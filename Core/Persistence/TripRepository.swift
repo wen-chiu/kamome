@@ -126,6 +126,115 @@ public struct TripRepository {
         return tripId
     }
 
+    /// Everything S3 needs for one trip.
+    public struct TripDetail {
+        public let trip: TripRecord
+        public let segments: [(segment: SegmentRecord, points: [TrackpointRecord])]
+        public let stops: [StopRecord]
+        public let photos: [PhotoRefRecord]
+    }
+
+    public func detail(tripId: String) throws -> TripDetail? {
+        try database.writer.read { db in
+            guard let trip = try TripRecord.fetchOne(db, key: tripId) else { return nil }
+            let segments = try SegmentRecord
+                .filter(sql: "trip_id = ?", arguments: [tripId])
+                .order(sql: "started_at")
+                .fetchAll(db)
+            let withPoints = try segments.map { segment in
+                (segment: segment, points: try TrackpointRecord
+                    .filter(sql: "segment_id = ?", arguments: [segment.id])
+                    .order(sql: "ts")
+                    .fetchAll(db))
+            }
+            let stops = try StopRecord
+                .filter(sql: "trip_id = ?", arguments: [tripId])
+                .order(sql: "arrived_at")
+                .fetchAll(db)
+            let photos = try PhotoRefRecord
+                .filter(sql: "trip_id = ?", arguments: [tripId])
+                .fetchAll(db)
+            return TripDetail(trip: trip, segments: withPoints, stops: stops, photos: photos)
+        }
+    }
+
+    public func updateTripStats(tripId: String, statsJson: String) throws {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE trip SET stats_json = ? WHERE id = ?",
+                arguments: [statsJson, tripId]
+            )
+        }
+    }
+
+    // MARK: - Stops (S4 Stop Editor)
+
+    public func setStopName(stopId: String, name: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE stop SET name = ? WHERE id = ?", arguments: [name, stopId])
+        }
+    }
+
+    public func setStopNote(stopId: String, note: String?) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE stop SET note = ? WHERE id = ?", arguments: [note, stopId])
+        }
+    }
+
+    /// Deletes a false-positive stop; its photos become route-attached.
+    public func deleteStop(stopId: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE photo_ref SET stop_id = NULL WHERE stop_id = ?", arguments: [stopId])
+            try db.execute(sql: "DELETE FROM stop WHERE id = ?", arguments: [stopId])
+        }
+    }
+
+    /// Merges `absorbedId` into `keptId`: earliest arrival, latest departure,
+    /// photos reassigned.
+    public func mergeStops(keptId: String, absorbedId: String) throws {
+        try database.writer.write { db in
+            guard
+                let kept = try StopRecord.fetchOne(db, key: keptId),
+                let absorbed = try StopRecord.fetchOne(db, key: absorbedId)
+            else { return }
+            let arrived = min(kept.arrivedAt, absorbed.arrivedAt)
+            let departed: Double?
+            switch (kept.departedAt, absorbed.departedAt) {
+            case let (keptEnd?, absorbedEnd?): departed = max(keptEnd, absorbedEnd)
+            default: departed = nil // one is still open-ended
+            }
+            try db.execute(
+                sql: "UPDATE stop SET arrived_at = ?, departed_at = ? WHERE id = ?",
+                arguments: [arrived, departed, keptId]
+            )
+            try db.execute(
+                sql: "UPDATE photo_ref SET stop_id = ? WHERE stop_id = ?",
+                arguments: [keptId, absorbedId]
+            )
+            try db.execute(sql: "DELETE FROM stop WHERE id = ?", arguments: [absorbedId])
+        }
+    }
+
+    // MARK: - Photos
+
+    public func replacePhotoRefs(tripId: String, with photos: [PhotoRefRecord]) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "DELETE FROM photo_ref WHERE trip_id = ?", arguments: [tripId])
+            for photo in photos {
+                try photo.insert(db)
+            }
+        }
+    }
+
+    public func setPhotoHighlight(photoId: String, isHighlight: Bool) throws {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE photo_ref SET is_highlight = ? WHERE id = ?",
+                arguments: [isHighlight ? 1 : 0, photoId]
+            )
+        }
+    }
+
     /// Trips for the S1 list, newest first.
     public func allTrips() throws -> [TripRecord] {
         try database.writer.read { db in

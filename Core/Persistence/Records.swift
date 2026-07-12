@@ -119,6 +119,53 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     }
 }
 
+extension TripRecord: Identifiable {}
+extension StopRecord: Identifiable {}
+extension PhotoRefRecord: Identifiable {}
+
+public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "photo_ref"
+
+    public var id: String
+    public var tripId: String
+    public var stopId: String?
+    /// PhotoKit local identifier; image bytes are NEVER copied (§3 rules).
+    public var phAssetId: String
+    public var takenAt: Double?
+    public var lat: Double?
+    public var lon: Double?
+    public var isHighlight: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id, lat, lon
+        case tripId = "trip_id"
+        case stopId = "stop_id"
+        case phAssetId = "ph_asset_id"
+        case takenAt = "taken_at"
+        case isHighlight = "is_highlight"
+    }
+
+    public init(
+        id: String,
+        tripId: String,
+        stopId: String?,
+        phAssetId: String,
+        takenAt: Double? = nil,
+        lat: Double? = nil,
+        lon: Double? = nil,
+        isHighlight: Int = 0
+    ) {
+        self.id = id
+        self.tripId = tripId
+        self.stopId = stopId
+        self.phAssetId = phAssetId
+        self.takenAt = takenAt
+        self.lat = lat
+        self.lon = lon
+        self.isHighlight = isHighlight
+    }
+}
+
 /// Row mapping is hand-written (no Codable): trackpoint is the hot table —
 /// a tracking day is 20–40k rows and the Phase 0 gate bulk-loads 50k — and
 /// Codable record machinery is several times slower in debug builds.

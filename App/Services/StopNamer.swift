@@ -1,0 +1,65 @@
+import CoreLocation
+import Foundation
+import KamomeConfig
+import KamomePersistence
+import KamomeTripComposer
+
+/// CLGeocoder adapter for §4.2 stop naming: throttled + cached via
+/// GeocodePolicy, honors device locale (Chinese place names natively, §1.7).
+final class StopNamer {
+    private let geocoder = CLGeocoder()
+    private var policy: GeocodePolicy
+    private let repository: TripRepository
+    private var queue: [StopRecord] = []
+    private var isWorking = false
+
+    init(config: TrackingConfig, repository: TripRepository) {
+        policy = GeocodePolicy(config: config.geocode)
+        self.repository = repository
+    }
+
+    /// Names every unnamed stop, respecting the throttle. Fire-and-forget;
+    /// results land in the DB and the next detail() read picks them up.
+    func nameUnnamedStops(_ stops: [StopRecord]) {
+        queue.append(contentsOf: stops.filter { $0.name == nil })
+        drain()
+    }
+
+    private func drain() {
+        guard !isWorking, !queue.isEmpty else { return }
+        let stop = queue.removeFirst()
+        let now = Date.now.timeIntervalSince1970
+
+        switch policy.decision(lat: stop.lat, lon: stop.lon, now: now) {
+        case .cached(let name):
+            try? repository.setStopName(stopId: stop.id, name: name)
+            drain()
+        case .throttled(let retryAfterS):
+            queue.insert(stop, at: 0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + retryAfterS) { [weak self] in
+                self?.drain()
+            }
+        case .lookup:
+            isWorking = true
+            let location = CLLocation(latitude: stop.lat, longitude: stop.lon)
+            geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+                guard let self else { return }
+                self.isWorking = false
+                if let name = Self.displayName(from: placemarks?.first) {
+                    self.policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: Date.now.timeIntervalSince1970)
+                    try? self.repository.setStopName(stopId: stop.id, name: name)
+                }
+                self.drain()
+            }
+        }
+    }
+
+    private static func displayName(from placemark: CLPlacemark?) -> String? {
+        guard let placemark else { return nil }
+        // Most specific first: POI/area name, street, locality.
+        return placemark.areasOfInterest?.first
+            ?? placemark.name
+            ?? placemark.thoroughfare
+            ?? placemark.locality
+    }
+}

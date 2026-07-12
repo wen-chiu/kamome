@@ -44,6 +44,7 @@ targets:
         NSLocationWhenInUseUsageDescription: Kamome records your route only during an active trip you started.
         NSLocationAlwaysAndWhenInUseUsageDescription: Always access lets Kamome keep recording an active trip in the background. Tracking stops the moment you end the trip.
         NSMotionUsageDescription: Motion data tells driving from walking so Kamome can save battery while recording.
+        NSPhotoLibraryUsageDescription: Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded.
         UIBackgroundModes: [location]
     settings:
       base:

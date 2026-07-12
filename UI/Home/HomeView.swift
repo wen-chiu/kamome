@@ -1,4 +1,5 @@
 import KamomeTrackingEngine
+import KamomeTripComposer
 import SwiftUI
 
 /// S1 Home / Trip List (minimal Phase 1 cut): trip list, vehicle selector,
@@ -42,16 +43,26 @@ struct HomeView: View {
     }
 
     private var tripList: some View {
-        List(session.trips, id: \.id) { trip in
-            VStack(alignment: .leading) {
-                Text(trip.title)
-                    .font(.headline)
-                Text(Date(timeIntervalSince1970: trip.startedAt), style: .date)
+        List(session.trips) { trip in
+            NavigationLink(value: trip.id) {
+                VStack(alignment: .leading) {
+                    Text(trip.title)
+                        .font(.headline)
+                    HStack {
+                        Text(Date(timeIntervalSince1970: trip.startedAt), style: .date)
+                        if let stats = TripStats.from(jsonString: trip.statsJson) {
+                            Text(String(format: "· %.0f km · %d", stats.distanceM / 1000, stats.stopCount))
+                        }
+                    }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                }
             }
         }
         .listStyle(.plain)
+        .navigationDestination(for: String.self) { tripId in
+            TripDetailView(tripId: tripId, session: session)
+        }
     }
 
     private var vehiclePicker: some View {
