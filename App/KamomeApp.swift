@@ -1,17 +1,27 @@
 import KamomeConfig
+import KamomePersistence
 import SwiftUI
 
 @main
 struct KamomeApp: App {
     /// Loaded once at startup; a broken or incomplete config must crash the
     /// launch with a message naming the problem (spec §0 rule 2).
-    let trackingConfig = AppConfig.loadOrDie()
+    private static let trackingConfig = AppConfig.loadOrDie()
+
+    @State private var session: TrackingSession
+
+    init() {
+        let database = AppConfig.openDatabaseOrDie()
+        _session = State(initialValue: TrackingSession(
+            config: Self.trackingConfig,
+            repository: TripRepository(database: database)
+        ))
+    }
 
     var body: some Scene {
         WindowGroup {
-            // Phase 0 placeholder proving the String Catalog pipeline.
-            // S1 Home replaces this in Phase 1.
-            Text("start_journey")
+            HomeView()
+                .environment(session)
         }
     }
 }
@@ -25,6 +35,20 @@ enum AppConfig {
             return try TrackingConfigLoader.load(contentsOf: url)
         } catch {
             fatalError("TrackingConfig failed to load: \(error)")
+        }
+    }
+
+    static func openDatabaseOrDie() -> AppDatabase {
+        do {
+            let support = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+            return try AppDatabase.onDisk(path: support.appendingPathComponent("kamome.sqlite").path)
+        } catch {
+            fatalError("Kamome database failed to open: \(error)")
         }
     }
 }

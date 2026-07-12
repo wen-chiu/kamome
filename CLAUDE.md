@@ -5,14 +5,19 @@ Rules of Engagement: spec §0 — phase gates are hard gates, no magic numbers
 (all tunables in `Config/TrackingConfig.json`), boring tech, demo artifact per
 phase, flag anything needing the physical device.
 
-## Current phase: 0 — Skeleton (gate passed locally 2026-07-12; PR + CI pending)
+## Current phase: 1 — Tracking Engine (unit gates pass; device gate pending)
 
-Gate criteria (spec §7 Phase 0, verbatim):
+Phase 0 gate passed locally + CI 2026-07-12 (`Docs/demos/phase0/gate-output.md`);
+PR #1 awaiting review/merge.
 
-> **Gate:** `xcodebuild -scheme Kamome test` green; `swiftlint` clean; schema
-> round-trip test (insert/read 50k trackpoints < 2 s in-memory).
+Gate criteria (spec §7 Phase 1, verbatim):
 
-Gate output: `Docs/demos/phase0/gate-output.md`.
+> - Replaying `perth_margaret_river_day1.gpx` yields exactly 4 stops (±0),
+>   ≥ 2 drive segments, ≥ 2 walk segments; assert in unit test.
+> - `city_walk_flapping.gpx` produces ≤ 1 spurious segment.
+> - Physical device test (manual, checklist in `Docs/device-test-P1.md`):
+>   2 h real drive, battery drain measured, route visually continuous.
+>   **Chiu signs off on this gate.**
 
 ## Verification commands (run from repo root)
 

@@ -33,6 +33,9 @@ public final class TrackingEngine {
     public private(set) var stops: [Stop] = []
     public let vehicle: VehicleType
 
+    /// Mode of the segment currently being recorded (S2 HUD).
+    public var currentMode: TransportMode? { open?.mode }
+
     private let config: TrackingConfig
     private var open: Segment?
     private var smoother: SpeedSmoother

@@ -20,6 +20,16 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Always access lets Kamome keep recording an active trip in the background. Tracking stops the moment you end the trip.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kamome records your route only during an active trip you started.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Motion data tells driving from walking so Kamome can save battery while recording.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

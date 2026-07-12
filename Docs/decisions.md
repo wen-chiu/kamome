@@ -55,6 +55,30 @@ requiring Xcode 16 locally (blocked: it was unavailable for this setup);
 a wrapper script (would change the canonical `xcodegen generate` command).
 Remove the postGenCommand when local Xcode reaches 16+.
 
+## 2026-07-12 — Walk threshold raised to 6 km/h; mid band is non-evidence
+
+**Context:** §4.1's literal defaults ("<4 km/h = walk, 4–20 = cycle/unknown")
+misclassify normal walking — humans walk 4–5.5 km/h, and GPS-derived speeds
+wobble around the true value. Fixture walk loops (4–4.5 km/h) proved it.
+**Decision:** `speed_walk_max_kmh: 6` in config (tunables exist to be tuned).
+The 6–20 km/h band classifies as cycle only on bicycle trips; otherwise it is
+*inconclusive* — it freezes the current mode rather than confirming `unknown`
+segments, so speed wobble can never split a segment.
+**Rejected:** spec-literal 4 km/h walk ceiling (fails on real walking);
+confirmable `unknown` segments (caused 7-way splits on the flapping fixture).
+
+## 2026-07-12 — Derived speeds use a 30 s displacement baseline
+
+**Context:** GPX replay (and any GPS without Doppler speed) must derive speed
+from positions. Adjacent-fix deltas at ±12 m urban noise make a stroller look
+like a cyclist (~10 km/h phantom speed).
+**Decision:** Speed = displacement over the trailing
+`speed_smoothing_window_s` (30 s) baseline; OS-provided Doppler speeds are
+instead smoothed by a rolling mean. Never both — double smoothing smears
+short bursts past `mode_confirm_s` and creates phantom segments.
+**Rejected:** per-fix derived speeds (noise-dominated); median per-step speed
+(still noise-dominated at walking pace).
+
 ## 2026-07-12 — Config loader module is `Core/ConfigLoader`, not `App/`
 
 **Context:** Spec §8 lists "config loader" under `App/`. A loader inside the

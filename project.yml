@@ -23,6 +23,7 @@ targets:
     platform: iOS
     sources:
       - App
+      - UI
       - path: Config/TrackingConfig.json
         buildPhase: resources
     dependencies:
@@ -30,12 +31,20 @@ targets:
         product: KamomePersistence
       - package: KamomeCore
         product: KamomeConfig
+      - package: KamomeCore
+        product: KamomeTrackingEngine
     info:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Kamome
         CFBundleDevelopmentRegion: zh-Hant
         UILaunchScreen: {}
+        # Purpose strings are localized in App/Resources/InfoPlist.xcstrings;
+        # tracking only ever runs during an explicit trip (§6).
+        NSLocationWhenInUseUsageDescription: Kamome records your route only during an active trip you started.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Always access lets Kamome keep recording an active trip in the background. Tracking stops the moment you end the trip.
+        NSMotionUsageDescription: Motion data tells driving from walking so Kamome can save battery while recording.
+        UIBackgroundModes: [location]
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).

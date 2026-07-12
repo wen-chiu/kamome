@@ -1,20 +1,124 @@
 {
   "sourceLanguage" : "zh-Hant",
   "strings" : {
+    "empty_state_pitch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Record → Recap → Fork" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "記錄 → 回顧 → 分享路線" }
+        }
+      }
+    },
+    "end_trip" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "End Trip" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "結束旅程" }
+        }
+      }
+    },
+    "home_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "My Journeys" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "我的旅程" }
+        }
+      }
+    },
     "start_journey" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start Journey"
-          }
+          "stringUnit" : { "state" : "translated", "value" : "Start Journey" }
         },
         "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開始出發"
-          }
+          "stringUnit" : { "state" : "translated", "value" : "開始出發" }
+        }
+      }
+    },
+    "stat_distance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Distance" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "距離" }
+        }
+      }
+    },
+    "stat_elapsed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Time" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "時間" }
+        }
+      }
+    },
+    "stat_stops" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Stops" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "停留" }
+        }
+      }
+    },
+    "vehicle_bicycle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bicycle" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "單車" }
+        }
+      }
+    },
+    "vehicle_car" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Car" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "汽車" }
+        }
+      }
+    },
+    "vehicle_label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Vehicle" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "交通方式" }
+        }
+      }
+    },
+    "vehicle_scooter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Scooter" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "機車" }
         }
       }
     }
