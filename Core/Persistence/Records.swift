@@ -76,7 +76,10 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
     }
 }
 
-public struct TrackpointRecord: Codable, Equatable, FetchableRecord, MutablePersistableRecord {
+/// Row mapping is hand-written (no Codable): trackpoint is the hot table —
+/// a tracking day is 20–40k rows and the Phase 0 gate bulk-loads 50k — and
+/// Codable record machinery is several times slower in debug builds.
+public struct TrackpointRecord: Equatable, FetchableRecord, MutablePersistableRecord {
     public static let databaseTableName = "trackpoint"
 
     public var id: Int64?
@@ -89,10 +92,45 @@ public struct TrackpointRecord: Codable, Equatable, FetchableRecord, MutablePers
     public var course: Double?
     public var altitude: Double?
 
-    enum CodingKeys: String, CodingKey {
-        case id, ts, lat, lon, speed, course, altitude
-        case segmentId = "segment_id"
-        case hAcc = "h_acc"
+    public init(row: Row) {
+        id = row["id"]
+        segmentId = row["segment_id"]
+        ts = row["ts"]
+        lat = row["lat"]
+        lon = row["lon"]
+        hAcc = row["h_acc"]
+        speed = row["speed"]
+        course = row["course"]
+        altitude = row["altitude"]
+    }
+
+    public func encode(to container: inout PersistenceContainer) {
+        container["id"] = id
+        container["segment_id"] = segmentId
+        container["ts"] = ts
+        container["lat"] = lat
+        container["lon"] = lon
+        container["h_acc"] = hAcc
+        container["speed"] = speed
+        container["course"] = course
+        container["altitude"] = altitude
+    }
+
+    /// Inserts points through one cached prepared statement — the fast path
+    /// for persisting a recorded segment.
+    public static func bulkInsert(_ points: [TrackpointRecord], into db: Database) throws {
+        let statement = try db.cachedStatement(sql: """
+            INSERT INTO trackpoint (segment_id, ts, lat, lon, h_acc, speed, course, altitude)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """)
+        for point in points {
+            // Fixed arity matching the SQL above; skip per-row validation.
+            statement.setUncheckedArguments([
+                point.segmentId, point.ts, point.lat, point.lon,
+                point.hAcc, point.speed, point.course, point.altitude,
+            ])
+            try statement.execute()
+        }
     }
 
     public init(

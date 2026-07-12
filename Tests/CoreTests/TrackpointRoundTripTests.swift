@@ -16,22 +16,23 @@ final class TrackpointRoundTripTests: XCTestCase {
             try segment.insert(db)
         }
 
+        let points = (0..<Self.pointCount).map { index in
+            TrackpointRecord(
+                segmentId: segment.id,
+                ts: Double(index),
+                lat: -31.95 + Double(index) * 1e-5,
+                lon: 115.86 + Double(index) * 1e-5,
+                hAcc: 5,
+                speed: 25,
+                course: 180,
+                altitude: 10
+            )
+        }
+
         let start = Date()
 
         try database.writer.write { db in
-            for index in 0..<Self.pointCount {
-                var point = TrackpointRecord(
-                    segmentId: segment.id,
-                    ts: Double(index),
-                    lat: -31.95 + Double(index) * 1e-5,
-                    lon: 115.86 + Double(index) * 1e-5,
-                    hAcc: 5,
-                    speed: 25,
-                    course: 180,
-                    altitude: 10
-                )
-                try point.insert(db)
-            }
+            try TrackpointRecord.bulkInsert(points, into: db)
         }
 
         let fetched = try database.writer.read { db in

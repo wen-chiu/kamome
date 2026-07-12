@@ -29,21 +29,21 @@ do {
         try TripRecord(id: "trip-1", title: "Perf fixture", startedAt: 0, status: "completed").insert(db)
         try SegmentRecord(id: "seg-1", tripId: "trip-1", mode: "drive", startedAt: 0).insert(db)
     }
+    let points = (0..<pointCount).map { index in
+        TrackpointRecord(
+            segmentId: "seg-1",
+            ts: Double(index),
+            lat: -31.95 + Double(index) * 1e-5,
+            lon: 115.86 + Double(index) * 1e-5,
+            hAcc: 5,
+            speed: 25,
+            course: 180,
+            altitude: 10
+        )
+    }
     let start = Date()
     try database.writer.write { db in
-        for index in 0..<pointCount {
-            var point = TrackpointRecord(
-                segmentId: "seg-1",
-                ts: Double(index),
-                lat: -31.95 + Double(index) * 1e-5,
-                lon: 115.86 + Double(index) * 1e-5,
-                hAcc: 5,
-                speed: 25,
-                course: 180,
-                altitude: 10
-            )
-            try point.insert(db)
-        }
+        try TrackpointRecord.bulkInsert(points, into: db)
     }
     let fetched = try database.writer.read { db in
         try TrackpointRecord.order(sql: "ts").fetchAll(db)
