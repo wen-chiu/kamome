@@ -12,11 +12,16 @@ struct RecordingView: View {
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        @Bindable var session = session
+        return ZStack(alignment: .bottom) {
             map
             hud
         }
         .onReceive(clock) { now = $0 }
+        .sheet(isPresented: $session.needsAlwaysPriming) {
+            AlwaysPrimingView()
+                .presentationDetents([.medium])
+        }
     }
 
     private var map: some View {

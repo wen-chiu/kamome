@@ -7,10 +7,9 @@ Phase 1 gate criterion and needs a physical iPhone, a car, and ~2 h.
 
 - [ ] Build to device from Xcode (free personal team is fine, 7-day profile).
 - [ ] Charge to 100%; note starting battery %.
-- [ ] Location permission: grant **When In Use** when prompted at first Start.
-      (Always-escalation priming screen is a Phase 2 follow-up; for this test,
-      keep the app foregrounded or grant Always manually in Settings to test
-      background behavior.)
+- [ ] Location permission: grant **When In Use** at first Start, then accept
+      the in-app priming sheet → choose **Always** in the iOS dialog. Screen
+      lock during the drive is part of the test.
 - [ ] Motion & Fitness permission: grant when prompted.
 
 ## Drive (~2 h, mixed route)
