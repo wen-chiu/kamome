@@ -70,6 +70,16 @@ Checklist: `Docs/device-test-P1.md`.
 **Rejected:** holding PR #2 open for a week (blocks fixture-testable Phase 2);
 dropping the criterion (it guards the POC's core risk, §9 row 1).
 
+## 2026-07-12 — S4 photo reorder deferred (needs schema v2)
+
+**Context:** §5 S4 lists "reorder photos", but schema v1's `photo_ref` has no
+order column — ordering falls out of `taken_at`.
+**Decision:** Phase 2 ships S4 with rename/note/highlight/delete (+ merge via
+timeline swipe). Reorder waits for a forward migration v2 adding
+`photo_ref.order_idx`, bundled with the next schema change rather than
+shipping a migration for one cosmetic feature.
+**Rejected:** schema v2 now (migration churn mid-phase for a non-gate feature).
+
 ## 2026-07-12 — Walk threshold raised to 6 km/h; mid band is non-evidence
 
 **Context:** §4.1's literal defaults ("<4 km/h = walk, 4–20 = cycle/unknown")
