@@ -127,7 +127,7 @@ public struct TrackpointRecord: Equatable, FetchableRecord, MutablePersistableRe
             // Fixed arity matching the SQL above; skip per-row validation.
             statement.setUncheckedArguments([
                 point.segmentId, point.ts, point.lat, point.lon,
-                point.hAcc, point.speed, point.course, point.altitude,
+                point.hAcc, point.speed, point.course, point.altitude
             ])
             try statement.execute()
         }
