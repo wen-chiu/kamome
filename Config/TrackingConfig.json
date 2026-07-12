@@ -1,9 +1,14 @@
 {
   "schema_version": 1,
+  "filter": {
+    "max_h_acc_m": 50
+  },
   "segmentation": {
     "mode_confirm_s": 60,
+    "speed_smoothing_window_s": 30,
+    "speed_stationary_max_kmh": 1.5,
+    "speed_walk_max_kmh": 6,
     "speed_drive_min_kmh": 20,
-    "speed_walk_max_kmh": 4,
     "speed_transit_min_kmh": 130
   },
   "dwell": {
@@ -15,9 +20,24 @@
     "epsilon_m": 15
   },
   "sampling": {
-    "drive_fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 50 },
-    "drive_slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 },
-    "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 }
+    "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 },
+    "vehicles": {
+      "car": {
+        "fast_min_kmh": 20,
+        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 50 },
+        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 }
+      },
+      "scooter": {
+        "fast_min_kmh": 15,
+        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 30 },
+        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 15 }
+      },
+      "bicycle": {
+        "fast_min_kmh": 12,
+        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 },
+        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 }
+      }
+    }
   },
   "export": {
     "target_duration_s": 30,

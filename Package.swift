@@ -14,6 +14,7 @@ let package = Package(
     products: [
         .library(name: "KamomePersistence", targets: ["KamomePersistence"]),
         .library(name: "KamomeConfig", targets: ["KamomeConfig"]),
+        .library(name: "KamomeTrackingEngine", targets: ["KamomeTrackingEngine"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
@@ -28,9 +29,14 @@ let package = Package(
             name: "KamomeConfig",
             path: "Core/ConfigLoader"
         ),
+        .target(
+            name: "KamomeTrackingEngine",
+            dependencies: ["KamomeConfig"],
+            path: "Core/TrackingEngine"
+        ),
         .testTarget(
             name: "KamomeCoreTests",
-            dependencies: ["KamomePersistence", "KamomeConfig"],
+            dependencies: ["KamomePersistence", "KamomeConfig", "KamomeTrackingEngine"],
             path: "Tests/CoreTests"
         ),
         // Local-only mirror of the Phase 0 gates for machines without Xcode

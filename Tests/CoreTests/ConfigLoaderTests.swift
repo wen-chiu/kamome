@@ -23,10 +23,12 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.dwell.radiusM, 80)
         XCTAssertEqual(config.dwell.regionRadiusM, 150)
         XCTAssertEqual(config.simplify.epsilonM, 15)
-        XCTAssertEqual(config.sampling.driveFast.distanceFilterM, 50)
-        XCTAssertEqual(config.sampling.driveSlow.distanceFilterM, 20)
+        XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
+        XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
+        XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)
         XCTAssertEqual(config.sampling.walk.distanceFilterM, 10)
         XCTAssertEqual(config.export.targetDurationS, 30)
+        XCTAssertEqual(config.filter.maxHAccM, 50)
     }
 
     func testMissingKeyFailsLoudlyNamingTheKey() throws {
