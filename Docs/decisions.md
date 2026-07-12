@@ -41,6 +41,20 @@ hand-edited. Committing it invites hand-edits and merge noise.
 verification commands and of CI.
 **Rejected:** committing the generated project for open-in-Xcode convenience.
 
+## 2026-07-12 — postGenCommand downgrades project format for Xcode 15.4
+
+**Context:** The dev Mac ended up with Xcode 15.4 (not 16). xcodegen 2.45
+emits project format `objectVersion = 77`, which Xcode 15.4 cannot open, and
+xcodegen has no spec option to control it (`xcodeVersion`/`objectVersion`
+options verified ineffective).
+**Decision:** `options.postGenCommand` seds `objectVersion` 77 → 56 on every
+`xcodegen generate`. We use no 77-only features; Xcode 16+ (CI) reads 56 fine,
+so the same generate works everywhere.
+**Rejected:** pinning an older xcodegen via brew (fragile, fights upgrades);
+requiring Xcode 16 locally (blocked: it was unavailable for this setup);
+a wrapper script (would change the canonical `xcodegen generate` command).
+Remove the postGenCommand when local Xcode reaches 16+.
+
 ## 2026-07-12 — Config loader module is `Core/ConfigLoader`, not `App/`
 
 **Context:** Spec §8 lists "config loader" under `App/`. A loader inside the

@@ -1,6 +1,7 @@
 import GRDB
-import KamomePersistence
 import XCTest
+
+@testable import KamomePersistence
 
 final class SchemaTests: XCTestCase {
     func testMigrationToV1CreatesAllTablesAndIndex() throws {
