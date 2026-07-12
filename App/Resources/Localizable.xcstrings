@@ -34,6 +34,50 @@
         }
       }
     },
+    "priming_allow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Allow Background Recording" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "允許背景記錄" }
+        }
+      }
+    },
+    "priming_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Choose \"Change to Always Allow\" so your route keeps recording with the screen locked. Kamome only ever tracks during a trip you started, and stops the moment you end it." }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "請選擇「永遠允許」，即使螢幕鎖定也能持續記錄路線。卡摸咩只在您啟動的旅程期間記錄，旅程結束立即停止。" }
+        }
+      }
+    },
+    "priming_later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Not Now" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "暫時不要" }
+        }
+      }
+    },
+    "priming_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Keep recording with the screen off" }
+        },
+        "zh-Hant" : {
+          "stringUnit" : { "state" : "translated", "value" : "螢幕關閉也持續記錄" }
+        }
+      }
+    },
     "start_journey" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -21,17 +21,25 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         super.init()
         manager.delegate = self
         manager.activityType = .automotiveNavigation
-        manager.allowsBackgroundLocationUpdates = false // escalated after Always grant
         manager.pausesLocationUpdatesAutomatically = false // we manage pausing (§2.3)
     }
 
+    var authorizationStatus: CLAuthorizationStatus {
+        manager.authorizationStatus
+    }
+
     func requestPermission() {
-        // When In Use at first Start; Always escalation with a priming screen
-        // is a device-test follow-up (§6).
+        // When In Use at first Start (§6); the priming sheet escalates to
+        // Always so tracking survives screen lock during an active trip.
         manager.requestWhenInUseAuthorization()
     }
 
+    func requestAlwaysPermission() {
+        manager.requestAlwaysAuthorization()
+    }
+
     func startUpdates(vehicle: VehicleType) {
+        applyBackgroundCapability()
         apply(policy: SamplingPolicyTable.policy(
             state: .recording, mode: .unknown, speedKmh: 0, vehicle: vehicle, config: config
         ))
@@ -90,7 +98,21 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         }
     }
 
+    /// Requires UIBackgroundModes=[location] (declared). Works with When In
+    /// Use (blue indicator pill) and silently with Always; tracking only ever
+    /// runs during an explicit trip (§6 — that's the App Review case).
+    private func applyBackgroundCapability() {
+        let status = manager.authorizationStatus
+        let authorized = status == .authorizedAlways || status == .authorizedWhenInUse
+        manager.allowsBackgroundLocationUpdates = authorized
+        manager.showsBackgroundLocationIndicator = true
+    }
+
     // MARK: - CLLocationManagerDelegate
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        applyBackgroundCapability()
+    }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         for location in locations {

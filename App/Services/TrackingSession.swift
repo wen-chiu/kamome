@@ -10,6 +10,8 @@ import Observation
 @Observable
 final class TrackingSession {
     private(set) var isRecording = false
+    /// Drives the §6 Always-permission priming sheet on first recording.
+    var needsAlwaysPriming = false
     private(set) var startedAt: Date?
     private(set) var traveledPath: [CLLocationCoordinate2D] = []
     private(set) var distanceM: Double = 0
@@ -46,6 +48,7 @@ final class TrackingSession {
 
         self.engine = engine
         locationService = service
+        needsAlwaysPriming = service.authorizationStatus != .authorizedAlways
         startedAt = now
         traveledPath = []
         distanceM = 0
@@ -88,6 +91,11 @@ final class TrackingSession {
         locationService = nil
         isRecording = false
         refreshTrips()
+    }
+
+    func grantAlwaysPermission() {
+        locationService?.requestAlwaysPermission()
+        needsAlwaysPriming = false
     }
 
     var elapsed: TimeInterval {
