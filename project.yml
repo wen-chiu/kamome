@@ -50,6 +50,9 @@ targets:
     platform: iOS
     sources:
       - Tests/AppTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: Kamome
 
