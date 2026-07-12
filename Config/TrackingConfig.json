@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "segmentation": {
+    "mode_confirm_s": 60,
+    "speed_drive_min_kmh": 20,
+    "speed_walk_max_kmh": 4,
+    "speed_transit_min_kmh": 130
+  },
+  "dwell": {
+    "window_s": 180,
+    "radius_m": 80,
+    "region_radius_m": 150
+  },
+  "simplify": {
+    "epsilon_m": 15
+  },
+  "sampling": {
+    "drive_fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 50 },
+    "drive_slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 },
+    "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 }
+  },
+  "export": {
+    "target_duration_s": 30,
+    "fps": 30,
+    "stop_hold_s": 1.5,
+    "gif_fps": 12,
+    "gif_width_px": 480
+  }
+}

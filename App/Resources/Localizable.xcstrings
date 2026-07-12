@@ -1,0 +1,23 @@
+{
+  "sourceLanguage" : "zh-Hant",
+  "strings" : {
+    "start_journey" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Journey"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始出發"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
