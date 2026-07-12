@@ -55,6 +55,21 @@ requiring Xcode 16 locally (blocked: it was unavailable for this setup);
 a wrapper script (would change the canonical `xcodegen generate` command).
 Remove the postGenCommand when local Xcode reaches 16+.
 
+## 2026-07-12 — Phase 1 device-test gate deferred (owner decision)
+
+**Context:** Both Phase 1 unit gates pass in CI. The remaining criterion — a
+~2 h physical drive with battery measurement — needs Chiu's car and calendar,
+unavailable for at least a week. Blocking all work on it serves nothing;
+silently skipping it would violate §0 rule 1.
+**Decision:** Chiu (product owner, 2026-07-12) defers the device test: Phase 1
+merges on unit gates alone, and the device sign-off becomes a **hard
+precondition for starting Phase 3** (whose gate is device-bound anyway).
+Before the drive happens, the Always-permission priming + background location
+flow must land, or the drive would only measure a known limitation.
+Checklist: `Docs/device-test-P1.md`.
+**Rejected:** holding PR #2 open for a week (blocks fixture-testable Phase 2);
+dropping the criterion (it guards the POC's core risk, §9 row 1).
+
 ## 2026-07-12 — Walk threshold raised to 6 km/h; mid band is non-evidence
 
 **Context:** §4.1's literal defaults ("<4 km/h = walk, 4–20 = cycle/unknown")
