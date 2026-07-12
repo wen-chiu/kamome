@@ -76,6 +76,49 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
     }
 }
 
+public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "stop"
+
+    public var id: String
+    public var tripId: String
+    public var lat: Double
+    public var lon: Double
+    public var arrivedAt: Double
+    public var departedAt: Double?
+    public var name: String?
+    public var note: String?
+    public var kind: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, lat, lon, name, note, kind
+        case tripId = "trip_id"
+        case arrivedAt = "arrived_at"
+        case departedAt = "departed_at"
+    }
+
+    public init(
+        id: String,
+        tripId: String,
+        lat: Double,
+        lon: Double,
+        arrivedAt: Double,
+        departedAt: Double? = nil,
+        name: String? = nil,
+        note: String? = nil,
+        kind: String? = nil
+    ) {
+        self.id = id
+        self.tripId = tripId
+        self.lat = lat
+        self.lon = lon
+        self.arrivedAt = arrivedAt
+        self.departedAt = departedAt
+        self.name = name
+        self.note = note
+        self.kind = kind
+    }
+}
+
 /// Row mapping is hand-written (no Codable): trackpoint is the hot table —
 /// a tracking day is 20–40k rows and the Phase 0 gate bulk-loads 50k — and
 /// Codable record machinery is several times slower in debug builds.

@@ -21,9 +21,20 @@ jobs:
       - name: SwiftLint
         run: swiftlint --strict
 
+      - name: Pick an available iPhone simulator
+        # Runner images vary in which device sets they ship — never hardcode
+        # a model name.
+        run: |
+          xcrun simctl list devices available
+          DEVICE=$(xcrun simctl list devices available \
+            | grep -E "^\s+iPhone" | head -1 | sed -E 's/^ *([^(]+[^ (]) *\(.*/\1/')
+          if [ -z "$DEVICE" ]; then echo "No iPhone simulator on runner" >&2; exit 1; fi
+          echo "Using simulator: $DEVICE"
+          echo "SIM_DEVICE=$DEVICE" >> "$GITHUB_ENV"
+
       - name: Test (app + KamomeCore package via scheme)
         run: |
           set -o pipefail
           xcodebuild -scheme Kamome test \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -destination "platform=iOS Simulator,name=$SIM_DEVICE" \
             CODE_SIGNING_ALLOWED=NO

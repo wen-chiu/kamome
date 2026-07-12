@@ -5,14 +5,14 @@ Rules of Engagement: spec §0 — phase gates are hard gates, no magic numbers
 (all tunables in `Config/TrackingConfig.json`), boring tech, demo artifact per
 phase, flag anything needing the physical device.
 
-## Current phase: 0 — Skeleton (gate passed locally 2026-07-12; PR + CI pending)
+## Current phase: 1 merged on unit gates; device gate DEFERRED, due before Phase 3
 
-Gate criteria (spec §7 Phase 0, verbatim):
-
-> **Gate:** `xcodebuild -scheme Kamome test` green; `swiftlint` clean; schema
-> round-trip test (insert/read 50k trackpoints < 2 s in-memory).
-
-Gate output: `Docs/demos/phase0/gate-output.md`.
+Phase 0 gate passed 2026-07-12 (`Docs/demos/phase0/gate-output.md`, PR #1 merged).
+Phase 1 unit gates passed in CI (PR #2); the physical device test (2 h drive,
+battery, route continuity — `Docs/device-test-P1.md`) was deferred by owner
+decision 2026-07-12 (see `Docs/decisions.md`) and **must pass, with Chiu's
+sign-off, before any Phase 3 work starts**. Prerequisite for the drive:
+Always-permission priming + background location flow.
 
 ## Verification commands (run from repo root)
 

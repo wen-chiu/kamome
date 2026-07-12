@@ -4,18 +4,34 @@ import Foundation
 /// tunable (spec §0 rule 2: no magic numbers in code).
 /// Every property is non-optional: a missing key is a hard startup error.
 public struct TrackingConfig: Decodable, Equatable {
+    public struct Filter: Decodable, Equatable {
+        /// Samples with horizontal accuracy worse than this are discarded.
+        public let maxHAccM: Double
+
+        enum CodingKeys: String, CodingKey {
+            case maxHAccM = "max_h_acc_m"
+        }
+    }
+
     public struct Segmentation: Decodable, Equatable {
         /// A mode change must be sustained this long before a new segment opens (§4.1).
         public let modeConfirmS: Double
+        /// Speeds are averaged over this window before classification.
+        public let speedSmoothingWindowS: Double
+        /// Below this the classifier reports "no evidence" (GPS jitter at rest);
+        /// dwell detection owns stationariness, not segmentation.
+        public let speedStationaryMaxKmh: Double
         /// Speed heuristic fallback thresholds (§4.1, §1.7 transit).
-        public let speedDriveMinKmh: Double
         public let speedWalkMaxKmh: Double
+        public let speedDriveMinKmh: Double
         public let speedTransitMinKmh: Double
 
         enum CodingKeys: String, CodingKey {
             case modeConfirmS = "mode_confirm_s"
-            case speedDriveMinKmh = "speed_drive_min_kmh"
+            case speedSmoothingWindowS = "speed_smoothing_window_s"
+            case speedStationaryMaxKmh = "speed_stationary_max_kmh"
             case speedWalkMaxKmh = "speed_walk_max_kmh"
+            case speedDriveMinKmh = "speed_drive_min_kmh"
             case speedTransitMinKmh = "speed_transit_min_kmh"
         }
     }
@@ -44,7 +60,7 @@ public struct TrackingConfig: Decodable, Equatable {
     }
 
     public struct SamplingPolicy: Decodable, Equatable {
-        /// Symbolic name mapped to a CLLocationAccuracy constant in Phase 1.
+        /// Symbolic name mapped to a CLLocationAccuracy constant by the app.
         public let desiredAccuracy: String
         public let distanceFilterM: Double
 
@@ -54,17 +70,30 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
-    public struct Sampling: Decodable, Equatable {
-        /// Adaptive sampling table (§2.3).
-        public let driveFast: SamplingPolicy
-        public let driveSlow: SamplingPolicy
-        public let walk: SamplingPolicy
+    public struct VehiclePreset: Decodable, Equatable {
+        /// At or above this speed the "fast" policy applies, else "slow" (§2.3).
+        public let fastMinKmh: Double
+        public let fast: SamplingPolicy
+        public let slow: SamplingPolicy
 
         enum CodingKeys: String, CodingKey {
-            case driveFast = "drive_fast"
-            case driveSlow = "drive_slow"
-            case walk
+            case fastMinKmh = "fast_min_kmh"
+            case fast, slow
         }
+    }
+
+    public struct Sampling: Decodable, Equatable {
+        public struct Vehicles: Decodable, Equatable {
+            /// Per-vehicle presets (§1.7): scooter/bicycle = lower speeds,
+            /// tighter filters, more stops.
+            public let car: VehiclePreset
+            public let scooter: VehiclePreset
+            public let bicycle: VehiclePreset
+        }
+
+        /// Adaptive sampling table (§2.3).
+        public let walk: SamplingPolicy
+        public let vehicles: Vehicles
     }
 
     public struct Export: Decodable, Equatable {
@@ -85,6 +114,7 @@ public struct TrackingConfig: Decodable, Equatable {
     }
 
     public let schemaVersion: Int
+    public let filter: Filter
     public let segmentation: Segmentation
     public let dwell: Dwell
     public let simplify: Simplify
@@ -93,7 +123,7 @@ public struct TrackingConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case segmentation, dwell, simplify, sampling, export
+        case filter, segmentation, dwell, simplify, sampling, export
     }
 }
 
