@@ -50,12 +50,12 @@ final class TripRepositoryTests: XCTestCase {
             segments: [
                 TripRepository.NewSegment(mode: "drive", startedAt: 0, endedAt: 1_000, points: [
                     TripRepository.NewTrackpoint(ts: 0, lat: -31.95, lon: 115.86),
-                    TripRepository.NewTrackpoint(ts: 1_000, lat: -32.00, lon: 115.87),
-                ]),
+                    TripRepository.NewTrackpoint(ts: 1_000, lat: -32.00, lon: 115.87)
+                ])
             ],
             stops: [
                 TripRepository.NewStop(lat: -32.0, lon: 115.87, arrivedAt: 1_000, departedAt: 2_000),
-                TripRepository.NewStop(lat: -32.5, lon: 115.72, arrivedAt: 3_000, departedAt: 4_000),
+                TripRepository.NewStop(lat: -32.5, lon: 115.72, arrivedAt: 3_000, departedAt: 4_000)
             ]
         )
         var detail = try XCTUnwrap(try repository.detail(tripId: tripId))
@@ -72,7 +72,7 @@ final class TripRepositoryTests: XCTestCase {
         // Photos attach to stops; deleting a stop detaches, not deletes.
         try repository.replacePhotoRefs(tripId: tripId, with: [
             PhotoRefRecord(id: "ph1", tripId: tripId, stopId: firstStop.id, phAssetId: "asset-1"),
-            PhotoRefRecord(id: "ph2", tripId: tripId, stopId: secondStop.id, phAssetId: "asset-2"),
+            PhotoRefRecord(id: "ph2", tripId: tripId, stopId: secondStop.id, phAssetId: "asset-2")
         ])
         try repository.setPhotoHighlight(photoId: "ph1", isHighlight: true)
         try repository.deleteStop(stopId: secondStop.id)
@@ -90,12 +90,12 @@ final class TripRepositoryTests: XCTestCase {
             title: "Merge fixture", startedAt: 0, endedAt: 10_000, segments: [],
             stops: [
                 TripRepository.NewStop(lat: -32.0, lon: 115.87, arrivedAt: 1_000, departedAt: 2_000),
-                TripRepository.NewStop(lat: -32.0005, lon: 115.8705, arrivedAt: 2_100, departedAt: 3_000),
+                TripRepository.NewStop(lat: -32.0005, lon: 115.8705, arrivedAt: 2_100, departedAt: 3_000)
             ]
         )
         var detail = try XCTUnwrap(try repository.detail(tripId: tripId))
         try repository.replacePhotoRefs(tripId: tripId, with: [
-            PhotoRefRecord(id: "ph1", tripId: tripId, stopId: detail.stops[1].id, phAssetId: "asset-1"),
+            PhotoRefRecord(id: "ph1", tripId: tripId, stopId: detail.stops[1].id, phAssetId: "asset-1")
         ])
 
         try repository.mergeStops(keptId: detail.stops[0].id, absorbedId: detail.stops[1].id)

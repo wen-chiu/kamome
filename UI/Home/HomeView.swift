@@ -2,14 +2,15 @@ import KamomeTrackingEngine
 import KamomeTripComposer
 import SwiftUI
 
-/// S1 Home / Trip List (minimal Phase 1 cut): trip list, vehicle selector,
-/// big Start button. Cover thumbnails and stats arrive in Phase 2.
+/// S1 Home / Trip List: trip cards (title, date, distance, stops), vehicle
+/// selector, big Start button. Cover map thumbnails remain a later polish.
 struct HomeView: View {
     @Environment(TrackingSession.self) private var session
     @State private var vehicle: VehicleType = .car
+    @State private var path: [String] = []
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             VStack(spacing: 16) {
                 if session.trips.isEmpty {
                     emptyState
@@ -27,6 +28,15 @@ struct HomeView: View {
             }
         }
         .preferredColorScheme(.dark) // dark-mode-first: maps look better (§5)
+        .onAppear {
+            #if DEBUG
+            // Demo screenshot automation (Phase 2 gate): jump straight to S3.
+            if ProcessInfo.processInfo.arguments.contains("-demo-open-trip"),
+               let first = session.trips.first {
+                path = [first.id]
+            }
+            #endif
+        }
     }
 
     private var emptyState: some View {
