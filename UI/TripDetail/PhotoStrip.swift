@@ -57,6 +57,9 @@ struct PhotoThumbnail: View {
     }
 
     private func loadThumbnail() async {
+        // A passive thumbnail must never trigger the system photos prompt;
+        // asking is the matcher flow's job. Undetermined → placeholder.
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else { return }
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
         guard let asset = fetch.firstObject else { return } // deleted → placeholder stays
         let manager = PHImageManager.default()

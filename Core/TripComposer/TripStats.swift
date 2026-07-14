@@ -19,6 +19,14 @@ public struct TripStats: Codable, Equatable {
         case topSpeedKmh = "top_speed_kmh"
     }
 
+    public init(distanceM: Double, driveS: Double, walkS: Double, stopCount: Int, topSpeedKmh: Double) {
+        self.distanceM = distanceM
+        self.driveS = driveS
+        self.walkS = walkS
+        self.stopCount = stopCount
+        self.topSpeedKmh = topSpeedKmh
+    }
+
     public static func compute(segments: [TrackingEngine.Segment], stops: [TrackingEngine.Stop]) -> TripStats {
         var distance = 0.0
         var drive = 0.0

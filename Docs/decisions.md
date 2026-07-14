@@ -70,6 +70,17 @@ Checklist: `Docs/device-test-P1.md`.
 **Rejected:** holding PR #2 open for a week (blocks fixture-testable Phase 2);
 dropping the criterion (it guards the POC's core risk, §9 row 1).
 
+## 2026-07-14 — Xcode 26.6 upgrade: objectVersion workaround removed
+
+**Context:** Chiu upgraded the dev Mac to Xcode 26.6 (required to deploy to a
+modern iPhone). Xcode 26 reads xcodegen's native objectVersion-77 format.
+**Decision:** Removed the `postGenCommand` sed (2026-07-12 ADR above,
+superseded). Local simulator destination is now `iPhone 17 Pro` — under
+Xcode 26, `name=iPhone 15` no longer resolves (implied `OS=latest`).
+GRDB stays pinned at 6.x: it builds clean on the new toolchain and a major
+bump deserves its own change, not a rider on a phase PR.
+**Rejected:** bumping GRDB to 7 in the same breath.
+
 ## 2026-07-12 — S4 photo reorder deferred (needs schema v2)
 
 **Context:** §5 S4 lists "reorder photos", but schema v1's `photo_ref` has no

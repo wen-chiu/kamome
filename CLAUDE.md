@@ -21,11 +21,13 @@ Gate criteria (spec §7 Phase 2, verbatim):
 
 ```bash
 xcodegen generate
-xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 swiftlint
 ```
 
-(Local Xcode is 15.4 → destination iPhone 15; CI uses iPhone 16 on Xcode 16.)
+(Local Xcode is 26.6 → destination iPhone 17 Pro; CI auto-picks its simulator.
+swiftlint locally needs `XCODE_DEFAULT_TOOLCHAIN_OVERRIDE=/Library/Developer/CommandLineTools`
+— Rosetta swiftlint can't load Xcode 26's arm64-only SourceKit.)
 
 The `.xcodeproj` is generated — never hand-edit it; change `project.yml` and
 re-run `xcodegen generate`.

@@ -2,11 +2,6 @@
 # NEVER hand-edit the .xcodeproj (spec §11.1); it is gitignored.
 name: Kamome
 options:
-  # xcodegen 2.45 emits the Xcode 16 project format (objectVersion 77), which
-  # the dev Mac's Xcode 15.4 cannot read. Downgrade to format 56 on every
-  # generate: we use no 77-only features, and newer Xcode reads 56 fine.
-  postGenCommand: sed -i '' 's/objectVersion = 77;/objectVersion = 56;/' Kamome.xcodeproj/project.pbxproj
-  xcodeVersion: "15.4"
   developmentLanguage: zh-Hant
   deploymentTarget:
     iOS: "17.0"
@@ -33,6 +28,8 @@ targets:
         product: KamomeConfig
       - package: KamomeCore
         product: KamomeTrackingEngine
+      - package: KamomeCore
+        product: KamomeTripComposer
     info:
       path: App/Info.plist
       properties:

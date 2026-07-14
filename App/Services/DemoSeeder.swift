@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import KamomePersistence
+import KamomeTripComposer
 
 /// Seeds a deterministic demo trip for the Phase 2 gate screenshot
 /// (`-demo-seed` launch argument; simulator/debug only).
@@ -78,11 +79,47 @@ enum DemoSeeder {
             stops: stops
         ) else { return }
 
+        decorate(tripId: tripId, driveS: end - start - dwellTotalS, repository: repository)
+    }
+
+    /// Stop names, photo refs, and stats — everything S3 shows beyond geometry.
+    private static func decorate(tripId: String, driveS: Double, repository: TripRepository) {
+        guard let detail = try? repository.detail(tripId: tripId),
+              detail.stops.count == stopInfo.count else { return }
+
         // Names skip the geocoder (deterministic screenshot, no network).
-        if let detail = try? repository.detail(tripId: tripId) {
-            for (record, info) in zip(detail.stops, stopInfo) {
-                try? repository.setStopName(stopId: record.id, name: info.name)
-            }
+        for (record, info) in zip(detail.stops, stopInfo) {
+            try? repository.setStopName(stopId: record.id, name: info.name)
+        }
+
+        // Seeded photo refs with dangling asset ids: pins get correct badge
+        // counts and thumbnails render the §3 graceful-placeholder path,
+        // without needing a photo-library permission grant (simctl privacy
+        // cannot pre-answer the iOS 26 photos prompt). Non-empty refs also
+        // stop TripDetailModel from re-running the live matcher.
+        let busselton = detail.stops[2].id
+        let margaretRiver = detail.stops[3].id
+        try? repository.replacePhotoRefs(tripId: tripId, with: [
+            PhotoRefRecord(id: "demo-ph1", tripId: tripId, stopId: busselton, phAssetId: "demo-missing-1"),
+            PhotoRefRecord(id: "demo-ph2", tripId: tripId, stopId: busselton, phAssetId: "demo-missing-2"),
+            PhotoRefRecord(
+                id: "demo-ph3", tripId: tripId, stopId: margaretRiver,
+                phAssetId: "demo-missing-3", isHighlight: 1
+            ),
+            PhotoRefRecord(id: "demo-ph4", tripId: tripId, stopId: margaretRiver, phAssetId: "demo-missing-4"),
+            PhotoRefRecord(id: "demo-ph5", tripId: tripId, stopId: nil, phAssetId: "demo-missing-5")
+        ])
+
+        // Stats strip content (~271 km straight-line route, 4 stops).
+        let stats = TripStats(
+            distanceM: 271_000,
+            driveS: driveS,
+            walkS: 0,
+            stopCount: stopInfo.count,
+            topSpeedKmh: 96
+        )
+        if let json = stats.jsonString() {
+            try? repository.updateTripStats(tripId: tripId, statsJson: json)
         }
     }
 }
