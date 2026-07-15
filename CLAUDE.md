@@ -16,6 +16,9 @@ device: choose "Selected Photos" and confirm matching + placeholders work)**.
 **Phase 1 device test also still open** — 2 h drive per
 `Docs/device-test-P1.md`, Chiu signs off. Both manual items are hard
 preconditions for Phase 3 (`Docs/decisions.md`, 2026-07-12).
+Build preconditions for the drive are met as of 2026-07-15: Always priming
+(Phase 2) and dwell region-resume in LocationService (decisions.md
+2026-07-15) are on `main` — the drive can run on a current build.
 
 Phase 3 (recap video, spec §4.5/§7) starts only after both boxes are ticked.
 
