@@ -70,6 +70,27 @@ Checklist: `Docs/device-test-P1.md`.
 **Rejected:** holding PR #2 open for a week (blocks fixture-testable Phase 2);
 dropping the criterion (it guards the POC's core risk, §9 row 1).
 
+## 2026-07-14 — Xcode 26.6 upgrade: objectVersion workaround removed
+
+**Context:** Chiu upgraded the dev Mac to Xcode 26.6 (required to deploy to a
+modern iPhone). Xcode 26 reads xcodegen's native objectVersion-77 format.
+**Decision:** Removed the `postGenCommand` sed (2026-07-12 ADR above,
+superseded). Local simulator destination is now `iPhone 17 Pro` — under
+Xcode 26, `name=iPhone 15` no longer resolves (implied `OS=latest`).
+GRDB stays pinned at 6.x: it builds clean on the new toolchain and a major
+bump deserves its own change, not a rider on a phase PR.
+**Rejected:** bumping GRDB to 7 in the same breath.
+
+## 2026-07-12 — S4 photo reorder deferred (needs schema v2)
+
+**Context:** §5 S4 lists "reorder photos", but schema v1's `photo_ref` has no
+order column — ordering falls out of `taken_at`.
+**Decision:** Phase 2 ships S4 with rename/note/highlight/delete (+ merge via
+timeline swipe). Reorder waits for a forward migration v2 adding
+`photo_ref.order_idx`, bundled with the next schema change rather than
+shipping a migration for one cosmetic feature.
+**Rejected:** schema v2 now (migration churn mid-phase for a non-gate feature).
+
 ## 2026-07-12 — Walk threshold raised to 6 km/h; mid band is non-evidence
 
 **Context:** §4.1's literal defaults ("<4 km/h = walk, 4–20 = cycle/unknown")

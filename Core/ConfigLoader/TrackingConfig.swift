@@ -59,6 +59,27 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    public struct Photos: Decodable, Equatable {
+        /// GPS-tagged photos attach to the nearest stop within this radius (§4.3).
+        public let matchRadiusM: Double
+
+        enum CodingKeys: String, CodingKey {
+            case matchRadiusM = "match_radius_m"
+        }
+    }
+
+    public struct Geocode: Decodable, Equatable {
+        /// CLGeocoder is throttled and cached (§4.2).
+        public let minIntervalS: Double
+        /// Coordinates round to this grid for cache lookups (~110 m at 0.001°).
+        public let cachePrecisionDeg: Double
+
+        enum CodingKeys: String, CodingKey {
+            case minIntervalS = "min_interval_s"
+            case cachePrecisionDeg = "cache_precision_deg"
+        }
+    }
+
     public struct SamplingPolicy: Decodable, Equatable {
         /// Symbolic name mapped to a CLLocationAccuracy constant by the app.
         public let desiredAccuracy: String
@@ -118,12 +139,14 @@ public struct TrackingConfig: Decodable, Equatable {
     public let segmentation: Segmentation
     public let dwell: Dwell
     public let simplify: Simplify
+    public let photos: Photos
+    public let geocode: Geocode
     public let sampling: Sampling
     public let export: Export
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, sampling, export
+        case filter, segmentation, dwell, simplify, photos, geocode, sampling, export
     }
 }
 

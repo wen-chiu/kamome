@@ -39,4 +39,70 @@ final class TripRepositoryTests: XCTestCase {
         let pointTotal = engine.segments.reduce(0) { $0 + $1.points.count }
         XCTAssertEqual(try repository.trackpointCount(tripId: tripId), pointTotal)
     }
+
+    func testStopEditingAndPhotoOperations() throws {
+        let database = try AppDatabase.inMemory()
+        let repository = TripRepository(database: database)
+        let tripId = try repository.saveCompletedTrip(
+            title: "Edit fixture",
+            startedAt: 0,
+            endedAt: 10_000,
+            segments: [
+                TripRepository.NewSegment(mode: "drive", startedAt: 0, endedAt: 1_000, points: [
+                    TripRepository.NewTrackpoint(ts: 0, lat: -31.95, lon: 115.86),
+                    TripRepository.NewTrackpoint(ts: 1_000, lat: -32.00, lon: 115.87)
+                ])
+            ],
+            stops: [
+                TripRepository.NewStop(lat: -32.0, lon: 115.87, arrivedAt: 1_000, departedAt: 2_000),
+                TripRepository.NewStop(lat: -32.5, lon: 115.72, arrivedAt: 3_000, departedAt: 4_000)
+            ]
+        )
+        var detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        let firstStop = detail.stops[0]
+        let secondStop = detail.stops[1]
+
+        // Rename + note (S4).
+        try repository.setStopName(stopId: firstStop.id, name: "咖啡店")
+        try repository.setStopNote(stopId: firstStop.id, note: "flat white")
+        detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        XCTAssertEqual(detail.stops[0].name, "咖啡店")
+        XCTAssertEqual(detail.stops[0].note, "flat white")
+
+        // Photos attach to stops; deleting a stop detaches, not deletes.
+        try repository.replacePhotoRefs(tripId: tripId, with: [
+            PhotoRefRecord(id: "ph1", tripId: tripId, stopId: firstStop.id, phAssetId: "asset-1"),
+            PhotoRefRecord(id: "ph2", tripId: tripId, stopId: secondStop.id, phAssetId: "asset-2")
+        ])
+        try repository.setPhotoHighlight(photoId: "ph1", isHighlight: true)
+        try repository.deleteStop(stopId: secondStop.id)
+        detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        XCTAssertEqual(detail.stops.count, 1)
+        XCTAssertEqual(detail.photos.count, 2, "deleting a stop must not delete its photos")
+        XCTAssertNil(detail.photos.first { $0.id == "ph2" }?.stopId)
+        XCTAssertEqual(detail.photos.first { $0.id == "ph1" }?.isHighlight, 1)
+    }
+
+    func testMergeStops() throws {
+        let database = try AppDatabase.inMemory()
+        let repository = TripRepository(database: database)
+        let tripId = try repository.saveCompletedTrip(
+            title: "Merge fixture", startedAt: 0, endedAt: 10_000, segments: [],
+            stops: [
+                TripRepository.NewStop(lat: -32.0, lon: 115.87, arrivedAt: 1_000, departedAt: 2_000),
+                TripRepository.NewStop(lat: -32.0005, lon: 115.8705, arrivedAt: 2_100, departedAt: 3_000)
+            ]
+        )
+        var detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        try repository.replacePhotoRefs(tripId: tripId, with: [
+            PhotoRefRecord(id: "ph1", tripId: tripId, stopId: detail.stops[1].id, phAssetId: "asset-1")
+        ])
+
+        try repository.mergeStops(keptId: detail.stops[0].id, absorbedId: detail.stops[1].id)
+        detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        XCTAssertEqual(detail.stops.count, 1)
+        XCTAssertEqual(detail.stops[0].arrivedAt, 1_000)
+        XCTAssertEqual(detail.stops[0].departedAt, 3_000)
+        XCTAssertEqual(detail.photos.first?.stopId, detail.stops[0].id, "photos follow the merge")
+    }
 }

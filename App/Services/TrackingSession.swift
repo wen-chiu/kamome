@@ -3,6 +3,7 @@ import Foundation
 import KamomeConfig
 import KamomePersistence
 import KamomeTrackingEngine
+import KamomeTripComposer
 import Observation
 
 /// View model behind S1/S2: owns one recording's engine + location service,
@@ -19,8 +20,8 @@ final class TrackingSession {
     private(set) var stopCount = 0
     private(set) var trips: [TripRecord] = []
 
-    private let config: TrackingConfig
-    private let repository: TripRepository
+    let config: TrackingConfig
+    let repository: TripRepository
     private var engine: TrackingEngine?
     private var locationService: LocationService?
     private var lastCoordinate: CLLocationCoordinate2D?
@@ -79,13 +80,19 @@ final class TrackingSession {
         let stops = engine.stops.map {
             TripRepository.NewStop(lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
         }
-        try? repository.saveCompletedTrip(
+        if let tripId = try? repository.saveCompletedTrip(
             title: title,
             startedAt: (startedAt ?? now).timeIntervalSince1970,
             endedAt: now.timeIntervalSince1970,
             segments: segments,
             stops: stops
-        )
+        ) {
+            // Denormalized stats for the S1 card and S3 strip (§3 stats_json).
+            let stats = TripStats.compute(segments: engine.segments, stops: engine.stops)
+            if let json = stats.jsonString() {
+                try? repository.updateTripStats(tripId: tripId, statsJson: json)
+            }
+        }
 
         self.engine = nil
         locationService = nil

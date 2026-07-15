@@ -1,6 +1,30 @@
 {
   "sourceLanguage" : "zh-Hant",
   "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kamome"
+          }
+        }
+      }
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kamome"
+          }
+        }
+      }
+    },
     "NSLocationAlwaysAndWhenInUseUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -48,6 +72,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "動態資料用於分辨開車或步行，讓記錄旅程時更省電。"
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡摸咩讀取旅程期間拍攝的照片，將它們放上路線。也支援僅選取部分照片。照片絕不會被複製或上傳。"
           }
         }
       }

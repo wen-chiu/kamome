@@ -66,10 +66,10 @@ public struct MotionActivity: Equatable {
     }
 }
 
-enum Geo {
+public enum Geo {
     /// Equirectangular approximation — exact enough at trip scale, cheap
     /// enough to run per sample.
-    static func distanceM(latA: Double, lonA: Double, latB: Double, lonB: Double) -> Double {
+    public static func distanceM(latA: Double, lonA: Double, latB: Double, lonB: Double) -> Double {
         let mPerDegLat = 111_320.0
         let dLat = (latB - latA) * mPerDegLat
         let dLon = (lonB - lonA) * mPerDegLat * cos(latA * .pi / 180)

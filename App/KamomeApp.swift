@@ -12,9 +12,13 @@ struct KamomeApp: App {
 
     init() {
         let database = AppConfig.openDatabaseOrDie()
+        let repository = TripRepository(database: database)
+        #if DEBUG
+        DemoSeeder.seedIfRequested(repository: repository)
+        #endif
         _session = State(initialValue: TrackingSession(
             config: Self.trackingConfig,
-            repository: TripRepository(database: database)
+            repository: repository
         ))
     }
 
