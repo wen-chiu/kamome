@@ -235,6 +235,12 @@ public struct TripRepository {
         }
     }
 
+    /// Self-contained database copy for the debug export path
+    /// (Docs/device-test-P1.md post-drive verification).
+    public func snapshotDatabase(to path: String) throws {
+        try database.snapshot(to: path)
+    }
+
     /// Trips for the S1 list, newest first.
     public func allTrips() throws -> [TripRecord] {
         try database.writer.read { db in

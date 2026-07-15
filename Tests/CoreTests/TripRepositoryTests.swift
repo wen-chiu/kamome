@@ -105,4 +105,29 @@ final class TripRepositoryTests: XCTestCase {
         XCTAssertEqual(detail.stops[0].departedAt, 3_000)
         XCTAssertEqual(detail.photos.first?.stopId, detail.stops[0].id, "photos follow the merge")
     }
+
+    /// Debug export path: a snapshot is a complete standalone database that
+    /// opens on its own and contains the saved trip.
+    func testSnapshotDatabaseProducesOpenableCopy() throws {
+        let database = try AppDatabase.inMemory()
+        let repository = TripRepository(database: database)
+        _ = try repository.saveCompletedTrip(
+            title: "Snapshot fixture", startedAt: 0, endedAt: 1_000,
+            segments: [
+                TripRepository.NewSegment(mode: "drive", startedAt: 0, endedAt: 1_000, points: [
+                    TripRepository.NewTrackpoint(ts: 0, lat: -31.95, lon: 115.86)
+                ])
+            ],
+            stops: []
+        )
+
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kamome-snapshot-\(UUID().uuidString).sqlite").path
+        defer { try? FileManager.default.removeItem(atPath: path) }
+        try repository.snapshotDatabase(to: path)
+
+        let copy = TripRepository(database: try AppDatabase.onDisk(path: path))
+        XCTAssertEqual(try copy.allTrips().count, 1)
+        XCTAssertEqual(try copy.allTrips().first?.title, "Snapshot fixture")
+    }
 }

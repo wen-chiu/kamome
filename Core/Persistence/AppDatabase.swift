@@ -23,6 +23,17 @@ public final class AppDatabase {
         return try AppDatabase(DatabaseQueue(path: path, configuration: configuration))
     }
 
+    /// Writes a self-contained copy of the whole database to `path`
+    /// (`VACUUM INTO` — consistent even mid-session, no journal sidecars).
+    /// Fails if a file already exists at `path`; callers pick a fresh name.
+    public func snapshot(to path: String) throws {
+        // VACUUM cannot run inside a transaction, so no `write { }` here;
+        // the barrier still keeps other writers out while the copy runs.
+        try writer.barrierWriteWithoutTransaction { db in
+            try db.execute(sql: "VACUUM INTO ?", arguments: [path])
+        }
+    }
+
     /// Forward-only migrations. Never edit a shipped migration; append a new one.
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()

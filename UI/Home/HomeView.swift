@@ -1,6 +1,7 @@
 import KamomeTrackingEngine
 import KamomeTripComposer
 import SwiftUI
+import UIKit
 
 /// S1 Home / Trip List: trip cards (title, date, distance, stops), vehicle
 /// selector, big Start button. Cover map thumbnails remain a later polish.
@@ -8,6 +9,9 @@ struct HomeView: View {
     @Environment(TrackingSession.self) private var session
     @State private var vehicle: VehicleType = .car
     @State private var path: [String] = []
+    #if DEBUG
+    @State private var debugShareFile: DebugShareFile?
+    #endif
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -26,6 +30,14 @@ struct HomeView: View {
             .fullScreenCover(isPresented: .constant(session.isRecording)) {
                 RecordingView()
             }
+            #if DEBUG
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { debugExportMenu }
+            }
+            .sheet(item: $debugShareFile) { file in
+                ActivityShareSheet(url: file.url)
+            }
+            #endif
         }
         .preferredColorScheme(.dark) // dark-mode-first: maps look better (§5)
         .onAppear {
@@ -95,4 +107,80 @@ struct HomeView: View {
         }
         .buttonStyle(.borderedProminent)
     }
+
+    #if DEBUG
+    // Post-drive verification aids (Docs/device-test-P1.md): pull the raw
+    // data off the phone without a tethered debugger. Debug builds only,
+    // strings deliberately unlocalized.
+    private var debugExportMenu: some View {
+        Menu {
+            Button {
+                debugShareFile = Self.exportDatabase(session: session)
+            } label: {
+                Label { Text(verbatim: "Export database") } icon: { Image(systemName: "cylinder.split.1x2") }
+            }
+            Button {
+                debugShareFile = Self.exportLatestTripGPX(session: session)
+            } label: {
+                Label { Text(verbatim: "Export latest trip as GPX") } icon: { Image(systemName: "map") }
+            }
+            .disabled(session.trips.isEmpty)
+            Button {
+                debugShareFile = DebugShareFile(url: DriveTestLog.shared.fileURL)
+            } label: {
+                Label { Text(verbatim: "Export drive-test log") } icon: { Image(systemName: "battery.75percent") }
+            }
+            .disabled(!DriveTestLog.shared.hasEntries)
+        } label: {
+            Image(systemName: "wrench.and.screwdriver")
+        }
+    }
+
+    private static func exportDatabase(session: TrackingSession) -> DebugShareFile? {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kamome-\(Self.timestamp()).sqlite")
+        do {
+            try session.repository.snapshotDatabase(to: url.path)
+            return DebugShareFile(url: url)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func exportLatestTripGPX(session: TrackingSession) -> DebugShareFile? {
+        guard let trip = session.trips.first,
+              let detail = try? session.repository.detail(tripId: trip.id) else { return nil }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kamome-trip-\(Self.timestamp()).gpx")
+        do {
+            try GPXExporter.gpx(for: detail).write(to: url, atomically: true, encoding: .utf8)
+            return DebugShareFile(url: url)
+        } catch {
+            return nil
+        }
+    }
+
+    private static func timestamp() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        return formatter.string(from: .now)
+    }
+    #endif
 }
+
+#if DEBUG
+private struct DebugShareFile: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: [url], applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+#endif
