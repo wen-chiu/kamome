@@ -115,6 +115,24 @@ short bursts past `mode_confirm_s` and creates phantom segments.
 **Rejected:** per-fix derived speeds (noise-dominated); median per-step speed
 (still noise-dominated at walking pace).
 
+## 2026-07-15 — Dwell resume via CLLocationManager region monitoring, not CLMonitor
+
+**Context:** §2.3 pauses GPS at a dwell and resumes on exit of a
+`dwell.region_radius_m` (150 m) region, naming `CLMonitor`. The engine side
+existed (`processWhilePaused`), but `LocationService` only ever stopped GPS —
+on a real device the first dwell ended tracking permanently. GPX replay never
+caught it because the harness pushes samples straight into the engine.
+**Decision:** `CLLocationManager.startMonitoring(for: CLCircularRegion)` +
+`didExitRegion` in the existing delegate. `CLMonitor` is an async/actor API
+that persists named monitors across launches — more machinery for one region
+at a time (boring tech, §0). Region events require **Always** authorization,
+so below Always (or if monitoring is unsupported, or `monitoringDidFail`
+fires) GPS simply stays on during the pause and the engine detects the exit
+from fixes — correct, just without the battery win.
+**Rejected:** `CLMonitor` per the letter of §2.3 (revisit if we ever monitor
+many regions); pausing GPS unconditionally (a When-In-Use user would strand
+the trip at the first coffee stop).
+
 ## 2026-07-12 — Config loader module is `Core/ConfigLoader`, not `App/`
 
 **Context:** Spec §8 lists "config loader" under `App/`. A loader inside the

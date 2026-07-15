@@ -8,13 +8,34 @@ import KamomeTrackingEngine
 /// §2.3 adaptive sampling table to the location manager. The only file that
 /// talks to CLLocationManager.
 final class LocationService: NSObject, CLLocationManagerDelegate {
+    /// How a dwell pause is executed given what CoreLocation can deliver (§2.3).
+    enum DwellPausePlan: Equatable {
+        /// GPS off; a region-exit event wakes tracking back up.
+        case regionMonitoring
+        /// Region events need Always authorization and hardware support —
+        /// without them GPS stays on so the engine still sees the exit fix.
+        case gpsFallback
+    }
+
+    static func dwellPausePlan(
+        authorization: CLAuthorizationStatus,
+        regionMonitoringAvailable: Bool
+    ) -> DwellPausePlan {
+        guard regionMonitoringAvailable, authorization == .authorizedAlways else { return .gpsFallback }
+        return .regionMonitoring
+    }
+
     var onSample: ((LocationSample, MotionActivity?) -> Void)?
+
+    private static let dwellRegionIdentifier = "kamome.dwell.region"
 
     private let manager = CLLocationManager()
     private let motionManager = CMMotionActivityManager()
     private let config: TrackingConfig
     private var latestActivity: MotionActivity?
     private var currentFilterM: Double = -1
+    private var vehicle: VehicleType?
+    private var isDwellRegionArmed = false
 
     init(config: TrackingConfig) {
         self.config = config
@@ -39,6 +60,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func startUpdates(vehicle: VehicleType) {
+        self.vehicle = vehicle
         applyBackgroundCapability()
         apply(policy: SamplingPolicyTable.policy(
             state: .recording, mode: .unknown, speedKmh: 0, vehicle: vehicle, config: config
@@ -48,9 +70,33 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func stopUpdates() {
+        disarmDwellRegion()
         manager.stopUpdatingLocation()
         motionManager.stopActivityUpdates()
         latestActivity = nil
+        vehicle = nil
+    }
+
+    /// §2.3 dwell: turn GPS off and arm a region around the stop center so a
+    /// region-exit event resumes tracking. When region events can't be
+    /// delivered, GPS stays on instead — a paused trip must never be stranded
+    /// waiting for an event that cannot come.
+    func pauseForDwell(centerLat: Double, centerLon: Double) {
+        let plan = Self.dwellPausePlan(
+            authorization: manager.authorizationStatus,
+            regionMonitoringAvailable: CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self)
+        )
+        guard plan == .regionMonitoring else { return }
+        let region = CLCircularRegion(
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            radius: min(config.dwell.regionRadiusM, manager.maximumRegionMonitoringDistance),
+            identifier: Self.dwellRegionIdentifier
+        )
+        region.notifyOnExit = true
+        region.notifyOnEntry = false
+        manager.startMonitoring(for: region)
+        isDwellRegionArmed = true
+        manager.stopUpdatingLocation()
     }
 
     /// Re-applies the sampling table when the engine's mode/speed changes.
@@ -61,10 +107,10 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     private func apply(policy: TrackingConfig.SamplingPolicy?) {
-        guard let policy else {
-            manager.stopUpdatingLocation()
-            return
-        }
+        // nil = dwell-paused. GPS off is pauseForDwell's call, not this one:
+        // in the gpsFallback plan updates keep flowing while paused, and
+        // stopping here would kill the trip's only way to detect the exit.
+        guard let policy else { return }
         // Only "nearest_ten_meters" is in the shipped table; unknown names
         // fall back to it rather than silently burning battery.
         manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
@@ -108,10 +154,39 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         manager.showsBackgroundLocationIndicator = true
     }
 
+    /// Region exit (or a monitoring failure) while dwell-paused: put GPS back
+    /// on so the engine sees the exit fix and reopens a segment.
+    private func resumeAfterDwell() {
+        guard isDwellRegionArmed else { return }
+        disarmDwellRegion()
+        guard let vehicle else { return }
+        apply(policy: SamplingPolicyTable.policy(
+            state: .recording, mode: .unknown, speedKmh: 0, vehicle: vehicle, config: config
+        ))
+        manager.startUpdatingLocation()
+    }
+
+    private func disarmDwellRegion() {
+        isDwellRegionArmed = false
+        for region in manager.monitoredRegions where region.identifier == Self.dwellRegionIdentifier {
+            manager.stopMonitoring(for: region)
+        }
+    }
+
     // MARK: - CLLocationManagerDelegate
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         applyBackgroundCapability()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
+        guard region.identifier == Self.dwellRegionIdentifier else { return }
+        resumeAfterDwell()
+    }
+
+    func locationManager(_ manager: CLLocationManager, monitoringDidFailFor region: CLRegion?, withError error: Error) {
+        guard region?.identifier == Self.dwellRegionIdentifier else { return }
+        resumeAfterDwell()
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {

@@ -112,6 +112,7 @@ final class TrackingSession {
 
     private func consume(sample: LocationSample, activity: MotionActivity?) {
         guard let engine else { return }
+        let wasDwellPaused = engine.state == .dwellPaused
         engine.process(sample, activity: activity)
 
         let coordinate = CLLocationCoordinate2D(latitude: sample.lat, longitude: sample.lon)
@@ -124,12 +125,18 @@ final class TrackingSession {
         traveledPath.append(coordinate)
         currentMode = engine.currentMode ?? .unknown
         stopCount = engine.stops.count
-        locationService?.adapt(
-            state: engine.state,
-            mode: currentMode,
-            speedKmh: (sample.speedMps ?? 0) * 3.6,
-            vehicle: engine.vehicle
-        )
+        if engine.state == .dwellPaused, !wasDwellPaused, let stop = engine.stops.last {
+            // §2.3: hand the stop center to the location layer so the resume
+            // region is armed before GPS goes quiet.
+            locationService?.pauseForDwell(centerLat: stop.lat, centerLon: stop.lon)
+        } else {
+            locationService?.adapt(
+                state: engine.state,
+                mode: currentMode,
+                speedKmh: (sample.speedMps ?? 0) * 3.6,
+                vehicle: engine.vehicle
+            )
+        }
     }
 
     private static func defaultTitle(for date: Date) -> String {

@@ -3,6 +3,14 @@
 The unit gates (GPX replay) pass in CI. This manual test is the remaining
 Phase 1 gate criterion and needs a physical iPhone, a car, and ~2 h.
 
+## Build preconditions (decisions.md 2026-07-12: must land before this drive)
+
+- [ ] Always-permission priming + background location flow (landed Phase 2).
+- [ ] Dwell region-resume in `LocationService` (decisions.md 2026-07-15) —
+      without it the first dwell pause turns GPS off permanently and the rest
+      of the trip is lost. GPX replay cannot cover the CoreLocation side, so
+      the two ≥ 5 min stops below are the real test of it.
+
 ## Setup
 
 - [ ] Build to device from Xcode (free personal team is fine, 7-day profile).
@@ -18,6 +26,9 @@ Phase 1 gate criterion and needs a physical iPhone, a car, and ~2 h.
 - [ ] Drive ≥ 45 min including highway and city streets.
 - [ ] Make 2 deliberate stops of ≥ 5 min (coffee, viewpoint) — engine should
       dwell-pause (HUD stop count +1 within ~3 min of stopping).
+- [ ] After each stop, confirm tracking **resumes** on driving off: HUD
+      distance ticks again within ~1 min of leaving the 150 m region
+      (region-exit → GPS back on; this is the dwell region-resume path).
 - [ ] Take a ≥ 10 min walk mid-trip (parking lot → shop and back).
 - [ ] Drive home; press End Trip.
 
