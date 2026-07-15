@@ -1,74 +1,98 @@
 {
-  "sourceLanguage": "zh-Hant",
-  "strings": {
-    "NSLocationAlwaysAndWhenInUseUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Always access lets Kamome keep recording an active trip in the background. Tracking stops the moment you end the trip — Kamome never tracks outside a trip."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "允許「永遠」存取，讓卡摸咩在背景持續記錄進行中的旅程。旅程結束即停止記錄——沒有進行中的旅程時絕不追蹤。"
+  "sourceLanguage" : "zh-Hant",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kamome"
           }
         }
       }
     },
-    "NSLocationWhenInUseUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamome records your route only during an active trip you started."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "卡摸咩只在您啟動的旅程期間記錄路線。"
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Kamome"
           }
         }
       }
     },
-    "NSMotionUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Motion data tells driving from walking so Kamome can save battery while recording."
+    "NSLocationAlwaysAndWhenInUseUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always access lets Kamome keep recording an active trip in the background. Tracking stops the moment you end the trip — Kamome never tracks outside a trip."
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "動態資料用於分辨開車或步行，讓記錄旅程時更省電。"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允許「永遠」存取，讓卡摸咩在背景持續記錄進行中的旅程。旅程結束即停止記錄——沒有進行中的旅程時絕不追蹤。"
           }
         }
       }
     },
-    "NSPhotoLibraryUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded."
+    "NSLocationWhenInUseUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamome records your route only during an active trip you started."
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "卡摸咩讀取旅程期間拍攝的照片，將它們放上路線。也支援僅選取部分照片。照片絕不會被複製或上傳。"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡摸咩只在您啟動的旅程期間記錄路線。"
+          }
+        }
+      }
+    },
+    "NSMotionUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Motion data tells driving from walking so Kamome can save battery while recording."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "動態資料用於分辨開車或步行，讓記錄旅程時更省電。"
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卡摸咩讀取旅程期間拍攝的照片，將它們放上路線。也支援僅選取部分照片。照片絕不會被複製或上傳。"
           }
         }
       }
     }
   },
-  "version": "1.0"
+  "version" : "1.0"
 }
