@@ -124,3 +124,23 @@ modules will need typed config without importing the app.
 `App/` keeps only the startup wiring (`AppConfig.loadOrDie()`), which is where
 "fail loudly at launch" happens.
 **Rejected:** loader entirely in `App/` per the letter of §8.
+
+## 2026-07-15 — Spec v1.3: battery-moat pivot (passive tier, import; fork deferred)
+
+**Context:** Strategy review (Chiu, 2026-07-15): road trips happen on a known
+road network, so sparse, near-free location signals (significant-location-
+change + CLVisit) can be map-matched back to full route fidelity — a
+structural battery advantage Relive's off-network scenario cannot copy. The
+same matching pipeline unlocks importing past trips (Google Timeline / photo
+EXIF), killing the cold-start problem. The v1 bet becomes "will anyone pay for
+a trip animation" (capture + import + recap), tested before the fork bet.
+**Decision:** Spec bumped to v1.3. New Phase 4 = Import & Map Matching
+(matching promoted from optional stretch to core), new Phase 5 = Passive
+Capture Tier (v1 = Phases 0–5, TestFlight at the Phase 5 gate). Plans & Fork
+moves to Phase 6, backend to Phase 7. Phase 1's adaptive engine is kept as the
+high-fidelity tier — no rework of merged code. Monetization stance recorded as
+transactional (per-trip export), not subscription. `Docs/icebox.md` created.
+**Rejected:** replacing the Phase 1 engine with passive-only (single-day
+turn-fidelity drives and off-network roads still need it, and it ships today);
+keeping fork as the POC-completing killer feature ahead of import (import
+acquires users with zero network; the fork loop needs one — §9).
