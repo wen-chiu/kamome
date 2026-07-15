@@ -56,6 +56,9 @@ final class TrackingSession {
         stopCount = 0
         currentMode = .unknown
         isRecording = true
+        #if DEBUG
+        DriveTestLog.shared.tripStarted(vehicle: vehicle.rawValue)
+        #endif
     }
 
     func end(now: Date = .now) {
@@ -98,6 +101,9 @@ final class TrackingSession {
         locationService = nil
         isRecording = false
         refreshTrips()
+        #if DEBUG
+        DriveTestLog.shared.tripEnded()
+        #endif
     }
 
     func grantAlwaysPermission() {
@@ -125,6 +131,15 @@ final class TrackingSession {
         traveledPath.append(coordinate)
         currentMode = engine.currentMode ?? .unknown
         stopCount = engine.stops.count
+        #if DEBUG
+        if (engine.state == .dwellPaused) != wasDwellPaused {
+            if wasDwellPaused {
+                DriveTestLog.shared.dwellResumed()
+            } else {
+                DriveTestLog.shared.dwellPaused()
+            }
+        }
+        #endif
         if engine.state == .dwellPaused, !wasDwellPaused, let stop = engine.stops.last {
             // §2.3: hand the stop center to the location layer so the resume
             // region is armed before GPS goes quiet.
