@@ -162,3 +162,32 @@ transactional (per-trip export), not subscription. `Docs/icebox.md` created.
 turn-fidelity drives and off-network roads still need it, and it ships today);
 keeping fork as the POC-completing killer feature ahead of import (import
 acquires users with zero network; the fork loop needs one — §9).
+
+## 2026-07-16 — Phase 3 starts now; device drive + photo-access check become P3 gate items
+
+**Context:** 2026-07-16 smoke drive (two short sessions, ~20 min + ~24 min)
+reviewed with the drive-test CSV. Findings: (a) route polyline deviates from
+the road — expected from 50 m drive sampling + ε=15 m display simplification;
+the planned fix is OSRM matching (§4.4, P3 stretch / P4 core) and raw points
+are retained, so no config change now; (b) a 2-second phantom trip was saved —
+`TrackingSession.end()` has no minimum-trip guard, and a zero-distance trip is
+a degenerate input for the §4.5 speed-warped camera path; (c) a photo taken
+during the trip never appeared: route-attached photo_refs (stop_id NULL) were
+rendered nowhere, and under Selected-Photos access the app offered no
+limited-library picker, so camera shots stayed invisible (limited-access gate
+check caught a real gap — box stays unticked until the re-check); (d) the
+evening dwell_pause without dwell_resume was benign (Chiu: parked until End
+Trip), so region-resume remains unproven either way.
+**Decision (Chiu):** Phase 3 (recap video) development starts now — its gate
+is fixture-driven and device-independent until the final on-device export
+check. The 2 h drive (`Docs/device-test-P1.md`) and the limited-photo-access
+re-check move from Phase 3 *preconditions* to Phase 3 *gate items*: P3 cannot
+close without them, and the drive rides the device build the P3 gate needs
+anyway. Photo fixes landed same day (route-photos strip in S3 +
+limited-library picker banner; re-match preserves highlights). Phantom-trip
+guard (min duration/distance, tunables in `TrackingConfig.json`) is a P3 work
+item.
+**Rejected:** deferring the drive to Phase 4 (dwell region-resume and the
+battery-moat numbers must be proven before more phases stack on the tracking
+engine); tightening sampling config to fix road deviation (costs battery;
+matching is the designed fix).

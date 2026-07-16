@@ -109,6 +109,40 @@
         }
       }
     },
+    "limited_photos_manage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select More Photos"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選取更多相片"
+          }
+        }
+      }
+    },
+    "limited_photos_notice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamome can only see selected photos"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kamome 只能看到你選取的相片"
+          }
+        }
+      }
+    },
     "merge_with_previous" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -190,6 +224,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "螢幕關閉也持續記錄"
+          }
+        }
+      }
+    },
+    "route_photos_header" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Along the route"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沿途照片"
           }
         }
       }

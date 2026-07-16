@@ -217,6 +217,14 @@ public struct TripRepository {
 
     // MARK: - Photos
 
+    public func photoRefs(tripId: String) throws -> [PhotoRefRecord] {
+        try database.writer.read { db in
+            try PhotoRefRecord
+                .filter(sql: "trip_id = ?", arguments: [tripId])
+                .fetchAll(db)
+        }
+    }
+
     public func replacePhotoRefs(tripId: String, with photos: [PhotoRefRecord]) throws {
         try database.writer.write { db in
             try db.execute(sql: "DELETE FROM photo_ref WHERE trip_id = ?", arguments: [tripId])

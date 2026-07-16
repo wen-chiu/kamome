@@ -20,6 +20,7 @@ struct TripDetailView: View {
             map.frame(minHeight: 280)
             if model.dayCount > 1 { dayChips }
             if let stats = model.stats { statsStrip(stats) }
+            if model.photoAccessIsLimited { limitedPhotosBanner }
             timeline
         }
         .navigationTitle(model.detail?.trip.title ?? "")
@@ -116,6 +117,26 @@ struct TripDetailView: View {
         }
     }
 
+    /// Selected-Photos access hides camera shots taken during the trip until
+    /// the user adds them; without this row they'd silently never appear.
+    private var limitedPhotosBanner: some View {
+        HStack {
+            Image(systemName: "photo.badge.exclamationmark")
+                .foregroundStyle(.secondary)
+            Text("limited_photos_notice")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("limited_photos_manage") {
+                model.manageLimitedPhotoSelection()
+            }
+            .font(.caption.bold())
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
+    }
+
     private var timeline: some View {
         List {
             ForEach(model.visibleStops, id: \.id) { stop in
@@ -147,6 +168,16 @@ struct TripDetailView: View {
                             Label("merge_with_previous", systemImage: "arrow.triangle.merge")
                         }
                     }
+                }
+            }
+            // §4.3 route-attached photos (no stop) — without this row they
+            // exist in the DB but appear nowhere.
+            if !model.routePhotos.isEmpty {
+                HStack {
+                    Text("route_photos_header")
+                        .font(.headline)
+                    Spacer()
+                    PhotoStrip(photos: model.routePhotos, maxThumbnails: 3)
                 }
             }
         }

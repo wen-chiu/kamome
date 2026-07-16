@@ -19,4 +19,11 @@ final class LocalizationTests: XCTestCase {
     func testSampleStringResolvesInEnglish() throws {
         XCTAssertEqual(try localizedValue("start_journey", locale: "en"), "Start Journey")
     }
+
+    func testLimitedPhotosStringsResolve() throws {
+        XCTAssertEqual(try localizedValue("limited_photos_manage", locale: "zh-Hant"), "選取更多相片")
+        XCTAssertEqual(try localizedValue("limited_photos_manage", locale: "en"), "Select More Photos")
+        XCTAssertEqual(try localizedValue("route_photos_header", locale: "zh-Hant"), "沿途照片")
+        XCTAssertEqual(try localizedValue("route_photos_header", locale: "en"), "Along the route")
+    }
 }

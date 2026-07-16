@@ -97,6 +97,36 @@ final class TripDetailModel {
         detail?.photos.filter { $0.stopId == stopId } ?? []
     }
 
+    /// §4.3 route-attached photos (stop_id NULL — taken mid-drive, away from
+    /// any stop): they get their own timeline strip instead of a stop's.
+    var routePhotos: [PhotoRefRecord] {
+        detail?.photos.filter { $0.stopId == nil } ?? []
+    }
+
+    var photoAccessIsLimited: Bool {
+        photoService.isLimitedAccess
+    }
+
+    /// Opens the system picker so a limited selection can grow, then
+    /// re-matches: photos added there should land on this trip immediately.
+    func manageLimitedPhotoSelection() {
+        photoService.presentLimitedLibraryPicker { [weak self] in
+            self?.rematchPhotos()
+        }
+    }
+
+    private func rematchPhotos() {
+        guard let detail, let endedAt = detail.trip.endedAt else { return }
+        photoService.matchPhotos(
+            tripId: tripId,
+            startedAt: detail.trip.startedAt,
+            endedAt: endedAt,
+            stops: detail.stops
+        ) { [weak self] _ in
+            self?.reload()
+        }
+    }
+
     // MARK: - S4 editing
 
     func rename(stopId: String, to name: String) {
