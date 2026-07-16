@@ -13,6 +13,15 @@ final class DriveTestLog {
     let fileURL: URL
     private var observer: NSObjectProtocol?
 
+    /// Local time with UTC offset (e.g. 2026-07-16T10:44:20+08:00) so the
+    /// checklist reviewer can line entries up with the drive without
+    /// converting from UTC.
+    private let timestampFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = .current
+        return formatter
+    }()
+
     private init() {
         let support = try? FileManager.default.url(
             for: .applicationSupportDirectory,
@@ -67,7 +76,7 @@ final class DriveTestLog {
         default: state = "unknown"
         }
         let line = [
-            ISO8601DateFormatter().string(from: .now),
+            timestampFormatter.string(from: .now),
             event, percent, state, detail
         ].joined(separator: ",") + "\n"
 
