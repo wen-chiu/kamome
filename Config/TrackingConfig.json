@@ -26,6 +26,10 @@
     "min_interval_s": 2,
     "cache_precision_deg": 0.001
   },
+  "trip": {
+    "min_duration_s": 60,
+    "min_distance_m": 100
+  },
   "sampling": {
     "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 },
     "vehicles": {
