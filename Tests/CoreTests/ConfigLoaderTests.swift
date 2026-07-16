@@ -28,6 +28,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)
         XCTAssertEqual(config.sampling.walk.distanceFilterM, 10)
         XCTAssertEqual(config.export.targetDurationS, 30)
+        XCTAssertEqual(config.export.maxHoldFraction, 0.5)
         XCTAssertEqual(config.filter.maxHAccM, 50)
         // Phantom-trip guard (ADR 2026-07-16).
         XCTAssertEqual(config.trip.minDurationS, 60)

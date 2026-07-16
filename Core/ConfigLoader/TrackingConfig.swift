@@ -140,13 +140,33 @@ public struct TrackingConfig: Decodable, Equatable {
         public let targetDurationS: Double
         public let fps: Int
         public let stopHoldS: Double
+        /// Stop holds shrink proportionally once they would exceed this share
+        /// of the video, so stop-dense trips keep a nonzero travel budget.
+        public let maxHoldFraction: Double
         public let gifFps: Int
         public let gifWidthPx: Int
+
+        public init(
+            targetDurationS: Double,
+            fps: Int,
+            stopHoldS: Double,
+            maxHoldFraction: Double,
+            gifFps: Int,
+            gifWidthPx: Int
+        ) {
+            self.targetDurationS = targetDurationS
+            self.fps = fps
+            self.stopHoldS = stopHoldS
+            self.maxHoldFraction = maxHoldFraction
+            self.gifFps = gifFps
+            self.gifWidthPx = gifWidthPx
+        }
 
         enum CodingKeys: String, CodingKey {
             case targetDurationS = "target_duration_s"
             case fps
             case stopHoldS = "stop_hold_s"
+            case maxHoldFraction = "max_hold_fraction"
             case gifFps = "gif_fps"
             case gifWidthPx = "gif_width_px"
         }

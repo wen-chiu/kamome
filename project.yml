@@ -30,6 +30,8 @@ targets:
         product: KamomeTrackingEngine
       - package: KamomeCore
         product: KamomeTripComposer
+      - package: KamomeCore
+        product: KamomeExportEngine
     info:
       path: App/Info.plist
       properties:

@@ -54,6 +54,7 @@
     "target_duration_s": 30,
     "fps": 30,
     "stop_hold_s": 1.5,
+    "max_hold_fraction": 0.5,
     "gif_fps": 12,
     "gif_width_px": 480
   }
