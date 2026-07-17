@@ -17,9 +17,23 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
 - Road deviation in the polyline is expected (sparse drive sampling + ε=15 m
   display simplification); fix is OSRM matching (§4.4, P3 stretch / P4 core),
   raw points are retained — do NOT tighten sampling config for this.
-- **P3 work item:** phantom-trip guard — `TrackingSession.end()` saves even a
-  2-second zero-point trip (degenerate input for §4.5 camera path). Min
-  duration/distance thresholds go in `Config/TrackingConfig.json`.
+- Phantom-trip guard landed (PR #7, CI green): `trip.min_duration_s` /
+  `trip.min_distance_m` in `TrackingConfig.json`; `TrackingSession.end()`
+  discards sub-minimum recordings (`TripGuard`, Core/TripComposer). PR #7
+  also fixed the local smoke's stale missing-key expectation.
+- P3 milestone branch `phase-3-recap` (stacked on PR #7): `KamomeExportEngine`
+  target started with `CameraPath` (§4.5 step 1 — speed-warp to
+  `export.target_duration_s`, per-stop holds pinned on-route, smoothstep
+  easing, new `export.max_hold_fraction` tunable caps holds on stop-dense
+  trips). Next: §4.5 steps 2–5 (frame rendering via MKMapSnapshotter,
+  AVAssetWriter MP4, GIF, S5 screen) + golden-frame gate tests.
+- Recap product decisions (decisions.md 2026-07-17, Chiu): overlay moments
+  (stop cards, and later route-attached photo fly-bys) are **timeline events**
+  built alongside CameraPath in step 2 — don't hardwire rendering to
+  `holdingStopIndex`. S5 gets a photos on/off toggle (route-only animation =
+  overlay events off) — P3 scope. Route-photo fly-bys = P3 stretch after the
+  render budget is proven; video clips in recap = icebox (deterministic
+  excerpts only — random breaks golden-frame CI).
 - Photo fixes landed 2026-07-16: route-attached photos (stop_id NULL) get an
   S3 strip; Selected-Photos access shows a banner + limited-library picker;
   re-match preserves highlights. Limited-access box stays unticked until Chiu

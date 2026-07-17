@@ -26,3 +26,16 @@ per-trip export + yearly unlock-all + creator tier is the model (§1.6).
 
 ## Premium video styles / fork-count analytics
 From spec v1.2 §1.6 — still parked.
+
+## Video clips in the recap (post-P3-gate candidate)
+Auto-excerpt short clips from videos the user shot mid-trip and play them at
+their stop's hold (the clip replaces the photo card; the hold stretches to
+clip length, still counted inside `export.max_hold_fraction`). Fits the
+minimum-effort vision — zero editing by the user. Hard constraints when
+thawed: **deterministic** excerpt selection (seed by trip id; §4.5 is a
+deterministic frame pipeline with golden-frame tests, and re-exporting must
+reproduce the same video), 2–3 s per clip (tunable), muted (consistent with
+the no-music call), cap clip count. Blocked on: §4.5 steps 2–5 landed and the
+<90 s render budget measured — per-frame video decode + composite is the
+single biggest render-cost risk in the whole pipeline. (Decision record:
+`decisions.md` 2026-07-17.)
