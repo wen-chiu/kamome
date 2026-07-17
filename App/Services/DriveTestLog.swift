@@ -49,8 +49,8 @@ final class DriveTestLog {
         }
     }
 
-    func tripEnded() {
-        append(event: "trip_end")
+    func tripEnded(discardedAsPhantom: Bool = false) {
+        append(event: "trip_end", detail: discardedAsPhantom ? "phantom_discarded" : "")
         if let observer {
             NotificationCenter.default.removeObserver(observer)
         }

@@ -66,6 +66,20 @@ final class TrackingSession {
         locationService?.stopUpdates()
         engine.finish(at: now.timeIntervalSince1970)
 
+        // Denormalized stats for the S1 card and S3 strip (§3 stats_json);
+        // computed before saving so the phantom guard shares its distance.
+        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops)
+        let durationS = now.timeIntervalSince(startedAt ?? now)
+        if TripGuard.isPhantom(durationS: durationS, distanceM: stats.distanceM, config: config.trip) {
+            self.engine = nil
+            locationService = nil
+            isRecording = false
+            #if DEBUG
+            DriveTestLog.shared.tripEnded(discardedAsPhantom: true)
+            #endif
+            return
+        }
+
         let title = Self.defaultTitle(for: startedAt ?? now)
         let segments = engine.segments.map { segment in
             TripRepository.NewSegment(
@@ -90,8 +104,6 @@ final class TrackingSession {
             segments: segments,
             stops: stops
         ) {
-            // Denormalized stats for the S1 card and S3 strip (§3 stats_json).
-            let stats = TripStats.compute(segments: engine.segments, stops: engine.stops)
             if let json = stats.jsonString() {
                 try? repository.updateTripStats(tripId: tripId, statsJson: json)
             }

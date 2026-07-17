@@ -61,13 +61,19 @@ do {
     let config = try TrackingConfigLoader.load(contentsOf: configURL)
     check(config.dwell.radiusM == 80, "TrackingConfig.json loads, dwell.radius_m == 80")
 
-    // Loader fails loudly, naming the missing key.
-    let broken = Data(#"{"schema_version": 1}"#.utf8)
+    // Loader fails loudly, naming the missing key. Mirrors the XCTest check
+    // (drop one nested key from the shipped file) so the expectation cannot
+    // drift with the config's key order.
+    var json = try JSONSerialization.jsonObject(with: Data(contentsOf: configURL)) as? [String: Any] ?? [:]
+    var dwell = json["dwell"] as? [String: Any] ?? [:]
+    dwell.removeValue(forKey: "radius_m")
+    json["dwell"] = dwell
+    let broken = try JSONSerialization.data(withJSONObject: json)
     do {
         _ = try TrackingConfigLoader.load(from: broken)
         check(false, "missing key should throw")
     } catch {
-        check(String(describing: error).contains("segmentation"), "missing key error names key: \(error)")
+        check(String(describing: error).contains("dwell.radius_m"), "missing key error names key: \(error)")
     }
 } catch {
     check(false, "unexpected error: \(error)")

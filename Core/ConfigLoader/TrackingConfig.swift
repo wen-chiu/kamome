@@ -80,6 +80,24 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    public struct Trip: Decodable, Equatable {
+        /// A finished recording below either minimum is discarded as a phantom
+        /// trip (accidental start/stop) instead of saved — a zero-length trip
+        /// is a degenerate input for the §4.5 recap camera path.
+        public let minDurationS: Double
+        public let minDistanceM: Double
+
+        public init(minDurationS: Double, minDistanceM: Double) {
+            self.minDurationS = minDurationS
+            self.minDistanceM = minDistanceM
+        }
+
+        enum CodingKeys: String, CodingKey {
+            case minDurationS = "min_duration_s"
+            case minDistanceM = "min_distance_m"
+        }
+    }
+
     public struct SamplingPolicy: Decodable, Equatable {
         /// Symbolic name mapped to a CLLocationAccuracy constant by the app.
         public let desiredAccuracy: String
@@ -141,12 +159,13 @@ public struct TrackingConfig: Decodable, Equatable {
     public let simplify: Simplify
     public let photos: Photos
     public let geocode: Geocode
+    public let trip: Trip
     public let sampling: Sampling
     public let export: Export
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, photos, geocode, sampling, export
+        case filter, segmentation, dwell, simplify, photos, geocode, trip, sampling, export
     }
 }
 
