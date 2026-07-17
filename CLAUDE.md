@@ -27,6 +27,13 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   easing, new `export.max_hold_fraction` tunable caps holds on stop-dense
   trips). Next: §4.5 steps 2–5 (frame rendering via MKMapSnapshotter,
   AVAssetWriter MP4, GIF, S5 screen) + golden-frame gate tests.
+- Recap product decisions (decisions.md 2026-07-17, Chiu): overlay moments
+  (stop cards, and later route-attached photo fly-bys) are **timeline events**
+  built alongside CameraPath in step 2 — don't hardwire rendering to
+  `holdingStopIndex`. S5 gets a photos on/off toggle (route-only animation =
+  overlay events off) — P3 scope. Route-photo fly-bys = P3 stretch after the
+  render budget is proven; video clips in recap = icebox (deterministic
+  excerpts only — random breaks golden-frame CI).
 - Photo fixes landed 2026-07-16: route-attached photos (stop_id NULL) get an
   S3 strip; Selected-Photos access shows a banner + limited-library picker;
   re-match preserves highlights. Limited-access box stays unticked until Chiu

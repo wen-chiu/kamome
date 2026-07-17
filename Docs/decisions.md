@@ -191,3 +191,37 @@ item.
 battery-moat numbers must be proven before more phases stack on the tracking
 engine); tightening sampling config to fix road deviation (costs battery;
 matching is the designed fix).
+
+## 2026-07-17 — Recap video: route photos in, export gets a photos toggle, video clips parked
+
+**Context:** Product discussion (Chiu, 2026-07-17) on §4.5 as the flagship
+share feature. Three proposals: (1) route-attached photos (stop_id NULL —
+scenery shot from the car, roadside pull-over) should surface in the recap,
+not just stop-pinned highlights; (2) two export outputs — a clean route-only
+animation and the full version with photos; (3) embed short clips from videos
+the user shot mid-trip, auto-excerpted, to make the recap livelier. Guiding
+vision restated: minimum-effort trip capture and sharing.
+**Decision (Chiu; scheduling delegated to Claude):**
+- **Route photos in the recap** — accepted. As the camera passes a
+  route-attached photo's projected position on the polyline, a small photo
+  card floats in and out *without pausing* (contrast with the large held stop
+  card). Scheduled as **P3 stretch**: lands after §4.5 steps 2–5 prove the
+  render budget. But the overlay-event model is generalized **now**, in step
+  2: photo/stop-card moments are timeline events computed alongside
+  `CameraPath`, not hardwired to `holdingStopIndex`, so stretch items slot in
+  without reworking the frame loop. Density cap is a config tunable (no magic
+  numbers).
+- **Photos toggle on export** — accepted, **P3 scope**. One pipeline, one S5
+  switch: overlay events off = route-only animation (also the privacy-
+  friendly share, and a step toward the icebox creator-b-roll wedge); on =
+  stops + route photos.
+- **Video clips** — idea accepted, **parked in icebox** until the P3 gate
+  establishes real render numbers. Design constraints recorded there: clip
+  selection must be deterministic (seeded by trip id — §4.5 is a
+  deterministic frame pipeline with golden-frame tests, and re-exports must
+  reproduce), clips run 2–3 s (tunable), muted, counted inside
+  `max_hold_fraction`.
+**Rejected:** random clip excerpting (breaks determinism and golden-frame
+CI); 4–5 s clips (one clip would eat 15 %+ of a 30 s video); putting route
+photos in the P3 gate (render budget for the base pipeline is unproven —
+visual sugar stacks on a working frame loop, not before it).
