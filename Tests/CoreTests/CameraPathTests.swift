@@ -28,7 +28,9 @@ final class CameraPathTests: XCTestCase {
             frameWidthPx: 1080,
             frameHeightPx: 1920,
             cameraSpanM: 1500,
-            keyframeIntervalFrames: 15
+            keyframeIntervalFrames: 15,
+            titleCardS: 2.5,
+            endCardS: 3
         )
     }
 

@@ -38,6 +38,8 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.frameHeightPx, 1920)
         XCTAssertEqual(config.export.cameraSpanM, 1500)
         XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
+        XCTAssertEqual(config.export.titleCardS, 2.5)
+        XCTAssertEqual(config.export.endCardS, 3.0)
         XCTAssertEqual(config.filter.maxHAccM, 50)
         XCTAssertEqual(config.filter.speedMaxHAccM, 25)
         // Phantom-trip guard (ADR 2026-07-16).

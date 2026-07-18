@@ -24,6 +24,10 @@ public struct RecapStyle {
     public var nameFontPx: CGFloat = 52
     public var badgeFontPx: CGFloat = 34
     public var badgeHeightPx: CGFloat = 56
+    public var titleFontPx: CGFloat = 72
+    public var subtitleFontPx: CGFloat = 40
+    public var statFontPx: CGFloat = 44
+    public var qrSidePx: CGFloat = 320
 
     public init() {}
 }
@@ -72,21 +76,53 @@ public struct RecapFrameCompositor {
         }
     }
 
+    /// Opening chrome (§4.5 step 4): trip name over dates + distance. All
+    /// copy is caller-supplied so localization stays in the app layer.
+    public struct TitleCard {
+        public let title: String
+        public let subtitle: String
+
+        public init(title: String, subtitle: String) {
+            self.title = title
+            self.subtitle = subtitle
+        }
+    }
+
+    /// Closing chrome (§4.5 step 4): stat lines plus the "Get this route"
+    /// QR (`RecapQRCode.image(for:sidePx:)`) and its call-to-action copy.
+    public struct EndCard {
+        public let statsLines: [String]
+        public let callToAction: String
+        public let qrCode: CGImage?
+
+        public init(statsLines: [String], callToAction: String, qrCode: CGImage? = nil) {
+            self.statsLines = statsLines
+            self.callToAction = callToAction
+            self.qrCode = qrCode
+        }
+    }
+
     public struct RenderError: Error {}
 
     private let path: CameraPath
     private let events: [OverlayEvent]
-    private let stopCards: [StopCard]
-    private let widthPx: Int
-    private let heightPx: Int
-    private let style: RecapStyle
-    private let scale: CGFloat
+    let stopCards: [StopCard]
+    let titleCard: TitleCard?
+    let endCard: EndCard?
+    let widthPx: Int
+    let heightPx: Int
+    let style: RecapStyle
+    let scale: CGFloat
 
     /// `stopCards[i]` matches stop index `i` as passed to `CameraPath`.
+    /// Title/end events with nil content are skipped, so callers without
+    /// chrome yet (previews) render route-only frames.
     public init(
         path: CameraPath,
         events: [OverlayEvent],
         stopCards: [StopCard],
+        titleCard: TitleCard? = nil,
+        endCard: EndCard? = nil,
         widthPx: Int,
         heightPx: Int,
         style: RecapStyle = RecapStyle()
@@ -94,6 +130,8 @@ public struct RecapFrameCompositor {
         self.path = path
         self.events = events
         self.stopCards = stopCards
+        self.titleCard = titleCard
+        self.endCard = endCard
         self.widthPx = widthPx
         self.heightPx = heightPx
         self.style = style
@@ -169,101 +207,12 @@ public struct RecapFrameCompositor {
         case let .stopCard(stopIndex):
             guard stopCards.indices.contains(stopIndex) else { return }
             draw(card: stopCards[stopIndex], in: context)
+        case .titleCard:
+            guard let titleCard else { return }
+            draw(titleCard: titleCard, in: context)
+        case .endCard:
+            guard let endCard else { return }
+            draw(endCard: endCard, in: context)
         }
-    }
-
-    /// Card anchored at the bottom of the frame: photo square on the left,
-    /// stop name beside it, day badge on the card's top edge.
-    private func draw(card: StopCard, in context: CGContext) {
-        let margin = style.cardMarginPx * scale
-        let cardHeight = style.cardHeightPx * scale
-        // CG space: y is measured from the bottom edge.
-        let rect = CGRect(x: margin, y: margin, width: CGFloat(widthPx) - margin * 2, height: cardHeight)
-        let corner = style.cardCornerPx * scale
-        let padding = style.cardPaddingPx * scale
-
-        context.setFillColor(style.cardColor)
-        context.addPath(CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil))
-        context.fillPath()
-
-        var textX = rect.minX + padding
-        if let photo = card.photo {
-            let side = cardHeight - padding * 2
-            let photoRect = CGRect(x: rect.minX + padding, y: rect.minY + padding, width: side, height: side)
-            context.saveGState()
-            context.addPath(
-                CGPath(roundedRect: photoRect, cornerWidth: corner / 2, cornerHeight: corner / 2, transform: nil)
-            )
-            context.clip()
-            context.draw(photo, in: photoRect)
-            context.restoreGState()
-            textX = photoRect.maxX + padding
-        }
-
-        drawText(
-            card.name,
-            at: CGPoint(x: textX, y: rect.midY - style.nameFontPx * scale / 2),
-            fontPx: style.nameFontPx,
-            color: style.cardTextColor,
-            in: context
-        )
-        drawBadge(card.dayLabel, straddling: rect, padding: padding, in: context)
-    }
-
-    /// Day badge pill straddling the card's top edge, left-aligned.
-    private func drawBadge(_ label: String, straddling rect: CGRect, padding: CGFloat, in context: CGContext) {
-        let badgeHeight = style.badgeHeightPx * scale
-        let badgeRect = CGRect(
-            x: rect.minX + padding,
-            y: rect.maxY - badgeHeight / 2,
-            width: badgeTextWidth(label) + padding * 2,
-            height: badgeHeight
-        )
-        context.setFillColor(style.badgeColor)
-        context.addPath(
-            CGPath(
-                roundedRect: badgeRect,
-                cornerWidth: badgeHeight / 2,
-                cornerHeight: badgeHeight / 2,
-                transform: nil
-            )
-        )
-        context.fillPath()
-        drawText(
-            label,
-            at: CGPoint(x: badgeRect.minX + padding, y: badgeRect.midY - style.badgeFontPx * scale / 2.5),
-            fontPx: style.badgeFontPx,
-            color: style.badgeTextColor,
-            in: context
-        )
-    }
-
-    private func font(px: CGFloat) -> CTFont {
-        CTFontCreateWithName("HelveticaNeue-Bold" as CFString, px * scale, nil)
-    }
-
-    private func line(_ text: String, fontPx: CGFloat, color: CGColor) -> CTLine {
-        let attributes: [CFString: Any] = [
-            kCTFontAttributeName: font(px: fontPx),
-            kCTForegroundColorAttributeName: color
-        ]
-        let attributed = CFAttributedStringCreate(
-            kCFAllocatorDefault,
-            text as CFString,
-            attributes as CFDictionary
-        )
-        // CFAttributedStringCreate only fails on allocation failure.
-        return CTLineCreateWithAttributedString(attributed!)
-    }
-
-    private func badgeTextWidth(_ text: String) -> CGFloat {
-        CGFloat(CTLineGetTypographicBounds(line(text, fontPx: style.badgeFontPx, color: style.badgeTextColor), nil, nil, nil))
-    }
-
-    private func drawText(_ text: String, at origin: CGPoint, fontPx: CGFloat, color: CGColor, in context: CGContext) {
-        context.saveGState()
-        context.textPosition = origin
-        CTLineDraw(line(text, fontPx: fontPx, color: color), context)
-        context.restoreGState()
     }
 }

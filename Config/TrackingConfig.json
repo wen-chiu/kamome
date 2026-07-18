@@ -64,6 +64,8 @@
     "frame_width_px": 1080,
     "frame_height_px": 1920,
     "camera_span_m": 1500,
-    "keyframe_interval_frames": 15
+    "keyframe_interval_frames": 15,
+    "title_card_s": 2.5,
+    "end_card_s": 3.0
   }
 }

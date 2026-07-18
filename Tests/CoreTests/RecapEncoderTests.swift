@@ -17,13 +17,13 @@ final class RecapEncoderTests: XCTestCase {
         TrackingConfig.Export(
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
-            cameraSpanM: 1500, keyframeIntervalFrames: 5
+            cameraSpanM: 1500, keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4
         )
     }
 
     private func makeExporter(config: TrackingConfig.Export) throws -> (exporter: RecapExporter, path: CameraPath) {
         let path = try XCTUnwrap(CameraPath(route: route, stops: [route[5]], config: config))
-        let events = OverlayTimeline.build(holds: path.holds, overlaysEnabled: true)
+        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: true)
         let compositor = RecapFrameCompositor(
             path: path,
             events: events,

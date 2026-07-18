@@ -174,6 +174,10 @@ public struct TrackingConfig: Decodable, Equatable {
         /// One map snapshot per this many frames; frames in between cross-fade
         /// the neighboring keyframe snapshots (§4.5 step 2 render budget).
         public let keyframeIntervalFrames: Int
+        /// Trip chrome windows (§4.5 step 4): title card over the opening,
+        /// end card ("Get this route") over the close.
+        public let titleCardS: Double
+        public let endCardS: Double
 
         public init(
             targetDurationS: Double,
@@ -185,7 +189,9 @@ public struct TrackingConfig: Decodable, Equatable {
             frameWidthPx: Int,
             frameHeightPx: Int,
             cameraSpanM: Double,
-            keyframeIntervalFrames: Int
+            keyframeIntervalFrames: Int,
+            titleCardS: Double,
+            endCardS: Double
         ) {
             self.targetDurationS = targetDurationS
             self.fps = fps
@@ -197,6 +203,8 @@ public struct TrackingConfig: Decodable, Equatable {
             self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM
             self.keyframeIntervalFrames = keyframeIntervalFrames
+            self.titleCardS = titleCardS
+            self.endCardS = endCardS
         }
 
         enum CodingKeys: String, CodingKey {
@@ -210,6 +218,8 @@ public struct TrackingConfig: Decodable, Equatable {
             case frameHeightPx = "frame_height_px"
             case cameraSpanM = "camera_span_m"
             case keyframeIntervalFrames = "keyframe_interval_frames"
+            case titleCardS = "title_card_s"
+            case endCardS = "end_card_s"
         }
     }
 

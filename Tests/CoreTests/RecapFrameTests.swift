@@ -25,14 +25,9 @@ final class RecapFrameTests: XCTestCase {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
-            cameraSpanM: 1500, keyframeIntervalFrames: keyframeIntervalFrames
+            cameraSpanM: 1500, keyframeIntervalFrames: keyframeIntervalFrames,
+            titleCardS: 1, endCardS: 1
         )
-    }
-
-    private struct RGB: Equatable {
-        let red: Int
-        let green: Int
-        let blue: Int
     }
 
     // Style colors as 8-bit sRGB, for pixel assertions.
@@ -53,14 +48,18 @@ final class RecapFrameTests: XCTestCase {
         stops: [CameraPath.Point] = [],
         overlaysEnabled: Bool = true,
         stopCards: [RecapFrameCompositor.StopCard] = [],
+        titleCard: RecapFrameCompositor.TitleCard? = nil,
+        endCard: RecapFrameCompositor.EndCard? = nil,
         config: TrackingConfig.Export
     ) throws -> (path: CameraPath, compositor: RecapFrameCompositor) {
         let path = try XCTUnwrap(CameraPath(route: route, stops: stops, config: config))
-        let events = OverlayTimeline.build(holds: path.holds, overlaysEnabled: overlaysEnabled)
+        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: overlaysEnabled)
         let compositor = RecapFrameCompositor(
             path: path,
             events: events,
             stopCards: stopCards,
+            titleCard: titleCard,
+            endCard: endCard,
             widthPx: config.frameWidthPx,
             heightPx: config.frameHeightPx,
             style: opaqueCardStyle
@@ -76,55 +75,6 @@ final class RecapFrameTests: XCTestCase {
             widthPx: config.frameWidthPx,
             heightPx: config.frameHeightPx
         )
-    }
-
-    // MARK: - Pixel helpers
-
-    private func pixels(_ image: CGImage) throws -> (data: CFData, bytesPerRow: Int) {
-        let data = try XCTUnwrap(image.dataProvider?.data)
-        return (data, image.bytesPerRow)
-    }
-
-    private func pixel(_ image: CGImage, col: Int, row: Int) throws -> RGB {
-        let (data, bytesPerRow) = try pixels(image)
-        let bytes = try XCTUnwrap(CFDataGetBytePtr(data))
-        let offset = row * bytesPerRow + col * 4
-        return RGB(red: Int(bytes[offset]), green: Int(bytes[offset + 1]), blue: Int(bytes[offset + 2]))
-    }
-
-    private func assertPixel(
-        _ image: CGImage,
-        col: Int,
-        row: Int,
-        is expected: RGB,
-        _ label: String,
-        file: StaticString = #filePath,
-        line: UInt = #line
-    ) throws {
-        let actual = try pixel(image, col: col, row: row)
-        for (component, want) in [(actual.red, expected.red), (actual.green, expected.green), (actual.blue, expected.blue)] {
-            XCTAssertEqual(
-                component, want, accuracy: 3,
-                "\(label) at (\(col),\(row)): got \(actual), expected \(expected)", file: file, line: line
-            )
-        }
-    }
-
-    private func colorCount(_ image: CGImage, matching target: RGB) throws -> Int {
-        let (data, bytesPerRow) = try pixels(image)
-        let bytes = try XCTUnwrap(CFDataGetBytePtr(data))
-        var count = 0
-        for row in 0..<image.height {
-            for col in 0..<image.width {
-                let offset = row * bytesPerRow + col * 4
-                if abs(Int(bytes[offset]) - target.red) <= 3,
-                   abs(Int(bytes[offset + 1]) - target.green) <= 3,
-                   abs(Int(bytes[offset + 2]) - target.blue) <= 3 {
-                    count += 1
-                }
-            }
-        }
-        return count
     }
 
     // MARK: - Compositor gates
@@ -226,6 +176,53 @@ final class RecapFrameTests: XCTestCase {
         XCTAssertEqual(first, second, "identical inputs must produce byte-identical frames")
     }
 
+    func testTitleCardOpensTheVideoEvenWithPhotosOff() async throws {
+        let config = exportConfig()
+        let title = RecapFrameCompositor.TitleCard(title: "Perth", subtitle: "Jul 16 · 1 km")
+        // photos off: stop cards gone, trip chrome stays (share hook intact).
+        let (path, compositor) = try makePipeline(overlaysEnabled: false, titleCard: title, config: config)
+        let background = try await snapshot(centeredAt: path.position(atTime: 0.5), config: config)
+        let frame = try compositor.render(atTime: 0.5, background: RecapBackground(current: background))
+
+        // Inside the title panel, left of the centered text.
+        try assertPixel(frame, col: 30, row: 25, is: cardRGB, "title panel under the top margin")
+        // After the title window the panel is gone.
+        let later = try compositor.render(atTime: 1.5, background: RecapBackground(current: background))
+        try assertPixel(later, col: 30, row: 25, is: backgroundRGB, "title card leaves after title_card_s")
+    }
+
+    func testEndCardShowsStatsPanelWithScannableQR() async throws {
+        let config = exportConfig()
+        let qr = try XCTUnwrap(RecapQRCode.image(for: "https://kamome.app/r/test", sidePx: 64))
+        let endCard = RecapFrameCompositor.EndCard(
+            statsLines: ["1 km · 1 stop", "6 min"],
+            callToAction: "Get this route",
+            qrCode: qr
+        )
+        let (path, compositor) = try makePipeline(endCard: endCard, config: config)
+        let time = config.targetDurationS - 0.5
+        let background = try await snapshot(centeredAt: path.position(atTime: time), config: config)
+        let frame = try compositor.render(atTime: time, background: RecapBackground(current: background))
+
+        // Panel fill left of the centered content.
+        try assertPixel(frame, col: 30, row: heightPx / 2, is: cardRGB, "end panel centered on the frame")
+        // The QR sits mid-panel: its modules must survive compositing.
+        var darkPixels = 0
+        for row in 160..<240 {
+            for col in 70..<146 {
+                let sample = try pixel(frame, col: col, row: row)
+                if sample.red < 100 && sample.green < 100 && sample.blue < 100 { darkPixels += 1 }
+            }
+        }
+        XCTAssertGreaterThan(darkPixels, 50, "QR modules should be visible in the end card")
+    }
+
+    func testQRCodeGeneratorProducesCrispModules() throws {
+        let qr = try XCTUnwrap(RecapQRCode.image(for: "https://kamome.app/r/test", sidePx: 128))
+        XCTAssertGreaterThanOrEqual(qr.width, 128)
+        XCTAssertEqual(qr.width, qr.height, "QR must stay square")
+    }
+
     // MARK: - Render loop gates
 
     /// Counts provider hits so the keyframe cache is provably doing its job.
@@ -284,7 +281,7 @@ final class RecapFrameTests: XCTestCase {
         let stops = engine.stops.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let config = exportConfig(targetDurationS: 2, fps: 5, keyframeIntervalFrames: 3)
         let path = try XCTUnwrap(CameraPath(route: tripRoute, stops: stops, config: config))
-        let events = OverlayTimeline.build(holds: path.holds, overlaysEnabled: true)
+        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: true)
         let cards = stops.indices.map { index in
             RecapFrameCompositor.StopCard(name: "Stop \(index + 1)", dayLabel: "Day 1")
         }
@@ -309,4 +306,59 @@ final class RecapFrameTests: XCTestCase {
         let second = try await lastFrame()
         XCTAssertEqual(first, second, "fixture render must be reproducible frame for frame")
     }
+}
+
+// MARK: - Pixel probes (file scope keeps the test class under lint's size cap)
+
+private struct RGB: Equatable {
+    let red: Int
+    let green: Int
+    let blue: Int
+}
+
+private func pixels(_ image: CGImage) throws -> (data: CFData, bytesPerRow: Int) {
+    let data = try XCTUnwrap(image.dataProvider?.data)
+    return (data, image.bytesPerRow)
+}
+
+private func pixel(_ image: CGImage, col: Int, row: Int) throws -> RGB {
+    let (data, bytesPerRow) = try pixels(image)
+    let bytes = try XCTUnwrap(CFDataGetBytePtr(data))
+    let offset = row * bytesPerRow + col * 4
+    return RGB(red: Int(bytes[offset]), green: Int(bytes[offset + 1]), blue: Int(bytes[offset + 2]))
+}
+
+private func assertPixel(
+    _ image: CGImage,
+    col: Int,
+    row: Int,
+    is expected: RGB,
+    _ label: String,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) throws {
+    let actual = try pixel(image, col: col, row: row)
+    for (component, want) in [(actual.red, expected.red), (actual.green, expected.green), (actual.blue, expected.blue)] {
+        XCTAssertEqual(
+            component, want, accuracy: 3,
+            "\(label) at (\(col),\(row)): got \(actual), expected \(expected)", file: file, line: line
+        )
+    }
+}
+
+private func colorCount(_ image: CGImage, matching target: RGB) throws -> Int {
+    let (data, bytesPerRow) = try pixels(image)
+    let bytes = try XCTUnwrap(CFDataGetBytePtr(data))
+    var count = 0
+    for row in 0..<image.height {
+        for col in 0..<image.width {
+            let offset = row * bytesPerRow + col * 4
+            if abs(Int(bytes[offset]) - target.red) <= 3,
+               abs(Int(bytes[offset + 1]) - target.green) <= 3,
+               abs(Int(bytes[offset + 2]) - target.blue) <= 3 {
+                count += 1
+            }
+        }
+    }
+    return count
 }
