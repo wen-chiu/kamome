@@ -1,4 +1,5 @@
 import Foundation
+import KamomeConfig
 import KamomeTrackingEngine
 
 /// Denormalized per-trip stats for `trip.stats_json` (§3) and the S3 stats
@@ -27,7 +28,11 @@ public struct TripStats: Codable, Equatable {
         self.topSpeedKmh = topSpeedKmh
     }
 
-    public static func compute(segments: [TrackingEngine.Segment], stops: [TrackingEngine.Stop]) -> TripStats {
+    public static func compute(
+        segments: [TrackingEngine.Segment],
+        stops: [TrackingEngine.Stop],
+        config: TrackingConfig
+    ) -> TripStats {
         var distance = 0.0
         var drive = 0.0
         var walk = 0.0
@@ -43,17 +48,11 @@ public struct TripStats: Codable, Equatable {
             var previous: LocationSample?
             for point in segment.points {
                 if let previous {
-                    let step = Geo.distanceM(latA: previous.lat, lonA: previous.lon, latB: point.lat, lonB: point.lon)
-                    distance += step
-                    let dt = point.ts - previous.ts
-                    if let osSpeed = point.speedMps {
-                        topMps = max(topMps, osSpeed)
-                    } else if dt > 0 {
-                        topMps = max(topMps, step / dt)
-                    }
+                    distance += Geo.distanceM(latA: previous.lat, lonA: previous.lon, latB: point.lat, lonB: point.lon)
                 }
                 previous = point
             }
+            topMps = max(topMps, maxWindowSpeedMps(points: segment.points, config: config))
         }
 
         return TripStats(
@@ -63,6 +62,35 @@ public struct TripStats: Codable, Equatable {
             stopCount: stops.count,
             topSpeedKmh: topMps * 3.6
         )
+    }
+
+    /// Top speed per ADR 2026-07-12: displacement over the trailing
+    /// `speed_smoothing_window_s`, never per-fix values — position glitches
+    /// leak into CoreLocation's own speed field (137 m/s on the 2026-07-18
+    /// drive), so raw OS speeds are as noise-prone as adjacent-fix deltas.
+    /// Points worse than `filter.speed_max_h_acc_m` are not speed evidence;
+    /// like the engine, a window under ⅓ full contributes nothing.
+    private static func maxWindowSpeedMps(points: [LocationSample], config: TrackingConfig) -> Double {
+        let windowS = config.segmentation.speedSmoothingWindowS
+        let usable = points.filter { point in
+            guard let hAcc = point.hAccM else { return true }  // missing metadata ≠ bad fix
+            return hAcc <= config.filter.speedMaxHAccM
+        }
+        var best = 0.0
+        var oldest = 0
+        for index in usable.indices.dropFirst() {
+            while usable[index].ts - usable[oldest].ts > windowS, oldest < index - 1 {
+                oldest += 1
+            }
+            let dt = usable[index].ts - usable[oldest].ts
+            guard dt >= windowS / 3 else { continue }
+            let meters = Geo.distanceM(
+                latA: usable[oldest].lat, lonA: usable[oldest].lon,
+                latB: usable[index].lat, lonB: usable[index].lon
+            )
+            best = max(best, meters / dt)
+        }
+        return best
     }
 
     public func jsonString() -> String? {
