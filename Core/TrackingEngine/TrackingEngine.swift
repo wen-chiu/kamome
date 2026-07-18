@@ -26,6 +26,13 @@ public final class TrackingEngine {
         public let lon: Double
         public let arrivedAt: Double
         public internal(set) var departedAt: Double?
+
+        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?) {
+            self.lat = lat
+            self.lon = lon
+            self.arrivedAt = arrivedAt
+            self.departedAt = departedAt
+        }
     }
 
     public private(set) var state: State = .idle
@@ -88,7 +95,11 @@ public final class TrackingEngine {
         lastAccepted = sample
         open?.points.append(sample)
 
-        if let dwell = dwellDetector.add(ts: sample.ts, lat: sample.lat, lon: sample.lon) {
+        // Never dwell-pause mid-walk: wandering a temple or night market is a
+        // stop, but pausing GPS there would throw away exactly the walking
+        // trace the recap wants — StopDeriver turns compact walk segments
+        // into stops at trip end instead (ADR 2026-07-18).
+        if open?.mode != .walk, let dwell = dwellDetector.add(ts: sample.ts, lat: sample.lat, lon: sample.lon) {
             beginDwell(dwell)
             return
         }

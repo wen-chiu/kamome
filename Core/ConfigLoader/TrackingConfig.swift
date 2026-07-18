@@ -48,11 +48,26 @@ public struct TrackingConfig: Decodable, Equatable {
         public let radiusM: Double
         /// CLMonitor region radius while paused at a stop (§2.3).
         public let regionRadiusM: Double
+        /// Trip-end stop derivation (ADR 2026-07-18): a sample-silence gap at
+        /// least this long with displacement ≤ radius_m is a stop the live
+        /// detector could never see — iOS stops delivering fixes when the
+        /// phone is stationary under a distance filter.
+        public let gapMinS: Double
+        /// A walk segment bracketed by vehicle segments counts as a stop
+        /// ("park and walk around") when it lasts at least visit_min_s and
+        /// ends within visit_return_radius_m of where it began — loop
+        /// closure, not wander extent: trailhead loops range far and still
+        /// end back at the car.
+        public let visitMinS: Double
+        public let visitReturnRadiusM: Double
 
         enum CodingKeys: String, CodingKey {
             case windowS = "window_s"
             case radiusM = "radius_m"
             case regionRadiusM = "region_radius_m"
+            case gapMinS = "gap_min_s"
+            case visitMinS = "visit_min_s"
+            case visitReturnRadiusM = "visit_return_radius_m"
         }
     }
 

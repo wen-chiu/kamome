@@ -36,7 +36,13 @@ final class SimplifierTests: XCTestCase {
 final class TripStatsTests: XCTestCase {
     func testStatsFromPerthReplay() throws {
         let engine = try GPXReplay.run(fixture: "perth_margaret_river_day1.gpx")
-        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops, config: try GPXReplay.loadConfig())
+        let config = try GPXReplay.loadConfig()
+        // Mirrors TrackingSession.end(): stats count live ∪ derived stops
+        // (ADR 2026-07-18).
+        let allStops = engine.stops + StopDeriver.derive(
+            segments: engine.segments, engineStops: engine.stops, config: config
+        )
+        let stats = TripStats.compute(segments: engine.segments, stops: allStops, config: config)
 
         // Fixture is ~242 km straight-line with noise (header comment).
         XCTAssertGreaterThan(stats.distanceM, 220_000)

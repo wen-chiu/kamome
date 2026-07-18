@@ -22,6 +22,10 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.dwell.windowS, 180)
         XCTAssertEqual(config.dwell.radiusM, 80)
         XCTAssertEqual(config.dwell.regionRadiusM, 150)
+        // Trip-end stop derivation (ADR 2026-07-18).
+        XCTAssertEqual(config.dwell.gapMinS, 300)
+        XCTAssertEqual(config.dwell.visitMinS, 300)
+        XCTAssertEqual(config.dwell.visitReturnRadiusM, 300)
         XCTAssertEqual(config.simplify.epsilonM, 15)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)

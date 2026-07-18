@@ -1,5 +1,6 @@
 import KamomePersistence
 import KamomeTrackingEngine
+import KamomeTripComposer
 import XCTest
 
 final class TripRepositoryTests: XCTestCase {
@@ -20,7 +21,12 @@ final class TripRepositoryTests: XCTestCase {
                 }
             )
         }
-        let stops = engine.stops.map {
+        // Mirrors TrackingSession.end(): saved stops are live ∪ derived
+        // (ADR 2026-07-18).
+        let allStops = engine.stops + StopDeriver.derive(
+            segments: engine.segments, engineStops: engine.stops, config: try GPXReplay.loadConfig()
+        )
+        let stops = allStops.map {
             TripRepository.NewStop(lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
         }
 
