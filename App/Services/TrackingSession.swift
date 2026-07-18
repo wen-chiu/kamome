@@ -66,9 +66,15 @@ final class TrackingSession {
         locationService?.stopUpdates()
         engine.finish(at: now.timeIntervalSince1970)
 
+        // Stops the live detector cannot see — silence gaps and walk visits
+        // (ADR 2026-07-18) — are derived from the finished segments.
+        let allStops = (engine.stops + StopDeriver.derive(
+            segments: engine.segments, engineStops: engine.stops, config: config
+        )).sorted { $0.arrivedAt < $1.arrivedAt }
+
         // Denormalized stats for the S1 card and S3 strip (§3 stats_json);
         // computed before saving so the phantom guard shares its distance.
-        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops, config: config)
+        let stats = TripStats.compute(segments: engine.segments, stops: allStops, config: config)
         let durationS = now.timeIntervalSince(startedAt ?? now)
         if TripGuard.isPhantom(durationS: durationS, distanceM: stats.distanceM, config: config.trip) {
             self.engine = nil
@@ -81,20 +87,8 @@ final class TrackingSession {
         }
 
         let title = Self.defaultTitle(for: startedAt ?? now)
-        let segments = engine.segments.map { segment in
-            TripRepository.NewSegment(
-                mode: segment.mode.rawValue,
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt,
-                points: segment.points.map {
-                    TripRepository.NewTrackpoint(
-                        ts: $0.ts, lat: $0.lat, lon: $0.lon,
-                        hAcc: $0.hAccM, speed: $0.speedMps, course: $0.course, altitude: $0.altitudeM
-                    )
-                }
-            )
-        }
-        let stops = engine.stops.map {
+        let segments = engine.segments.map(Self.repositorySegment)
+        let stops = allStops.map {
             TripRepository.NewStop(lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
         }
         if let tripId = try? repository.saveCompletedTrip(
@@ -164,6 +158,20 @@ final class TrackingSession {
                 vehicle: engine.vehicle
             )
         }
+    }
+
+    private static func repositorySegment(from segment: TrackingEngine.Segment) -> TripRepository.NewSegment {
+        TripRepository.NewSegment(
+            mode: segment.mode.rawValue,
+            startedAt: segment.startedAt,
+            endedAt: segment.endedAt,
+            points: segment.points.map {
+                TripRepository.NewTrackpoint(
+                    ts: $0.ts, lat: $0.lat, lon: $0.lon,
+                    hAcc: $0.hAccM, speed: $0.speedMps, course: $0.course, altitude: $0.altitudeM
+                )
+            }
+        )
     }
 
     private static func defaultTitle(for date: Date) -> String {
