@@ -22,6 +22,8 @@ public struct RecapStyle {
     public var cardCornerPx: CGFloat = 32
     public var cardPaddingPx: CGFloat = 28
     public var nameFontPx: CGFloat = 52
+    public var detailFontPx: CGFloat = 36
+    public var cardDetailColor = CGColor(srgbRed: 0.45, green: 0.45, blue: 0.5, alpha: 1)
     public var badgeFontPx: CGFloat = 34
     public var badgeHeightPx: CGFloat = 56
     public var titleFontPx: CGFloat = 72
@@ -64,14 +66,19 @@ public struct RecapBackground {
 public struct RecapFrameCompositor {
     /// What a stop card shows during its hold (§4.5 step 3). Content is
     /// caller-supplied; the compositor never touches Photos or the DB.
+    /// `detail` is the stop.kind line — walk visits get their walking
+    /// duration ("步行 21 分鐘"), plain dwells pass nil; copy is formatted
+    /// by the app layer so localization stays out of core.
     public struct StopCard {
         public let name: String
         public let dayLabel: String
+        public let detail: String?
         public let photo: CGImage?
 
-        public init(name: String, dayLabel: String, photo: CGImage? = nil) {
+        public init(name: String, dayLabel: String, detail: String? = nil, photo: CGImage? = nil) {
             self.name = name
             self.dayLabel = dayLabel
+            self.detail = detail
             self.photo = photo
         }
     }

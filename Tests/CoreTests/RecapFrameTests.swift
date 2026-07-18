@@ -134,6 +134,28 @@ final class RecapFrameTests: XCTestCase {
         try assertPixel(plain, col: cardX, row: cardY, is: backgroundRGB, "overlays off leaves bare map")
     }
 
+    /// stop.kind rendering (ADR 2026-07-18 stop-kind): a walk-visit card
+    /// carries a detail line (walking duration); a dwell card doesn't.
+    func testWalkVisitDetailLineDrawsDeterministically() async throws {
+        let config = exportConfig()
+
+        func render(detail: String?) async throws -> Data {
+            let card = RecapFrameCompositor.StopCard(name: "紫雲巖", dayLabel: "Day 1", detail: detail)
+            let (path, compositor) = try makePipeline(stops: [route[5]], stopCards: [card], config: config)
+            let hold = try XCTUnwrap(path.holds.first)
+            let time = (hold.startS + hold.endS) / 2
+            let background = try await snapshot(centeredAt: path.position(atTime: time), config: config)
+            let frame = try compositor.render(atTime: time, background: RecapBackground(current: background))
+            return try XCTUnwrap(pixels(frame).data as Data?)
+        }
+
+        let dwellCard = try await render(detail: nil)
+        let walkVisitCard = try await render(detail: "步行 21 分鐘")
+        XCTAssertNotEqual(dwellCard, walkVisitCard, "the detail line must actually draw")
+        let repeated = try await render(detail: "步行 21 分鐘")
+        XCTAssertEqual(walkVisitCard, repeated, "detail rendering must stay byte-deterministic")
+    }
+
     func testCrossFadeBlendsBackgroundsAndKeepsOverlayOnRoute() async throws {
         let config = exportConfig()
         let (path, compositor) = try makePipeline(config: config)
@@ -225,21 +247,6 @@ final class RecapFrameTests: XCTestCase {
 
     // MARK: - Render loop gates
 
-    /// Counts provider hits so the keyframe cache is provably doing its job.
-    private final class CountingProvider: RecapSnapshotProviding {
-        private let inner = FlatSnapshotProvider()
-        private(set) var requestCount = 0
-
-        func snapshot(
-            centerLat: Double, centerLon: Double, spanM: Double, widthPx: Int, heightPx: Int
-        ) async throws -> MapSnapshot {
-            requestCount += 1
-            return try await inner.snapshot(
-                centerLat: centerLat, centerLon: centerLon, spanM: spanM, widthPx: widthPx, heightPx: heightPx
-            )
-        }
-    }
-
     func testLoopDeliversEveryFrameInOrderWithOneSnapshotPerKeyframe() async throws {
         // 2 s × 5 fps = 10 frames; keyframe every 3 frames → keyframes 0–3
         // plus the bracketing 4th: exactly 5 snapshots for 10 frames.
@@ -308,7 +315,22 @@ final class RecapFrameTests: XCTestCase {
     }
 }
 
-// MARK: - Pixel probes (file scope keeps the test class under lint's size cap)
+// MARK: - Helpers at file scope (keeps the test class under lint's size cap)
+
+/// Counts provider hits so the keyframe cache is provably doing its job.
+private final class CountingProvider: RecapSnapshotProviding {
+    private let inner = FlatSnapshotProvider()
+    private(set) var requestCount = 0
+
+    func snapshot(
+        centerLat: Double, centerLon: Double, spanM: Double, widthPx: Int, heightPx: Int
+    ) async throws -> MapSnapshot {
+        requestCount += 1
+        return try await inner.snapshot(
+            centerLat: centerLat, centerLon: centerLon, spanM: spanM, widthPx: widthPx, heightPx: heightPx
+        )
+    }
+}
 
 private struct RGB: Equatable {
     let red: Int

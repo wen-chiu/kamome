@@ -33,13 +33,35 @@ extension RecapFrameCompositor {
             textX = photoRect.maxX + padding
         }
 
-        drawText(
-            card.name,
-            at: CGPoint(x: textX, y: rect.midY - style.nameFontPx * scale / 2),
-            fontPx: style.nameFontPx,
-            color: style.cardTextColor,
-            in: context
-        )
+        if let detail = card.detail {
+            // Two lines: name upper, kind detail (e.g. walking duration) lower.
+            let gap = padding / 2
+            let nameH = style.nameFontPx * scale
+            let detailH = style.detailFontPx * scale
+            let blockTop = rect.midY + (nameH + gap + detailH) / 2
+            drawText(
+                card.name,
+                at: CGPoint(x: textX, y: blockTop - nameH),
+                fontPx: style.nameFontPx,
+                color: style.cardTextColor,
+                in: context
+            )
+            drawText(
+                detail,
+                at: CGPoint(x: textX, y: blockTop - nameH - gap - detailH),
+                fontPx: style.detailFontPx,
+                color: style.cardDetailColor,
+                in: context
+            )
+        } else {
+            drawText(
+                card.name,
+                at: CGPoint(x: textX, y: rect.midY - style.nameFontPx * scale / 2),
+                fontPx: style.nameFontPx,
+                color: style.cardTextColor,
+                in: context
+            )
+        }
         drawBadge(card.dayLabel, straddling: rect, padding: padding, in: context)
     }
 
