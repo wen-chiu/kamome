@@ -9,7 +9,9 @@ import KamomeConfig
 /// renderer. The S5 photos toggle maps to `photosEnabled` — off means a
 /// route-only animation with no stop cards. Title and end cards are trip
 /// chrome, not photo moments, so the toggle never removes them (the end card
-/// carries the "Get this route" share hook).
+/// carries the "Get this route" share hook). Confirmed by Chiu 2026-07-18
+/// (decisions.md recap-chrome): if a completely chrome-free export is ever
+/// wanted, that is a separate explicit option — do not overload this flag.
 public struct OverlayEvent: Equatable {
     public enum Kind: Equatable {
         /// Photo card + stop name + day badge during the stop's hold (§4.5 step 3).

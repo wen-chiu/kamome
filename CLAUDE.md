@@ -33,8 +33,9 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   travels with `MapSnapshot` so MKMapSnapshotter's `point(for:)` stays
   authoritative; `FlatSnapshotProvider` keeps golden-frame gates
   deterministic), title/end cards as new OverlayEvent kinds (photos toggle
-  gates stop cards only — see decisions.md 2026-07-18 recap-chrome, needs
-  Chiu sign-off), `RecapQRCode`, and `RecapExporter` → H.264 MP4 +
+  gates stop cards only — decisions.md 2026-07-18 recap-chrome, **confirmed
+  by Chiu**; chrome-free export = separate future option, never this
+  toggle), `RecapQRCode`, and `RecapExporter` → H.264 MP4 +
   decimated GIF with progress/cancel. New export tunables: frame size,
   camera_span_m, keyframe_interval_frames, title_card_s, end_card_s.
   Remaining for P3: S5 screen (wire RecapExporter + MapKitSnapshotProvider,

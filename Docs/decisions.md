@@ -326,7 +326,7 @@ resume; icebox); HUD stop count shows live stops only until End Trip;
 end card (stats + "Get this route" QR) to the recap. The 2026-07-17 decision
 says the S5 photos toggle off means "route-only animation = overlay events
 off" — written before title/end cards existed as events.
-**Decision (Claude, implementation call — needs Chiu's sign-off):** the
+**Decision (Claude implementation call; confirmed by Chiu 2026-07-18):** the
 toggle gates **photo moments** (stop cards, later route-photo fly-bys).
 Title/end cards are trip *chrome*, not photo moments, and always render:
 dropping the end card would silently remove the share hook (§1.3 loops) from
@@ -336,6 +336,11 @@ caller-supplied strings so wording stays app-side ("Get this route", spec
 v1.4 §4.5) and localizable.
 **Rejected:** gating all overlay events (kills the share hook); a second
 toggle for chrome (S5 stays one-switch simple; revisit only if users ask).
+**Chiu (2026-07-18 review):** agreed as stated; additionally — a completely
+clean export with no trip chrome, if ever wanted, must be a **separate
+explicit option**, never a reuse of the photos toggle. S5 labels must make
+it obvious the toggle controls photo overlays only. Locked by gate test
+`testPhotosOffKeepsEndCardShareHook`.
 
 ## 2026-07-18 — stop.kind = what happened, never how it was detected
 

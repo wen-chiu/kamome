@@ -46,14 +46,14 @@ final class RecapFrameTests: XCTestCase {
 
     private func makePipeline(
         stops: [CameraPath.Point] = [],
-        overlaysEnabled: Bool = true,
+        photosEnabled: Bool = true,
         stopCards: [RecapFrameCompositor.StopCard] = [],
         titleCard: RecapFrameCompositor.TitleCard? = nil,
         endCard: RecapFrameCompositor.EndCard? = nil,
         config: TrackingConfig.Export
     ) throws -> (path: CameraPath, compositor: RecapFrameCompositor) {
         let path = try XCTUnwrap(CameraPath(route: route, stops: stops, config: config))
-        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: overlaysEnabled)
+        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: photosEnabled)
         let compositor = RecapFrameCompositor(
             path: path,
             events: events,
@@ -110,7 +110,7 @@ final class RecapFrameTests: XCTestCase {
         }
     }
 
-    func testStopHoldShowsCardAndOverlaysOffHidesIt() async throws {
+    func testStopHoldShowsCardAndPhotosOffHidesIt() async throws {
         let config = exportConfig()
         let card = RecapFrameCompositor.StopCard(name: "Busselton Jetty", dayLabel: "Day 1")
         let (path, compositor) = try makePipeline(
@@ -126,12 +126,12 @@ final class RecapFrameTests: XCTestCase {
         let cardY = heightPx - 40
         try assertPixel(frame, col: cardX, row: cardY, is: cardRGB, "stop card visible during hold")
 
-        // S5 photos toggle off → route-only animation, no card.
+        // S5 photos toggle off → no photo overlays (stop cards).
         let (_, plainCompositor) = try makePipeline(
-            stops: [route[5]], overlaysEnabled: false, stopCards: [card], config: config
+            stops: [route[5]], photosEnabled: false, stopCards: [card], config: config
         )
         let plain = try plainCompositor.render(atTime: time, background: RecapBackground(current: background))
-        try assertPixel(plain, col: cardX, row: cardY, is: backgroundRGB, "overlays off leaves bare map")
+        try assertPixel(plain, col: cardX, row: cardY, is: backgroundRGB, "photos off leaves bare map")
     }
 
     /// stop.kind rendering (ADR 2026-07-18 stop-kind): a walk-visit card
@@ -202,7 +202,7 @@ final class RecapFrameTests: XCTestCase {
         let config = exportConfig()
         let title = RecapFrameCompositor.TitleCard(title: "Perth", subtitle: "Jul 16 · 1 km")
         // photos off: stop cards gone, trip chrome stays (share hook intact).
-        let (path, compositor) = try makePipeline(overlaysEnabled: false, titleCard: title, config: config)
+        let (path, compositor) = try makePipeline(photosEnabled: false, titleCard: title, config: config)
         let background = try await snapshot(centeredAt: path.position(atTime: 0.5), config: config)
         let frame = try compositor.render(atTime: 0.5, background: RecapBackground(current: background))
 
@@ -211,6 +211,36 @@ final class RecapFrameTests: XCTestCase {
         // After the title window the panel is gone.
         let later = try compositor.render(atTime: 1.5, background: RecapBackground(current: background))
         try assertPixel(later, col: 30, row: 25, is: backgroundRGB, "title card leaves after title_card_s")
+    }
+
+    /// Locks the signed-off toggle contract (decisions.md 2026-07-18, Chiu):
+    /// photosEnabled removes stop cards ONLY — the end card and its share
+    /// hook must survive a route-only export. A fully chrome-free export
+    /// would be a separate explicit option, never this toggle.
+    func testPhotosOffKeepsEndCardShareHook() async throws {
+        let config = exportConfig()
+        let endCard = RecapFrameCompositor.EndCard(
+            statsLines: ["1 km · 1 stop"],
+            callToAction: "Get this route",
+            qrCode: RecapQRCode.image(for: "https://kamome.app/r/test", sidePx: 64)
+        )
+        let stopCard = RecapFrameCompositor.StopCard(name: "Stop", dayLabel: "Day 1")
+        let (path, compositor) = try makePipeline(
+            stops: [route[5]], photosEnabled: false, stopCards: [stopCard], endCard: endCard, config: config
+        )
+
+        // No stop card during what would have been the hold...
+        let hold = try XCTUnwrap(path.holds.first)
+        let holdTime = (hold.startS + hold.endS) / 2
+        let holdBackground = try await snapshot(centeredAt: path.position(atTime: holdTime), config: config)
+        let holdFrame = try compositor.render(atTime: holdTime, background: RecapBackground(current: holdBackground))
+        try assertPixel(holdFrame, col: widthPx - 25, row: heightPx - 40, is: backgroundRGB, "no stop card with photos off")
+
+        // ...but the end card still closes the video.
+        let endTime = config.targetDurationS - 0.5
+        let endBackground = try await snapshot(centeredAt: path.position(atTime: endTime), config: config)
+        let endFrame = try compositor.render(atTime: endTime, background: RecapBackground(current: endBackground))
+        try assertPixel(endFrame, col: 30, row: heightPx / 2, is: cardRGB, "end card survives photos off")
     }
 
     func testEndCardShowsStatsPanelWithScannableQR() async throws {
