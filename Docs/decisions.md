@@ -225,3 +225,32 @@ vision restated: minimum-effort trip capture and sharing.
 CI); 4–5 s clips (one clip would eat 15 %+ of a 30 s video); putting route
 photos in the P3 gate (render budget for the base pipeline is unproven —
 visual sugar stacks on a working frame loop, not before it).
+
+## 2026-07-18 — Fork demoted from positioning language to mechanism
+
+**Context:** Two rounds of external product review (GPT + Claude, 2026-07-17/18)
+converged on the same judgment: "GitHub for road trips" is engineer-brain
+framing. Ordinary travelers don't fork — they save routes and get inspired
+(Pinterest psychology: Save / Inspired by / Get this route has low interaction
+cost and low psychological commitment; Fork implies obligation to execute).
+The spec had already absorbed the rest of that debate in v1.3 (battery moat,
+import as acquisition hook, passive tier = v1, transactional monetization,
+fork gated behind §10's ≥1-organic-fork criterion) — but the positioning line,
+the §1.5 "killer feature" label, and the §4.5 end-card copy still carried the
+v1.2 fork-first language. The end card is a P3 deliverable (ExportEngine
+step 4), so the copy decision was due now, not at P6.
+**Decision (Chiu):** Spec v1.4. Fork remains the underlying mechanism —
+`.kamome` interchange file, `plan.forked_from` lineage, §3.1 schema all
+unchanged — but it is no longer the product's marketing identity. Positioning
+rewritten to memory-engine framing ("you don't have to remember the app; it
+remembers the journey"). All user-facing copy uses **Save / Get this route /
+Inspired by**; "fork" survives only in internal names (code, schema, §1.3
+loop names). Three spec edits: positioning line, §1.5 row label (killer
+feature → P6 bet), §4.5 end card ("Fork this route" → "Get this route").
+S6/S7 screen wording is settled at P6 when those screens are built.
+**Rejected:** renaming the `.kamome` schema fields or fork-loop internals
+(churn with zero user-facing value); re-litigating the rest of the
+GPT/Claude debate (v1.3 already absorbed the convergent conclusions — the
+next data point is the P3 gate, not more positioning documents); adding an
+AI prose diary or a generic badge/passport system (icebox; the 環島 badge in
+§1.7 is already the correctly-scoped milestone feature).

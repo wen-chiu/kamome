@@ -1,8 +1,9 @@
 # Kamome — working memory for Claude Code
 
-**Authoritative spec:** `Docs/kamome-poc-spec.md` (v1.3, 2026-07-15 battery-moat
-pivot — phases renumbered: P4 Import & Matching, P5 Passive Tier = v1/TestFlight,
-P6 Plans & Fork, P7 backend). Read it before any work.
+**Authoritative spec:** `Docs/kamome-poc-spec.md` (v1.4, 2026-07-18 fork demoted
+to mechanism — user-facing copy says Save / Get this route, never "fork"; v1.3
+battery-moat pivot — phases renumbered: P4 Import & Matching, P5 Passive Tier =
+v1/TestFlight, P6 Plans & Fork, P7 backend). Read it before any work.
 Rules of Engagement: spec §0 — phase gates are hard gates, no magic numbers
 (all tunables in `Config/TrackingConfig.json`), boring tech, demo artifact per
 phase, flag anything needing the physical device.

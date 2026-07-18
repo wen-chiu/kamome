@@ -1,11 +1,11 @@
 # Kamome 卡摸咩 — POC Design Spec & Build Plan
 
 **Product name:** Kamome / 卡摸咩 (かもめ, "seagull" — inspired by the Taiwanese classic 《快樂的出帆》; the seagull follows the traveler out and comes home with the memories)
-**Positioning:** GitHub for road trips. Record your journey with high route fidelity, turn it into an animated recap video, and publish it as a forkable route plan others can copy, edit, and drive. **Taiwan-first launch, English-ready by design.**
+**Positioning:** The memory engine for road trips — you don't have to remember the app; it remembers the journey. Arm it once, get a cinematic recap video, and share a route others can save and drive. Fork is the underlying mechanism (§3.1), not the marketing language: user-facing copy says **Save / Get this route / Inspired by**, never "fork" ("GitHub for road trips" is engineer-brain framing — ordinary travelers save and get inspired; they don't fork). **Taiwan-first launch, English-ready by design.**
 **Brand element:** the animated "you are here" head marker in the recap video is a small seagull, not a dot. This is the mascot and the app icon.
 **Platform:** iOS 17+, Swift 5.10+, SwiftUI. Base localization zh-Hant, second locale en. All user-facing strings in String Catalogs from Phase 0 — never hardcoded.
 **Audience for this doc:** Claude (Claude Code) as the implementing engineer. Chiu as product owner / reviewer.
-**Doc version:** 1.3 (2026-07-15) — battery-moat repositioning: passive capture tier (§1.8, §2.3), map matching promoted to core (§4.4), trip import (§4.7), phases renumbered (fork → Phase 6, backend → Phase 7), transactional monetization note (§1.6). v1.2 (2026-07-11) added Roadtrippers analysis, Taiwan-market adaptations, Kamome branding, handoff checklist & kickoff prompt.
+**Doc version:** 1.4 (2026-07-18) — fork demoted from positioning to mechanism: positioning line rewritten (memory-engine framing), §1.5 fork row relabeled P6 bet, §4.5 end card copy → "Get this route"; all user-facing copy uses Save / Get / Inspired by (S6/S7 screen wording settled at P6 — internal names, table `plan.forked_from`, and `.kamome` schema unchanged). v1.3 (2026-07-15) — battery-moat repositioning: passive capture tier (§1.8, §2.3), map matching promoted to core (§4.4), trip import (§4.7), phases renumbered (fork → Phase 6, backend → Phase 7), transactional monetization note (§1.6). v1.2 (2026-07-11) added Roadtrippers analysis, Taiwan-market adaptations, Kamome branding, handoff checklist & kickoff prompt.
 
 > **Naming due-diligence (do before locking bundle ID):** search App Store for existing "Kamome" apps, check TIPO (Taiwan) and JPO trademark registers in app/software classes — note JR Kyushu operates a Shinkansen named かもめ (different class, likely fine, verify anyway). **IP caution:** the song 《快樂的出帆》 inspires the *name only*. Never use its lyrics or melody in the app, recap videos, or marketing — the composition is almost certainly still in copyright. Original seagull branding only.
 
@@ -52,7 +52,7 @@ The zero-effort promise is differentiator #1 (§1.8): Relive makes you start/sto
 |---|---|---|---|---|---|
 | Auto route tracking | ✅ | ✅ (activity) | ❌ | ✅ | ✅ |
 | Road-snapped route fidelity | ❌ (straight lines, gaps — top user complaint) | partial | n/a (plans only) | ✅ (private) | ✅ **core feature** |
-| Fork a real driven route into an editable plan | ❌ | ❌ | ❌ (editorial guides only) | ❌ | ✅ **killer feature** |
+| Save a real driven route as an editable plan (fork mechanism) | ❌ | ❌ | ❌ (editorial guides only) | ❌ | ✅ **P6 bet — validated by §10, not assumed** |
 | Plan-vs-actual diff after the trip | ❌ | ❌ | ❌ | ❌ | ✅ |
 | One-tap animated route video with photos | ✅ (Trip Reels) | ✅ | ❌ | ❌ | ✅ (must match or beat quality) |
 | Works with zero account / zero server | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -275,7 +275,7 @@ Deterministic frame pipeline, 1080×1920 (9:16 social) default, 30 fps:
 1. Compute camera path: interpolate along full-trip polyline; speed-warp so total video = `target_duration_s` (default 30 s) regardless of trip length; ease-in/out at stops.
 2. For each frame: `MKMapSnapshotter` renders base map for camera position (cache tiles by region — snapshot per keyframe every N frames, cross-fade between, to keep render time sane), draw traveled polyline portion + animated head dot via CoreGraphics overlay.
 3. At each stop: 1.5 s hold, photo card animates in (highlight photo), stop name label, day badge.
-4. Title card (trip name, dates, distance) + end card (stats + "Fork this route" QR → share URL/file).
+4. Title card (trip name, dates, distance) + end card (stats + "Get this route" QR → share URL/file).
 5. Encode via `AVAssetWriter` (H.264). GIF export: same frames at 12 fps, 480 px wide, `ImageIO` with palette quantization.
 Acceptance bar: an 8-day, 1,200 km trip renders in **< 90 s on an iPhone 13-class device** and looks share-worthy. This feature is the marketing engine — over-invest here.
 
