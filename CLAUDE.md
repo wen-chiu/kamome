@@ -41,6 +41,12 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   re-checks on device.
 - Evening dwell_pause without dwell_resume was benign (parked until End
   Trip) — region-resume still unproven on hardware; the drive proves it.
+- Stop detection redesigned after the 2026-07-18 17:04 drive missed both real
+  stops (ADR 2026-07-18): DwellDetector is streak-based (age-based span check
+  never fired on sparse real sampling); engine never dwell-pauses mid-walk;
+  `StopDeriver` (TripComposer) adds silence-gap + walk-visit (loop-closure)
+  stops at trip end. Trip stop semantics = live ∪ derived; new dwell tunables
+  gap_min_s / visit_min_s / visit_return_radius_m.
 
 ## Verification commands (run from repo root)
 

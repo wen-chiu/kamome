@@ -1,16 +1,24 @@
 import KamomeTrackingEngine
+import KamomeTripComposer
 import XCTest
 
 /// Spec §7 Phase 1 gates, asserted against the real engine via GPX replay.
 final class Phase1GateTests: XCTestCase {
     /// Gate: exactly 4 stops (±0), ≥ 2 drive segments, ≥ 2 walk segments.
+    /// Stops are the pipeline's output — live dwells ∪ trip-end derivation
+    /// (ADR 2026-07-18): the fixture's two walk-loop stops no longer
+    /// dwell-pause mid-walk (that would discard the walking trace on real
+    /// trips); they come back as derived walk-visit stops.
     func testPerthMargaretRiverDay1() throws {
         let engine = try GPXReplay.run(fixture: "perth_margaret_river_day1.gpx")
+        let derived = StopDeriver.derive(
+            segments: engine.segments, engineStops: engine.stops, config: try GPXReplay.loadConfig()
+        )
 
         let drives = engine.segments.filter { $0.mode == .drive }
         let walks = engine.segments.filter { $0.mode == .walk }
 
-        XCTAssertEqual(engine.stops.count, 4, "stops: \(describe(engine))")
+        XCTAssertEqual(engine.stops.count + derived.count, 4, "stops: \(describe(engine))")
         XCTAssertGreaterThanOrEqual(drives.count, 2, "drive segments: \(describe(engine))")
         XCTAssertGreaterThanOrEqual(walks.count, 2, "walk segments: \(describe(engine))")
         XCTAssertEqual(engine.state, .completed)

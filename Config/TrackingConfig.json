@@ -15,7 +15,10 @@
   "dwell": {
     "window_s": 180,
     "radius_m": 80,
-    "region_radius_m": 150
+    "region_radius_m": 150,
+    "gap_min_s": 300,
+    "visit_min_s": 300,
+    "visit_return_radius_m": 300
   },
   "simplify": {
     "epsilon_m": 15

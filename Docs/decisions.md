@@ -281,3 +281,41 @@ GPT/Claude debate (v1.3 already absorbed the convergent conclusions — the
 next data point is the P3 gate, not more positioning documents); adding an
 AI prose diary or a generic badge/passport system (icebox; the 環島 badge in
 §1.7 is already the correctly-scoped milestone feature).
+
+## 2026-07-18 — Stop detection redesigned around real stops: streaks, walk visits, silence gaps
+
+**Context:** Second real drive (17:04 export, `Docs/tests/`): a ~20 min temple
+visit and an ~8 min 7-11 stop produced **zero** recorded stops. Three causes:
+(a) the dwell window "must span the full duration" check required a sample in
+the one-second sliver at the window boundary — dense GPX fixtures always have
+one, sparse real sampling (10–50 m distance filters) almost never does, so
+the live detector was structurally dead on hardware; (b) the temple was a
+*walking* stop — the engine correctly made a 21 min walk segment (spread
+≤ 50 m), and even a fixed dwell detector would have paused GPS mid-walk and
+discarded the walking trace; (c) at the 7-11 the parked phone got zero
+location callbacks for 586 s (distance filter), and a sample-driven detector
+cannot see silence. Chiu (product): walking-around stops are stops on a road
+trip, and the walking pace should be kept.
+**Decision:** Three-part redesign. (1) `DwellDetector` keeps a
+stayed-within-radius **streak** evicted by geometry, not age; it votes once
+the streak spans `window_s`. (2) The engine **never dwell-pauses during a
+confirmed walk segment** — walking IS recap material. (3) New `StopDeriver`
+(Core/TripComposer) adds stops at trip end: **silence gaps** (≥
+`dwell.gap_min_s` with displacement ≤ `dwell.radius_m`) and **walk visits**
+(walk segment bracketed by vehicle segments, ≥ `dwell.visit_min_s`, ending
+within `dwell.visit_return_radius_m` of its start — loop closure, not wander
+extent, separates a visit from an A→B walk; trailhead loops range far and
+still end at the car; a final-destination walk derives nothing). Derived
+stops dedupe against live stops by time overlap; trip stop semantics are now
+**live ∪ derived** (Phase 1 gate tests updated accordingly — perth still
+exactly 4). Replaying the real 17:04 GPX yields the temple (+975 s, 29 min)
+and the 7-11 (+2884 s, 11 min).
+**Rejected:** fixing only the streak rule (would have made the temple worse —
+dwell-pause would kill the walk trace); wander-extent radius for walk visits
+(perth's legitimate walk loops range 274–460 m); live wall-clock silence
+timers in the engine (breaks replay determinism; a `LocationService`-level
+timer for the battery win is a possible follow-up needing device proof).
+**Known limitations:** park-then-sit ≥ 3 min *before* walking still
+dwell-pauses and loses the subsequent walk trace (needs activity-aware
+resume; icebox); HUD stop count shows live stops only until End Trip;
+`drive_s` still includes silence-gap time.
