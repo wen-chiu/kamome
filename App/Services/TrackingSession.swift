@@ -68,7 +68,7 @@ final class TrackingSession {
 
         // Denormalized stats for the S1 card and S3 strip (§3 stats_json);
         // computed before saving so the phantom guard shares its distance.
-        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops)
+        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops, config: config)
         let durationS = now.timeIntervalSince(startedAt ?? now)
         if TripGuard.isPhantom(durationS: durationS, distanceM: stats.distanceM, config: config.trip) {
             self.engine = nil

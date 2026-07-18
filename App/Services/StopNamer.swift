@@ -56,10 +56,15 @@ final class StopNamer {
 
     private static func displayName(from placemark: CLPlacemark?) -> String? {
         guard let placemark else { return nil }
-        // Most specific first: POI/area name, street, locality.
-        return placemark.areasOfInterest?.first
-            ?? placemark.name
-            ?? placemark.thoroughfare
-            ?? placemark.locality
+        return StopDisplayName.choose(
+            name: placemark.name,
+            thoroughfare: placemark.thoroughfare,
+            subLocality: placemark.subLocality,
+            locality: placemark.locality,
+            administrativeArea: placemark.administrativeArea,
+            country: placemark.country,
+            inlandWater: placemark.inlandWater,
+            ocean: placemark.ocean
+        )
     }
 }

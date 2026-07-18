@@ -36,7 +36,7 @@ final class SimplifierTests: XCTestCase {
 final class TripStatsTests: XCTestCase {
     func testStatsFromPerthReplay() throws {
         let engine = try GPXReplay.run(fixture: "perth_margaret_river_day1.gpx")
-        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops)
+        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops, config: try GPXReplay.loadConfig())
 
         // Fixture is ~242 km straight-line with noise (header comment).
         XCTAssertGreaterThan(stats.distanceM, 220_000)
@@ -49,6 +49,39 @@ final class TripStatsTests: XCTestCase {
         // Round-trips through trip.stats_json.
         let restored = TripStats.from(jsonString: stats.jsonString())
         XCTAssertEqual(restored, stats)
+    }
+
+    /// Regression for the 2026-07-18 drive: a 3-second GPS glitch cluster
+    /// (137 m jumps, h_acc 43–49 m — inside the keep filter) carried
+    /// CoreLocation speeds of 137 m/s and put 495 km/h in the stats. Glitch
+    /// points are position-kept but must not count as speed evidence.
+    func testGlitchClusterDoesNotInflateTopSpeed() throws {
+        let config = try GPXReplay.loadConfig()
+        let engine = TrackingEngine(config: config, vehicle: .car)
+        let mps = 60.0 / 3.6
+        let mPerDegLat = 111_320.0
+
+        engine.start(at: 0)
+        for second in stride(from: 0.0, through: 600, by: 2) {
+            let isGlitch = (300...304).contains(second)
+            // The glitch shears sideways off the path, exactly like the real
+            // trace: position jumps ~137 m/s east for a few fixes.
+            let glitchOffsetLon = isGlitch ? (second - 298) * 137.0 / mPerDegLat : 0
+            engine.process(
+                LocationSample(
+                    ts: second,
+                    lat: 25.0 + second * mps / mPerDegLat,
+                    lon: 121.36 + glitchOffsetLon,
+                    hAccM: isGlitch ? 45 : 5,
+                    speedMps: isGlitch ? 137.4 : mps
+                )
+            )
+        }
+        engine.finish(at: 600)
+
+        let stats = TripStats.compute(segments: engine.segments, stops: engine.stops, config: config)
+        XCTAssertGreaterThan(stats.topSpeedKmh, 55, "real cruising speed should survive")
+        XCTAssertLessThan(stats.topSpeedKmh, 70, "glitch cluster must not inflate top speed")
     }
 }
 

@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
   "filter": {
-    "max_h_acc_m": 50
+    "max_h_acc_m": 50,
+    "speed_max_h_acc_m": 25
   },
   "segmentation": {
     "mode_confirm_s": 60,

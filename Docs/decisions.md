@@ -192,6 +192,33 @@ battery-moat numbers must be proven before more phases stack on the tracking
 engine); tightening sampling config to fix road deviation (costs battery;
 matching is the designed fix).
 
+## 2026-07-18 — Speed evidence gated by accuracy; geocoded names need address context
+
+**Context:** 2026-07-18 drive (Taoyuan, 17 km / 1.6 h urban, artifacts in
+`Docs/demos/`). Two data bugs: (a) top speed showed 495 km/h — a 3-second GPS
+glitch cluster (137 m jumps, h_acc 43–49 m, inside the 50 m keep filter)
+carried CoreLocation's own `speed` = 137.4 m/s, and `TripStats` trusted raw
+per-fix speeds, violating the spirit of the 2026-07-12 displacement-baseline
+ADR; real top speed from clean fixes was ~61 km/h. (b) The stop was named
+「臺灣島」— Apple's geocoder answers ordinary Taiwan coordinates with
+island-scale features (via `areasOfInterest` and feature-only placemark
+`name`s). Positives: phantom guard discarded a 50 s accidental start on
+device; battery 100% → 100% unplugged over 1 h 40 m (zero `battery_change`
+events); photo permission flow + route-photo strip worked.
+**Decision:** (a) `TripStats` top speed = displacement over the trailing
+`speed_smoothing_window_s` (mirrors the engine, incl. the ⅓-window warm-up
+rule), computed only from fixes with h_acc ≤ new `filter.speed_max_h_acc_m`
+(25); OS speeds are never used for the stat — position glitches leak into
+them. Glitchy fixes still draw the route. (b) Stop naming trusts placemark
+`name` only when address context exists (thoroughfare or subLocality non-nil)
+and the name differs from coarse fields; fallback chain thoroughfare →
+subLocality → locality; `areasOfInterest` dropped entirely (pure logic in
+`StopDisplayName`, Core/TripComposer). MKLocalSearch POI naming → icebox.
+**Rejected:** clamping top speed to a plausibility cap (shows the cap, hides
+the bug); tightening `filter.max_h_acc_m` (glitch fixes are position-useful);
+a blocklist of island names (fragile, market-specific). Note: stats_json of
+already-recorded trips is not recomputed — POC-phase trips are throwaway.
+
 ## 2026-07-17 — Recap video: route photos in, export gets a photos toggle, video clips parked
 
 **Context:** Product discussion (Chiu, 2026-07-17) on §4.5 as the flagship

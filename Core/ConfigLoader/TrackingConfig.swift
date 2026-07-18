@@ -7,9 +7,15 @@ public struct TrackingConfig: Decodable, Equatable {
     public struct Filter: Decodable, Equatable {
         /// Samples with horizontal accuracy worse than this are discarded.
         public let maxHAccM: Double
+        /// Samples worse than this still draw the route but are excluded as
+        /// speed evidence: the 2026-07-18 drive had a glitch cluster at
+        /// h_acc 43–49 m (under the keep threshold) that CoreLocation tagged
+        /// with 137 m/s speeds, putting 495 km/h in the trip stats.
+        public let speedMaxHAccM: Double
 
         enum CodingKeys: String, CodingKey {
             case maxHAccM = "max_h_acc_m"
+            case speedMaxHAccM = "speed_max_h_acc_m"
         }
     }
 
