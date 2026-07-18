@@ -33,6 +33,11 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.sampling.walk.distanceFilterM, 10)
         XCTAssertEqual(config.export.targetDurationS, 30)
         XCTAssertEqual(config.export.maxHoldFraction, 0.5)
+        // Frame render tunables (§4.5 step 2).
+        XCTAssertEqual(config.export.frameWidthPx, 1080)
+        XCTAssertEqual(config.export.frameHeightPx, 1920)
+        XCTAssertEqual(config.export.cameraSpanM, 1500)
+        XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
         XCTAssertEqual(config.filter.maxHAccM, 50)
         XCTAssertEqual(config.filter.speedMaxHAccM, 25)
         // Phantom-trip guard (ADR 2026-07-16).

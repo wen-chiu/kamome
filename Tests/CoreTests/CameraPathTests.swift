@@ -24,7 +24,11 @@ final class CameraPathTests: XCTestCase {
             stopHoldS: stopHoldS,
             maxHoldFraction: maxHoldFraction,
             gifFps: 12,
-            gifWidthPx: 480
+            gifWidthPx: 480,
+            frameWidthPx: 1080,
+            frameHeightPx: 1920,
+            cameraSpanM: 1500,
+            keyframeIntervalFrames: 15
         )
     }
 

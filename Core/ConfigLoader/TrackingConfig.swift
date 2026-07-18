@@ -166,6 +166,14 @@ public struct TrackingConfig: Decodable, Equatable {
         public let maxHoldFraction: Double
         public let gifFps: Int
         public let gifWidthPx: Int
+        /// Output frame size (§4.5: 1080×1920, 9:16 social default).
+        public let frameWidthPx: Int
+        public let frameHeightPx: Int
+        /// Ground distance the frame spans horizontally.
+        public let cameraSpanM: Double
+        /// One map snapshot per this many frames; frames in between cross-fade
+        /// the neighboring keyframe snapshots (§4.5 step 2 render budget).
+        public let keyframeIntervalFrames: Int
 
         public init(
             targetDurationS: Double,
@@ -173,7 +181,11 @@ public struct TrackingConfig: Decodable, Equatable {
             stopHoldS: Double,
             maxHoldFraction: Double,
             gifFps: Int,
-            gifWidthPx: Int
+            gifWidthPx: Int,
+            frameWidthPx: Int,
+            frameHeightPx: Int,
+            cameraSpanM: Double,
+            keyframeIntervalFrames: Int
         ) {
             self.targetDurationS = targetDurationS
             self.fps = fps
@@ -181,6 +193,10 @@ public struct TrackingConfig: Decodable, Equatable {
             self.maxHoldFraction = maxHoldFraction
             self.gifFps = gifFps
             self.gifWidthPx = gifWidthPx
+            self.frameWidthPx = frameWidthPx
+            self.frameHeightPx = frameHeightPx
+            self.cameraSpanM = cameraSpanM
+            self.keyframeIntervalFrames = keyframeIntervalFrames
         }
 
         enum CodingKeys: String, CodingKey {
@@ -190,6 +206,10 @@ public struct TrackingConfig: Decodable, Equatable {
             case maxHoldFraction = "max_hold_fraction"
             case gifFps = "gif_fps"
             case gifWidthPx = "gif_width_px"
+            case frameWidthPx = "frame_width_px"
+            case frameHeightPx = "frame_height_px"
+            case cameraSpanM = "camera_span_m"
+            case keyframeIntervalFrames = "keyframe_interval_frames"
         }
     }
 

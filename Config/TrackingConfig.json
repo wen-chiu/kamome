@@ -60,6 +60,10 @@
     "stop_hold_s": 1.5,
     "max_hold_fraction": 0.5,
     "gif_fps": 12,
-    "gif_width_px": 480
+    "gif_width_px": 480,
+    "frame_width_px": 1080,
+    "frame_height_px": 1920,
+    "camera_span_m": 1500,
+    "keyframe_interval_frames": 15
   }
 }

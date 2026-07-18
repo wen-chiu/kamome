@@ -155,19 +155,41 @@ public struct CameraPath {
     }
 
     public func position(atTime time: Double) -> Position {
+        let (distanceM, holdIndex) = state(atTime: time)
+        let point = coordinate(atDistance: distanceM)
+        return Position(lat: point.lat, lon: point.lon, holdingStopIndex: holdIndex)
+    }
+
+    /// Along-route distance covered at `time` — the frame renderer's traveled
+    /// polyline ends here.
+    public func traveledDistanceM(atTime time: Double) -> Double {
+        state(atTime: time).distanceM
+    }
+
+    /// Route vertices already passed at `time`, closed with the interpolated
+    /// head point, ready for the traveled-polyline stroke (§4.5 step 2).
+    public func routePrefix(atTime time: Double) -> [Point] {
+        let distanceM = traveledDistanceM(atTime: time)
+        var prefix: [Point] = []
+        for (index, vertexM) in cumulativeM.enumerated() where vertexM < distanceM {
+            prefix.append(route[index])
+        }
+        prefix.append(coordinate(atDistance: distanceM))
+        return prefix
+    }
+
+    private func state(atTime time: Double) -> (distanceM: Double, holdIndex: Int?) {
         let clamped = min(max(time, 0), durationS)
         // The timeline is a handful of entries per stop — linear scan is fine.
         let entry = timeline.last(where: { $0.startS <= clamped }) ?? timeline[0]
         switch entry.phase {
         case let .hold(stopIndex, atM):
-            let point = coordinate(atDistance: atM)
-            return Position(lat: point.lat, lon: point.lon, holdingStopIndex: stopIndex)
+            return (atM, stopIndex)
         case let .travel(fromM, toM):
             let span = entry.endS - entry.startS
             let progress = span > 0 ? (clamped - entry.startS) / span : 1
             let eased = Self.smoothstep(min(max(progress, 0), 1))
-            let point = coordinate(atDistance: fromM + (toM - fromM) * eased)
-            return Position(lat: point.lat, lon: point.lon, holdingStopIndex: nil)
+            return (fromM + (toM - fromM) * eased, nil)
         }
     }
 
