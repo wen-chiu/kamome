@@ -27,7 +27,11 @@ final class TripRepositoryTests: XCTestCase {
             segments: engine.segments, engineStops: engine.stops, config: try GPXReplay.loadConfig()
         )
         let stops = allStops.map {
-            TripRepository.NewStop(lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
+            TripRepository.NewStop(
+                lat: $0.lat, lon: $0.lon,
+                arrivedAt: $0.arrivedAt, departedAt: $0.departedAt,
+                kind: $0.kind.rawValue
+            )
         }
 
         let tripId = try repository.saveCompletedTrip(
@@ -41,6 +45,10 @@ final class TripRepositoryTests: XCTestCase {
         XCTAssertEqual(try repository.allTrips().count, 1)
         XCTAssertEqual(try repository.allTrips().first?.status, "completed")
         XCTAssertEqual(try repository.stopCount(tripId: tripId), 4)
+        // stop.kind round-trips: perth = 2 live dwells + 2 derived walk visits.
+        let persistedKinds = try repository.detail(tripId: tripId)?.stops.map(\.kind) ?? []
+        XCTAssertEqual(persistedKinds.filter { $0 == "dwell" }.count, 2)
+        XCTAssertEqual(persistedKinds.filter { $0 == "walk_visit" }.count, 2)
         XCTAssertEqual(try repository.segmentCount(tripId: tripId), engine.segments.count)
         let pointTotal = engine.segments.reduce(0) { $0 + $1.points.count }
         XCTAssertEqual(try repository.trackpointCount(tripId: tripId), pointTotal)

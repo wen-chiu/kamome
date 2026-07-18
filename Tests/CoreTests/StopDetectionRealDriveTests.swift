@@ -86,6 +86,7 @@ final class StopDetectionRealDriveTests: XCTestCase {
         let derived = StopDeriver.derive(segments: engine.segments, engineStops: engine.stops, config: config)
         XCTAssertEqual(derived.count, 1, "the walk visit is a stop")
         let stop = derived[0]
+        XCTAssertEqual(stop.kind, .walkVisit, "recap renders walk visits with duration/trace")
         XCTAssertEqual((stop.departedAt ?? 0) - stop.arrivedAt, 1260, accuracy: 120)
         XCTAssertEqual(stop.lat, templeLat, accuracy: 100 / mPerDegLat)
     }
@@ -129,6 +130,7 @@ final class StopDetectionRealDriveTests: XCTestCase {
         let total = engine.stops.count + derived.count
         XCTAssertEqual(total, 1, "engine (live, at departure) and deriver (gap) must not double-count")
         let stop = (engine.stops + derived)[0]
+        XCTAssertEqual(stop.kind, .dwell, "silence is the detection mechanism, not the kind")
         XCTAssertEqual((stop.departedAt ?? 0) - stop.arrivedAt, 586, accuracy: 200)
     }
 

@@ -53,12 +53,15 @@ public struct TripRepository {
         public let lon: Double
         public let arrivedAt: Double
         public let departedAt: Double?
+        /// `StopKind` raw value (ADR 2026-07-18 stop-kind).
+        public let kind: String
 
-        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?) {
+        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?, kind: String = "dwell") {
             self.lat = lat
             self.lon = lon
             self.arrivedAt = arrivedAt
             self.departedAt = departedAt
+            self.kind = kind
         }
     }
 
@@ -119,7 +122,7 @@ public struct TripRepository {
                     lon: stop.lon,
                     arrivedAt: stop.arrivedAt,
                     departedAt: stop.departedAt,
-                    kind: "auto"
+                    kind: stop.kind
                 ).insert(db)
             }
         }

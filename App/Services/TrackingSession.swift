@@ -89,7 +89,11 @@ final class TrackingSession {
         let title = Self.defaultTitle(for: startedAt ?? now)
         let segments = engine.segments.map(Self.repositorySegment)
         let stops = allStops.map {
-            TripRepository.NewStop(lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
+            TripRepository.NewStop(
+                lat: $0.lat, lon: $0.lon,
+                arrivedAt: $0.arrivedAt, departedAt: $0.departedAt,
+                kind: $0.kind.rawValue
+            )
         }
         if let tripId = try? repository.saveCompletedTrip(
             title: title,

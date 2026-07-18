@@ -336,3 +336,24 @@ caller-supplied strings so wording stays app-side ("Get this route", spec
 v1.4 §4.5) and localizable.
 **Rejected:** gating all overlay events (kills the share hook); a second
 toggle for chrome (S5 stays one-switch simple; revisit only if users ask).
+
+## 2026-07-18 — stop.kind = what happened, never how it was detected
+
+**Context:** The recap must render a walking visit (card + walking
+duration/trace) differently from a plain dwell. Schema v1 reserved
+`stop.kind` but every save wrote `"auto"`. GPT review (relayed by Chiu)
+flagged a modeling trap: `silence` as a kind would mix "what happened" with
+"how we detected it."
+**Decision:** `StopKind` enum (TrackingEngine): `dwell` and `walk_visit`
+only. Silence-gap-derived stops are `dwell` — the phone sat somewhere; GPS
+silence is merely the evidence. Detection mechanism is deliberately not
+persisted; if evidence ever demands it, a `detection_method` column rides
+the next schema migration (alongside `photo_ref.order_idx`, per the
+2026-07-12 reorder ADR). Kind flows engine/deriver → `NewStop` →
+`stop.kind`; rows from builds before this change carry `"auto"`, and
+readers treat unknown kinds as `dwell`. No new Place/Visit abstraction
+(owner decision: Stop + time-overlap is sufficient for P3; the walk trace
+is recovered from the walk segment sharing the stop's time span).
+**Rejected:** `silence` as a user-facing kind; a `detection_method` column
+now (migration churn with no reader); Place/Visit entities before the
+compositor proves what it actually needs.

@@ -60,6 +60,14 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   `StopDeriver` (TripComposer) adds silence-gap + walk-visit (loop-closure)
   stops at trip end. Trip stop semantics = live ∪ derived; new dwell tunables
   gap_min_s / visit_min_s / visit_return_radius_m.
+- `stop.kind` wired (ADR 2026-07-18 stop-kind): `dwell` | `walk_visit` via
+  `StopKind`; silence-derived = dwell (detection ≠ kind); pre-existing rows
+  say "auto" — readers treat unknown as dwell. Compositor renders walk visits
+  with walking duration/trace (recovered via time overlap with the walk
+  segment — no Place/Visit abstraction, owner decision). Next-drive
+  validation items tracked in `Docs/device-test-P3.md` (A–E). POI naming
+  (MKLocalSearch → geocode fallback) = next standalone PR after the first
+  end-to-end replay; do not block compositor on it.
 
 ## Verification commands (run from repo root)
 
