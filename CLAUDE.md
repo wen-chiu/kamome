@@ -26,8 +26,21 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   target started with `CameraPath` (§4.5 step 1 — speed-warp to
   `export.target_duration_s`, per-stop holds pinned on-route, smoothstep
   easing, new `export.max_hold_fraction` tunable caps holds on stop-dense
-  trips). Next: §4.5 steps 2–5 (frame rendering via MKMapSnapshotter,
-  AVAssetWriter MP4, GIF, S5 screen) + golden-frame gate tests.
+  trips).
+- §4.5 steps 2, 4, 5 landed 2026-07-18 (three commits on `phase-3-recap`):
+  frame renderer (`RecapFrameCompositor` + `RecapRenderLoop`, keyframe
+  snapshots cross-faded per `export.keyframe_interval_frames`, projection
+  travels with `MapSnapshot` so MKMapSnapshotter's `point(for:)` stays
+  authoritative; `FlatSnapshotProvider` keeps golden-frame gates
+  deterministic), title/end cards as new OverlayEvent kinds (photos toggle
+  gates stop cards only — see decisions.md 2026-07-18 recap-chrome, needs
+  Chiu sign-off), `RecapQRCode`, and `RecapExporter` → H.264 MP4 +
+  decimated GIF with progress/cancel. New export tunables: frame size,
+  camera_span_m, keyframe_interval_frames, title_card_s, end_card_s.
+  Remaining for P3: S5 screen (wire RecapExporter + MapKitSnapshotProvider,
+  photos toggle, stop-card photo/title/end content from the trip DB), render
+  budget proof on device (§4.5 bar: 8-day trip < 90 s on iPhone 13-class),
+  demo artifact, plus the two gate items below.
 - Recap product decisions (decisions.md 2026-07-17, Chiu): overlay moments
   (stop cards, and later route-attached photo fly-bys) are **timeline events**
   built alongside CameraPath in step 2 — don't hardwire rendering to

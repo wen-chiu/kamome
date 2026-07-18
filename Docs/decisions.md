@@ -319,3 +319,20 @@ timer for the battery win is a possible follow-up needing device proof).
 dwell-pauses and loses the subsequent walk trace (needs activity-aware
 resume; icebox); HUD stop count shows live stops only until End Trip;
 `drive_s` still includes silence-gap time.
+
+## 2026-07-18 — Recap chrome: photos toggle gates stop cards only; title/end cards always render
+
+**Context:** §4.5 step 4 adds a title card (trip name, dates, distance) and an
+end card (stats + "Get this route" QR) to the recap. The 2026-07-17 decision
+says the S5 photos toggle off means "route-only animation = overlay events
+off" — written before title/end cards existed as events.
+**Decision (Claude, implementation call — needs Chiu's sign-off):** the
+toggle gates **photo moments** (stop cards, later route-photo fly-bys).
+Title/end cards are trip *chrome*, not photo moments, and always render:
+dropping the end card would silently remove the share hook (§1.3 loops) from
+exactly the exports users make when they want a clean route video. Toggle
+semantics live in `OverlayTimeline.build(photosEnabled:)`; card copy is
+caller-supplied strings so wording stays app-side ("Get this route", spec
+v1.4 §4.5) and localizable.
+**Rejected:** gating all overlay events (kills the share hook); a second
+toggle for chrome (S5 stays one-switch simple; revisit only if users ask).
