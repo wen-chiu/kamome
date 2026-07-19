@@ -5,7 +5,7 @@
 **Brand element:** the animated "you are here" head marker in the recap video is a small seagull, not a dot. This is the mascot and the app icon.
 **Platform:** iOS 17+, Swift 5.10+, SwiftUI. Base localization zh-Hant, second locale en. All user-facing strings in String Catalogs from Phase 0 — never hardcoded.
 **Audience for this doc:** Claude (Claude Code) as the implementing engineer. Chiu as product owner / reviewer.
-**Doc version:** 1.4 (2026-07-18) — fork demoted from positioning to mechanism: positioning line rewritten (memory-engine framing), §1.5 fork row relabeled P6 bet, §4.5 end card copy → "Get this route"; all user-facing copy uses Save / Get / Inspired by (S6/S7 screen wording settled at P6 — internal names, table `plan.forked_from`, and `.kamome` schema unchanged). v1.3 (2026-07-15) — battery-moat repositioning: passive capture tier (§1.8, §2.3), map matching promoted to core (§4.4), trip import (§4.7), phases renumbered (fork → Phase 6, backend → Phase 7), transactional monetization note (§1.6). v1.2 (2026-07-11) added Roadtrippers analysis, Taiwan-market adaptations, Kamome branding, handoff checklist & kickoff prompt.
+**Doc version:** 1.5 (2026-07-19) — recap visual pivot (owner decision after reviewing the P3 demo artifact): the recap is a stylized, premium animated replay, not Apple-tile output — vision in `Docs/kamome-animation-vision.md`; recap base-map substrate moves MKMapSnapshotter → MapLibre Native + self-hosted vector tiles with Kamome-authored themed styles (ADR in `Docs/decisions.md` 2026-07-19; implementer guide `Docs/vector-tile-pipeline.md`); §0 gains rule 6 (storytelling engine + recognizable identity); §4.5 step 2 rewritten + visual quality bar added; Phase 3 scope frozen as the pipeline milestone; new **Phase 3.5 Recap Visual System** (OSRM §4.4 pulled forward → MapLibre substrate → Modern Minimal theme; no renumbering of P4–P7). v1.4 (2026-07-18) — fork demoted from positioning to mechanism: positioning line rewritten (memory-engine framing), §1.5 fork row relabeled P6 bet, §4.5 end card copy → "Get this route"; all user-facing copy uses Save / Get / Inspired by (S6/S7 screen wording settled at P6 — internal names, table `plan.forked_from`, and `.kamome` schema unchanged). v1.3 (2026-07-15) — battery-moat repositioning: passive capture tier (§1.8, §2.3), map matching promoted to core (§4.4), trip import (§4.7), phases renumbered (fork → Phase 6, backend → Phase 7), transactional monetization note (§1.6). v1.2 (2026-07-11) added Roadtrippers analysis, Taiwan-market adaptations, Kamome branding, handoff checklist & kickoff prompt.
 
 > **Naming due-diligence (do before locking bundle ID):** search App Store for existing "Kamome" apps, check TIPO (Taiwan) and JPO trademark registers in app/software classes — note JR Kyushu operates a Shinkansen named かもめ (different class, likely fine, verify anyway). **IP caution:** the song 《快樂的出帆》 inspires the *name only*. Never use its lyrics or melody in the app, recap videos, or marketing — the composition is almost certainly still in copyright. Original seagull branding only.
 
@@ -20,6 +20,7 @@ These override any default behavior:
 3. **Prefer boring tech.** No reactive frameworks beyond what SwiftUI requires. Use Swift Concurrency (async/await) only where the OS API forces it (location callbacks, photo fetches, video export). No Combine pipelines for business logic.
 4. **Every phase ends with a demo artifact** (screen recording script or exported file) placed in `Docs/demos/phaseN/`.
 5. **Hardware reality:** building/running requires Xcode on macOS and a physical iPhone for background-location and battery testing. The simulator + GPX fixtures cover logic testing only. Flag any step that needs the physical device instead of silently skipping it.
+6. **Kamome is a travel storytelling engine, not a GPS visualizer or vehicle animation engine.** (Added v1.5; full vision in `Docs/kamome-animation-vision.md`.) Two binding consequences: (a) the judgment criterion for every future camera movement, pause, transition, and visual effect is *does it serve the narrative of the journey* — not *does it display the data*; (b) a Kamome replay must never look like Apple/Google Maps with an animated route on top — the visual language must be distinctive enough to recognize a Kamome replay instantly, even with branding stripped. Corollary: the replay engine and the rendering theme are fully decoupled; Modern Minimal is merely the first theme implemented, never a structural assumption, and nothing theme-specific may leak into the replay engine.
 
 ---
 
@@ -114,9 +115,9 @@ Import (§4.7) is the same insight applied backwards: past trips already exist a
 │  │  trips / segments / trackpoints / stops /    │              │
 │  │  photo_refs / plans / plan_stops             │              │
 │  └──────────────────────────────────────────────┘              │
-│   PhotoKit (read-only)      MapKit (render)                    │
+│   PhotoKit (read-only)  MapKit (S2/S3)  MapLibre (recap, P3.5) │
 └────────────────────────────────────────────────────────────────┘
-        Phase 3 stretch → Phase 4 core sidecar: OSRM /match (Docker, self-hosted)
+        Phase 3.5 core sidecar: OSRM /match (Docker, self-hosted)
         Phase 4 adds Core/ImportKit (Timeline + EXIF importers, §4.7)
         Phase 7: Supabase (Postgres+PostGIS, Auth, Storage)
 ```
@@ -126,10 +127,11 @@ Import (§4.7) is the same insight applied backwards: past trips already exist a
 | Decision | Choice | Rejected alternative | Why |
 |---|---|---|---|
 | Persistence | **GRDB + SQLite** | SwiftData | A full day of tracking ≈ 20–40k trackpoints. GRDB gives bulk inserts, raw SQL, and R*Tree spatial index. SwiftData bulk-insert performance and migration story are weaker, and a coding agent hits fewer undocumented quirks with GRDB. |
-| Maps | **MapKit** | Mapbox | Free, native, `MKMapSnapshotter` gives us video frames. Mapbox looks better but adds $ + SDK weight. Revisit at Phase 7 if snapshot styling is too limited. |
+| Maps (interactive screens S2/S3) | **MapKit** | Mapbox | Free, native, adequate for live HUD and trip detail. (Pre-v1.5 this row also covered recap frames via `MKMapSnapshotter`; that materialized as the §9 "too plain" risk — recap substrate split out below.) |
+| Recap base map (Phase 3.5) | **MapLibre Native + self-hosted vector tiles, Kamome-authored style per theme** | Fully custom renderer; Mapbox; restyling MapKit (no styling API exists) | Owner-rejected Apple-tile look (ADR 2026-07-19). Full control of colors, typography, and what is *omitted*; PMTiles = static-file hosting, no tile server; same regional OSM extracts as OSRM; checked-in tiles make golden frames bit-stable. Must clear the §4.5 quality bar or the decision gets revisited. Guide: `Docs/vector-tile-pipeline.md`. |
 | Map matching (snap-to-road) | **OSRM `/match`, self-hosted Docker** (Phase 4 — core) | Mapbox Map Matching API | Free, offline-capable for a region extract (e.g. Australia OSM ≈ 1 GB, Taiwan ≈ 100 MB), no per-request cost. Mapbox is easier but meters every request. Phases 1–3 ship raw polyline + Douglas-Peucker; from Phase 4 matching is **core infrastructure** — import (§4.7) and the passive tier (§1.8) are load-bearing on it — but trip completion must still never block on it. |
 | Transport mode | **CMMotionActivityManager primary, speed heuristic fallback** | ML model | Apple's on-device classifier (automotive/cycling/walking/stationary) is free and battery-neutral. Speed heuristic covers devices/regions where it's unreliable. |
-| Video | **MKMapSnapshotter frames → AVAssetWriter** | Screen-record a MapKit camera flight | Deterministic, background-renderable, testable frame-by-frame. |
+| Video | **Snapshot-provider frames → AVAssetWriter** (provider = MapLibre from Phase 3.5; MKMapSnapshotter was the P3 bootstrap) | Screen-record a map camera flight | Deterministic, background-renderable, testable frame-by-frame — property of the frame pipeline, independent of which provider renders the base map. |
 | Backend (Phase 7 only) | **Supabase** | Custom FastAPI | Auth + Postgres/PostGIS + storage + row-level security in one; solo-maintainable. |
 
 ### 2.3 Battery budget (non-functional requirement)
@@ -273,11 +275,13 @@ On trip completion (and on-demand): `PHAsset.fetchAssets` with predicate `creati
 ### 4.5 Recap video (ExportEngine)
 Deterministic frame pipeline, 1080×1920 (9:16 social) default, 30 fps:
 1. Compute camera path: interpolate along full-trip polyline; speed-warp so total video = `target_duration_s` (default 30 s) regardless of trip length; ease-in/out at stops.
-2. For each frame: `MKMapSnapshotter` renders base map for camera position (cache tiles by region — snapshot per keyframe every N frames, cross-fade between, to keep render time sane), draw traveled polyline portion + animated head dot via CoreGraphics overlay.
+2. For each frame: a `RecapSnapshotProviding` provider renders the base map for the camera position (snapshot per keyframe every N frames, cross-fade between, to keep render time sane); the compositor draws the traveled route portion + animated head marker via CoreGraphics overlay, projecting through the snapshot's own projection. From Phase 3.5 the shipping provider is **MapLibre Native over self-hosted vector tiles with a Kamome-authored theme style** (ADR 2026-07-19; `Docs/vector-tile-pipeline.md`); `MapKitSnapshotProvider` was the P3 bootstrap, `FlatSnapshotProvider` keeps golden-frame CI deterministic. Boundary discipline: renderer SDK types never leak past the provider file (§0 rule 6 corollary).
 3. At each stop: 1.5 s hold, photo card animates in (highlight photo), stop name label, day badge.
 4. Title card (trip name, dates, distance) + end card (stats + "Get this route" QR → share URL/file).
 5. Encode via `AVAssetWriter` (H.264). GIF export: same frames at 12 fps, 480 px wide, `ImageIO` with palette quantization.
 Acceptance bar: an 8-day, 1,200 km trip renders in **< 90 s on an iPhone 13-class device** and looks share-worthy. This feature is the marketing engine — over-invest here.
+
+**Visual quality bar (v1.5, judged at the Phase 3.5 gate):** the reason we carry self-hosted tiles instead of free Apple Maps is that MapLibre + a Kamome style sheet must produce output **clearly better-designed than native Apple Maps for journey replay**. Concretely: zero business-POI noise; deliberate use of empty space — subtractive cartography that shows only what serves the journey; distinctive road and route treatment; instantly recognizable Kamome identity with branding stripped (§0 rule 6). Judged by side-by-side stills against the P3 Apple-tiles artifact (`Docs/demos/phase3/`) at matched camera positions, reviewed by Chiu; a style sheet that fails side-by-side is not shippable, and if the bar proves unreachable the substrate decision itself is revisited (ADR 2026-07-19). The route must always follow real roads — never straight lines between GPS points (matching §4.4 is a Phase 3.5 prerequisite). Themes are swappable without touching animation logic; how the seagull head marker (brand element, page 1) composes with the per-trip vehicle icon (§1.7) is settled during Modern Minimal theme design, not here.
 
 ### 4.6 Plan-vs-actual diff
 Given `trip.origin_plan_id`: match plan_stops to actual stops by name-similarity + distance < 1 km. Output: visited / skipped / unplanned-extra + dwell delta per stop + total distance delta. Rendered as a "trip report card." (Unique feature — no incumbent has it.)
@@ -337,12 +341,19 @@ Scope: TrackingEngine state machine (idle → recording → dwell-paused → rec
 Scope: reverse-geocode names, PhotoKit matching §4.3, S3/S4 screens, stats computation, Douglas-Peucker display simplification.
 **Gate:** unit tests for photo→stop assignment (timestamp-only, GPS, conflict cases); a seeded demo trip renders S3 with photos on correct pins (screenshot in demo folder); limited-photo-access path manually verified.
 
-### Phase 3 — Recap Video/GIF (est. 3–5 sessions)
-Scope: ExportEngine §4.5, S5. Optional stretch (early start on Phase 4's core): OSRM matching §4.4 (Docker compose file + `Docs/osrm-setup.md`; Taiwan + Australia extracts).
-**Gate:** golden-frame tests (render frames 0/N/last for fixture trip, compare hash within tolerance); 1,200 km fixture trip exports MP4 < 90 s on device; exported GIF < 8 MB; Chiu posts one recap somewhere real and it doesn't embarrass him.
+### Phase 3 — Recap Pipeline (est. 3–5 sessions) — scope frozen 2026-07-19 as the *pipeline* milestone
+Scope: ExportEngine §4.5 pipeline mechanics (camera path, overlay timeline, frame compositor, MP4/GIF encoders, progress/cancel), S5. The recap's *visual system* is Phase 3.5 (decisions.md 2026-07-19) — all of this phase's machinery survives that substrate swap.
+**Gate:** golden-frame tests (render frames 0/N/last for fixture trip, compare hash within tolerance); 1,200 km fixture trip exports MP4 < 90 s on device; exported GIF < 8 MB; 2 h real-drive re-run + limited-photo-access re-check pass (`Docs/device-test-P3.md`, moved into this gate per decisions.md 2026-07-16). **Chiu signs off.** (The original share-worthiness item — "Chiu posts one recap and it doesn't embarrass him" — moved to the Phase 3.5 gate, where the visual system can actually meet it.)
+
+### Phase 3.5 — Recap Visual System (est. 4–6 sessions) ← the marketing engine's look
+Added v1.5 (decisions.md 2026-07-19; vision `Docs/kamome-animation-vision.md`). The recap becomes a stylized, premium animated replay. Strictly sequenced:
+1. **OSRM matching §4.4** — pulled forward from Phase 4 (Docker compose + `Docs/osrm-setup.md`; Taiwan + Australia extracts). The replay vehicle must never travel over straight lines between GPS points; matching precedes any visual work.
+2. **MapLibre substrate** — `MapLibreSnapshotProvider` conforming to the existing `RecapSnapshotProviding` boundary (MapLibre types confined to the provider file; ADR 2026-07-19), self-hosted vector tiles per `Docs/vector-tile-pipeline.md`.
+3. **Modern Minimal theme** — first Kamome-authored style sheet; must clear the §4.5 visual quality bar.
+**Gate:** matched fixture route stays on the road network in rendered frames (golden-frame assert on checked-in tiles + style — bit-stable, no live-tile tolerance); render budget still < 90 s on device with the MapLibre substrate; §4.5 quality bar passed via side-by-side review vs. the P3 artifact — **Chiu signs off**; Chiu posts one recap somewhere real and it doesn't embarrass him (inherited from P3); theme-swap demonstrated (Modern Minimal ↔ route-only `FlatSnapshotProvider`) with zero replay-engine changes; demo artifact in `Docs/demos/phase3_5/`.
 
 ### Phase 4 — Import & Map Matching (est. 3–4 sessions) ← the acquisition hook
-Scope: OSRM matching §4.4 as core infrastructure (if not landed as Phase 3 stretch); schema v2 (§3 rules); `Core/ImportKit/` — Google Timeline importer + photo-EXIF importer §4.7; S1 import entry point; imported trips flow through stop-naming/photo/recap pipelines unchanged.
+Scope: OSRM matching §4.4 lands in Phase 3.5; this phase extends it to import sources and hardens it as core infrastructure; schema v2 (§3 rules); `Core/ImportKit/` — Google Timeline importer + photo-EXIF importer §4.7; S1 import entry point; imported trips flow through stop-naming/photo/recap pipelines unchanged.
 **Gate:** fixture Timeline export (in `Tests/Fixtures/`, one per known format variant) imports to a trip with expected stop count and total distance; EXIF importer clusters a fixture photo set into expected stops; matched polyline for `perth_margaret_river_day1.gpx` stays on the road network (assert via recorded OSRM responses replayed in CI; live-OSRM run documented in demo folder); device demo: import → recap end-to-end, artifact in `Docs/demos/phase4/`.
 
 ### Phase 5 — Passive Capture Tier (est. 3–5 sessions) ← the battery moat
@@ -357,7 +368,7 @@ Scope: plan tables, S6/S7, trip→plan conversion, `.kamome` export/import + URL
 Scope: Supabase auth (Sign in with Apple), publish plan → public web page (Next.js or Supabase edge-rendered) with map + "Open in app" fork button, PostGIS storage, route browse/search by region. Web page is the SEO/discovery surface ("best Perth to Albany road trip route" queries).
 **Gate:** defined later; do not design now.
 
-**Total estimate: Phases 0–5 (v1) ≈ 15–24 Claude Code sessions; + Phase 6 (POC complete) ≈ 18–28.** Budget calendar time around Phase 1, 3 and 5 device testing — those need your hands, your car, and (Phase 5) several ordinary days of carrying the phone.
+**Total estimate: Phases 0–5 (v1, incl. 3.5) ≈ 19–30 Claude Code sessions; + Phase 6 (POC complete) ≈ 22–34.** Budget calendar time around Phase 1, 3/3.5 and 5 device testing — those need your hands, your car, and (Phase 5) several ordinary days of carrying the phone.
 
 ---
 
@@ -390,7 +401,9 @@ Conventions: `@Observable` view models; repositories are the only layer touching
 |---|---|---|
 | iOS kills background tracking → gaps (the exact failure users crucify Polarsteps for) | High | Always-authorization + background mode + region-monitor resurrection at dwells; on relaunch, stitch gap with MKDirections route between last/first points and mark it "inferred" visually. |
 | Battery > 5%/day | Medium | Adaptive table is config-driven — tune on real drives; Battery Saver preset. |
-| MKMapSnapshotter too slow/plain for video | Medium | Keyframe + crossfade strategy first; if quality insufficient, Phase-3 spike: Mapbox static images API behind the same FrameSource protocol. |
+| ~~MKMapSnapshotter too slow/plain for video~~ **Materialized 2026-07-19** — owner rejected the Apple-tile look outright | — | Recap substrate replaced: MapLibre + self-hosted vector tiles, Phase 3.5 (ADR 2026-07-19). Keyframe + crossfade rendering strategy survives unchanged. |
+| Kamome style sheet fails the §4.5 quality bar (MapLibre output not clearly better than Apple Maps for replay) | Medium | Side-by-side gate at Phase 3.5 before theme work is declared done; iterate style JSON (cheap — no code); if the bar proves unreachable, revisit the substrate ADR rather than shipping a mediocre look. |
+| Self-hosted vector tiles add ops/size burden | Medium | PMTiles = single static file per region, no tile server; regional extracts only (TW ≈ 100 MB OSM, matching OSRM's footprint); tile generation is a documented offline step (`Docs/vector-tile-pipeline.md`), not runtime infrastructure. |
 | App Review rejects background location | Low-Med | Tracking only during explicit trips, review notes + video, honest purpose strings. |
 | Passive tier fidelity: SLC too sparse, or matcher snaps to the wrong parallel road | Medium | Confidence gating + "inferred" rendering; per-trip high-fidelity opt-in; tune against real multi-day wear before v1 TestFlight (Phase 5 gate). |
 | Google Timeline export format drift breaks the importer | Medium | Versioned parser per known variant, friendly "unsupported version" error, one CI fixture per variant. |

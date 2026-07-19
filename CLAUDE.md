@@ -1,14 +1,45 @@
 # Kamome — working memory for Claude Code
 
-**Authoritative spec:** `Docs/kamome-poc-spec.md` (v1.4, 2026-07-18 fork demoted
-to mechanism — user-facing copy says Save / Get this route, never "fork"; v1.3
-battery-moat pivot — phases renumbered: P4 Import & Matching, P5 Passive Tier =
-v1/TestFlight, P6 Plans & Fork, P7 backend). Read it before any work.
+**Authoritative spec:** `Docs/kamome-poc-spec.md` (v1.5, 2026-07-19 recap
+visual pivot — see below; v1.4 fork demoted to mechanism — user-facing copy
+says Save / Get this route, never "fork"; v1.3 battery-moat pivot — phases
+renumbered: P4 Import & Matching, P5 Passive Tier = v1/TestFlight, P6 Plans
+& Fork, P7 backend). Read it before any work.
 Rules of Engagement: spec §0 — phase gates are hard gates, no magic numbers
 (all tunables in `Config/TrackingConfig.json`), boring tech, demo artifact per
 phase, flag anything needing the physical device.
 
-## Current phase: 3 (recap video, spec §4.5/§7) — started 2026-07-16
+## Recap visual pivot (spec v1.5, 2026-07-19, Chiu)
+
+Chiu rejected the P3 demo's Apple-tile look — Kamome is a **travel
+storytelling engine**, not a GPS visualizer (now spec §0 rule 6: every
+motion/visual decision must serve the journey's narrative; a replay must be
+recognizably Kamome without branding). Vision:
+`Docs/kamome-animation-vision.md`. Consequences:
+
+- **P3 scope frozen as the pipeline milestone** — its machinery (CameraPath,
+  OverlayTimeline, compositor, encoders, S5) all survives. Gate items
+  unchanged (device: 2 h drive, limited-photo re-check, < 90 s budget, S5
+  UX); the "Chiu posts one recap" share-worthiness item moved to P3.5.
+- **New Phase 3.5 — Recap Visual System** (spec §7), strictly sequenced:
+  OSRM matching §4.4 (pulled forward; route must never be straight lines
+  between GPS points) → MapLibre substrate → Modern Minimal theme.
+- **Substrate ADR** (decisions.md 2026-07-19): MapLibre Native +
+  self-hosted vector tiles (Planetiler → PMTiles, same extracts as OSRM),
+  Kamome-authored style JSON per theme. Implementer guide:
+  `Docs/vector-tile-pipeline.md` — includes the **quality bar** (must be
+  clearly better-designed than Apple Maps for replay, judged side-by-side
+  vs. the P3 artifact, Chiu signs off; unreachable bar ⇒ reopen the ADR).
+- **Boundary discipline, not premature abstraction** (Chiu): no generic
+  multi-renderer interface. `RecapSnapshotProviding` already is the
+  boundary (`import MapKit` lives only in `MapKitSnapshotProvider.swift`;
+  MapLibre types get the same one-file confinement). Deferred gaps, built
+  only when their consumer exists: pitch/bearing in the snapshot request
+  (isometric camera), `RecapTheme` overlay tokens (defined during Modern
+  Minimal). Engine ↔ theme fully decoupled; Modern Minimal is the first
+  theme, never a structural assumption.
+
+## Current phase: 3 (recap pipeline, spec §4.5/§7) — started 2026-07-16
 
 Gate restructure (decisions.md 2026-07-16, Chiu): the 2 h drive
 (`Docs/device-test-P1.md`) and the limited-photo-access re-check moved from
@@ -62,7 +93,15 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   re-match preserves highlights. Limited-access box stays unticked until Chiu
   re-checks on device.
 - Evening dwell_pause without dwell_resume was benign (parked until End
-  Trip) — region-resume still unproven on hardware; the drive proves it.
+  Trip). Region-resume got its first hardware proof on the 2026-07-19 drive
+  and **failed half-open**: resume fired, iOS suspended the app ~10 s after
+  the region-exit wake, 32 min / 13 km lost (straight line in the recap,
+  second stop unrecordable). Fix landed on `phase-3-recap` (decisions.md
+  2026-07-19 region-resume): background-flag re-assert on resume, trip-long
+  significant-location-change safety net, `sampling.recovery_gap_s` (60)
+  silent-death watchdog, engine-side resume now also restarts GPS
+  (`resumeActiveTracking`). New CSV events `region_exit` / `gps_recover`.
+  Re-validation = device-test-P3 item C (needs the physical device).
 - Stop detection redesigned after the 2026-07-18 17:04 drive missed both real
   stops (ADR 2026-07-18): DwellDetector is streak-based (age-based span check
   never fired on sparse real sampling); engine never dwell-pauses mid-walk;

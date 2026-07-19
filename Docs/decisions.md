@@ -362,3 +362,134 @@ is recovered from the walk segment sharing the stop's time span).
 **Rejected:** `silence` as a user-facing kind; a `detection_method` column
 now (migration churn with no reader); Place/Visit entities before the
 compositor proves what it actually needs.
+
+## 2026-07-19 — Recap visual pivot: P3 frozen as pipeline milestone, Phase 3.5 opened
+
+**Context:** Chiu reviewed the P3 demo artifact
+(`Docs/demos/phase3/kamome-p3-recap.mp4`) and rejected the visual
+direction: Apple Maps tiles + a polyline read as GPS debug output, not
+travel storytelling. Full product direction recorded in
+`Docs/kamome-animation-vision.md` (TravelBoast-class animated replay,
+premium/Apple-like, real road fidelity, interchangeable themes).
+**Decision (Chiu, 2026-07-19):**
+- **P3 scope is frozen as the pipeline milestone.** Its remaining gate
+  items (2 h drive, limited-photo re-check, on-device render budget via
+  S5 readout, S5 UX pass) validate tracking and the engine — all of which
+  survive the substrate swap — and still gate P3 close. The
+  share-worthiness gate item ("Chiu posts one recap and it doesn't
+  embarrass him") moves to Phase 3.5, where it belongs now.
+- **Phase 3.5 — Recap Visual System** opens as its own phase (spec §7),
+  sequenced: OSRM matching (§4.4, pulled forward from P4) → MapLibre
+  substrate → Modern Minimal theme. No renumbering of P4–P7 (v1.3 already
+  renumbered once; downstream references stay stable).
+- **Replay engine ↔ rendering theme: fully decoupled.** Modern Minimal is
+  merely the first theme implemented, not a structural assumption.
+  Nothing theme-specific may leak into the replay engine.
+- **Two new spec-level principles** (spec §0 rule 6): a Kamome replay
+  must never look like Apple/Google Maps with an animated route on top
+  (recognizable identity without branding), and Kamome is a travel
+  storytelling engine, not a vehicle animation engine — every camera
+  movement, pause, transition, and effect must serve the narrative of the
+  journey. This is the judgment criterion for all future motion decisions.
+**Rejected:** reopening P3 (holds tracking validation hostage to a
+multi-week visual effort); deferring visuals to P4+ polish (the recap is
+the marketing engine — §4.5 "over-invest here" already says so).
+
+## 2026-07-19 — ADR: recap substrate = MapLibre Native + self-hosted vector tiles
+
+**Context:** The vision requires a base map Kamome fully controls
+(colors, typography, what is *omitted*) and route rendering that always
+follows real roads. `MKMapSnapshotter` cannot be restyled at all — no
+amount of overlay work gets a recognizable Kamome look out of Apple's
+cartography. Implementer guide: `Docs/vector-tile-pipeline.md`.
+**Decision:** Recap base maps render via **MapLibre Native (iOS)** over
+**self-hosted vector tiles** (OSM extracts → Planetiler → PMTiles, same
+regional extracts as OSRM) with a **Kamome-authored MapLibre style JSON
+per theme**. MapKit remains the map for interactive app screens (S2 HUD,
+S3 detail) — this ADR covers the recap substrate only; §2.2 Maps row
+updated accordingly.
+**Renderer/engine boundary (audited 2026-07-19):** `import MapKit`
+appears in exactly one ExportEngine file (`MapKitSnapshotProvider.swift`);
+everything else consumes `MapSnapshot` (CGImage + projection closure) via
+`RecapSnapshotProviding`. **That protocol already is the boundary** — the
+MapLibre implementation is one new file (`MapLibreSnapshotProvider`)
+conforming to it, with MapLibre types equally confined. Known gaps,
+deliberately deferred until their consumer exists (owner decision — no
+speculative multi-renderer `MapProvider` interface with one real
+implementation; the correct boundary can't be known before the second
+renderer arrives):
+1. *Camera attitude* — the snapshot request has center/span only, no
+   pitch/bearing. Extend additively when the isometric camera lands.
+2. *Theme-owned overlay treatment* — route casing/color, marker art, card
+   chrome are currently compositor-side constants. A `RecapTheme` value
+   (design tokens, not a renderer interface) gets defined when Modern
+   Minimal is built, driven by what that theme actually needs.
+Boundary discipline is the rule: MapLibre types must never leak past the
+provider file; CI may enforce via a lint/grep gate.
+**Quality bar (the whole point — this justifies the operational burden):**
+MapLibre + a Kamome style sheet must produce output *clearly
+better-designed than native Apple Maps for journey replay*. Concretely:
+zero business-POI noise; deliberate use of empty space (subtractive
+cartography — show only what serves the journey); distinctive road/route
+treatment; recognizable Kamome identity with branding stripped (spec §0
+rule 6). Judged per `Docs/vector-tile-pipeline.md` §"Quality bar":
+side-by-side stills vs. the P3 Apple-tiles artifact at matched
+camera positions, reviewed by Chiu; a style sheet that fails
+side-by-side is not shippable, and if the bar proves unreachable the
+substrate decision itself gets revisited. Golden-frame CI improves:
+checked-in tiles + style are bit-stable, unlike Apple's live tiles.
+**Rejected:** fully custom renderer (needed for Style 1's hand-illustrated
+world eventually, but months of asset + engine work before the first
+share-worthy export; revisit when Style 1 is scheduled); restyling
+MapKit (impossible — no styling API); Mapbox (metered, closed);
+generic three-way renderer abstraction designed upfront (premature —
+rewritten the day the second real renderer arrives).
+
+## 2026-07-19 — Drive finding: region-resume died after wake; recovery watchdog added
+
+**Context (evening drive, `Docs/tests/2026-7-19/`):** First hardware proof
+of the §2.3 region-exit resume (device-test-P3 item C) — and it failed
+half-open. Timeline from the CSV + trip DB (trip 13:51–15:09): dwell
+correctly detected at the drive-through (stop 春日路372號, 14:29–14:36,
+`dwell_pause` 14:34:15), region-exit resume fired (`dwell_resume`
+14:36:56), GPS restarted and delivered exactly **two** coarse fixes
+(h_acc ≈ 39 m, no speed/course) at 14:36:56 and 14:37:06 — then nothing
+until 15:09:25, when the phone was unlocked to end the trip. The ~10 s of
+delivery matches the region-exit background wake window: iOS suspended
+the app when the wake expired, despite `startUpdatingLocation()` having
+been called during it. Result: 32 min / ~13 km of driving lost, the
+second real stop never observable (StopDeriver correctly derives nothing —
+a silence gap spanning kilometers is not a stop), recap shows a straight
+gray line, and the post-resume segment saved as `unknown` with 3 points.
+
+**Decision — three layers, all landed on `phase-3-recap`:**
+1. `resumeAfterDwell` re-asserts `allowsBackgroundLocationUpdates`
+   (`applyBackgroundCapability()`) *before* restarting updates — a session
+   started inside a background wake without the flag in effect dies with
+   the wake.
+2. **Trip-long significant-location-change monitoring** as a safety net
+   (the §1.8 passive-tier primitive, ~zero battery): SLC fixes keep waking
+   the app even when suspended, giving the recovery watchdog execution
+   windows. Stopped at `stopUpdates()`.
+3. **Silent-death watchdog** (`sampling.recovery_gap_s`, default 60): if a
+   delivered fix arrives ≥ that long after the previous one while actively
+   tracking (never while dwell-armed — GPS is off on purpose there), the
+   standard session is presumed dead and restarted, background flag
+   re-asserted. Self-limiting: the restart's immediate fix resets the gap.
+   Bonus: an SLC fix escaping the 150 m region now resumes the engine even
+   if the region-exit event never arrives (`TrackingSession` calls the new
+   `resumeActiveTracking()` on the dwellPaused→recording transition).
+
+New CSV events for the next drive: `region_exit` (exit event delivered),
+`gps_recover,<gap_s>` (watchdog fired). Item C in `Docs/device-test-P3.md`
+stays open until a drive shows dwell_pause → region_exit → continuous
+trackpoints with no gps_recover (or a gps_recover that proves the net
+works). Worst case if iOS keeps suspending: route degrades to SLC
+granularity (~500 m) instead of a 32-minute hole — map matching (§4.4,
+P3.5) can reconstruct that; it cannot reconstruct absence.
+
+**Rejected:** `UIApplication` background task around the resume (buys
+≤ 30 s, doesn't fix the steady state, drags UIKit into the location
+layer); restarting updates on *every* delivered fix (restart → immediate
+fix → restart loop); tightening sampling config (unrelated — this was
+session death, not filter tuning).
