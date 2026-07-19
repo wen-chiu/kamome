@@ -38,10 +38,18 @@ but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
   toggle), `RecapQRCode`, and `RecapExporter` → H.264 MP4 +
   decimated GIF with progress/cancel. New export tunables: frame size,
   camera_span_m, keyframe_interval_frames, title_card_s, end_card_s.
-  Remaining for P3: S5 screen (wire RecapExporter + MapKitSnapshotProvider,
-  photos toggle, stop-card photo/title/end content from the trip DB), render
-  budget proof on device (§4.5 bar: 8-day trip < 90 s on iPhone 13-class),
-  demo artifact, plus the two gate items below.
+  S5 landed 2026-07-19: `RecapComposer` (trip DB → cards; recap geometry
+  goes through Douglas-Peucker at simplify.epsilon_m), `RecapModel`/
+  `RecapView` (photos toggle labeled "停留照片卡" + always-on chrome note,
+  MP4/GIF picker, progress/cancel, share sheet, render-time readout), film
+  button on S3. Render-loop snapshot prefetch + `video_bitrate_mbps` (5)
+  landed after 2026-07-19 benchmarks (sim: pipeline 22.8 s, snapshots
+  0.67 s each, demo end-to-end 34.6 s). Demo artifact:
+  `Docs/demos/phase3/` (perth fixture, real tiles). QR payload =
+  `kamome://route/<id>` placeholder until P6/P7.
+  Remaining for P3 (all need the physical device, `Docs/device-test-P3.md`
+  F–H): render budget < 90 s via S5 readout, S5 UX pass, 2 h drive,
+  limited-photo re-check.
 - Recap product decisions (decisions.md 2026-07-17, Chiu): overlay moments
   (stop cards, and later route-attached photo fly-bys) are **timeline events**
   built alongside CameraPath in step 2 — don't hardwire rendering to

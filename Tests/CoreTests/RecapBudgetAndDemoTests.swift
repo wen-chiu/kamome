@@ -21,10 +21,10 @@ final class RecapBudgetAndDemoTests: XCTestCase {
     private func syntheticLongTrip() -> (route: [CameraPath.Point], stops: [CameraPath.Point]) {
         // A wandering path so nothing collapses to straight lines.
         let route = (0..<5_000).map { index -> CameraPath.Point in
-            let t = Double(index)
+            let step = Double(index)
             return CameraPath.Point(
-                lat: -32.0 + t * 0.002 + 0.01 * sin(t / 40),
-                lon: 115.75 + 0.01 * cos(t / 55)
+                lat: -32.0 + step * 0.002 + 0.01 * sin(step / 40),
+                lon: 115.75 + 0.01 * cos(step / 55)
             )
         }
         let stops = (1...24).map { route[$0 * 200] }
