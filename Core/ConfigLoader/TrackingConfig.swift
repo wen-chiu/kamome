@@ -80,6 +80,56 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    /// Sendable: `OSRMMatchProvider` carries this across its async transport.
+    public struct Matching: Decodable, Equatable, Sendable {
+        /// OSRM host for map matching (§4.4), e.g. "http://127.0.0.1:5000".
+        /// Empty string = matching disabled: segments keep raw geometry and
+        /// readers fall back to the simplified raw polyline. Stays empty
+        /// until the self-hosted server exists (`Docs/osrm-setup.md`).
+        public let baseURL: String
+        /// Max trackpoints per /match request (spec §4.4: ≤100).
+        public let chunkSize: Int
+        /// A segment whose worst per-matching confidence is below this keeps
+        /// its raw polyline (spec §4.4: render "inferred", never invent roads).
+        public let confidenceMin: Double
+        /// Floor for the per-point search radius sent to OSRM; a point's own
+        /// h_acc is used when it is larger.
+        public let radiusM: Double
+        /// Per-request timeout. Matching is best-effort and must never block
+        /// trip completion (§4.4), so this stays short.
+        public let timeoutS: Double
+        /// Douglas-Peucker ε for *matched* geometry in the recap. Tighter
+        /// than simplify.epsilon_m: 15 m would visibly cut snapped corners
+        /// at recap zoom, but raw OSRM output on a long trip would blow the
+        /// §4.5 render budget.
+        public let displayEpsilonM: Double
+
+        enum CodingKeys: String, CodingKey {
+            case baseURL = "base_url"
+            case chunkSize = "chunk_size"
+            case confidenceMin = "confidence_min"
+            case radiusM = "radius_m"
+            case timeoutS = "timeout_s"
+            case displayEpsilonM = "display_epsilon_m"
+        }
+
+        public init(
+            baseURL: String,
+            chunkSize: Int,
+            confidenceMin: Double,
+            radiusM: Double,
+            timeoutS: Double,
+            displayEpsilonM: Double
+        ) {
+            self.baseURL = baseURL
+            self.chunkSize = chunkSize
+            self.confidenceMin = confidenceMin
+            self.radiusM = radiusM
+            self.timeoutS = timeoutS
+            self.displayEpsilonM = displayEpsilonM
+        }
+    }
+
     public struct Photos: Decodable, Equatable {
         /// GPS-tagged photos attach to the nearest stop within this radius (§4.3).
         public let matchRadiusM: Double
@@ -246,6 +296,7 @@ public struct TrackingConfig: Decodable, Equatable {
     public let segmentation: Segmentation
     public let dwell: Dwell
     public let simplify: Simplify
+    public let matching: Matching
     public let photos: Photos
     public let geocode: Geocode
     public let trip: Trip
@@ -254,7 +305,7 @@ public struct TrackingConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, photos, geocode, trip, sampling, export
+        case filter, segmentation, dwell, simplify, matching, photos, geocode, trip, sampling, export
     }
 }
 

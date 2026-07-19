@@ -161,6 +161,18 @@ public struct TripRepository {
         }
     }
 
+    /// Stores the §4.4 map-matched geometry for one segment (nil clears it —
+    /// e.g. after a re-match invalidation). Matching is post-completion and
+    /// best-effort, so this is the only column it ever touches.
+    public func setMatchedPolyline(segmentId: String, encodedPolyline: String?) throws {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE segment SET matched_polyline = ? WHERE id = ?",
+                arguments: [encodedPolyline, segmentId]
+            )
+        }
+    }
+
     public func updateTripStats(tripId: String, statsJson: String) throws {
         try database.writer.write { db in
             try db.execute(

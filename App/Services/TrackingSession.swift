@@ -105,6 +105,12 @@ final class TrackingSession {
             if let json = stats.jsonString() {
                 try? repository.updateTripStats(tripId: tripId, statsJson: json)
             }
+            // §4.4 matching, fire-and-forget: trip completion never waits on
+            // it, and the recap path retries any segment left unmatched.
+            let matcher = RouteMatchService(repository: repository, config: config)
+            Task.detached(priority: .utility) {
+                await matcher.matchTrip(tripId: tripId)
+            }
         }
 
         self.engine = nil

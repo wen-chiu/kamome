@@ -493,3 +493,57 @@ P3.5) can reconstruct that; it cannot reconstruct absence.
 layer); restarting updates on *every* delivered fix (restart → immediate
 fix → restart loop); tightening sampling config (unrelated — this was
 session death, not filter tuning).
+
+## 2026-07-19 — Owner call: continue into Phase 3.5 while P3's device items stay open
+
+**Context.** The four remaining P3 gate items (device-test-P3 F–H: render
+budget < 90 s via the S5 readout, S5 UX pass, 2 h drive re-run, limited-photo
+re-check) all require the physical iPhone, which is not available to the
+current dev sessions. Chiu directed work to continue rather than idle on
+hardware availability.
+
+**Decision.** P3 is **not closed** — nothing is marked passed that didn't
+run. Its checklist stays open in `Docs/device-test-P3.md` and must be
+executed before P3.5's own gate can be judged (both gates need the same
+device day anyway: the < 90 s budget must be re-proven on the MapLibre
+substrate regardless). Meanwhile Phase 3.5 fixture-driven work proceeds on
+`phase-3-recap`, in spec order: OSRM matching app-side first.
+
+**Why this is safe.** P3.5 step 1 (matching) and step 2 (substrate) are
+exactly the parts that need no hardware; the P3 device items neither block
+nor are blocked by them. The risk of building on an unvalidated pipeline is
+bounded: the 2026-07-19 smoke drive already exercised the export end-to-end
+(34.6 s demo artifact), so what remains unproven on device is budget/UX
+polish, not mechanism.
+
+## 2026-07-19 — §4.4 map matching: app side landed, server-side deferred to setup doc
+
+P3.5 step 1, app half. `KamomeRouteMatching` (Core/RouteMatching) is the
+fourth Core module: `EncodedPolyline` (precision-5 codec — the
+`segment.matched_polyline` storage format), `RouteMatchProviding` (the
+boundary; OSRM types confined to `OSRMMatchProvider.swift` exactly like
+MapKit in `MapKitSnapshotProvider.swift`), `OSRMMatchProvider` (chunked
+`/match`, ≤ `matching.chunk_size` pts/request, per-segment worst-confidence
+gate at `matching.confidence_min`, injectable transport so CI replays
+recorded responses — no live server in tests, ever).
+
+Consumers: `RouteMatchService` (App) matches drive/scooter segments
+post-completion (fire-and-forget at End Trip; idempotent retry at recap
+export) — walks stay raw on purpose, feet ignore the drivable network.
+`RecapComposer.route` prefers decoded matched geometry at the tighter
+`matching.display_epsilon_m` (5 m — 15 m would visibly cut snapped corners;
+raw OSRM density would blow the §4.5 render budget), raw Douglas-Peucker at
+`simplify.epsilon_m` remains the per-segment fallback, which doubles as the
+§4.4 "inferred" degradation.
+
+`matching.base_url` ships **empty = disabled**: no server exists yet.
+Bringing one up (Docker, Taiwan + Australia extracts, validation steps,
+device ATS note) is `Docs/osrm-setup.md` — the first task for the next
+session. **The route-follows-roads claim is unvalidated until someone runs
+that doc against the perth fixture**; the P3.5 gate's golden-frame
+road-network assert stays open until then.
+
+**Rejected:** matching cycle segments with the car profile (wrong network
+graph — needs the bike profile, future provider); a `matched` boolean
+column (`matched_polyline IS NULL` already says it); blocking recap export
+on matching success (§4.4 forbids it).

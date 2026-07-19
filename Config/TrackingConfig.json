@@ -23,6 +23,14 @@
   "simplify": {
     "epsilon_m": 15
   },
+  "matching": {
+    "base_url": "",
+    "chunk_size": 100,
+    "confidence_min": 0.5,
+    "radius_m": 25,
+    "timeout_s": 10,
+    "display_epsilon_m": 5
+  },
   "photos": {
     "match_radius_m": 300
   },

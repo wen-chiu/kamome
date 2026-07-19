@@ -27,6 +27,13 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.dwell.visitMinS, 300)
         XCTAssertEqual(config.dwell.visitReturnRadiusM, 300)
         XCTAssertEqual(config.simplify.epsilonM, 15)
+        // Map matching (§4.4, P3.5): disabled until the OSRM server exists.
+        XCTAssertEqual(config.matching.baseURL, "")
+        XCTAssertEqual(config.matching.chunkSize, 100)
+        XCTAssertEqual(config.matching.confidenceMin, 0.5)
+        XCTAssertEqual(config.matching.radiusM, 25)
+        XCTAssertEqual(config.matching.timeoutS, 10)
+        XCTAssertEqual(config.matching.displayEpsilonM, 5)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)

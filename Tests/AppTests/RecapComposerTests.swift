@@ -1,6 +1,7 @@
 @testable import Kamome
 import KamomeExportEngine
 import KamomePersistence
+import KamomeRouteMatching
 import KamomeTripComposer
 import XCTest
 
@@ -55,7 +56,7 @@ final class RecapComposerTests: XCTestCase {
         // Middle point well off the endpoints' chord so ε=15 m keeps it.
         let route = RecapComposer.route(
             from: [segment(points: [(-32.0, 115.75), (-32.1, 115.90), (-32.2, 115.77)])],
-            epsilonM: 15
+            epsilonM: 15, matchedEpsilonM: 5
         )
         let content = try XCTUnwrap(RecapComposer.content(
             trip: trip(daysLong: 2),
@@ -85,7 +86,7 @@ final class RecapComposerTests: XCTestCase {
     func testDegenerateRouteYieldsNoContent() {
         XCTAssertNil(RecapComposer.content(
             trip: trip(),
-            route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75)])], epsilonM: 15),
+            route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75)])], epsilonM: 15, matchedEpsilonM: 5),
             stops: [],
             stats: nil,
             photosByStop: [:]
@@ -115,7 +116,9 @@ final class RecapComposerTests: XCTestCase {
         let photo = try makeSolidImage()
         let content = try XCTUnwrap(RecapComposer.content(
             trip: trip(),
-            route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])], epsilonM: 15),
+            route: RecapComposer.route(
+                from: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])], epsilonM: 15, matchedEpsilonM: 5
+            ),
             stops: [stop()],
             stats: nil,
             photosByStop: ["stop-1": photo]
@@ -127,9 +130,34 @@ final class RecapComposerTests: XCTestCase {
         // 500 straight-line points → ε=15 m keeps only the endpoints, so an
         // 8-day trip's stroke cost stays inside the §4.5 render budget.
         let dense = (0..<500).map { (-32.0 + Double($0) * 0.0001, 115.75) }
-        let route = RecapComposer.route(from: [segment(points: dense)], epsilonM: 15)
+        let route = RecapComposer.route(from: [segment(points: dense)], epsilonM: 15, matchedEpsilonM: 5)
         XCTAssertGreaterThanOrEqual(route.count, 2)
         XCTAssertLessThan(route.count, 10, "collinear run must collapse")
+    }
+
+    func testMatchedSegmentUsesSnappedGeometryOverRawPoints() {
+        // Raw trace cuts the corner; the stored matched polyline follows it.
+        let snapped = [
+            GeoPoint(lat: -32.00, lon: 115.75),
+            GeoPoint(lat: -32.05, lon: 115.85),
+            GeoPoint(lat: -32.20, lon: 115.77)
+        ]
+        var matched = segment(points: [(-32.0, 115.75), (-32.2, 115.77)])
+        matched.segment.matchedPolyline = EncodedPolyline.encode(snapped)
+
+        let route = RecapComposer.route(from: [matched], epsilonM: 15, matchedEpsilonM: 5)
+        XCTAssertEqual(route.count, 3, "snapped geometry must replace the raw 2-point chord")
+        XCTAssertEqual(route[1].lat, -32.05, accuracy: 0.0001)
+        XCTAssertEqual(route[1].lon, 115.85, accuracy: 0.0001)
+    }
+
+    func testDegenerateMatchedPolylineFallsBackToRawPoints() {
+        // A 1-point (or corrupt) stored polyline must never erase the route.
+        var matched = segment(points: [(-32.0, 115.75), (-32.1, 115.90), (-32.2, 115.77)])
+        matched.segment.matchedPolyline = EncodedPolyline.encode([GeoPoint(lat: -32.0, lon: 115.75)])
+
+        let route = RecapComposer.route(from: [matched], epsilonM: 15, matchedEpsilonM: 5)
+        XCTAssertEqual(route.count, 3, "raw points are the fallback")
     }
 
     func testShareURLEncodesTripId() {

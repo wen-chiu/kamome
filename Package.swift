@@ -17,6 +17,7 @@ let package = Package(
         .library(name: "KamomeTrackingEngine", targets: ["KamomeTrackingEngine"]),
         .library(name: "KamomeTripComposer", targets: ["KamomeTripComposer"]),
         .library(name: "KamomeExportEngine", targets: ["KamomeExportEngine"]),
+        .library(name: "KamomeRouteMatching", targets: ["KamomeRouteMatching"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
@@ -46,6 +47,11 @@ let package = Package(
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/ExportEngine"
         ),
+        .target(
+            name: "KamomeRouteMatching",
+            dependencies: ["KamomeConfig"],
+            path: "Core/RouteMatching"
+        ),
         .testTarget(
             name: "KamomeCoreTests",
             dependencies: [
@@ -54,6 +60,7 @@ let package = Package(
                 "KamomeTrackingEngine",
                 "KamomeTripComposer",
                 "KamomeExportEngine",
+                "KamomeRouteMatching",
             ],
             path: "Tests/CoreTests"
         ),

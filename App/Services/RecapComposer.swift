@@ -3,6 +3,7 @@ import Foundation
 import KamomeConfig
 import KamomeExportEngine
 import KamomePersistence
+import KamomeRouteMatching
 import KamomeTrackingEngine
 import KamomeTripComposer
 
@@ -18,19 +19,29 @@ enum RecapComposer {
         let endCard: RecapFrameCompositor.EndCard
     }
 
-    /// Display-grade recap geometry: per-segment Douglas-Peucker at the same
-    /// ε as S3 (§4.4) — the compositor strokes the traveled path every frame,
-    /// so raw multi-day trackpoint counts would blow the §4.5 render budget.
+    /// Display-grade recap geometry. Segments matched to the road network
+    /// (§4.4, `segment.matched_polyline`) contribute their snapped geometry
+    /// at the tighter matched ε — the replay must follow real roads, never
+    /// straight lines between GPS points (§4.5 quality bar). Unmatched
+    /// segments fall back to raw points at the same ε as S3. Either way the
+    /// compositor strokes the traveled path every frame, so everything is
+    /// Douglas-Peucker-bounded to protect the §4.5 render budget.
     static func route(
         from segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
-        epsilonM: Double
+        epsilonM: Double,
+        matchedEpsilonM: Double
     ) -> [CameraPath.Point] {
-        segments.flatMap { item in
-            Simplifier.douglasPeucker(
-                item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) },
-                epsilonM: epsilonM
-            )
-            .map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+        segments.flatMap { item -> [CameraPath.Point] in
+            let source: (points: [Simplifier.Point], epsilonM: Double)
+            if let encoded = item.segment.matchedPolyline,
+               case let decoded = EncodedPolyline.decode(encoded),
+               decoded.count >= 2 {
+                source = (decoded.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, matchedEpsilonM)
+            } else {
+                source = (item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, epsilonM)
+            }
+            return Simplifier.douglasPeucker(source.points, epsilonM: source.epsilonM)
+                .map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         }
     }
 

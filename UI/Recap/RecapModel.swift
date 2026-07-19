@@ -77,6 +77,10 @@ final class RecapModel {
     // MARK: - Pipeline
 
     private func runExport() async {
+        // Best-effort §4.4 matching before composing: idempotent, bounded by
+        // matching.timeout_s per request, an instant no-op while base_url is
+        // empty. The replay should follow roads whenever a server is around.
+        await RouteMatchService(repository: repository, config: config).matchTrip(tripId: tripId)
         guard let detail = try? repository.detail(tripId: tripId) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
@@ -84,7 +88,11 @@ final class RecapModel {
         let stats = TripStats.from(jsonString: detail.trip.statsJson)
         // Stop-card photos are only needed when photo overlays are on.
         let photos = photosEnabled ? await loadStopPhotos(detail: detail) : [:]
-        let route = RecapComposer.route(from: detail.segments, epsilonM: config.simplify.epsilonM)
+        let route = RecapComposer.route(
+            from: detail.segments,
+            epsilonM: config.simplify.epsilonM,
+            matchedEpsilonM: config.matching.displayEpsilonM
+        )
         guard let content = RecapComposer.content(
             trip: detail.trip,
             route: route,

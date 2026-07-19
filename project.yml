@@ -32,6 +32,8 @@ targets:
         product: KamomeTripComposer
       - package: KamomeCore
         product: KamomeExportEngine
+      - package: KamomeCore
+        product: KamomeRouteMatching
     info:
       path: App/Info.plist
       properties:
