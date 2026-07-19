@@ -39,7 +39,27 @@ recognizably Kamome without branding). Vision:
   Minimal). Engine ↔ theme fully decoupled; Modern Minimal is the first
   theme, never a structural assumption.
 
-## Current phase: 3 (recap pipeline, spec §4.5/§7) — started 2026-07-16
+## Current phase: 3.5 (recap visual system, spec §7) — P3 device items STILL OPEN
+
+**Read `Docs/handoff-P3.5.md` before doing anything — it is the work order,
+in mandatory sequence.** Owner decision (decisions.md 2026-07-19): P3.5
+fixture-driven work proceeds while P3's four device-dependent gate items
+(`Docs/device-test-P3.md`) wait for Chiu's iPhone; P3 is NOT closed and
+nothing gets marked passed without its artifact. State at handoff:
+
+- §4.4 matching app side landed on `phase-3-recap` (decisions.md 2026-07-19
+  matching): `Core/RouteMatching/` (`EncodedPolyline`, `RouteMatchProviding`
+  boundary, `OSRMMatchProvider` — OSRM types confined to that one file,
+  injectable transport for recorded-response CI), `RouteMatchService`
+  (drive/scooter only; fire-and-forget at End Trip, idempotent at export),
+  `RecapComposer` prefers snapped geometry at `matching.display_epsilon_m`.
+  `matching.base_url` ships "" = disabled — no server exists yet.
+- Next: stand up OSRM per `Docs/osrm-setup.md` and validate on the perth
+  fixture (handoff §1), then MapLibre substrate (handoff §2), then Modern
+  Minimal theme with Chiu sign-off (handoff §3), then the combined device
+  day closes P3 + judges the P3.5 gate (handoff §4).
+
+## Phase 3 history (recap pipeline, spec §4.5/§7) — started 2026-07-16
 
 Gate restructure (decisions.md 2026-07-16, Chiu): the 2 h drive
 (`Docs/device-test-P1.md`) and the limited-photo-access re-check moved from
