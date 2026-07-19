@@ -6,8 +6,10 @@ import SwiftUI
 /// S3 Trip Detail: mode-colored route (drive solid, walk dotted), stop pins
 /// with photo badges, day filter chips, stats strip, timeline list.
 struct TripDetailView: View {
+    @Environment(TrackingSession.self) private var session
     @State private var model: TripDetailModel
     @State private var editingStop: StopRecord?
+    @State private var showingRecap = false
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: TripDetailModel(
@@ -26,9 +28,23 @@ struct TripDetailView: View {
         .navigationTitle(model.detail?.trip.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.load() }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                // S5 entry: only completed trips have a recap to render.
+                Button {
+                    showingRecap = true
+                } label: {
+                    Label("recap_export", systemImage: "film")
+                }
+                .disabled(model.detail?.trip.endedAt == nil)
+            }
+        }
         .sheet(item: $editingStop) { stop in
             StopEditorView(model: model, stop: stop)
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingRecap) {
+            RecapView(tripId: model.tripId, session: session)
         }
     }
 
