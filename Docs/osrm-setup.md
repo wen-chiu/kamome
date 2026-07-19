@@ -19,6 +19,20 @@ curl -LO https://download.geofabrik.de/asia/taiwan-latest.osm.pbf
 curl -LO https://download.geofabrik.de/australia-oceania/australia-latest.osm.pbf
 ```
 
+**Low-RAM machines — use the Western Australia state extract for the perth
+fixture.** Full `australia-latest` needs ~8 GB RAM for `osrm-extract`; on an
+8 GB Docker allocation that OOMs. The perth fixture is in Western Australia,
+and `Docs/vector-tile-pipeline.md` already endorses the WA state extract for
+this region, so swap it in:
+
+```bash
+curl -LO https://download.geofabrik.de/australia-oceania/australia/western-australia-latest.osm.pbf
+```
+
+Then use `western-australia` in place of `australia` throughout the steps
+below. (Setup on 2026-07-19 used this on an 8 GB machine — full Australia
+was not attempted.)
+
 ## 2. Preprocess (once per extract, car profile)
 
 MLD pipeline; Australia needs ~8 GB RAM for the extract step.
@@ -43,11 +57,15 @@ One region per port — OSRM serves a single dataset per process. Compose file
 services:
   osrm-taiwan:
     image: osrm/osrm-backend
+    restart: unless-stopped
     command: osrm-routed --algorithm mld /data/taiwan-latest.osrm
     volumes: [".:/data"]
-    ports: ["5000:5000"]
+    # macOS: host 5000 is taken by AirPlay Receiver (ControlCenter) — use 5002
+    ports: ["5002:5000"]
   osrm-australia:
     image: osrm/osrm-backend
+    restart: unless-stopped
+    # low-RAM machines: western-australia-latest.osrm covers the perth fixture
     command: osrm-routed --algorithm mld /data/australia-latest.osrm
     volumes: [".:/data"]
     ports: ["5001:5000"]
@@ -57,6 +75,10 @@ services:
 docker compose up -d
 ```
 
+`restart: unless-stopped` brings the servers back after a Docker or machine
+restart; the preprocessed `.osrm*` files persist on disk, so no reprocessing
+is needed — just `docker compose up -d` from `~/kamome-osrm` again.
+
 Region selection is manual for now (set `base_url` to the port covering the
 trip). Auto-selection by trip bounding box is a P4 concern — do not build it
 before an importer needs it.
@@ -65,7 +87,8 @@ before an importer needs it.
 
 `Config/TrackingConfig.json`:
 
-- Simulator: `"base_url": "http://127.0.0.1:5000"`
+- Simulator, perth fixture (WA): `"base_url": "http://127.0.0.1:5001"`
+- Simulator, Taiwan: `"base_url": "http://127.0.0.1:5002"` (5000 = AirPlay)
 - Physical device: `"base_url": "http://<Mac-LAN-IP>:5000"` — plain HTTP to a
   private-network host; if ATS blocks it, add an
   `NSAllowsLocalNetworking`-scoped exception in project.yml (dev builds
@@ -96,4 +119,11 @@ Capture one recorded `/match` response for the perth fixture into
   `--max-matching-size`, not recommended).
 - Low confidence on sparse traces: expected on passive-tier density (P5) —
   that is what `matching.confidence_min` and the raw-polyline fallback are
-  for. Do not lower the floor to force matches.
+  for. Do not lower the floor to force matches. (The two-point freeway smoke
+  in §5 returns `code: Ok` with `confidence: 0` — normal for a 2-location
+  request; the real per-segment match on the fixture has real confidence.)
+- `bind: address already in use` on 5000 (macOS): AirPlay Receiver
+  (ControlCenter) listens on 5000. Map the container to 5002 instead
+  (`ports: ["5002:5000"]`) rather than disabling AirPlay.
+- `osrm-extract` killed / OOM: the extract step is the RAM peak. Full
+  Australia needs ~8 GB; drop to the `western-australia` state extract (§1).
