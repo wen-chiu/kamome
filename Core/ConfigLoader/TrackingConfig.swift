@@ -154,6 +154,18 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Adaptive sampling table (§2.3).
         public let walk: SamplingPolicy
         public let vehicles: Vehicles
+        /// Watchdog for silent background-session death (2026-07-19 drive:
+        /// the region-exit wake restarted GPS, iOS suspended the app ~10 s
+        /// later, and 32 min of driving vanished). While actively tracking,
+        /// a delivery gap of at least this long means the standard location
+        /// session is presumed dead and gets restarted on the next fix that
+        /// does arrive (significant-change monitoring keeps those coming).
+        public let recoveryGapS: Double
+
+        enum CodingKeys: String, CodingKey {
+            case walk, vehicles
+            case recoveryGapS = "recovery_gap_s"
+        }
     }
 
     public struct Export: Decodable, Equatable {

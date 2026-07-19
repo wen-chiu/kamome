@@ -35,6 +35,7 @@
     "min_distance_m": 100
   },
   "sampling": {
+    "recovery_gap_s": 60,
     "walk": {
       "desired_accuracy": "nearest_ten_meters",
       "distance_filter_m": 10

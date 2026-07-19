@@ -155,6 +155,12 @@ final class TrackingSession {
             // region is armed before GPS goes quiet.
             locationService?.pauseForDwell(centerLat: stop.lat, centerLon: stop.lon)
         } else {
+            if wasDwellPaused, engine.state == .recording {
+                // The engine resumed off a delivered fix; make sure the
+                // location layer follows even if the region-exit event never
+                // arrives (it may have been this very fix's SLC wake).
+                locationService?.resumeActiveTracking()
+            }
             locationService?.adapt(
                 state: engine.state,
                 mode: currentMode,

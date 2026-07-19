@@ -65,6 +65,14 @@ final class DriveTestLog {
         append(event: "dwell_resume")
     }
 
+    func regionExited() {
+        append(event: "region_exit")
+    }
+
+    func gpsRecovered(gapS: Double) {
+        append(event: "gps_recover", detail: String(Int(gapS)))
+    }
+
     private func append(event: String, detail: String = "") {
         let device = UIDevice.current
         let percent = device.batteryLevel < 0 ? "" : String(Int(device.batteryLevel * 100))

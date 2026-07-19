@@ -18,7 +18,16 @@ build ≥ the stop.kind commit; the formal 2 h gate drive checklist stays
 - [ ] Stop recorded with full duration (arrival backdated across the gap)
 - [ ] CSV shows `dwell_pause` → `dwell_resume` (either ~3 min after parking
       or at return-to-car; resume ≤ ~1 min after leaving the 150 m region)
-- [ ] **Region-based resume works on real hardware** — still unproven
+- [ ] **Region-based resume works on real hardware** — 2026-07-19 drive:
+      resume fired but the app was suspended ~10 s later; 32 min lost
+      (decisions.md 2026-07-19 region-resume). Fix landed (background-flag
+      re-assert + trip-long SLC net + `sampling.recovery_gap_s` watchdog).
+      Re-test on a build ≥ that commit:
+      - [ ] `region_exit` appears in CSV at drive-away
+      - [ ] Trackpoints continuous after resume (no multi-minute gap)
+      - [ ] Any `gps_recover,<gap_s>` events noted here: ______
+            (none = resume held on its own; present = the net caught a
+            suspension — either way the leg must be recorded)
 
 ## D. Traffic jam / true standstill ≥ 3 min
 - [ ] Note whether a false stop (short `dwell_pause`/`dwell_resume` pair +
