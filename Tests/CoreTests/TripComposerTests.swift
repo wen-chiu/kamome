@@ -27,8 +27,8 @@ final class SimplifierTests: XCTestCase {
         let raw = drive.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }
         let simplified = Simplifier.douglasPeucker(raw, epsilonM: 15)
         XCTAssertLessThan(simplified.count, raw.count / 3, "straight-ish drives should thin at least 3×")
-        // Fixture legs are synthetic straight lines — collapsing to the two
-        // endpoints is the *correct* extreme.
+        // Fixture drive legs are road-matched; long freeway straights still
+        // collapse hard while real curves survive.
         XCTAssertGreaterThanOrEqual(simplified.count, 2)
     }
 }
@@ -44,9 +44,10 @@ final class TripStatsTests: XCTestCase {
         )
         let stats = TripStats.compute(segments: engine.segments, stops: allStops, config: config)
 
-        // Fixture is ~242 km straight-line with noise (header comment).
-        XCTAssertGreaterThan(stats.distanceM, 220_000)
-        XCTAssertLessThan(stats.distanceM, 270_000)
+        // Fixture drive legs are road-matched (~291 km by road, header
+        // comment) plus ~7 km of walk loops.
+        XCTAssertGreaterThan(stats.distanceM, 275_000)
+        XCTAssertLessThan(stats.distanceM, 315_000)
         XCTAssertEqual(stats.stopCount, 4)
         XCTAssertGreaterThan(stats.driveS, stats.walkS)
         XCTAssertGreaterThan(stats.topSpeedKmh, 70)

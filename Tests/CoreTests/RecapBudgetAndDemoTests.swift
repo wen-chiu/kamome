@@ -134,9 +134,9 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             path: path,
             events: events,
             stopCards: cards,
-            titleCard: .init(title: "Perth → Margaret River", subtitle: "Day 1 · 268 km"),
+            titleCard: .init(title: "Perth → Margaret River", subtitle: "Day 1 · 291 km"),
             endCard: .init(
-                statsLines: ["268 km · 4 stops", "6.5 h on the road"],
+                statsLines: ["291 km · 4 stops", "5.8 h on the road"],
                 callToAction: "Get this route",
                 qrCode: RecapQRCode.image(for: "kamome://route/demo", sidePx: 320)
             ),

@@ -54,10 +54,23 @@ nothing gets marked passed without its artifact. State at handoff:
   (drive/scooter only; fire-and-forget at End Trip, idempotent at export),
   `RecapComposer` prefers snapped geometry at `matching.display_epsilon_m`.
   `matching.base_url` ships "" = disabled — no server exists yet.
-- Next: stand up OSRM per `Docs/osrm-setup.md` and validate on the perth
-  fixture (handoff §1), then MapLibre substrate (handoff §2), then Modern
-  Minimal theme with Chiu sign-off (handoff §3), then the combined device
-  day closes P3 + judges the P3.5 gate (handoff §4).
+- Handoff §1 (matching end-to-end) done 2026-07-19: local OSRM live (WA
+  extract :5001 for perth, TW :5002; servers in `~/kamome-osrm`), matched
+  recap export proven in-sim via env-gated `RecapMatchingE2ETests` (real
+  RecapModel pipeline; all four drive segments snapped, worst chunk
+  confidence ≈ 0.98), before/after artifact + notes in
+  `Docs/demos/phase3_5/matching/`, recorded `/match` response replayed in
+  CI (`OSRMRecordedFixtureTests` + `Tests/Fixtures/osrm/`). **Perth
+  fixture regenerated with road-matched drive legs** (`route_leg` in
+  `generate_fixtures.py`, needs the local server to regenerate): §1
+  exposed that the old straight-line legs sat kilometers off-road (the
+  Geographe Bay crossing was the fixture's own geometry) and the §4.4
+  confidence gate correctly refused to invent a route — the gate was NOT
+  loosened. Stops/walks/timing structure unchanged; full suite green.
+  Fixture-regen decision + artifact pair still need Chiu's eyes.
+- Next: MapLibre substrate (handoff §2), then Modern Minimal theme with
+  Chiu sign-off (handoff §3), then the combined device day closes P3 +
+  judges the P3.5 gate (handoff §4).
 
 ## Phase 3 history (recap pipeline, spec §4.5/§7) — started 2026-07-16
 

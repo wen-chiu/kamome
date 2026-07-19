@@ -22,3 +22,11 @@ Known visual limitation (expected): the route cuts across Geographe Bay and
 clips shorelines — sparse fixture sampling + straight-line interpolation.
 OSRM map matching (§4.4, P4 core) snaps it to roads; do not tune sampling
 for this (decisions.md 2026-07-16).
+
+Post-scriptum (P3.5 §1, 2026-07-19): the bay crossing turned out to be the
+*fixture's own* straight-line geometry, kilometers off-road — §4.4 matching
+correctly refuses to invent a route for it (confidence gate). The fixture
+has since been regenerated with road-matched drive legs
+(`generate_fixtures.py route_leg`); this artifact predates that and is kept
+frozen as the P3 baseline / the "before" of
+`Docs/demos/phase3_5/matching/`.
