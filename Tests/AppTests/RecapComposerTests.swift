@@ -52,9 +52,14 @@ final class RecapComposerTests: XCTestCase {
 
     func testContentMapsRouteStopsAndCards() throws {
         let stops = [stop(), stop(id: "stop-2", name: nil, arrivedOffset: 90_000)]
+        // Middle point well off the endpoints' chord so ε=15 m keeps it.
+        let route = RecapComposer.route(
+            from: [segment(points: [(-32.0, 115.75), (-32.1, 115.90), (-32.2, 115.77)])],
+            epsilonM: 15
+        )
         let content = try XCTUnwrap(RecapComposer.content(
             trip: trip(daysLong: 2),
-            segments: [segment(points: [(-32.0, 115.75), (-32.1, 115.76), (-32.2, 115.77)])],
+            route: route,
             stops: stops,
             stats: TripStats.from(jsonString: trip().statsJson),
             photosByStop: [:]
@@ -80,7 +85,7 @@ final class RecapComposerTests: XCTestCase {
     func testDegenerateRouteYieldsNoContent() {
         XCTAssertNil(RecapComposer.content(
             trip: trip(),
-            segments: [segment(points: [(-32.0, 115.75)])],
+            route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75)])], epsilonM: 15),
             stops: [],
             stats: nil,
             photosByStop: [:]
@@ -110,12 +115,21 @@ final class RecapComposerTests: XCTestCase {
         let photo = try makeSolidImage()
         let content = try XCTUnwrap(RecapComposer.content(
             trip: trip(),
-            segments: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])],
+            route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])], epsilonM: 15),
             stops: [stop()],
             stats: nil,
             photosByStop: ["stop-1": photo]
         ))
         XCTAssertNotNil(content.stopCards[0].photo)
+    }
+
+    func testRouteSimplifiesDenseCollinearRuns() {
+        // 500 straight-line points → ε=15 m keeps only the endpoints, so an
+        // 8-day trip's stroke cost stays inside the §4.5 render budget.
+        let dense = (0..<500).map { (-32.0 + Double($0) * 0.0001, 115.75) }
+        let route = RecapComposer.route(from: [segment(points: dense)], epsilonM: 15)
+        XCTAssertGreaterThanOrEqual(route.count, 2)
+        XCTAssertLessThan(route.count, 10, "collinear run must collapse")
     }
 
     func testShareURLEncodesTripId() {

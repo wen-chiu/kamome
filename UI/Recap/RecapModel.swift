@@ -84,9 +84,10 @@ final class RecapModel {
         let stats = TripStats.from(jsonString: detail.trip.statsJson)
         // Stop-card photos are only needed when photo overlays are on.
         let photos = photosEnabled ? await loadStopPhotos(detail: detail) : [:]
+        let route = RecapComposer.route(from: detail.segments, epsilonM: config.simplify.epsilonM)
         guard let content = RecapComposer.content(
             trip: detail.trip,
-            segments: detail.segments,
+            route: route,
             stops: detail.stops,
             stats: stats,
             photosByStop: photos

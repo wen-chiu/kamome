@@ -36,7 +36,7 @@ class RecapRenderTestCase: XCTestCase {
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
             cameraSpanM: 1500, keyframeIntervalFrames: keyframeIntervalFrames,
-            titleCardS: 1, endCardS: 1
+            titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
         )
     }
 
@@ -132,14 +132,20 @@ class RecapRenderTestCase: XCTestCase {
 }
 
 /// Counts provider hits so the keyframe cache is provably doing its job.
+/// Lock-guarded: the render loop prefetches snapshots concurrently.
 final class CountingProvider: RecapSnapshotProviding {
     private let inner = FlatSnapshotProvider()
-    private(set) var requestCount = 0
+    private let lock = NSLock()
+    private var count = 0
+
+    var requestCount: Int {
+        lock.withLock { count }
+    }
 
     func snapshot(
         centerLat: Double, centerLon: Double, spanM: Double, widthPx: Int, heightPx: Int
     ) async throws -> MapSnapshot {
-        requestCount += 1
+        lock.withLock { count += 1 }
         return try await inner.snapshot(
             centerLat: centerLat, centerLon: centerLon, spanM: spanM, widthPx: widthPx, heightPx: heightPx
         )

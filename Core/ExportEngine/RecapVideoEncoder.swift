@@ -17,14 +17,19 @@ public final class RecapVideoEncoder {
     private let heightPx: Int
     private let fps: Int
 
-    public init(outputURL: URL, widthPx: Int, heightPx: Int, fps: Int) throws {
+    public init(outputURL: URL, widthPx: Int, heightPx: Int, fps: Int, bitrateMbps: Double) throws {
         writer = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
         input = AVAssetWriterInput(
             mediaType: .video,
             outputSettings: [
                 AVVideoCodecKey: AVVideoCodecType.h264,
                 AVVideoWidthKey: widthPx,
-                AVVideoHeightKey: heightPx
+                AVVideoHeightKey: heightPx,
+                // Uncapped VideoToolbox output measured 51 MB per 30 s
+                // (2026-07-19) — map animation compresses fine at ~5 Mbps.
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: Int(bitrateMbps * 1_000_000)
+                ]
             ]
         )
         input.expectsMediaDataInRealTime = false

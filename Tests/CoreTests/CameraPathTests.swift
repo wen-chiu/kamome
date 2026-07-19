@@ -30,7 +30,8 @@ final class CameraPathTests: XCTestCase {
             cameraSpanM: 1500,
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
-            endCardS: 3
+            endCardS: 3,
+            videoBitrateMbps: 5
         )
     }
 

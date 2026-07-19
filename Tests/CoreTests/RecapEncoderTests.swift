@@ -17,7 +17,7 @@ final class RecapEncoderTests: XCTestCase {
         TrackingConfig.Export(
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
-            cameraSpanM: 1500, keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4
+            cameraSpanM: 1500, keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4, videoBitrateMbps: 5
         )
     }
 

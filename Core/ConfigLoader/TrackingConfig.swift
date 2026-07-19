@@ -178,6 +178,9 @@ public struct TrackingConfig: Decodable, Equatable {
         /// end card ("Get this route") over the close.
         public let titleCardS: Double
         public let endCardS: Double
+        /// H.264 average bitrate; unconstrained AVAssetWriter output measured
+        /// 51 MB per 30 s (2026-07-19) — unshareable.
+        public let videoBitrateMbps: Double
 
         public init(
             targetDurationS: Double,
@@ -191,7 +194,8 @@ public struct TrackingConfig: Decodable, Equatable {
             cameraSpanM: Double,
             keyframeIntervalFrames: Int,
             titleCardS: Double,
-            endCardS: Double
+            endCardS: Double,
+            videoBitrateMbps: Double
         ) {
             self.targetDurationS = targetDurationS
             self.fps = fps
@@ -205,6 +209,7 @@ public struct TrackingConfig: Decodable, Equatable {
             self.keyframeIntervalFrames = keyframeIntervalFrames
             self.titleCardS = titleCardS
             self.endCardS = endCardS
+            self.videoBitrateMbps = videoBitrateMbps
         }
 
         enum CodingKeys: String, CodingKey {
@@ -220,6 +225,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case keyframeIntervalFrames = "keyframe_interval_frames"
             case titleCardS = "title_card_s"
             case endCardS = "end_card_s"
+            case videoBitrateMbps = "video_bitrate_mbps"
         }
     }
 

@@ -13,7 +13,7 @@ final class OverlayTimelineTests: XCTestCase {
         TrackingConfig.Export(
             targetDurationS: 30, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
-            cameraSpanM: 1500, keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3
+            cameraSpanM: 1500, keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
         )
     }
 

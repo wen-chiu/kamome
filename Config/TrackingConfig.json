@@ -35,22 +35,43 @@
     "min_distance_m": 100
   },
   "sampling": {
-    "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 },
+    "walk": {
+      "desired_accuracy": "nearest_ten_meters",
+      "distance_filter_m": 10
+    },
     "vehicles": {
       "car": {
         "fast_min_kmh": 20,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 50 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 50
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 20
+        }
       },
       "scooter": {
         "fast_min_kmh": 15,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 30 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 15 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 30
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 15
+        }
       },
       "bicycle": {
         "fast_min_kmh": 12,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 20
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 10
+        }
       }
     }
   },
@@ -66,6 +87,7 @@
     "camera_span_m": 1500,
     "keyframe_interval_frames": 15,
     "title_card_s": 2.5,
-    "end_card_s": 3.0
+    "end_card_s": 3.0,
+    "video_bitrate_mbps": 5
   }
 }

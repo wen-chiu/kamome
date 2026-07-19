@@ -18,17 +18,32 @@ enum RecapComposer {
         let endCard: RecapFrameCompositor.EndCard
     }
 
+    /// Display-grade recap geometry: per-segment Douglas-Peucker at the same
+    /// ε as S3 (§4.4) — the compositor strokes the traveled path every frame,
+    /// so raw multi-day trackpoint counts would blow the §4.5 render budget.
+    static func route(
+        from segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
+        epsilonM: Double
+    ) -> [CameraPath.Point] {
+        segments.flatMap { item in
+            Simplifier.douglasPeucker(
+                item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) },
+                epsilonM: epsilonM
+            )
+            .map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+        }
+    }
+
     /// `photosByStop` maps stop id → the stop's card photo (highlight first).
     /// Returns nil for trips the phantom guard should have kept out anyway
     /// (no route points).
     static func content(
         trip: TripRecord,
-        segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
+        route: [CameraPath.Point],
         stops: [StopRecord],
         stats: TripStats?,
         photosByStop: [String: CGImage]
     ) -> Content? {
-        let route = segments.flatMap(\.points).map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         guard route.count >= 2 else { return nil }
 
         let stopPoints = stops.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }

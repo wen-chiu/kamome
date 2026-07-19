@@ -42,7 +42,8 @@ public struct RecapExporter {
             outputURL: videoURL,
             widthPx: config.frameWidthPx,
             heightPx: config.frameHeightPx,
-            fps: config.fps
+            fps: config.fps,
+            bitrateMbps: config.videoBitrateMbps
         )
         let gif = try gifURL.map {
             try RecapGIFEncoder(outputURL: $0, config: config, sourceFrameCount: path.frameCount)
