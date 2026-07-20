@@ -547,3 +547,60 @@ road-network assert stays open until then.
 graph — needs the bike profile, future provider); a `matched` boolean
 column (`matched_polyline IS NULL` already says it); blocking recap export
 on matching success (§4.4 forbids it).
+
+## 2026-07-20 — Recap visual system validated on real data via a web prototype
+
+**Context.** Before committing the Swift recap-visual work (Phase 3.5, spec
+§4.5/§7), the direction was de-risked in a throwaway HTML/JS prototype driven
+by Chiu's **real 170-photo, 13-day Iceland ring-road trip** (not synthetic
+fixtures). Three iterations were built and reviewed live; owner sign-off:
+"prototype 蠻成功的，現在可以收斂回到 app 本身." Full writeup, the data
+pipeline, and the engine source are in `Docs/prototype/`.
+
+**Decisions (each constrains an existing component — no new architecture):**
+
+1. **Base map = real geometry + hand-written subtractive style.** Chiu's
+   formula: *真幾何 ＋ 手寫減法樣式 = 紀念品地圖* (souvenir map). Real coastline/
+   glacier/terrain geometry (so the place is recognizable — the fully-abstract
+   v1 was rejected as unidentifiable) styled subtractively (no POI, no road
+   labels, chosen colours) so it never reads as a map app. This is the exact
+   MapLibre substrate ADR (2026-07-19) — the prototype is now the "before"
+   evidence for the Phase 3.5 quality-bar side-by-side, and the reason the
+   substrate is non-negotiable. Route precision is a later OSRM concern (§4.4)
+   and does not gate the look.
+
+2. **Stop photos = a rotating deck at the stop location.** Not the current
+   single stop-card. Camera eases to the place; a 3-card fan blooms with the
+   hero **cross-fading through all of that stop's 3–8 photos**, progress dots,
+   dwell scaled to photo count. Chiu revised per-photo hold **1.0 s → 0.8 s**.
+   Owner-confirmed *not* a full-screen takeover — "bead floating on the map."
+   Owner in `OverlayTimeline` / §4.5 stop-card work; photos from `photo_ref`
+   (§4.3), `is_highlight` leads.
+
+3. **`CameraPath` must be a vehicle-locked follow-cam** (the prototype's one
+   unmet item). Chiu: "只有路線移動而已沒有帶入車子" — a wide route-draw is not
+   enough; the **vehicle must be the subject** at a close, heading-up zoom with
+   the map/route moving underneath. Needs the near-terrain detail vector tiles
+   give at zoom. Wide shots reserved for title/end/day-transitions. Top-down
+   car is the default marker; seagull (brand mascot) / scooter / bike swappable
+   — the seagull is no longer forced as the moving marker.
+
+**Forward directions recorded (not yet scheduled):** photo-**EXIF import first**
+(the prototype pipeline *is* that importer, §4.7 — and the only way to dogfood
+recap quality on past trips before the next drive; Google Timeline import
+backlogged); **video clips as auto-trimmed (2–3 s), muted, hard-capped "beads"**
+after the photo version ships (deterministic excerpts only, golden-frame-safe);
+**royalty-free beat-synced music** — bundled library + offline beat maps, recap
+events quantized to the beat grid in CameraPath/OverlayTimeline, free = silent
+export (user adds platform music), premium = in-app track (§1.6 transactional).
+
+**Positioning restated by owner** and lifted into the spec header (v1.6):
+"Kamome turns your road trips into stories you can relive and share" — a
+storytelling/memory product, built first for Chiu's own use (hates organizing,
+wants the trip to auto-become a film).
+
+**Rejected:** the fully-abstract base map (v1 — unrecognizable); a fixed
+top/bottom photo slot (v2 — photos must live at the place); forcing the seagull
+as the moving vehicle marker (car is the default, seagull stays the mascot);
+letting users hand-trim recap video clips (variable length → hard cap instead);
+bundled copyrighted music (royalty-free + optional silent export only).

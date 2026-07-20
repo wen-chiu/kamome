@@ -39,6 +39,20 @@ recognizably Kamome without branding). Vision:
   Minimal). Engine ↔ theme fully decoupled; Modern Minimal is the first
   theme, never a structural assumption.
 
+**Prototype validation (2026-07-20, `Docs/prototype/`, decisions.md
+2026-07-20).** Direction de-risked in a throwaway web prototype on Chiu's
+real 170-photo Iceland trip; owner sign-off "收斂回 app". Locked constraints
+for §4.5/§7 (no architecture change — they constrain existing components):
+(a) base map = **real geometry + subtractive style** = 紀念品地圖 (reaffirms
+substrate ADR; abstract map rejected); (b) stop photos = **rotating deck at
+the place**, hero cross-fades 3–8 photos at **0.8 s each** (OverlayTimeline);
+(c) `CameraPath` must be a **vehicle-locked TravelBoast follow-cam** (vehicle
+is the subject, close heading-up zoom) — the prototype's one unmet item;
+top-down car default, seagull/scooter/bike swappable. Positioning restated →
+spec header v1.6 ("stories you can relive and share"). Forward directions
+recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
+"beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
+
 ## Current phase: 3.5 (recap visual system, spec §7) — P3 device items STILL OPEN
 
 **Read `Docs/handoff-P3.5.md` before doing anything — it is the work order,
