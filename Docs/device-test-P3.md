@@ -4,17 +4,35 @@ Tracked validation items (Chiu, 2026-07-18). These ride any drive on a
 build ≥ the stop.kind commit; the formal 2 h gate drive checklist stays
 `Docs/device-test-P1.md`. Findings → `Docs/decisions.md`.
 
-## A. Park → walk ~20 min loop → return → drive
+## ⚠️ Redistribution 2026-07-20 (Replay MVP repositioning — history preserved, nothing marked passed)
+
+Per `decisions.md` 2026-07-20, these items were **split by destination**. Every
+checkbox below stays exactly as it was — **unchecked items remain unchecked**;
+this section only records *which gate each item now belongs to*.
+
+- **→ Capture Beta (Phase 5)** — tracking / background / battery, no longer on
+  the release path: **A, B, C, D, E**, and **H's 2 h continuous drive**. These
+  validate live capture, which the Replay MVP does not ship.
+- **→ Replay MVP gate (Phase 3.5)** — export / photo, still blocking release:
+  **F** (reframed — no longer a single < 90 s pass/fail; now *per-trip export
+  time recorded and product-acceptable* across the three dogfood trips), **G**
+  (S5 UX / progress / cancel / share), and **H's limited-photo re-check**.
+
+Do not fake a pass on either side. Capture Beta items get executed when the
+passive tier is built; Replay MVP items get executed on the three-real-trip
+dogfood day (see `Docs/handoff-P3.5.md` §6).
+
+## A. Park → walk ~20 min loop → return → drive  · **→ Capture Beta**
 - [ ] Walking trace preserved (walk segment visible, no gap)
 - [ ] Stop appears at End Trip with `kind = walk_visit`, pinned near the car
 - [ ] NO `dwell_pause` in the CSV during the walk
 
-## B. Park → sit in car ≥ 3 min → then walk  *(known edge, expected to fail)*
+## B. Park → sit in car ≥ 3 min → then walk  *(known edge, expected to fail)*  · **→ Capture Beta**
 - [ ] Confirm behavior: dwell fires while sitting; walk within 150 m is
       swallowed by the pause → walk trace lost
 - Future fix: activity-aware resume (icebox). Do NOT fix pre-emptively.
 
-## C. Park with GPS silence ~10 min → drive away
+## C. Park with GPS silence ~10 min → drive away  · **→ Capture Beta** (region-resume re-validation)
 - [ ] Stop recorded with full duration (arrival backdated across the gap)
 - [ ] CSV shows `dwell_pause` → `dwell_resume` (either ~3 min after parking
       or at return-to-car; resume ≤ ~1 min after leaving the 150 m region)
@@ -29,20 +47,25 @@ build ≥ the stop.kind commit; the formal 2 h gate drive checklist stays
             (none = resume held on its own; present = the net caught a
             suspension — either way the leg must be recorded)
 
-## D. Traffic jam / true standstill ≥ 3 min
+## D. Traffic jam / true standstill ≥ 3 min  · **→ Capture Beta**
 - [ ] Note whether a false stop (short `dwell_pause`/`dwell_resume` pair +
       spurious stop row) appears, and what the road situation actually was
 - Tunables on trial: `dwell.window_s` 180 / `dwell.radius_m` 80.
   Do NOT pre-tune without this data.
 
-## E. Battery
+## E. Battery  · **→ Capture Beta**
 - [ ] Battery % logged across the drive (CSV) — compare against the
       ≤ 5 %/8 h trend target (P1 checklist)
 - [ ] Note stop-heavy vs highway split; screen use
 - Silence-timer GPS pause (LocationService-level) is designed but NOT
   built — build only if these measurements say it matters.
 
-## F. §4.5 render budget (hard bar: 8-day-scale trip < 90 s)
+## F. §4.5 render budget  · **→ Replay MVP gate (reframed 2026-07-20)**
+
+**Reframed:** no longer a single "< 90 s" pass/fail. Now *per-trip export time
+recorded (S5 readout) and judged product-acceptable* across the three dogfood
+trips (`handoff-P3.5.md` §6). The simulator baselines below stay as a rough
+sanity reference only.
 Simulator baselines (2026-07-19, M-series Mac — treat as optimistic):
 frame+encode pipeline 22.8 s (900 frames @ 1080×1920, 5k-vertex route,
 24 stops); map snapshots 0.67 s each; full demo render 34.6 s end-to-end
@@ -54,7 +77,7 @@ after every export — no instruments needed.
       CPU-bound (compositing) before touching anything — prefetch depth
       and keyframe_interval_frames are the knobs, in that order.
 
-## G. S5 user-experience validation (P3 acceptance)
+## G. S5 user-experience validation  · **→ Replay MVP gate**
 - [ ] S3 (trip detail) → film button → S5 sheet opens
 - [ ] "停留照片卡" toggle ON: exported video shows stop cards with photos
       where the trip has matched photos
@@ -65,10 +88,10 @@ after every export — no instruments needed.
 - [ ] Cancel mid-render returns to idle, no stray files, re-export works
 - [ ] Render-time readout appears and looks plausible (item F)
 
-## H. Phase 3 hard gates (spec §7 — P3 cannot close without these)
-- [ ] **2 h continuous drive** per `Docs/device-test-P1.md` checklist on a
-      build ≥ this branch (also feeds A–E above)
-- [ ] **Limited photo access re-check** (Selected Photos): banner + picker
-      flow on S3 works on device; after adding photos via the picker, a
-      re-exported recap picks them up on stop cards (CLAUDE.md
+## H. Former Phase 3 hard gates — **split 2026-07-20**
+- [ ] **2 h continuous drive**  · **→ Capture Beta** — per `Docs/device-test-P1.md`
+      checklist on a build ≥ this branch (also feeds A–E above)
+- [ ] **Limited photo access re-check** (Selected Photos)  · **→ Replay MVP gate** —
+      banner + picker flow on S3 works on device; after adding photos via the
+      picker, a re-exported recap picks them up on stop cards (CLAUDE.md
       2026-07-16 item stays unticked until this passes)

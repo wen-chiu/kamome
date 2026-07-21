@@ -1,15 +1,56 @@
 # Kamome — working memory for Claude Code
 
-**Authoritative spec:** `Docs/kamome-poc-spec.md` (v1.5, 2026-07-19 recap
-visual pivot — see below; v1.4 fork demoted to mechanism — user-facing copy
-says Save / Get this route, never "fork"; v1.3 battery-moat pivot — phases
-renumbered: P4 Import & Matching, P5 Passive Tier = v1/TestFlight, P6 Plans
-& Fork, P7 backend). Read it before any work.
+**Authoritative spec:** `Docs/kamome-poc-spec.md` (v1.7, 2026-07-20 **Replay
+MVP repositioning** — see below; the first release ships a **photo-import
+recap**, not passive capture). Phase map: **P3.5 = Replay MVP (current
+release target)**, P4 = Story Director, P5 = Capture Beta, P6 = Plans, P7 =
+backend. Earlier: v1.5 recap visual pivot, v1.4 fork = mechanism (user-facing
+copy says Save / Get this route, never "fork"), v1.3 battery-moat. Read it
+before any work.
 Rules of Engagement: spec §0 — phase gates are hard gates, no magic numbers
 (all tunables in `Config/TrackingConfig.json`), boring tech, demo artifact per
-phase, flag anything needing the physical device.
+phase, flag anything needing the physical device, honest provenance (never
+"Verified Trip" — recorded vs reconstructed-from-photos is a product rule).
+
+## Replay MVP repositioning (spec v1.7, 2026-07-20, Chiu) — READ FIRST
+
+Long-term vision unchanged (Kamome auto-remembers a journey and directs it
+into a film worth rewatching). But the **first release is smaller and
+verifiable — the Replay MVP:** pick a past trip's photos → reconstruct from
+EXIF place+time → snap to real roads (OSRM, already landed) → souvenir-map
+recap → **MP4** → share. Two-layer evolution: (1) Replay MVP, (2) Story
+Director (auto-select/narrative/hero/music) — build the MVP without blocking
+layer 2. `decisions.md` 2026-07-20. Consequences:
+
+- **Phase 3.5 renamed → Replay MVP**; **photo-EXIF import pulled forward**
+  into it (was old P4). Work order = `Docs/handoff-P3.5.md`, resequenced:
+  **Photo EXIF Import first** → MapLibre souvenir map → Modern Minimal (the
+  ONE MVP theme) → vehicle follow-cam (primary dynamic, NOT "always-centred"
+  dogma) → basic photo deck (0.8 s, explicitly *basic*) → **three-real-trip
+  dogfood** → TestFlight.
+- **P3.5 gate is now a product release gate** (three real trips → shareable
+  films, in-app only, no DB edits / no CapCut; ≥1 published; limited-photo on
+  device; stable MP4 export; per-trip time *product-acceptable*, the single
+  <90 s number retired). Map-vs-Apple side-by-side = design review, NOT the
+  gate. "Worth publishing," not "prettier map." Three trips is hard, never one.
+- **MP4 is the launch format; GIF demoted to non-blocking.**
+- **P3 device items redistributed (none faked passed):** export/S5-UX/
+  limited-photo → Replay MVP gate; 2 h drive + region-resume → Capture Beta
+  (`Docs/device-test-P3.md` re-tagged).
+- **P5 Passive Capture Tier renamed → Capture Beta**, moved *after* the video
+  product; inherits the tracking/battery device gates; only place "Arm once,
+  forget it" is validated. **P4 Import & Matching renamed → Story Director**
+  (EXIF half moved to MVP; Story Director is **deterministic — no AI/LLM
+  tokens** (scoring/selection over trip data); Google Timeline importer
+  **dropped** as redundant — EXIF import + in-app capture cover it).
+- **Honest provenance:** schema v2 `trip.source` (recorded | imported_photos |
+  imported_timeline) lands with the MVP; UI labels imported trips
+  "reconstructed from photos"; low-confidence legs render inferred.
 
 ## Recap visual pivot (spec v1.5, 2026-07-19, Chiu)
+
+*(Phase/gate framing here is superseded by the Replay MVP section above — kept
+for the substrate ADR + boundary-discipline detail, which still hold.)*
 
 Chiu rejected the P3 demo's Apple-tile look — Kamome is a **travel
 storytelling engine**, not a GPS visualizer (now spec §0 rule 6: every
@@ -53,13 +94,35 @@ spec header v1.6 ("stories you can relive and share"). Forward directions
 recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
 "beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
 
-## Current phase: 3.5 (recap visual system, spec §7) — P3 device items STILL OPEN
+## Current phase: 3.5 = **Replay MVP** (spec §7) — next build item: **§2 MapLibre souvenir map**
 
-**Read `Docs/handoff-P3.5.md` before doing anything — it is the work order,
-in mandatory sequence.** Owner decision (decisions.md 2026-07-19): P3.5
-fixture-driven work proceeds while P3's four device-dependent gate items
-(`Docs/device-test-P3.md`) wait for Chiu's iPhone; P3 is NOT closed and
-nothing gets marked passed without its artifact. State at handoff:
+**Read `Docs/handoff-P3.5.md` before doing anything — it is the Replay MVP
+work order, in mandatory sequence.** §1 **Photo EXIF Import is landed** (engine
++ S1 UI + honest provenance, 2026-07-21); the next build item is **§2 MapLibre
+souvenir-map substrate**. P3 is engineering-complete; its
+device items are redistributed (export/photo → Replay MVP gate; 2 h drive +
+region-resume → Capture Beta), none faked passed (`Docs/device-test-P3.md`).
+State at handoff:
+
+- **§1 Photo EXIF Import landed 2026-07-21** (`handoff-P3.5.md` §1 Status).
+  Engine (schema v2 provenance, `Core/ImportKit/`,
+  `TripRepository.saveImportedTrip`, `ImportService`, `PhotoLibraryImportSource`)
+  shipped earlier; this pass added the **S1 UI + provenance labels**:
+  `Import from photos` hero on S1 (`HomeView`; live capture demoted to a
+  secondary section), `ImportSheet` (date-range → import → progress/errors →
+  push S3; `ImportFlowModel`), S1 `From photos` badge + S3
+  "reconstructed from photos" note (never "verified"), all copy zh-Hant-first
+  in the catalog (`LocalizationTests` guards it, incl. that the note omits
+  "verified"). New tunable `import.default_range_days` (picker default;
+  ConfigLoaderTests). Demo: `Docs/demos/phase3_5/import/`. **Device-only,
+  flagged NOT passed:** live PhotoKit date-range fetch + Limited-Library path
+  (`presentLimitedLibraryPicker`) — folds into the §6 three-trip gate.
+  Device-test follow-ups landed 2026-07-21: import date pickers made friendlier
+  (tap-to-expand rows that collapse on pick; end date snaps to the start's
+  month), and **stop names now surface progressively** — `StopNamer` gained an
+  `onNamed` callback and `TripDetailModel` reloads as each name lands, fixing
+  many-stop imported trips that the old one-shot `t+3 s` reload left unnamed
+  (shared path; recorded trips benefit too).
 
 - §4.4 matching app side landed on `phase-3-recap` (decisions.md 2026-07-19
   matching): `Core/RouteMatching/` (`EncodedPolyline`, `RouteMatchProviding`
@@ -82,16 +145,19 @@ nothing gets marked passed without its artifact. State at handoff:
   confidence gate correctly refused to invent a route — the gate was NOT
   loosened. Stops/walks/timing structure unchanged; full suite green.
   Fixture-regen decision + artifact pair still need Chiu's eyes.
-- Next: MapLibre substrate (handoff §2), then Modern Minimal theme with
-  Chiu sign-off (handoff §3), then the combined device day closes P3 +
-  judges the P3.5 gate (handoff §4).
+- Next (Replay MVP order, `handoff-P3.5.md`): §1 Photo EXIF Import ✅ (2026-07-21)
+  → **§2 MapLibre souvenir map** (next) → §3 Modern Minimal (Chiu sign-off) →
+  §4 follow-cam → §5 photo deck → §6 three-real-trip dogfood = the Replay MVP
+  release gate.
 
 ## Phase 3 history (recap pipeline, spec §4.5/§7) — started 2026-07-16
 
 Gate restructure (decisions.md 2026-07-16, Chiu): the 2 h drive
 (`Docs/device-test-P1.md`) and the limited-photo-access re-check moved from
 Phase 3 *preconditions* to Phase 3 *gate items* — P3 dev is fixture-driven,
-but **P3 cannot close without both**. The 2026-07-16 smoke drive surfaced:
+but **P3 cannot close without both**. *(Superseded 2026-07-20: the 2 h drive
+moved to Capture Beta; the limited-photo re-check stays as a Replay MVP gate
+item.)* The 2026-07-16 smoke drive surfaced:
 
 - Road deviation in the polyline is expected (sparse drive sampling + ε=15 m
   display simplification); fix is OSRM matching (§4.4, P3 stretch / P4 core),

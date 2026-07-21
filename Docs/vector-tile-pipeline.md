@@ -1,7 +1,8 @@
-# Vector-tile pipeline — recap base maps (Phase 3.5)
+# Vector-tile pipeline — recap base maps (Phase 3.5 = Replay MVP)
 
 **Status:** authoritative implementer guide for the MapLibre substrate
-(spec v1.5 §4.5 / §7 Phase 3.5; ADR `Docs/decisions.md` 2026-07-19).
+(spec v1.7 §4.5 / §7 Phase 3.5 = Replay MVP; ADR `Docs/decisions.md`
+2026-07-19). This is Replay MVP work order §2 (`Docs/handoff-P3.5.md`).
 Written to be executable by a fresh implementer with no other context.
 Read `Docs/kamome-animation-vision.md` first — it is the "why" behind
 every choice here.
@@ -34,10 +35,12 @@ replay*. Concretely, a passing style sheet has:
 **Judging procedure:** render stills at the camera positions of the three
 P3 reference stills (`Docs/demos/phase3/still-*.png` — title card, stop
 card, end card) plus two mid-drive frames, and present them side-by-side
-with the P3 Apple-tiles versions. Chiu reviews and signs off at the
-Phase 3.5 gate. A style that fails side-by-side is not shippable. If
-after honest iteration the bar looks unreachable, do not lower the bar —
-reopen the substrate ADR.
+with the P3 Apple-tiles versions. Chiu reviews and signs off. **This is a
+design review, not the Replay MVP release gate** (2026-07-20): it keeps the
+substrate honest, but the release gate is the full-video judgment across three
+real trips (spec §4.5 / §10) — "prettier map" is necessary, not sufficient. A
+style that fails side-by-side is still not shippable. If after honest iteration
+the bar looks unreachable, do not lower the bar — reopen the substrate ADR.
 
 ---
 

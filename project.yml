@@ -34,6 +34,8 @@ targets:
         product: KamomeExportEngine
       - package: KamomeCore
         product: KamomeRouteMatching
+      - package: KamomeCore
+        product: KamomeImportKit
     info:
       path: App/Info.plist
       properties:

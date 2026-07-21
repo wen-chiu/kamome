@@ -26,6 +26,13 @@ final class PhotoLibraryService {
         PHPhotoLibrary.authorizationStatus(for: .readWrite) == .limited
     }
 
+    /// Access explicitly refused — the import flow surfaces a "grant access"
+    /// message rather than the "no geotagged photos" one when the fetch comes
+    /// back empty because permission was denied (spec §5 friendly errors).
+    var isDenied: Bool {
+        PHPhotoLibrary.authorizationStatus(for: .readWrite) == .denied
+    }
+
     /// Presents the system limited-library picker over the topmost view
     /// controller, then calls back on the main queue so the caller can
     /// re-match against the new selection.

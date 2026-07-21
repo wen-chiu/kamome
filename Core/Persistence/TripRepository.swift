@@ -11,12 +11,16 @@ public struct TripRepository {
         public let startedAt: Double
         public let endedAt: Double?
         public let points: [NewTrackpoint]
+        /// `SegmentSource` raw value (schema v2, §3). nil = default (gps_hifi);
+        /// the photo-EXIF importer sets `exif`.
+        public let source: String?
 
-        public init(mode: String, startedAt: Double, endedAt: Double?, points: [NewTrackpoint]) {
+        public init(mode: String, startedAt: Double, endedAt: Double?, points: [NewTrackpoint], source: String? = nil) {
             self.mode = mode
             self.startedAt = startedAt
             self.endedAt = endedAt
             self.points = points
+            self.source = source
         }
     }
 
@@ -65,7 +69,7 @@ public struct TripRepository {
         }
     }
 
-    private let database: AppDatabase
+    let database: AppDatabase
 
     public init(database: AppDatabase) {
         self.database = database

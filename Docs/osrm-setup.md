@@ -80,8 +80,9 @@ restart; the preprocessed `.osrm*` files persist on disk, so no reprocessing
 is needed — just `docker compose up -d` from `~/kamome-osrm` again.
 
 Region selection is manual for now (set `base_url` to the port covering the
-trip). Auto-selection by trip bounding box is a P4 concern — do not build it
-before an importer needs it.
+trip). Auto-selection by trip bounding box is deferred (region auto-select is
+not needed while `base_url` ships `""` = disabled) — do not build it before a
+consumer needs it.
 
 ## 4. Point the app at it
 
@@ -106,9 +107,10 @@ Expect `"code": "Ok"` with a non-empty `matchings` array. Then the real
 check: run the app (sim), open the perth fixture trip
 (`Docs/demos/phase3/` seeding notes), export a recap, and confirm the
 replay follows the freeway curves where the P3 artifact cut corners.
-Capture one recorded `/match` response for the perth fixture into
-`Tests/Fixtures/` when P4's replay-in-CI gate lands (the transport hook on
-`OSRMMatchProvider` is built for exactly that).
+A recorded `/match` response for the perth fixture is already checked into
+`Tests/Fixtures/osrm/` and replayed in CI (done in the Replay MVP / P3.5
+matching validation; the transport hook on `OSRMMatchProvider` is built for
+exactly that).
 
 ## Troubleshooting
 
@@ -117,7 +119,8 @@ Capture one recorded `/match` response for the perth fixture into
 - Chunk-size errors (`TooBig`): OSRM caps match locations at 100 per request
   by default; `matching.chunk_size` must stay ≤ 100 (or raise the server's
   `--max-matching-size`, not recommended).
-- Low confidence on sparse traces: expected on passive-tier density (P5) —
+- Low confidence on sparse traces: expected on sparse photo-EXIF points (Replay
+  MVP) and later passive-tier density (Capture Beta) —
   that is what `matching.confidence_min` and the raw-polyline fallback are
   for. Do not lower the floor to force matches. (The two-point freeway smoke
   in §5 returns `code: Ok` with `confidence: 0` — normal for a 2-location

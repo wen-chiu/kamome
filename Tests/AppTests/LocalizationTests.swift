@@ -37,4 +37,25 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(try localizedValue("route_photos_header", locale: "zh-Hant"), "沿途照片")
         XCTAssertEqual(try localizedValue("route_photos_header", locale: "en"), "Along the route")
     }
+
+    /// S1 import hero + sheet copy (Replay MVP §4.7/§5).
+    func testImportStringsResolve() throws {
+        XCTAssertEqual(try localizedValue("import_from_photos", locale: "zh-Hant"), "從相片匯入旅程")
+        XCTAssertEqual(try localizedValue("import_from_photos", locale: "en"), "Import from photos")
+        XCTAssertEqual(try localizedValue("import_start", locale: "zh-Hant"), "開始匯入")
+        XCTAssertEqual(try localizedValue("import_start", locale: "en"), "Import")
+        // The friendly error must never blame the user or imply a defect.
+        XCTAssertTrue(try localizedValue("import_error_no_photos", locale: "en").contains("geotagged"))
+    }
+
+    /// Honest provenance (§3/§6): imported trips read as reconstructed, and the
+    /// copy must never claim the trip is recorded or "verified".
+    func testProvenanceStringsResolve() throws {
+        XCTAssertEqual(try localizedValue("provenance_badge", locale: "zh-Hant"), "相片重建")
+        XCTAssertEqual(try localizedValue("provenance_badge", locale: "en"), "From photos")
+        let noteEN = try localizedValue("provenance_note", locale: "en")
+        XCTAssertTrue(noteEN.contains("reconstructed"))
+        XCTAssertFalse(noteEN.lowercased().contains("verified"))
+        XCTAssertTrue(try localizedValue("provenance_note", locale: "zh-Hant").contains("重建"))
+    }
 }

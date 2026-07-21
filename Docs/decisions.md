@@ -604,3 +604,116 @@ top/bottom photo slot (v2 — photos must live at the place); forcing the seagul
 as the moving vehicle marker (car is the default, seagull stays the mascot);
 letting users hand-trim recap video clips (variable length → hard cap instead);
 bundled copyrighted music (royalty-free + optional silent export only).
+
+## 2026-07-20 — Replay MVP repositioning: photo-import recap ships first; capture → Capture Beta; Story Director & Plans deferred; honest provenance
+
+**Context.** Product-strategy re-confirmation (Chiu, 2026-07-20). The long-term
+vision is unchanged — *Kamome automatically remembers a journey and directs it
+into a travel film worth rewatching* — but the earlier framing (spec ≤ v1.6)
+made the **first release** a passive-capture "v1" (Phases 0–5, TestFlight at the
+Phase 5 passive-tier gate). That over-promises: it commits the launch to
+12-day zero-touch background capture and imperceptible battery, neither proven,
+and gates the whole product behind hardware Chiu cannot always run. The web
+prototype (2026-07-20 ADR above) meanwhile proved that **sparse geotagged photos
+alone** reconstruct a recognizable, share-worthy trip once snapped to roads.
+
+**Decision.** Ship a smaller, publishable, verifiable product first — the
+**Replay MVP**: *pick a past trip's photos → reconstruct from EXIF place + time →
+snap to real roads (OSRM, already landed) → souvenir-map recap → MP4 → share.*
+Product evolution is two layers, and the architecture must not block layer 2:
+1. **Replay MVP** — auto-generate a real-road trip animation from photos.
+2. **Story Director** — on top of the MVP: automatic moment-selection, narrative,
+   hero photos, chapters/elision, variable pacing, light edit controls, video
+   beads, licensed music + beat-sync. *Kamome is ultimately not full playback of
+   all trip data — it is a director that dares to select and omit.* Not now.
+
+Concrete changes (spec bumped to v1.7):
+- **Phase 3.5 renamed "Recap Visual System" → "Replay MVP,"** and **photo-EXIF
+  import is pulled forward into it** from the old Phase 4. Sequence:
+  photo-EXIF import (schema v2 `trip.source`) → MapLibre souvenir-map substrate →
+  Modern Minimal (the ONE MVP theme; multiple themes are not an MVP condition) →
+  vehicle follow-cam (primary dynamic, **not** an unchallengeable "always
+  centred" dogma — Story Director makes it one shot among many) → basic photo
+  deck (deterministic 3–8 @ 0.8 s; explicitly *basic*, not final) →
+  **three-real-trip dogfood** → TestFlight.
+- **The P3.5 gate becomes a product release gate,** not a static-visual gate.
+  The MapLibre-vs-Apple side-by-side survives as a **design review** only; it
+  does not replace the full-video judgment. Hard conditions: three real trips of
+  different character each go photos → import → recap → MP4 → share **entirely
+  in-app** (no DB edits, no external tools); routes honest (no gross
+  sea/mountain/wrong-road; low confidence shown as inferred); all three worth
+  keeping and sharing; **≥ 1 published publicly**; limited-photo path passes on
+  device; stable on-device export (no crash / acceptable memory); per-trip export
+  time recorded and *product-acceptable* (the single < 90 s number is retired as
+  pass/fail). "Three trips" is hard — never downgraded to one.
+- **MP4 is the launch format; GIF is demoted to non-blocking.**
+- **Phase 3's device items are redistributed (nothing faked passed):** export /
+  S5-UX / limited-photo / per-trip-render-time → into the Replay MVP gate; the
+  2 h drive + region-resume re-validation → **Capture Beta**. Checklists in
+  `Docs/device-test-P3.md` are preserved and re-tagged, not deleted.
+- **Phase 5 "Passive Capture Tier" renamed → "Capture Beta"** and moved *after*
+  the video product. It inherits the moved tracking/battery gates (2 h drive,
+  region-resume, long-duration background, process-death recovery, passive
+  capture, ≥ 3-day battery) and is the **only** place "Arm once, forget it" is
+  validated and usable in copy. The old §10 "passive-capture v1" success criteria
+  move here.
+- **Phase 4 "Import & Map Matching" renamed → "Story Director."** Its EXIF half
+  moved into the MVP; matching already landed; **no importer remains** — the
+  Google Timeline importer is **dropped as redundant** (owner add-on 2026-07-20:
+  photo-EXIF import covers past trips, in-app capture covers new ones, so a
+  drift-prone Timeline parser adds maintenance for little unique value; the
+  `imported_timeline` enum value is kept only for forward-compat).
+- **Story Director is deterministic — no AI/LLM tokens** (owner constraint
+  2026-07-20). It is a scoring-and-selection engine over structured trip data
+  (moment salience = weighted photo-count / `is_highlight` / dwell / geo-novelty
+  / day-boundary; top-N with non-maximum-suppression spacing; omit + speed-warp
+  the gaps; per-photo hold scales with salience). Hero-photo pick uses
+  **on-device Vision** (saliency / faces — free, local, no tokens, no network,
+  not an LLM; owner-confirmed 2026-07-20), cached for determinism, with
+  `is_highlight` → dwell-midpoint → chronological fallback; Vision stays in its
+  own boundary file. No network, no per-call cost, and **determinism keeps
+  golden-frame CI stable**. The manual "replace / remove" controls are the taste
+  escape hatch.
+- **Capture Beta must justify itself vs. photo reconstruction (open question,
+  owner-raised 2026-07-20; decide from MVP feedback).** Since photo-EXIF import
+  already reconstructs most photo-rich trips, live capture earns its
+  background/battery build only via the three things photos structurally cannot
+  give: a **truth-path** (actual road vs. an OSRM guess between sparse photos),
+  **no-photo stops/scenes**, and **not-even-photos zero effort**. Recorded as a
+  question, not an assumption.
+- **Plans (Phase 6) benefits from captured road-detail; community sharing is the
+  virality engine** (owner note 2026-07-20, discuss later). A shared route from
+  *recorded* driving beats one reconstructed from a stranger's photos — links
+  Capture Beta → Plans value; sequencing deferred.
+- **Plans & Fork (Phase 6) and Backend (Phase 7) unchanged and further
+  deferred** — plan/fork must never block or delay the video product; start only
+  after the Replay MVP *and* Story Director show real sharing.
+- **Honest provenance (product rule, not cosmetic).** `trip.source` separates
+  what Kamome **recorded** from what was **reconstructed from photos**; the UI
+  must surface it (S1 badge, S3 note); GPS/EXIF are not tamper-proof and must
+  never be presented as proof or as a "Verified Trip". Spec §3/§6.
+- **Positioning de-overclaimed:** MVP copy may not claim 12-day zero-touch
+  capture or imperceptible battery; those are Capture-Beta-validated promises.
+
+**Docs touched:** spec (header/positioning, §1.1/§1.3/§1.5/§1.8, §2.1–§2.3, §3,
+§4.4/§4.5/§4.7, §5, §6, §7 full phase map, §9, §10, §11), `handoff-P3.5.md`
+(rewritten as the Replay MVP work order, Photo EXIF Import first),
+`kamome-animation-vision.md` (two-layer note), `device-test-P3.md` (Capture-Beta
+re-tagging), `CLAUDE.md` (current phase + gate), plus secondary phase-ref
+reconciliation in `osrm-setup.md` / `icebox.md` / `vector-tile-pipeline.md`.
+
+**Rejected:** shipping passive-capture as the first release (over-promises
+battery/background integrity that need hardware Chiu can't always run, and buries
+a validated photo-recap product behind it); marking P3's device items passed to
+"unblock" release (violates §0 rule 1 — they are moved, not passed); deleting the
+tracking checklists (they are real Capture-Beta work); keeping GIF as a launch
+gate (MP4 is the share format, GIF is a nice-to-have); a Google Timeline importer
+(drift-prone maintenance, redundant given EXIF import + in-app capture); using
+AI/LLM tokens for Story Director (per-call cost + network + breaks golden-frame
+determinism — hand-tuned heuristics fit the structured-data problem); a
+single-video gate (three trips of different character is the honest bar for
+"worth publishing");
+letting the map-vs-Apple side-by-side stand in for the product judgment (pretty
+map ≠ shareable film); building Story Director / multiple themes / plans now
+(scope; the architecture keeps them open without building them — spec §0 rule 6,
+boundary discipline).

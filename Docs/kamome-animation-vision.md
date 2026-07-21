@@ -8,6 +8,26 @@ quality bar, §7 Phase 3.5), `Docs/decisions.md` 2026-07-19 (gate decision
 Pipeline mechanics of §4.5 (camera path, overlay timeline, encoding,
 budgets) are unaffected.
 
+**Scope note — Replay MVP repositioning (2026-07-20, `decisions.md`).** This
+document is the *long-term* visual north star; it is not the MVP checklist.
+Product evolution is two layers: **(1) Replay MVP** — auto-generate a real-road
+trip animation from imported photos; **(2) Story Director** — add automatic
+selection, narrative, hero photos, pacing, and music. Read every ambition below
+through that lens:
+- **Follow-cam is the MVP's primary dynamic, not the sole or final narrative.**
+  The "vehicle is the subject / centred" framing is the MVP simplification;
+  Story Director makes the follow-cam **one narrative shot among many** (chapter
+  transitions, establishing shots, hero holds). Build `CameraPath` for both from
+  the start (spec §4.5).
+- **"Multiple art styles" is a long-term differentiator, not an MVP condition.**
+  The MVP ships exactly **one** theme (Modern Minimal). Cute Illustration /
+  Semi-Realistic are future; the engine ↔ theme decoupling keeps them open
+  without building them.
+- **"Accuracy is a core value" means faithful-to-roads, not proof.** Many MVP
+  recaps are **reconstructed from photo locations**, not recorded; they must be
+  labeled honestly (spec §3/§6 — `trip.source`, never "Verified Trip"). GPS/EXIF
+  are not tamper-proof; low-confidence legs render as inferred, never invented.
+
 ---
 
 Kamome is not a GPS visualization tool. It is a travel storytelling engine.

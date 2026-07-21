@@ -54,19 +54,36 @@
         }
       }
     },
+    "empty_state_import_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No need to wait for your next trip — relive a past one in minutes."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不必等下次出遊，幾分鐘就能重溫一趟舊旅程。"
+          }
+        }
+      }
+    },
     "empty_state_pitch": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Record → Recap → Fork"
+            "value": "Pick your photos, rebuild your trip recap"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "記錄 → 回顧 → 分享路線"
+            "value": "挑選相片，重建你的旅程回顧"
           }
         }
       }
@@ -105,6 +122,193 @@
         }
       }
     },
+    "import_close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉"
+          }
+        }
+      }
+    },
+    "import_error_access": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome needs photo access to rebuild a trip. Enable photo access in Settings."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩需要取用相片才能重建旅程。請到「設定」開啟相片存取權。"
+          }
+        }
+      }
+    },
+    "import_error_no_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No geotagged photos in this range. Adjust the dates, or check that your photos include location data."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這段期間找不到有定位的相片。試著調整日期，或確認相片含有位置資訊。"
+          }
+        }
+      }
+    },
+    "import_from": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始日期"
+          }
+        }
+      }
+    },
+    "import_from_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import from photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從相片匯入旅程"
+          }
+        }
+      }
+    },
+    "import_range_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome reads geotagged photos from this range and rebuilds them into a trip. Photos are never copied or uploaded."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩會讀取這段期間有定位的相片，重建成一趟旅程。相片不會被複製或上傳。"
+          }
+        }
+      }
+    },
+    "import_range_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date range"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇日期範圍"
+          }
+        }
+      }
+    },
+    "import_running": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rebuilding trip…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重建旅程中…"
+          }
+        }
+      }
+    },
+    "import_start": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始匯入"
+          }
+        }
+      }
+    },
+    "import_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import from Photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從相片匯入"
+          }
+        }
+      }
+    },
+    "import_to": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束日期"
+          }
+        }
+      }
+    },
     "limited_photos_manage": {
       "extractionState": "manual",
       "localizations": {
@@ -135,6 +339,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kamome 只能看到你選取的相片"
+          }
+        }
+      }
+    },
+    "live_capture_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record a new trip live"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即時記錄新旅程"
           }
         }
       }
@@ -220,6 +441,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "螢幕關閉也持續記錄"
+          }
+        }
+      }
+    },
+    "provenance_badge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相片重建"
+          }
+        }
+      }
+    },
+    "provenance_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This trip was reconstructed from your photos' place and time — not a recorded track."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這趟旅程根據相片的位置與時間重建，並非實際記錄的軌跡。"
           }
         }
       }

@@ -22,6 +22,7 @@ struct TripDetailView: View {
             map.frame(minHeight: 280)
             if model.dayCount > 1 { dayChips }
             if let stats = model.stats { statsStrip(stats) }
+            if model.isReconstructed { provenanceNote }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             timeline
         }
@@ -131,6 +132,22 @@ struct TripDetailView: View {
             Text(value).font(.subheadline.bold()).monospacedDigit()
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
+    }
+
+    /// Honest provenance (§3/§6): an imported trip's route is inferred from
+    /// photo place+time, not recorded — say so, and never imply it is verified.
+    private var provenanceNote: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "photo.on.rectangle")
+                .foregroundStyle(.secondary)
+            Text("provenance_note")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
     }
 
     /// Selected-Photos access hides camera shots taken during the trip until

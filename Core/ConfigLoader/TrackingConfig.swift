@@ -139,6 +139,35 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    public struct Import: Decodable, Equatable {
+        /// Photo-EXIF clustering tunables (§4.7). Defaults mirror the validated
+        /// prototype (`Docs/prototype/recap_data_pipeline.py`); tune against the
+        /// three real dogfood trips (the Replay MVP gate).
+        /// A photo joins a cluster while within this distance of its centroid.
+        public let stopRadiusM: Double
+        /// A larger time gap between consecutive photos opens a new cluster
+        /// (a revisit) even inside the radius.
+        public let stopSplitGapS: Double
+        /// A cluster becomes a stop only with at least this many photos.
+        public let minPhotosPerStop: Int
+        /// Recap photo-deck size bounds (basic MVP presentation; §5).
+        public let deckMinPhotos: Int
+        public let deckMaxPhotos: Int
+        /// How many days back the S1 import date-range picker defaults to
+        /// (UI default only — the user adjusts it; kept here so it isn't a
+        /// magic number, §0 rule 2).
+        public let defaultRangeDays: Int
+
+        enum CodingKeys: String, CodingKey {
+            case stopRadiusM = "stop_radius_m"
+            case stopSplitGapS = "stop_split_gap_s"
+            case minPhotosPerStop = "min_photos_per_stop"
+            case deckMinPhotos = "deck_min_photos"
+            case deckMaxPhotos = "deck_max_photos"
+            case defaultRangeDays = "default_range_days"
+        }
+    }
+
     public struct Geocode: Decodable, Equatable {
         /// CLGeocoder is throttled and cached (§4.2).
         public let minIntervalS: Double
@@ -298,6 +327,7 @@ public struct TrackingConfig: Decodable, Equatable {
     public let simplify: Simplify
     public let matching: Matching
     public let photos: Photos
+    public let photoImport: Import
     public let geocode: Geocode
     public let trip: Trip
     public let sampling: Sampling
@@ -306,6 +336,7 @@ public struct TrackingConfig: Decodable, Equatable {
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
         case filter, segmentation, dwell, simplify, matching, photos, geocode, trip, sampling, export
+        case photoImport = "import"
     }
 }
 

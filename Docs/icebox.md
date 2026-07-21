@@ -17,8 +17,16 @@ Revisit only after fork loop (Phase 6) proves organic sharing.
 ## Auto trip detection (arm-nothing capture)
 Passive tier v2: detect trip start with zero user action (first SLC fix far
 from home region → "looks like you're on a trip — recording?" notification).
-Needs the Phase 5 tier proven first; also raises the App Review bar (§6 —
+Needs the Capture Beta tier proven first; also raises the App Review bar (§6 —
 current posture is "only between explicit Start/End").
+
+## Google Timeline importer — dropped as redundant (owner 2026-07-20)
+Was Phase 4 scope; cut. Photo-EXIF import already reconstructs *past* trips and
+in-app capture (Capture Beta) covers *new* ones, so a Timeline parser adds
+Google-export format-drift maintenance for little unique value. The
+`imported_timeline` `trip.source` value stays reserved for forward-compat only.
+Thaw only if real user demand for Timeline import appears. (`decisions.md`
+2026-07-20 Replay MVP repositioning.)
 
 ## Subscription vs. transactional — decided, kept for the record
 $4.99/mo subscription dies of churn at 2–4 trips/year usage. Transactional

@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "KamomeTripComposer", targets: ["KamomeTripComposer"]),
         .library(name: "KamomeExportEngine", targets: ["KamomeExportEngine"]),
         .library(name: "KamomeRouteMatching", targets: ["KamomeRouteMatching"]),
+        .library(name: "KamomeImportKit", targets: ["KamomeImportKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
@@ -52,6 +53,12 @@ let package = Package(
             dependencies: ["KamomeConfig"],
             path: "Core/RouteMatching"
         ),
+        // Pure photo-EXIF import clustering (spec §4.7). No PhotoKit/GRDB — the
+        // adapters live in the app; this stays deterministically testable.
+        .target(
+            name: "KamomeImportKit",
+            path: "Core/ImportKit"
+        ),
         .testTarget(
             name: "KamomeCoreTests",
             dependencies: [
@@ -61,6 +68,7 @@ let package = Package(
                 "KamomeTripComposer",
                 "KamomeExportEngine",
                 "KamomeRouteMatching",
+                "KamomeImportKit",
             ],
             path: "Tests/CoreTests"
         ),

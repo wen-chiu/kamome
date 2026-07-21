@@ -34,6 +34,14 @@
   "photos": {
     "match_radius_m": 300
   },
+  "import": {
+    "stop_radius_m": 4000,
+    "stop_split_gap_s": 10800,
+    "min_photos_per_stop": 2,
+    "deck_min_photos": 3,
+    "deck_max_photos": 8,
+    "default_range_days": 7
+  },
   "geocode": {
     "min_interval_s": 2,
     "cache_precision_deg": 0.001

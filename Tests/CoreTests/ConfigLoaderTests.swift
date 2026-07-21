@@ -53,6 +53,13 @@ final class ConfigLoaderTests: XCTestCase {
         // Phantom-trip guard (ADR 2026-07-16).
         XCTAssertEqual(config.trip.minDurationS, 60)
         XCTAssertEqual(config.trip.minDistanceM, 100)
+        // Photo-EXIF import clustering (§4.7, Replay MVP) — prototype defaults.
+        XCTAssertEqual(config.photoImport.stopRadiusM, 4000)
+        XCTAssertEqual(config.photoImport.stopSplitGapS, 10_800)
+        XCTAssertEqual(config.photoImport.minPhotosPerStop, 2)
+        XCTAssertEqual(config.photoImport.deckMinPhotos, 3)
+        XCTAssertEqual(config.photoImport.deckMaxPhotos, 8)
+        XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
     }
 
     func testMissingKeyFailsLoudlyNamingTheKey() throws {
