@@ -156,6 +156,38 @@ quality bar (a **design review**, not the release gate — spec §4.5 revised).
    snapshot request arrives with the follow-cam (§4); `RecapTheme` overlay
    tokens arrive with Modern Minimal (§3).
 
+### Status — §2 substrate landed 2026-07-21 (functional, MapKit still shipping)
+
+Machinery for the substrate is in on `phase-3-recap`; the shipping base map is
+**still MapKit** until §3 clears Chiu's design review (then MapKit dies in that
+PR). Decisions + rationale: `decisions.md` 2026-07-21.
+
+- [x] **Tile build** — `Tests/Fixtures/tiles/generate_tiles.sh` (Planetiler via
+      Docker; local Java is 11, the image bundles Java 21) → small Perth-corridor
+      `perth-2026-07-19.pmtiles` checked in. Full-region tiles stay out of git.
+- [x] **MapLibre SPM `6.27.0`** (exact) in `project.yml`, app target. Resolves +
+      links; the build **compile-checks** the `MLN*` API usage.
+- [x] **`MapLibreSnapshotProvider`** (`App/Services/`, **not** the SwiftPM core —
+      keeps package tests SDK-free; decisions.md 2026-07-21) conforming to the
+      existing `RecapSnapshotProviding`. `import MapLibre` in that one file only,
+      **CI grep gate** enforces it. Projection travels with the snapshot
+      (`MLNMapSnapshot.point(for:)`); span→zoom via Web Mercator, `scale = 1`.
+- [x] **Pure style resolver** `RecapMapStyle` (no SDK) injects the on-disk tiles
+      path into the theme's `pmtiles://__KAMOME_TILES__` sentinel — unit-tested
+      (`Tests/AppTests/MapLibreSubstrateTests.swift`), so the tile wiring is
+      verified without a Metal render.
+- [x] **Functional subtractive theme** `Config/RecapThemes/functional-base.json`
+      (land/water/road skeleton, no POI/labels) + `README.md` Maputnik workflow.
+      **Not** Modern Minimal.
+- [x] **Golden-frame CI unchanged** — still `FlatSnapshotProvider`, bit-stable,
+      no live tiles/Metal/network.
+- [ ] **Device/sim-only (flagged, NOT passed):** the actual MapLibre pixel
+      output — `pmtiles://` tiles loading, the subtractive style rendering,
+      threading of `MLNMapSnapshotter` off the render loop — plus the
+      pmtiles://-vs-mbtiles:// ingestion confirmation. Metal is not in CI (§8);
+      this folds into the §3 design review + the §6 three-trip gate. Ingestion
+      scheme is theme-JSON-declared, so a fallback is a one-line edit.
+
 ## 3. Modern Minimal theme — the ONE MVP theme (spec §4.5, Chiu in the loop)
 
 Vision: `Docs/kamome-animation-vision.md`. The **one** publishable theme.

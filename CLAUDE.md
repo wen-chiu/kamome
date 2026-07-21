@@ -94,15 +94,34 @@ spec header v1.6 ("stories you can relive and share"). Forward directions
 recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
 "beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
 
-## Current phase: 3.5 = **Replay MVP** (spec §7) — next build item: **§2 MapLibre souvenir map**
+## Current phase: 3.5 = **Replay MVP** (spec §7) — next build item: **§3 Modern Minimal theme (needs Chiu sign-off)**
 
 **Read `Docs/handoff-P3.5.md` before doing anything — it is the Replay MVP
-work order, in mandatory sequence.** §1 **Photo EXIF Import is landed** (engine
-+ S1 UI + honest provenance, 2026-07-21); the next build item is **§2 MapLibre
-souvenir-map substrate**. P3 is engineering-complete; its
-device items are redistributed (export/photo → Replay MVP gate; 2 h drive +
-region-resume → Capture Beta), none faked passed (`Docs/device-test-P3.md`).
-State at handoff:
+work order, in mandatory sequence.** §1 Photo EXIF Import ✅ (2026-07-21) and
+§2 **MapLibre souvenir-map substrate** ✅ (2026-07-21) are landed; the next build
+item is **§3 Modern Minimal** — the ONE MVP theme, which needs a side-by-side
+design review + **Chiu sign-off** (do NOT self-certify the visual). P3 is
+engineering-complete; its device items are redistributed (export/photo → Replay
+MVP gate; 2 h drive + region-resume → Capture Beta), none faked passed
+(`Docs/device-test-P3.md`). State at handoff:
+
+- **§2 MapLibre substrate landed 2026-07-21** (`handoff-P3.5.md` §2 Status;
+  decisions.md 2026-07-21). MapLibre `6.27.0` (SPM, exact, app target) confined
+  to `App/Services/MapLibreSnapshotProvider.swift` (**not** the SwiftPM core —
+  keeps package tests SDK-free; CI grep gate enforces `import MapLibre` in that
+  one file). Conforms to the existing `RecapSnapshotProviding`; projection travels
+  with the snapshot (`MLNMapSnapshot.point(for:)`); span→zoom via Web Mercator,
+  `scale = 1`. Pure `RecapMapStyle` resolver injects the on-disk tiles path into
+  the theme's `pmtiles://__KAMOME_TILES__` sentinel (unit-tested, no Metal).
+  First theme = `Config/RecapThemes/functional-base.json` (subtractive: land/
+  water/road skeleton, **no POI/labels** — NOT Modern Minimal). Fixture tiles via
+  `Tests/Fixtures/tiles/generate_tiles.sh` (Planetiler/Docker). **MapKit is still
+  the shipping base map** — `RecapModel` unchanged until §3 clears the design
+  review, then MapKit dies in that PR. Golden-frame CI unchanged
+  (`FlatSnapshotProvider`, bit-stable). **Device/sim-only, flagged NOT passed:**
+  actual MapLibre pixel render + `pmtiles://`-vs-`mbtiles://` confirmation (Metal,
+  not in CI) → §3 review + §6 gate. Ingestion scheme is theme-JSON-declared, so a
+  fallback is a one-line edit.
 
 - **§1 Photo EXIF Import landed 2026-07-21** (`handoff-P3.5.md` §1 Status).
   Engine (schema v2 provenance, `Core/ImportKit/`,
@@ -146,9 +165,9 @@ State at handoff:
   loosened. Stops/walks/timing structure unchanged; full suite green.
   Fixture-regen decision + artifact pair still need Chiu's eyes.
 - Next (Replay MVP order, `handoff-P3.5.md`): §1 Photo EXIF Import ✅ (2026-07-21)
-  → **§2 MapLibre souvenir map** (next) → §3 Modern Minimal (Chiu sign-off) →
-  §4 follow-cam → §5 photo deck → §6 three-real-trip dogfood = the Replay MVP
-  release gate.
+  → §2 MapLibre souvenir map ✅ (2026-07-21) → **§3 Modern Minimal (Chiu sign-off)**
+  (next) → §4 follow-cam → §5 photo deck → §6 three-real-trip dogfood = the Replay
+  MVP release gate.
 
 ## Phase 3 history (recap pipeline, spec §4.5/§7) — started 2026-07-16
 

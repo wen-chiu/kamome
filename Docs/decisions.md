@@ -717,3 +717,82 @@ letting the map-vs-Apple side-by-side stand in for the product judgment (pretty
 map ≠ shareable film); building Story Director / multiple themes / plans now
 (scope; the architecture keeps them open without building them — spec §0 rule 6,
 boundary discipline).
+
+## 2026-07-21 — Replay MVP §2: MapLibre substrate landed (provider in app target, pmtiles ingestion, MapKit kept alive)
+
+**Context.** Replay MVP work order §2 (`Docs/handoff-P3.5.md`;
+`Docs/vector-tile-pipeline.md`): build the MapLibre souvenir-map substrate that
+lets the recap be a 紀念品地圖 instead of Apple/Google cartography (spec §0 rule
+6). The renderer boundary already exists — `RecapSnapshotProviding`
+(`Core/ExportEngine/RecapSnapshot.swift`); this ADR records the concrete
+integration choices made building the second implementation behind it.
+
+**Decisions.**
+
+1. **MapLibre pinned exactly at `6.27.0`** (SPM,
+   `maplibre/maplibre-gl-native-distribution`, product `MapLibre`, added to the
+   **app target** in `project.yml`). Exact-version, not a range: golden-frame CI
+   and a reproducible substrate must not float under a map SDK. v6 line ⇒ `MLN*`
+   API. Resolution verified (`xcodebuild -resolvePackageDependencies`).
+
+2. **Provider lives in the app target, not `Core/ExportEngine`.**
+   `Docs/vector-tile-pipeline.md` §7 had penciled
+   `Core/ExportEngine/MapLibreSnapshotProvider.swift`, but that path is inside
+   the `KamomeExportEngine` **SwiftPM** target, which must stay a pure,
+   deterministic, SDK-free core (`swift test`, golden frames). A third-party
+   binary map framework there would poison every package test. So
+   `App/Services/MapLibreSnapshotProvider.swift` — same home as the other SDK
+   boundary adapters (`PhotoLibraryImportSource` = PhotoKit,
+   `RouteMatchService`). `MapKitSnapshotProvider` stays in the package only
+   because MapKit is a system framework the package can `#if canImport` without a
+   dependency; MapLibre cannot. The protocol is still the boundary; the file is
+   `#if canImport(MapLibre)`-guarded exactly like `MapKitSnapshotProvider` is
+   `#if canImport(MapKit)`-guarded. **Confinement is now CI-enforced** (grep gate
+   in `.github/workflows/ci.yml`: `import MapLibre` may appear in exactly one
+   file).
+
+3. **Tile ingestion path = native `pmtiles://`**, declared in the theme JSON's
+   source, with the on-disk path injected by a pure, SDK-free resolver
+   (`RecapMapStyle`, unit-tested). Chosen over the MBTiles / localhost fallbacks
+   (`Docs/vector-tile-pipeline.md` §5) because it keeps a single artifact and no
+   runtime server. **The scheme lives in config (theme JSON), not code**, so the
+   MBTiles fallback is a one-line theme edit if a device shows native pmtiles://
+   unsupported in this MapLibre build. *Flagged: the actual tile render is Metal
+   and is **not** in CI — it is on the sim/device manual list (§6 gate); the
+   pmtiles://-vs-mbtiles:// confirmation happens there.*
+
+4. **Camera = center + span → MapLibre zoom** (Web Mercator, 512 px tiles,
+   `scale = 1` so point==pixel like the MapKit provider's `displayScale 1`).
+   Pitch/bearing stay out of the snapshot request until the follow-cam (§4) needs
+   them — additive extension, deferred gap 1 (ADR 2026-07-19), not pre-built.
+
+5. **First theme is `functional-base.json` — unstyled, subtractive** (land +
+   water + a quiet road skeleton; no POI, no labels). It only proves frames
+   render. **Modern Minimal (§3) is separate and needs Chiu's side-by-side
+   sign-off** — deliberately not self-certified here. `MapKitSnapshotProvider`
+   and production wiring (`RecapModel` still constructs `MapKitSnapshotProvider`)
+   are **untouched**: MapKit stays the shipping base map until Modern Minimal
+   clears the design review, then it is retired in that same PR.
+
+6. **OSM attribution** (`© OpenStreetMap contributors`, ODbL) is set on the theme
+   source now. Surfacing it on the end card / about screen is **bound to the §3
+   switch-over PR** — the point at which OSM tiles are actually shown to users
+   (MapKit renders production output through §2). Recorded here so it cannot be
+   forgotten.
+
+**What is verified vs. flagged.** Verified in-repo: SPM resolves; the app builds
+and **links** MapLibre (compile-checks the `MLN*` API usage); the confinement
+grep holds; `RecapMapStyle` resolution + zoom math are unit-tested; golden-frame
+CI stays bit-stable on `FlatSnapshotProvider`. **Flagged (needs sim/device, not
+faked):** the actual MapLibre pixel output — tiles loading via `pmtiles://`, the
+subtractive style rendering, zh-Hant labels (a §3 concern) — folds into the §6
+three-trip gate and the §3 design review.
+
+**Rejected:** provider in the SwiftPM core (poisons deterministic package tests
+with a binary SDK); a generic multi-renderer `MapProvider` abstraction (premature
+— the protocol already is the boundary, ADR 2026-07-19); a floating MapLibre
+version (non-reproducible substrate); bundling full-region tiles in git (only the
+small cropped fixture is committed); adding a live-tile MapLibre golden test
+(non-deterministic Metal render — violates golden-frame discipline); building
+Modern Minimal / pitch-bearing / RecapTheme tokens now (§3/§4 scope with owner
+sign-off, no consumer yet).

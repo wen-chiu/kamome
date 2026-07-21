@@ -11,6 +11,13 @@ options:
 packages:
   KamomeCore:
     path: .
+  # Recap base-map substrate (spec §4.5 step 2; ADR 2026-07-19). MapLibre is
+  # confined to App/Services/MapLibreSnapshotProvider.swift — the only file that
+  # imports it (CI grep gate). Pinned exactly: golden-frame CI must be
+  # reproducible, and a floating map SDK is not.
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    exactVersion: 6.27.0
 
 targets:
   Kamome:
@@ -20,6 +27,10 @@ targets:
       - App
       - UI
       - path: Config/TrackingConfig.json
+        buildPhase: resources
+      # Recap theme style JSON (§4.5 step 2 substrate). Modern Minimal (§3)
+      # joins this folder after Chiu's design review.
+      - path: Config/RecapThemes/functional-base.json
         buildPhase: resources
     dependencies:
       - package: KamomeCore
@@ -36,6 +47,8 @@ targets:
         product: KamomeRouteMatching
       - package: KamomeCore
         product: KamomeImportKit
+      - package: MapLibre
+        product: MapLibre
     info:
       path: App/Info.plist
       properties:

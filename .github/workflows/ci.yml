@@ -21,6 +21,20 @@ jobs:
       - name: SwiftLint
         run: swiftlint --strict
 
+      - name: SDK confinement (MapLibre stays in one file)
+        # The RecapSnapshotProviding protocol is the renderer boundary
+        # (ADR 2026-07-19): MapLibre types must never leak past the provider.
+        # Same discipline keeps import MapKit / import Photos each in one file.
+        run: |
+          offenders=$(grep -rl --include='*.swift' 'import MapLibre' . \
+            | grep -v 'App/Services/MapLibreSnapshotProvider.swift' || true)
+          if [ -n "$offenders" ]; then
+            echo "import MapLibre outside its provider file:" >&2
+            echo "$offenders" >&2
+            exit 1
+          fi
+          echo "MapLibre confinement OK"
+
       - name: Pick an available iPhone simulator
         # Runner images vary in which device sets they ship — never hardcode
         # a model name.

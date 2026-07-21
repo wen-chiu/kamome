@@ -209,23 +209,39 @@ The move to self-hosted tiles makes golden-frame testing *stronger*:
 
 ## 9. Deliverables checklist (Phase 3.5, substrate portion)
 
-- [ ] `Docs/osrm-setup.md` OSRM matching running first (§4.4) — visuals
-      wait until routes are road-true.
-- [ ] Planetiler runs documented + regional `.pmtiles` generated (TW +
-      WA), extract dates pinned.
-- [ ] MapLibre SPM dependency in `project.yml`; ingestion path (§5
-      verify list) decided and recorded in decisions.md.
-- [ ] `MapLibreSnapshotProvider` conforming to `RecapSnapshotProviding`;
-      `import MapLibre` confined to that file (grep gate).
-- [ ] `Config/RecapThemes/modern-minimal.json` + Maputnik workflow note.
-- [ ] zh-Hant labels verified on Taiwan fixture
-      (`localIdeographFontFamily`).
-- [ ] OSM attribution ("© OpenStreetMap contributors") in end card /
-      about screen.
-- [ ] CI: cropped fixture tiles checked in, golden frames exact-hash.
-- [ ] Side-by-side quality-bar review pack rendered (§1) → Chiu sign-off.
-- [ ] Render budget re-measured on device via S5 readout (< 90 s).
+- [x] `Docs/osrm-setup.md` OSRM matching running first (§4.4) — landed +
+      validated end-to-end (decisions.md 2026-07-19).
+- [x] Planetiler runs documented + a `.pmtiles` generated, extract date
+      pinned — WA Perth-corridor **fixture** crop
+      (`Tests/Fixtures/tiles/generate_tiles.sh`,
+      `perth-2026-07-19.pmtiles`). Full-region TW/WA builds use the same
+      script with a wider/no bounds; those files stay out of git.
+- [x] MapLibre SPM dependency in `project.yml` (`6.27.0`, exact); ingestion
+      path decided (native `pmtiles://`, theme-JSON declared) and recorded in
+      decisions.md (2026-07-21).
+- [x] `MapLibreSnapshotProvider` conforming to `RecapSnapshotProviding`
+      (`App/Services/`, not the SwiftPM core — see decisions.md 2026-07-21);
+      `import MapLibre` confined to that file, **CI grep gate added**.
+- [x] Functional subtractive base theme + Maputnik workflow note
+      (`Config/RecapThemes/functional-base.json` + `README.md`).
+      `modern-minimal.json` is **§3** (Chiu sign-off), not this step.
+- [ ] zh-Hant labels verified on Taiwan fixture (`localIdeographFontFamily`)
+      — **§3**: the functional base draws no labels yet.
+- [ ] OSM attribution on end card / about screen — set on the theme source
+      now; end-card surfacing **bound to the §3 switch-over PR** (when OSM
+      tiles actually reach users; decisions.md 2026-07-21).
+- [~] Cropped fixture tiles checked in; golden frames stay exact-hash on
+      `FlatSnapshotProvider` (no live-tile MapLibre golden — non-deterministic
+      Metal, §8). A MapLibre golden test waits for §3 sign-off.
+- [ ] Side-by-side quality-bar review pack rendered (§1) → Chiu sign-off — **§3**.
+- [ ] Render budget re-measured on device via S5 readout — **device, §6 gate**.
 
 ## Changelog
 
+- 2026-07-21 — §2 substrate landed on `phase-3-recap`: MapLibre `6.27.0`
+  (SPM, app target, confined + CI grep gate), `MapLibreSnapshotProvider` +
+  pure `RecapMapStyle` resolver, `functional-base.json` subtractive theme,
+  Perth-corridor fixture tiles. MapKit stays the shipping base map until §3.
+  Ingestion = native `pmtiles://` (theme-declared). Details: decisions.md
+  2026-07-21. Sim/device pixel render + pmtiles:// confirmation flagged to §6.
 - 2026-07-19 — initial version (with substrate ADR, decisions.md).
