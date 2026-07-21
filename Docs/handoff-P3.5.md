@@ -200,6 +200,29 @@ matched camera positions, **Chiu signs off** — post the comparison and stop; d
 not self-certify. (This review keeps the substrate honest; it does **not**
 replace the three-trip release gate — spec §4.5 revised.)
 
+### Status — §3 kicked off 2026-07-21 (DRAFT theme + review harness; awaiting Chiu)
+
+Blocked on a human sign-off + a real Metal render (neither is available to an
+agent in CI), so only the **buildable, verifiable groundwork** landed; the visual
+is **not** self-certified and **MapKit is still the shipping base map**
+(`RecapModel` untouched).
+
+- [x] **Draft base style** `Config/RecapThemes/modern-minimal.json` — refined
+      subtractive cartography from the vision doc (restrained desaturated palette,
+      water/land contrast, landcover tint, road hierarchy with subtle casing).
+      **Marked DRAFT in its metadata; unrendered/unverified here.** Bundled as an
+      app resource so it can be rendered on sim/device.
+- [x] **Design-review harness** `Docs/demos/phase3_5/modern-minimal/README.md` —
+      the matched-camera procedure vs. `Docs/demos/phase3/still-*.png`, the
+      quality-bar checklist Chiu applies, and the sign-off-gated follow-ups.
+- [ ] **Needs Chiu + a real render (NOT done):** render Modern Minimal stills on
+      sim/device, side-by-side vs. the P3 artifact, **Chiu signs off**. Only then:
+      sparse place labels + glyph pipeline (zh-Hant via `localIdeographFontFamily`),
+      the overlay `RecapStyle.modernMinimal` preset, the `RecapModel`→MapLibre
+      **switch that retires `MapKitSnapshotProvider`**, and OSM end-card
+      attribution — all in that one switch-over PR. If the bar proves unreachable
+      after honest iteration, **reopen the substrate ADR** (do not lower it).
+
 ## 4. Vehicle-focused follow-cam (spec §4.5 step 1; prototype §2.3)
 
 Reference: `Docs/prototype/README.md` §2.3, `decisions.md` 2026-07-20. The one

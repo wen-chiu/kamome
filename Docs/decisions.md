@@ -796,3 +796,27 @@ small cropped fixture is committed); adding a live-tile MapLibre golden test
 (non-deterministic Metal render — violates golden-frame discipline); building
 Modern Minimal / pitch-bearing / RecapTheme tokens now (§3/§4 scope with owner
 sign-off, no consumer yet).
+
+## 2026-07-21 — §3 Modern Minimal: kicked off as a DRAFT (visual sign-off is Chiu's, on a real render)
+
+**Context.** §3's acceptance is a **side-by-side design review that Chiu signs
+off** on real MapLibre stills (vector-tile-pipeline §1). MapLibre rendering is
+Metal — not producible in agent CI — and the judgment is a human's. So an agent
+can lay the **buildable, verifiable groundwork** but cannot close §3.
+
+**Decision.** Land the groundwork only, explicitly un-self-certified:
+`Config/RecapThemes/modern-minimal.json` as a **DRAFT** base style (refined
+subtractive cartography from `Docs/kamome-animation-vision.md`, marked DRAFT in
+metadata, bundled), plus the review harness
+(`Docs/demos/phase3_5/modern-minimal/README.md`). **MapKit stays the shipping
+base map** — `RecapModel` is untouched. The label/glyph pipeline, the overlay
+`RecapStyle.modernMinimal` preset, the `RecapModel`→MapLibre switch (which retires
+`MapKitSnapshotProvider`), and OSM end-card attribution are **all gated on the
+sign-off** and land in that one switch-over PR — driven by what the review reveals
+(theme tokens come from real needs, ADR 2026-07-19), not guessed ahead of it.
+
+**Rejected:** self-certifying the look or switching production to MapLibre without
+Chiu (violates handoff §3 + spec §0 rule 1); authoring labels/glyphs and the
+overlay preset blind before the review (unverifiable, likely reworked — the review
+should drive them); lowering the quality bar if the draft disappoints (reopen the
+substrate ADR instead, decisions.md 2026-07-19).

@@ -28,9 +28,12 @@ targets:
       - UI
       - path: Config/TrackingConfig.json
         buildPhase: resources
-      # Recap theme style JSON (§4.5 step 2 substrate). Modern Minimal (§3)
-      # joins this folder after Chiu's design review.
+      # Recap theme style JSON (§4.5 step 2 substrate). functional-base is the
+      # §2 substrate; modern-minimal is the §3 DRAFT (not signed off — MapKit
+      # stays the shipping base map until Chiu's design review clears it).
       - path: Config/RecapThemes/functional-base.json
+        buildPhase: resources
+      - path: Config/RecapThemes/modern-minimal.json
         buildPhase: resources
     dependencies:
       - package: KamomeCore

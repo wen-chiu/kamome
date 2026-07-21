@@ -1,0 +1,140 @@
+{
+  "version": 8,
+  "name": "Kamome Modern Minimal (draft)",
+  "metadata": {
+    "kamome:role": "theme-draft",
+    "kamome:status": "DRAFT — NOT signed off. Authored from the written direction in Docs/kamome-animation-vision.md without a live render (Metal is not available in this environment). This is a STARTING POINT for Chiu's Maputnik/device iteration + the §3 side-by-side design review (Docs/demos/phase3_5/modern-minimal/README.md), not the finished look. MapKit stays the shipping base map until this clears review.",
+    "kamome:direction": "Apple-inspired: restrained desaturated palette, deliberate empty space, subtractive (no POI, no road labels), simplified road hierarchy, subtle water/land contrast. 'Minimal without feeling empty.' The route is a compositor overlay (RecapStyle), NOT drawn here — the one accent stays with the journey.",
+    "kamome:deferred": "Sparse city/town place labels + the glyph pipeline (Latin PBF + localIdeographFontFamily for zh-Hant) are a device-time sub-step — labels need on-device glyph verification (vector-tile-pipeline §6). This draft is intentionally label-free, like functional-base.",
+    "kamome:schema": "OpenMapTiles (Planetiler default)"
+  },
+  "sources": {
+    "kamome": {
+      "type": "vector",
+      "url": "pmtiles://__KAMOME_TILES__",
+      "attribution": "© OpenMapTiles © OpenStreetMap contributors",
+      "maxzoom": 14
+    }
+  },
+  "layers": [
+    {
+      "id": "land",
+      "type": "background",
+      "paint": {
+        "background-color": "#f4f2ee"
+      }
+    },
+    {
+      "id": "landcover-wood",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "landcover",
+      "minzoom": 6,
+      "filter": ["all", ["==", "$type", "Polygon"], ["==", "class", "wood"]],
+      "paint": {
+        "fill-color": "#e7eae0",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.25, 12, 0.55]
+      }
+    },
+    {
+      "id": "landcover-grass",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "landcover",
+      "minzoom": 8,
+      "filter": ["all", ["==", "$type", "Polygon"], ["in", "class", "grass", "park"]],
+      "paint": {
+        "fill-color": "#eaeee2",
+        "fill-opacity": 0.5
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": ["all", ["==", "$type", "Polygon"], ["!=", "intermittent", 1]],
+      "paint": {
+        "fill-color": "#bcd0d8",
+        "fill-antialias": true
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "waterway",
+      "minzoom": 9,
+      "filter": ["==", "$type", "LineString"],
+      "paint": {
+        "line-color": "#bcd0d8",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.5, 14, 1.6]
+      }
+    },
+    {
+      "id": "road-residential-casing",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "transportation",
+      "minzoom": 13,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "minor", "service", "residential"]],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#e6e3da",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1.4, 14, 2.6]
+      }
+    },
+    {
+      "id": "road-residential",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "transportation",
+      "minzoom": 13,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "minor", "service", "residential"]],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#fbfaf7",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.6, 14, 1.4]
+      }
+    },
+    {
+      "id": "road-secondary",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "transportation",
+      "minzoom": 10,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "secondary", "tertiary"]],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#e9e6dd",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 14, 3.0]
+      }
+    },
+    {
+      "id": "road-primary-casing",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "transportation",
+      "minzoom": 6,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "primary", "trunk", "motorway"]],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#dcd6c8",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 1.4, 10, 3.0, 14, 5.6]
+      }
+    },
+    {
+      "id": "road-primary",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "transportation",
+      "minzoom": 6,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "primary", "trunk", "motorway"]],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#fdfcf9",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 10, 1.8, 14, 3.8]
+      }
+    }
+  ]
+}
