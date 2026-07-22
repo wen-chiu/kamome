@@ -852,3 +852,36 @@ suppressed, and place attribution deliberately (end card).
 **Still flagged (unchanged):** the *aesthetic* is not self-certified — Chiu signs
 off the look (§3); render-loop threading of `MLNMapSnapshotter` under the full
 export and the on-device render/budget are the §6 gate.
+
+## 2026-07-22 — §3 visual direction corrected: dark atmospheric souvenir map (not pale "Modern Minimal")
+
+**Context.** Chiu rejected the §3 draft v1 (`modern-minimal.json`) as "essentially a
+desaturated OSM base map — an engineering map with the contrast reduced, not a
+designed map." The target is the **illustrated, editorial souvenir map** validated
+in the prototype + WIP demo (`Docs/prototype/recap_engine.html`, artifact "Kamome
+Recap 冰島環島"): dark-navy sea, dark-slate land silhouette, a **glowing coastline**,
+pale ice/glacier, warm-orange glowing route.
+
+**Finding — NOT a substrate problem.** The demo's own build note prescribes exactly
+our stack: real MapLibre vector-tile geometry + a Kamome-authored style sheet that
+"decides what to show and what colours" (底圖幾何要真，視覺樣式要我們自己寫). The v1
+failure was the *style's design language* (pale nav-map, full road grid, flat fills,
+no graphic treatment) and the fact that **most of the crafted feeling lives in the
+compositor** (vignette, route glow, grade), which §3 had not touched. So MapLibre
+stays; the style + compositor change.
+
+**Decision (owner-approved approach, 2026-07-22).** Minimum-viable path, no new data,
+same OMT tiles:
+1. **Base style rewritten** to the dark souvenir language (draft v2): dark sea,
+   slate land, glowing coastline via stacked `line-blur` layers on the water
+   boundary, pale `ice`, drop roads/POI/labels (faint major-road whisper only).
+   Rendered in-sim; first-look stills in `Docs/demos/phase3_5/modern-minimal/`.
+2. **Next: compositor atmosphere** (vignette, route/marker glow, vertical grade) as
+   `RecapTheme` tokens in `RecapFrameCompositor` — where the rest of the craft lives.
+3. **Deferred (not required for reference parity):** hillshade/terrain relief (new
+   DEM source — the reference has none), paper/grain fill-textures, hand-illustrated
+   per-landmark art (that is Style 1 / the custom renderer the ADR deferred; the
+   demo is vector-styled, so it is not this).
+
+Verification stays honest: render stills in-sim and get Chiu's read **before** any
+compositor build or production switch. MapKit remains the shipping base map.

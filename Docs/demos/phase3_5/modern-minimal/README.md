@@ -8,9 +8,16 @@ render that is not produced in this repo's CI.
 
 ## Status
 
-- `Config/RecapThemes/modern-minimal.json` — **DRAFT, NOT signed off.** Authored
-  from `Docs/kamome-animation-vision.md` without a live render. A starting point
-  for iteration, not the finished look.
+- `Config/RecapThemes/modern-minimal.json` — **DRAFT v2, NOT signed off.**
+  **v1 (pale "desaturated OSM") was rejected by Chiu 2026-07-22** — it read as an
+  engineering map with the contrast turned down. v2 is a **dark atmospheric
+  souvenir map** matching the validated prototype + WIP demo
+  (`Docs/prototype`, artifact "Kamome Recap 冰島環島"): dark-navy sea, dark-slate
+  land, a **glowing teal coastline**, pale ice, water bodies with glowing rims,
+  no roads/POI/labels (only a faint major-road whisper). Rendered in-sim.
+- **This is the base map only.** ~Half the crafted feeling — **vignette, route
+  glow, marker glow, vertical grade** — is a *compositor* job (`RecapTheme`
+  tokens in `RecapFrameCompositor`), not this style, and is the **next** step.
 - **MapKit is still the shipping base map.** `RecapModel` is untouched. Nothing
   switches to MapLibre until this review passes.
 
@@ -52,12 +59,18 @@ The console prints the output dir; open `modern-minimal-*.png` (and the
 `TEST_RUNNER_KAMOME_RENDER_OUT=/some/dir`. On a **device**, bundle a region
 `.pmtiles` (or side-load via Files) — see vector-tile-pipeline §5.
 
-## First-look stills (committed, 2026-07-22 — DRAFT)
+## First-look stills (committed, 2026-07-22 — DRAFT v2 dark souvenir)
 
-Rendered in-sim from the committed Margaret River fixture crop, both themes:
+Rendered in-sim from the committed Margaret River fixture crop:
 
-- `modern-minimal-{town-close,town-mid,coast-wide}.png`
-- `functional-base-{town-close,town-mid,coast-wide}.png`
+- `modern-minimal-{town-close,town-mid,coast-wide}.png` — the dark souvenir draft.
+- `functional-base-{town-close,town-mid,coast-wide}.png` — the §2 substrate.
+
+Known refinement knobs (not yet tuned; awaiting Chiu's read of the direction):
+coastline glow width/opacity; hiding tiny water polygons (WA farm dams make the
+mid frame spotty — Iceland/coastal trips are cleaner); the landcover tint;
+whether the faint road whisper stays. The land looks flat because the **vertical
+grade + vignette are the compositor's job** (next step), not the base style.
 
 These are a **first look**, not the matched-position side-by-side: they sit over
 the small fixture area (Margaret River coast), not the P3 stills' camera

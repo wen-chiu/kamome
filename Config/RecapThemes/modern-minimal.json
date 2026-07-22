@@ -1,11 +1,10 @@
 {
   "version": 8,
-  "name": "Kamome Modern Minimal (draft)",
+  "name": "Kamome Souvenir Map (dark) — draft v2",
   "metadata": {
     "kamome:role": "theme-draft",
-    "kamome:status": "DRAFT — NOT signed off. Authored from the written direction in Docs/kamome-animation-vision.md without a live render (Metal is not available in this environment). This is a STARTING POINT for Chiu's Maputnik/device iteration + the §3 side-by-side design review (Docs/demos/phase3_5/modern-minimal/README.md), not the finished look. MapKit stays the shipping base map until this clears review.",
-    "kamome:direction": "Apple-inspired: restrained desaturated palette, deliberate empty space, subtractive (no POI, no road labels), simplified road hierarchy, subtle water/land contrast. 'Minimal without feeling empty.' The route is a compositor overlay (RecapStyle), NOT drawn here — the one accent stays with the journey.",
-    "kamome:deferred": "Sparse city/town place labels + the glyph pipeline (Latin PBF + localIdeographFontFamily for zh-Hant) are a device-time sub-step — labels need on-device glyph verification (vector-tile-pipeline §6). This draft is intentionally label-free, like functional-base.",
+    "kamome:status": "DRAFT v2 — NOT signed off. Rewritten 2026-07-22 toward the DARK ATMOSPHERIC SOUVENIR MAP validated in the prototype + WIP demo (Docs/prototype, artifact 'Kamome Recap 冰島環島'), replacing the earlier pale 'desaturated OSM' draft Chiu rejected. Direction: dark navy sea, dark-slate land silhouette, a GLOWING coastline, pale ice; no roads/POI/labels. Half the crafted feeling (vignette, route glow, grade) is a COMPOSITOR job (RecapTheme) — NOT in this style — so judge this as the substrate, with that atmosphere still to come.",
+    "kamome:reference": "prototype land fill #24343c→#182530 on sea #08111A→#04070C, coastline stroke rgba(140,214,204,.28), route #FF8A5B glow. See Docs/prototype/recap_engine.html.",
     "kamome:schema": "OpenMapTiles (Planetiler default)"
   },
   "sources": {
@@ -21,7 +20,7 @@
       "id": "land",
       "type": "background",
       "paint": {
-        "background-color": "#f4f2ee"
+        "background-color": "#1e2b33"
       }
     },
     {
@@ -29,23 +28,22 @@
       "type": "fill",
       "source": "kamome",
       "source-layer": "landcover",
-      "minzoom": 6,
-      "filter": ["all", ["==", "$type", "Polygon"], ["==", "class", "wood"]],
+      "minzoom": 5,
+      "filter": ["all", ["==", "$type", "Polygon"], ["in", "class", "wood", "grass"]],
       "paint": {
-        "fill-color": "#e7eae0",
-        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 6, 0.25, 12, 0.55]
+        "fill-color": "#213039",
+        "fill-opacity": 0.55
       }
     },
     {
-      "id": "landcover-grass",
+      "id": "ice",
       "type": "fill",
       "source": "kamome",
       "source-layer": "landcover",
-      "minzoom": 8,
-      "filter": ["all", ["==", "$type", "Polygon"], ["in", "class", "grass", "park"]],
+      "filter": ["all", ["==", "$type", "Polygon"], ["in", "class", "ice", "glacier"]],
       "paint": {
-        "fill-color": "#eaeee2",
-        "fill-opacity": 0.5
+        "fill-color": "#d6e8ee",
+        "fill-opacity": 0.26
       }
     },
     {
@@ -55,8 +53,34 @@
       "source-layer": "water",
       "filter": ["all", ["==", "$type", "Polygon"], ["!=", "intermittent", 1]],
       "paint": {
-        "fill-color": "#bcd0d8",
-        "fill-antialias": true
+        "fill-color": "#0c151d"
+      }
+    },
+    {
+      "id": "coastline-glow",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": ["==", "$type", "Polygon"],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#7ccdc0",
+        "line-opacity": 0.32,
+        "line-blur": ["interpolate", ["linear"], ["zoom"], 4, 3, 12, 9],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 3, 12, 10]
+      }
+    },
+    {
+      "id": "coastline-edge",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": ["==", "$type", "Polygon"],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#a6ddce",
+        "line-opacity": 0.7,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.6, 12, 1.4]
       }
     },
     {
@@ -67,73 +91,23 @@
       "minzoom": 9,
       "filter": ["==", "$type", "LineString"],
       "paint": {
-        "line-color": "#bcd0d8",
+        "line-color": "#6fb7ad",
+        "line-opacity": 0.4,
         "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.5, 14, 1.6]
       }
     },
     {
-      "id": "road-residential-casing",
+      "id": "road-skeleton",
       "type": "line",
       "source": "kamome",
       "source-layer": "transportation",
-      "minzoom": 13,
-      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "minor", "service", "residential"]],
+      "minzoom": 8,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway", "trunk", "primary"]],
       "layout": {"line-cap": "round", "line-join": "round"},
       "paint": {
-        "line-color": "#e6e3da",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 1.4, 14, 2.6]
-      }
-    },
-    {
-      "id": "road-residential",
-      "type": "line",
-      "source": "kamome",
-      "source-layer": "transportation",
-      "minzoom": 13,
-      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "minor", "service", "residential"]],
-      "layout": {"line-cap": "round", "line-join": "round"},
-      "paint": {
-        "line-color": "#fbfaf7",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.6, 14, 1.4]
-      }
-    },
-    {
-      "id": "road-secondary",
-      "type": "line",
-      "source": "kamome",
-      "source-layer": "transportation",
-      "minzoom": 10,
-      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "secondary", "tertiary"]],
-      "layout": {"line-cap": "round", "line-join": "round"},
-      "paint": {
-        "line-color": "#e9e6dd",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 14, 3.0]
-      }
-    },
-    {
-      "id": "road-primary-casing",
-      "type": "line",
-      "source": "kamome",
-      "source-layer": "transportation",
-      "minzoom": 6,
-      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "primary", "trunk", "motorway"]],
-      "layout": {"line-cap": "round", "line-join": "round"},
-      "paint": {
-        "line-color": "#dcd6c8",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 1.4, 10, 3.0, 14, 5.6]
-      }
-    },
-    {
-      "id": "road-primary",
-      "type": "line",
-      "source": "kamome",
-      "source-layer": "transportation",
-      "minzoom": 6,
-      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "primary", "trunk", "motorway"]],
-      "layout": {"line-cap": "round", "line-join": "round"},
-      "paint": {
-        "line-color": "#fdfcf9",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.6, 10, 1.8, 14, 3.8]
+        "line-color": "#3a4a54",
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 14, 0.5],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 14, 2.0]
       }
     }
   ]
