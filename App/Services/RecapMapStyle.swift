@@ -49,9 +49,14 @@ enum RecapMapStyle {
         tilesURL: URL,
         in bundle: Bundle = .main
     ) throws -> URL {
+        // MapLibre's pmtiles handler wants a full URL after the scheme, not a
+        // bare path: `pmtiles:///abs/path` fails with "unsupported URL", while
+        // `pmtiles://file:///abs/path` loads (verified in-sim 2026-07-22,
+        // MapLibre 6.27.0 — vector-tile-pipeline §5). So inject the file URL's
+        // absoluteString, not `.path`.
         let json = try resolvedStyleJSON(
             styleResource: styleResource,
-            tilesPath: tilesURL.path,
+            tilesPath: tilesURL.absoluteString,
             in: bundle
         )
         let out = FileManager.default.temporaryDirectory

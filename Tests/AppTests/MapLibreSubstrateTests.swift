@@ -13,12 +13,12 @@ final class MapLibreSubstrateTests: XCTestCase {
     func testBundledFunctionalStyleResolvesAndInjectsTilesPath() throws {
         let json = try RecapMapStyle.resolvedStyleJSON(
             styleResource: "functional-base",
-            tilesPath: "/tiles/perth-fixture.pmtiles",
+            tilesPath: "file:///tiles/perth-fixture.pmtiles",
             in: .main
         )
         XCTAssertTrue(
-            json.contains("pmtiles:///tiles/perth-fixture.pmtiles"),
-            "the sentinel must be replaced with the real tiles path"
+            json.contains("pmtiles://file:///tiles/perth-fixture.pmtiles"),
+            "the sentinel must be replaced with the real tiles URL"
         )
         XCTAssertFalse(
             json.contains(RecapMapStyle.tilesPlaceholder),
@@ -48,7 +48,8 @@ final class MapLibreSubstrateTests: XCTestCase {
             styleResource: "functional-base", tilesURL: tiles, in: .main
         )
         let written = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertTrue(written.contains("pmtiles:///data/perth-fixture.pmtiles"))
+        // MapLibre needs a full URL after the scheme: pmtiles://file:///…
+        XCTAssertTrue(written.contains("pmtiles://file:///data/perth-fixture.pmtiles"))
         // Valid JSON, not just a string blob.
         let object = try JSONSerialization.jsonObject(with: Data(contentsOf: url))
         XCTAssertNotNil(object as? [String: Any])

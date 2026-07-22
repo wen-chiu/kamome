@@ -181,12 +181,17 @@ PR). Decisions + rationale: `decisions.md` 2026-07-21.
       **Not** Modern Minimal.
 - [x] **Golden-frame CI unchanged** — still `FlatSnapshotProvider`, bit-stable,
       no live tiles/Metal/network.
-- [ ] **Device/sim-only (flagged, NOT passed):** the actual MapLibre pixel
-      output — `pmtiles://` tiles loading, the subtractive style rendering,
-      threading of `MLNMapSnapshotter` off the render loop — plus the
-      pmtiles://-vs-mbtiles:// ingestion confirmation. Metal is not in CI (§8);
-      this folds into the §3 design review + the §6 three-trip gate. Ingestion
-      scheme is theme-JSON-declared, so a fallback is a one-line edit.
+- [x] **In-sim render CONFIRMED 2026-07-22** (`ModernMinimalRenderTests`,
+      env-gated, writes stills). MapLibre 6.27.0 loads the pmtiles and renders the
+      subtractive style in the simulator; ingestion path resolved to
+      `pmtiles://file:///…` (`RecapMapStyle` injects the file URL — decisions.md
+      2026-07-22 / pipeline §5). First-look stills in
+      `Docs/demos/phase3_5/modern-minimal/`.
+- [ ] **Still device-only / §6 gate (NOT passed):** `MLNMapSnapshotter` threading
+      under the *full* export render loop, and the on-device render/budget. Metal
+      stays out of CI (§8). Aesthetic sign-off is §3 (Chiu). New §3 item surfaced:
+      MapLibre bakes its own wordmark + attribution into snapshots — cover or
+      suppress at the switch-over.
 
 ## 3. Modern Minimal theme — the ONE MVP theme (spec §4.5, Chiu in the loop)
 

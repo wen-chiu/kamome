@@ -122,16 +122,17 @@ Notes for the implementer:
   on-demand region download. Design nothing for this now (spec §0 rule 1
   — Phase 7 territory).
 
-**MapLibre ingestion — verify at implementation time, in this order:**
-1. Native `pmtiles://` URL support in the current MapLibre Native iOS
-   release (landed upstream in the v6 line; confirm it is in the release
-   you pin, on iOS specifically).
-2. Fallback A: convert to MBTiles (`pmtiles convert` from the protomaps
-   CLI) and use MapLibre Native's `mbtiles://` file source.
-3. Fallback B: a trivial in-app localhost range-request handler in the
-   dev harness only.
-Record which path was taken in `Docs/decisions.md` when the provider PR
-lands. Do not build Fallback B for production.
+**MapLibre ingestion — RESOLVED 2026-07-22 (MapLibre 6.27.0, verified in-sim).**
+Native `pmtiles://` works; the URL form is **`pmtiles://file:///abs/path.pmtiles`**
+(full URL after the scheme — a bare `pmtiles:///path` throws `MLNErrorDomain
+Code=6 "unsupported URL"`). `RecapMapStyle` injects `tilesURL.absoluteString`
+accordingly (decisions.md 2026-07-22). The fallbacks below are unused and kept
+only in case a future MapLibre pin regresses:
+- Fallback A: convert to MBTiles (`pmtiles convert`) → `mbtiles://` file source.
+- Fallback B: a trivial in-app localhost range-request handler, dev harness only
+  (never production).
+Because the scheme lives in the theme JSON source, switching to a fallback is a
+one-line theme edit, not a code change.
 
 ## 6. Style-sheet authoring (theme = MapLibre style JSON)
 

@@ -33,28 +33,50 @@ geographical accuracy → delightful details.** If, after honest iteration, the 
 looks unreachable, **do not lower it — reopen the substrate ADR** (decisions.md
 2026-07-19).
 
-## How to render (sim/device — Metal)
+## How to check it (one command)
 
-Not run in CI on purpose (non-deterministic Metal; golden-frame discipline,
-vector-tile-pipeline §8). From a scratch/dev entry point:
+A render harness is wired up — `Tests/AppTests/ModernMinimalRenderTests.swift`.
+It drives the **real** MapLibre snapshotter (Metal) over the committed fixture
+tiles and writes PNG stills you open by eye. Env-gated so it never runs in CI
+(non-deterministic Metal; golden-frame discipline, vector-tile-pipeline §8).
 
-```swift
-// Quick local check uses the committed Margaret River fixture crop.
-// For the FULL side-by-side at the P3 camera positions, generate region-wide
-// WA tiles first (widen $BOUNDS in Tests/Fixtures/tiles/generate_tiles.sh).
-let tiles = Bundle.main.url(forResource: "perth-2026-07-19", withExtension: "pmtiles")!
-let styleURL = try RecapMapStyle.resolvedStyleURL(styleResource: "modern-minimal", tilesURL: tiles)
-let provider = MapLibreSnapshotProvider(styleURL: styleURL)
-
-// Representative camera inside the fixture crop (span matches export.camera_span_m):
-let frame = try await provider.snapshot(
-    centerLat: -33.955, centerLon: 115.075, spanM: 1500, widthPx: 1080, heightPx: 1920)
-// Save frame.image beside the P3 still for the same kind of moment.
+```bash
+KAMOME_RENDER_STILLS=1 xcodebuild -scheme Kamome test \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:KamomeTests/ModernMinimalRenderTests \
+  TEST_RUNNER_KAMOME_RENDER_STILLS=1
 ```
 
-Suggested review set: the three P3 card moments + two mid-drive frames = five
-side-by-side pairs. Drop the rendered PNGs in this folder as `mm-*.png` next to a
-short note, and post the pairs for Chiu.
+The console prints the output dir; open `modern-minimal-*.png` (and the
+`functional-base-*` pair). Override the location with
+`TEST_RUNNER_KAMOME_RENDER_OUT=/some/dir`. On a **device**, bundle a region
+`.pmtiles` (or side-load via Files) — see vector-tile-pipeline §5.
+
+## First-look stills (committed, 2026-07-22 — DRAFT)
+
+Rendered in-sim from the committed Margaret River fixture crop, both themes:
+
+- `modern-minimal-{town-close,town-mid,coast-wide}.png`
+- `functional-base-{town-close,town-mid,coast-wide}.png`
+
+These are a **first look**, not the matched-position side-by-side: they sit over
+the small fixture area (Margaret River coast), not the P3 stills' camera
+positions. For the true matched review, generate **region-wide** WA tiles (widen
+`$BOUNDS` in `Tests/Fixtures/tiles/generate_tiles.sh`) and render at the P3 card
+moments beside `Docs/demos/phase3/still-*.png`.
+
+## Findings from the in-sim render (2026-07-22)
+
+- ✅ **The substrate renders.** MapLibre 6.27.0 loads the pmtiles and applies the
+  style in the simulator. Tiles load via `pmtiles://file:///…` — a bare
+  `pmtiles:///path` throws "unsupported URL" (`RecapMapStyle` now injects the file
+  URL; recorded in decisions.md 2026-07-22 / vector-tile-pipeline §5).
+- ⚠️ **MapLibre bakes its own wordmark + attribution into the snapshot** (a
+  "MapLibre" logo bottom-left, "© OpenMapTiles © OpenStreetMap contributors"
+  bottom-right). Good for the ODbL credit, but the wordmark is not wanted in the
+  final recap. **§3 sign-off item:** decide whether the compositor covers the
+  corners or the snapshotter ornaments are suppressed, and place the OSM/OMT
+  attribution deliberately (end card).
 
 ## Follow-ups gated on sign-off (all land in the switch-over PR)
 

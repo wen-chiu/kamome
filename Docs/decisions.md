@@ -820,3 +820,35 @@ Chiu (violates handoff §3 + spec §0 rule 1); authoring labels/glyphs and the
 overlay preset blind before the review (unverifiable, likely reworked — the review
 should drive them); lowering the quality bar if the draft disappoints (reopen the
 substrate ADR instead, decisions.md 2026-07-19).
+
+## 2026-07-22 — pmtiles ingestion CONFIRMED in-sim: `pmtiles://file://`, MapLibre renders in the simulator
+
+**Context.** §2 landed the substrate with the actual MapLibre pixel render flagged
+device/sim-only (decisions.md 2026-07-21). Building the §3 review harness
+(`Tests/AppTests/ModernMinimalRenderTests.swift`, env-gated, writes PNG stills)
+exercised the real `MLNMapSnapshotter` in the iOS simulator and resolved two of
+those flags.
+
+**Findings.**
+1. **MapLibre renders in the simulator** (Metal). No device needed to eyeball the
+   base map; the golden-frame discipline (no MapLibre in CI) is unchanged — the
+   render test is env-gated and asserts only non-blank, never pixels.
+2. **Ingestion path = `pmtiles://file:///abs/path.pmtiles`.** MapLibre 6.27.0's
+   pmtiles handler recognises the scheme but rejects a bare `pmtiles:///path`
+   with `MLNErrorDomain Code=6 "unsupported URL"`; it needs a full URL after the
+   scheme. `RecapMapStyle` now injects `tilesURL.absoluteString` (the `file://`
+   URL) rather than `.path`. This retires the pmtiles-vs-mbtiles fallback question
+   for local files (vector-tile-pipeline §5) — native pmtiles works.
+3. **The functional-base and modern-minimal styles both render** subtractively
+   (coast, water, quiet roads; no POI/labels) over the committed fixture. First-
+   look stills committed under `Docs/demos/phase3_5/modern-minimal/`.
+
+**New §3 sign-off item.** The snapshotter bakes MapLibre's own wordmark + a
+`© OpenMapTiles © OpenStreetMap contributors` line into every image. The
+attribution satisfies ODbL, but the wordmark is unwanted in the final recap —
+decide at sign-off whether the compositor covers the corners or the ornaments are
+suppressed, and place attribution deliberately (end card).
+
+**Still flagged (unchanged):** the *aesthetic* is not self-certified — Chiu signs
+off the look (§3); render-loop threading of `MLNMapSnapshotter` under the full
+export and the on-device render/budget are the §6 gate.
