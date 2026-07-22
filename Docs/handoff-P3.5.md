@@ -205,28 +205,33 @@ matched camera positions, **Chiu signs off** — post the comparison and stop; d
 not self-certify. (This review keeps the substrate honest; it does **not**
 replace the three-trip release gate — spec §4.5 revised.)
 
-### Status — §3 kicked off 2026-07-21 (DRAFT theme + review harness; awaiting Chiu)
+### Status — §3 substrate SIGNED OFF for now (Chiu, 2026-07-22); remainder deferred
 
-Blocked on a human sign-off + a real Metal render (neither is available to an
-agent in CI), so only the **buildable, verifiable groundwork** landed; the visual
-is **not** self-certified and **MapKit is still the shipping base map**
-(`RecapModel` untouched).
+Chiu's call 2026-07-22: **the MapLibre substrate + base-style direction is accepted
+("this is not the MapLibre issue") — stop iterating the base style.** The real
+dissatisfaction is the **overall recap output / video format**, to be redesigned in
+a **separate session** ("revisit all the difference"). So §3 is signed off *as the
+substrate*, and the visual-polish + switch-over items are deliberately deferred.
 
-- [x] **Draft base style** `Config/RecapThemes/modern-minimal.json` — refined
-      subtractive cartography from the vision doc (restrained desaturated palette,
-      water/land contrast, landcover tint, road hierarchy with subtle casing).
-      **Marked DRAFT in its metadata; unrendered/unverified here.** Bundled as an
-      app resource so it can be rendered on sim/device.
-- [x] **Design-review harness** `Docs/demos/phase3_5/modern-minimal/README.md` —
-      the matched-camera procedure vs. `Docs/demos/phase3/still-*.png`, the
-      quality-bar checklist Chiu applies, and the sign-off-gated follow-ups.
-- [ ] **Needs Chiu + a real render (NOT done):** render Modern Minimal stills on
-      sim/device, side-by-side vs. the P3 artifact, **Chiu signs off**. Only then:
-      sparse place labels + glyph pipeline (zh-Hant via `localIdeographFontFamily`),
-      the overlay `RecapStyle.modernMinimal` preset, the `RecapModel`→MapLibre
-      **switch that retires `MapKitSnapshotProvider`**, and OSM end-card
-      attribution — all in that one switch-over PR. If the bar proves unreachable
-      after honest iteration, **reopen the substrate ADR** (do not lower it).
+- [x] **MapLibre substrate accepted** — `MapLibreSnapshotProvider` + tiles render
+      correctly in-sim (decisions.md 2026-07-22). Not a substrate problem.
+- [x] **Base style direction settled** — dark atmospheric **souvenir map** (draft
+      v2, `Config/RecapThemes/modern-minimal.json`): dark sea, slate land, glowing
+      coastline, pale ice, no roads/POI/labels. v1 (pale desaturated OSM) rejected.
+      Stills in `Docs/demos/phase3_5/modern-minimal/`. **Not pixel-final** — polish
+      folds into the redesign below.
+- [ ] **DEFERRED to the recap-output redesign session (NOT done):**
+      - **Compositor atmosphere** — vignette, route/marker glow, vertical grade as
+        `RecapTheme` tokens in `RecapFrameCompositor` (where most of the crafted
+        feeling lives; the base style alone reads flat).
+      - **Output video format** — Chiu wants the overall recap output revisited
+        (aspect/size/duration, container/delivery, in-frame template/chrome,
+        follow-cam animation §4/§5). Open discussion; no decisions yet.
+      - **The switch-over PR** — sparse labels + glyph pipeline (zh-Hant via
+        `localIdeographFontFamily`), overlay `RecapStyle.modernMinimal` preset,
+        `RecapModel`→MapLibre switch that **retires `MapKitSnapshotProvider`**, OSM
+        end-card attribution. **Held** until the atmosphere + output format land —
+        **MapKit stays the shipping base map** until then (do not flip early).
 
 ## 4. Vehicle-focused follow-cam (spec §4.5 step 1; prototype §2.3)
 

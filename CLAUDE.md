@@ -94,21 +94,22 @@ spec header v1.6 ("stories you can relive and share"). Forward directions
 recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
 "beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
 
-## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **§3 Modern Minimal — DRAFT landed, awaiting Chiu's device render + sign-off**
+## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **recap OUTPUT / video-format redesign (own session); §3 substrate signed off**
 
 **Read `Docs/handoff-P3.5.md` before doing anything — it is the Replay MVP
-work order, in mandatory sequence.** §1 Photo EXIF Import ✅ (2026-07-21) and
-§2 **MapLibre souvenir-map substrate** ✅ (2026-07-21) are landed. **§3 Modern
-Minimal is IN PROGRESS**: a DRAFT base style (`Config/RecapThemes/modern-minimal.json`)
-+ the review harness (`Docs/demos/phase3_5/modern-minimal/README.md`) landed
-2026-07-21, but the visual is **NOT self-certified** — §3 closes only when Chiu
-signs off on a side-by-side of real MapLibre stills vs. the P3 artifact (Metal
-render, needs sim/device; not producible in CI). **MapKit is still the shipping
-base map** (`RecapModel` untouched) until that sign-off, which also carries the
-labels/glyphs, the overlay `RecapStyle.modernMinimal` preset, the MapLibre
-production switch (retiring `MapKitSnapshotProvider`), and OSM end-card
-attribution (handoff §3 Status; decisions.md 2026-07-21). Do NOT self-certify the
-look or switch production without Chiu. P3 is
+work order, in mandatory sequence.** §1 Photo EXIF Import ✅ (2026-07-21), §2
+**MapLibre souvenir-map substrate** ✅ (2026-07-21), and **§3 base-map substrate
+✅ SIGNED OFF for now** (Chiu, 2026-07-22) are landed. **The open thread is the
+overall recap OUTPUT / video format** — Chiu: "not what I want, but *not* the
+MapLibre issue; the output video format doesn't meet my expectation — we'll
+revisit all the difference in another session." So the base-map style is settled
+(dark atmospheric **souvenir map**, draft v2 `Config/RecapThemes/modern-minimal.json`;
+the pale v1 was rejected), and these are **deferred to that redesign session**
+(decisions.md 2026-07-22; handoff §3 Status): the **compositor atmosphere**
+(vignette/route-glow/grade — `RecapTheme` tokens), labels/glyphs, the overlay
+`RecapStyle.modernMinimal` preset, and the `RecapModel`→MapLibre **production
+switch** (retires `MapKitSnapshotProvider` + OSM attribution). **MapKit is still
+the shipping base map — do NOT flip production early** (mid-redesign). P3 is
 engineering-complete; its device items are redistributed (export/photo → Replay
 MVP gate; 2 h drive + region-resume → Capture Beta), none faked passed
 (`Docs/device-test-P3.md`). State at handoff:
@@ -173,10 +174,10 @@ MVP gate; 2 h drive + region-resume → Capture Beta), none faked passed
   loosened. Stops/walks/timing structure unchanged; full suite green.
   Fixture-regen decision + artifact pair still need Chiu's eyes.
 - Next (Replay MVP order, `handoff-P3.5.md`): §1 Photo EXIF Import ✅ (2026-07-21)
-  → §2 MapLibre souvenir map ✅ (2026-07-21) → **§3 Modern Minimal 🚧 (draft +
-  review harness landed 2026-07-21; awaiting Chiu's device render + sign-off)**
-  → §4 follow-cam → §5 photo deck → §6 three-real-trip dogfood = the Replay
-  MVP release gate.
+  → §2 MapLibre souvenir map ✅ (2026-07-21) → §3 base-map substrate ✅ signed off
+  (2026-07-22) → **recap OUTPUT / video-format redesign 🗣️ (own session; carries
+  the deferred compositor atmosphere + MapLibre production switch)** → §4 follow-cam
+  → §5 photo deck → §6 three-real-trip dogfood = the Replay MVP release gate.
 
 ## Phase 3 history (recap pipeline, spec §4.5/§7) — started 2026-07-16
 

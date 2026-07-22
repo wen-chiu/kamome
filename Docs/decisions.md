@@ -885,3 +885,28 @@ same OMT tiles:
 
 Verification stays honest: render stills in-sim and get Chiu's read **before** any
 compositor build or production switch. MapKit remains the shipping base map.
+
+## 2026-07-22 — §3 signed off as the substrate; recap-output redesign moved to its own session
+
+**Decision (Chiu, 2026-07-22).** After the draft v2 dark souvenir base map, Chiu:
+"still not what I want, but this is not the MapLibre issue… we could sign off §3
+MapLibre for now, and do the compositor atmosphere later. The output video format
+does not meet my expectation — we need to discuss and update it, in another session."
+
+**What this means.**
+- **§3 substrate is signed off** — MapLibre + the dark-souvenir base-style *direction*
+  are accepted; stop iterating the base style. It is **not** a substrate problem.
+- **The real gap is the overall recap OUTPUT / video format**, not the base map. That
+  redesign (aspect/size/duration, container/delivery, in-frame template/chrome, the
+  follow-cam animation) is a **separate future session** — "revisit all the difference."
+  No output-format decisions were made here.
+- **Deferred, bundled with that redesign:** the compositor atmosphere (vignette,
+  route/marker glow, grade — `RecapTheme` tokens), labels/glyphs, the overlay
+  `RecapStyle.modernMinimal` preset, and the `RecapModel`→MapLibre production switch
+  that retires `MapKitSnapshotProvider` + surfaces OSM attribution.
+- **MapKit stays the shipping base map.** The production switch is **not** done now —
+  flipping mid-redesign would ship an un-atmosphered look while the whole output is
+  being reconsidered. Hold it for the switch-over PR after the redesign.
+
+**Rejected:** flipping production to MapLibre on this sign-off (premature — output is
+under redesign); continuing to tune the base-map palette (Chiu: not the issue).
