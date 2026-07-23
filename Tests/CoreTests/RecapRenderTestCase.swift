@@ -35,7 +35,8 @@ class RecapRenderTestCase: XCTestCase {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
-            cameraSpanM: 1500, keyframeIntervalFrames: keyframeIntervalFrames,
+            cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, followHeadingUp: false,
+            keyframeIntervalFrames: keyframeIntervalFrames,
             titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
         )
     }
@@ -76,6 +77,7 @@ class RecapRenderTestCase: XCTestCase {
             centerLat: position.lat,
             centerLon: position.lon,
             spanM: config.cameraSpanM,
+            bearing: 0,
             widthPx: config.frameWidthPx,
             heightPx: config.frameHeightPx
         )
@@ -143,11 +145,12 @@ final class CountingProvider: RecapSnapshotProviding {
     }
 
     func snapshot(
-        centerLat: Double, centerLon: Double, spanM: Double, widthPx: Int, heightPx: Int
+        centerLat: Double, centerLon: Double, spanM: Double, bearing: Double, widthPx: Int, heightPx: Int
     ) async throws -> MapSnapshot {
         lock.withLock { count += 1 }
         return try await inner.snapshot(
-            centerLat: centerLat, centerLon: centerLon, spanM: spanM, widthPx: widthPx, heightPx: heightPx
+            centerLat: centerLat, centerLon: centerLon, spanM: spanM, bearing: bearing,
+            widthPx: widthPx, heightPx: heightPx
         )
     }
 }

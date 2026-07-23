@@ -46,16 +46,19 @@ public struct RecapRenderLoop {
         func fetch(_ keyframe: Int) -> Task<MapSnapshot, Error> {
             if let running = fetches[keyframe] { return running }
             let time = Double(keyframe * interval) / Double(config.fps)
-            let position = path.position(atTime: min(time, path.durationS))
-            let spanM = config.cameraSpanM
+            // The camera frame carries the wide↔close span + heading-up bearing;
+            // it centers on the trip during the title/end shots, the vehicle
+            // through the body (CameraPath.cameraFrame).
+            let frame = path.cameraFrame(atTime: min(time, path.durationS))
             let widthPx = config.frameWidthPx
             let heightPx = config.frameHeightPx
             let provider = self.provider
             let task = Task {
                 try await provider.snapshot(
-                    centerLat: position.lat,
-                    centerLon: position.lon,
-                    spanM: spanM,
+                    centerLat: frame.centerLat,
+                    centerLon: frame.centerLon,
+                    spanM: frame.spanM,
+                    bearing: frame.bearing,
                     widthPx: widthPx,
                     heightPx: heightPx
                 )

@@ -260,8 +260,18 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Output frame size (§4.5: 1080×1920, 9:16 social default).
         public let frameWidthPx: Int
         public let frameHeightPx: Int
-        /// Ground distance the frame spans horizontally.
+        /// Ground span during the close follow-cam body (§4.5 step 1, prototype
+        /// §2.3) — the tight end the camera zooms into; title/end widen out.
         public let cameraSpanM: Double
+        /// Multiplier on the trip bounding box for the wide establishing/closing
+        /// shots (1.0 = edge-to-edge). Floored at `cameraSpanM` on tiny trips.
+        public let wideSpanPadding: Double
+        /// Seconds to ease wide↔close at each card boundary (title→body,
+        /// body→end). A quick cross-fade dolly; keep short or it eats the body.
+        public let zoomTransitionS: Double
+        /// Rotate the map heading-up (true TravelBoast). Needs a provider that
+        /// honors `bearing` (MapLibre); false until the substrate switch (§3).
+        public let followHeadingUp: Bool
         /// One map snapshot per this many frames; frames in between cross-fade
         /// the neighboring keyframe snapshots (§4.5 step 2 render budget).
         public let keyframeIntervalFrames: Int
@@ -283,6 +293,9 @@ public struct TrackingConfig: Decodable, Equatable {
             frameWidthPx: Int,
             frameHeightPx: Int,
             cameraSpanM: Double,
+            wideSpanPadding: Double,
+            zoomTransitionS: Double,
+            followHeadingUp: Bool,
             keyframeIntervalFrames: Int,
             titleCardS: Double,
             endCardS: Double,
@@ -297,6 +310,9 @@ public struct TrackingConfig: Decodable, Equatable {
             self.frameWidthPx = frameWidthPx
             self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM
+            self.wideSpanPadding = wideSpanPadding
+            self.zoomTransitionS = zoomTransitionS
+            self.followHeadingUp = followHeadingUp
             self.keyframeIntervalFrames = keyframeIntervalFrames
             self.titleCardS = titleCardS
             self.endCardS = endCardS
@@ -313,6 +329,9 @@ public struct TrackingConfig: Decodable, Equatable {
             case frameWidthPx = "frame_width_px"
             case frameHeightPx = "frame_height_px"
             case cameraSpanM = "camera_span_m"
+            case wideSpanPadding = "wide_span_padding"
+            case zoomTransitionS = "zoom_transition_s"
+            case followHeadingUp = "follow_heading_up"
             case keyframeIntervalFrames = "keyframe_interval_frames"
             case titleCardS = "title_card_s"
             case endCardS = "end_card_s"

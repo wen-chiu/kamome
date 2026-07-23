@@ -94,7 +94,7 @@ final class RecapFrameTests: RecapRenderTestCase {
         let dark = try await FlatSnapshotProvider(red: 0.2, green: 0.2, blue: 0.2).snapshot(
             centerLat: path.position(atTime: time).lat,
             centerLon: path.position(atTime: time).lon,
-            spanM: config.cameraSpanM, widthPx: widthPx, heightPx: heightPx
+            spanM: config.cameraSpanM, bearing: 0, widthPx: widthPx, heightPx: heightPx
         )
         let light = try await snapshot(centeredAt: path.position(atTime: time), config: config)
         let frame = try compositor.render(

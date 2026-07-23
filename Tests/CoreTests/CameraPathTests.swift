@@ -16,7 +16,8 @@ final class CameraPathTests: XCTestCase {
         targetDurationS: Double = 30,
         fps: Int = 30,
         stopHoldS: Double = 1.5,
-        maxHoldFraction: Double = 0.5
+        maxHoldFraction: Double = 0.5,
+        followHeadingUp: Bool = false
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS,
@@ -28,11 +29,20 @@ final class CameraPathTests: XCTestCase {
             frameWidthPx: 1080,
             frameHeightPx: 1920,
             cameraSpanM: 1500,
+            wideSpanPadding: 1.15,
+            zoomTransitionS: 0.8,
+            followHeadingUp: followHeadingUp,
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
             endCardS: 3,
             videoBitrateMbps: 5
         )
+    }
+
+    /// A route large enough that the whole-trip fitting span exceeds the close
+    /// follow span, so the wide↔close difference is observable.
+    private let longRoute: [CameraPath.Point] = (0...10).map {
+        CameraPath.Point(lat: -32.0 + Double($0) * 0.1, lon: 115.75)
     }
 
     func testVideoDurationIsTargetRegardlessOfRouteLength() throws {
@@ -109,6 +119,69 @@ final class CameraPathTests: XCTestCase {
 
         let holdFrames = (0..<path.frameCount).filter { path.position(atFrame: $0).holdingStopIndex != nil }
         XCTAssertEqual(Double(holdFrames.count), 450, accuracy: Double(stops.count))
+    }
+
+    // MARK: - Follow-cam framing (prototype §2.3)
+
+    func testCameraWidensForTitleAndEndClosesForBody() throws {
+        let config = exportConfig()
+        let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [], config: config))
+
+        let opening = path.cameraFrame(atTime: 0)
+        let body = path.cameraFrame(atTime: config.targetDurationS / 2)
+        let closing = path.cameraFrame(atTime: config.targetDurationS)
+
+        // Body is the tight follow span; the establishing/closing shots are much wider.
+        XCTAssertEqual(body.spanM, config.cameraSpanM, accuracy: 1e-6, "body sits at the close follow span")
+        XCTAssertGreaterThan(opening.spanM, config.cameraSpanM * 10, "title shot frames the whole trip")
+        XCTAssertGreaterThan(closing.spanM, config.cameraSpanM * 10, "end shot frames the whole trip")
+
+        // Wide shots center on the trip; the body follows the vehicle.
+        let tripCenterLat = (longRoute.first!.lat + longRoute.last!.lat) / 2
+        XCTAssertEqual(opening.centerLat, tripCenterLat, accuracy: 1e-6, "wide shot centers the trip")
+        let vehicle = path.position(atTime: config.targetDurationS / 2)
+        XCTAssertEqual(body.centerLat, vehicle.lat, accuracy: 1e-6, "close shot rides the vehicle")
+    }
+
+    func testTinyTripNeverZoomsOutPastCloseSpan() throws {
+        // straightRoute is ~1 km — its fitting span is under the close span, so
+        // the wide floor collapses to the close span and there is no zoom-out.
+        let config = exportConfig()
+        let path = try XCTUnwrap(CameraPath(route: straightRoute, stops: [], config: config))
+        XCTAssertEqual(path.cameraFrame(atTime: 0).spanM, config.cameraSpanM, accuracy: 1e-6)
+        XCTAssertEqual(path.cameraFrame(atTime: 15).spanM, config.cameraSpanM, accuracy: 1e-6)
+    }
+
+    func testZoomOnlyTightensFromWideIntoBody() throws {
+        let config = exportConfig()
+        let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [], config: config))
+        var previous = Double.greatestFiniteMagnitude
+        for time in stride(from: 0.0, through: config.titleCardS + config.zoomTransitionS + 1, by: 0.1) {
+            let span = path.cameraFrame(atTime: time).spanM
+            XCTAssertLessThanOrEqual(span, previous + 1e-6, "span should only tighten into the body at t=\(time)")
+            previous = span
+        }
+    }
+
+    func testHeadingFollowsRouteDirection() throws {
+        let north = try XCTUnwrap(CameraPath(route: straightRoute, stops: [], config: exportConfig()))
+        XCTAssertEqual(north.position(atTime: 15).heading, 0, accuracy: 1, "north-bound → heading 0°")
+
+        let eastRoute = (0...10).map { CameraPath.Point(lat: -32.0, lon: 115.75 + Double($0) * 0.0009) }
+        let east = try XCTUnwrap(CameraPath(route: eastRoute, stops: [], config: exportConfig()))
+        XCTAssertEqual(east.position(atTime: 15).heading, 90, accuracy: 1, "east-bound → heading 90°")
+    }
+
+    func testBearingStaysZeroUnlessHeadingUpEnabled() throws {
+        let eastRoute = (0...10).map { CameraPath.Point(lat: -32.0, lon: 115.75 + Double($0) * 0.0009) }
+        // Default: north-up map, the marker rotates — bearing stays 0.
+        let northUp = try XCTUnwrap(CameraPath(route: eastRoute, stops: [], config: exportConfig()))
+        XCTAssertEqual(northUp.cameraFrame(atTime: 15).bearing, 0, accuracy: 1e-9)
+        // follow_heading_up on: the body rotates to the travel heading.
+        let rotated = try XCTUnwrap(
+            CameraPath(route: eastRoute, stops: [], config: exportConfig(followHeadingUp: true))
+        )
+        XCTAssertEqual(rotated.cameraFrame(atTime: 15).bearing, 90, accuracy: 1, "heading-up rotates the map east→up")
     }
 
     func testDegenerateRoutesProduceNoPath() {

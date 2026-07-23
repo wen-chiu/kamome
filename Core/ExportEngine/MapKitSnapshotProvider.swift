@@ -12,10 +12,16 @@ public struct MapKitSnapshotProvider: RecapSnapshotProviding {
 
     public init() {}
 
+    /// `bearing` is accepted for protocol conformance but ignored: this
+    /// north-up region snapshot is the retiring base map (handoff §3), and the
+    /// camera path only emits a non-zero bearing under `follow_heading_up`,
+    /// which requires the MapLibre substrate. Heading-up on MapKit would mean
+    /// switching to a rotated `MKMapCamera`, which isn't worth it here.
     public func snapshot(
         centerLat: Double,
         centerLon: Double,
         spanM: Double,
+        bearing: Double,
         widthPx: Int,
         heightPx: Int
     ) async throws -> MapSnapshot {

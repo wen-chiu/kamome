@@ -22,9 +22,10 @@ import UIKit
 /// the MapKit provider hands back `snapshot.point(for:)` instead of redoing the
 /// mercator math (`RecapSnapshot.swift`).
 ///
-/// Pitch/bearing are deliberately absent: the snapshot request is center + span
-/// only until the follow-cam (§4) needs an isometric camera, at which point the
-/// request is extended additively (ADR 2026-07-19, deferred gap 1).
+/// `bearing` rotates the camera heading-up for the follow-cam (§4); `point(for:)`
+/// carries the rotation, so overlays still land on the road. Pitch stays 0 (the
+/// recap is top-down, not isometric) — extended additively if that ever changes
+/// (ADR 2026-07-19, deferred gap 1).
 public struct MapLibreSnapshotProvider: RecapSnapshotProviding {
     public struct SnapshotError: Error {}
 
@@ -39,6 +40,7 @@ public struct MapLibreSnapshotProvider: RecapSnapshotProviding {
         centerLat: Double,
         centerLon: Double,
         spanM: Double,
+        bearing: Double,
         widthPx: Int,
         heightPx: Int
     ) async throws -> MapSnapshot {
@@ -55,7 +57,7 @@ public struct MapLibreSnapshotProvider: RecapSnapshotProviding {
                 let camera = MLNMapCamera()
                 camera.centerCoordinate = center
                 camera.pitch = 0
-                camera.heading = 0
+                camera.heading = bearing
                 let options = MLNMapSnapshotOptions(styleURL: styleURL, camera: camera, size: size)
                 options.zoomLevel = zoom
                 // 1 point == 1 pixel so frame sizes and point(for:)
