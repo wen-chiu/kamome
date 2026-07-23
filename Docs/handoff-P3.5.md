@@ -257,6 +257,36 @@ explicit keyframes reserved for title / end / day-transitions.
   keyframe rules). No magic numbers. Golden-frame CI stays deterministic
   (`FlatSnapshotProvider`); the *feel* is judged on device in §6.
 
+### Status — camera core (framing half) landed 2026-07-23 (commit `3eac0ab`, `phase-3-recap`; NOT merged)
+
+CI green (104 tests, swiftlint --strict clean). The **framing half** is done; the
+**visual half** (vehicle marker + photo deck) is next, on branch
+`feature/vehicle-marker-photo-deck` (branched off `3eac0ab`, no work started).
+
+- `CameraPath` now emits **two** outputs: `Position` (the vehicle — lat/lon +
+  `heading`, the route tangent) and a new `CameraFrame` (the snapshot —
+  center/span/`bearing`). Title/end windows frame the whole trip (wide); the body
+  eases to a close span locked on the vehicle over `zoom_transition_s`. Camera ≠
+  vehicle: in wide shots the camera centers the trip while the vehicle sits small
+  in place — that separation is what makes "establishing shot → dive into the drive."
+- `RecapSnapshotProviding` gained `bearing` (heading-up): `MapLibreSnapshotProvider`
+  honors it (`MLNMapCamera.heading`), `FlatSnapshotProvider` rotates its projection
+  for CI determinism, `MapKitSnapshotProvider` accepts-and-ignores (retiring
+  north-up path). `RecapRenderLoop` drives snapshots from `cameraFrame`.
+- New tunables `wide_span_padding` / `zoom_transition_s` / `follow_heading_up`
+  (**default false** = north-up map + rotating marker, the validated prototype
+  behavior; heading-up map rotation is a MapLibre-era opt-in). The close span
+  reuses `camera_span_m` (default kept 1500) — **tune on a device render**, not guessed.
+- 6 new framing tests (wide/close spans, tiny-trip floor, monotonic zoom-in,
+  heading direction, bearing gated on `follow_heading_up`).
+
+**Remaining for §4 — the visual half (`RecapFrameCompositor`):** replace the red
+head dot with a **top-down car marker** rotated to `Position.heading` (screen
+rotation = `heading − bearing`; swappable via theme), plus the §5 photo deck. Judge
+the follow-cam *feel* on device (§6) over the MapLibre substrate at close zoom —
+`FlatSnapshotProvider` stills can pre-check the *layout* (car size, photo framing)
+deterministically first.
+
 ## 5. Basic photo deck @ ~0.8 s (OverlayTimeline; prototype §2.2)
 
 Reference: `Docs/prototype/README.md` §2.2, `decisions.md` 2026-07-20. At each
@@ -268,7 +298,16 @@ stop the camera eases to the place and a **photo deck** blooms — a 3-card fan
   per stop → `TrackingConfig.json`.
 - Photos come from `photo_ref` rows matched to the stop (§4.3); `is_highlight`
   leads the deck. Deterministic (fixed order + timing) → golden-frame safe.
-- Owner-confirmed **not** a full-screen takeover — "bead floating on the map."
+- **Revised 2026-07-23 (Chiu):** the deck should **zoom the photo IN — enlarge it
+  to a clear, prominent size — then zoom back out to the map** once the stop's
+  photos finish. So the deck carries a **scale envelope over the dwell** (grow →
+  hold & rotate 0.8 s/photo → shrink back), not a constant small bead. This
+  *revises* the earlier "bead floating on the map, not a takeover" note below:
+  bigger and clearer at peak, but it still returns to the map (not a hard
+  full-screen cut). Deterministic scale keyframes → golden-frame safe.
+- (Superseded) Owner had said **not** a full-screen takeover — "bead floating on
+  the map"; the 2026-07-23 revision keeps the "returns to the map" spirit but
+  wants the photo enlarged for clarity at peak, not bead-sized throughout.
 - **Explicitly the MVP's *basic* photo presentation, not Story Director.** Do
   not bake in a long-term assumption that every stop carries equal narrative
   weight — Story Director will vary pacing and select/omit stops (spec §7 P4).

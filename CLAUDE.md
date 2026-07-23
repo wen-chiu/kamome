@@ -94,12 +94,30 @@ spec header v1.6 ("stories you can relive and share"). Forward directions
 recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
 "beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
 
-## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **recap OUTPUT / video-format redesign (own session); §3 substrate signed off**
+## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **recap OUTPUT / video-format redesign — follow-cam CAMERA CORE landed 2026-07-23; vehicle marker + photo deck next**
 
 **Read `Docs/handoff-P3.5.md` before doing anything — it is the Replay MVP
 work order, in mandatory sequence.** §1 Photo EXIF Import ✅ (2026-07-21), §2
 **MapLibre souvenir-map substrate** ✅ (2026-07-21), and **§3 base-map substrate
-✅ SIGNED OFF for now** (Chiu, 2026-07-22) are landed. **The open thread is the
+✅ SIGNED OFF for now** (Chiu, 2026-07-22) are landed.
+
+- **§4 follow-cam — camera core landed 2026-07-23** (commit `3eac0ab`, on
+  `phase-3-recap`, CI green; handoff §4 Status; decisions.md 2026-07-23). The
+  **framing half** is done: `CameraPath` now emits a `Position` (vehicle: lat/lon
+  + `heading`) *and* a new `CameraFrame` (snapshot: center/span/`bearing`) — wide
+  establishing shot over the whole trip in the title/end windows, easing to a
+  close vehicle-locked span through the body. `RecapSnapshotProviding` gained
+  `bearing` (MapLibre honors, Flat rotates for CI, MapKit accepts-and-ignores).
+  New tunables `wide_span_padding` / `zoom_transition_s` / `follow_heading_up`
+  (**default false** = north-up + rotating marker; heading-up is a MapLibre-era
+  opt-in). **The visual half is next** — vehicle marker sprite + photo deck (with
+  Chiu's zoom-in/rotate/zoom-back revision, handoff §5) — on branch
+  `feature/vehicle-marker-photo-deck` (off `3eac0ab`, not started). **Not merged
+  to main: PR #11 still holds until the §6 three-trip gate** (owner call
+  2026-07-23 — reaffirmed the documented hold; the redesign is mid-flight and
+  MapKit is still shipping).
+
+**The open thread is the
 overall recap OUTPUT / video format** — Chiu: "not what I want, but *not* the
 MapLibre issue; the output video format doesn't meet my expectation — we'll
 revisit all the difference in another session." So the base-map style is settled

@@ -910,3 +910,44 @@ does not meet my expectation — we need to discuss and update it, in another se
 
 **Rejected:** flipping production to MapLibre on this sign-off (premature — output is
 under redesign); continuing to tune the base-map palette (Chiu: not the issue).
+
+## 2026-07-23 — Follow-cam camera core: wide-to-close framing, camera ≠ vehicle
+
+**Context.** The recap OUTPUT redesign's first piece. The prototype's one unmet item
+was the TravelBoast follow-cam; diagnosis (this session) was that the shipping camera
+used a single fixed `camera_span_m` (1500 m) start-to-finish — no establishing shot,
+no close follow — so it read as "the route sliding," not "the car driving."
+
+**Decision (implemented, commit `3eac0ab` on `phase-3-recap`, CI green).**
+- **Split camera from vehicle.** `CameraPath` emits `Position` (the vehicle subject —
+  lat/lon + `heading`, the route tangent) and a new `CameraFrame` (the snapshot —
+  center/span/`bearing`). In wide shots the camera centers the *trip* while the vehicle
+  sits small in its real place; in the body the camera locks onto the vehicle. Two
+  outputs, not one — that separation is what a wide→close film needs.
+- **Wide establishing/closing, close body.** Title/end windows frame the whole-trip
+  bounding box (`wide_span_padding`); the body eases to `camera_span_m` (reused as the
+  close span). Wide↔close eases over `zoom_transition_s` (renders as a quick cross-fade
+  dolly; adaptive keyframe interval for a smoother dolly is a deferred refinement).
+- **`bearing` on the snapshot boundary.** `RecapSnapshotProviding` gained `bearing`
+  (the "additive extension" the ADR 2026-07-19 anticipated). `MapLibreSnapshotProvider`
+  honors it (`MLNMapCamera.heading`); `FlatSnapshotProvider` rotates its projection so
+  golden-frame CI stays deterministic; `MapKitSnapshotProvider` accepts-and-ignores it
+  (the retiring north-up path).
+- **`follow_heading_up` defaults false** = north-up map + a marker that rotates to
+  heading (the validated prototype behavior). Heading-up *map* rotation is a
+  MapLibre-era opt-in (MapKit can't rotate; the marker's screen rotation is then
+  `heading − bearing`). Kept the close-span default at 1500 — tuned on a device render,
+  not guessed.
+
+**Not in this decision (next):** the vehicle marker sprite and the photo deck (with
+Chiu's 2026-07-23 zoom-in/rotate/zoom-back revision) — the visual `RecapFrameCompositor`
+half, on branch `feature/vehicle-marker-photo-deck`.
+
+**Not merged.** Reaffirmed the documented hold (handoff §6): PR #11 keeps `phase-3-recap`
+off `main` until the three-trip dogfood gate — the redesign is mid-flight and MapKit is
+still the shipping base map, so merging now would land a half-finished redesign in main.
+
+**Rejected:** heading-up on by default (inconsistent on the still-shipping MapKit path,
+which can't rotate); a generic multi-camera abstraction (boundary discipline — extend
+`CameraFrame`/`RecapSnapshotProviding` additively when a consumer needs it); guessing a
+new close-span value in code (it's a device-tuned feel, left at the prior default).
