@@ -61,6 +61,19 @@ public struct RecapStyle {
     public var deckDotOnColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     public var deckDotOffColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.4)
 
+    // Stop label (§5 two-beat lead): a pin at the stop + a name pill above it,
+    // anchored on the map (the reference's city label). Drawn by OverlayRenderer.
+    public var labelPinColor = CGColor(srgbRed: 0.35, green: 0.85, blue: 0.95, alpha: 1)
+    public var labelPinRingColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
+    public var labelPinRadiusPx: CGFloat = 16
+    public var labelPillColor = CGColor(srgbRed: 0.1, green: 0.12, blue: 0.16, alpha: 0.92)
+    public var labelTextColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    public var labelDetailColor = CGColor(srgbRed: 0.7, green: 0.75, blue: 0.8, alpha: 1)
+    public var labelFontPx: CGFloat = 46
+    public var labelDetailFontPx: CGFloat = 32
+    public var labelPillPaddingPx: CGFloat = 24
+    public var labelPillGapPx: CGFloat = 28    // pin → pill vertical gap
+
     public init() {}
 }
 
