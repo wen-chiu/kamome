@@ -14,13 +14,13 @@ public struct RecapExporter {
 
     private let path: CameraPath
     private let compositor: RecapFrameCompositor
-    private let provider: RecapSnapshotProviding
+    private let provider: MapRenderer
     private let config: TrackingConfig.Export
 
     public init(
         path: CameraPath,
         compositor: RecapFrameCompositor,
-        provider: RecapSnapshotProviding,
+        provider: MapRenderer,
         config: TrackingConfig.Export
     ) {
         self.path = path

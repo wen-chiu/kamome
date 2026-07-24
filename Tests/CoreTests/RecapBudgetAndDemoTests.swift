@@ -90,15 +90,18 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         let provider = MapKitSnapshotProvider()
         // Warm-up snapshot excluded from the average (tile cache, GeoServices).
         _ = try await provider.snapshot(
-            centerLat: -32.0, centerLon: 115.75, spanM: config.cameraSpanM, bearing: 0,
-            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+            CameraFrame(centerLat: -32.0, centerLon: 115.75, spanM: config.cameraSpanM, bearing: 0),
+            map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
         )
         let started = Date.now
         let count = 10
         for index in 0..<count {
             _ = try await provider.snapshot(
-                centerLat: -32.0 - Double(index) * 0.05, centerLon: 115.75 + Double(index) * 0.03,
-                spanM: config.cameraSpanM, bearing: 0, widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+                CameraFrame(
+                    centerLat: -32.0 - Double(index) * 0.05, centerLon: 115.75 + Double(index) * 0.03,
+                    spanM: config.cameraSpanM, bearing: 0
+                ),
+                map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
             )
         }
         let perSnapshot = Date.now.timeIntervalSince(started) / Double(count)

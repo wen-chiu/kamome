@@ -32,6 +32,10 @@ final class CameraPathTests: XCTestCase {
             wideSpanPadding: 1.15,
             zoomTransitionS: 0.8,
             followHeadingUp: followHeadingUp,
+            deckPhotoHoldS: 0.8,
+            deckZoomS: 0.5,
+            deckSpanM: 600,
+            deckLabelLeadS: 0.6,
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
             endCardS: 3,
@@ -109,6 +113,33 @@ final class CameraPathTests: XCTestCase {
         XCTAssertGreaterThan(speed(atFrame: midLegFrame), speed(atFrame: 0) * 2, "mid-leg should be much faster than launch")
         let brakingSpeed = speed(atFrame: firstHoldFrame - 2)
         XCTAssertGreaterThan(speed(atFrame: midLegFrame), brakingSpeed * 2, "camera should brake into the hold")
+    }
+
+    func testPerStopHoldsScaleWithSuppliedDurations() throws {
+        // Two stops with explicit per-stop holds (photo-deck dwell, §5): the
+        // first should hold ~3× as many frames as the second.
+        let stops = [straightRoute[3], straightRoute[7]]
+        let path = try XCTUnwrap(
+            CameraPath(route: straightRoute, stops: stops, config: exportConfig(), stopHoldsS: [3.0, 1.0])
+        )
+        let firstFrames = (0..<path.frameCount).filter { path.position(atFrame: $0).holdingStopIndex == 0 }.count
+        let secondFrames = (0..<path.frameCount).filter { path.position(atFrame: $0).holdingStopIndex == 1 }.count
+        // 3 s and 1 s at 30 fps ≈ 90 and 30 frames.
+        XCTAssertEqual(Double(firstFrames), 90, accuracy: 2)
+        XCTAssertEqual(Double(secondFrames), 30, accuracy: 2)
+    }
+
+    func testPerStopHoldsAreCappedTogetherKeepingProportions() throws {
+        // 6 s + 6 s = 12 s of holds against a 30 s video caps at 15 s
+        // (max_hold_fraction 0.5); each scales to 7.5 s but stays equal.
+        let stops = [straightRoute[3], straightRoute[7]]
+        let path = try XCTUnwrap(
+            CameraPath(route: straightRoute, stops: stops, config: exportConfig(), stopHoldsS: [12.0, 12.0])
+        )
+        let firstFrames = (0..<path.frameCount).filter { path.position(atFrame: $0).holdingStopIndex == 0 }.count
+        let secondFrames = (0..<path.frameCount).filter { path.position(atFrame: $0).holdingStopIndex == 1 }.count
+        XCTAssertEqual(Double(firstFrames + secondFrames), 450, accuracy: 3, "total holds capped at 15 s")
+        XCTAssertEqual(firstFrames, secondFrames, accuracy: 2, "equal holds stay equal after the cap")
     }
 
     func testStopDenseTripShrinksHoldsToPreserveTravelTime() throws {

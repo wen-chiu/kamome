@@ -9,14 +9,30 @@ import Foundation
 /// reference frame and scale linearly with frame width.
 public struct RecapStyle {
     public var routeColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 1)
-    public var headDotColor = CGColor(srgbRed: 1.0, green: 0.29, blue: 0.27, alpha: 1)
     public var cardColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.96)
     public var cardTextColor = CGColor(srgbRed: 0.1, green: 0.1, blue: 0.12, alpha: 1)
     public var badgeColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 1)
     public var badgeTextColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
 
+    // Vehicle marker (§4.5 step 1). The moving subject: which sprite, how big,
+    // and its body/glass/edge colors. Swap `vehicleMarker` to change the
+    // subject without touching the compositor (car default; seagull/scooter/bike).
+    public var vehicleMarker: VehicleMarker = .car
+    public var markerColor = CGColor(srgbRed: 1.0, green: 0.29, blue: 0.27, alpha: 1)
+    public var markerAccentColor = CGColor(srgbRed: 0.98, green: 0.98, blue: 0.99, alpha: 0.92)
+    public var markerOutlineColor = CGColor(srgbRed: 0.1, green: 0.11, blue: 0.14, alpha: 0.85)
+    /// Marker length (nose-to-tail) at the 1080 reference; scales with width.
+    public var vehicleMarkerLengthPx: CGFloat = 96
+    /// Optional raster sprite for the moving subject (the cute anime car,
+    /// injected by the app from a bundled asset — the core stays asset-free and
+    /// deterministic). When set it replaces the vector `vehicleMarker`. In the
+    /// heading-up chase cam (TravelBoast) it rides upright as a hero pose while
+    /// the map rotates under it, so it is drawn without per-frame rotation;
+    /// `markerImageHeightPx` is its displayed height at the 1080 reference.
+    public var markerImage: CGImage?
+    public var markerImageHeightPx: CGFloat = 360
+
     public var routeWidthPx: CGFloat = 14
-    public var headDotRadiusPx: CGFloat = 22
     public var cardMarginPx: CGFloat = 48
     public var cardHeightPx: CGFloat = 280
     public var cardCornerPx: CGFloat = 32
@@ -31,7 +47,47 @@ public struct RecapStyle {
     public var statFontPx: CGFloat = 44
     public var qrSidePx: CGFloat = 320
 
+    // Photo deck (§5, Chiu 2026-07-23): the enlarged photo that blooms at a
+    // stop. Peak hero width as a fraction of the frame; matte, dots, caption.
+    public var deckPhotoWidthFraction: CGFloat = 0.64
+    public var deckPhotoAspect: CGFloat = 1.25         // portrait card (h / w)
+    public var deckMatteColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    public var deckMattePx: CGFloat = 14
+    public var deckCornerPx: CGFloat = 28
+    public var deckShadowColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.35)
+    public var deckCaptionFontPx: CGFloat = 40
+    public var deckCaptionColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    public var deckDotRadiusPx: CGFloat = 7
+    public var deckDotOnColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    public var deckDotOffColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.4)
+
     public init() {}
+}
+
+/// Photo-deck pacing (§5). A stop's dwell scales with its photo count so all
+/// 3–8 photos get their `photoHoldS`; the compositor renders a grow → rotate →
+/// shrink scale envelope over that window. Mirrors `export.deck_*`; the default
+/// matches the shipped config so a default-constructed compositor still paces
+/// sensibly.
+public struct RecapDeck {
+    public var photoHoldS: Double
+    public var zoomS: Double
+    /// The pin/label leads (spec §5, Chiu 2026-07-24 two-beat): it lands first
+    /// at the follow span, then the camera dollies in and the photos bloom.
+    public var labelLeadS: Double
+
+    public init(photoHoldS: Double = 0.8, zoomS: Double = 0.5, labelLeadS: Double = 0.6) {
+        self.photoHoldS = photoHoldS
+        self.zoomS = zoomS
+        self.labelLeadS = labelLeadS
+    }
+
+    /// Dwell for a stop showing `photoCount` deck photos: the label lead, then a
+    /// grow-in and shrink-out (zoomS each) bracketing one `photoHoldS` slot per
+    /// photo. At least one slot so a single-photo stop still reads.
+    public func dwellS(photoCount: Int) -> Double {
+        labelLeadS + 2 * zoomS + Double(max(1, photoCount)) * photoHoldS
+    }
 }
 
 /// The two keyframe snapshots a frame blends between. At `blend == 0` the
@@ -73,13 +129,16 @@ public struct RecapFrameCompositor {
         public let name: String
         public let dayLabel: String
         public let detail: String?
-        public let photo: CGImage?
+        /// The stop's deck photos (highlight first, §5). When non-empty the
+        /// stop renders as an enlarging, rotating photo deck; when empty it
+        /// falls back to the label-only bottom card (route-only / no-photo).
+        public let photos: [CGImage]
 
-        public init(name: String, dayLabel: String, detail: String? = nil, photo: CGImage? = nil) {
+        public init(name: String, dayLabel: String, detail: String? = nil, photos: [CGImage] = []) {
             self.name = name
             self.dayLabel = dayLabel
             self.detail = detail
-            self.photo = photo
+            self.photos = photos
         }
     }
 
@@ -119,11 +178,13 @@ public struct RecapFrameCompositor {
     let widthPx: Int
     let heightPx: Int
     let style: RecapStyle
+    let deck: RecapDeck
     let scale: CGFloat
 
     /// `stopCards[i]` matches stop index `i` as passed to `CameraPath`.
     /// Title/end events with nil content are skipped, so callers without
-    /// chrome yet (previews) render route-only frames.
+    /// chrome yet (previews) render route-only frames. `deck` sets the photo
+    /// deck's pacing; the default matches the shipped config.
     public init(
         path: CameraPath,
         events: [OverlayEvent],
@@ -132,7 +193,8 @@ public struct RecapFrameCompositor {
         endCard: EndCard? = nil,
         widthPx: Int,
         heightPx: Int,
-        style: RecapStyle = RecapStyle()
+        style: RecapStyle = RecapStyle(),
+        deck: RecapDeck = RecapDeck()
     ) {
         self.path = path
         self.events = events
@@ -142,6 +204,7 @@ public struct RecapFrameCompositor {
         self.widthPx = widthPx
         self.heightPx = heightPx
         self.style = style
+        self.deck = deck
         scale = CGFloat(widthPx) / 1080
     }
 
@@ -169,9 +232,11 @@ public struct RecapFrameCompositor {
         }
 
         drawTraveledRoute(atTime: time, background: background, in: context)
-        drawHeadDot(atTime: time, background: background, in: context)
+        drawVehicleMarker(atTime: time, background: background, in: context)
+        // Overlays draw over the marker so the enlarged deck photo can bloom in
+        // front of the vehicle at a stop.
         for event in OverlayTimeline.active(in: events, atTime: time) {
-            draw(event: event, in: context)
+            draw(event: event, atTime: time, in: context)
         }
 
         guard let image = context.makeImage() else { throw RenderError() }
@@ -199,21 +264,53 @@ public struct RecapFrameCompositor {
         context.strokePath()
     }
 
-    private func drawHeadDot(atTime time: Double, background: RecapBackground, in context: CGContext) {
+    /// The moving subject at its projected position (§4.5 step 1), drawn by the
+    /// Layer-2 `SubjectRenderer`. The compositor supplies the state + camera and
+    /// owns none of the marker's screen transform.
+    private func drawVehicleMarker(atTime time: Double, background: RecapBackground, in context: CGContext) {
         let position = path.position(atTime: time)
-        let center = cgPoint(background.point(lat: position.lat, lon: position.lon))
-        let radius = style.headDotRadiusPx * scale
-        context.setFillColor(style.headDotColor)
-        context.fillEllipse(
-            in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+        let cameraFrame = path.cameraFrame(atTime: time)
+        let camera = CameraFrame(
+            centerLat: cameraFrame.centerLat, centerLon: cameraFrame.centerLon,
+            spanM: cameraFrame.spanM, bearing: cameraFrame.bearing
+        )
+        let state = SubjectState(lat: position.lat, lon: position.lon, heading: position.heading)
+        subjectRenderer.render(state, camera: camera, into: renderSurface(background: background, in: context))
+    }
+
+    /// The subject renderer built from the style tokens (the anime sprite rides
+    /// upright; the vector markers rotate to heading). Injected properly when
+    /// the compositor consumes the timeline; built here during the bridge.
+    private var subjectRenderer: SpriteSubjectRenderer {
+        if let sprite = style.markerImage {
+            return SpriteSubjectRenderer(visual: .sprite(sprite), mode: .heroUpright, sizePx: style.markerImageHeightPx)
+        }
+        return SpriteSubjectRenderer(
+            visual: .marker(style.vehicleMarker, palette: VehicleMarker.Palette(
+                fill: style.markerColor, accent: style.markerAccentColor, outline: style.markerOutlineColor
+            )),
+            mode: .topDownRotating,
+            sizePx: style.vehicleMarkerLengthPx
         )
     }
 
-    private func draw(event: OverlayEvent, in context: CGContext) {
+    /// A `RenderSurface` whose projection carries the keyframe cross-fade blend.
+    private func renderSurface(background: RecapBackground, in context: CGContext) -> RenderSurface {
+        RenderSurface(context: context, widthPx: widthPx, heightPx: heightPx, scale: scale) { lat, lon in
+            background.point(lat: lat, lon: lon)
+        }
+    }
+
+    private func draw(event: OverlayEvent, atTime time: Double, in context: CGContext) {
         switch event.kind {
         case let .stopCard(stopIndex):
             guard stopCards.indices.contains(stopIndex) else { return }
-            draw(card: stopCards[stopIndex], in: context)
+            let card = stopCards[stopIndex]
+            if card.photos.isEmpty {
+                draw(card: card, in: context)
+            } else {
+                drawDeck(card: card, window: (event.startS, event.endS), atTime: time, in: context)
+            }
         case .titleCard:
             guard let titleCard else { return }
             draw(titleCard: titleCard, in: context)

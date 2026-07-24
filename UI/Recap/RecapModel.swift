@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import KamomeConfig
 import KamomeExportEngine
+import KamomeImportKit
 import KamomePersistence
 import KamomeTripComposer
 import Observation
@@ -86,33 +87,59 @@ final class RecapModel {
             return
         }
         let stats = TripStats.from(jsonString: detail.trip.statsJson)
-        // Stop-card photos are only needed when photo overlays are on.
-        let photos = photosEnabled ? await loadStopPhotos(detail: detail) : [:]
+        // Deck photo refs are selected here (data); bitmaps are loaded below only
+        // for the current compositor bridge. Refs stay out of the render size.
+        let photoRefs = photosEnabled ? selectStopPhotoRefs(detail: detail) : [:]
+        let deck = RecapDeck(photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS, labelLeadS: config.export.deckLabelLeadS)
         let route = RecapComposer.route(
             from: detail.segments,
             epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM
         )
-        guard let content = RecapComposer.content(
+        guard let trip = RecapComposer.trip(
             trip: detail.trip,
             route: route,
             stops: detail.stops,
             stats: stats,
-            photosByStop: photos
-        ), let path = CameraPath(route: content.route, stops: content.stops, config: config.export) else {
+            photosByStop: photoRefs,
+            deck: deck,
+            stopHoldS: config.export.stopHoldS
+        ) else {
+            phase = .failed(message: String(localized: "recap_failed"))
+            return
+        }
+        let routePoints = trip.route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+        let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
+        guard let path = CameraPath(
+            route: routePoints, stops: stopPoints, config: config.export,
+            stopHoldsS: trip.stops.map(\.dwellS)
+        ) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }
 
+        // Bridge the style-independent RecapTrip into today's compositor inputs:
+        // resolve refs → bitmaps and generate the QR from shareURL (both move into
+        // the OverlayRenderer when the render-layers migration lands).
+        let stopImages = photosEnabled ? await loadDeckImages(refs: photoRefs) : [:]
         let events = OverlayTimeline.build(holds: path.holds, config: config.export, photosEnabled: photosEnabled)
         let compositor = RecapFrameCompositor(
             path: path,
             events: events,
-            stopCards: content.stopCards,
-            titleCard: content.titleCard,
-            endCard: content.endCard,
+            stopCards: zip(trip.stops, detail.stops).map { tripStop, record in
+                RecapFrameCompositor.StopCard(
+                    name: tripStop.name, dayLabel: tripStop.dayLabel, detail: tripStop.detail,
+                    photos: stopImages[record.id] ?? []
+                )
+            },
+            titleCard: RecapFrameCompositor.TitleCard(title: trip.title, subtitle: trip.subtitle),
+            endCard: RecapFrameCompositor.EndCard(
+                statsLines: trip.statsLines, callToAction: trip.callToAction,
+                qrCode: RecapQRCode.image(for: trip.shareURL, sidePx: Int(RecapStyle().qrSidePx))
+            ),
             widthPx: config.export.frameWidthPx,
-            heightPx: config.export.frameHeightPx
+            heightPx: config.export.frameHeightPx,
+            deck: deck
         )
         let exporter = RecapExporter(
             path: path,
@@ -176,22 +203,43 @@ final class RecapModel {
 
     // MARK: - Photos
 
-    /// Highlight photo first, else the stop's earliest photo. Card size is
-    /// the frame's photo square (~450 px) — no full-res decodes.
-    private func loadStopPhotos(detail: TripRepository.TripDetail) async -> [String: CGImage] {
-        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else { return [:] }
-        var result: [String: CGImage] = [:]
+    /// Selects each stop's deck photo *refs* (§5): highlight first, then the rest
+    /// evenly spread across the visit, capped at `deck_max_photos` so a
+    /// photo-dense stop samples the whole visit rather than just its first burst
+    /// (`PhotoDeckSelector`, shared with import). Pure data — no PhotoKit, no
+    /// bitmaps; the render layer resolves the refs.
+    private func selectStopPhotoRefs(detail: TripRepository.TripDetail) -> [String: [PhotoRef]] {
+        var result: [String: [PhotoRef]] = [:]
         for stop in detail.stops {
-            let candidates = detail.photos
+            let ordered = detail.photos
                 .filter { $0.stopId == stop.id }
                 .sorted { lhs, rhs in
                     if lhs.isHighlight != rhs.isHighlight { return lhs.isHighlight > rhs.isHighlight }
                     return (lhs.takenAt ?? 0) < (rhs.takenAt ?? 0)
                 }
-            guard let chosen = candidates.first else { continue }
-            if let image = await loadImage(assetId: chosen.phAssetId) {
-                result[stop.id] = image
+                .map(\.phAssetId)
+            let selected = PhotoDeckSelector.evenlySpread(
+                ordered,
+                min: config.photoImport.deckMinPhotos,
+                max: config.photoImport.deckMaxPhotos
+            )
+            if !selected.isEmpty { result[stop.id] = selected.map(PhotoRef.asset) }
+        }
+        return result
+    }
+
+    /// Resolves selected refs → bitmaps for the current compositor bridge
+    /// (moves into the `OverlayRenderer` at the render-layers migration). Needs
+    /// library access — undetermined means no photos; never prompt here.
+    private func loadDeckImages(refs: [String: [PhotoRef]]) async -> [String: [CGImage]] {
+        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else { return [:] }
+        var result: [String: [CGImage]] = [:]
+        for (stopID, stopRefs) in refs {
+            var images: [CGImage] = []
+            for case let .asset(assetId) in stopRefs {
+                if let image = await loadImage(assetId: assetId) { images.append(image) }
             }
+            if !images.isEmpty { result[stopID] = images }
         }
         return result
     }
@@ -204,9 +252,11 @@ final class RecapModel {
         options.isNetworkAccessAllowed = false
         return await withCheckedContinuation { continuation in
             var resumed = false
+            // Decoded for the deck's enlarged peak (~0.64 × 1080-wide card); the
+            // compositor aspect-fills, so a generous square covers any crop.
             PHImageManager.default().requestImage(
                 for: asset,
-                targetSize: CGSize(width: 450, height: 450),
+                targetSize: CGSize(width: 900, height: 900),
                 contentMode: .aspectFill,
                 options: options
             ) { image, _ in

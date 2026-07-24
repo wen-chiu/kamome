@@ -7,10 +7,8 @@ public struct TrackingConfig: Decodable, Equatable {
     public struct Filter: Decodable, Equatable {
         /// Samples with horizontal accuracy worse than this are discarded.
         public let maxHAccM: Double
-        /// Samples worse than this still draw the route but are excluded as
-        /// speed evidence: the 2026-07-18 drive had a glitch cluster at
-        /// h_acc 43–49 m (under the keep threshold) that CoreLocation tagged
-        /// with 137 m/s speeds, putting 495 km/h in the trip stats.
+        /// Samples worse than this draw the route but are excluded as speed
+        /// evidence (2026-07-18: an h_acc 43–49 m glitch tagged 137 m/s → 495 km/h).
         public let speedMaxHAccM: Double
 
         enum CodingKeys: String, CodingKey {
@@ -48,16 +46,12 @@ public struct TrackingConfig: Decodable, Equatable {
         public let radiusM: Double
         /// CLMonitor region radius while paused at a stop (§2.3).
         public let regionRadiusM: Double
-        /// Trip-end stop derivation (ADR 2026-07-18): a sample-silence gap at
-        /// least this long with displacement ≤ radius_m is a stop the live
-        /// detector could never see — iOS stops delivering fixes when the
-        /// phone is stationary under a distance filter.
+        /// Trip-end stop derivation (ADR 2026-07-18): a sample-silence gap this
+        /// long with displacement ≤ radius_m is a stop the live detector can't see.
         public let gapMinS: Double
-        /// A walk segment bracketed by vehicle segments counts as a stop
-        /// ("park and walk around") when it lasts at least visit_min_s and
-        /// ends within visit_return_radius_m of where it began — loop
-        /// closure, not wander extent: trailhead loops range far and still
-        /// end back at the car.
+        /// A walk segment bracketed by vehicle segments is a stop ("park and walk
+        /// around") when it lasts ≥ visit_min_s and ends within
+        /// visit_return_radius_m of where it began — loop closure, not wander extent.
         public let visitMinS: Double
         public let visitReturnRadiusM: Double
 
@@ -233,12 +227,10 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Adaptive sampling table (§2.3).
         public let walk: SamplingPolicy
         public let vehicles: Vehicles
-        /// Watchdog for silent background-session death (2026-07-19 drive:
-        /// the region-exit wake restarted GPS, iOS suspended the app ~10 s
-        /// later, and 32 min of driving vanished). While actively tracking,
-        /// a delivery gap of at least this long means the standard location
-        /// session is presumed dead and gets restarted on the next fix that
-        /// does arrive (significant-change monitoring keeps those coming).
+        /// Watchdog for silent background-session death (2026-07-19 drive: iOS
+        /// suspended the app ~10 s after a region-exit wake, losing 32 min). A
+        /// delivery gap this long while tracking presumes the standard location
+        /// session dead and restarts it on the next significant-change fix.
         public let recoveryGapS: Double
 
         enum CodingKeys: String, CodingKey {
@@ -252,71 +244,53 @@ public struct TrackingConfig: Decodable, Equatable {
         public let targetDurationS: Double
         public let fps: Int
         public let stopHoldS: Double
-        /// Stop holds shrink proportionally once they would exceed this share
-        /// of the video, so stop-dense trips keep a nonzero travel budget.
+        /// Stop holds shrink proportionally past this share of the video, so
+        /// stop-dense trips keep a nonzero travel budget.
         public let maxHoldFraction: Double
         public let gifFps: Int
         public let gifWidthPx: Int
         /// Output frame size (§4.5: 1080×1920, 9:16 social default).
         public let frameWidthPx: Int
         public let frameHeightPx: Int
-        /// Ground span during the close follow-cam body (§4.5 step 1, prototype
-        /// §2.3) — the tight end the camera zooms into; title/end widen out.
+        /// Ground span of the close follow-cam body (§4.5 step 1, prototype §2.3).
         public let cameraSpanM: Double
-        /// Multiplier on the trip bounding box for the wide establishing/closing
-        /// shots (1.0 = edge-to-edge). Floored at `cameraSpanM` on tiny trips.
+        /// Trip-bounding-box multiplier for the wide shots; floored at `cameraSpanM`.
         public let wideSpanPadding: Double
-        /// Seconds to ease wide↔close at each card boundary (title→body,
-        /// body→end). A quick cross-fade dolly; keep short or it eats the body.
+        /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
-        /// Rotate the map heading-up (true TravelBoast). Needs a provider that
-        /// honors `bearing` (MapLibre); false until the substrate switch (§3).
+        /// Rotate the map heading-up (needs a `bearing`-honoring provider; §3).
         public let followHeadingUp: Bool
-        /// One map snapshot per this many frames; frames in between cross-fade
-        /// the neighboring keyframe snapshots (§4.5 step 2 render budget).
+        /// Photo-deck pacing (§5): label lead, per-photo dwell, grow/shrink each,
+        /// dolly-in span while a stop's deck is up (deck zoom = camera track).
+        public let deckPhotoHoldS: Double
+        public let deckZoomS: Double
+        public let deckSpanM: Double
+        public let deckLabelLeadS: Double
+        /// One map snapshot per this many frames; in-between frames cross-fade (§4.5).
         public let keyframeIntervalFrames: Int
-        /// Trip chrome windows (§4.5 step 4): title card over the opening,
-        /// end card ("Get this route") over the close.
+        /// Trip chrome windows (§4.5 step 4): title over the open, end over the close.
         public let titleCardS: Double
         public let endCardS: Double
-        /// H.264 average bitrate; unconstrained AVAssetWriter output measured
-        /// 51 MB per 30 s (2026-07-19) — unshareable.
+        /// H.264 average bitrate; unconstrained output was ~51 MB/30 s (unshareable).
         public let videoBitrateMbps: Double
 
         public init(
-            targetDurationS: Double,
-            fps: Int,
-            stopHoldS: Double,
-            maxHoldFraction: Double,
-            gifFps: Int,
-            gifWidthPx: Int,
-            frameWidthPx: Int,
-            frameHeightPx: Int,
-            cameraSpanM: Double,
-            wideSpanPadding: Double,
-            zoomTransitionS: Double,
-            followHeadingUp: Bool,
-            keyframeIntervalFrames: Int,
-            titleCardS: Double,
-            endCardS: Double,
-            videoBitrateMbps: Double
+            targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
+            gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
+            cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double, followHeadingUp: Bool,
+            deckPhotoHoldS: Double, deckZoomS: Double, deckSpanM: Double, deckLabelLeadS: Double,
+            keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
         ) {
-            self.targetDurationS = targetDurationS
-            self.fps = fps
-            self.stopHoldS = stopHoldS
-            self.maxHoldFraction = maxHoldFraction
-            self.gifFps = gifFps
-            self.gifWidthPx = gifWidthPx
-            self.frameWidthPx = frameWidthPx
-            self.frameHeightPx = frameHeightPx
-            self.cameraSpanM = cameraSpanM
-            self.wideSpanPadding = wideSpanPadding
-            self.zoomTransitionS = zoomTransitionS
-            self.followHeadingUp = followHeadingUp
-            self.keyframeIntervalFrames = keyframeIntervalFrames
-            self.titleCardS = titleCardS
-            self.endCardS = endCardS
-            self.videoBitrateMbps = videoBitrateMbps
+            self.targetDurationS = targetDurationS; self.fps = fps
+            self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
+            self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
+            self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
+            self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
+            self.zoomTransitionS = zoomTransitionS; self.followHeadingUp = followHeadingUp
+            self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
+            self.deckSpanM = deckSpanM; self.deckLabelLeadS = deckLabelLeadS
+            self.keyframeIntervalFrames = keyframeIntervalFrames; self.titleCardS = titleCardS
+            self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
         }
 
         enum CodingKeys: String, CodingKey {
@@ -332,6 +306,10 @@ public struct TrackingConfig: Decodable, Equatable {
             case wideSpanPadding = "wide_span_padding"
             case zoomTransitionS = "zoom_transition_s"
             case followHeadingUp = "follow_heading_up"
+            case deckPhotoHoldS = "deck_photo_hold_s"
+            case deckZoomS = "deck_zoom_s"
+            case deckSpanM = "deck_span_m"
+            case deckLabelLeadS = "deck_label_lead_s"
             case keyframeIntervalFrames = "keyframe_interval_frames"
             case titleCardS = "title_card_s"
             case endCardS = "end_card_s"

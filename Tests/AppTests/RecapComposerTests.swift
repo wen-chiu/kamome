@@ -58,7 +58,7 @@ final class RecapComposerTests: XCTestCase {
             from: [segment(points: [(-32.0, 115.75), (-32.1, 115.90), (-32.2, 115.77)])],
             epsilonM: 15, matchedEpsilonM: 5
         )
-        let content = try XCTUnwrap(RecapComposer.content(
+        let recap = try XCTUnwrap(RecapComposer.trip(
             trip: trip(daysLong: 2),
             route: route,
             stops: stops,
@@ -66,25 +66,23 @@ final class RecapComposerTests: XCTestCase {
             photosByStop: [:]
         ))
 
-        XCTAssertEqual(content.route.count, 3)
-        XCTAssertEqual(content.stops.count, 2)
-        XCTAssertEqual(content.stopCards.count, 2)
-        XCTAssertEqual(content.stopCards[0].name, "紫雲巖")
-        XCTAssertFalse(content.stopCards[1].name.isEmpty, "unnamed stop must get the localized fallback")
-        XCTAssertEqual(content.titleCard.title, "Perth Loop")
-        let subtitle = content.titleCard.subtitle
-        XCTAssertTrue(subtitle.contains("1203"), "subtitle carries distance, got: \(subtitle)")
-        XCTAssertEqual(content.endCard.statsLines.count, 2)
+        XCTAssertEqual(recap.route.count, 3)
+        XCTAssertEqual(recap.stops.count, 2)
+        XCTAssertEqual(recap.stops[0].name, "紫雲巖")
+        XCTAssertFalse(recap.stops[1].name.isEmpty, "unnamed stop must get the localized fallback")
+        XCTAssertEqual(recap.title, "Perth Loop")
+        XCTAssertTrue(recap.subtitle.contains("1203"), "subtitle carries distance, got: \(recap.subtitle)")
+        XCTAssertEqual(recap.statsLines.count, 2)
         // localizedStringWithFormat groups digits ("1,203") per locale.
-        let distanceLine = content.endCard.statsLines[0].replacingOccurrences(of: ",", with: "")
-        XCTAssertTrue(distanceLine.contains("1203"), "distance km in the stats line, got: \(content.endCard.statsLines[0])")
-        XCTAssertTrue(content.endCard.statsLines[0].contains("2"), "stop count in the distance line")
-        XCTAssertTrue(content.endCard.statsLines[1].contains("3.2"), "drive hours with one decimal")
-        XCTAssertFalse(content.endCard.callToAction.isEmpty)
+        let distanceLine = recap.statsLines[0].replacingOccurrences(of: ",", with: "")
+        XCTAssertTrue(distanceLine.contains("1203"), "distance km in the stats line, got: \(recap.statsLines[0])")
+        XCTAssertTrue(recap.statsLines[0].contains("2"), "stop count in the distance line")
+        XCTAssertTrue(recap.statsLines[1].contains("3.2"), "drive hours with one decimal")
+        XCTAssertFalse(recap.callToAction.isEmpty)
     }
 
-    func testDegenerateRouteYieldsNoContent() {
-        XCTAssertNil(RecapComposer.content(
+    func testDegenerateRouteYieldsNoTrip() {
+        XCTAssertNil(RecapComposer.trip(
             trip: trip(),
             route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75)])], epsilonM: 15, matchedEpsilonM: 5),
             stops: [],
@@ -112,18 +110,18 @@ final class RecapComposerTests: XCTestCase {
         XCTAssertNil(RecapComposer.walkDetail(for: stop(duration: nil, kind: "walk_visit")))
     }
 
-    func testStopCardPhotoComesFromProvidedMap() throws {
-        let photo = try makeSolidImage()
-        let content = try XCTUnwrap(RecapComposer.content(
+    func testStopPhotosComeFromProvidedRefs() throws {
+        let recap = try XCTUnwrap(RecapComposer.trip(
             trip: trip(),
             route: RecapComposer.route(
                 from: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])], epsilonM: 15, matchedEpsilonM: 5
             ),
             stops: [stop()],
             stats: nil,
-            photosByStop: ["stop-1": photo]
+            photosByStop: ["stop-1": [.asset("asset-a"), .asset("asset-b")]]
         ))
-        XCTAssertNotNil(content.stopCards[0].photo)
+        // Refs pass through untouched — data layer points, never loads.
+        XCTAssertEqual(recap.stops[0].photos, [.asset("asset-a"), .asset("asset-b")])
     }
 
     func testRouteSimplifiesDenseCollinearRuns() {
@@ -162,14 +160,5 @@ final class RecapComposerTests: XCTestCase {
 
     func testShareURLEncodesTripId() {
         XCTAssertEqual(RecapComposer.shareURLString(tripId: "abc-123"), "kamome://route/abc-123")
-    }
-
-    private func makeSolidImage() throws -> CGImage {
-        let context = try XCTUnwrap(CGContext(
-            data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0,
-            space: try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB)),
-            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        return try XCTUnwrap(context.makeImage())
     }
 }

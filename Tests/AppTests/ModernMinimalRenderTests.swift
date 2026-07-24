@@ -67,8 +67,8 @@ final class ModernMinimalRenderTests: XCTestCase {
             let provider = MapLibreSnapshotProvider(styleURL: styleURL)
             for shot in shots {
                 let snapshot = try await provider.snapshot(
-                    centerLat: shot.lat, centerLon: shot.lon, spanM: shot.spanM, bearing: 0,
-                    widthPx: 1080, heightPx: 1920
+                    CameraFrame(centerLat: shot.lat, centerLon: shot.lon, spanM: shot.spanM, bearing: 0),
+                    map: MapState(), widthPx: 1080, heightPx: 1920
                 )
                 let image = snapshot.image
                 XCTAssertEqual(image.width, 1080)

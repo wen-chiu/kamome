@@ -64,7 +64,7 @@ final class MapLibreSubstrateTests: XCTestCase {
         let provider = MapLibreSnapshotProvider(
             styleURL: URL(fileURLWithPath: "/tmp/style.json")
         )
-        let boundary: RecapSnapshotProviding = provider
+        let boundary: MapRenderer = provider
         XCTAssertNotNil(boundary)
     }
 

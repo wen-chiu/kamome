@@ -11,14 +11,6 @@ import KamomeTripComposer
 /// photo CGImages arrive pre-loaded (RecapModel owns PhotoKit), and all copy
 /// is formatted here so localization never enters KamomeExportEngine.
 enum RecapComposer {
-    struct Content {
-        let route: [CameraPath.Point]
-        let stops: [CameraPath.Point]
-        let stopCards: [RecapFrameCompositor.StopCard]
-        let titleCard: RecapFrameCompositor.TitleCard
-        let endCard: RecapFrameCompositor.EndCard
-    }
-
     /// Display-grade recap geometry. Segments matched to the road network
     /// (§4.4, `segment.matched_polyline`) contribute their snapped geometry
     /// at the tighter matched ε — the replay must follow real roads, never
@@ -30,8 +22,8 @@ enum RecapComposer {
         from segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
         epsilonM: Double,
         matchedEpsilonM: Double
-    ) -> [CameraPath.Point] {
-        segments.flatMap { item -> [CameraPath.Point] in
+    ) -> [RecapCoordinate] {
+        segments.flatMap { item -> [RecapCoordinate] in
             let source: (points: [Simplifier.Point], epsilonM: Double)
             if let encoded = item.segment.matchedPolyline,
                case let decoded = EncodedPolyline.decode(encoded),
@@ -41,48 +33,47 @@ enum RecapComposer {
                 source = (item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, epsilonM)
             }
             return Simplifier.douglasPeucker(source.points, epsilonM: source.epsilonM)
-                .map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+                .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
         }
     }
 
-    /// `photosByStop` maps stop id → the stop's card photo (highlight first).
-    /// Returns nil for trips the phantom guard should have kept out anyway
-    /// (no route points).
-    static func content(
+    /// Maps one trip's records into the style-independent `RecapTrip` (S5).
+    /// `photosByStop` maps stop id → the stop's selected deck photo *refs*
+    /// (highlight first, ≤ `deck_max_photos`) — refs, not bitmaps; the render
+    /// layer resolves them. `deck` + `stopHoldS` size each stop's dwell from its
+    /// photo count. Returns nil for trips the phantom guard should have kept out
+    /// anyway (no route points).
+    static func trip(
         trip: TripRecord,
-        route: [CameraPath.Point],
+        route: [RecapCoordinate],
         stops: [StopRecord],
         stats: TripStats?,
-        photosByStop: [String: CGImage]
-    ) -> Content? {
+        photosByStop: [String: [PhotoRef]],
+        deck: RecapDeck = RecapDeck(),
+        stopHoldS: Double = 1.5
+    ) -> RecapTrip? {
         guard route.count >= 2 else { return nil }
 
-        let stopPoints = stops.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
-        let cards = stops.map { stop in
-            RecapFrameCompositor.StopCard(
+        let tripStops = stops.map { stop -> RecapTrip.Stop in
+            let photos = photosByStop[stop.id] ?? []
+            return RecapTrip.Stop(
+                coordinate: RecapCoordinate(lat: stop.lat, lon: stop.lon),
                 name: stop.name ?? String(localized: "stop_unnamed"),
                 dayLabel: dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt),
                 detail: walkDetail(for: stop),
-                photo: photosByStop[stop.id]
+                photos: photos,
+                dwellS: photos.isEmpty ? stopHoldS : deck.dwellS(photoCount: photos.count)
             )
         }
 
-        return Content(
+        return RecapTrip(
             route: route,
-            stops: stopPoints,
-            stopCards: cards,
-            titleCard: RecapFrameCompositor.TitleCard(
-                title: trip.title,
-                subtitle: titleSubtitle(trip: trip, stats: stats)
-            ),
-            endCard: RecapFrameCompositor.EndCard(
-                statsLines: statsLines(stats: stats, stopCount: stops.count),
-                callToAction: String(localized: "recap_get_route"),
-                qrCode: RecapQRCode.image(
-                    for: shareURLString(tripId: trip.id),
-                    sidePx: Int(RecapStyle().qrSidePx)
-                )
-            )
+            stops: tripStops,
+            title: trip.title,
+            subtitle: titleSubtitle(trip: trip, stats: stats),
+            statsLines: statsLines(stats: stats, stopCount: stops.count),
+            callToAction: String(localized: "recap_get_route"),
+            shareURL: shareURLString(tripId: trip.id)
         )
     }
 

@@ -7,30 +7,26 @@ import MapKit
 /// keyframe. The returned projection wraps `snapshot.point(for:)`, so overlay
 /// drawing aligns with MapKit's actual tile layout — never reimplement the
 /// mercator math on top of it.
-public struct MapKitSnapshotProvider: RecapSnapshotProviding {
+public struct MapKitSnapshotProvider: MapRenderer {
     public struct SnapshotError: Error {}
 
     public init() {}
 
-    /// `bearing` is accepted for protocol conformance but ignored: this
-    /// north-up region snapshot is the retiring base map (handoff §3), and the
-    /// camera path only emits a non-zero bearing under `follow_heading_up`,
-    /// which requires the MapLibre substrate. Heading-up on MapKit would mean
-    /// switching to a rotated `MKMapCamera`, which isn't worth it here.
-    public func snapshot(
-        centerLat: Double,
-        centerLon: Double,
-        spanM: Double,
-        bearing: Double,
-        widthPx: Int,
-        heightPx: Int
-    ) async throws -> MapSnapshot {
+    /// Cannot rotate: this north-up region snapshot is the retiring base map
+    /// (handoff §3). The `CameraFrame.bearing` is honestly declared unsupported
+    /// (heading-up would mean a rotated `MKMapCamera`) rather than silently
+    /// accepted-and-ignored — the follow-cam resolver reads this.
+    public var capabilities: MapRendererCapabilities {
+        MapRendererCapabilities(supportsBearing: false, supportsHeadingUp: false)
+    }
+
+    public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
         let options = MKMapSnapshotter.Options()
-        let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
+        let center = CLLocationCoordinate2D(latitude: frame.centerLat, longitude: frame.centerLon)
         options.region = MKCoordinateRegion(
             center: center,
-            latitudinalMeters: spanM * Double(heightPx) / Double(widthPx),
-            longitudinalMeters: spanM
+            latitudinalMeters: frame.spanM * Double(heightPx) / Double(widthPx),
+            longitudinalMeters: frame.spanM
         )
         options.size = CGSize(width: widthPx, height: heightPx)
         #if canImport(UIKit)

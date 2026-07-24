@@ -19,13 +19,13 @@ public struct RecapRenderLoop {
 
     private let path: CameraPath
     private let compositor: RecapFrameCompositor
-    private let provider: RecapSnapshotProviding
+    private let provider: MapRenderer
     private let config: TrackingConfig.Export
 
     public init(
         path: CameraPath,
         compositor: RecapFrameCompositor,
-        provider: RecapSnapshotProviding,
+        provider: MapRenderer,
         config: TrackingConfig.Export
     ) {
         self.path = path
@@ -49,19 +49,16 @@ public struct RecapRenderLoop {
             // The camera frame carries the wide↔close span + heading-up bearing;
             // it centers on the trip during the title/end shots, the vehicle
             // through the body (CameraPath.cameraFrame).
-            let frame = path.cameraFrame(atTime: min(time, path.durationS))
+            let cameraFrame = path.cameraFrame(atTime: min(time, path.durationS))
+            let frame = CameraFrame(
+                centerLat: cameraFrame.centerLat, centerLon: cameraFrame.centerLon,
+                spanM: cameraFrame.spanM, bearing: cameraFrame.bearing
+            )
             let widthPx = config.frameWidthPx
             let heightPx = config.frameHeightPx
             let provider = self.provider
             let task = Task {
-                try await provider.snapshot(
-                    centerLat: frame.centerLat,
-                    centerLon: frame.centerLon,
-                    spanM: frame.spanM,
-                    bearing: frame.bearing,
-                    widthPx: widthPx,
-                    heightPx: heightPx
-                )
+                try await provider.snapshot(frame, map: MapState(), widthPx: widthPx, heightPx: heightPx)
             }
             fetches[keyframe] = task
             return task

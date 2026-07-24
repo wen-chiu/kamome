@@ -13,7 +13,7 @@ import UIKit
 ///
 /// **This is the only file in the codebase that may `import MapLibre`.** It
 /// mirrors the discipline that keeps `import MapKit` in `MapKitSnapshotProvider`
-/// and `import Photos` in `PhotoLibraryImportSource` — the `RecapSnapshotProviding`
+/// and `import Photos` in `PhotoLibraryImportSource` — the `MapRenderer`
 /// protocol *is* the boundary (ADR 2026-07-19), so MapLibre types never leak
 /// past here. CI enforces it (`.github/workflows/ci.yml` confinement grep).
 ///
@@ -26,7 +26,7 @@ import UIKit
 /// carries the rotation, so overlays still land on the road. Pitch stays 0 (the
 /// recap is top-down, not isometric) — extended additively if that ever changes
 /// (ADR 2026-07-19, deferred gap 1).
-public struct MapLibreSnapshotProvider: RecapSnapshotProviding {
+public struct MapLibreSnapshotProvider: MapRenderer {
     public struct SnapshotError: Error {}
 
     /// A style file already resolved against its tiles (see `RecapMapStyle`).
@@ -36,18 +36,18 @@ public struct MapLibreSnapshotProvider: RecapSnapshotProviding {
         self.styleURL = styleURL
     }
 
-    public func snapshot(
-        centerLat: Double,
-        centerLon: Double,
-        spanM: Double,
-        bearing: Double,
-        widthPx: Int,
-        heightPx: Int
-    ) async throws -> MapSnapshot {
-        let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
+    /// Rotates the map (`MLNMapCamera.heading`), so it drives the heading-up
+    /// follow cam (§4) — the substrate the anime hero car needs.
+    public var capabilities: MapRendererCapabilities {
+        MapRendererCapabilities(supportsBearing: true, supportsHeadingUp: true)
+    }
+
+    public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
+        let center = CLLocationCoordinate2D(latitude: frame.centerLat, longitude: frame.centerLon)
         let size = CGSize(width: widthPx, height: heightPx)
-        let zoom = Self.zoomLevel(spanM: spanM, widthPx: widthPx, latitude: centerLat)
+        let zoom = Self.zoomLevel(spanM: frame.spanM, widthPx: widthPx, latitude: frame.centerLat)
         let styleURL = self.styleURL
+        let bearing = frame.bearing
 
         // MLNMapSnapshotter is run-loop bound; drive it from the main queue and
         // hop back with the finished image. The snapshotter is retained by its

@@ -22,30 +22,16 @@ public struct MapSnapshot {
     }
 }
 
-/// Where base maps come from. `MapKitSnapshotProvider` is the shipping
-/// implementation; `FlatSnapshotProvider` keeps the pipeline deterministic
-/// for golden-frame tests and offline route-only renders.
-///
-/// `bearing` (deg, 0 = north-up) rotates the map heading-up for the follow-cam
-/// (§4). Providers that can't rotate (the retiring MapKit path) ignore it; the
-/// camera path only emits a non-zero bearing when `export.follow_heading_up` is
-/// on, which requires the MapLibre substrate.
-public protocol RecapSnapshotProviding {
-    func snapshot(
-        centerLat: Double,
-        centerLon: Double,
-        spanM: Double,
-        bearing: Double,
-        widthPx: Int,
-        heightPx: Int
-    ) async throws -> MapSnapshot
-}
-
 /// Deterministic no-map background: a solid fill with a local equirectangular
-/// projection centered on the camera. Same inputs → identical bytes, which is
-/// what the golden-frame gate tests hash against.
-public struct FlatSnapshotProvider: RecapSnapshotProviding {
+/// projection centered on the camera (Layer 1 `MapRenderer`). Same inputs →
+/// identical bytes, which is what the golden-frame gate tests hash against.
+public struct FlatSnapshotProvider: MapRenderer {
     public struct RenderError: Error {}
+
+    /// Rotates its projection for `bearing`, so heading-up stays deterministic.
+    public var capabilities: MapRendererCapabilities {
+        MapRendererCapabilities(supportsBearing: true, supportsHeadingUp: true)
+    }
 
     /// sRGB fill for the empty map.
     private let background: CGColor
@@ -54,14 +40,8 @@ public struct FlatSnapshotProvider: RecapSnapshotProviding {
         background = CGColor(srgbRed: red, green: green, blue: blue, alpha: 1)
     }
 
-    public func snapshot(
-        centerLat: Double,
-        centerLon: Double,
-        spanM: Double,
-        bearing: Double,
-        widthPx: Int,
-        heightPx: Int
-    ) async throws -> MapSnapshot {
+    public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
+        let centerLat = frame.centerLat, centerLon = frame.centerLon, spanM = frame.spanM, bearing = frame.bearing
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
                   data: nil,

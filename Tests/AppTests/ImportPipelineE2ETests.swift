@@ -46,15 +46,15 @@ final class ImportPipelineE2ETests: XCTestCase {
             matchedEpsilonM: config.matching.displayEpsilonM
         )
         XCTAssertGreaterThanOrEqual(route.count, 2)
-        let content = RecapComposer.content(
+        let recap = RecapComposer.trip(
             trip: detail.trip,
             route: route,
             stops: detail.stops,
             stats: nil,
             photosByStop: [:]
         )
-        XCTAssertNotNil(content, "imported trip must produce recap content unchanged")
-        XCTAssertEqual(content?.stops.count, 2)
+        XCTAssertNotNil(recap, "imported trip must produce recap data unchanged")
+        XCTAssertEqual(recap?.stops.count, 2)
     }
 
     func testTooFewGeotaggedPhotosIsRejected() async throws {

@@ -37,7 +37,7 @@ public struct RouteMatchOutcome: Equatable, Sendable {
 }
 
 /// Boundary for map matching (§4.4) — the same one-file-per-backend
-/// discipline as `RecapSnapshotProviding` (§0 boundary rule): OSRM types
+/// discipline as `MapRenderer` (§0 boundary rule): OSRM types
 /// stay inside `OSRMMatchProvider.swift`, and future backends (e.g. a foot
 /// profile for walk segments) conform here without touching callers.
 ///

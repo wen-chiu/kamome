@@ -23,7 +23,8 @@ class RecapRenderTestCase: XCTestCase {
 
     // Style colors as 8-bit sRGB, for pixel assertions.
     let routeRGB = RGB(red: 33, green: 115, blue: 242)
-    let headRGB = RGB(red: 255, green: 74, blue: 69)
+    // Vehicle marker body (RecapStyle.markerColor) — the car fills its center.
+    let markerRGB = RGB(red: 255, green: 74, blue: 69)
     let backgroundRGB = RGB(red: 237, green: 237, blue: 232)
     let cardRGB = RGB(red: 255, green: 255, blue: 255)
 
@@ -36,6 +37,7 @@ class RecapRenderTestCase: XCTestCase {
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, followHeadingUp: false,
+            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckSpanM: 600, deckLabelLeadS: 0.6,
             keyframeIntervalFrames: keyframeIntervalFrames,
             titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
         )
@@ -74,13 +76,22 @@ class RecapRenderTestCase: XCTestCase {
 
     func snapshot(centeredAt position: CameraPath.Position, config: TrackingConfig.Export) async throws -> MapSnapshot {
         try await FlatSnapshotProvider().snapshot(
-            centerLat: position.lat,
-            centerLon: position.lon,
-            spanM: config.cameraSpanM,
-            bearing: 0,
-            widthPx: config.frameWidthPx,
-            heightPx: config.frameHeightPx
+            CameraFrame(centerLat: position.lat, centerLon: position.lon, spanM: config.cameraSpanM, bearing: 0),
+            map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
         )
+    }
+
+    /// A solid-color test photo for deck rendering — distinct fills let a pixel
+    /// probe tell which photo the deck is showing.
+    func makeSolidImage(red: CGFloat, green: CGFloat, blue: CGFloat, side: Int = 16) throws -> CGImage {
+        let context = try XCTUnwrap(CGContext(
+            data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
+            space: try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB)),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(srgbRed: red, green: green, blue: blue, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+        return try XCTUnwrap(context.makeImage())
     }
 
     // MARK: - Pixel probes
@@ -135,22 +146,19 @@ class RecapRenderTestCase: XCTestCase {
 
 /// Counts provider hits so the keyframe cache is provably doing its job.
 /// Lock-guarded: the render loop prefetches snapshots concurrently.
-final class CountingProvider: RecapSnapshotProviding {
+final class CountingProvider: MapRenderer {
     private let inner = FlatSnapshotProvider()
     private let lock = NSLock()
     private var count = 0
+
+    var capabilities: MapRendererCapabilities { inner.capabilities }
 
     var requestCount: Int {
         lock.withLock { count }
     }
 
-    func snapshot(
-        centerLat: Double, centerLon: Double, spanM: Double, bearing: Double, widthPx: Int, heightPx: Int
-    ) async throws -> MapSnapshot {
+    func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
         lock.withLock { count += 1 }
-        return try await inner.snapshot(
-            centerLat: centerLat, centerLon: centerLon, spanM: spanM, bearing: bearing,
-            widthPx: widthPx, heightPx: heightPx
-        )
+        return try await inner.snapshot(frame, map: map, widthPx: widthPx, heightPx: heightPx)
     }
 }

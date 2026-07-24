@@ -109,7 +109,19 @@ public struct CameraPath {
     /// Fails on degenerate input (fewer than two points or zero length) —
     /// the phantom-trip guard keeps such trips out of the DB, so a caller
     /// asking anyway has a bug upstream.
-    public init?(route: [Point], stops: [Point], config: TrackingConfig.Export) {
+    ///
+    /// `stopHoldsS` gives each stop (indexed like `stops`) its own hold
+    /// duration — the photo deck makes a stop's dwell scale with its photo
+    /// count (§5, `RecapDeck.dwellS`). nil keeps every stop at the uniform
+    /// `export.stop_hold_s` (route-only / no-photo path, and the golden-frame
+    /// tests). Either way the total holds are still capped at
+    /// `export.max_hold_fraction` of the video so travel time never vanishes.
+    public init?(
+        route: [Point],
+        stops: [Point],
+        config: TrackingConfig.Export,
+        stopHoldsS: [Double]? = nil
+    ) {
         guard route.count >= 2 else { return nil }
         var cumulative = [0.0]
         cumulative.reserveCapacity(route.count)
@@ -126,7 +138,7 @@ public struct CameraPath {
 
         self.route = route
         self.cumulativeM = cumulative
-        timeline = Self.buildTimeline(anchors: anchors, totalM: totalM, config: config)
+        timeline = Self.buildTimeline(anchors: anchors, totalM: totalM, config: config, stopHoldsS: stopHoldsS)
         self.fps = config.fps
         durationS = config.targetDurationS
         frameCount = Int((config.targetDurationS * Double(config.fps)).rounded())
@@ -167,24 +179,37 @@ public struct CameraPath {
         .sorted { $0.distanceM < $1.distanceM }
     }
 
-    /// Time budget: holds first (capped at `max_hold_fraction`), the rest is
-    /// travel, split across legs in proportion to leg distance.
+    /// Time budget: holds first (their sum capped at `max_hold_fraction`), the
+    /// rest is travel, split across legs in proportion to leg distance. Each
+    /// anchor's hold is its per-stop `stopHoldsS` value (photo-deck length) or
+    /// the uniform `stop_hold_s` fallback; the cap scales every hold by one
+    /// factor so photo-heavy stops keep their relative weight.
     private static func buildTimeline(
         anchors: [(stopIndex: Int, distanceM: Double)],
         totalM: Double,
-        config: TrackingConfig.Export
+        config: TrackingConfig.Export,
+        stopHoldsS: [Double]?
     ) -> [TimelineEntry] {
         let targetS = config.targetDurationS
-        var holdS = config.stopHoldS
-        if !anchors.isEmpty {
-            holdS = min(holdS, targetS * config.maxHoldFraction / Double(anchors.count))
+        var holds = anchors.map { anchor -> Double in
+            if let stopHoldsS, anchor.stopIndex < stopHoldsS.count {
+                return max(0, stopHoldsS[anchor.stopIndex])
+            }
+            return config.stopHoldS
         }
-        let travelS = targetS - holdS * Double(anchors.count)
+        let totalHold = holds.reduce(0, +)
+        let cap = targetS * config.maxHoldFraction
+        if totalHold > cap, totalHold > 0 {
+            let factor = cap / totalHold
+            holds = holds.map { $0 * factor }
+        }
+        let travelS = targetS - holds.reduce(0, +)
 
         var timeline: [TimelineEntry] = []
         var clock = 0.0
         var legStartM = 0.0
-        for anchor in anchors {
+        for (index, anchor) in anchors.enumerated() {
+            let holdS = holds[index]
             let legM = max(0, anchor.distanceM - legStartM)
             let legS = travelS * legM / totalM
             timeline.append(

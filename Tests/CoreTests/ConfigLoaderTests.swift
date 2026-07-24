@@ -48,6 +48,11 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.wideSpanPadding, 1.15)
         XCTAssertEqual(config.export.zoomTransitionS, 0.8)
         XCTAssertFalse(config.export.followHeadingUp)
+        // Photo-deck pacing (§5, Chiu 2026-07-23).
+        XCTAssertEqual(config.export.deckPhotoHoldS, 0.8)
+        XCTAssertEqual(config.export.deckZoomS, 0.5)
+        XCTAssertEqual(config.export.deckSpanM, 600)
+        XCTAssertEqual(config.export.deckLabelLeadS, 0.6)
         XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
         XCTAssertEqual(config.export.titleCardS, 2.5)
         XCTAssertEqual(config.export.endCardS, 3.0)

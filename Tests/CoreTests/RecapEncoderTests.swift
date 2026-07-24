@@ -18,6 +18,7 @@ final class RecapEncoderTests: XCTestCase {
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, followHeadingUp: false,
+            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckSpanM: 600, deckLabelLeadS: 0.6,
             keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4, videoBitrateMbps: 5
         )
     }
