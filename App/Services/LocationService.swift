@@ -36,6 +36,10 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private var currentFilterM: Double = -1
     private var vehicle: VehicleType?
     private var isDwellRegionArmed = false
+    /// Timestamp of the last delivered fix, for the silent-death watchdog
+    /// (sampling.recovery_gap_s). nil right after (re)starting the standard
+    /// session — the first fix after a restart never triggers recovery.
+    private var lastDeliveryTs: Double?
 
     init(config: TrackingConfig) {
         self.config = config
@@ -65,13 +69,23 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         apply(policy: SamplingPolicyTable.policy(
             state: .recording, mode: .unknown, speedKmh: 0, vehicle: vehicle, config: config
         ))
+        lastDeliveryTs = nil
         manager.startUpdatingLocation()
+        // Trip-long safety net (2026-07-19 drive: the dwell region-exit wake
+        // restarted GPS but iOS suspended the app ~10 s later, losing 32 min
+        // of driving). Significant-change fixes cost ~nothing (§1.8) and keep
+        // waking the app, so the recovery watchdog always gets another shot
+        // at restarting a dead standard session.
+        if CLLocationManager.significantLocationChangeMonitoringAvailable() {
+            manager.startMonitoringSignificantLocationChanges()
+        }
         startMotionUpdates()
     }
 
     func stopUpdates() {
         disarmDwellRegion()
         manager.stopUpdatingLocation()
+        manager.stopMonitoringSignificantLocationChanges()
         motionManager.stopActivityUpdates()
         latestActivity = nil
         vehicle = nil
@@ -96,7 +110,16 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         region.notifyOnEntry = false
         manager.startMonitoring(for: region)
         isDwellRegionArmed = true
+        lastDeliveryTs = nil
         manager.stopUpdatingLocation()
+    }
+
+    /// The engine left dwell-pause on its own (a fix escaped the region —
+    /// e.g. a significant-change fix arriving before, or instead of, the
+    /// region-exit event). Bring GPS back up to match; no-op when the region
+    /// was never armed (gpsFallback plan) or the exit event already handled it.
+    func resumeActiveTracking() {
+        resumeAfterDwell()
     }
 
     /// Re-applies the sampling table when the engine's mode/speed changes.
@@ -163,6 +186,12 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         apply(policy: SamplingPolicyTable.policy(
             state: .recording, mode: .unknown, speedKmh: 0, vehicle: vehicle, config: config
         ))
+        // Re-assert before restarting: this runs inside a short region-exit
+        // background wake, and a session started without the background flag
+        // in effect dies when the wake window closes — the 2026-07-19 drive
+        // got exactly two fixes after resume, then 32 min of silence.
+        applyBackgroundCapability()
+        lastDeliveryTs = nil
         manager.startUpdatingLocation()
     }
 
@@ -181,6 +210,9 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
         guard region.identifier == Self.dwellRegionIdentifier else { return }
+        #if DEBUG
+        DriveTestLog.shared.regionExited()
+        #endif
         resumeAfterDwell()
     }
 
@@ -190,6 +222,20 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let newest = locations.last, !isDwellRegionArmed, vehicle != nil {
+            let ts = newest.timestamp.timeIntervalSince1970
+            if let previous = lastDeliveryTs, ts - previous >= config.sampling.recoveryGapS {
+                // The standard session died without any callback (iOS
+                // suspended the app); this fix is a significant-change wake —
+                // use its runtime window to bring the session back.
+                applyBackgroundCapability()
+                manager.startUpdatingLocation()
+                #if DEBUG
+                DriveTestLog.shared.gpsRecovered(gapS: ts - previous)
+                #endif
+            }
+            lastDeliveryTs = ts
+        }
         for location in locations {
             let sample = LocationSample(
                 ts: location.timestamp.timeIntervalSince1970,

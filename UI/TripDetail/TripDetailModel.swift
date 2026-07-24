@@ -41,16 +41,30 @@ final class TripDetailModel {
         }
         let unnamed = detail.stops.filter { $0.name == nil }
         if !unnamed.isEmpty {
-            namer.nameUnnamedStops(unnamed)
-            // Names land asynchronously; refresh shortly after.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
-                self?.reload()
+            // Reload as each name lands, not once on a timer: a photo-dense
+            // imported trip has many stops geocoded over ~30 s (§4.2 throttle),
+            // well past any single refresh.
+            namer.nameUnnamedStops(unnamed) { [weak self] in
+                self?.scheduleReload()
             }
         }
     }
 
     func reload() {
         detail = try? repository.detail(tripId: tripId)
+    }
+
+    /// Coalesces bursts of naming callbacks into at most one reload per runloop
+    /// tick (nearby stops can resolve from the geocode cache synchronously).
+    private var reloadScheduled = false
+    private func scheduleReload() {
+        guard !reloadScheduled else { return }
+        reloadScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.reloadScheduled = false
+            self.reload()
+        }
     }
 
     // MARK: - Days (S3 filter chips)
@@ -105,6 +119,11 @@ final class TripDetailModel {
 
     var photoAccessIsLimited: Bool {
         photoService.isLimitedAccess
+    }
+
+    /// True for photo-reconstructed trips — drives the S3 provenance note (§3).
+    var isReconstructed: Bool {
+        detail?.trip.tripSource.isReconstructed ?? false
     }
 
     /// Opens the system picker so a limited selection can grow, then

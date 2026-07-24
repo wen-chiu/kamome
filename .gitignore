@@ -4,3 +4,6 @@ xcuserdata/
 /.build
 /DerivedData
 .swiftpm/
+
+# Raw device-test artifacts (drive logs, sqlite dumps, personal photos) stay local
+Docs/tests/

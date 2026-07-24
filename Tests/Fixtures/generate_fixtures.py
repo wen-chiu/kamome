@@ -2,16 +2,32 @@
 """Deterministic synthetic GPX fixture generator for Kamome Phase 0 (spec §7).
 
 Regenerate with:  python3 Tests/Fixtures/generate_fixtures.py
-Paths are synthetic straight-line interpolations between anchor coordinates
-with Gaussian GPS noise — NOT road-matched. Phase 1 gates count stops and
-segments, not geometry fidelity. Each fixture's parameters are documented in
-its own file header comment.
+Dwells and walk loops are synthetic geometry with Gaussian GPS noise. Drive
+legs come in two flavors:
+
+- `Track.leg` — straight-line interpolation between anchors, NOT road-matched.
+  Phase 1 gates count stops and segments, not geometry fidelity.
+- `Track.route_leg` — road-following geometry from the local OSRM server
+  (`Docs/osrm-setup.md`), resampled to the requested speed/interval, same
+  noise model. Added for P3.5 §1: validating §4.4 map matching end-to-end
+  needs drive traces that are plausible GPS recordings of a real road trip —
+  the straight-line legs sit kilometers off-road (e.g. across Geographe Bay),
+  which the matching confidence gate rejects by design. Regenerating the
+  perth fixture therefore needs the WA extract server running; the checked-in
+  file is the artifact, so CI never touches the network.
+
+Each fixture's parameters are documented in its own file header comment.
 """
 
+import json
 import math
+import os
 import random
+import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+OSRM_URL = os.environ.get("KAMOME_OSRM_URL", "http://127.0.0.1:5001")
 
 HERE = Path(__file__).parent
 M_PER_DEG_LAT = 111_320.0
@@ -50,6 +66,43 @@ class Track:
             lat = start[0] + (end[0] - start[0]) * f
             lon = start[1] + (end[1] - start[1]) * f
             self._emit(lat, lon, 30, t + timedelta(seconds=duration * f))
+        return t + timedelta(seconds=duration)
+
+    def route_leg(self, start, end, speed_kmh, sample_s, t):
+        """Road-following leg: OSRM /route geometry between the anchors,
+        resampled to one point per sample_s at speed_kmh; returns arrival
+        time. Needs the local server (Docs/osrm-setup.md)."""
+        url = (f"{OSRM_URL}/route/v1/driving/"
+               f"{start[1]:.6f},{start[0]:.6f};{end[1]:.6f},{end[0]:.6f}"
+               f"?geometries=geojson&overview=full")
+        try:
+            body = json.load(urllib.request.urlopen(url))
+        except OSError as error:
+            raise SystemExit(
+                f"OSRM route request failed ({error}) — road-matched legs need the "
+                f"local server from Docs/osrm-setup.md at {OSRM_URL} "
+                "(override with KAMOME_OSRM_URL)"
+            )
+        shape = [(lat, lon) for lon, lat in body["routes"][0]["geometry"]["coordinates"]]
+
+        mps = speed_kmh / 3.6
+        step_m = mps * sample_s
+        self._emit(*start, 30, t)
+        walked = 0.0
+        next_emit = step_m
+        for a, b in zip(shape, shape[1:]):
+            seg = dist_m(a, b)
+            if seg == 0:
+                continue
+            while next_emit <= walked + seg:
+                f = (next_emit - walked) / seg
+                lat = a[0] + (b[0] - a[0]) * f
+                lon = a[1] + (b[1] - a[1]) * f
+                self._emit(lat, lon, 30, t + timedelta(seconds=next_emit / mps))
+                next_emit += step_m
+            walked += seg
+        duration = walked / mps
+        self._emit(*end, 30, t + timedelta(seconds=duration))
         return t + timedelta(seconds=duration)
 
     def dwell(self, center, minutes, t, sample_s=30, jitter_m=10):
@@ -114,30 +167,42 @@ def perth_margaret_river():
     busselton = (-33.6440, 115.3450)
     margaret_river = (-33.9550, 115.0750)
 
+    # Parked dwells use jitter_m=4: iid jitter sigma 10 m at 30 s sampling
+    # averages ~2.1 km/h of pseudo-motion — right on the knife-edge between
+    # speed_stationary_max_kmh (1.5) and walking, so whether a dwell
+    # live-pauses or melts into a walk segment used to depend on the rng
+    # draw. Sigma 4 (~1.1 km/h) is decisively stationary. The Bunbury and
+    # Busselton visits are decisively the *other* thing — the whole visit
+    # is an on-foot loop from the car (walk-visit stop, ADR 2026-07-18) —
+    # so the fixture's 2 dwells + 2 walk visits are structural, not luck.
     clock = datetime(2026, 2, 10, 0, 30, tzinfo=timezone.utc)  # 08:30 AWST
-    clock = t.leg(perth, mandurah, 90, 5, clock)
-    clock = t.dwell(mandurah, 25, clock)                       # STOP 1
-    clock = t.leg(mandurah, bunbury, 90, 5, clock)
-    clock = t.dwell(bunbury, 25, clock)                        # STOP 2
-    clock = t.walk_loop(bunbury, 25, 4.5, clock)               # WALK LOOP 1
-    clock = t.dwell(bunbury, 0.5, clock)                       # brief return to car (< dwell window)
-    clock = t.leg(bunbury, busselton, 85, 5, clock)
-    clock = t.dwell(busselton, 20, clock)                      # STOP 3
-    clock = t.walk_loop(busselton, 30, 4.0, clock, radius_m=400)  # WALK LOOP 2 (jetty)
-    clock = t.dwell(busselton, 0.5, clock)
-    clock = t.leg(busselton, margaret_river, 85, 5, clock)
-    t.dwell(margaret_river, 30, clock)                         # STOP 4
+    clock = t.route_leg(perth, mandurah, 90, 5, clock)
+    clock = t.dwell(mandurah, 25, clock, jitter_m=4)           # STOP 1 (parked)
+    clock = t.route_leg(mandurah, bunbury, 90, 5, clock)
+    clock = t.walk_loop(bunbury, 50, 4.5, clock)               # STOP 2 (walk visit)
+    clock = t.dwell(bunbury, 0.5, clock, jitter_m=4)           # brief return to car (< dwell window)
+    clock = t.route_leg(bunbury, busselton, 85, 5, clock)
+    clock = t.walk_loop(busselton, 50, 4.0, clock, radius_m=400)  # STOP 3 (jetty walk visit)
+    clock = t.dwell(busselton, 0.5, clock, jitter_m=4)
+    clock = t.route_leg(busselton, margaret_river, 85, 5, clock)
+    t.dwell(margaret_river, 30, clock, jitter_m=4)             # STOP 4 (parked)
 
     t.write("perth_margaret_river_day1.gpx", [
         "SYNTHETIC fixture (spec §7): Perth -> Mandurah -> Bunbury -> Busselton -> Margaret River.",
-        "Generated by generate_fixtures.py, seed=1. Straight-line legs, NOT road-matched.",
-        "~242 km straight-line (~280 km nominal by road), 2026-02-10, starts 08:30 AWST.",
+        "Generated by generate_fixtures.py, seed=1.",
+        "Drive legs are ROAD-MATCHED (P3.5 §1, 2026-07-19): geometry from the local OSRM",
+        "WA-extract server (Docs/osrm-setup.md), so the trace is a plausible GPS recording",
+        "a §4.4 /match can confidently snap. Earlier revisions used straight anchor-to-anchor",
+        "lines (km off-road, e.g. across Geographe Bay), which the confidence gate rejects.",
+        "2026-02-10, starts 08:30 AWST.",
         "Drive legs at 85-90 km/h sampled every 5 s; GPS noise sigma 4 m.",
-        "Exactly 4 stops (dwell >= 180 s within 80 m): Mandurah 25 min, Bunbury 25 min,",
-        "Busselton 20 min, Margaret River 30 min. Dwell sampled every 30 s, jitter 10 m.",
-        "2 walk loops (4-4.5 km/h, 10 s sampling, sharp departure/return): Bunbury 25 min,",
-        "Busselton jetty 30 min; each followed by a 30-s pause at the car (short enough",
-        "that the 180 s containment window never fills -> no extra stop).",
+        "Exactly 4 stops, decisively shaped (not rng-marginal — see generator comment):",
+        "- Mandurah 25 min + Margaret River 30 min: parked dwells, 30 s sampling,",
+        "  jitter 4 m (~1.1 km/h, below the 1.5 km/h stationary ceiling -> live pause).",
+        "- Bunbury 50 min + Busselton jetty 50 min: on-foot loop visits from the car",
+        "  (4-4.5 km/h, 10 s sampling, sharp departure/return) -> derived walk-visit",
+        "  stops; each followed by a 30-s pause at the car (short enough that the",
+        "  180 s containment window never fills -> no extra stop).",
         "Phase 1 gate: exactly 4 stops, >= 2 drive segments, >= 2 walk segments.",
     ])
 

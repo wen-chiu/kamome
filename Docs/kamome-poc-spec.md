@@ -1,11 +1,15 @@
 # Kamome 卡摸咩 — POC Design Spec & Build Plan
 
 **Product name:** Kamome / 卡摸咩 (かもめ, "seagull" — inspired by the Taiwanese classic 《快樂的出帆》; the seagull follows the traveler out and comes home with the memories)
-**Positioning:** GitHub for road trips. Record your journey with high route fidelity, turn it into an animated recap video, and publish it as a forkable route plan others can copy, edit, and drive. **Taiwan-first launch, English-ready by design.**
+**Positioning:** **"Kamome turns your road trips into stories you can relive and share."** (Owner-restated north star, 2026-07-20 — this line sits above every feature call.)
+
+**Two-layer product evolution (2026-07-20, Chiu — supersedes the earlier "passive-capture v1" framing).** The long-term vision is unchanged: *Kamome automatically remembers your journey and directs it into a travel film worth rewatching.* But the **first shipped product is deliberately smaller, publishable, and verifiable — the Replay MVP:** *pick a past trip's photos → Kamome rebuilds the route from their EXIF place + time, snaps it to real roads, and auto-generates a cool, shareable travel-path animation (MP4).* The MVP does **not** promise full passive background recording or the automatic story-directing; those are proven later (**Capture Beta**, **Story Director** — §7) and the architecture must not block them. The evolution is two layers: **(1) Replay MVP** — auto-generate a real-road trip animation; **(2) Story Director** — on top of the MVP, add automatic moment-selection, narrative, hero photos, pacing, and music, becoming a true trip-memory director. Do not cram Story Director into the MVP now. **Do not let MVP copy claim 12-day zero-touch capture or imperceptible battery** — those are Capture-Beta-validated promises, not launch claims (see §1, §7, §10).
+
+Founder motivation (Chiu, keep verbatim): *built first for myself — I love travelling but can't be bothered to organize; the trip ends and Kamome has already made the movie.* This is a **storytelling / memory** product, not a GPS or planning tool. Fork is the underlying mechanism (§3.1), not the marketing language: user-facing copy says **Save / Get this route / Inspired by**, never "fork" ("GitHub for road trips" is engineer-brain framing — ordinary travelers save and get inspired; they don't fork). **Taiwan-first launch, English-ready by design.**
 **Brand element:** the animated "you are here" head marker in the recap video is a small seagull, not a dot. This is the mascot and the app icon.
 **Platform:** iOS 17+, Swift 5.10+, SwiftUI. Base localization zh-Hant, second locale en. All user-facing strings in String Catalogs from Phase 0 — never hardcoded.
 **Audience for this doc:** Claude (Claude Code) as the implementing engineer. Chiu as product owner / reviewer.
-**Doc version:** 1.3 (2026-07-15) — battery-moat repositioning: passive capture tier (§1.8, §2.3), map matching promoted to core (§4.4), trip import (§4.7), phases renumbered (fork → Phase 6, backend → Phase 7), transactional monetization note (§1.6). v1.2 (2026-07-11) added Roadtrippers analysis, Taiwan-market adaptations, Kamome branding, handoff checklist & kickoff prompt.
+**Doc version:** 1.7 (2026-07-20) — **Replay MVP repositioning** (owner decision, `decisions.md` 2026-07-20). The first shipped product is redefined from "passive-capture v1" to the **Replay MVP**: photo-EXIF import → OSRM road reconstruction → souvenir-map recap → MP4 share, validated on **three real past trips**. Consequences: **Phase 3.5 is renamed Replay MVP** and absorbs **photo-EXIF import** (pulled forward from the old Phase 4); its gate becomes a **product release gate** (three shareable films), not a static-visual gate. The tracking/battery device gates (2 h drive, region-resume re-validation, long-duration background, process-death recovery, passive capture, ≥ 3-day battery, the "Arm once, forget it" promise) leave the release path for a new **Capture Beta** (Phase 5, renamed from Passive Capture Tier — the checklists are preserved and moved, never marked passed). **Story Director** (automatic moment-selection, narrative, hero photos, chapters/elision, licensed music + beat-sync) becomes **Phase 4** (renamed from Import & Map Matching — its EXIF half moved into the MVP; the Google Timeline importer is **dropped as redundant** — EXIF import covers past trips, in-app capture covers new ones; owner decision 2026-07-20). Story Director is **deterministic — no AI/LLM tokens** (scoring-and-selection over structured trip data, §7 Phase 4). Plans & Fork (Phase 6) and Backend (Phase 7) are unchanged and further deferred. **MP4 is the launch format; GIF is demoted to non-blocking.** Honest provenance added (§3, §6): `trip.source` distinguishes Kamome-recorded from reconstructed-from-photos, and UI copy never says "Verified Trip". Positioning de-overclaimed (header above). — v1.6 (2026-07-20) — recap visual system validated via a throwaway web prototype on real data (Chiu's 170-photo Iceland ring-road trip); owner sign-off "prototype 蠻成功的，收斂回 app". Findings + the data pipeline + engine source: `Docs/prototype/` (also `decisions.md` 2026-07-20). Locked-in constraints for §4.5/§7: (a) base map = **real geometry + hand-written subtractive style** = "紀念品地圖" (souvenir map), reaffirming the MapLibre substrate ADR; (b) stop photos = a **rotating photo deck at the stop location**, hero cross-fades through 3–8 photos at **0.8 s each** (not the old single card); (c) `CameraPath` must be a **vehicle-locked TravelBoast follow-cam** (vehicle is the subject, close heading-up zoom) — the prototype's one unmet requirement; top-down car is the default marker, seagull/scooter/bike swappable. Positioning line restated (above). Forward directions recorded: photo-EXIF import first (the prototype IS that importer, §4.7), video clips as auto-trimmed muted "beads", and royalty-free **beat-synced** music (bundled library + offline beat maps, events quantized to the beat; free=silent export, premium=in-app track). No architecture change — these constrain existing components (`RecapSnapshotProviding`, `CameraPath`, `OverlayTimeline`, `RecapTheme`, `ImportKit`). v1.5 (2026-07-19) — recap visual pivot (owner decision after reviewing the P3 demo artifact): the recap is a stylized, premium animated replay, not Apple-tile output — vision in `Docs/kamome-animation-vision.md`; recap base-map substrate moves MKMapSnapshotter → MapLibre Native + self-hosted vector tiles with Kamome-authored themed styles (ADR in `Docs/decisions.md` 2026-07-19; implementer guide `Docs/vector-tile-pipeline.md`); §0 gains rule 6 (storytelling engine + recognizable identity); §4.5 step 2 rewritten + visual quality bar added; Phase 3 scope frozen as the pipeline milestone; new **Phase 3.5 Recap Visual System** (OSRM §4.4 pulled forward → MapLibre substrate → Modern Minimal theme; no renumbering of P4–P7). v1.4 (2026-07-18) — fork demoted from positioning to mechanism: positioning line rewritten (memory-engine framing), §1.5 fork row relabeled P6 bet, §4.5 end card copy → "Get this route"; all user-facing copy uses Save / Get / Inspired by (S6/S7 screen wording settled at P6 — internal names, table `plan.forked_from`, and `.kamome` schema unchanged). v1.3 (2026-07-15) — battery-moat repositioning: passive capture tier (§1.8, §2.3), map matching promoted to core (§4.4), trip import (§4.7), phases renumbered (fork → Phase 6, backend → Phase 7), transactional monetization note (§1.6). v1.2 (2026-07-11) added Roadtrippers analysis, Taiwan-market adaptations, Kamome branding, handoff checklist & kickoff prompt.
 
 > **Naming due-diligence (do before locking bundle ID):** search App Store for existing "Kamome" apps, check TIPO (Taiwan) and JPO trademark registers in app/software classes — note JR Kyushu operates a Shinkansen named かもめ (different class, likely fine, verify anyway). **IP caution:** the song 《快樂的出帆》 inspires the *name only*. Never use its lyrics or melody in the app, recap videos, or marketing — the composition is almost certainly still in copyright. Original seagull branding only.
 
@@ -20,26 +24,29 @@ These override any default behavior:
 3. **Prefer boring tech.** No reactive frameworks beyond what SwiftUI requires. Use Swift Concurrency (async/await) only where the OS API forces it (location callbacks, photo fetches, video export). No Combine pipelines for business logic.
 4. **Every phase ends with a demo artifact** (screen recording script or exported file) placed in `Docs/demos/phaseN/`.
 5. **Hardware reality:** building/running requires Xcode on macOS and a physical iPhone for background-location and battery testing. The simulator + GPX fixtures cover logic testing only. Flag any step that needs the physical device instead of silently skipping it.
+6. **Kamome is a travel storytelling engine, not a GPS visualizer or vehicle animation engine.** (Added v1.5; full vision in `Docs/kamome-animation-vision.md`.) Two binding consequences: (a) the judgment criterion for every future camera movement, pause, transition, and visual effect is *does it serve the narrative of the journey* — not *does it display the data*; (b) a Kamome replay must never look like Apple/Google Maps with an animated route on top — the visual language must be distinctive enough to recognize a Kamome replay instantly, even with branding stripped. Corollary: the replay engine and the rendering theme are fully decoupled; Modern Minimal is merely the first theme implemented, never a structural assumption, and nothing theme-specific may leak into the replay engine.
 
 ---
 
 ## 1. Product Definition
 
 ### 1.1 One-sentence pitch
-"Arm it once when the trip starts, forget the app for 12 days — get a cinematic map video of your road trip and a route plan anyone can fork, with battery drain you can't measure."
 
-The zero-effort promise is differentiator #1 (§1.8): Relive makes you start/stop every activity — forget once and that leg is gone forever. Kamome's capture must never depend on the user remembering anything mid-trip.
+**Replay MVP (what ships first, what launch copy may claim):** "Pick a past trip's photos — Kamome rebuilds the route on real roads and turns it into a share-worthy travel animation, no journaling."
+
+**Long-term vision (validated later; NOT an MVP claim):** "Arm it once when the trip starts, forget the app for days — get a cinematic map video of your road trip, with battery drain you can't measure." This zero-effort passive-capture promise is the eventual differentiator #1 (§1.8), but it is proven in **Capture Beta** (§7), not at MVP launch. When capture does ship, its rule holds: Kamome's capture must never depend on the user remembering anything mid-trip (Relive makes you start/stop every activity — forget once and that leg is gone forever).
 
 ### 1.2 Personas
 - **P1 The Road Tripper (primary):** plans multi-day self-drive trips, wants a beautiful record and stats without manual journaling. (Reference user: an 8-day Perth → Margaret River → Albany loop.)
 - **P2 The Trip Planner:** hasn't gone yet; browses real driven routes, forks one, edits stops, uses it as the plan.
 - **P3 The Audience:** friends/family receiving the recap video or follow link. Never installs the app. They are the viral vector.
 
-### 1.3 Core loops
-1. **Capture loop:** Arm once at trip start → auto-track segments (drive/walk/transit) across days with zero mid-trip interaction → auto-detect stops → attach photos → End at trip end.
-2. **Share loop:** Trip → one-tap animated recap (MP4/GIF) → posted to socials → watermark/link drives installs.
-3. **Fork loop:** Published trip → viewer forks it into an editable Plan → drives it → publishes their version → network effect.
-4. **Import loop (cold start, §4.7):** Google Timeline / photo EXIF → last year's trip becomes a recap within minutes of install — value before the user's next vacation, and the acquisition hook.
+Ordered by when they ship. Loops 1–2 are the **Replay MVP**; loops 3–4 are later phases.
+
+1. **Import loop (§4.7) — the MVP's core loop:** photo EXIF → last year's trip becomes a recap within minutes of install, before the user's next vacation. This is the acquisition hook *and* the way Chiu dogfoods recap quality on real past trips.
+2. **Share loop:** Trip (imported or recorded) → one-tap animated recap (MP4) → posted to socials → watermark/link drives installs.
+3. **Capture loop (Capture Beta, §7):** Arm once at trip start → auto-track segments (drive/walk/transit) across days with zero mid-trip interaction → auto-detect stops → attach photos → End at trip end. Feeds the *same* recap pipeline as import; not in the MVP.
+4. **Fork loop (Phase 6):** Published trip → viewer saves it into an editable Plan → drives it → publishes their version → network effect. Deferred until the video product proves people share.
 
 ### 1.4 What we deliberately do NOT build (POC)
 - No social feed, comments, likes, or follower graph.
@@ -52,12 +59,12 @@ The zero-effort promise is differentiator #1 (§1.8): Relive makes you start/sto
 |---|---|---|---|---|---|
 | Auto route tracking | ✅ | ✅ (activity) | ❌ | ✅ | ✅ |
 | Road-snapped route fidelity | ❌ (straight lines, gaps — top user complaint) | partial | n/a (plans only) | ✅ (private) | ✅ **core feature** |
-| Fork a real driven route into an editable plan | ❌ | ❌ | ❌ (editorial guides only) | ❌ | ✅ **killer feature** |
+| Save a real driven route as an editable plan (fork mechanism) | ❌ | ❌ | ❌ (editorial guides only) | ❌ | ✅ **P6 bet — validated by §10, not assumed** |
 | Plan-vs-actual diff after the trip | ❌ | ❌ | ❌ | ❌ | ✅ |
-| One-tap animated route video with photos | ✅ (Trip Reels) | ✅ | ❌ | ❌ | ✅ (must match or beat quality) |
+| One-tap animated route video with photos | ✅ (Trip Reels) | ✅ | ❌ | ❌ | ✅ **Replay MVP — the launch product; must match or beat quality** |
 | Works with zero account / zero server | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Zero mid-trip interaction, multi-day battery story (§1.8) | ❌ (gaps are its top complaint) | ❌ (manual start/stop per activity) | n/a | ✅ (but private, no output) | ✅ **differentiator #1** |
-| Import past trips (Timeline export / photo EXIF) | ❌ | ❌ | ❌ | export-only | ✅ **acquisition hook** |
+| Zero mid-trip interaction, multi-day battery story (§1.8) | ❌ (gaps are its top complaint) | ❌ (manual start/stop per activity) | n/a | ✅ (but private, no output) | ✅ **eventual differentiator #1 — Capture Beta, not an MVP claim** |
+| Import past trips (photo EXIF) | ❌ | ❌ | ❌ | export-only | ✅ **Replay MVP core loop — photo-EXIF import** |
 | Taiwan / Asia market coverage | generic | generic | ❌ (US/CA/NZ/AU POI database) | generic | ✅ **home turf** |
 
 ### 1.6 Roadtrippers — why it doesn't kill this idea
@@ -81,14 +88,16 @@ The launch market changes real requirements, not just translations:
 
 ### 1.8 The battery moat — why passive capture beats Relive structurally
 
+> **Sequencing note (2026-07-20):** this section is the **Capture Beta** thesis (Phase 5), not a Replay MVP claim. The MVP ships the *import* application of this same matching pipeline (§4.7) — sparse geotagged photos snapped to roads — which needs no background capture and no battery proof. The passive-capture tier below is real and load-bearing for the long-term vision, but nothing in the MVP release depends on it, and MVP copy must not promise it.
+
 Relive-class trackers need high-frequency GPS because trails are not on any road network — the raw points *are* the route. A road trip is the opposite: ~99% of it happens on a known network, so sparse, nearly-free signals (iOS significant-location-change, ~500 m / minutes granularity, plus `CLVisit` for stops) can be **snapped back onto the road network with map matching (§4.4)** and look as good as continuous tracking — a car can only be where roads are. Relive cannot copy this: their core scenario has no network to snap to. This, not "they do outdoors, we do driving," is why the markets don't overlap.
 
 Product consequence — two capture tiers, user-selectable at Start (passive is the default for multi-day trips):
 
-- **Passive tier (Phase 5):** arm the trip once, forget the app for 12 days, battery impact indistinguishable from zero. Sparse fixes + CLVisit stops + map matching + daily CMMotionActivity backfill. This kills the "forgot to press start" failure mode entirely.
+- **Passive tier (Capture Beta, Phase 5):** arm the trip once, forget the app for days, battery impact indistinguishable from zero. Sparse fixes + CLVisit stops + map matching + daily CMMotionActivity backfill. This kills the "forgot to press start" failure mode entirely — but the claim is only usable once Capture Beta's ≥ 3-day battery + integrity gate passes on real hardware.
 - **High-fidelity tier (the Phase 1 engine):** continuous adaptive GPS (§2.3 table) for single-day drives where turn-level fidelity matters, off-network driving (gravel, private roads), or when matching confidence is low.
 
-Import (§4.7) is the same insight applied backwards: past trips already exist as sparse data (Google Timeline export, photo EXIF geotags) — the identical matching pipeline turns them into recaps. **One pipeline, three sources: passive capture, high-fidelity capture, import.**
+Import (§4.7) is the same insight applied backwards, and it is **what the MVP ships**: past trips already exist as sparse data (photo EXIF geotags) — the identical matching pipeline turns them into recaps with zero capture and zero battery cost. **One pipeline, three sources: import (MVP), passive capture (Capture Beta), high-fidelity capture (Capture Beta).**
 
 ---
 
@@ -114,10 +123,10 @@ Import (§4.7) is the same insight applied backwards: past trips already exist a
 │  │  trips / segments / trackpoints / stops /    │              │
 │  │  photo_refs / plans / plan_stops             │              │
 │  └──────────────────────────────────────────────┘              │
-│   PhotoKit (read-only)      MapKit (render)                    │
+│   PhotoKit (read-only)  MapKit (S2/S3)  MapLibre (recap, P3.5) │
 └────────────────────────────────────────────────────────────────┘
-        Phase 3 stretch → Phase 4 core sidecar: OSRM /match (Docker, self-hosted)
-        Phase 4 adds Core/ImportKit (Timeline + EXIF importers, §4.7)
+        Replay MVP (P3.5) core sidecar: OSRM /match (Docker, self-hosted)
+        Replay MVP adds Core/ImportKit (photo-EXIF importer §4.7)
         Phase 7: Supabase (Postgres+PostGIS, Auth, Storage)
 ```
 
@@ -126,21 +135,22 @@ Import (§4.7) is the same insight applied backwards: past trips already exist a
 | Decision | Choice | Rejected alternative | Why |
 |---|---|---|---|
 | Persistence | **GRDB + SQLite** | SwiftData | A full day of tracking ≈ 20–40k trackpoints. GRDB gives bulk inserts, raw SQL, and R*Tree spatial index. SwiftData bulk-insert performance and migration story are weaker, and a coding agent hits fewer undocumented quirks with GRDB. |
-| Maps | **MapKit** | Mapbox | Free, native, `MKMapSnapshotter` gives us video frames. Mapbox looks better but adds $ + SDK weight. Revisit at Phase 7 if snapshot styling is too limited. |
-| Map matching (snap-to-road) | **OSRM `/match`, self-hosted Docker** (Phase 4 — core) | Mapbox Map Matching API | Free, offline-capable for a region extract (e.g. Australia OSM ≈ 1 GB, Taiwan ≈ 100 MB), no per-request cost. Mapbox is easier but meters every request. Phases 1–3 ship raw polyline + Douglas-Peucker; from Phase 4 matching is **core infrastructure** — import (§4.7) and the passive tier (§1.8) are load-bearing on it — but trip completion must still never block on it. |
+| Maps (interactive screens S2/S3) | **MapKit** | Mapbox | Free, native, adequate for live HUD and trip detail. (Pre-v1.5 this row also covered recap frames via `MKMapSnapshotter`; that materialized as the §9 "too plain" risk — recap substrate split out below.) |
+| Recap base map (Phase 3.5) | **MapLibre Native + self-hosted vector tiles, Kamome-authored style per theme** | Fully custom renderer; Mapbox; restyling MapKit (no styling API exists) | Owner-rejected Apple-tile look (ADR 2026-07-19). Full control of colors, typography, and what is *omitted*; PMTiles = static-file hosting, no tile server; same regional OSM extracts as OSRM; checked-in tiles make golden frames bit-stable. Must clear the §4.5 quality bar or the decision gets revisited. Guide: `Docs/vector-tile-pipeline.md`. |
+| Map matching (snap-to-road) | **OSRM `/match`, self-hosted Docker** (app side landed in the Replay MVP / P3.5) | Mapbox Map Matching API | Free, offline-capable for a region extract (e.g. Australia OSM ≈ 1 GB, Taiwan ≈ 100 MB), no per-request cost. Mapbox is easier but meters every request. Phases 1–3 shipped raw polyline + Douglas-Peucker; from the Replay MVP matching is **core infrastructure** — photo-EXIF import (§4.7) is load-bearing on it (sparse geotags look wrong unsnapped), and the passive tier (§1.8, Capture Beta) later too — but trip completion/import must still never block on it. |
 | Transport mode | **CMMotionActivityManager primary, speed heuristic fallback** | ML model | Apple's on-device classifier (automotive/cycling/walking/stationary) is free and battery-neutral. Speed heuristic covers devices/regions where it's unreliable. |
-| Video | **MKMapSnapshotter frames → AVAssetWriter** | Screen-record a MapKit camera flight | Deterministic, background-renderable, testable frame-by-frame. |
+| Video | **Snapshot-provider frames → AVAssetWriter** (provider = MapLibre from Phase 3.5; MKMapSnapshotter was the P3 bootstrap) | Screen-record a map camera flight | Deterministic, background-renderable, testable frame-by-frame — property of the frame pipeline, independent of which provider renders the base map. |
 | Backend (Phase 7 only) | **Supabase** | Custom FastAPI | Auth + Postgres/PostGIS + storage + row-level security in one; solo-maintainable. |
 
-### 2.3 Battery budget (non-functional requirement)
-Two capture tiers (§1.8). The battery story is differentiator #1 — treat a regression here like data loss.
+### 2.3 Battery budget (non-functional requirement — applies to capture; **Capture Beta**, not the Replay MVP)
+Two capture tiers (§1.8). The battery story is the eventual differentiator #1 — treat a regression here like data loss. (The Replay MVP imports past trips and records nothing, so this NFR does not gate it; it gates Capture Beta.)
 
-**Passive tier (default for multi-day trips; Phase 5).** Target: **drain attributable to Kamome < 1%/day** — unmeasurable over a 12-day trip.
+**Passive tier (default for multi-day trips; Capture Beta, Phase 5).** Target: **drain attributable to Kamome < 1%/day** — unmeasurable over a multi-day trip.
 - `startMonitoringSignificantLocationChanges()` — cell-tower granularity (~500 m / ≥ 5 min); relaunches the app after suspension or termination, so an armed trip survives process death and reboots.
 - `CLVisit` monitoring — arrival/departure events become `stop` candidates (replaces §4.2's sliding-window dwell, which needs dense points).
 - Route fidelity comes from map matching (§4.4), not sampling density; low-confidence gaps render as "inferred" dashed lines.
 - Mode labeling: `CMMotionActivityManager.queryActivityStarting(from:to:)` backfill once per day (the API keeps ~7 days of history) classifies segments drive/walk/transit after the fact.
-- Tunables live in a `passive` block of `TrackingConfig.json` (visit min-dwell, matching confidence floor, backfill cadence — defaults set in Phase 5).
+- Tunables live in a `passive` block of `TrackingConfig.json` (visit min-dwell, matching confidence floor, backfill cadence — defaults set in Capture Beta).
 
 **High-fidelity tier (the Phase 1 engine; per-trip opt-in).** Target: **≤ 5% battery per 8h tracking day** (Polarsteps claims ~4%; that is the market bar).
 Strategy — adaptive sampling driven by motion state:
@@ -176,7 +186,7 @@ CREATE TABLE segment (
   mode TEXT NOT NULL,             -- drive | scooter | walk | cycle | transit | unknown
   started_at REAL NOT NULL,
   ended_at REAL,
-  matched_polyline TEXT           -- Google-encoded polyline AFTER map matching (Phase 4)
+  matched_polyline TEXT           -- Google-encoded polyline AFTER map matching (landed in Replay MVP / P3.5)
 );
 
 CREATE TABLE trackpoint (
@@ -231,7 +241,8 @@ CREATE TABLE plan_stop (
 **Rules:**
 - Photos are referenced by PhotoKit identifier only — never duplicated into app storage (storage + privacy win). Handle deleted-asset gracefully (placeholder tile).
 - `trip → plan` conversion and `plan → .kamome` export are pure functions over these tables; keep them in `Core/PlanKit/` with unit tests.
-- **Schema v2 (one forward migration, lands with Phase 4):** `trip.source TEXT NOT NULL DEFAULT 'recorded'` (`recorded | imported_timeline | imported_photos`), `segment.source TEXT` (`gps_hifi | gps_passive | timeline | exif`), plus `photo_ref.order_idx` (the deferred S4 reorder — bundled per `Docs/decisions.md` 2026-07-12).
+- **Honest provenance (2026-07-20).** `trip.source` is load-bearing, not cosmetic: it separates what Kamome **actually recorded** (`recorded`) from what was **reconstructed from photo locations** (`imported_photos`) or a Timeline export (`imported_timeline`). Both produce first-class recaps, but the distinction must surface in the UI (S1 card badge, S3 detail — §5). GPS and EXIF are **not** tamper-proof evidence; never present an imported trip as proof, and never use copy like "Verified Trip". This is a product rule, not a nicety (§6).
+- **Schema v2 (one forward migration, lands with the Replay MVP — photo import needs it):** `trip.source TEXT NOT NULL DEFAULT 'recorded'` (`recorded | imported_timeline | imported_photos`), `segment.source TEXT` (`gps_hifi | gps_passive | timeline | exif`), plus `photo_ref.order_idx` (the deferred S4 reorder — bundled per `Docs/decisions.md` 2026-07-12). The `gps_passive` value is written later by passive capture (Capture Beta). `imported_timeline` / `timeline` stay in the enum as **reserved forward-compat only** — no Google Timeline importer is planned (dropped as redundant, owner decision 2026-07-20; §4.7).
 
 ### 3.1 `.kamome` interchange file (the fork mechanism, pre-backend)
 A versioned JSON document — this is the product's contract, treat schema changes like API changes:
@@ -268,25 +279,31 @@ On trip completion (and on-demand): `PHAsset.fetchAssets` with predicate `creati
 
 ### 4.4 Route simplification & matching
 - Phase 1–3: Douglas-Peucker per segment, epsilon `simplify_eps_m` (default 15 m) for display; raw points kept in DB.
-- Phase 4 (**core**, promoted from stretch — §1.8): batch segments (≤100 pts/request) to OSRM `/match?geometries=polyline&tidy=true`; store result in `segment.matched_polyline`. One pipeline serves three sources: high-fidelity recordings (cosmetic win), passive-tier fixes, and imported Timeline/EXIF points (load-bearing — sparse data looks wrong without snapping). On failure (no OSRM reachable / confidence below `matching_confidence_min`), fall back to simplified raw polyline, mark segment `matched=false`, render "inferred" style. **Never block trip completion or import on matching.**
+- **Replay MVP / P3.5** (app side landed, `decisions.md` 2026-07-19; **core**, promoted from stretch — §1.8): batch segments (≤100 pts/request) to OSRM `/match?geometries=polyline&tidy=true`; store result in `segment.matched_polyline`. One pipeline serves three sources: imported photo-EXIF points (load-bearing — sparse geotags look wrong without snapping; this is the MVP's dependency), later imported Timeline points and passive-tier fixes (Capture Beta), and high-fidelity recordings (cosmetic win). On failure (no OSRM reachable / confidence below `matching_confidence_min`), fall back to simplified raw polyline, mark segment `matched=false`, render **"inferred" (honestly low-confidence) style** — the Replay MVP gate forbids inventing a route that crosses sea/mountain or a wrong road, so low-confidence legs must read as inferred, never as fact. **Never block trip completion or import on matching.**
 
 ### 4.5 Recap video (ExportEngine)
 Deterministic frame pipeline, 1080×1920 (9:16 social) default, 30 fps:
 1. Compute camera path: interpolate along full-trip polyline; speed-warp so total video = `target_duration_s` (default 30 s) regardless of trip length; ease-in/out at stops.
-2. For each frame: `MKMapSnapshotter` renders base map for camera position (cache tiles by region — snapshot per keyframe every N frames, cross-fade between, to keep render time sane), draw traveled polyline portion + animated head dot via CoreGraphics overlay.
+2. For each frame: a `RecapSnapshotProviding` provider renders the base map for the camera position (snapshot per keyframe every N frames, cross-fade between, to keep render time sane); the compositor draws the traveled route portion + animated head marker via CoreGraphics overlay, projecting through the snapshot's own projection. From Phase 3.5 the shipping provider is **MapLibre Native over self-hosted vector tiles with a Kamome-authored theme style** (ADR 2026-07-19; `Docs/vector-tile-pipeline.md`); `MapKitSnapshotProvider` was the P3 bootstrap, `FlatSnapshotProvider` keeps golden-frame CI deterministic. Boundary discipline: renderer SDK types never leak past the provider file (§0 rule 6 corollary).
 3. At each stop: 1.5 s hold, photo card animates in (highlight photo), stop name label, day badge.
-4. Title card (trip name, dates, distance) + end card (stats + "Fork this route" QR → share URL/file).
+4. Title card (trip name, dates, distance) + end card (stats + "Get this route" QR → share URL/file).
 5. Encode via `AVAssetWriter` (H.264). GIF export: same frames at 12 fps, 480 px wide, `ImageIO` with palette quantization.
-Acceptance bar: an 8-day, 1,200 km trip renders in **< 90 s on an iPhone 13-class device** and looks share-worthy. This feature is the marketing engine — over-invest here.
+Acceptance bar (**revised 2026-07-20**): each of the three real dogfood trips exports on a real iPhone in a **product-acceptable** time, **recorded per trip** via the S5 readout — no crash, no unacceptable memory pressure. The single "< 90 s on an iPhone 13-class device" number was a simulator-era target and is **not** re-used as a pass/fail line without fresh device data; it survives only as a rough sanity reference. What actually gates is Chiu's judgment that the film is worth sharing (§10). This feature is the marketing engine — over-invest here.
+
+The camera treatment for the MVP is a **vehicle-locked follow-cam** (§4.5 step 1 / prototype §2.3), which reads as *driving forward through terrain*. This is the MVP's primary dynamic — but it is **not an unchallengeable product dogma**: "the vehicle is always centered for the whole film" is an MVP simplification, not a permanent law. Story Director (§7) will make the follow-cam **one narrative shot among many** (chapter transitions, establishing shots, hero holds), so build `CameraPath` to emit the follow trajectory *and* explicit wide keyframes, never hardwiring "centered vehicle" as the only camera mode.
+
+**Visual quality bar (v1.5, judged during the Replay MVP as a design review — NOT the release gate):** the reason we carry self-hosted tiles instead of free Apple Maps is that MapLibre + a Kamome style sheet must produce output **clearly better-designed than native Apple Maps for journey replay**. Concretely: zero business-POI noise; deliberate use of empty space — subtractive cartography that shows only what serves the journey; distinctive road and route treatment; instantly recognizable Kamome identity with branding stripped (§0 rule 6). Judged by side-by-side stills against the P3 Apple-tiles artifact (`Docs/demos/phase3/`) at matched camera positions, reviewed by Chiu; a style sheet that fails side-by-side is not shippable, and if the bar proves unreachable the substrate decision itself is revisited (ADR 2026-07-19). **Scope correction (2026-07-20):** this side-by-side is a design checkpoint that keeps the substrate honest — it **does not replace** the Replay MVP release gate. The release gate is the full-video product judgment across three real trips (§10): "map looks prettier than Apple Maps" is necessary, not sufficient; "is this a travel-path animation worth publishing" is the real bar. The route must always follow real roads — never straight lines between GPS points (matching §4.4 is a Replay MVP prerequisite, already landed app-side). Themes are swappable without touching animation logic; **one theme (Modern Minimal) is the MVP target — multiple themes are explicitly not an MVP success condition**; how the seagull head marker (brand element, page 1) composes with the per-trip vehicle icon (§1.7) is settled during Modern Minimal theme design, not here.
 
 ### 4.6 Plan-vs-actual diff
 Given `trip.origin_plan_id`: match plan_stops to actual stops by name-similarity + distance < 1 km. Output: visited / skipped / unplanned-extra + dwell delta per stop + total distance delta. Rendered as a "trip report card." (Unique feature — no incumbent has it.)
 
-### 4.7 Trip import (the cold-start killer)
-Nobody should wait for their next vacation to see Kamome's value. Two importers (Phase 4, `Core/ImportKit/`), both feeding the normal pipeline (map matching §4.4 → stops → photo matching §4.3 → recap §4.5):
-- **Google Timeline:** parse the user-obtained Timeline export JSON (Google Takeout or the Maps in-app export; the format drifts — version-pin a parser per known variant, reject unknown variants with a friendly error, one fixture per variant in CI). Place visits → `stop` rows; activity-segment waypoints → trackpoints with `segment.source='timeline'`.
-- **Photo EXIF:** user picks a date range or album; geotagged photos cluster into stops + a coarse route (time-gap + distance heuristics, tunables in config). Photos are attached to their stops by construction — zero matching ambiguity.
-Imported trips are first-class: same S3 detail, same recap, same fork-to-plan. Acceptance bar: file selected → recap rendering starts in **< 30 s** for a 12-day Timeline export; the render itself meets §4.5's budget. This is the acquisition hook (§1.3 loop 4) — the first share happens before the user ever records.
+### 4.7 Trip import (the cold-start killer — and the Replay MVP's core)
+Nobody should wait for their next vacation to see Kamome's value. **One importer** (`Core/ImportKit/`, the **photo-EXIF importer**), feeding the normal pipeline (map matching §4.4 → stops → photo matching §4.3 → recap §4.5):
+- **Photo EXIF (Replay MVP — the MVP's core):** user picks a date range or album; geotagged photos cluster into `stop` rows + photo groups + a coarse route (time-gap + distance heuristics, tunables in config), which OSRM (§4.4) snaps to real roads. Photos are attached to their stops by construction — zero matching ambiguity. Imported trips write `trip.source = 'imported_photos'`, `segment.source = 'exif'` (§3), and must be honestly labeled as reconstructed-from-photos (§6), never as recorded. The prototype (`Docs/prototype/`) already proved this end-to-end on a real 13-day, 170-photo trip — that pipeline *is* this importer.
+
+**Google Timeline importer — dropped (owner decision 2026-07-20).** Considered and cut as redundant: photo-EXIF import already covers *past* trips, and in-app capture (Capture Beta) covers *new* ones, so a Timeline parser adds format-drift maintenance for little unique value. The `imported_timeline` enum value is reserved for forward-compat only (§3). Revisit only if real demand appears (`Docs/icebox.md`).
+
+Imported trips are first-class: same S3 detail, same recap, same fork-to-plan. Acceptance bar (Replay MVP): album/range selected → the trip reconstructs and a recap can render, in a **product-acceptable** time recorded per trip; the render itself meets §4.5's (revised) bar. This is the acquisition hook (§1.3 loop 1) — the first share happens before the user ever records.
 
 ---
 
@@ -294,11 +311,11 @@ Imported trips are first-class: same S3 detail, same recap, same fork-to-plan. A
 
 | # | Screen | Contents / behavior |
 |---|---|---|
-| S1 | Home / Trip List | Cards: cover map thumbnail, title, dates, distance. Big `Start Journey` button + `Import a past trip` (Timeline / photos, §4.7, from Phase 4). Empty state sells import first — value in minutes, not after the next vacation. |
+| S1 | Home / Trip List | Cards: cover map thumbnail, title, dates, distance, **source badge** (recorded vs reconstructed-from-photos — §3 honest provenance). **`Import from photos`** is the MVP hero action (§4.7 photo EXIF); `Start Journey` (live capture) arrives with Capture Beta. Empty state sells import first — value in minutes, not after the next vacation. |
 | S2 | Recording HUD | Live map, traveled polyline, current mode icon (car/walk), elapsed / km, battery-friendly note. Buttons: `Add Stop Note`, `Pause`, `End Trip`. Lock-screen Live Activity showing distance + duration (Phase 2 nice-to-have). |
-| S3 | Trip Detail | Full map with matched route colored by mode (drive = solid, walk = dotted), stop pins with photo thumbnails, day filter chips, stats strip (distance, drive time, stops, top speed). Timeline list below map. |
+| S3 | Trip Detail | Full map with matched route colored by mode (drive = solid, walk = dotted), **inferred/low-confidence legs shown honestly** (dashed), stop pins with photo thumbnails, day filter chips, stats strip (distance, drive time, stops, top speed), **provenance note** for imported trips ("reconstructed from photos", never "verified"). Timeline list below map. |
 | S4 | Stop Editor | Rename, note, reorder photos, mark highlight, delete false-positive stop, merge stops. |
-| S5 | Export | Aspect ratio picker (9:16 / 1:1 / 16:9), duration, GIF vs MP4, live preview of first seconds, progress bar, share sheet. |
+| S5 | Export | Aspect ratio picker (9:16 / 1:1 / 16:9), duration, **MP4 (launch format)** with GIF as an optional non-blocking extra, live preview of first seconds, progress bar, cancel, render-time readout, share sheet. |
 | S6 | Plan Editor | Day-grouped reorderable stop list + map. Search-to-add stop (MKLocalSearch). Per-day drive-time estimate (MKDirections, cached). Import `.kamome` = pre-filled editor with "Forked from …" banner. |
 | S7 | Convert / Fork | From S3: `Publish as Plan` → generates plan from stops → S6. From received file: `Fork` → S6. |
 | S8 | Settings | Tracking profile (Battery saver / Balanced / High fidelity → maps to config presets), permissions status + fix-it deep links, data export (GPX + JSON), delete all data. |
@@ -311,16 +328,31 @@ Design language: map is the hero on every screen; one accent color; dark-mode-fi
 
 - Location: request **When In Use** at first Start, escalate to **Always** with a priming screen explaining background tracking only during an active trip. Purpose strings must say exactly that.
 - `UIBackgroundModes = [location]`; expect App Review to ask for justification — include a review note + demo video showing tracking stops when the user ends a trip. Never track outside an active trip. This is both an ethics line and the reason review will pass.
-- Passive tier (Phase 5): requires **Always** at arming (significant-change and CLVisit deliver while the app is dead). The priming copy must say a multi-day trip keeps a low-power recorder alive until you End Trip. The review posture is unchanged — capture runs only between an explicit Start and End, even when that window spans 12 days, and End Trip verifiably stops all monitoring.
+- Passive tier (Capture Beta, Phase 5): requires **Always** at arming (significant-change and CLVisit deliver while the app is dead). The priming copy must say a multi-day trip keeps a low-power recorder alive until you End Trip. The review posture is unchanged — capture runs only between an explicit Start and End, and End Trip verifiably stops all monitoring. (Not in the Replay MVP: the MVP requests only Photos, no background location.)
 - Motion & Fitness permission for CMMotionActivity (graceful degradation to speed heuristic if denied).
 - Photos: `PHPhotoLibrary` **limited access compatible** — the picker flow must work if the user grants only selected photos.
-- Privacy nutrition label: location + photos, "data not collected" (true until Phase 7 — a genuine marketing point: "your location history never leaves your phone"). Timeline import strengthens the point: the exported file is parsed on-device and never uploaded.
+- Privacy nutrition label: location + photos, "data not collected" (true until Phase 7 — a genuine marketing point: "your location history never leaves your phone"). Import strengthens the point: photos and any Timeline export are parsed on-device and never uploaded.
+- **Honest provenance in copy (§3).** A recap built from imported photos is presented as *reconstructed from your photos*, never as a recorded or "Verified Trip". GPS/EXIF are not tamper-proof; do not imply they are. This is both an ethics line and a trust line for the share loop.
 
 ---
 
 ## 7. Build Plan — Phases & Hard Gates
 
 > Each phase = one milestone PR. Verification commands run from repo root. GPX fixtures live in `Tests/Fixtures/` and include `perth_margaret_river_day1.gpx` (synthetic 280 km drive with 4 stops + 2 walk loops), `taiwan_huandao_9days.gpx` (synthetic round-island loop, mixed car + scooter + one TRA rail leg — exercises transit heuristic and 環島 loop detection), and `city_walk_flapping.gpx` (mode-flapping torture test).
+
+**Phase map (revised 2026-07-20 — Replay MVP repositioning, `decisions.md`):**
+
+| Phase | Name | Status | Role |
+|---|---|---|---|
+| 0 | Skeleton | ✅ done | project, GRDB, config, CI |
+| 1 | Tracking Engine | ✅ done (device gate → Capture Beta) | high-fidelity capture |
+| 2 | Stops, Photos, Trip Detail | ✅ done | S3/S4, photo matching |
+| 3 | Recap Export Pipeline | ✅ engineering done (device items redistributed) | frame pipeline, MP4/GIF, S5 |
+| **3.5** | **Replay MVP** (recap from photos) | **← current, RELEASE TARGET** | import → souvenir map → follow-cam → MP4 share; 3-trip dogfood gate |
+| 4 | Story Director | after MVP proves sharing | **deterministic (no-LLM)** moment-selection, narrative, hero, chapters, pacing, music |
+| 5 | Capture Beta | after MVP (hardware-gated) | passive capture, battery, "arm once" — inherits the moved tracking device gates |
+| 6 | Plans & Get this route | further deferred | fork mechanism |
+| 7 | Backend & Community | post-POC | Supabase, web pages |
 
 ### Phase 0 — Skeleton (est. 1–2 sessions)
 Scope: Xcode project, GRDB integration, schema v1 + migrations, TrackingConfig.json loader, String Catalogs wired (zh-Hant dev language + en), CI (`xcodebuild test` via GitHub Actions macOS runner), repo structure below.
@@ -337,27 +369,71 @@ Scope: TrackingEngine state machine (idle → recording → dwell-paused → rec
 Scope: reverse-geocode names, PhotoKit matching §4.3, S3/S4 screens, stats computation, Douglas-Peucker display simplification.
 **Gate:** unit tests for photo→stop assignment (timestamp-only, GPS, conflict cases); a seeded demo trip renders S3 with photos on correct pins (screenshot in demo folder); limited-photo-access path manually verified.
 
-### Phase 3 — Recap Video/GIF (est. 3–5 sessions)
-Scope: ExportEngine §4.5, S5. Optional stretch (early start on Phase 4's core): OSRM matching §4.4 (Docker compose file + `Docs/osrm-setup.md`; Taiwan + Australia extracts).
-**Gate:** golden-frame tests (render frames 0/N/last for fixture trip, compare hash within tolerance); 1,200 km fixture trip exports MP4 < 90 s on device; exported GIF < 8 MB; Chiu posts one recap somewhere real and it doesn't embarrass him.
+### Phase 3 — Recap Export Pipeline (✅ engineering complete 2026-07-19; device items redistributed 2026-07-20)
+Scope: ExportEngine §4.5 pipeline mechanics (camera path, overlay timeline, frame compositor, MP4/GIF encoders, progress/cancel), S5. The recap's *visual system* is the Replay MVP / P3.5 (decisions.md 2026-07-19) — all of this phase's machinery survives that substrate swap. Its **development purpose is done**; but no unverified device item is marked passed (§0 rule 1).
+**Gate — engineering items (passed):** golden-frame tests (render frames 0/N/last for fixture trip, compare hash within tolerance) — done, CI green.
+**Gate — device items, redistributed 2026-07-20 (nothing faked passed; `Docs/device-test-P3.md`):**
+- **Fold into the Replay MVP gate:** on-device MP4 export, S5 UX / progress / cancel / share sheet, limited-photo re-check, per-trip render time recorded. GIF is now **non-blocking** — MP4 is the launch format, so the old "GIF < 8 MB" line is retired as a gate.
+- **Move to Capture Beta:** the 2 h real drive and region-resume re-validation (tracking/battery items, not recap-video items). The single "< 90 s on device" number is retired as a pass/fail line (§4.5 revised).
+- The original share-worthiness item ("Chiu posts one recap and it doesn't embarrass him") is now part of the **Replay MVP** gate, where the visual system can actually meet it.
 
-### Phase 4 — Import & Map Matching (est. 3–4 sessions) ← the acquisition hook
-Scope: OSRM matching §4.4 as core infrastructure (if not landed as Phase 3 stretch); schema v2 (§3 rules); `Core/ImportKit/` — Google Timeline importer + photo-EXIF importer §4.7; S1 import entry point; imported trips flow through stop-naming/photo/recap pipelines unchanged.
-**Gate:** fixture Timeline export (in `Tests/Fixtures/`, one per known format variant) imports to a trip with expected stop count and total distance; EXIF importer clusters a fixture photo set into expected stops; matched polyline for `perth_margaret_river_day1.gpx` stays on the road network (assert via recorded OSRM responses replayed in CI; live-OSRM run documented in demo folder); device demo: import → recap end-to-end, artifact in `Docs/demos/phase4/`.
+### Phase 3.5 — Replay MVP (recap from photos) ← the first shippable product / RELEASE TARGET
+Renamed & rescoped 2026-07-20 (decisions.md; was "Recap Visual System"). Ships the loop **pick past photos → reconstruct trip → snap to real roads → souvenir-map recap → MP4 → share.** Work order and full detail in `Docs/handoff-P3.5.md`; the OSRM matching app side is already landed (do not redo). Sequence:
+1. **Photo EXIF import (§4.7)** — `Core/ImportKit/` + schema v2 (`trip.source` / `segment.source`, honest provenance §3). Pick an album / date range → cluster geotagged photos into stops + photo groups + a coarse route → OSRM snap (§4.4). Imported trips flow through the existing Trip Detail (S3), RecapComposer, and ExportEngine **unchanged**. The prototype (`Docs/prototype/`) is this importer, proven on a real 13-day trip.
+2. **MapLibre souvenir-map substrate** — `MapLibreSnapshotProvider` behind the existing `RecapSnapshotProviding` boundary; real geometry + Kamome hand-written **subtractive** style (no generic nav map, no POI noise); MapLibre types confined to that one file; no abstraction layer without a consumer. Guide: `Docs/vector-tile-pipeline.md`.
+3. **Modern Minimal theme** — the ONE publishable theme. Multiple themes are **not** an MVP success condition; theme swap stays feasible via the boundary but is not a product deliverable to spend time proving.
+4. **Vehicle-focused follow-cam** (§4.5 step 1) — close, heading-aware follow trajectory as the primary dynamic; wide shots as explicit keyframes. "Centered vehicle for the whole film" is an MVP simplification, **not dogma** — Story Director makes it one shot among many.
+5. **Basic photo deck** — deterministic 3–8 photos @ ~0.8 s at the real location (OverlayTimeline). Labeled explicitly as the MVP's **basic** photo presentation, not final Story Director; no long-term assumption that every stop has equal narrative weight.
+6. **Three real-trip dogfood** — Chiu's three different past trips, each run fully in-app: photos import → matching → recap → MP4 → share. **No hand-edited DB, no prototype-script data-patching, no CapCut / external-tool rescue.**
+7. **TestFlight / public demo** — only after the three trips pass = release candidate.
 
-### Phase 5 — Passive Capture Tier (est. 3–5 sessions) ← the battery moat
-Scope: significant-location-change + CLVisit adapter in `LocationService`; armed-trip persistence across process death + relaunch resume (SLC launch key); passive samples → matching → segments; CMMotionActivity daily backfill; tier choice at Start (passive default for multi-day); `passive` config block; S2 HUD passive variant ("recording quietly — battery-free").
-**Gate:** sparse-fix replay fixture (`perth_margaret_river_day1` downsampled to SLC density) produces a matched route within tolerance of the dense-replay route; process-kill/relaunch test preserves the armed trip; **physical device test: ≥ 3-day armed period, drain attributable to Kamome < 1%/day, route + stops correct — Chiu signs off** (checklist `Docs/device-test-P5.md`). **This gate = v1 complete. Ship to TestFlight, recruit 10 road trippers** (≥ half from Taiwan 環島/road-trip communities, §10).
+**Replay MVP hard gate (a product release gate — replaces the old static-visual gate):**
+- Three real trips of **different character** all import successfully from photos.
+- All three complete **entirely in-app**: import → route reconstruction → recap → MP4 → share — with **no DB edits and no repo-external tools** to fix results.
+- The route has **no obvious sea-crossing / mountain-crossing straight line and no gross wrong-road**; low-confidence inference is presented **honestly** (inferred style, §4.4), never as fact.
+- All three films are ones **Chiu genuinely wants to keep and share**.
+- **≥ 1 actually published publicly**, without external-editing rescue.
+- **Limited Photo Library path passes on a real device.**
+- All three export **stably on a real iPhone** — no crash, no unacceptable memory pressure.
+- **Per-trip export time recorded** (S5 readout), judged **product-acceptable** — the retired single < 90 s number is not the criterion.
+- MapLibre-vs-Apple-Maps side-by-side may stay as a **design review** but does **not** replace the full-video product judgment.
+- The final criterion is **not "the map looks prettier" but "is this a travel-path animation worth publishing".**
+"Three real trips" stays a **hard** condition — never downgraded to a single video. **Chiu signs off.** Demo artifacts in `Docs/demos/phase3_5/`. **This gate = Replay MVP release candidate.**
 
-### Phase 6 — Plans & Fork (est. 3–4 sessions; start only if v1 TestFlight validates capture + import + recap)
-Scope: plan tables, S6/S7, trip→plan conversion, `.kamome` export/import + URL scheme, plan-vs-actual diff §4.6, drive-time estimates. Stretch: 環島 loop detection + progress ring + badge (§1.7).
+### Phase 4 — Story Director (est. TBD) ← only after the Replay MVP proves films get shared
+Renamed 2026-07-20 (was "Import & Map Matching"): matching already landed and the photo-EXIF importer moved into the Replay MVP, so **no importer remains here** (the Google Timeline importer was dropped as redundant — §4.7). This phase turns *Replay* (faithful playback) into *direction* — the product that **dares to choose and to omit**. Start only once the Replay MVP has real evidence people share the films.
+
+**Feasibility — deterministic, no AI/LLM tokens (owner constraint 2026-07-20).** Story Director is a **scoring-and-selection engine over structured trip data** (stops, segments, photos, timestamps, geography) — pure algorithm, no LLM, no network, no per-call cost, and deterministic (which *keeps* golden-frame CI stable rather than breaking it). Moment salience = a weighted sum of photo count, `is_highlight`, dwell duration, geographic novelty (distance from the last kept moment), and day-boundary signals — weights are `TrackingConfig.json` tunables; select top-N with non-maximum suppression for spacing; omit the rest and speed-warp the gaps; scale per-photo hold by salience. Hero-photo pick uses **on-device Vision** (saliency / face detection — free, local, no tokens, no network, not an LLM; owner-confirmed 2026-07-20) to rank a stop's photos, falling back to `is_highlight` → nearest-the-dwell-midpoint → chronological when Vision yields no signal. Vision confined to its own boundary file (SDK-confinement rule); its scores are cached so re-exports stay deterministic. The manual "replace / remove" controls are the taste escape hatch. Scope:
+- Automatic selection of **5–8 key moments**, ranked by photos, dwell time, geographic change, `is_highlight`, and day transition.
+- **Hero photo** treatment; **chapters & elision**; **variable photo dwell pacing** (drop the MVP's equal-weight simplification).
+- A few light **"replace this scene / remove this stop"** controls — director's touch-ups, not a full editor.
+- **Video beads** — auto-trim 2–3 s, muted, hard-capped, deterministic (icebox constraints; golden-frame-safe).
+- **Licensed music + beat-sync** — bundled royalty-free library + offline beat maps, recap events quantized to the beat; free = silent export, premium = in-app track (§1.6 transactional).
+Core principle: **Kamome is ultimately not a full playback of all trip data — it is a travel director that dares to select and to omit.** The selection algorithm above *is* that director — deterministic, not learned.
+**Gate:** defined when the phase starts; do not design now.
+
+### Phase 5 — Capture Beta (est. 3–5 sessions) ← the passive-capture / battery moat, now a beta *after* the video product
+Renamed & resequenced 2026-07-20 (was "Passive Capture Tier / v1"). This is where the long-term "arm once, forget it" promise is finally built and proven — the promise the Replay MVP deliberately does **not** claim. Scope: significant-location-change + CLVisit adapter in `LocationService`; armed-trip persistence across process death + relaunch resume (SLC launch key); passive samples → matching → segments; CMMotionActivity daily backfill; tier choice at Start (passive default for multi-day); `passive` config block; S2 HUD passive variant ("recording quietly — battery-free").
+
+**Open question — what does capture add over photo reconstruction? (owner-raised 2026-07-20, decide from MVP feedback, do not assume).** Since photo-EXIF import already reconstructs most photo-rich trips, Capture Beta must earn its background/battery engineering by selling the **three things photos structurally cannot**: (1) a **truth-path** — the actual road every turn, not an OSRM guess between sparse photos that can pick the wrong parallel road or miss an unphotographed detour (this *is* the `recorded` vs `reconstructed-from-photos` line, §3); (2) **stops/scenes with no photo** (a meal, gas, a viewpoint you didn't shoot) — invisible to EXIF; (3) **true zero-effort** — you didn't even have to take photos (scooter 環島, night, rain, driving-focused trips), the purest form of the founding motivation. Whether these justify the build is validated after the MVP, not presumed here.
+**Gate — inherits the tracking/battery device items moved here 2026-07-20 (checklists preserved in `Docs/device-test-P1.md` / `-P3.md` / `-P5.md`, none faked passed):**
+- Sparse-fix replay fixture (`perth_margaret_river_day1` downsampled to SLC density) produces a matched route within tolerance of the dense-replay route.
+- Process-kill / relaunch preserves the armed trip (process-death recovery).
+- **2 h real drive** and **region-resume re-validation** — moved out of the old Phase 3 gate (device-test-P3 items C + H's drive).
+- **Physical device: ≥ 3-day armed period, drain attributable to Kamome < 1%/day, route + stops correct — Chiu signs off** (`Docs/device-test-P5.md`).
+- **Only after this gate** is "Arm once, forget it" validated and usable in product copy.
+
+### Phase 6 — Plans & Get this route (est. 3–4 sessions; further deferred 2026-07-20)
+Do not start until **both** the Replay MVP and Story Director have real sharing evidence — plan/fork must never block or delay the video product. Scope: plan tables, S6/S7, trip→plan conversion, `.kamome` export/import + URL scheme, plan-vs-actual diff §4.6, drive-time estimates. Stretch: 環島 loop detection + progress ring + badge (§1.7).
+
+**Forward note (owner, 2026-07-20 — discuss later, do not design now).** Plans is where **captured road-detail data** earns unique value: a shared "Get this route" from *recorded* driving is higher-fidelity than one reconstructed from a stranger's photos — so this phase benefits from Capture Beta existing. Community route-sharing is also the intended **virality engine** (share loop → installs). This links Capture Beta → Plans; sequencing is a later discussion.
 **Gate:** round-trip property test (trip → plan → file → import → identical plan); fork lineage preserved; diff report correct on fixture (planned 6 stops, drove 5 + 1 extra → report says exactly that). **This gate = POC complete.**
 
 ### Phase 7 — Backend & Community (post-POC, only if Phase 6 telemetry says people fork)
 Scope: Supabase auth (Sign in with Apple), publish plan → public web page (Next.js or Supabase edge-rendered) with map + "Open in app" fork button, PostGIS storage, route browse/search by region. Web page is the SEO/discovery surface ("best Perth to Albany road trip route" queries).
 **Gate:** defined later; do not design now.
 
-**Total estimate: Phases 0–5 (v1) ≈ 15–24 Claude Code sessions; + Phase 6 (POC complete) ≈ 18–28.** Budget calendar time around Phase 1, 3 and 5 device testing — those need your hands, your car, and (Phase 5) several ordinary days of carrying the phone.
+**Estimates (revised 2026-07-20).** The near-term release is the **Replay MVP** (through Phase 3.5) — the remaining MVP build is import + substrate + theme + follow-cam + photo deck, then the three-trip dogfood day. **Story Director** (Phase 4) and **Capture Beta** (Phase 5) follow the MVP; Plans (6) and Backend (7) after. Budget calendar time for the Replay MVP device day (Chiu's iPhone + three real past-trip photo sets) and, later, for Capture Beta's several ordinary days carrying the phone with a trip armed.
 
 ---
 
@@ -390,29 +466,38 @@ Conventions: `@Observable` view models; repositories are the only layer touching
 |---|---|---|
 | iOS kills background tracking → gaps (the exact failure users crucify Polarsteps for) | High | Always-authorization + background mode + region-monitor resurrection at dwells; on relaunch, stitch gap with MKDirections route between last/first points and mark it "inferred" visually. |
 | Battery > 5%/day | Medium | Adaptive table is config-driven — tune on real drives; Battery Saver preset. |
-| MKMapSnapshotter too slow/plain for video | Medium | Keyframe + crossfade strategy first; if quality insufficient, Phase-3 spike: Mapbox static images API behind the same FrameSource protocol. |
+| ~~MKMapSnapshotter too slow/plain for video~~ **Materialized 2026-07-19** — owner rejected the Apple-tile look outright | — | Recap substrate replaced: MapLibre + self-hosted vector tiles, Phase 3.5 (ADR 2026-07-19). Keyframe + crossfade rendering strategy survives unchanged. |
+| Kamome style sheet fails the §4.5 quality bar (MapLibre output not clearly better than Apple Maps for replay) | Medium | Side-by-side design review during the Replay MVP before theme work is declared done (a checkpoint, not the release gate — §4.5); iterate style JSON (cheap — no code); if the bar proves unreachable, revisit the substrate ADR rather than shipping a mediocre look. |
+| Imported recap read as recorded fact (route reconstructed from photos mistaken for a verified GPS trip) | Medium | Honest provenance is a product rule (§3/§6): `trip.source` badge on S1/S3, "reconstructed from photos" copy, inferred legs drawn dashed; never "Verified Trip". A wrong-road or sea-crossing inference must read as inferred — the Replay MVP gate rejects gross fabrication. |
+| Self-hosted vector tiles add ops/size burden | Medium | PMTiles = single static file per region, no tile server; regional extracts only (TW ≈ 100 MB OSM, matching OSRM's footprint); tile generation is a documented offline step (`Docs/vector-tile-pipeline.md`), not runtime infrastructure. |
 | App Review rejects background location | Low-Med | Tracking only during explicit trips, review notes + video, honest purpose strings. |
-| Passive tier fidelity: SLC too sparse, or matcher snaps to the wrong parallel road | Medium | Confidence gating + "inferred" rendering; per-trip high-fidelity opt-in; tune against real multi-day wear before v1 TestFlight (Phase 5 gate). |
-| Google Timeline export format drift breaks the importer | Medium | Versioned parser per known variant, friendly "unsupported version" error, one CI fixture per variant. |
+| Passive tier fidelity: SLC too sparse, or matcher snaps to the wrong parallel road | Medium | Confidence gating + "inferred" rendering; per-trip high-fidelity opt-in; tune against real multi-day wear at the Capture Beta gate (Phase 5) — not an MVP concern. |
 | Fork loop needs a network no solo dev has | High (business risk, not tech) | `.kamome` file works peer-to-peer day one; build-in-public content channel is the distribution hedge; Phase 7 web pages capture search traffic. |
 | Scope creep toward Polarsteps parity | High | §1.4 is a contract. New feature ideas go to `Docs/icebox.md`, not the sprint. |
 | Name/IP conflict (Kamome trademark; 《快樂的出帆》 music rights) | Low-Med | Trademark search (App Store, TIPO, JPO) before bundle-ID lock; name inspiration only — zero lyrics/melody anywhere. |
 
 ---
 
-## 10. Success Criteria (v1 decision after Phase 5 + 4 weeks of TestFlight; fork decision after Phase 6)
+## 10. Success Criteria (staged to the phase map, §7)
 
-v1 (validates capture + import + recap — "will anyone pay for a trip animation?"):
+Decisions are staged: the **Replay MVP** release is judged first, **Capture Beta** and the fork bet later. Restructured 2026-07-20 — the old "passive-capture v1" criteria moved to Capture Beta, not deleted.
+
+### Replay MVP — release-candidate gate (Chiu, before any TestFlight)
+The §7 Phase 3.5 hard gate, restated as the go/no-go: three real past trips of **different character** each go **photos → import → route reconstruction → recap → MP4 → share, entirely in-app** — no DB edits, no repo-external tools; routes are honest (no gross sea/mountain/wrong-road fabrication; low confidence shown as inferred); all three films are ones Chiu wants to keep and share; **≥ 1 published publicly** without external editing; limited-photo path passes on device; stable export on a real iPhone (no crash, acceptable memory); per-trip export time recorded and product-acceptable. The bar is **"worth publishing," not "prettier map."** "Three trips" is hard — never downgraded to one.
+
+### Replay MVP — market validation (after TestFlight / public demo)
+- ≥ 5 of 10 testers **import a past trip from photos** in their first session (the cold-start hook working).
+- ≥ 3 recap videos **voluntarily shared** by testers.
+- ≥ 1 payment signal for HD / no-watermark export (fake-door price probe is fine at this stage).
+- Tester pool: recruit at least half from Taiwan 環島 / road-trip communities so localization and scooter mode get real coverage.
+
+### Capture Beta — success criteria (the old "passive-capture v1" bar, moved here; **not** MVP criteria)
 - ≥ 7 of 10 testers complete a real trip with **zero mid-trip interaction** (not just zero mid-drive).
 - Battery complaint count: 0; passive-tier drain < 1%/day on tester devices.
-- ≥ 5 of 10 testers import a past trip in their first session (the cold-start hook working).
-- ≥ 3 recap videos voluntarily shared by testers.
-- ≥ 1 payment signal for HD/no-watermark export (fake-door price probe is fine at this stage).
-- Your own verdict after using it — passive tier — on the Feb 2027 WA trip; that trip is the ultimate acceptance test.
-- Tester pool: recruit at least half from Taiwan 環島/road-trip communities so localization and scooter mode get real coverage.
+- Chiu's own verdict after using the passive tier on the Feb 2027 WA trip — the ultimate *capture* acceptance test (the recap quality is already validated at the Replay MVP gate).
 
-Phase 6 continue/kill (the fork bet, decided only after v1 passes):
-- ≥ 1 organic fork (someone imports someone else's `.kamome`).
+### Phase 6 continue/kill (the fork bet, decided only after the video product proves sharing)
+- ≥ 1 organic fork (someone saves & gets someone else's `.kamome`).
 
 ---
 
@@ -420,7 +505,7 @@ Phase 6 continue/kill (the fork bet, decided only after v1 passes):
 
 ### 11.1 Human prerequisites — Chiu does these once, Claude Code cannot
 1. **Mac with Xcode 16+** and command line tools; a **physical iPhone** with a cable (needed from Phase 1 gate onward).
-2. **Apple Developer:** free personal team is enough through Phase 4 (7-day dev provisioning, background location works in dev builds). Paid Program (US$99/yr) required at Phase 5 for v1 TestFlight — defer the cost.
+2. **Apple Developer:** free personal team is enough for most of the Replay MVP (7-day dev provisioning). Paid Program (US$99/yr) is required at the **Replay MVP TestFlight** (Phase 3.5 gate) — the first time the cost is unavoidable.
 3. `brew install xcodegen swiftlint` — the Xcode project is **generated from `project.yml` via XcodeGen**, never hand-edited. Rationale: `.pbxproj` is merge-hostile and agent-hostile; a YAML-defined project keeps every change reviewable in diffs.
 4. Create the GitHub repo (private), default branch `main`, empty.
 5. Bundle ID: use placeholder `com.chiu.kamome.dev` until the trademark check (§ header note) clears; renaming a bundle ID pre-TestFlight is free.
@@ -443,4 +528,4 @@ output shown. Do not begin any Phase 1 work.
 ```
 
 ### 11.4 Session cadence recommendation
-One phase-gate per PR; review diffs before merging (you are the second pair of eyes the solo project otherwise lacks). Device-test days for Phase 1/3 gates need your car and ~2 h; the Phase 5 gate needs several ordinary days of carrying the phone with a trip armed — schedule them like sprint reviews, not afterthoughts.
+One phase-gate per PR; review diffs before merging (you are the second pair of eyes the solo project otherwise lacks). The **Replay MVP** device day needs Chiu's iPhone plus **three real past-trip photo sets** (import → recap → MP4 → share on device); the **Capture Beta** gate later needs your car (2 h drive) and several ordinary days of carrying the phone with a trip armed — schedule them like sprint reviews, not afterthoughts.

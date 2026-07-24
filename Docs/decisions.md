@@ -253,6 +253,35 @@ CI); 4–5 s clips (one clip would eat 15 %+ of a 30 s video); putting route
 photos in the P3 gate (render budget for the base pipeline is unproven —
 visual sugar stacks on a working frame loop, not before it).
 
+## 2026-07-18 — Fork demoted from positioning language to mechanism
+
+**Context:** Two rounds of external product review (GPT + Claude, 2026-07-17/18)
+converged on the same judgment: "GitHub for road trips" is engineer-brain
+framing. Ordinary travelers don't fork — they save routes and get inspired
+(Pinterest psychology: Save / Inspired by / Get this route has low interaction
+cost and low psychological commitment; Fork implies obligation to execute).
+The spec had already absorbed the rest of that debate in v1.3 (battery moat,
+import as acquisition hook, passive tier = v1, transactional monetization,
+fork gated behind §10's ≥1-organic-fork criterion) — but the positioning line,
+the §1.5 "killer feature" label, and the §4.5 end-card copy still carried the
+v1.2 fork-first language. The end card is a P3 deliverable (ExportEngine
+step 4), so the copy decision was due now, not at P6.
+**Decision (Chiu):** Spec v1.4. Fork remains the underlying mechanism —
+`.kamome` interchange file, `plan.forked_from` lineage, §3.1 schema all
+unchanged — but it is no longer the product's marketing identity. Positioning
+rewritten to memory-engine framing ("you don't have to remember the app; it
+remembers the journey"). All user-facing copy uses **Save / Get this route /
+Inspired by**; "fork" survives only in internal names (code, schema, §1.3
+loop names). Three spec edits: positioning line, §1.5 row label (killer
+feature → P6 bet), §4.5 end card ("Fork this route" → "Get this route").
+S6/S7 screen wording is settled at P6 when those screens are built.
+**Rejected:** renaming the `.kamome` schema fields or fork-loop internals
+(churn with zero user-facing value); re-litigating the rest of the
+GPT/Claude debate (v1.3 already absorbed the convergent conclusions — the
+next data point is the P3 gate, not more positioning documents); adding an
+AI prose diary or a generic badge/passport system (icebox; the 環島 badge in
+§1.7 is already the correctly-scoped milestone feature).
+
 ## 2026-07-18 — Stop detection redesigned around real stops: streaks, walk visits, silence gaps
 
 **Context:** Second real drive (17:04 export, `Docs/tests/`): a ~20 min temple
@@ -290,3 +319,635 @@ timer for the battery win is a possible follow-up needing device proof).
 dwell-pauses and loses the subsequent walk trace (needs activity-aware
 resume; icebox); HUD stop count shows live stops only until End Trip;
 `drive_s` still includes silence-gap time.
+
+## 2026-07-18 — Recap chrome: photos toggle gates stop cards only; title/end cards always render
+
+**Context:** §4.5 step 4 adds a title card (trip name, dates, distance) and an
+end card (stats + "Get this route" QR) to the recap. The 2026-07-17 decision
+says the S5 photos toggle off means "route-only animation = overlay events
+off" — written before title/end cards existed as events.
+**Decision (Claude implementation call; confirmed by Chiu 2026-07-18):** the
+toggle gates **photo moments** (stop cards, later route-photo fly-bys).
+Title/end cards are trip *chrome*, not photo moments, and always render:
+dropping the end card would silently remove the share hook (§1.3 loops) from
+exactly the exports users make when they want a clean route video. Toggle
+semantics live in `OverlayTimeline.build(photosEnabled:)`; card copy is
+caller-supplied strings so wording stays app-side ("Get this route", spec
+v1.4 §4.5) and localizable.
+**Rejected:** gating all overlay events (kills the share hook); a second
+toggle for chrome (S5 stays one-switch simple; revisit only if users ask).
+**Chiu (2026-07-18 review):** agreed as stated; additionally — a completely
+clean export with no trip chrome, if ever wanted, must be a **separate
+explicit option**, never a reuse of the photos toggle. S5 labels must make
+it obvious the toggle controls photo overlays only. Locked by gate test
+`testPhotosOffKeepsEndCardShareHook`.
+
+## 2026-07-18 — stop.kind = what happened, never how it was detected
+
+**Context:** The recap must render a walking visit (card + walking
+duration/trace) differently from a plain dwell. Schema v1 reserved
+`stop.kind` but every save wrote `"auto"`. GPT review (relayed by Chiu)
+flagged a modeling trap: `silence` as a kind would mix "what happened" with
+"how we detected it."
+**Decision:** `StopKind` enum (TrackingEngine): `dwell` and `walk_visit`
+only. Silence-gap-derived stops are `dwell` — the phone sat somewhere; GPS
+silence is merely the evidence. Detection mechanism is deliberately not
+persisted; if evidence ever demands it, a `detection_method` column rides
+the next schema migration (alongside `photo_ref.order_idx`, per the
+2026-07-12 reorder ADR). Kind flows engine/deriver → `NewStop` →
+`stop.kind`; rows from builds before this change carry `"auto"`, and
+readers treat unknown kinds as `dwell`. No new Place/Visit abstraction
+(owner decision: Stop + time-overlap is sufficient for P3; the walk trace
+is recovered from the walk segment sharing the stop's time span).
+**Rejected:** `silence` as a user-facing kind; a `detection_method` column
+now (migration churn with no reader); Place/Visit entities before the
+compositor proves what it actually needs.
+
+## 2026-07-19 — Recap visual pivot: P3 frozen as pipeline milestone, Phase 3.5 opened
+
+**Context:** Chiu reviewed the P3 demo artifact
+(`Docs/demos/phase3/kamome-p3-recap.mp4`) and rejected the visual
+direction: Apple Maps tiles + a polyline read as GPS debug output, not
+travel storytelling. Full product direction recorded in
+`Docs/kamome-animation-vision.md` (TravelBoast-class animated replay,
+premium/Apple-like, real road fidelity, interchangeable themes).
+**Decision (Chiu, 2026-07-19):**
+- **P3 scope is frozen as the pipeline milestone.** Its remaining gate
+  items (2 h drive, limited-photo re-check, on-device render budget via
+  S5 readout, S5 UX pass) validate tracking and the engine — all of which
+  survive the substrate swap — and still gate P3 close. The
+  share-worthiness gate item ("Chiu posts one recap and it doesn't
+  embarrass him") moves to Phase 3.5, where it belongs now.
+- **Phase 3.5 — Recap Visual System** opens as its own phase (spec §7),
+  sequenced: OSRM matching (§4.4, pulled forward from P4) → MapLibre
+  substrate → Modern Minimal theme. No renumbering of P4–P7 (v1.3 already
+  renumbered once; downstream references stay stable).
+- **Replay engine ↔ rendering theme: fully decoupled.** Modern Minimal is
+  merely the first theme implemented, not a structural assumption.
+  Nothing theme-specific may leak into the replay engine.
+- **Two new spec-level principles** (spec §0 rule 6): a Kamome replay
+  must never look like Apple/Google Maps with an animated route on top
+  (recognizable identity without branding), and Kamome is a travel
+  storytelling engine, not a vehicle animation engine — every camera
+  movement, pause, transition, and effect must serve the narrative of the
+  journey. This is the judgment criterion for all future motion decisions.
+**Rejected:** reopening P3 (holds tracking validation hostage to a
+multi-week visual effort); deferring visuals to P4+ polish (the recap is
+the marketing engine — §4.5 "over-invest here" already says so).
+
+## 2026-07-19 — ADR: recap substrate = MapLibre Native + self-hosted vector tiles
+
+**Context:** The vision requires a base map Kamome fully controls
+(colors, typography, what is *omitted*) and route rendering that always
+follows real roads. `MKMapSnapshotter` cannot be restyled at all — no
+amount of overlay work gets a recognizable Kamome look out of Apple's
+cartography. Implementer guide: `Docs/vector-tile-pipeline.md`.
+**Decision:** Recap base maps render via **MapLibre Native (iOS)** over
+**self-hosted vector tiles** (OSM extracts → Planetiler → PMTiles, same
+regional extracts as OSRM) with a **Kamome-authored MapLibre style JSON
+per theme**. MapKit remains the map for interactive app screens (S2 HUD,
+S3 detail) — this ADR covers the recap substrate only; §2.2 Maps row
+updated accordingly.
+**Renderer/engine boundary (audited 2026-07-19):** `import MapKit`
+appears in exactly one ExportEngine file (`MapKitSnapshotProvider.swift`);
+everything else consumes `MapSnapshot` (CGImage + projection closure) via
+`RecapSnapshotProviding`. **That protocol already is the boundary** — the
+MapLibre implementation is one new file (`MapLibreSnapshotProvider`)
+conforming to it, with MapLibre types equally confined. Known gaps,
+deliberately deferred until their consumer exists (owner decision — no
+speculative multi-renderer `MapProvider` interface with one real
+implementation; the correct boundary can't be known before the second
+renderer arrives):
+1. *Camera attitude* — the snapshot request has center/span only, no
+   pitch/bearing. Extend additively when the isometric camera lands.
+2. *Theme-owned overlay treatment* — route casing/color, marker art, card
+   chrome are currently compositor-side constants. A `RecapTheme` value
+   (design tokens, not a renderer interface) gets defined when Modern
+   Minimal is built, driven by what that theme actually needs.
+Boundary discipline is the rule: MapLibre types must never leak past the
+provider file; CI may enforce via a lint/grep gate.
+**Quality bar (the whole point — this justifies the operational burden):**
+MapLibre + a Kamome style sheet must produce output *clearly
+better-designed than native Apple Maps for journey replay*. Concretely:
+zero business-POI noise; deliberate use of empty space (subtractive
+cartography — show only what serves the journey); distinctive road/route
+treatment; recognizable Kamome identity with branding stripped (spec §0
+rule 6). Judged per `Docs/vector-tile-pipeline.md` §"Quality bar":
+side-by-side stills vs. the P3 Apple-tiles artifact at matched
+camera positions, reviewed by Chiu; a style sheet that fails
+side-by-side is not shippable, and if the bar proves unreachable the
+substrate decision itself gets revisited. Golden-frame CI improves:
+checked-in tiles + style are bit-stable, unlike Apple's live tiles.
+**Rejected:** fully custom renderer (needed for Style 1's hand-illustrated
+world eventually, but months of asset + engine work before the first
+share-worthy export; revisit when Style 1 is scheduled); restyling
+MapKit (impossible — no styling API); Mapbox (metered, closed);
+generic three-way renderer abstraction designed upfront (premature —
+rewritten the day the second real renderer arrives).
+
+## 2026-07-19 — Drive finding: region-resume died after wake; recovery watchdog added
+
+**Context (evening drive, `Docs/tests/2026-7-19/`):** First hardware proof
+of the §2.3 region-exit resume (device-test-P3 item C) — and it failed
+half-open. Timeline from the CSV + trip DB (trip 13:51–15:09): dwell
+correctly detected at the drive-through (stop 春日路372號, 14:29–14:36,
+`dwell_pause` 14:34:15), region-exit resume fired (`dwell_resume`
+14:36:56), GPS restarted and delivered exactly **two** coarse fixes
+(h_acc ≈ 39 m, no speed/course) at 14:36:56 and 14:37:06 — then nothing
+until 15:09:25, when the phone was unlocked to end the trip. The ~10 s of
+delivery matches the region-exit background wake window: iOS suspended
+the app when the wake expired, despite `startUpdatingLocation()` having
+been called during it. Result: 32 min / ~13 km of driving lost, the
+second real stop never observable (StopDeriver correctly derives nothing —
+a silence gap spanning kilometers is not a stop), recap shows a straight
+gray line, and the post-resume segment saved as `unknown` with 3 points.
+
+**Decision — three layers, all landed on `phase-3-recap`:**
+1. `resumeAfterDwell` re-asserts `allowsBackgroundLocationUpdates`
+   (`applyBackgroundCapability()`) *before* restarting updates — a session
+   started inside a background wake without the flag in effect dies with
+   the wake.
+2. **Trip-long significant-location-change monitoring** as a safety net
+   (the §1.8 passive-tier primitive, ~zero battery): SLC fixes keep waking
+   the app even when suspended, giving the recovery watchdog execution
+   windows. Stopped at `stopUpdates()`.
+3. **Silent-death watchdog** (`sampling.recovery_gap_s`, default 60): if a
+   delivered fix arrives ≥ that long after the previous one while actively
+   tracking (never while dwell-armed — GPS is off on purpose there), the
+   standard session is presumed dead and restarted, background flag
+   re-asserted. Self-limiting: the restart's immediate fix resets the gap.
+   Bonus: an SLC fix escaping the 150 m region now resumes the engine even
+   if the region-exit event never arrives (`TrackingSession` calls the new
+   `resumeActiveTracking()` on the dwellPaused→recording transition).
+
+New CSV events for the next drive: `region_exit` (exit event delivered),
+`gps_recover,<gap_s>` (watchdog fired). Item C in `Docs/device-test-P3.md`
+stays open until a drive shows dwell_pause → region_exit → continuous
+trackpoints with no gps_recover (or a gps_recover that proves the net
+works). Worst case if iOS keeps suspending: route degrades to SLC
+granularity (~500 m) instead of a 32-minute hole — map matching (§4.4,
+P3.5) can reconstruct that; it cannot reconstruct absence.
+
+**Rejected:** `UIApplication` background task around the resume (buys
+≤ 30 s, doesn't fix the steady state, drags UIKit into the location
+layer); restarting updates on *every* delivered fix (restart → immediate
+fix → restart loop); tightening sampling config (unrelated — this was
+session death, not filter tuning).
+
+## 2026-07-19 — Owner call: continue into Phase 3.5 while P3's device items stay open
+
+**Context.** The four remaining P3 gate items (device-test-P3 F–H: render
+budget < 90 s via the S5 readout, S5 UX pass, 2 h drive re-run, limited-photo
+re-check) all require the physical iPhone, which is not available to the
+current dev sessions. Chiu directed work to continue rather than idle on
+hardware availability.
+
+**Decision.** P3 is **not closed** — nothing is marked passed that didn't
+run. Its checklist stays open in `Docs/device-test-P3.md` and must be
+executed before P3.5's own gate can be judged (both gates need the same
+device day anyway: the < 90 s budget must be re-proven on the MapLibre
+substrate regardless). Meanwhile Phase 3.5 fixture-driven work proceeds on
+`phase-3-recap`, in spec order: OSRM matching app-side first.
+
+**Why this is safe.** P3.5 step 1 (matching) and step 2 (substrate) are
+exactly the parts that need no hardware; the P3 device items neither block
+nor are blocked by them. The risk of building on an unvalidated pipeline is
+bounded: the 2026-07-19 smoke drive already exercised the export end-to-end
+(34.6 s demo artifact), so what remains unproven on device is budget/UX
+polish, not mechanism.
+
+## 2026-07-19 — §4.4 map matching: app side landed, server-side deferred to setup doc
+
+P3.5 step 1, app half. `KamomeRouteMatching` (Core/RouteMatching) is the
+fourth Core module: `EncodedPolyline` (precision-5 codec — the
+`segment.matched_polyline` storage format), `RouteMatchProviding` (the
+boundary; OSRM types confined to `OSRMMatchProvider.swift` exactly like
+MapKit in `MapKitSnapshotProvider.swift`), `OSRMMatchProvider` (chunked
+`/match`, ≤ `matching.chunk_size` pts/request, per-segment worst-confidence
+gate at `matching.confidence_min`, injectable transport so CI replays
+recorded responses — no live server in tests, ever).
+
+Consumers: `RouteMatchService` (App) matches drive/scooter segments
+post-completion (fire-and-forget at End Trip; idempotent retry at recap
+export) — walks stay raw on purpose, feet ignore the drivable network.
+`RecapComposer.route` prefers decoded matched geometry at the tighter
+`matching.display_epsilon_m` (5 m — 15 m would visibly cut snapped corners;
+raw OSRM density would blow the §4.5 render budget), raw Douglas-Peucker at
+`simplify.epsilon_m` remains the per-segment fallback, which doubles as the
+§4.4 "inferred" degradation.
+
+`matching.base_url` ships **empty = disabled**: no server exists yet.
+Bringing one up (Docker, Taiwan + Australia extracts, validation steps,
+device ATS note) is `Docs/osrm-setup.md` — the first task for the next
+session. **The route-follows-roads claim is unvalidated until someone runs
+that doc against the perth fixture**; the P3.5 gate's golden-frame
+road-network assert stays open until then.
+
+**Rejected:** matching cycle segments with the car profile (wrong network
+graph — needs the bike profile, future provider); a `matched` boolean
+column (`matched_polyline IS NULL` already says it); blocking recap export
+on matching success (§4.4 forbids it).
+
+## 2026-07-20 — Recap visual system validated on real data via a web prototype
+
+**Context.** Before committing the Swift recap-visual work (Phase 3.5, spec
+§4.5/§7), the direction was de-risked in a throwaway HTML/JS prototype driven
+by Chiu's **real 170-photo, 13-day Iceland ring-road trip** (not synthetic
+fixtures). Three iterations were built and reviewed live; owner sign-off:
+"prototype 蠻成功的，現在可以收斂回到 app 本身." Full writeup, the data
+pipeline, and the engine source are in `Docs/prototype/`.
+
+**Decisions (each constrains an existing component — no new architecture):**
+
+1. **Base map = real geometry + hand-written subtractive style.** Chiu's
+   formula: *真幾何 ＋ 手寫減法樣式 = 紀念品地圖* (souvenir map). Real coastline/
+   glacier/terrain geometry (so the place is recognizable — the fully-abstract
+   v1 was rejected as unidentifiable) styled subtractively (no POI, no road
+   labels, chosen colours) so it never reads as a map app. This is the exact
+   MapLibre substrate ADR (2026-07-19) — the prototype is now the "before"
+   evidence for the Phase 3.5 quality-bar side-by-side, and the reason the
+   substrate is non-negotiable. Route precision is a later OSRM concern (§4.4)
+   and does not gate the look.
+
+2. **Stop photos = a rotating deck at the stop location.** Not the current
+   single stop-card. Camera eases to the place; a 3-card fan blooms with the
+   hero **cross-fading through all of that stop's 3–8 photos**, progress dots,
+   dwell scaled to photo count. Chiu revised per-photo hold **1.0 s → 0.8 s**.
+   Owner-confirmed *not* a full-screen takeover — "bead floating on the map."
+   Owner in `OverlayTimeline` / §4.5 stop-card work; photos from `photo_ref`
+   (§4.3), `is_highlight` leads.
+
+3. **`CameraPath` must be a vehicle-locked follow-cam** (the prototype's one
+   unmet item). Chiu: "只有路線移動而已沒有帶入車子" — a wide route-draw is not
+   enough; the **vehicle must be the subject** at a close, heading-up zoom with
+   the map/route moving underneath. Needs the near-terrain detail vector tiles
+   give at zoom. Wide shots reserved for title/end/day-transitions. Top-down
+   car is the default marker; seagull (brand mascot) / scooter / bike swappable
+   — the seagull is no longer forced as the moving marker.
+
+**Forward directions recorded (not yet scheduled):** photo-**EXIF import first**
+(the prototype pipeline *is* that importer, §4.7 — and the only way to dogfood
+recap quality on past trips before the next drive; Google Timeline import
+backlogged); **video clips as auto-trimmed (2–3 s), muted, hard-capped "beads"**
+after the photo version ships (deterministic excerpts only, golden-frame-safe);
+**royalty-free beat-synced music** — bundled library + offline beat maps, recap
+events quantized to the beat grid in CameraPath/OverlayTimeline, free = silent
+export (user adds platform music), premium = in-app track (§1.6 transactional).
+
+**Positioning restated by owner** and lifted into the spec header (v1.6):
+"Kamome turns your road trips into stories you can relive and share" — a
+storytelling/memory product, built first for Chiu's own use (hates organizing,
+wants the trip to auto-become a film).
+
+**Rejected:** the fully-abstract base map (v1 — unrecognizable); a fixed
+top/bottom photo slot (v2 — photos must live at the place); forcing the seagull
+as the moving vehicle marker (car is the default, seagull stays the mascot);
+letting users hand-trim recap video clips (variable length → hard cap instead);
+bundled copyrighted music (royalty-free + optional silent export only).
+
+## 2026-07-20 — Replay MVP repositioning: photo-import recap ships first; capture → Capture Beta; Story Director & Plans deferred; honest provenance
+
+**Context.** Product-strategy re-confirmation (Chiu, 2026-07-20). The long-term
+vision is unchanged — *Kamome automatically remembers a journey and directs it
+into a travel film worth rewatching* — but the earlier framing (spec ≤ v1.6)
+made the **first release** a passive-capture "v1" (Phases 0–5, TestFlight at the
+Phase 5 passive-tier gate). That over-promises: it commits the launch to
+12-day zero-touch background capture and imperceptible battery, neither proven,
+and gates the whole product behind hardware Chiu cannot always run. The web
+prototype (2026-07-20 ADR above) meanwhile proved that **sparse geotagged photos
+alone** reconstruct a recognizable, share-worthy trip once snapped to roads.
+
+**Decision.** Ship a smaller, publishable, verifiable product first — the
+**Replay MVP**: *pick a past trip's photos → reconstruct from EXIF place + time →
+snap to real roads (OSRM, already landed) → souvenir-map recap → MP4 → share.*
+Product evolution is two layers, and the architecture must not block layer 2:
+1. **Replay MVP** — auto-generate a real-road trip animation from photos.
+2. **Story Director** — on top of the MVP: automatic moment-selection, narrative,
+   hero photos, chapters/elision, variable pacing, light edit controls, video
+   beads, licensed music + beat-sync. *Kamome is ultimately not full playback of
+   all trip data — it is a director that dares to select and omit.* Not now.
+
+Concrete changes (spec bumped to v1.7):
+- **Phase 3.5 renamed "Recap Visual System" → "Replay MVP,"** and **photo-EXIF
+  import is pulled forward into it** from the old Phase 4. Sequence:
+  photo-EXIF import (schema v2 `trip.source`) → MapLibre souvenir-map substrate →
+  Modern Minimal (the ONE MVP theme; multiple themes are not an MVP condition) →
+  vehicle follow-cam (primary dynamic, **not** an unchallengeable "always
+  centred" dogma — Story Director makes it one shot among many) → basic photo
+  deck (deterministic 3–8 @ 0.8 s; explicitly *basic*, not final) →
+  **three-real-trip dogfood** → TestFlight.
+- **The P3.5 gate becomes a product release gate,** not a static-visual gate.
+  The MapLibre-vs-Apple side-by-side survives as a **design review** only; it
+  does not replace the full-video judgment. Hard conditions: three real trips of
+  different character each go photos → import → recap → MP4 → share **entirely
+  in-app** (no DB edits, no external tools); routes honest (no gross
+  sea/mountain/wrong-road; low confidence shown as inferred); all three worth
+  keeping and sharing; **≥ 1 published publicly**; limited-photo path passes on
+  device; stable on-device export (no crash / acceptable memory); per-trip export
+  time recorded and *product-acceptable* (the single < 90 s number is retired as
+  pass/fail). "Three trips" is hard — never downgraded to one.
+- **MP4 is the launch format; GIF is demoted to non-blocking.**
+- **Phase 3's device items are redistributed (nothing faked passed):** export /
+  S5-UX / limited-photo / per-trip-render-time → into the Replay MVP gate; the
+  2 h drive + region-resume re-validation → **Capture Beta**. Checklists in
+  `Docs/device-test-P3.md` are preserved and re-tagged, not deleted.
+- **Phase 5 "Passive Capture Tier" renamed → "Capture Beta"** and moved *after*
+  the video product. It inherits the moved tracking/battery gates (2 h drive,
+  region-resume, long-duration background, process-death recovery, passive
+  capture, ≥ 3-day battery) and is the **only** place "Arm once, forget it" is
+  validated and usable in copy. The old §10 "passive-capture v1" success criteria
+  move here.
+- **Phase 4 "Import & Map Matching" renamed → "Story Director."** Its EXIF half
+  moved into the MVP; matching already landed; **no importer remains** — the
+  Google Timeline importer is **dropped as redundant** (owner add-on 2026-07-20:
+  photo-EXIF import covers past trips, in-app capture covers new ones, so a
+  drift-prone Timeline parser adds maintenance for little unique value; the
+  `imported_timeline` enum value is kept only for forward-compat).
+- **Story Director is deterministic — no AI/LLM tokens** (owner constraint
+  2026-07-20). It is a scoring-and-selection engine over structured trip data
+  (moment salience = weighted photo-count / `is_highlight` / dwell / geo-novelty
+  / day-boundary; top-N with non-maximum-suppression spacing; omit + speed-warp
+  the gaps; per-photo hold scales with salience). Hero-photo pick uses
+  **on-device Vision** (saliency / faces — free, local, no tokens, no network,
+  not an LLM; owner-confirmed 2026-07-20), cached for determinism, with
+  `is_highlight` → dwell-midpoint → chronological fallback; Vision stays in its
+  own boundary file. No network, no per-call cost, and **determinism keeps
+  golden-frame CI stable**. The manual "replace / remove" controls are the taste
+  escape hatch.
+- **Capture Beta must justify itself vs. photo reconstruction (open question,
+  owner-raised 2026-07-20; decide from MVP feedback).** Since photo-EXIF import
+  already reconstructs most photo-rich trips, live capture earns its
+  background/battery build only via the three things photos structurally cannot
+  give: a **truth-path** (actual road vs. an OSRM guess between sparse photos),
+  **no-photo stops/scenes**, and **not-even-photos zero effort**. Recorded as a
+  question, not an assumption.
+- **Plans (Phase 6) benefits from captured road-detail; community sharing is the
+  virality engine** (owner note 2026-07-20, discuss later). A shared route from
+  *recorded* driving beats one reconstructed from a stranger's photos — links
+  Capture Beta → Plans value; sequencing deferred.
+- **Plans & Fork (Phase 6) and Backend (Phase 7) unchanged and further
+  deferred** — plan/fork must never block or delay the video product; start only
+  after the Replay MVP *and* Story Director show real sharing.
+- **Honest provenance (product rule, not cosmetic).** `trip.source` separates
+  what Kamome **recorded** from what was **reconstructed from photos**; the UI
+  must surface it (S1 badge, S3 note); GPS/EXIF are not tamper-proof and must
+  never be presented as proof or as a "Verified Trip". Spec §3/§6.
+- **Positioning de-overclaimed:** MVP copy may not claim 12-day zero-touch
+  capture or imperceptible battery; those are Capture-Beta-validated promises.
+
+**Docs touched:** spec (header/positioning, §1.1/§1.3/§1.5/§1.8, §2.1–§2.3, §3,
+§4.4/§4.5/§4.7, §5, §6, §7 full phase map, §9, §10, §11), `handoff-P3.5.md`
+(rewritten as the Replay MVP work order, Photo EXIF Import first),
+`kamome-animation-vision.md` (two-layer note), `device-test-P3.md` (Capture-Beta
+re-tagging), `CLAUDE.md` (current phase + gate), plus secondary phase-ref
+reconciliation in `osrm-setup.md` / `icebox.md` / `vector-tile-pipeline.md`.
+
+**Rejected:** shipping passive-capture as the first release (over-promises
+battery/background integrity that need hardware Chiu can't always run, and buries
+a validated photo-recap product behind it); marking P3's device items passed to
+"unblock" release (violates §0 rule 1 — they are moved, not passed); deleting the
+tracking checklists (they are real Capture-Beta work); keeping GIF as a launch
+gate (MP4 is the share format, GIF is a nice-to-have); a Google Timeline importer
+(drift-prone maintenance, redundant given EXIF import + in-app capture); using
+AI/LLM tokens for Story Director (per-call cost + network + breaks golden-frame
+determinism — hand-tuned heuristics fit the structured-data problem); a
+single-video gate (three trips of different character is the honest bar for
+"worth publishing");
+letting the map-vs-Apple side-by-side stand in for the product judgment (pretty
+map ≠ shareable film); building Story Director / multiple themes / plans now
+(scope; the architecture keeps them open without building them — spec §0 rule 6,
+boundary discipline).
+
+## 2026-07-21 — Replay MVP §2: MapLibre substrate landed (provider in app target, pmtiles ingestion, MapKit kept alive)
+
+**Context.** Replay MVP work order §2 (`Docs/handoff-P3.5.md`;
+`Docs/vector-tile-pipeline.md`): build the MapLibre souvenir-map substrate that
+lets the recap be a 紀念品地圖 instead of Apple/Google cartography (spec §0 rule
+6). The renderer boundary already exists — `RecapSnapshotProviding`
+(`Core/ExportEngine/RecapSnapshot.swift`); this ADR records the concrete
+integration choices made building the second implementation behind it.
+
+**Decisions.**
+
+1. **MapLibre pinned exactly at `6.27.0`** (SPM,
+   `maplibre/maplibre-gl-native-distribution`, product `MapLibre`, added to the
+   **app target** in `project.yml`). Exact-version, not a range: golden-frame CI
+   and a reproducible substrate must not float under a map SDK. v6 line ⇒ `MLN*`
+   API. Resolution verified (`xcodebuild -resolvePackageDependencies`).
+
+2. **Provider lives in the app target, not `Core/ExportEngine`.**
+   `Docs/vector-tile-pipeline.md` §7 had penciled
+   `Core/ExportEngine/MapLibreSnapshotProvider.swift`, but that path is inside
+   the `KamomeExportEngine` **SwiftPM** target, which must stay a pure,
+   deterministic, SDK-free core (`swift test`, golden frames). A third-party
+   binary map framework there would poison every package test. So
+   `App/Services/MapLibreSnapshotProvider.swift` — same home as the other SDK
+   boundary adapters (`PhotoLibraryImportSource` = PhotoKit,
+   `RouteMatchService`). `MapKitSnapshotProvider` stays in the package only
+   because MapKit is a system framework the package can `#if canImport` without a
+   dependency; MapLibre cannot. The protocol is still the boundary; the file is
+   `#if canImport(MapLibre)`-guarded exactly like `MapKitSnapshotProvider` is
+   `#if canImport(MapKit)`-guarded. **Confinement is now CI-enforced** (grep gate
+   in `.github/workflows/ci.yml`: `import MapLibre` may appear in exactly one
+   file).
+
+3. **Tile ingestion path = native `pmtiles://`**, declared in the theme JSON's
+   source, with the on-disk path injected by a pure, SDK-free resolver
+   (`RecapMapStyle`, unit-tested). Chosen over the MBTiles / localhost fallbacks
+   (`Docs/vector-tile-pipeline.md` §5) because it keeps a single artifact and no
+   runtime server. **The scheme lives in config (theme JSON), not code**, so the
+   MBTiles fallback is a one-line theme edit if a device shows native pmtiles://
+   unsupported in this MapLibre build. *Flagged: the actual tile render is Metal
+   and is **not** in CI — it is on the sim/device manual list (§6 gate); the
+   pmtiles://-vs-mbtiles:// confirmation happens there.*
+
+4. **Camera = center + span → MapLibre zoom** (Web Mercator, 512 px tiles,
+   `scale = 1` so point==pixel like the MapKit provider's `displayScale 1`).
+   Pitch/bearing stay out of the snapshot request until the follow-cam (§4) needs
+   them — additive extension, deferred gap 1 (ADR 2026-07-19), not pre-built.
+
+5. **First theme is `functional-base.json` — unstyled, subtractive** (land +
+   water + a quiet road skeleton; no POI, no labels). It only proves frames
+   render. **Modern Minimal (§3) is separate and needs Chiu's side-by-side
+   sign-off** — deliberately not self-certified here. `MapKitSnapshotProvider`
+   and production wiring (`RecapModel` still constructs `MapKitSnapshotProvider`)
+   are **untouched**: MapKit stays the shipping base map until Modern Minimal
+   clears the design review, then it is retired in that same PR.
+
+6. **OSM attribution** (`© OpenStreetMap contributors`, ODbL) is set on the theme
+   source now. Surfacing it on the end card / about screen is **bound to the §3
+   switch-over PR** — the point at which OSM tiles are actually shown to users
+   (MapKit renders production output through §2). Recorded here so it cannot be
+   forgotten.
+
+**What is verified vs. flagged.** Verified in-repo: SPM resolves; the app builds
+and **links** MapLibre (compile-checks the `MLN*` API usage); the confinement
+grep holds; `RecapMapStyle` resolution + zoom math are unit-tested; golden-frame
+CI stays bit-stable on `FlatSnapshotProvider`. **Flagged (needs sim/device, not
+faked):** the actual MapLibre pixel output — tiles loading via `pmtiles://`, the
+subtractive style rendering, zh-Hant labels (a §3 concern) — folds into the §6
+three-trip gate and the §3 design review.
+
+**Rejected:** provider in the SwiftPM core (poisons deterministic package tests
+with a binary SDK); a generic multi-renderer `MapProvider` abstraction (premature
+— the protocol already is the boundary, ADR 2026-07-19); a floating MapLibre
+version (non-reproducible substrate); bundling full-region tiles in git (only the
+small cropped fixture is committed); adding a live-tile MapLibre golden test
+(non-deterministic Metal render — violates golden-frame discipline); building
+Modern Minimal / pitch-bearing / RecapTheme tokens now (§3/§4 scope with owner
+sign-off, no consumer yet).
+
+## 2026-07-21 — §3 Modern Minimal: kicked off as a DRAFT (visual sign-off is Chiu's, on a real render)
+
+**Context.** §3's acceptance is a **side-by-side design review that Chiu signs
+off** on real MapLibre stills (vector-tile-pipeline §1). MapLibre rendering is
+Metal — not producible in agent CI — and the judgment is a human's. So an agent
+can lay the **buildable, verifiable groundwork** but cannot close §3.
+
+**Decision.** Land the groundwork only, explicitly un-self-certified:
+`Config/RecapThemes/modern-minimal.json` as a **DRAFT** base style (refined
+subtractive cartography from `Docs/kamome-animation-vision.md`, marked DRAFT in
+metadata, bundled), plus the review harness
+(`Docs/demos/phase3_5/modern-minimal/README.md`). **MapKit stays the shipping
+base map** — `RecapModel` is untouched. The label/glyph pipeline, the overlay
+`RecapStyle.modernMinimal` preset, the `RecapModel`→MapLibre switch (which retires
+`MapKitSnapshotProvider`), and OSM end-card attribution are **all gated on the
+sign-off** and land in that one switch-over PR — driven by what the review reveals
+(theme tokens come from real needs, ADR 2026-07-19), not guessed ahead of it.
+
+**Rejected:** self-certifying the look or switching production to MapLibre without
+Chiu (violates handoff §3 + spec §0 rule 1); authoring labels/glyphs and the
+overlay preset blind before the review (unverifiable, likely reworked — the review
+should drive them); lowering the quality bar if the draft disappoints (reopen the
+substrate ADR instead, decisions.md 2026-07-19).
+
+## 2026-07-22 — pmtiles ingestion CONFIRMED in-sim: `pmtiles://file://`, MapLibre renders in the simulator
+
+**Context.** §2 landed the substrate with the actual MapLibre pixel render flagged
+device/sim-only (decisions.md 2026-07-21). Building the §3 review harness
+(`Tests/AppTests/ModernMinimalRenderTests.swift`, env-gated, writes PNG stills)
+exercised the real `MLNMapSnapshotter` in the iOS simulator and resolved two of
+those flags.
+
+**Findings.**
+1. **MapLibre renders in the simulator** (Metal). No device needed to eyeball the
+   base map; the golden-frame discipline (no MapLibre in CI) is unchanged — the
+   render test is env-gated and asserts only non-blank, never pixels.
+2. **Ingestion path = `pmtiles://file:///abs/path.pmtiles`.** MapLibre 6.27.0's
+   pmtiles handler recognises the scheme but rejects a bare `pmtiles:///path`
+   with `MLNErrorDomain Code=6 "unsupported URL"`; it needs a full URL after the
+   scheme. `RecapMapStyle` now injects `tilesURL.absoluteString` (the `file://`
+   URL) rather than `.path`. This retires the pmtiles-vs-mbtiles fallback question
+   for local files (vector-tile-pipeline §5) — native pmtiles works.
+3. **The functional-base and modern-minimal styles both render** subtractively
+   (coast, water, quiet roads; no POI/labels) over the committed fixture. First-
+   look stills committed under `Docs/demos/phase3_5/modern-minimal/`.
+
+**New §3 sign-off item.** The snapshotter bakes MapLibre's own wordmark + a
+`© OpenMapTiles © OpenStreetMap contributors` line into every image. The
+attribution satisfies ODbL, but the wordmark is unwanted in the final recap —
+decide at sign-off whether the compositor covers the corners or the ornaments are
+suppressed, and place attribution deliberately (end card).
+
+**Still flagged (unchanged):** the *aesthetic* is not self-certified — Chiu signs
+off the look (§3); render-loop threading of `MLNMapSnapshotter` under the full
+export and the on-device render/budget are the §6 gate.
+
+## 2026-07-22 — §3 visual direction corrected: dark atmospheric souvenir map (not pale "Modern Minimal")
+
+**Context.** Chiu rejected the §3 draft v1 (`modern-minimal.json`) as "essentially a
+desaturated OSM base map — an engineering map with the contrast reduced, not a
+designed map." The target is the **illustrated, editorial souvenir map** validated
+in the prototype + WIP demo (`Docs/prototype/recap_engine.html`, artifact "Kamome
+Recap 冰島環島"): dark-navy sea, dark-slate land silhouette, a **glowing coastline**,
+pale ice/glacier, warm-orange glowing route.
+
+**Finding — NOT a substrate problem.** The demo's own build note prescribes exactly
+our stack: real MapLibre vector-tile geometry + a Kamome-authored style sheet that
+"decides what to show and what colours" (底圖幾何要真，視覺樣式要我們自己寫). The v1
+failure was the *style's design language* (pale nav-map, full road grid, flat fills,
+no graphic treatment) and the fact that **most of the crafted feeling lives in the
+compositor** (vignette, route glow, grade), which §3 had not touched. So MapLibre
+stays; the style + compositor change.
+
+**Decision (owner-approved approach, 2026-07-22).** Minimum-viable path, no new data,
+same OMT tiles:
+1. **Base style rewritten** to the dark souvenir language (draft v2): dark sea,
+   slate land, glowing coastline via stacked `line-blur` layers on the water
+   boundary, pale `ice`, drop roads/POI/labels (faint major-road whisper only).
+   Rendered in-sim; first-look stills in `Docs/demos/phase3_5/modern-minimal/`.
+2. **Next: compositor atmosphere** (vignette, route/marker glow, vertical grade) as
+   `RecapTheme` tokens in `RecapFrameCompositor` — where the rest of the craft lives.
+3. **Deferred (not required for reference parity):** hillshade/terrain relief (new
+   DEM source — the reference has none), paper/grain fill-textures, hand-illustrated
+   per-landmark art (that is Style 1 / the custom renderer the ADR deferred; the
+   demo is vector-styled, so it is not this).
+
+Verification stays honest: render stills in-sim and get Chiu's read **before** any
+compositor build or production switch. MapKit remains the shipping base map.
+
+## 2026-07-22 — §3 signed off as the substrate; recap-output redesign moved to its own session
+
+**Decision (Chiu, 2026-07-22).** After the draft v2 dark souvenir base map, Chiu:
+"still not what I want, but this is not the MapLibre issue… we could sign off §3
+MapLibre for now, and do the compositor atmosphere later. The output video format
+does not meet my expectation — we need to discuss and update it, in another session."
+
+**What this means.**
+- **§3 substrate is signed off** — MapLibre + the dark-souvenir base-style *direction*
+  are accepted; stop iterating the base style. It is **not** a substrate problem.
+- **The real gap is the overall recap OUTPUT / video format**, not the base map. That
+  redesign (aspect/size/duration, container/delivery, in-frame template/chrome, the
+  follow-cam animation) is a **separate future session** — "revisit all the difference."
+  No output-format decisions were made here.
+- **Deferred, bundled with that redesign:** the compositor atmosphere (vignette,
+  route/marker glow, grade — `RecapTheme` tokens), labels/glyphs, the overlay
+  `RecapStyle.modernMinimal` preset, and the `RecapModel`→MapLibre production switch
+  that retires `MapKitSnapshotProvider` + surfaces OSM attribution.
+- **MapKit stays the shipping base map.** The production switch is **not** done now —
+  flipping mid-redesign would ship an un-atmosphered look while the whole output is
+  being reconsidered. Hold it for the switch-over PR after the redesign.
+
+**Rejected:** flipping production to MapLibre on this sign-off (premature — output is
+under redesign); continuing to tune the base-map palette (Chiu: not the issue).
+
+## 2026-07-23 — Follow-cam camera core: wide-to-close framing, camera ≠ vehicle
+
+**Context.** The recap OUTPUT redesign's first piece. The prototype's one unmet item
+was the TravelBoast follow-cam; diagnosis (this session) was that the shipping camera
+used a single fixed `camera_span_m` (1500 m) start-to-finish — no establishing shot,
+no close follow — so it read as "the route sliding," not "the car driving."
+
+**Decision (implemented, commit `3eac0ab` on `phase-3-recap`, CI green).**
+- **Split camera from vehicle.** `CameraPath` emits `Position` (the vehicle subject —
+  lat/lon + `heading`, the route tangent) and a new `CameraFrame` (the snapshot —
+  center/span/`bearing`). In wide shots the camera centers the *trip* while the vehicle
+  sits small in its real place; in the body the camera locks onto the vehicle. Two
+  outputs, not one — that separation is what a wide→close film needs.
+- **Wide establishing/closing, close body.** Title/end windows frame the whole-trip
+  bounding box (`wide_span_padding`); the body eases to `camera_span_m` (reused as the
+  close span). Wide↔close eases over `zoom_transition_s` (renders as a quick cross-fade
+  dolly; adaptive keyframe interval for a smoother dolly is a deferred refinement).
+- **`bearing` on the snapshot boundary.** `RecapSnapshotProviding` gained `bearing`
+  (the "additive extension" the ADR 2026-07-19 anticipated). `MapLibreSnapshotProvider`
+  honors it (`MLNMapCamera.heading`); `FlatSnapshotProvider` rotates its projection so
+  golden-frame CI stays deterministic; `MapKitSnapshotProvider` accepts-and-ignores it
+  (the retiring north-up path).
+- **`follow_heading_up` defaults false** = north-up map + a marker that rotates to
+  heading (the validated prototype behavior). Heading-up *map* rotation is a
+  MapLibre-era opt-in (MapKit can't rotate; the marker's screen rotation is then
+  `heading − bearing`). Kept the close-span default at 1500 — tuned on a device render,
+  not guessed.
+
+**Not in this decision (next):** the vehicle marker sprite and the photo deck (with
+Chiu's 2026-07-23 zoom-in/rotate/zoom-back revision) — the visual `RecapFrameCompositor`
+half, on branch `feature/vehicle-marker-photo-deck`.
+
+**Not merged.** Reaffirmed the documented hold (handoff §6): PR #11 keeps `phase-3-recap`
+off `main` until the three-trip dogfood gate — the redesign is mid-flight and MapKit is
+still the shipping base map, so merging now would land a half-finished redesign in main.
+
+**Rejected:** heading-up on by default (inconsistent on the still-shipping MapKit path,
+which can't rotate); a generic multi-camera abstraction (boundary discipline — extend
+`CameraFrame`/`RecapSnapshotProviding` additively when a consumer needs it); guessing a
+new close-span value in code (it's a device-tuned feel, left at the prior default).

@@ -6,8 +6,10 @@ import SwiftUI
 /// S3 Trip Detail: mode-colored route (drive solid, walk dotted), stop pins
 /// with photo badges, day filter chips, stats strip, timeline list.
 struct TripDetailView: View {
+    @Environment(TrackingSession.self) private var session
     @State private var model: TripDetailModel
     @State private var editingStop: StopRecord?
+    @State private var showingRecap = false
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: TripDetailModel(
@@ -20,15 +22,30 @@ struct TripDetailView: View {
             map.frame(minHeight: 280)
             if model.dayCount > 1 { dayChips }
             if let stats = model.stats { statsStrip(stats) }
+            if model.isReconstructed { provenanceNote }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             timeline
         }
         .navigationTitle(model.detail?.trip.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { model.load() }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                // S5 entry: only completed trips have a recap to render.
+                Button {
+                    showingRecap = true
+                } label: {
+                    Label("recap_export", systemImage: "film")
+                }
+                .disabled(model.detail?.trip.endedAt == nil)
+            }
+        }
         .sheet(item: $editingStop) { stop in
             StopEditorView(model: model, stop: stop)
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showingRecap) {
+            RecapView(tripId: model.tripId, session: session)
         }
     }
 
@@ -115,6 +132,22 @@ struct TripDetailView: View {
             Text(value).font(.subheadline.bold()).monospacedDigit()
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
+    }
+
+    /// Honest provenance (§3/§6): an imported trip's route is inferred from
+    /// photo place+time, not recorded — say so, and never imply it is verified.
+    private var provenanceNote: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "photo.on.rectangle")
+                .foregroundStyle(.secondary)
+            Text("provenance_note")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
     }
 
     /// Selected-Photos access hides camera shots taken during the trip until

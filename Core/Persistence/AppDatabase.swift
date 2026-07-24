@@ -110,6 +110,24 @@ public final class AppDatabase {
                 """)
         }
 
+        // Schema v2 (spec §3) — honest provenance + the deferred S4 reorder.
+        // Lands with the Replay MVP: the photo-EXIF importer writes
+        // trip.source='imported_photos' / segment.source='exif', and the UI
+        // labels reconstructed trips honestly (never "Verified Trip").
+        // Forward-only — never edit v1 above; this ALTERs it additively.
+        migrator.registerMigration("v2") { db in
+            // What produced this trip (TripSource). NOT NULL DEFAULT 'recorded'
+            // backfills every legacy row as a genuine recording.
+            try db.execute(sql: "ALTER TABLE trip ADD COLUMN source TEXT NOT NULL DEFAULT 'recorded'")
+            // How a segment's geometry was obtained (SegmentSource:
+            // gps_hifi | gps_passive | timeline | exif). Nullable — legacy rows
+            // predate the concept and stay NULL (readers treat NULL as gps_hifi).
+            try db.execute(sql: "ALTER TABLE segment ADD COLUMN source TEXT")
+            // The deferred S4 manual photo reorder (2026-07-12 ADR). Nullable —
+            // NULL means "order by taken_at", the prior behavior.
+            try db.execute(sql: "ALTER TABLE photo_ref ADD COLUMN order_idx INTEGER")
+        }
+
         return migrator
     }
 }

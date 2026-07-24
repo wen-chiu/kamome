@@ -23,8 +23,24 @@
   "simplify": {
     "epsilon_m": 15
   },
+  "matching": {
+    "base_url": "",
+    "chunk_size": 100,
+    "confidence_min": 0.5,
+    "radius_m": 25,
+    "timeout_s": 10,
+    "display_epsilon_m": 5
+  },
   "photos": {
     "match_radius_m": 300
+  },
+  "import": {
+    "stop_radius_m": 4000,
+    "stop_split_gap_s": 10800,
+    "min_photos_per_stop": 2,
+    "deck_min_photos": 3,
+    "deck_max_photos": 8,
+    "default_range_days": 7
   },
   "geocode": {
     "min_interval_s": 2,
@@ -35,22 +51,44 @@
     "min_distance_m": 100
   },
   "sampling": {
-    "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 },
+    "recovery_gap_s": 60,
+    "walk": {
+      "desired_accuracy": "nearest_ten_meters",
+      "distance_filter_m": 10
+    },
     "vehicles": {
       "car": {
         "fast_min_kmh": 20,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 50 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 50
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 20
+        }
       },
       "scooter": {
         "fast_min_kmh": 15,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 30 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 15 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 30
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 15
+        }
       },
       "bicycle": {
         "fast_min_kmh": 12,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 20
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 10
+        }
       }
     }
   },
@@ -58,7 +96,18 @@
     "target_duration_s": 30,
     "fps": 30,
     "stop_hold_s": 1.5,
+    "max_hold_fraction": 0.5,
     "gif_fps": 12,
-    "gif_width_px": 480
+    "gif_width_px": 480,
+    "frame_width_px": 1080,
+    "frame_height_px": 1920,
+    "camera_span_m": 1500,
+    "wide_span_padding": 1.15,
+    "zoom_transition_s": 0.8,
+    "follow_heading_up": false,
+    "keyframe_interval_frames": 15,
+    "title_card_s": 2.5,
+    "end_card_s": 3.0,
+    "video_bitrate_mbps": 5
   }
 }

@@ -5,6 +5,16 @@ public enum TransportMode: String, Equatable {
     case drive, scooter, walk, cycle, transit, unknown
 }
 
+/// What happened at a stop — persisted to `stop.kind` and rendered
+/// differently by the recap (ADR 2026-07-18 stop-kind): a `walkVisit` card
+/// carries the walking duration/trace, a `dwell` card doesn't. Deliberately
+/// NOT the detection mechanism: a stop found via GPS silence is still a
+/// dwell — the phone sat somewhere.
+public enum StopKind: String, Equatable {
+    case dwell
+    case walkVisit = "walk_visit"
+}
+
 /// Per-trip vehicle selected at Start (§1.7). Tunes the sampling table and
 /// what "automotive" motion is labeled as.
 public enum VehicleType: String, CaseIterable, Equatable {

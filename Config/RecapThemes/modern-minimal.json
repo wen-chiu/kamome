@@ -1,0 +1,114 @@
+{
+  "version": 8,
+  "name": "Kamome Souvenir Map (dark) — draft v2",
+  "metadata": {
+    "kamome:role": "theme-draft",
+    "kamome:status": "DRAFT v2 — NOT signed off. Rewritten 2026-07-22 toward the DARK ATMOSPHERIC SOUVENIR MAP validated in the prototype + WIP demo (Docs/prototype, artifact 'Kamome Recap 冰島環島'), replacing the earlier pale 'desaturated OSM' draft Chiu rejected. Direction: dark navy sea, dark-slate land silhouette, a GLOWING coastline, pale ice; no roads/POI/labels. Half the crafted feeling (vignette, route glow, grade) is a COMPOSITOR job (RecapTheme) — NOT in this style — so judge this as the substrate, with that atmosphere still to come.",
+    "kamome:reference": "prototype land fill #24343c→#182530 on sea #08111A→#04070C, coastline stroke rgba(140,214,204,.28), route #FF8A5B glow. See Docs/prototype/recap_engine.html.",
+    "kamome:schema": "OpenMapTiles (Planetiler default)"
+  },
+  "sources": {
+    "kamome": {
+      "type": "vector",
+      "url": "pmtiles://__KAMOME_TILES__",
+      "attribution": "© OpenMapTiles © OpenStreetMap contributors",
+      "maxzoom": 14
+    }
+  },
+  "layers": [
+    {
+      "id": "land",
+      "type": "background",
+      "paint": {
+        "background-color": "#1e2b33"
+      }
+    },
+    {
+      "id": "landcover-wood",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "landcover",
+      "minzoom": 5,
+      "filter": ["all", ["==", "$type", "Polygon"], ["in", "class", "wood", "grass"]],
+      "paint": {
+        "fill-color": "#213039",
+        "fill-opacity": 0.55
+      }
+    },
+    {
+      "id": "ice",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "landcover",
+      "filter": ["all", ["==", "$type", "Polygon"], ["in", "class", "ice", "glacier"]],
+      "paint": {
+        "fill-color": "#d6e8ee",
+        "fill-opacity": 0.26
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": ["all", ["==", "$type", "Polygon"], ["!=", "intermittent", 1]],
+      "paint": {
+        "fill-color": "#0c151d"
+      }
+    },
+    {
+      "id": "coastline-glow",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": ["==", "$type", "Polygon"],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#7ccdc0",
+        "line-opacity": 0.32,
+        "line-blur": ["interpolate", ["linear"], ["zoom"], 4, 3, 12, 9],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 3, 12, 10]
+      }
+    },
+    {
+      "id": "coastline-edge",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": ["==", "$type", "Polygon"],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#a6ddce",
+        "line-opacity": 0.7,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.6, 12, 1.4]
+      }
+    },
+    {
+      "id": "waterway",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "waterway",
+      "minzoom": 9,
+      "filter": ["==", "$type", "LineString"],
+      "paint": {
+        "line-color": "#6fb7ad",
+        "line-opacity": 0.4,
+        "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.5, 14, 1.6]
+      }
+    },
+    {
+      "id": "road-skeleton",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "transportation",
+      "minzoom": 8,
+      "filter": ["all", ["==", "$type", "LineString"], ["in", "class", "motorway", "trunk", "primary"]],
+      "layout": {"line-cap": "round", "line-join": "round"},
+      "paint": {
+        "line-color": "#3a4a54",
+        "line-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.25, 14, 0.5],
+        "line-width": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 14, 2.0]
+      }
+    }
+  ]
+}

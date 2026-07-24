@@ -89,7 +89,11 @@ final class TrackingSession {
         let title = Self.defaultTitle(for: startedAt ?? now)
         let segments = engine.segments.map(Self.repositorySegment)
         let stops = allStops.map {
-            TripRepository.NewStop(lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
+            TripRepository.NewStop(
+                lat: $0.lat, lon: $0.lon,
+                arrivedAt: $0.arrivedAt, departedAt: $0.departedAt,
+                kind: $0.kind.rawValue
+            )
         }
         if let tripId = try? repository.saveCompletedTrip(
             title: title,
@@ -100,6 +104,12 @@ final class TrackingSession {
         ) {
             if let json = stats.jsonString() {
                 try? repository.updateTripStats(tripId: tripId, statsJson: json)
+            }
+            // §4.4 matching, fire-and-forget: trip completion never waits on
+            // it, and the recap path retries any segment left unmatched.
+            let matcher = RouteMatchService(repository: repository, config: config)
+            Task.detached(priority: .utility) {
+                await matcher.matchTrip(tripId: tripId)
             }
         }
 
@@ -151,6 +161,12 @@ final class TrackingSession {
             // region is armed before GPS goes quiet.
             locationService?.pauseForDwell(centerLat: stop.lat, centerLon: stop.lon)
         } else {
+            if wasDwellPaused, engine.state == .recording {
+                // The engine resumed off a delivered fix; make sure the
+                // location layer follows even if the region-exit event never
+                // arrives (it may have been this very fix's SLC wake).
+                locationService?.resumeActiveTracking()
+            }
             locationService?.adapt(
                 state: engine.state,
                 mode: currentMode,

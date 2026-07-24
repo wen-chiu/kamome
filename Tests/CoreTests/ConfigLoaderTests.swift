@@ -27,16 +27,43 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.dwell.visitMinS, 300)
         XCTAssertEqual(config.dwell.visitReturnRadiusM, 300)
         XCTAssertEqual(config.simplify.epsilonM, 15)
+        // Map matching (§4.4, P3.5): disabled until the OSRM server exists.
+        XCTAssertEqual(config.matching.baseURL, "")
+        XCTAssertEqual(config.matching.chunkSize, 100)
+        XCTAssertEqual(config.matching.confidenceMin, 0.5)
+        XCTAssertEqual(config.matching.radiusM, 25)
+        XCTAssertEqual(config.matching.timeoutS, 10)
+        XCTAssertEqual(config.matching.displayEpsilonM, 5)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)
         XCTAssertEqual(config.sampling.walk.distanceFilterM, 10)
         XCTAssertEqual(config.export.targetDurationS, 30)
+        XCTAssertEqual(config.export.maxHoldFraction, 0.5)
+        // Frame render tunables (§4.5 step 2).
+        XCTAssertEqual(config.export.frameWidthPx, 1080)
+        XCTAssertEqual(config.export.frameHeightPx, 1920)
+        XCTAssertEqual(config.export.cameraSpanM, 1500)
+        // Follow-cam framing (§4.5 step 1, prototype §2.3).
+        XCTAssertEqual(config.export.wideSpanPadding, 1.15)
+        XCTAssertEqual(config.export.zoomTransitionS, 0.8)
+        XCTAssertFalse(config.export.followHeadingUp)
+        XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
+        XCTAssertEqual(config.export.titleCardS, 2.5)
+        XCTAssertEqual(config.export.endCardS, 3.0)
+        XCTAssertEqual(config.export.videoBitrateMbps, 5)
         XCTAssertEqual(config.filter.maxHAccM, 50)
         XCTAssertEqual(config.filter.speedMaxHAccM, 25)
         // Phantom-trip guard (ADR 2026-07-16).
         XCTAssertEqual(config.trip.minDurationS, 60)
         XCTAssertEqual(config.trip.minDistanceM, 100)
+        // Photo-EXIF import clustering (§4.7, Replay MVP) — prototype defaults.
+        XCTAssertEqual(config.photoImport.stopRadiusM, 4000)
+        XCTAssertEqual(config.photoImport.stopSplitGapS, 10_800)
+        XCTAssertEqual(config.photoImport.minPhotosPerStop, 2)
+        XCTAssertEqual(config.photoImport.deckMinPhotos, 3)
+        XCTAssertEqual(config.photoImport.deckMaxPhotos, 8)
+        XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
     }
 
     func testMissingKeyFailsLoudlyNamingTheKey() throws {

@@ -12,6 +12,7 @@ final class StopNamer {
     private let repository: TripRepository
     private var queue: [StopRecord] = []
     private var isWorking = false
+    private var onNamed: (() -> Void)?
 
     init(config: TrackingConfig, repository: TripRepository) {
         policy = GeocodePolicy(config: config.geocode)
@@ -19,8 +20,11 @@ final class StopNamer {
     }
 
     /// Names every unnamed stop, respecting the throttle. Fire-and-forget;
-    /// results land in the DB and the next detail() read picks them up.
-    func nameUnnamedStops(_ stops: [StopRecord]) {
+    /// results land in the DB. `onNamed` fires (main thread) each time a name
+    /// is written so the caller can reload — a photo-dense imported trip can
+    /// have many stops geocoded over ~30 s past a one-shot refresh (§4.2).
+    func nameUnnamedStops(_ stops: [StopRecord], onNamed: (() -> Void)? = nil) {
+        if let onNamed { self.onNamed = onNamed }
         queue.append(contentsOf: stops.filter { $0.name == nil })
         drain()
     }
@@ -33,6 +37,7 @@ final class StopNamer {
         switch policy.decision(lat: stop.lat, lon: stop.lon, now: now) {
         case .cached(let name):
             try? repository.setStopName(stopId: stop.id, name: name)
+            onNamed?()
             drain()
         case .throttled(let retryAfterS):
             queue.insert(stop, at: 0)
@@ -48,6 +53,7 @@ final class StopNamer {
                 if let name = Self.displayName(from: placemarks?.first) {
                     self.policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: Date.now.timeIntervalSince1970)
                     try? self.repository.setStopName(stopId: stop.id, name: name)
+                    self.onNamed?()
                 }
                 self.drain()
             }
