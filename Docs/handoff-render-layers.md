@@ -68,34 +68,38 @@ camera stream, synchronized with overlay content by `LinearTimeline`.
   - Layer 2 `SubjectRenderer`: marker drawing moved into `SpriteSubjectRenderer`;
     the compositor supplies `SubjectState`+`CameraFrame`, owns no screen transform.
 
-## 2. What's next — Layer 3 + wiring (the visual-changing chunk)
+## 2. What's next — Layer 3 wiring (the visual-changing chunk)
 
 This is **not** byte-identical — it lands the approved new visuals. It ends with
 a **MapLibre stills render for Chiu's sign-off**, not golden-frame gates.
 
-- **`RecapOverlayRenderer`** (concrete `OverlayRenderer`) consuming
-  `OverlayContent`: `routeReveal` (glow trail — port the route stroke),
-  **`stopLabel`** (pin + name — NEW drawing, the two-beat lead), `photoDeck`
-  (port the deck bloom, now driven by `RecapPhotoDeck.emphasis`/`focusIndex`),
-  `titleChrome`, `endChrome` (generate the QR from `shareURL` via `RecapQRCode`).
-- **`PhotoRef` resolver** — `PhotoRef` → `CGImage` at draw size. App-provided
-  (PhotoKit, moved out of `RecapModel.loadDeckImages`); a synthetic **test stub**
-  for deterministic CI.
-- **New `FrameCompositor`** consuming `LinearTimeline` + the three renderers; the
-  render loop pulls the four state streams per frame (apply the timeline's
-  `cameraFrame` — incl. the stop dolly — when fetching snapshots).
-- **Retire** the old `OverlayTimeline` / `OverlayEvent` / `RecapCardDrawing` /
-  the old single-beat deck; delete the `RecapModel` bridge (it currently maps
-  `RecapTrip` back into today's compositor inputs + resolves refs→bitmaps).
+- **DONE (committed `e1ae715`, additive + tested, not yet wired):**
+  `RecapOverlayRenderer` (concrete `OverlayRenderer`) draws all five
+  `OverlayContent`: `routeReveal` (glow trail), the NEW `stopLabel` (pin + name
+  pill, two-beat lead), `photoDeck` (bloom driven by `RecapPhotoDeck.emphasis`/
+  `focusIndex`; caption dropped — the label owns identity), `titleChrome`,
+  `endChrome` (QR generated from `shareURL`). `RecapPhotoResolving` protocol
+  (`PhotoRef` → `CGImage`) with a test stub; stop-label tokens on `RecapStyle`.
+  Tests: `RecapOverlayRendererTests`.
+- **New `FrameCompositor`** consuming `LinearTimeline` + the three renderers +
+  a resolver; the render loop pulls the four state streams per frame (fetch
+  snapshots at the timeline's `cameraFrame` — incl. the stop dolly).
+- **`PhotoRef` resolver (app)** — a PhotoKit `RecapPhotoResolving` (move the
+  bitmap loading out of `RecapModel.loadDeckImages`).
+- **`RecapModel` switch + bridge deletion** — build `LinearTimeline` + the
+  renderers; delete the code that maps `RecapTrip` back into today's compositor
+  inputs and resolves refs→bitmaps up front.
+- **Retire** the old `RecapFrameCompositor` render path / `OverlayTimeline` /
+  `OverlayEvent` / `RecapCardDrawing` / old single-beat deck / the marker
+  delegation shim.
 - **Rewrite the golden tests** to construct via `LinearTimeline` + renderers +
   the test resolver. Marker/route/chrome frames stay assertable; the stop frames
   are new (two-beat) behavior.
 - Then render fresh **MapLibre follow-cam stills** (anime car + two-beat deck over
   the dark souvenir map) for Chiu to sign off.
 
-Suggested order: `RecapOverlayRenderer` + resolver → new `FrameCompositor` +
-loop → `RecapModel` switch + bridge deletion → retire old overlay code → rewrite
-tests → stills.
+Suggested order: new `FrameCompositor` + loop → `RecapModel` switch + bridge
+deletion → retire old overlay/compositor code → rewrite tests → stills.
 
 ## 3. Key constraints (do not violate)
 
