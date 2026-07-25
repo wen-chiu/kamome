@@ -43,10 +43,15 @@ let package = Package(
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/TripComposer"
         ),
+        // Ships the hero car sprite (Resources/car-sprite.png). Code-drawn
+        // vehicles hit a quality ceiling (Chiu 2026-07-25), so the car is a
+        // raster asset loaded through `Bundle.module`; the remaining vector
+        // markers stay code-drawn. Still SDK-free and deterministic.
         .target(
             name: "KamomeExportEngine",
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
-            path: "Core/ExportEngine"
+            path: "Core/ExportEngine",
+            resources: [.process("Resources")]
         ),
         .target(
             name: "KamomeRouteMatching",

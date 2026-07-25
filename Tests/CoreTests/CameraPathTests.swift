@@ -115,6 +115,26 @@ final class CameraPathTests: XCTestCase {
         XCTAssertGreaterThan(speed(atFrame: midLegFrame), brakingSpeed * 2, "camera should brake into the hold")
     }
 
+    /// `holds` exposes one window per stop in playback order even when stops are
+    /// passed out of route order — the timeline anchors each stop scene to them.
+    func testHoldsExposeOneWindowPerStopInPlaybackOrder() throws {
+        // route[7] is passed first but lies later along the meridian than route[3].
+        let path = try XCTUnwrap(
+            CameraPath(route: straightRoute, stops: [straightRoute[7], straightRoute[3]], config: exportConfig())
+        )
+        let holds = path.holds
+
+        XCTAssertEqual(holds.count, 2)
+        XCTAssertEqual(holds.map(\.stopIndex), [1, 0], "the second stop passed lies earlier on the route")
+        XCTAssertLessThan(holds[0].startS, holds[1].startS)
+        for hold in holds {
+            XCTAssertEqual(hold.endS - hold.startS, 1.5, accuracy: 1e-9)
+            // The camera is actually holding this stop throughout the window.
+            let mid = path.position(atTime: (hold.startS + hold.endS) / 2)
+            XCTAssertEqual(mid.holdingStopIndex, hold.stopIndex)
+        }
+    }
+
     func testPerStopHoldsScaleWithSuppliedDurations() throws {
         // Two stops with explicit per-stop holds (photo-deck dwell, §5): the
         // first should hold ~3× as many frames as the second.

@@ -61,18 +61,38 @@ public struct MapState: Equatable {
     }
 }
 
-/// The photos a stop shows (by reference), which one is in focus, and the
-/// deck's presence (0…1) at this instant. The camera zoom that accompanies a
-/// deck is a `CameraTrack` concern — this is only what the deck *draws*.
+/// The photos a stop shows (by reference), which one is in focus, how far the
+/// **reveal** has opened, and the deck's opacity at this instant — plus the stop
+/// identity the card carries below it (pin + name), so the viewer always knows
+/// where a photo was taken.
+///
+/// `reveal` is the deck's own scale envelope (Chiu 2026-07-25): a 0…1 progress
+/// the renderer maps onto its own on-screen size range, so the photo grows as
+/// the shot opens. It is **synchronized with, but separate from**, the camera's
+/// dolly into the stop — how big the photo draws is a drawing concern, how
+/// zoomed the map is is a `CameraFrame` concern, and one value must never drive
+/// both.
 public struct RecapPhotoDeck: Equatable {
     public let photos: [PhotoRef]
     public let focusIndex: Int
-    public let emphasis: Double
+    /// 0…1 reveal progress → the renderer's min…max on-screen card size.
+    public let reveal: Double
+    /// 0…1 fade, so the card can cross-fade with the lead-in stop label.
+    public let opacity: Double
+    /// The stop's name and optional detail line, drawn under the card.
+    public let name: String
+    public let detail: String?
 
-    public init(photos: [PhotoRef], focusIndex: Int, emphasis: Double) {
+    public init(
+        photos: [PhotoRef], focusIndex: Int, reveal: Double, opacity: Double,
+        name: String, detail: String? = nil
+    ) {
         self.photos = photos
         self.focusIndex = focusIndex
-        self.emphasis = emphasis
+        self.reveal = reveal
+        self.opacity = opacity
+        self.name = name
+        self.detail = detail
     }
 }
 
@@ -85,8 +105,10 @@ public struct RecapPhotoDeck: Equatable {
 public enum OverlayContent: Equatable {
     /// The glowing traveled trail up to the subject.
     case routeReveal([RecapCoordinate])
-    /// A stop pin + name label anchored on the map.
-    case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?)
+    /// A stop pin on the map with its name label floating clear above the
+    /// vehicle (the lead-in beat). `opacity` fades it out as the photo deck
+    /// takes over the stop's identity below the card.
+    case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?, opacity: Double)
     /// The enlarged photo deck at a stop.
     case photoDeck(RecapPhotoDeck)
     /// Opening chrome: trip name + dates/distance.

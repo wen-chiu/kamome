@@ -20,6 +20,9 @@ import KamomeConfig
 /// slots in above this; the state streams and renderers do not change.
 public struct LinearTimeline {
     public let durationS: Double
+    /// Total rendered frames (`durationS · fps`) — what the render loop and
+    /// exporter iterate; taken straight from the reused `CameraPath`.
+    public let frameCount: Int
 
     private let path: CameraPath
     private let stops: [RecapTrip.Stop]
@@ -45,6 +48,7 @@ public struct LinearTimeline {
 
         self.path = path
         durationS = path.durationS
+        frameCount = path.frameCount
         stops = trip.stops
         holds = path.holds
         routeCoordinates = trip.route
@@ -74,22 +78,25 @@ public struct LinearTimeline {
 
     /// Camera framing: the CameraPath wide→close follow, with the stop dolly-in
     /// laid on top. The label-lead beat stays at the follow span (no dolly); over
-    /// the deck sub-window the span eases to `deckSpanM` and back, on the shared
-    /// emphasis envelope.
+    /// the deck sub-window the span eases to `deckSpanM` and back. This is the
+    /// **map** envelope only — the photo card's own scale envelope is
+    /// `deckReveal`, deliberately a different curve (Chiu 2026-07-25).
     public func cameraFrame(atTime time: Double) -> CameraFrame {
         let base = path.cameraFrame(atTime: time)
         guard let active = activeStop(atTime: time), !active.stop.photos.isEmpty else {
             return CameraFrame(centerLat: base.centerLat, centerLon: base.centerLon, spanM: base.spanM, bearing: base.bearing)
         }
-        let emphasis = deckEmphasis(atTime: time, deck: deckWindow(active.hold))
-        let spanM = base.spanM + (deckSpanM - base.spanM) * emphasis
+        let dolly = cameraDolly(atTime: time, deck: deckWindow(active.hold))
+        let spanM = base.spanM + (deckSpanM - base.spanM) * dolly
         return CameraFrame(centerLat: base.centerLat, centerLon: base.centerLon, spanM: spanM, bearing: base.bearing)
     }
 
     /// Everything drawn over the map at `time`: the revealed trail, the trip
-    /// chrome, and — at a stop — the two-beat: the stop label leads across the
-    /// whole stop, then the photo deck blooms over the deck sub-window (focus
-    /// advancing through the rotate phase, emphasis on the camera's envelope).
+    /// chrome, and — at a stop — the two beats. Beat 1: the pin lands with its
+    /// name floating above the vehicle. Beat 2: the photo deck opens (focus
+    /// advancing through the rotate phase, the card growing on `deckReveal`)
+    /// while the lead-in label cross-fades out, its identity handed to the pin +
+    /// name drawn under the card.
     public func overlayContents(atTime time: Double) -> [OverlayContent] {
         var contents: [OverlayContent] = [.routeReveal(routePrefix(atTime: time))]
         if time < titleCardS {
@@ -100,13 +107,21 @@ public struct LinearTimeline {
         }
         if let active = activeStop(atTime: time), !active.stop.photos.isEmpty {
             let stop = active.stop
-            contents.append(.stopLabel(name: stop.name, coordinate: stop.coordinate, detail: stop.detail))
             let window = deckWindow(active.hold)
+            let labelOpacity = leadLabelOpacity(atTime: time, deck: window)
+            if labelOpacity > 0.001 {
+                contents.append(.stopLabel(
+                    name: stop.name, coordinate: stop.coordinate, detail: stop.detail, opacity: labelOpacity
+                ))
+            }
             if time >= window.start {
                 contents.append(.photoDeck(RecapPhotoDeck(
                     photos: stop.photos,
                     focusIndex: focusIndex(atTime: time, deck: window, count: stop.photos.count),
-                    emphasis: deckEmphasis(atTime: time, deck: window)
+                    reveal: deckReveal(atTime: time, deck: window),
+                    opacity: deckOpacity(atTime: time, deck: window),
+                    name: stop.name,
+                    detail: stop.detail
                 )))
             }
         }
@@ -129,24 +144,61 @@ public struct LinearTimeline {
         (min(hold.startS + deck.labelLeadS, hold.endS), hold.endS)
     }
 
-    /// 0 at the sub-window edges, 1 across the middle — the grow → hold → shrink
-    /// envelope. Zoom clamps to 40% of the sub-window so it always fits even when
-    /// a stop-dense trip squeezed the hold (`max_hold_fraction`).
-    private func deckEmphasis(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
-        let length = window.end - window.start
-        let zoom = min(deck.zoomS, length * 0.4)
+    /// The zoom ramp used at both edges of a deck window, clamped to 40% of the
+    /// window so it always fits even when a stop-dense trip squeezed the hold
+    /// (`max_hold_fraction`).
+    private func zoomRamp(_ window: (start: Double, end: Double)) -> Double {
+        min(deck.zoomS, (window.end - window.start) * 0.4)
+    }
+
+    /// **Map** envelope: 0 at the sub-window edges, 1 across the middle — the
+    /// camera dollies in over `deck_zoom_s`, holds tight on the stop, pulls back
+    /// out. Distinct from `deckReveal`, which keeps opening while this holds.
+    private func cameraDolly(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
+        let zoom = zoomRamp(window)
         guard zoom > 0 else { return time >= window.start ? 1 : 0 }
         if time < window.start + zoom { return Self.smoothstep((time - window.start) / zoom) }
         if time > window.end - zoom { return Self.smoothstep((window.end - time) / zoom) }
         return 1
     }
 
+    /// **Card** envelope (Chiu 2026-07-25): the photo keeps growing across the
+    /// whole hold — not just the camera's dolly-in — so the stop plays as a slow
+    /// cinematic reveal rather than a card that pops to full size and sits
+    /// there. It scales back down over the closing ramp as the camera pulls out.
+    private func deckReveal(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
+        let zoom = zoomRamp(window)
+        let openEnd = window.end - zoom
+        let opening = openEnd - window.start
+        guard opening > 0 else { return 0 }
+        if time <= openEnd { return Self.smoothstep((time - window.start) / opening) }
+        guard zoom > 0 else { return 0 }
+        return Self.smoothstep((window.end - time) / zoom)
+    }
+
+    /// Card opacity: fades in over the opening ramp, out over the closing one.
+    private func deckOpacity(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
+        let zoom = zoomRamp(window)
+        guard zoom > 0 else { return time >= window.start ? 1 : 0 }
+        if time < window.start + zoom { return Self.smoothstep((time - window.start) / zoom) }
+        if time > window.end - zoom { return Self.smoothstep((window.end - time) / zoom) }
+        return 1
+    }
+
+    /// The lead-in label above the vehicle: solid through beat 1, then handing
+    /// the stop's identity to the card's own pin + name as the deck fades in.
+    private func leadLabelOpacity(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
+        guard time >= window.start else { return 1 }
+        let zoom = zoomRamp(window)
+        guard zoom > 0 else { return 0 }
+        return 1 - Self.smoothstep((time - window.start) / zoom)
+    }
+
     /// Which photo is in focus: the rotate phase (between the zoom edges) split
     /// into `count` equal slots. Grow holds photo 0 (highlight leads); shrink
     /// holds the last.
     private func focusIndex(atTime time: Double, deck window: (start: Double, end: Double), count: Int) -> Int {
-        let length = window.end - window.start
-        let zoom = min(deck.zoomS, length * 0.4)
+        let zoom = zoomRamp(window)
         let rotateStart = window.start + zoom
         let rotateLength = max((window.end - zoom) - rotateStart, 1e-6)
         let slot = rotateLength / Double(count)

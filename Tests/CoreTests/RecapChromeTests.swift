@@ -4,73 +4,64 @@ import KamomeExportEngine
 import KamomeTrackingEngine
 import XCTest
 
-/// §4.5 step 4 chrome gates: title/end cards and the QR share hook, under
-/// the signed-off toggle contract (decisions.md 2026-07-18 recap-chrome).
+/// §4.5 step 4 chrome gates on the render-layers pipeline: the title/end chrome
+/// (drawn by `RecapOverlayRenderer`, emitted by `LinearTimeline`) and the QR
+/// share hook, under the signed-off toggle contract (decisions.md 2026-07-18
+/// recap-chrome). Chrome is independent of photos — a photoless (route-only)
+/// trip still opens with the title and closes with the end card + share QR.
 final class RecapChromeTests: RecapRenderTestCase {
     func testTitleCardOpensTheVideoEvenWithPhotosOff() async throws {
         let config = exportConfig()
-        let title = RecapFrameCompositor.TitleCard(title: "Perth", subtitle: "Jul 16 · 1 km")
-        // photos off: stop cards gone, trip chrome stays (share hook intact).
-        let (path, compositor) = try makePipeline(photosEnabled: false, titleCard: title, config: config)
-        let background = try await snapshot(centeredAt: path.position(atTime: 0.5), config: config)
-        let frame = try compositor.render(atTime: 0.5, background: RecapBackground(current: background))
+        // Route-only trip (a photoless stop): the title chrome still opens it.
+        let timeline = try makeTimeline(
+            makeTrip(stops: [StopSpec(routeIndex: 5)], title: "Perth", subtitle: "Jul 16 · 1 km", config: config),
+            config: config
+        )
+        let compositor = makeCompositor(timeline)
 
-        // Inside the title panel, left of the centered text.
+        // Inside the title panel, under the top margin, left of the centered text.
+        let frame = try await renderFrame(timeline, compositor, at: 0.5, config: config)
         try assertPixel(frame, col: 30, row: 25, is: cardRGB, "title panel under the top margin")
         // After the title window the panel is gone.
-        let later = try compositor.render(atTime: 1.5, background: RecapBackground(current: background))
+        let later = try await renderFrame(timeline, compositor, at: 1.5, config: config)
         try assertPixel(later, col: 30, row: 25, is: backgroundRGB, "title card leaves after title_card_s")
     }
 
     /// Locks the signed-off toggle contract (decisions.md 2026-07-18, Chiu):
-    /// photosEnabled removes stop cards ONLY — the end card and its share
-    /// hook must survive a route-only export. A fully chrome-free export
-    /// would be a separate explicit option, never this toggle.
+    /// a route-only trip drops the stop deck/label but keeps the end card and
+    /// its share hook. A fully chrome-free export would be a separate explicit
+    /// option, never this path.
     func testPhotosOffKeepsEndCardShareHook() async throws {
         let config = exportConfig()
-        let endCard = RecapFrameCompositor.EndCard(
-            statsLines: ["1 km · 1 stop"],
-            callToAction: "Get this route",
-            qrCode: RecapQRCode.image(for: "https://kamome.app/r/test", sidePx: 64)
-        )
-        let stopCard = RecapFrameCompositor.StopCard(name: "Stop", dayLabel: "Day 1")
-        let (path, compositor) = try makePipeline(
-            stops: [route[5]], photosEnabled: false, stopCards: [stopCard], endCard: endCard, config: config
-        )
+        let timeline = try makeTimeline(makeTrip(stops: [StopSpec(routeIndex: 5)], config: config), config: config)
+        let compositor = makeCompositor(timeline)
 
-        // No stop card during what would have been the hold...
-        let hold = try XCTUnwrap(path.holds.first)
-        let holdTime = (hold.startS + hold.endS) / 2
-        let holdBackground = try await snapshot(centeredAt: path.position(atTime: holdTime), config: config)
-        let holdFrame = try compositor.render(atTime: holdTime, background: RecapBackground(current: holdBackground))
-        try assertPixel(holdFrame, col: widthPx - 25, row: heightPx - 40, is: backgroundRGB, "no stop card with photos off")
-
+        // No stop deck anywhere across the route-only trip...
+        for time in stride(from: 0.0, through: timeline.durationS, by: 0.25) {
+            XCTAssertNil(activePhotoDeck(timeline.overlayContents(atTime: time)), "no deck with photos off at t=\(time)")
+        }
         // ...but the end card still closes the video.
         let endTime = config.targetDurationS - 0.5
-        let endBackground = try await snapshot(centeredAt: path.position(atTime: endTime), config: config)
-        let endFrame = try compositor.render(atTime: endTime, background: RecapBackground(current: endBackground))
+        let endFrame = try await renderFrame(timeline, compositor, at: endTime, config: config)
         try assertPixel(endFrame, col: 30, row: heightPx / 2, is: cardRGB, "end card survives photos off")
     }
 
     func testEndCardShowsStatsPanelWithScannableQR() async throws {
         let config = exportConfig()
-        let qr = try XCTUnwrap(RecapQRCode.image(for: "https://kamome.app/r/test", sidePx: 64))
-        let endCard = RecapFrameCompositor.EndCard(
-            statsLines: ["1 km · 1 stop", "6 min"],
-            callToAction: "Get this route",
-            qrCode: qr
+        let timeline = try makeTimeline(
+            makeTrip(statsLines: ["1 km · 1 stop", "6 min"], config: config), config: config
         )
-        let (path, compositor) = try makePipeline(endCard: endCard, config: config)
+        let compositor = makeCompositor(timeline)
         let time = config.targetDurationS - 0.5
-        let background = try await snapshot(centeredAt: path.position(atTime: time), config: config)
-        let frame = try compositor.render(atTime: time, background: RecapBackground(current: background))
+        let frame = try await renderFrame(timeline, compositor, at: time, config: config)
 
         // Panel fill left of the centered content.
         try assertPixel(frame, col: 30, row: heightPx / 2, is: cardRGB, "end panel centered on the frame")
-        // The QR sits mid-panel: its modules must survive compositing.
+        // The QR sits mid-panel: its modules must survive compositing. The panel
+        // is otherwise white, so any dark pixels are QR modules.
         var darkPixels = 0
-        for row in 160..<240 {
-            for col in 70..<146 {
+        for row in 150..<235 {
+            for col in 76..<140 {
                 let sample = try pixel(frame, col: col, row: row)
                 if sample.red < 100 && sample.green < 100 && sample.blue < 100 { darkPixels += 1 }
             }
@@ -82,4 +73,5 @@ final class RecapChromeTests: RecapRenderTestCase {
         let qr = try XCTUnwrap(RecapQRCode.image(for: "https://kamome.app/r/test", sidePx: 128))
         XCTAssertGreaterThanOrEqual(qr.width, 128)
         XCTAssertEqual(qr.width, qr.height, "QR must stay square")
-    }}
+    }
+}

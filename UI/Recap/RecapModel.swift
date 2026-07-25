@@ -6,7 +6,6 @@ import KamomeImportKit
 import KamomePersistence
 import KamomeTripComposer
 import Observation
-import Photos
 
 /// Backs S5: builds recap content from the trip DB, runs `RecapExporter`
 /// off the main actor, and publishes progress / the finished files.
@@ -87,8 +86,8 @@ final class RecapModel {
             return
         }
         let stats = TripStats.from(jsonString: detail.trip.statsJson)
-        // Deck photo refs are selected here (data); bitmaps are loaded below only
-        // for the current compositor bridge. Refs stay out of the render size.
+        // Deck photo refs are selected here (data); the resolver loads the
+        // bitmaps. Refs stay out of the render size.
         let photoRefs = photosEnabled ? selectStopPhotoRefs(detail: detail) : [:]
         let deck = RecapDeck(photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS, labelLeadS: config.export.deckLabelLeadS)
         let route = RecapComposer.route(
@@ -108,44 +107,40 @@ final class RecapModel {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }
-        let routePoints = trip.route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
-        let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
-        guard let path = CameraPath(
-            route: routePoints, stops: stopPoints, config: config.export,
-            stopHoldsS: trip.stops.map(\.dwellS)
-        ) else {
+        // Layer 3 pipeline. The map stays north-up (product decision, Chiu
+        // 2026-07-25) and the 8-direction car sprite carries the heading, so the
+        // hero car renders the same on MapKit today as on MapLibre later — the
+        // base-map switch no longer changes what the subject looks like.
+        //
+        // `follow_heading_up` ships false; the capability check only stops a
+        // renderer that cannot rotate from being handed a bearing it would drop,
+        // should the flag ever be turned on.
+        let provider = MapKitSnapshotProvider()
+        let exportConfig = config.export.withFollowHeadingUp(
+            config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
+        )
+        guard let timeline = LinearTimeline(trip: trip, config: exportConfig) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }
-
-        // Bridge the style-independent RecapTrip into today's compositor inputs:
-        // resolve refs → bitmaps and generate the QR from shareURL (both move into
-        // the OverlayRenderer when the render-layers migration lands).
-        let stopImages = photosEnabled ? await loadDeckImages(refs: photoRefs) : [:]
-        let events = OverlayTimeline.build(holds: path.holds, config: config.export, photosEnabled: photosEnabled)
-        let compositor = RecapFrameCompositor(
-            path: path,
-            events: events,
-            stopCards: zip(trip.stops, detail.stops).map { tripStop, record in
-                RecapFrameCompositor.StopCard(
-                    name: tripStop.name, dayLabel: tripStop.dayLabel, detail: tripStop.detail,
-                    photos: stopImages[record.id] ?? []
-                )
-            },
-            titleCard: RecapFrameCompositor.TitleCard(title: trip.title, subtitle: trip.subtitle),
-            endCard: RecapFrameCompositor.EndCard(
-                statsLines: trip.statsLines, callToAction: trip.callToAction,
-                qrCode: RecapQRCode.image(for: trip.shareURL, sidePx: Int(RecapStyle().qrSidePx))
-            ),
+        let style = RecapStyle()
+        let resolver = PhotoLibraryPhotoResolver()
+        if photosEnabled {
+            let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
+            await resolver.warm(trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1))
+        }
+        let compositor = FrameCompositor(
+            timeline: timeline,
+            subject: VehicleSubjectRenderer.make(style: style),
+            overlay: RecapOverlayRenderer(style: style, resolver: resolver),
             widthPx: config.export.frameWidthPx,
-            heightPx: config.export.frameHeightPx,
-            deck: deck
+            heightPx: config.export.frameHeightPx
         )
         let exporter = RecapExporter(
-            path: path,
+            timeline: timeline,
             compositor: compositor,
-            provider: MapKitSnapshotProvider(),
-            config: config.export
+            provider: provider,
+            config: exportConfig
         )
 
         let scratch = FileManager.default.temporaryDirectory
@@ -226,44 +221,5 @@ final class RecapModel {
             if !selected.isEmpty { result[stop.id] = selected.map(PhotoRef.asset) }
         }
         return result
-    }
-
-    /// Resolves selected refs → bitmaps for the current compositor bridge
-    /// (moves into the `OverlayRenderer` at the render-layers migration). Needs
-    /// library access — undetermined means no photos; never prompt here.
-    private func loadDeckImages(refs: [String: [PhotoRef]]) async -> [String: [CGImage]] {
-        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else { return [:] }
-        var result: [String: [CGImage]] = [:]
-        for (stopID, stopRefs) in refs {
-            var images: [CGImage] = []
-            for case let .asset(assetId) in stopRefs {
-                if let image = await loadImage(assetId: assetId) { images.append(image) }
-            }
-            if !images.isEmpty { result[stopID] = images }
-        }
-        return result
-    }
-
-    private func loadImage(assetId: String) async -> CGImage? {
-        let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
-        guard let asset = fetch.firstObject else { return nil }
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat
-        options.isNetworkAccessAllowed = false
-        return await withCheckedContinuation { continuation in
-            var resumed = false
-            // Decoded for the deck's enlarged peak (~0.64 × 1080-wide card); the
-            // compositor aspect-fills, so a generous square covers any crop.
-            PHImageManager.default().requestImage(
-                for: asset,
-                targetSize: CGSize(width: 900, height: 900),
-                contentMode: .aspectFill,
-                options: options
-            ) { image, _ in
-                guard !resumed else { return }
-                resumed = true
-                continuation.resume(returning: image?.cgImage)
-            }
-        }
     }
 }

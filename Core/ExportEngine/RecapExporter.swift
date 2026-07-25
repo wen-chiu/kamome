@@ -12,18 +12,18 @@ public struct RecapExporter {
         public let gifURL: URL?
     }
 
-    private let path: CameraPath
-    private let compositor: RecapFrameCompositor
+    private let timeline: LinearTimeline
+    private let compositor: FrameCompositor
     private let provider: MapRenderer
     private let config: TrackingConfig.Export
 
     public init(
-        path: CameraPath,
-        compositor: RecapFrameCompositor,
+        timeline: LinearTimeline,
+        compositor: FrameCompositor,
         provider: MapRenderer,
         config: TrackingConfig.Export
     ) {
-        self.path = path
+        self.timeline = timeline
         self.compositor = compositor
         self.provider = provider
         self.config = config
@@ -46,11 +46,11 @@ public struct RecapExporter {
             bitrateMbps: config.videoBitrateMbps
         )
         let gif = try gifURL.map {
-            try RecapGIFEncoder(outputURL: $0, config: config, sourceFrameCount: path.frameCount)
+            try RecapGIFEncoder(outputURL: $0, config: config, sourceFrameCount: timeline.frameCount)
         }
 
         var cancelled = false
-        let loop = RecapRenderLoop(path: path, compositor: compositor, provider: provider, config: config)
+        let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
         try await loop.renderFrames { frame, image in
             guard shouldContinue() else {
                 cancelled = true
@@ -58,7 +58,7 @@ public struct RecapExporter {
             }
             try video.append(image, frame: frame)
             try gif?.append(image, frame: frame)
-            progress?(Double(frame + 1) / Double(path.frameCount))
+            progress?(Double(frame + 1) / Double(timeline.frameCount))
             return true
         }
         guard !cancelled else { return nil }

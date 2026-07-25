@@ -28,8 +28,12 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         switch content {
         case let .routeReveal(coordinates):
             drawRouteReveal(coordinates, into: surface)
-        case let .stopLabel(name, coordinate, detail):
+        case let .stopLabel(name, coordinate, detail, opacity):
+            guard opacity > 0.001 else { return }
+            surface.context.saveGState()
+            surface.context.setAlpha(CGFloat(opacity))
             drawStopLabel(name: name, coordinate: coordinate, detail: detail, into: surface)
+            surface.context.restoreGState()
         case let .photoDeck(deck):
             drawPhotoDeck(deck, into: surface)
         case let .titleChrome(title, subtitle):
@@ -56,25 +60,49 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         context.strokePath()
     }
 
-    // MARK: - Stop label (§5 two-beat lead: pin + name pill, anchored on the map)
+    // MARK: - Stop label (§5 beat 1: pin on the map, name floating over the car)
 
+    /// The pin **and** its name pill float together above the vehicle, clear of
+    /// it by the vehicle's own half-length plus `labelVehicleClearancePx`, so
+    /// neither ever prints over the car (Chiu 2026-07-25). The group is centered
+    /// on the stop's projected position, so it still reads as marking that spot —
+    /// the parked vehicle itself is what sits on the exact point.
     private func drawStopLabel(
         name: String, coordinate: RecapCoordinate, detail: String?, into surface: RenderSurface
     ) {
-        let context = surface.context
         let scale = surface.scale
-        let center = surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon)
+        let anchor = surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon)
         let radius = style.labelPinRadiusPx * scale
+        let clearance = (style.subjectLengthPx / 2 + style.labelVehicleClearancePx) * scale
+        let pinCenterY = anchor.y + clearance + radius * 1.5
 
-        // Pin: a white ring under a colored dot, so it reads on any terrain.
+        drawPin(at: CGPoint(x: anchor.x, y: pinCenterY), radius: radius, in: surface)
+        drawNamePill(
+            name: name, detail: detail, centerX: anchor.x,
+            bottomY: pinCenterY + radius * 1.5 + style.labelPinGapPx * scale, in: surface
+        )
+    }
+
+    /// A white ring under a colored dot, so the stop point reads on any terrain.
+    private func drawPin(at center: CGPoint, radius: CGFloat, in surface: RenderSurface) {
+        let context = surface.context
         context.setFillColor(style.labelPinRingColor)
         context.fillEllipse(in: CGRect(
             x: center.x - radius * 1.5, y: center.y - radius * 1.5, width: radius * 3, height: radius * 3
         ))
         context.setFillColor(style.labelPinColor)
         context.fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+    }
 
-        // Name pill floating above the pin (higher y in the CG bottom-left frame).
+    /// The name pill (plus optional detail line) sitting on `bottomY`, centered
+    /// on `centerX`. Shared by the lead-in label and the deck's caption group so
+    /// the stop's identity is drawn identically in both beats.
+    @discardableResult
+    private func drawNamePill(
+        name: String, detail: String?, centerX: CGFloat, bottomY: CGFloat, in surface: RenderSurface
+    ) -> CGRect {
+        let context = surface.context
+        let scale = surface.scale
         let padding = style.labelPillPaddingPx * scale
         let nameH = style.labelFontPx * scale
         let detailH = detail == nil ? 0 : style.labelDetailFontPx * scale
@@ -83,8 +111,7 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         let detailW = detail.map { textWidth($0, fontPx: style.labelDetailFontPx, in: surface) } ?? 0
         let pillW = max(nameW, detailW) + padding * 2
         let pillH = padding * 2 + nameH + innerGap + detailH
-        let pillBottom = center.y + radius * 1.5 + style.labelPillGapPx * scale
-        let pillRect = CGRect(x: center.x - pillW / 2, y: pillBottom, width: pillW, height: pillH)
+        let pillRect = CGRect(x: centerX - pillW / 2, y: bottomY, width: pillW, height: pillH)
 
         context.setFillColor(style.labelPillColor)
         context.addPath(CGPath(
@@ -93,46 +120,68 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         context.fillPath()
 
         drawCenteredText(
-            name, centerX: center.x, baselineY: pillRect.maxY - padding - nameH * 0.82,
+            name, centerX: centerX, baselineY: pillRect.maxY - padding - nameH * 0.82,
             fontPx: style.labelFontPx, color: style.labelTextColor, in: surface
         )
         if let detail {
             drawCenteredText(
-                detail, centerX: center.x, baselineY: pillRect.minY + padding,
+                detail, centerX: centerX, baselineY: pillRect.minY + padding,
                 fontPx: style.labelDetailFontPx, color: style.labelDetailColor, in: surface
             )
         }
+        return pillRect
     }
 
-    // MARK: - Photo deck (bloom driven by the timeline's emphasis + focusIndex)
+    // MARK: - Photo deck (zoom-in reveal, driven by the timeline's reveal/opacity)
 
+    /// The card opens from `deckPhotoMinWidthFraction` to
+    /// `deckPhotoMaxWidthFraction` on the timeline's `reveal`, so the photo grows
+    /// as the shot pushes in and still leaves the map and trail visible around
+    /// its edges (Chiu 2026-07-25). The stop's pin + name ride under the card
+    /// throughout, so the viewer always knows where the photo was taken.
     private func drawPhotoDeck(_ deck: RecapPhotoDeck, into surface: RenderSurface) {
-        guard deck.emphasis > 0.001, !deck.photos.isEmpty else { return }
+        guard deck.opacity > 0.001, !deck.photos.isEmpty else { return }
         let context = surface.context
         let count = deck.photos.count
         let index = min(max(deck.focusIndex, 0), count - 1)
 
-        let peakW = CGFloat(surface.widthPx) * style.deckPhotoWidthFraction
-        let peakH = peakW * style.deckPhotoAspect
-        let cardCenter = CGPoint(x: CGFloat(surface.widthPx) / 2, y: CGFloat(surface.heightPx) * 0.55)
-        let matteRect = CGRect(x: cardCenter.x - peakW / 2, y: cardCenter.y - peakH / 2, width: peakW, height: peakH)
-        let image = resolver.image(for: deck.photos[index], targetPx: Int(peakW))
+        let minW = CGFloat(surface.widthPx) * style.deckPhotoMinWidthFraction
+        let maxW = CGFloat(surface.widthPx) * style.deckPhotoMaxWidthFraction
+        let cardW = minW + (maxW - minW) * CGFloat(min(max(deck.reveal, 0), 1))
+        let cardH = cardW * style.deckPhotoAspect
+        let cardCenter = CGPoint(x: CGFloat(surface.widthPx) / 2, y: CGFloat(surface.heightPx) * 0.56)
+        let matteRect = CGRect(x: cardCenter.x - cardW / 2, y: cardCenter.y - cardH / 2, width: cardW, height: cardH)
+        let image = resolver.image(for: deck.photos[index], targetPx: Int(maxW))
 
         context.saveGState()
-        context.translateBy(x: cardCenter.x, y: cardCenter.y)
-        context.scaleBy(x: CGFloat(deck.emphasis), y: CGFloat(deck.emphasis))
-        context.translateBy(x: -cardCenter.x, y: -cardCenter.y)
+        context.setAlpha(CGFloat(deck.opacity))
         drawDeckStack(matteRect: matteRect, count: count, in: surface)
         drawDeckHero(image, matteRect: matteRect, in: surface)
-        context.restoreGState()
+        drawDeckDots(count: count, current: index, below: matteRect, in: surface)
 
-        let dotsAlpha = CGFloat(min(max((deck.emphasis - 0.4) / 0.6, 0), 1))
-        if dotsAlpha > 0.001 {
-            context.saveGState()
-            context.setAlpha(dotsAlpha)
-            drawDeckDots(count: count, current: index, below: matteRect, in: surface)
-            context.restoreGState()
-        }
+        // The stop's identity, anchored under the card: pin then name.
+        let scale = surface.scale
+        let dotsBand = style.deckDotRadiusPx * 2 * scale + style.cardPaddingPx * scale
+        let pinCenterY = matteRect.minY - dotsBand - style.deckLabelGapPx * scale - style.labelPinRadiusPx * 1.5 * scale
+        drawPin(
+            at: CGPoint(x: cardCenter.x, y: pinCenterY), radius: style.labelPinRadiusPx * scale, in: surface
+        )
+        let pillH = pillHeight(detail: deck.detail, in: surface)
+        drawNamePill(
+            name: deck.name, detail: deck.detail, centerX: cardCenter.x,
+            bottomY: pinCenterY - style.labelPinRadiusPx * 1.5 * scale - style.deckLabelGapPx * scale - pillH,
+            in: surface
+        )
+        context.restoreGState()
+    }
+
+    /// The pill's drawn height — needed to park it *below* an anchor.
+    private func pillHeight(detail: String?, in surface: RenderSurface) -> CGFloat {
+        let scale = surface.scale
+        let padding = style.labelPillPaddingPx * scale
+        let detailH = detail == nil ? 0 : style.labelDetailFontPx * scale
+        let innerGap = detail == nil ? 0 : padding / 2
+        return padding * 2 + style.labelFontPx * scale + innerGap + detailH
     }
 
     private func drawDeckStack(matteRect: CGRect, count: Int, in surface: RenderSurface) {

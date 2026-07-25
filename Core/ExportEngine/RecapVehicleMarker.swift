@@ -1,19 +1,22 @@
 import CoreGraphics
 import Foundation
 
-/// The moving subject drawn at the vehicle position (§4.5 step 1, prototype
-/// §2.3 — "the vehicle is the subject," not a dot on a wide map). A top-down
-/// **car** is the default; the seagull (brand mascot), scooter, and bike are
-/// swappable through the overlay token on `RecapStyle`, so nothing hardwires
-/// the car (Chiu 2026-07-20: seagull is no longer forced as the moving marker).
+/// The **vector** moving subjects (§4.5 step 1, prototype §2.3 — "the vehicle is
+/// the subject," not a dot on a wide map). These are simple enough that
+/// code-drawn paths look right: the seagull (brand mascot), a scooter, a bike.
 ///
-/// Each marker is drawn as pure CoreGraphics vector paths — no image assets —
-/// so the whole pipeline stays deterministic for the golden-frame gate. Shapes
-/// are authored in a normalized local frame (forward = +y, unit length 1.0,
-/// centered on the origin) and scaled to `lengthPx`; the origin is always
-/// covered so the marker reads as a solid subject at its center.
+/// The **car is not here** — code-drawn cars hit a quality ceiling (Chiu
+/// 2026-07-25) and it ships as a raster sprite instead (`RecapCarSprite`,
+/// `SubjectVisual.rasterSprite`). The `VehicleSilhouette` protocol that existed
+/// to make cars swappable went with it; these markers draw directly, which is
+/// all a handful of simple shapes ever needed.
+///
+/// Shapes are authored in a normalized local frame (forward = +y, unit length
+/// 1.0, centered on the origin) and scaled to `lengthPx`; the origin is always
+/// covered so the marker reads as a solid subject at its center. Unlike the
+/// raster sprite, these *may* be rotated to the travel heading — a stroked
+/// vector shape survives rotation where a shaded 3/4 photo-real sprite does not.
 public enum VehicleMarker: String, CaseIterable {
-    case car
     case seagull
     case scooter
     case bike
@@ -42,8 +45,7 @@ public enum VehicleMarker: String, CaseIterable {
     }
 
     /// Draws the marker centered at `center` (in the compositor's y-up frame),
-    /// its nose pointing `rotationDegrees` clockwise from screen-up. `fill` is
-    /// the body, `accent` the glass/wheels, `outline` the contrast edge.
+    /// its nose pointing `rotationDegrees` clockwise from screen-up.
     public func draw(
         in context: CGContext,
         at center: CGPoint,
@@ -59,58 +61,18 @@ public enum VehicleMarker: String, CaseIterable {
         context.scaleBy(x: lengthPx, y: lengthPx)
         // Outline scales with the marker but not with the unit path transform.
         let width = 0.045
-
         switch self {
-        case .car:
-            drawCar(in: context, colors: colors, outlineWidth: width)
-        case .scooter:
-            drawScooter(in: context, colors: colors, outlineWidth: width)
-        case .bike:
-            drawBike(in: context, colors: colors, outlineWidth: width)
-        case .seagull:
-            drawSeagull(in: context, colors: colors, outlineWidth: width)
+        case .scooter: drawScooter(in: context, colors: colors, outlineWidth: width)
+        case .bike: drawBike(in: context, colors: colors, outlineWidth: width)
+        case .seagull: drawSeagull(in: context, colors: colors)
         }
         context.restoreGState()
     }
 
     // MARK: - Silhouettes (unit local frame: forward = +y, length 1.0)
 
-    private func drawCar(in context: CGContext, colors: Palette, outlineWidth: CGFloat) {
-        // Body: a rounded rect, nose (+y) slightly narrower than the tail.
-        let body = CGPath(
-            roundedRect: CGRect(x: -0.24, y: -0.5, width: 0.48, height: 1.0),
-            cornerWidth: 0.2, cornerHeight: 0.24, transform: nil
-        )
-        fillStroke(context, path: body, fill: colors.fill, outline: colors.outline, width: outlineWidth)
-
-        // Windscreen (front) + rear window: tinted glass, kept off dead-center
-        // so the origin stays solid body.
-        let windshield = CGPath(
-            roundedRect: CGRect(x: -0.17, y: 0.12, width: 0.34, height: 0.2),
-            cornerWidth: 0.08, cornerHeight: 0.08, transform: nil
-        )
-        let rearWindow = CGPath(
-            roundedRect: CGRect(x: -0.17, y: -0.32, width: 0.34, height: 0.18),
-            cornerWidth: 0.08, cornerHeight: 0.08, transform: nil
-        )
-        context.setFillColor(colors.accent)
-        context.addPath(windshield)
-        context.addPath(rearWindow)
-        context.fillPath()
-
-        // Headlights at the very nose.
-        context.setFillColor(colors.accent)
-        for side in [-1.0, 1.0] as [CGFloat] {
-            context.addPath(CGPath(
-                roundedRect: CGRect(x: side * 0.16 - 0.05, y: 0.42, width: 0.1, height: 0.05),
-                cornerWidth: 0.025, cornerHeight: 0.025, transform: nil
-            ))
-        }
-        context.fillPath()
-    }
-
     private func drawScooter(in context: CGContext, colors: Palette, outlineWidth: CGFloat) {
-        // Narrow deck, distinct from the car's wide body.
+        // Narrow deck, distinct from a car's wide body.
         let deck = CGPath(
             roundedRect: CGRect(x: -0.14, y: -0.42, width: 0.28, height: 0.84),
             cornerWidth: 0.13, cornerHeight: 0.16, transform: nil
@@ -144,20 +106,15 @@ public enum VehicleMarker: String, CaseIterable {
         ))
         context.fillPath()
         // Two wheels front and back.
-        context.setFillColor(colors.accent)
         for centerY in [0.34, -0.34] as [CGFloat] {
-            context.addEllipse(in: CGRect(x: -0.14, y: centerY - 0.14, width: 0.28, height: 0.28))
+            let wheel = CGPath(
+                ellipseIn: CGRect(x: -0.14, y: centerY - 0.14, width: 0.28, height: 0.28), transform: nil
+            )
+            fillStroke(context, path: wheel, fill: colors.accent, outline: colors.outline, width: outlineWidth)
         }
-        context.fillPath()
-        context.setLineWidth(outlineWidth)
-        context.setStrokeColor(colors.outline)
-        for centerY in [0.34, -0.34] as [CGFloat] {
-            context.addEllipse(in: CGRect(x: -0.14, y: centerY - 0.14, width: 0.28, height: 0.28))
-        }
-        context.strokePath()
     }
 
-    private func drawSeagull(in context: CGContext, colors: Palette, outlineWidth: CGFloat) {
+    private func drawSeagull(in context: CGContext, colors: Palette) {
         // Ported from the prototype's GULL (recap_engine.html) — the earlier
         // seagull Chiu preferred: a single flowing double-arc, stroked (not
         // filled), round caps. SVG viewBox spans ±24 / ±16 with wingtips at

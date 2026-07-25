@@ -80,9 +80,10 @@ public struct CameraPath {
     public let frameCount: Int
     public let durationS: Double
 
-    /// Hold windows in video time, in playback order — what OverlayTimeline
-    /// anchors stop cards to (decisions.md 2026-07-17: overlay moments are
-    /// timeline events, not per-frame reads of the camera's hold state).
+    /// Hold windows in video time, in playback order — what `LinearTimeline`
+    /// anchors each stop scene (pin/label lead → photo deck) to (decisions.md
+    /// 2026-07-17: overlay moments are timeline events, not per-frame reads of
+    /// the camera's hold state).
     public var holds: [Hold] {
         timeline.compactMap { entry in
             guard case let .hold(stopIndex, _) = entry.phase else { return nil }

@@ -2,33 +2,35 @@ import CoreGraphics
 import Foundation
 import KamomeConfig
 
-/// §4.5 step 2 orchestration: walks the camera path frame by frame, requests
+/// §4.5 step 2 orchestration: walks the timeline frame by frame, requests
 /// one base-map snapshot per keyframe (`export.keyframe_interval_frames`),
 /// and cross-fades between neighboring keyframes for the frames in between —
 /// snapshotting all 900 frames would blow the < 90 s render budget.
 ///
-/// Snapshots are prefetched a few keyframes ahead so network-bound
-/// MKMapSnapshotter fetches overlap CPU-bound compositing (2026-07-19
-/// benchmark: serial fetches alone cost ~40 s of the budget). Prefetch only
-/// changes timing, never pixels — frames are still delivered strictly in
-/// order, so encoders (AVAssetWriter, GIF) consume them as a stream.
+/// Snapshots are taken at the timeline's `cameraFrame` (the wide↔close follow
+/// *and* the stop dolly-in), so the base map zooms into a stop exactly while
+/// its photo deck blooms. Prefetched a few keyframes ahead so network-bound
+/// snapshot fetches overlap CPU-bound compositing (2026-07-19 benchmark: serial
+/// fetches alone cost ~40 s of the budget). Prefetch only changes timing, never
+/// pixels — frames are delivered strictly in order, so encoders consume them as
+/// a stream.
 public struct RecapRenderLoop {
     /// Keyframes requested ahead of the one being composited. Bounds both
     /// network concurrency and cache memory (~8 MB per 1080×1920 snapshot).
     private static let prefetchDepth = 4
 
-    private let path: CameraPath
-    private let compositor: RecapFrameCompositor
+    private let timeline: LinearTimeline
+    private let compositor: FrameCompositor
     private let provider: MapRenderer
     private let config: TrackingConfig.Export
 
     public init(
-        path: CameraPath,
-        compositor: RecapFrameCompositor,
+        timeline: LinearTimeline,
+        compositor: FrameCompositor,
         provider: MapRenderer,
         config: TrackingConfig.Export
     ) {
-        self.path = path
+        self.timeline = timeline
         self.compositor = compositor
         self.provider = provider
         self.config = config
@@ -39,32 +41,28 @@ public struct RecapRenderLoop {
     public func renderFrames(_ deliver: (Int, CGImage) throws -> Bool) async throws {
         let interval = max(config.keyframeIntervalFrames, 1)
         // The last frame blends toward this keyframe; never fetch past it.
-        let lastKeyframe = (path.frameCount - 1) / interval + 1
+        let lastKeyframe = (timeline.frameCount - 1) / interval + 1
         var fetches: [Int: Task<MapSnapshot, Error>] = [:]
         defer { fetches.values.forEach { $0.cancel() } }
 
         func fetch(_ keyframe: Int) -> Task<MapSnapshot, Error> {
             if let running = fetches[keyframe] { return running }
             let time = Double(keyframe * interval) / Double(config.fps)
-            // The camera frame carries the wide↔close span + heading-up bearing;
-            // it centers on the trip during the title/end shots, the vehicle
-            // through the body (CameraPath.cameraFrame).
-            let cameraFrame = path.cameraFrame(atTime: min(time, path.durationS))
-            let frame = CameraFrame(
-                centerLat: cameraFrame.centerLat, centerLon: cameraFrame.centerLon,
-                spanM: cameraFrame.spanM, bearing: cameraFrame.bearing
-            )
+            // The camera frame carries the wide↔close span + heading-up bearing
+            // + the stop dolly (LinearTimeline.cameraFrame).
+            let frame = timeline.cameraFrame(atTime: min(time, timeline.durationS))
+            let map = timeline.mapState(atTime: min(time, timeline.durationS))
             let widthPx = config.frameWidthPx
             let heightPx = config.frameHeightPx
             let provider = self.provider
             let task = Task {
-                try await provider.snapshot(frame, map: MapState(), widthPx: widthPx, heightPx: heightPx)
+                try await provider.snapshot(frame, map: map, widthPx: widthPx, heightPx: heightPx)
             }
             fetches[keyframe] = task
             return task
         }
 
-        for frame in 0..<path.frameCount {
+        for frame in 0..<timeline.frameCount {
             let keyframe = frame / interval
             for ahead in 2...(2 + Self.prefetchDepth) where keyframe + ahead <= lastKeyframe {
                 _ = fetch(keyframe + ahead)

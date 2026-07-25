@@ -3,10 +3,12 @@ import KamomeConfig
 import KamomeExportEngine
 import XCTest
 
-/// Shared harness for the §4.5 golden-frame gates: a 1 km straight meridian
-/// route rendered into a small 216×384 frame (1080×1920 ÷ 5), the flat
-/// provider for determinism, and pixel probes for composition assertions.
-/// Subclasses hold the actual tests (RecapFrameTests, RecapChromeTests).
+/// Shared harness for the §4.5 golden-frame gates, on the render-layers pipeline
+/// (`RecapTrip` → `LinearTimeline` → `FrameCompositor` over the deterministic
+/// `FlatSnapshotProvider`): a 1 km straight meridian route rendered into a small
+/// 216×384 frame (1080×1920 ÷ 5), plus pixel probes for composition assertions.
+/// Subclasses hold the actual tests (RecapFrameTests, RecapChromeTests,
+/// RecapOverlayRendererTests).
 class RecapRenderTestCase: XCTestCase {
     struct RGB: Equatable {
         let red: Int
@@ -14,8 +16,30 @@ class RecapRenderTestCase: XCTestCase {
         let blue: Int
     }
 
-    let route: [CameraPath.Point] = (0...10).map {
-        CameraPath.Point(lat: -32.0 + Double($0) * 0.0009, lon: 115.75)
+    /// A `RecapPhotoResolving` stub: refs → bitmaps via a closure, so a deck
+    /// test can give each photo a distinct color and probe which one shows.
+    struct StubResolver: RecapPhotoResolving {
+        let provide: (PhotoRef) -> CGImage?
+        func image(for ref: PhotoRef, targetPx: Int) -> CGImage? { provide(ref) }
+    }
+
+    /// One stop in a test trip, anchored to a route vertex.
+    struct StopSpec {
+        let routeIndex: Int
+        let name: String
+        let detail: String?
+        let photos: [PhotoRef]
+
+        init(routeIndex: Int, name: String = "Stop", detail: String? = nil, photos: [PhotoRef] = []) {
+            self.routeIndex = routeIndex
+            self.name = name
+            self.detail = detail
+            self.photos = photos
+        }
+    }
+
+    let route: [RecapCoordinate] = (0...10).map {
+        RecapCoordinate(lat: -32.0 + Double($0) * 0.0009, lon: 115.75)
     }
 
     let widthPx = 216
@@ -23,63 +47,156 @@ class RecapRenderTestCase: XCTestCase {
 
     // Style colors as 8-bit sRGB, for pixel assertions.
     let routeRGB = RGB(red: 33, green: 115, blue: 242)
-    // Vehicle marker body (RecapStyle.markerColor) — the car fills its center.
-    let markerRGB = RGB(red: 255, green: 74, blue: 69)
     let backgroundRGB = RGB(red: 237, green: 237, blue: 232)
     let cardRGB = RGB(red: 255, green: 255, blue: 255)
+
+    /// Half the drawn vehicle length in this frame's pixels — probes that want
+    /// bare map (or trail) must clear it.
+    var vehicleHalfPx: Int {
+        Int(RecapStyle().subjectLengthPx * CGFloat(widthPx) / 1080 / 2)
+    }
+
+    /// Is this pixel the car's paintwork? The sprite is illustrated artwork, so
+    /// tests assert the *hue* (red-dominant) over a region rather than any exact
+    /// tone — the sprite's own center is windshield glass, and pinning exact
+    /// pixels would make every art change a false failure.
+    func isVehiclePaint(_ sample: RGB) -> Bool {
+        sample.red > 90 && sample.red > sample.green + 45 && sample.red > sample.blue + 45
+    }
+
+    /// How many of the car's painted pixels appear within `radius` of a point.
+    func vehiclePaintCount(_ image: CGImage, aroundCol col: Int, row: Int, radius: Int) throws -> Int {
+        var count = 0
+        for probeRow in max(row - radius, 0)..<min(row + radius, image.height) {
+            for probeCol in max(col - radius, 0)..<min(col + radius, image.width)
+            where isVehiclePaint(try pixel(image, col: probeCol, row: probeRow)) {
+                count += 1
+            }
+        }
+        return count
+    }
+
+    func assertVehiclePresent(
+        _ image: CGImage, col: Int, row: Int, radius: Int? = nil, _ label: String,
+        file: StaticString = #filePath, line: UInt = #line
+    ) throws {
+        let count = try vehiclePaintCount(image, aroundCol: col, row: row, radius: radius ?? vehicleHalfPx)
+        XCTAssertGreaterThan(count, 20, "\(label): no vehicle paint near (\(col),\(row))", file: file, line: line)
+    }
 
     func exportConfig(
         targetDurationS: Double = 6,
         fps: Int = 10,
-        keyframeIntervalFrames: Int = 15
+        keyframeIntervalFrames: Int = 15,
+        followHeadingUp: Bool = false
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
-            cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, followHeadingUp: false,
+            cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, followHeadingUp: followHeadingUp,
             deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckSpanM: 600, deckLabelLeadS: 0.6,
             keyframeIntervalFrames: keyframeIntervalFrames,
             titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
         )
     }
 
-    /// Card at full opacity so its pixels are exactly white regardless of the
-    /// background under it.
+    /// Chrome panels at full opacity so their pixels are exactly white
+    /// regardless of the background under them.
     var opaqueCardStyle: RecapStyle {
         var style = RecapStyle()
         style.cardColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
         return style
     }
 
-    func makePipeline(
-        stops: [CameraPath.Point] = [],
-        photosEnabled: Bool = true,
-        stopCards: [RecapFrameCompositor.StopCard] = [],
-        titleCard: RecapFrameCompositor.TitleCard? = nil,
-        endCard: RecapFrameCompositor.EndCard? = nil,
+    // MARK: - Pipeline construction
+
+    /// A style-independent test trip from route vertices + stop specs. Each
+    /// stop's dwell is photo-count-driven (`RecapDeck.dwellS`) when it has
+    /// photos, else the uniform `stop_hold_s` (matches RecapComposer).
+    func makeTrip(
+        route: [RecapCoordinate]? = nil,
+        stops: [StopSpec] = [],
+        title: String = "Trip",
+        subtitle: String = "Subtitle",
+        statsLines: [String] = ["1 km · 1 stop"],
+        callToAction: String = "Get this route",
+        shareURL: String = "kamome://route/test",
         config: TrackingConfig.Export
-    ) throws -> (path: CameraPath, compositor: RecapFrameCompositor) {
-        let path = try XCTUnwrap(CameraPath(route: route, stops: stops, config: config))
-        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: photosEnabled)
-        let compositor = RecapFrameCompositor(
-            path: path,
-            events: events,
-            stopCards: stopCards,
-            titleCard: titleCard,
-            endCard: endCard,
-            widthPx: config.frameWidthPx,
-            heightPx: config.frameHeightPx,
-            style: opaqueCardStyle
+    ) -> RecapTrip {
+        let coords = route ?? self.route
+        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let tripStops = stops.map { spec in
+            RecapTrip.Stop(
+                coordinate: coords[spec.routeIndex], name: spec.name, dayLabel: "Day 1",
+                detail: spec.detail, photos: spec.photos,
+                dwellS: spec.photos.isEmpty ? config.stopHoldS : deck.dwellS(photoCount: spec.photos.count)
+            )
+        }
+        return RecapTrip(
+            route: coords, stops: tripStops, title: title, subtitle: subtitle,
+            statsLines: statsLines, callToAction: callToAction, shareURL: shareURL
         )
-        return (path, compositor)
     }
 
-    func snapshot(centeredAt position: CameraPath.Position, config: TrackingConfig.Export) async throws -> MapSnapshot {
-        try await FlatSnapshotProvider().snapshot(
-            CameraFrame(centerLat: position.lat, centerLon: position.lon, spanM: config.cameraSpanM, bearing: 0),
-            map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+    func makeTimeline(_ trip: RecapTrip, config: TrackingConfig.Export) throws -> LinearTimeline {
+        try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+    }
+
+    /// A compositor over the subject + overlay renderers, on the shipped north-up
+    /// map. `resolver` supplies deck bitmaps; the default returns none (route /
+    /// label / chrome tests need no photos).
+    func makeCompositor(
+        _ timeline: LinearTimeline,
+        style: RecapStyle? = nil,
+        resolver: RecapPhotoResolving? = nil
+    ) -> FrameCompositor {
+        let style = style ?? opaqueCardStyle
+        return FrameCompositor(
+            timeline: timeline,
+            subject: VehicleSubjectRenderer.make(style: style),
+            overlay: RecapOverlayRenderer(style: style, resolver: resolver ?? StubResolver { _ in nil }),
+            widthPx: widthPx, heightPx: heightPx
         )
     }
+
+    /// The keyframe background at `time`: a single snapshot taken at the
+    /// timeline's own `cameraFrame` (blend 1), the flat provider for determinism.
+    func background(
+        _ timeline: LinearTimeline, at time: Double, config: TrackingConfig.Export,
+        provider: FlatSnapshotProvider = FlatSnapshotProvider()
+    ) async throws -> RecapBackground {
+        let frame = timeline.cameraFrame(atTime: time)
+        let snapshot = try await provider.snapshot(
+            CameraFrame(centerLat: frame.centerLat, centerLon: frame.centerLon, spanM: frame.spanM, bearing: frame.bearing),
+            map: MapState(), widthPx: widthPx, heightPx: heightPx
+        )
+        return RecapBackground(current: snapshot)
+    }
+
+    /// Renders the frame at `time` over the timeline's own keyframe background.
+    func renderFrame(
+        _ timeline: LinearTimeline, _ compositor: FrameCompositor, at time: Double, config: TrackingConfig.Export
+    ) async throws -> CGImage {
+        try compositor.render(atTime: time, background: try await background(timeline, at: time, config: config))
+    }
+
+    // MARK: - Timeline scanning helpers
+
+    func activePhotoDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
+        for content in contents {
+            if case let .photoDeck(deck) = content { return deck }
+        }
+        return nil
+    }
+
+    func hasStopLabel(_ contents: [OverlayContent]) -> Bool {
+        contents.contains {
+            if case .stopLabel = $0 { return true }
+            return false
+        }
+    }
+
+    // MARK: - Test images
 
     /// A solid-color test photo for deck rendering — distinct fills let a pixel
     /// probe tell which photo the deck is showing.

@@ -4,11 +4,9 @@ import Foundation
 // The three **renderer protocols** — the rendering side of the narrow waist
 // (render-layers refactor 2026-07-24). Each consumes a state type and knows
 // nothing about how that state was produced, so a VisualStyle can swap all
-// three to change the look without touching story/timing. Each already has 2+
-// real conformers coming (MapLibre/MapKit/Flat · car/gull · deck/label/chrome),
+// three to change the look without touching story/timing. Each has 2+ real
+// conformers (MapLibre/MapKit/Flat · car/gull/scooter/bike · deck/label/chrome),
 // so the abstraction is earned, not ceremony.
-//
-// (Defined here for review before the migration wires the conformers.)
 
 // MARK: - Layer 1: MapRenderer
 
@@ -32,37 +30,15 @@ public protocol MapRenderer {
     func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot
 }
 
-/// How the moving subject faces on screen — decoupled from which sprite it is,
-/// so any (visual × mode) combination is valid (some just look better).
-public enum SpriteMode: Equatable {
-    /// Never rotates; relies on a heading-up map (the anime hero car).
-    case heroUpright
-    /// Rotates to `heading − bearing` (a top-down marker, the gull).
-    case topDownRotating
-}
-
-/// The capability consumer: resolves a requested heading-up against what the
-/// renderer supports, yielding both the camera decision (rotate the map?) and
-/// the subject's `SpriteMode`. Nobody downstream assumes MapKit can rotate.
-public struct FollowCamMode: Equatable {
-    public let headingUp: Bool
-    public let spriteMode: SpriteMode
-
-    public init(headingUp: Bool, spriteMode: SpriteMode) {
-        self.headingUp = headingUp
-        self.spriteMode = spriteMode
-    }
-
-    public static func resolve(
-        requestHeadingUp: Bool,
-        _ capabilities: MapRendererCapabilities
-    ) -> FollowCamMode {
-        if requestHeadingUp, capabilities.supportsHeadingUp {
-            return FollowCamMode(headingUp: true, spriteMode: .heroUpright)
-        }
-        return FollowCamMode(headingUp: false, spriteMode: .topDownRotating)
-    }
-}
+// The map never rotates to follow the vehicle (product decision, Chiu
+// 2026-07-25: a turning map hides the route's real shape and the distance
+// covered, which is what a travel recap exists to show). The vehicle carries the
+// heading instead. `export.follow_heading_up` therefore ships `false`, and
+// `supportsHeadingUp` above survives only as the guard that stops a renderer
+// which cannot rotate from being handed a bearing it would silently drop.
+//
+// This replaced a `FollowCamMode` type whose only job was choosing between the
+// two orientations; with the choice settled there was no decision left to name.
 
 // MARK: - Layers 2 & 3: what renderers draw onto
 

@@ -293,6 +293,24 @@ public struct TrackingConfig: Decodable, Equatable {
             self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
         }
 
+        /// A copy with `follow_heading_up` forced to `resolved`. The composition
+        /// root resolves the configured request against what the base-map
+        /// renderer can actually honor, so a provider
+        /// that cannot rotate is never handed a bearing it would silently drop.
+        public func withFollowHeadingUp(_ resolved: Bool) -> Export {
+            Export(
+                targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
+                maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
+                frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+                cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
+                zoomTransitionS: zoomTransitionS, followHeadingUp: resolved,
+                deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
+                deckSpanM: deckSpanM, deckLabelLeadS: deckLabelLeadS,
+                keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
+                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps
+            )
+        }
+
         enum CodingKeys: String, CodingKey {
             case targetDurationS = "target_duration_s"
             case fps

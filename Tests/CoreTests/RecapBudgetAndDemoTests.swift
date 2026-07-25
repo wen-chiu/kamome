@@ -35,6 +35,44 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         try GPXReplay.loadConfig().export  // the shipped 1080×1920@30 defaults
     }
 
+    /// Trip chrome copy for a benchmark/demo render.
+    private struct Chrome {
+        let title: String
+        let subtitle: String
+        let statsLines: [String]
+        let shareURL: String
+    }
+
+    /// A route-only `RecapTrip` (no deck photos) from synthetic/fixture geometry
+    /// — the benchmark measures the pipeline, not photo loading.
+    private func routeTrip(
+        route: [CameraPath.Point], stops: [CameraPath.Point], names: [String],
+        chrome: Chrome, config: TrackingConfig.Export
+    ) -> RecapTrip {
+        let tripStops = stops.enumerated().map { index, stop in
+            RecapTrip.Stop(
+                coordinate: RecapCoordinate(lat: stop.lat, lon: stop.lon),
+                name: index < names.count ? names[index] : "Stop \(index + 1)",
+                dayLabel: "Day \(index / 3 + 1)", detail: nil, photos: [], dwellS: config.stopHoldS
+            )
+        }
+        return RecapTrip(
+            route: route.map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }, stops: tripStops,
+            title: chrome.title, subtitle: chrome.subtitle, statsLines: chrome.statsLines,
+            callToAction: "Get this route", shareURL: chrome.shareURL
+        )
+    }
+
+    private func routeCompositor(_ timeline: LinearTimeline, config: TrackingConfig.Export) -> FrameCompositor {
+        let style = RecapStyle()
+        return FrameCompositor(
+            timeline: timeline,
+            subject: VehicleSubjectRenderer.make(style: style),
+            overlay: RecapOverlayRenderer(style: style, resolver: BenchNoPhotoResolver()),
+            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+        )
+    }
+
     func testRenderBudgetFullResolutionFlatProvider() async throws {
         try XCTSkipUnless(
             ProcessInfo.processInfo.environment["KAMOME_RENDER_BENCH"] == "1",
@@ -42,26 +80,18 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         )
         let config = try fullResolutionConfig()
         let (route, stops) = syntheticLongTrip()
-        let path = try XCTUnwrap(CameraPath(route: route, stops: stops, config: config))
-        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: true)
-        let cards = stops.indices.map {
-            RecapFrameCompositor.StopCard(name: "Stop \($0 + 1)", dayLabel: "Day \($0 / 3 + 1)")
-        }
-        let compositor = RecapFrameCompositor(
-            path: path,
-            events: events,
-            stopCards: cards,
-            titleCard: .init(title: "Benchmark Trip", subtitle: "8 days · 1,200 km"),
-            endCard: .init(
-                statsLines: ["1,200 km · 24 stops"],
-                callToAction: "Get this route",
-                qrCode: RecapQRCode.image(for: "kamome://route/bench", sidePx: 320)
+        let trip = routeTrip(
+            route: route, stops: stops, names: stops.indices.map { "Stop \($0 + 1)" },
+            chrome: Chrome(
+                title: "Benchmark Trip", subtitle: "8 days · 1,200 km",
+                statsLines: ["1,200 km · 24 stops"], shareURL: "kamome://route/bench"
             ),
-            widthPx: config.frameWidthPx,
-            heightPx: config.frameHeightPx
+            config: config
         )
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
         let exporter = RecapExporter(
-            path: path, compositor: compositor, provider: FlatSnapshotProvider(), config: config
+            timeline: timeline, compositor: routeCompositor(timeline, config: config),
+            provider: FlatSnapshotProvider(), config: config
         )
         let videoURL = FileManager.default.temporaryDirectory.appendingPathComponent("bench.mp4")
         let gifURL = FileManager.default.temporaryDirectory.appendingPathComponent("bench.gif")
@@ -78,7 +108,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         let videoMB = Double((try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int) ?? 0) / 1e6
         let gifMB = Double((try? FileManager.default.attributesOfItem(atPath: gifURL.path)[.size] as? Int) ?? 0) / 1e6
         print(String(format: "KAMOME_BENCH pipeline (flat provider, %d frames @ %d×%d): %.1f s — mp4 %.1f MB, gif %.1f MB",
-                     path.frameCount, config.frameWidthPx, config.frameHeightPx, seconds, videoMB, gifMB))
+                     timeline.frameCount, config.frameWidthPx, config.frameHeightPx, seconds, videoMB, gifMB))
     }
 
     func testMapKitSnapshotLatency() async throws {
@@ -123,31 +153,20 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         let engine = try GPXReplay.run(fixture: "perth_margaret_river_day1.gpx")
         let route = engine.segments.flatMap(\.points).map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stops = engine.stops.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
-        let path = try XCTUnwrap(CameraPath(route: route, stops: stops, config: config))
-        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: true)
         // The fixture is the DemoSeeder trip: same stops, same order.
         let names = ["Mandurah", "Bunbury", "Busselton Jetty", "Margaret River"]
-        let cards = stops.indices.map { index in
-            RecapFrameCompositor.StopCard(
-                name: index < names.count ? names[index] : "Stop \(index + 1)",
-                dayLabel: "Day 1"
-            )
-        }
-        let compositor = RecapFrameCompositor(
-            path: path,
-            events: events,
-            stopCards: cards,
-            titleCard: .init(title: "Perth → Margaret River", subtitle: "Day 1 · 291 km"),
-            endCard: .init(
-                statsLines: ["291 km · 4 stops", "5.8 h on the road"],
-                callToAction: "Get this route",
-                qrCode: RecapQRCode.image(for: "kamome://route/demo", sidePx: 320)
+        let trip = routeTrip(
+            route: route, stops: stops, names: names,
+            chrome: Chrome(
+                title: "Perth → Margaret River", subtitle: "Day 1 · 291 km",
+                statsLines: ["291 km · 4 stops", "5.8 h on the road"], shareURL: "kamome://route/demo"
             ),
-            widthPx: config.frameWidthPx,
-            heightPx: config.frameHeightPx
+            config: config
         )
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
         let exporter = RecapExporter(
-            path: path, compositor: compositor, provider: MapKitSnapshotProvider(), config: config
+            timeline: timeline, compositor: routeCompositor(timeline, config: config),
+            provider: MapKitSnapshotProvider(), config: config
         )
         // Test clones are destroyed after the run, so honor a host output
         // path (simulator doesn't enforce the file sandbox).
@@ -166,4 +185,9 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         print("KAMOME_DEMO mp4: \(videoURL.path)")
         print("KAMOME_DEMO gif: \(gifURL.path)")
     }
+}
+
+/// The benchmark/demo trips are route-only; no deck photos to resolve.
+private struct BenchNoPhotoResolver: RecapPhotoResolving {
+    func image(for ref: PhotoRef, targetPx: Int) -> CGImage? { nil }
 }

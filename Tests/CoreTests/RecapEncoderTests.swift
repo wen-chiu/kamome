@@ -8,8 +8,8 @@ import XCTest
 /// §4.5 step 5 gate: the encoders turn the deterministic frame stream into a
 /// real MP4 and GIF with the promised duration, size, and frame decimation.
 final class RecapEncoderTests: XCTestCase {
-    private let route: [CameraPath.Point] = (0...10).map {
-        CameraPath.Point(lat: -32.0 + Double($0) * 0.0009, lon: 115.75)
+    private let route: [RecapCoordinate] = (0...10).map {
+        RecapCoordinate(lat: -32.0 + Double($0) * 0.0009, lon: 115.75)
     }
 
     /// 2 s × 10 fps = 20 frames; GIF at 5 fps → stride 2 → 10 GIF frames.
@@ -23,20 +23,27 @@ final class RecapEncoderTests: XCTestCase {
         )
     }
 
-    private func makeExporter(config: TrackingConfig.Export) throws -> (exporter: RecapExporter, path: CameraPath) {
-        let path = try XCTUnwrap(CameraPath(route: route, stops: [route[5]], config: config))
-        let events = OverlayTimeline.build(holds: path.holds, config: config, photosEnabled: true)
-        let compositor = RecapFrameCompositor(
-            path: path,
-            events: events,
-            stopCards: [RecapFrameCompositor.StopCard(name: "Stop", dayLabel: "Day 1")],
+    private func makeExporter(config: TrackingConfig.Export) throws -> (exporter: RecapExporter, frameCount: Int) {
+        let stop = RecapTrip.Stop(
+            coordinate: route[5], name: "Stop", dayLabel: "Day 1", detail: nil, photos: [], dwellS: config.stopHoldS
+        )
+        let trip = RecapTrip(
+            route: route, stops: [stop], title: "Trip", subtitle: "Sub",
+            statsLines: [], callToAction: "", shareURL: "kamome://route/test"
+        )
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let style = RecapStyle()
+        let compositor = FrameCompositor(
+            timeline: timeline,
+            subject: VehicleSubjectRenderer.make(style: style),
+            overlay: RecapOverlayRenderer(style: style, resolver: NoPhotoResolver()),
             widthPx: config.frameWidthPx,
             heightPx: config.frameHeightPx
         )
         let exporter = RecapExporter(
-            path: path, compositor: compositor, provider: FlatSnapshotProvider(), config: config
+            timeline: timeline, compositor: compositor, provider: FlatSnapshotProvider(), config: config
         )
-        return (exporter, path)
+        return (exporter, timeline.frameCount)
     }
 
     private func scratchURL(_ name: String) -> URL {
@@ -67,7 +74,7 @@ final class RecapEncoderTests: XCTestCase {
 
     func testExportProducesDecimatedScaledGIF() async throws {
         let config = exportConfig()
-        let (exporter, path) = try makeExporter(config: config)
+        let (exporter, frameCount) = try makeExporter(config: config)
         let videoURL = scratchURL("recap.mp4")
         let gifURL = scratchURL("recap.gif")
         defer {
@@ -80,7 +87,7 @@ final class RecapEncoderTests: XCTestCase {
         XCTAssertEqual(output?.gifURL, gifURL)
         let source = try XCTUnwrap(CGImageSourceCreateWithURL(gifURL as CFURL, nil))
         // fps 10 → gif 5 fps → every 2nd of 20 frames.
-        XCTAssertEqual(CGImageSourceGetCount(source), path.frameCount / 2)
+        XCTAssertEqual(CGImageSourceGetCount(source), frameCount / 2)
         let first = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
         XCTAssertEqual(first.width, config.gifWidthPx)
         XCTAssertEqual(first.height, 192, "aspect ratio should survive the downscale")
@@ -107,4 +114,9 @@ final class RecapEncoderTests: XCTestCase {
         XCTAssertNil(output, "cancelled export must not report success")
         XCTAssertEqual(framesSeen, 5, "rendering should stop right after cancellation")
     }
+}
+
+/// The encoder gates render a route-only trip; no deck photos to resolve.
+private struct NoPhotoResolver: RecapPhotoResolving {
+    func image(for ref: PhotoRef, targetPx: Int) -> CGImage? { nil }
 }
