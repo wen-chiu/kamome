@@ -1,7 +1,14 @@
 # Handoff — Recap Layer 3 + visual redesign (2026-07-25)
 
-Branch `phase-3-recap`, commit `ce28db6`. 119 tests green, `swiftlint --strict`
-clean. **Not merged — PR #11 still holds until the §6 three-real-trip gate.**
+Branch `phase-3-recap`, commits `ce28db6` (Layer 3 + redesign) and `2917008`
+(final car art). 119 tests green, `swiftlint --strict` clean. **Not merged —
+PR #11 still holds until the §6 three-real-trip gate.**
+
+**Layer 3 is fully landed, visuals included** — Chiu signed off the car sprites,
+the photo-deck zoom-in reveal, and the two-beat stop label on 2026-07-25. The
+render-layers refactor that began at `c933121` is complete: nothing in the recap
+pipeline is still waiting on a design decision. What remains before PR #11 is
+device validation, not visual work — see §7.
 
 Continues `Docs/handoff-render-layers.md` (Layers 1–2, `c933121`). That document
 describes the architecture; this one records Layer 3 and the visual decisions
@@ -122,14 +129,57 @@ on the car's roof — the group floats precisely to avoid that.
   but meaningless image. If the sweep ever needs changing, keep it on the real
   pipeline.
 
-## 6. Still open
+## 6. Carried forward from this work
 
 - Car art is **done** (2026-07-25). The glow and residual-tilt caveats from the
   single-sprite era died with it; the new drawings have clean transparent edges
   and each faces its own bearing.
-- Deferred from the §3 sign-off and still open: compositor atmosphere
-  (vignette / route-glow / grade), labels/glyphs, the `RecapStyle.modernMinimal`
-  preset, and the `RecapModel` → MapLibre **production switch**. MapKit is still
-  the shipping base map.
-- Next in the Replay MVP order (`Docs/handoff-P3.5.md`): §6 three-real-trip
-  dogfood = the release gate.
+- **Known, accepted, not blocking (Chiu 2026-07-25):** scaling by canvas rather
+  than by content bounds leaves the car up to ~26 px (at the 1080 reference) off
+  the true vehicle point on `sw`/`nw`, where the artwork sits furthest from its
+  canvas centre. Invisible in stills. **Revisit only if it shows in rendered
+  video**, via per-sprite content-centre correction at load — the canvas scaling
+  itself must stay, or the car pulses as it turns.
+
+## 7. What is left before PR #11 can go up
+
+Nothing in this document blocks. The remaining work is **device validation plus
+two deferred rendering decisions**, in rough dependency order.
+
+### Code work still outstanding
+
+1. **MapLibre production switch** — `RecapModel` still constructs
+   `MapKitSnapshotProvider`. Flipping it to `MapLibreSnapshotProvider` retires
+   MapKit and the OSM attribution overlay. Deferred at the §3 sign-off
+   (2026-07-22) and *not* re-opened by this session; the 8-direction car renders
+   identically on both, so the switch is now purely a base-map change and no
+   longer gated on the subject.
+2. **Compositor atmosphere** — vignette / route-glow / grade as `RecapTheme`
+   tokens, plus labels/glyphs and the `RecapStyle.modernMinimal` preset. Also
+   deferred from §3. The stills use an ad-hoc `glowRouteStyle()` in the harness;
+   the shipped default is still the plain blue trail.
+
+### Device validation (needs a real iPhone — none of it can be faked)
+
+From `Docs/device-test-P3.md`, the items redistributed to the Replay MVP gate:
+
+- **F — render budget:** export the longest real trip on device, record the S5
+  readout. The `< 90 s` number is retired; the criterion is *product-acceptable*.
+- **G — S5 UX pass:** S3 → film button → sheet, photos toggle on/off, MP4 and
+  GIF through the share sheet, cancel mid-render.
+- **Limited Photo Library path** — still unproven on device (flagged since §1;
+  the simulator's photo-grant is broken on iOS 26, see the toolchain note).
+- **MapLibre pixel render + `pmtiles://` vs `mbtiles://`** — Metal, so CI has
+  never executed it. Folds into the switch above.
+
+### The gate itself (`Docs/handoff-P3.5.md` §6)
+
+Three of Chiu's real past trips, of different character, each run **entirely
+in-app**: photos import → matching → recap → MP4 → share. No DB edits, no
+external tools. Routes honest (no sea-crossing straight lines), all three films
+worth keeping, **≥ 1 published publicly**, stable export on device. Three trips
+is hard and never downgrades to one. Chiu signs off; artifacts land in
+`Docs/demos/phase3_5/`.
+
+**Merge point:** the whole Replay MVP goes to `main` as one PR (or a tight
+stack) once §6 passes — that is what PR #11 is waiting for.

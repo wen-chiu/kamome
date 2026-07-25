@@ -257,11 +257,23 @@ explicit keyframes reserved for title / end / day-transitions.
   keyframe rules). No magic numbers. Golden-frame CI stays deterministic
   (`FlatSnapshotProvider`); the *feel* is judged on device in §6.
 
-### Status — camera core (framing half) landed 2026-07-23 (commit `3eac0ab`, `phase-3-recap`; NOT merged)
+### Status — §4 and §5 COMPLETE 2026-07-25 (`ce28db6` + `2917008`, `phase-3-recap`; NOT merged)
 
-CI green (104 tests, swiftlint --strict clean). The **framing half** is done; the
-**visual half** (vehicle marker + photo deck) is next, on branch
-`feature/vehicle-marker-photo-deck` (branched off `3eac0ab`, no work started).
+The framing half landed 2026-07-23 (`3eac0ab`, detail below). The **visual half**
+— vehicle subject and photo deck — landed 2026-07-25 together with the Layer 3
+render wiring, and Chiu signed it off. **See `Docs/handoff-recap-visuals.md`**;
+it also lists what remains before PR #11. Headlines, because they reverse
+decisions recorded further down this file:
+
+- The map is **north-up and never rotates** (heading-up was tried and abandoned);
+  the vehicle carries the heading as an **8-direction sprite set**, nearest-bucket
+  selected, never rotated at runtime. `FollowCamMode` was removed.
+- The photo deck is a **zoom-in reveal** (0.30 → 0.50 frame width) on its own
+  envelope, deliberately a different curve from the camera dolly.
+- The stop plays **two beats**: pin + name floating clear above the vehicle, then
+  cross-fading out as the photo card takes over the stop's identity beneath it.
+
+The rest of this section is the 2026-07-23 camera-core record, still accurate:
 
 - `CameraPath` now emits **two** outputs: `Position` (the vehicle — lat/lon +
   `heading`, the route tangent) and a new `CameraFrame` (the snapshot —
