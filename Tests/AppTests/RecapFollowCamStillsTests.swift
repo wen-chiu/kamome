@@ -260,19 +260,20 @@ final class RecapFollowCamStillsTests: XCTestCase {
 #if canImport(MapLibre)
 /// The heading-sweep pass, split out to keep the harness type small.
 private extension RecapFollowCamStillsTests {
-    /// A route whose travel heading turns steadily from −60° to 240°: each step
+    /// A route whose travel heading turns steadily from −90° to 450°: each step
     /// advances a fixed distance along a slightly rotated heading, curling into a
-    /// loop that passes through north, north-east, east, south-east and south.
+    /// loop that passes through all eight sprite directions.
     ///
-    /// It deliberately overshoots at both ends: sampling skips the title and end
-    /// windows (where the camera is still easing between the wide shot and the
-    /// close follow), so 0° and 180° have to occur comfortably *inside* the body
-    /// of the film rather than at the route's first and last vertex.
+    /// It deliberately overshoots a full turn at both ends: sampling skips the
+    /// title and end windows (where the camera is still easing between the wide
+    /// shot and the close follow), so 0° and 315° have to occur comfortably
+    /// *inside* the body of the film rather than at the route's first and last
+    /// vertex.
     private var sweepRoute: [RecapCoordinate] {
         var coords = [RecapCoordinate(lat: -33.9695, lon: 115.0715)]
-        let steps = 100, stepM = 25.0
+        let steps = 140, stepM = 20.0
         for index in 0..<steps {
-            let heading = (-60.0 + 300.0 * Double(index) / Double(steps)) * .pi / 180
+            let heading = (-90.0 + 540.0 * Double(index) / Double(steps)) * .pi / 180
             let previous = coords[coords.count - 1]
             coords.append(RecapCoordinate(
                 lat: previous.lat + stepM * cos(heading) / 111_320,
@@ -304,7 +305,7 @@ private extension RecapFollowCamStillsTests {
             widthPx: width, heightPx: height
         )
 
-        for target in [0.0, 45, 90, 135, 180] {
+        for target in SpriteDirection.allCases.map(\.degrees) {
             guard let time = timeOfHeading(target, in: timeline, config: config) else {
                 XCTFail("the sweep route never travels at \(Int(target))°")
                 continue

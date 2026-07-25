@@ -28,9 +28,10 @@ public struct RecapStyle {
 
     // The moving subject (§4.5 step 1): the bundled 8-direction car sprite over a
     // north-up map, the vehicle turning rather than the world (Chiu 2026-07-25).
-    /// Longest on-screen side of the car sprite at the 1080 reference. The eight
-    /// drawings share one square canvas, so the car keeps a constant size as it
-    /// turns; the canvas is larger than the car, hence the generous value.
+    /// The sprite **canvas** side on screen at the 1080 reference. Scaling by the
+    /// shared canvas rather than by each drawing's content is what keeps the car
+    /// from pulsing as it turns; the car itself fills 52–74% of it, so the drawn
+    /// vehicle runs roughly 200–280 px.
     public var carSpriteLengthPx: CGFloat = 380
     /// Drawn only when the sprite set fails to load. Vector, so it rotates
     /// freely. The gull is the brand mascot and reads as a light glyph over the

@@ -43,11 +43,10 @@ public enum SpriteDirection: String, CaseIterable {
 /// export must not re-decode eight PNGs 900 times. Decoding is deterministic, so
 /// the golden-frame gate still holds.
 ///
-/// **The current files are placeholders**: they were pre-rendered by turning the
-/// original single hero image to each bearing, so only the north-east-ish one has
-/// truly correct perspective and each carries a baked-in direction tag. They
-/// exist to prove the bucket selection; replacing them with eight properly drawn
-/// sprites is an asset swap with no code change.
+/// The eight drawings share one 512×512 canvas and are scaled by canvas, not by
+/// content, so the car cannot pulse as it turns. The car fills 52–74% of that
+/// canvas depending on direction, which is correct: a car seen side-on really is
+/// longer on screen than one seen from behind.
 public enum RecapCarSprite {
     private static let cache = SpriteCache()
 
