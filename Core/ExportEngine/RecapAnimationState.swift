@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import KamomeTrackingEngine
 
 /// The style-independent **state types** — the "narrow waist" where story/timing
 /// meets rendering (render-layers refactor 2026-07-24). The animation timeline
@@ -102,6 +103,21 @@ public struct RecapPhotoDeck: Equatable {
     }
 }
 
+/// A revealed stretch of trail: the part of one `RecapTrip.Leg` the subject has
+/// already covered, carrying that leg's mode and provenance so the renderer can
+/// stroke it honestly. Pure data — the renderer projects and styles it.
+public struct RecapRouteLeg: Equatable {
+    public let coordinates: [RecapCoordinate]
+    public let mode: TransportMode
+    public let provenance: RouteProvenance
+
+    public init(coordinates: [RecapCoordinate], mode: TransportMode, provenance: RouteProvenance) {
+        self.coordinates = coordinates
+        self.mode = mode
+        self.provenance = provenance
+    }
+}
+
 /// One drawable element active at an instant — **pure data**, no CoreGraphics
 /// and no geo→pixel (the renderer projects through the `CameraFrame`, resolves
 /// `PhotoRef`s, and generates the QR from `shareURL`). Overlays never mutate or
@@ -109,8 +125,11 @@ public struct RecapPhotoDeck: Equatable {
 /// content it belongs to. `Equatable`, so a test can assert what the timeline
 /// produced without comparing bitmaps.
 public enum OverlayContent: Equatable {
-    /// The glowing traveled trail up to the subject.
-    case routeReveal([RecapCoordinate])
+    /// The traveled trail up to the subject, leg by leg. Legs rather than one
+    /// polyline because they do not all deserve the same stroke: a leg the
+    /// pipeline could not confidently reconstruct must read as a guess in the
+    /// published film, not as road (PD-1).
+    case routeReveal([RecapRouteLeg])
     /// A stop pin on the map with its name label floating clear above the
     /// vehicle (the lead-in beat). `opacity` fades it out as the photo deck
     /// takes over the stop's identity below the card.
@@ -119,7 +138,9 @@ public enum OverlayContent: Equatable {
     case photoDeck(RecapPhotoDeck)
     /// Opening chrome: trip name + dates/distance.
     case titleChrome(title: String, subtitle: String)
-    /// Closing chrome: stats + the "Get this route" share payload (the renderer
-    /// makes the QR).
-    case endChrome(stats: [String], callToAction: String, shareURL: String)
+    /// Closing chrome: stats, the call to action, and the share payload the
+    /// renderer turns into a QR. `shareURL` is nil for the Replay MVP (PD-4) —
+    /// the end card shows the Kamome wordmark instead of a code that resolves
+    /// to nothing.
+    case endChrome(stats: [String], callToAction: String, shareURL: String?)
 }

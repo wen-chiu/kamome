@@ -41,7 +41,8 @@ final class RouteMatchingTests: XCTestCase {
         timeoutS: 10,
         displayEpsilonM: 5,
         routeMaxDetourRatio: 2.5,
-        routeWaypointMinSpacingM: 250
+        routeWaypointMinSpacingM: 250,
+        routeWaypointRadiusM: 500
     )
 
     private func trace(count: Int) -> [RouteMatchPoint] {
@@ -172,6 +173,8 @@ final class RouteMatchingTests: XCTestCase {
             "the intermediate photo rides along as a via-waypoint (PD-3)"
         )
         XCTAssertFalse(url.contains("timestamps="), "/route takes no timestamps")
+        // The waypoint radius, not the 25 m GPS floor — photos sit beside roads.
+        XCTAssertTrue(url.contains("radiuses=500;500;500"), "got: \(url)")
     }
 
     /// PD-3 outlier protection: `/route` always answers *something* drivable, so

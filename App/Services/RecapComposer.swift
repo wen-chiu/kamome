@@ -11,19 +11,22 @@ import KamomeTripComposer
 /// photo CGImages arrive pre-loaded (RecapModel owns PhotoKit), and all copy
 /// is formatted here so localization never enters KamomeExportEngine.
 enum RecapComposer {
-    /// Display-grade recap geometry. Segments matched to the road network
-    /// (§4.4, `segment.matched_polyline`) contribute their snapped geometry
-    /// at the tighter matched ε — the replay must follow real roads, never
-    /// straight lines between GPS points (§4.5 quality bar). Unmatched
-    /// segments fall back to raw points at the same ε as S3. Either way the
-    /// compositor strokes the traveled path every frame, so everything is
-    /// Douglas-Peucker-bounded to protect the §4.5 render budget.
-    static func route(
+    /// Display-grade recap geometry, one `RecapTrip.Leg` per stored segment.
+    /// Segments matched to the road network (§4.4, `segment.matched_polyline`)
+    /// contribute their snapped geometry at the tighter matched ε — the replay
+    /// must follow real roads, never straight lines between GPS points (§4.5
+    /// quality bar). Unmatched segments fall back to raw points at the same ε as
+    /// S3. Either way the compositor strokes the traveled path every frame, so
+    /// everything is Douglas-Peucker-bounded to protect the §4.5 render budget.
+    ///
+    /// Each leg also carries **why its geometry looks the way it does**, which
+    /// the film draws (PD-1) — see `provenance(for:)`.
+    static func legs(
         from segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
         epsilonM: Double,
         matchedEpsilonM: Double
-    ) -> [RecapCoordinate] {
-        segments.flatMap { item -> [RecapCoordinate] in
+    ) -> [RecapTrip.Leg] {
+        segments.compactMap { item -> RecapTrip.Leg? in
             let source: (points: [Simplifier.Point], epsilonM: Double)
             if let encoded = item.segment.matchedPolyline,
                case let decoded = EncodedPolyline.decode(encoded),
@@ -32,9 +35,44 @@ enum RecapComposer {
             } else {
                 source = (item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, epsilonM)
             }
-            return Simplifier.douglasPeucker(source.points, epsilonM: source.epsilonM)
+            let coordinates = Simplifier.douglasPeucker(source.points, epsilonM: source.epsilonM)
                 .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
+            guard coordinates.count >= 2 else { return nil }
+            return RecapTrip.Leg(
+                coordinates: coordinates,
+                mode: TransportMode(rawValue: item.segment.mode) ?? .unknown,
+                provenance: provenance(for: item.segment)
+            )
         }
+    }
+
+    /// Derives a segment's provenance from what the row actually says (PD-1).
+    /// No confidence column is needed: snapped geometry either exists or it
+    /// doesn't, and the segment knows whether it was recorded or reconstructed
+    /// from photos.
+    ///
+    /// Note the asymmetry, and that it is deliberate: raw geometry on a
+    /// *recorded* segment is honest — it is a real GPS trace that simply never
+    /// went through matching — while raw geometry on an *imported* segment is a
+    /// straight line between two photos that nobody watched being traveled. Only
+    /// the second is inferred, and only the second gets dashed.
+    static func provenance(for segment: SegmentRecord) -> RouteProvenance {
+        if segment.matchedPolyline != nil { return .reconstructed }
+        switch segment.segmentSource {
+        case .gpsHifi, .gpsPassive: return .recorded
+        case .exif, .timeline: return .inferred
+        }
+    }
+
+    /// The whole display polyline. Kept for callers that only need geometry
+    /// (S3's map, distance math) — the film goes through `legs`.
+    static func route(
+        from segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
+        epsilonM: Double,
+        matchedEpsilonM: Double
+    ) -> [RecapCoordinate] {
+        legs(from: segments, epsilonM: epsilonM, matchedEpsilonM: matchedEpsilonM)
+            .flatMap(\.coordinates)
     }
 
     /// Maps one trip's records into the style-independent `RecapTrip` (S5).
@@ -45,14 +83,14 @@ enum RecapComposer {
     /// anyway (no route points).
     static func trip(
         trip: TripRecord,
-        route: [RecapCoordinate],
+        legs: [RecapTrip.Leg],
         stops: [StopRecord],
         stats: TripStats?,
         photosByStop: [String: [PhotoRef]],
         deck: RecapDeck = RecapDeck(),
         stopHoldS: Double = 1.5
     ) -> RecapTrip? {
-        guard route.count >= 2 else { return nil }
+        guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
 
         let tripStops = stops.map { stop -> RecapTrip.Stop in
             let photos = photosByStop[stop.id] ?? []
@@ -67,13 +105,13 @@ enum RecapComposer {
         }
 
         return RecapTrip(
-            route: route,
+            legs: legs,
             stops: tripStops,
             title: trip.title,
             subtitle: titleSubtitle(trip: trip, stats: stats),
             statsLines: statsLines(stats: stats, stopCount: stops.count),
-            callToAction: String(localized: "recap_get_route"),
-            shareURL: shareURLString(tripId: trip.id)
+            callToAction: String(localized: "recap_end_cta"),
+            shareURL: nil
         )
     }
 
@@ -116,9 +154,11 @@ enum RecapComposer {
         return [distanceStops, drive]
     }
 
-    /// P3 placeholder payload: a deep link to this trip. Becomes the real
-    /// share URL / `.kamome` file reference when P6/P7 land — the QR is part
-    /// of the sharing flow (Chiu, 2026-07-18), so it renders from day one.
+    /// The share payload the end-card QR would encode. **Unused by the Replay
+    /// MVP** (PD-4): `kamome://route/<id>` resolves to nothing — no page, no
+    /// install, no trip — so the film shows the Kamome wordmark rather than a
+    /// code that invites a scan it cannot honor. Kept because the QR path is
+    /// intact and returns the day the real share URL exists (spec P6/P7).
     static func shareURLString(tripId: String) -> String {
         "kamome://route/\(tripId)"
     }

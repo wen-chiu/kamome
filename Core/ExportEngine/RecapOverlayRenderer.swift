@@ -26,8 +26,8 @@ public struct RecapOverlayRenderer: OverlayRenderer {
 
     public func render(_ content: OverlayContent, camera: CameraFrame, into surface: RenderSurface) {
         switch content {
-        case let .routeReveal(coordinates):
-            drawRouteReveal(coordinates, into: surface)
+        case let .routeReveal(legs):
+            for leg in legs { drawRouteLeg(leg, into: surface) }
         case let .stopLabel(name, coordinate, detail, opacity):
             guard opacity > 0.001 else { return }
             surface.context.saveGState()
@@ -41,34 +41,6 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         case let .endChrome(stats, callToAction, shareURL):
             drawEndChrome(stats: stats, callToAction: callToAction, shareURL: shareURL, into: surface)
         }
-    }
-
-    // MARK: - Route reveal (the glowing traveled trail)
-
-    /// Stroked twice when the theme asks for it: a wide translucent glow under a
-    /// crisp core, which is what makes the trail read as *lit* on a dark map
-    /// rather than as a flat polyline. The path is built once and reused.
-    private func drawRouteReveal(_ coordinates: [RecapCoordinate], into surface: RenderSurface) {
-        guard coordinates.count >= 2 else { return }
-        let context = surface.context
-        let path = CGMutablePath()
-        path.move(to: surface.cgPoint(lat: coordinates[0].lat, lon: coordinates[0].lon))
-        for coordinate in coordinates.dropFirst() {
-            path.addLine(to: surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon))
-        }
-        context.setLineCap(.round)
-        context.setLineJoin(.round)
-
-        if (style.routeGlowColor.alpha) > 0.001 {
-            context.setStrokeColor(style.routeGlowColor)
-            context.setLineWidth(style.routeWidthPx * style.routeGlowWidthMultiple * surface.scale)
-            context.addPath(path)
-            context.strokePath()
-        }
-        context.setStrokeColor(style.routeColor)
-        context.setLineWidth(style.routeWidthPx * surface.scale)
-        context.addPath(path)
-        context.strokePath()
     }
 
     // MARK: - Stop label (§5 beat 1: pin on the map, name floating over the car)

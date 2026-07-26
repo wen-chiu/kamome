@@ -513,6 +513,23 @@
         }
       }
     },
+    "recap_end_cta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record your own journey"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記錄你自己的旅程"
+          }
+        }
+      }
+    },
     "recap_export": {
       "extractionState": "manual",
       "localizations": {
@@ -611,23 +628,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "MP4 影片"
-          }
-        }
-      }
-    },
-    "recap_get_route": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Get this route"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取得這條路線"
           }
         }
       }

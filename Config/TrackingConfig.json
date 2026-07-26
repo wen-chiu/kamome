@@ -31,7 +31,8 @@
     "timeout_s": 10,
     "display_epsilon_m": 5,
     "route_max_detour_ratio": 2.5,
-    "route_waypoint_min_spacing_m": 250
+    "route_waypoint_min_spacing_m": 250,
+    "route_waypoint_radius_m": 500
   },
   "photos": {
     "match_radius_m": 300

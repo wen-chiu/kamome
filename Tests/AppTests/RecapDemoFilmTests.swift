@@ -4,6 +4,9 @@ import CoreText
 @testable import Kamome
 import KamomeConfig
 import KamomeExportEngine
+import KamomeImportKit
+import KamomePersistence
+import KamomeRouteMatching
 import KamomeTrackingEngine
 import KamomeTripComposer
 import UniformTypeIdentifiers
@@ -41,7 +44,11 @@ final class RecapDemoFilmTests: XCTestCase {
             "Manual demo render — set KAMOME_DEMO_FILM=1."
         )
         let config = try AppConfig.loadOrDie().export
-        let trip = try demoTrip(config: config)
+        try await renderFilm(trip: try demoTrip(config: config), config: config, named: "kamome-demo-film")
+    }
+
+    /// Renders `trip` the way the shipped app would and prints where it landed.
+    private func renderFilm(trip: RecapTrip, config: TrackingConfig.Export, named: String) async throws {
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
         let style = RecapStyle.modernMinimal
 
@@ -66,7 +73,7 @@ final class RecapDemoFilmTests: XCTestCase {
 
         let outDir = outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let videoURL = outDir.appendingPathComponent("kamome-demo-film.mp4")
+        let videoURL = outDir.appendingPathComponent("\(named).mp4")
         try? FileManager.default.removeItem(at: videoURL)
 
         let started = Date.now
@@ -80,10 +87,96 @@ final class RecapDemoFilmTests: XCTestCase {
             (try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int) ?? 0
         ) / 1e6
         print(String(
-            format: "KAMOME_DEMO_FILM %@  %d stops · %d frames · %.1fs video · %.1f MB · rendered in %.0fs",
-            videoURL.path, trip.stops.count, timeline.frameCount, duration, sizeMB, seconds
+            format: "KAMOME_DEMO_FILM %@  %d stops · %d legs · %d frames · %.1fs video · %.1f MB · rendered in %.0fs",
+            videoURL.path, trip.stops.count, trip.legs.count, timeline.frameCount, duration, sizeMB, seconds
         ))
     }
+
+    // MARK: - Imported film (photos → legs → OSRM → recap)
+
+    /// The **whole Replay MVP loop** in one artifact: geotagged photos →
+    /// `ImportService` (per-leg segments) → OSRM `/route` reconstruction with the
+    /// intermediate photos as via-waypoints → `RecapComposer` typed legs → film.
+    ///
+    /// This is where the honesty shows: the drives reconstruct against the road
+    /// network and draw solid, while the coastal walk — never routed, because a
+    /// car profile would snap it to the nearest street (PD-8) — draws dashed.
+    /// Both are in the same frame, which is the point of PD-1.
+    ///
+    /// Needs a live OSRM covering the corridor and tiles for it:
+    ///
+    ///   KAMOME_DEMO_FILM_IMPORT=1 \
+    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5001 \
+    ///   KAMOME_TILES_PATH=Tests/Fixtures/tiles/perth-2026-07-19.pmtiles \
+    ///   KAMOME_RENDER_OUT=/path/to/out
+    func testRenderImportedFilm() async throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["KAMOME_DEMO_FILM_IMPORT"] == "1",
+            "Manual demo render — set KAMOME_DEMO_FILM_IMPORT=1."
+        )
+        let full = try AppConfig.loadOrDie()
+        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5001"
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let service = ImportService(
+            repository: repository, config: full,
+            matcher: RouteMatchService(
+                repository: repository, config: full,
+                reconstructor: OSRMRouteProvider(config: full.matching.withBaseURL(baseURL))
+            )
+        )
+
+        let tripId = try await service.importTrip(title: "Margaret River", photos: Self.corridorPhotos)
+        let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        let legs = RecapComposer.legs(
+            from: detail.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
+        )
+        print("KAMOME_DEMO_FILM_IMPORT legs: " + legs.map { "\($0.mode.rawValue)/\($0.provenance)" }.joined(separator: ", "))
+
+        let config = full.export
+        var photosByStop: [String: [PhotoRef]] = [:]
+        for stop in detail.stops {
+            photosByStop[stop.id] = detail.photos
+                .filter { $0.stopId == stop.id }
+                .prefix(3)
+                .map { PhotoRef.asset($0.phAssetId) }
+        }
+        let trip = try XCTUnwrap(RecapComposer.trip(
+            trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
+            photosByStop: photosByStop,
+            deck: RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS),
+            stopHoldS: config.stopHoldS
+        ))
+        try await renderFilm(trip: trip, config: config, named: "kamome-imported-film")
+    }
+
+    /// A day around Margaret River, inside the committed fixture tiles' bounds
+    /// (114.96…115.16 E, −34.0…−33.78 S). Three places joined by two drives and
+    /// one long coastal walk.
+    private static let corridorPhotos: [ImportPhoto] = {
+        func photo(_ id: String, _ ts: Double, _ lat: Double, _ lon: Double) -> ImportPhoto {
+            ImportPhoto(assetId: id, timestamp: ts, lat: lat, lon: lon)
+        }
+        let start = 1_752_600_000.0
+        return [
+            // Margaret River town, morning.
+            photo("mr1", start, -33.9550, 115.0750),
+            photo("mr2", start + 300, -33.9556, 115.0762),
+            photo("mr3", start + 700, -33.9548, 115.0745),
+            // On the road north — a lone shot that becomes a via-waypoint.
+            photo("via1", start + 2_400, -33.9050, 115.0900),
+            // Cowaramup.
+            photo("cw1", start + 4_200, -33.8560, 115.1040),
+            photo("cw2", start + 4_500, -33.8565, 115.1035),
+            photo("cw3", start + 5_100, -33.8558, 115.1048),
+            // Drive down to the coast at Prevelly.
+            photo("pv1", start + 9_000, -33.9760, 114.9950),
+            photo("pv2", start + 9_400, -33.9765, 114.9944),
+            photo("pv3", start + 9_900, -33.9757, 114.9958),
+            // Cape to Cape: ~5 km up the coast on foot, 75 minutes.
+            photo("ct1", start + 14_400, -33.9300, 114.9850),
+            photo("ct2", start + 14_700, -33.9295, 114.9856)
+        ]
+    }()
 
     // MARK: - Trip
 
@@ -108,11 +201,17 @@ final class RecapDemoFilmTests: XCTestCase {
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
         )
 
-        let route = engine.segments
-            .flatMap(\.points)
-            .map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }
-        let simplified = Simplifier.douglasPeucker(route, epsilonM: full.simplify.epsilonM)
-            .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
+        // One leg per engine segment, as the app now composes (typed-leg pass
+        // 2026-07-26). This trip is real recorded GPS end to end, so every leg
+        // is `.recorded` and draws solid — the dashed treatment is exercised by
+        // the imported film below, where it belongs.
+        let legs = engine.segments.compactMap { segment -> RecapTrip.Leg? in
+            let points = segment.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }
+            let simplified = Simplifier.douglasPeucker(points, epsilonM: full.simplify.epsilonM)
+                .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
+            guard simplified.count >= 2 else { return nil }
+            return RecapTrip.Leg(coordinates: simplified, mode: segment.mode, provenance: .recorded)
+        }
 
         let tripStops = stops.enumerated().map { index, stop -> RecapTrip.Stop in
             let photos = (0..<3).map { PhotoRef.asset("stop\(index)-photo\($0)") }
@@ -124,10 +223,10 @@ final class RecapDemoFilmTests: XCTestCase {
             )
         }
         return RecapTrip(
-            route: simplified, stops: tripStops,
+            legs: legs, stops: tripStops,
             title: "Perth → Margaret River", subtitle: "Day 1 · 291 km",
             statsLines: ["291 km · \(tripStops.count) 停留", "5.8 小時"],
-            callToAction: "Get this route", shareURL: "kamome://route/demo"
+            callToAction: "Record your own journey"
         )
     }
 

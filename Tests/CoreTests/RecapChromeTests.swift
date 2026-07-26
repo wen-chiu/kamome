@@ -28,10 +28,10 @@ final class RecapChromeTests: RecapRenderTestCase {
     }
 
     /// Locks the signed-off toggle contract (decisions.md 2026-07-18, Chiu):
-    /// a route-only trip drops the stop deck/label but keeps the end card and
-    /// its share hook. A fully chrome-free export would be a separate explicit
-    /// option, never this path.
-    func testPhotosOffKeepsEndCardShareHook() async throws {
+    /// a route-only trip drops the stop deck/label but keeps the end card.
+    /// A fully chrome-free export would be a separate explicit option, never
+    /// this path.
+    func testPhotosOffKeepsEndCard() async throws {
         let config = exportConfig()
         let timeline = try makeTimeline(makeTrip(stops: [StopSpec(routeIndex: 5)], config: config), config: config)
         let compositor = makeCompositor(timeline)
@@ -46,27 +46,49 @@ final class RecapChromeTests: RecapRenderTestCase {
         try assertPixel(endFrame, col: 30, row: heightPx / 2, is: cardRGB, "end card survives photos off")
     }
 
-    func testEndCardShowsStatsPanelWithScannableQR() async throws {
-        let config = exportConfig()
-        let timeline = try makeTimeline(
-            makeTrip(statsLines: ["1 km · 1 stop", "6 min"], config: config), config: config
-        )
-        let compositor = makeCompositor(timeline)
-        let time = config.targetDurationS - 0.5
-        let frame = try await renderFrame(timeline, compositor, at: time, config: config)
-
-        // Panel fill left of the centered content.
-        try assertPixel(frame, col: 30, row: heightPx / 2, is: cardRGB, "end panel centered on the frame")
-        // The QR sits mid-panel: its modules must survive compositing. The panel
-        // is otherwise white, so any dark pixels are QR modules.
-        var darkPixels = 0
+    /// Ink inside the end panel's mark area — QR modules or wordmark glyphs,
+    /// depending on which the film is carrying.
+    private func markInk(_ frame: CGImage) throws -> Int {
+        var dark = 0
         for row in 150..<235 {
             for col in 76..<140 {
                 let sample = try pixel(frame, col: col, row: row)
-                if sample.red < 100 && sample.green < 100 && sample.blue < 100 { darkPixels += 1 }
+                if sample.red < 100 && sample.green < 100 && sample.blue < 100 { dark += 1 }
             }
         }
-        XCTAssertGreaterThan(darkPixels, 50, "QR modules should be visible in the end card")
+        return dark
+    }
+
+    private func endFrame(shareURL: String?) async throws -> CGImage {
+        let config = exportConfig()
+        let timeline = try makeTimeline(
+            makeTrip(statsLines: ["1 km · 1 stop", "6 min"], shareURL: shareURL, config: config), config: config
+        )
+        return try await renderFrame(
+            timeline, makeCompositor(timeline), at: config.targetDurationS - 0.5, config: config
+        )
+    }
+
+    /// PD-4: the MVP film closes on the Kamome wordmark, not on a QR encoding
+    /// `kamome://route/<id>` — a code that resolves to nothing invites the one
+    /// interaction the film cannot honor.
+    func testEndCardShowsWordmarkNotQRWhenThereIsNoShareURL() async throws {
+        let frame = try await endFrame(shareURL: nil)
+        try assertPixel(frame, col: 30, row: heightPx / 2, is: cardRGB, "end panel centered on the frame")
+
+        let wordmarkInk = try markInk(frame)
+        XCTAssertGreaterThan(wordmarkInk, 0, "the wordmark must actually print")
+        // A QR fills its square densely; a word is mostly whitespace. This is
+        // what distinguishes them without reading pixels back as text.
+        let qrInk = try markInk(try await endFrame(shareURL: "kamome://route/test"))
+        XCTAssertLessThan(wordmarkInk, qrInk / 2, "a wordmark must not be mistakable for a code")
+    }
+
+    /// The QR capability is intact and returns the day a real share URL exists
+    /// (spec P6/P7) — only the MVP payload was suppressed, not the machinery.
+    func testQRStillRendersWhenAShareURLIsSupplied() async throws {
+        let frame = try await endFrame(shareURL: "https://kamome.app/r/test")
+        XCTAssertGreaterThan(try markInk(frame), 50, "QR modules should be visible in the end card")
     }
 
     func testQRCodeGeneratorProducesCrispModules() throws {

@@ -21,6 +21,19 @@ public struct RecapStyle {
     public var routeGlowColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 0)
     public var routeGlowWidthMultiple: CGFloat = 2.6
 
+    // Inferred legs (PD-1): stretches Kamome could not reconstruct — straight
+    // lines between photo positions. They must be legible as a *guess* at a
+    // glance in the published film, so they get the opposite of the confident
+    // treatment: a dashed, thinner, unlit stroke. Dashes are the one convention
+    // a map reader already knows for "approximate", which is why this is a dash
+    // pattern rather than, say, a second color the viewer has to be taught.
+    public var routeInferredColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 0.6)
+    /// Relative to `routeWidthPx` — an inferred leg reads as the lighter claim.
+    public var routeInferredWidthMultiple: CGFloat = 0.65
+    /// Dash on/off lengths at the 1080 reference width.
+    public var routeInferredDashPx: CGFloat = 26
+    public var routeInferredGapPx: CGFloat = 22
+
     // Atmosphere (§4.5, deferred from the §3 sign-off and landed 2026-07-25).
     // Applied by `FrameCompositor` over the finished frame, so every layer —
     // map, trail, subject, overlays — sits inside the same grade. All default to
@@ -45,6 +58,10 @@ public struct RecapStyle {
     public var subtitleFontPx: CGFloat = 40
     public var statFontPx: CGFloat = 44
     public var qrSidePx: CGFloat = 320
+    /// The Kamome wordmark that stands where the QR would go while no share URL
+    /// exists (PD-4). Sized to carry the end card on its own, not to imitate the
+    /// footprint of the code it replaces.
+    public var wordmarkFontPx: CGFloat = 84
 
     // The moving subject (§4.5 step 1): the bundled 8-direction car sprite over a
     // north-up map, the vehicle turning rather than the world (Chiu 2026-07-25).
@@ -125,6 +142,9 @@ public struct RecapStyle {
         style.routeWidthPx = 17
         style.routeGlowColor = CGColor(srgbRed: 0.22, green: 0.62, blue: 0.92, alpha: 0.32)
         style.routeGlowWidthMultiple = 3.0
+        // Inferred: same hue so it still reads as the journey, but unlit,
+        // thinner and dashed — visibly a guess, not a road.
+        style.routeInferredColor = CGColor(srgbRed: 0.42, green: 0.87, blue: 0.98, alpha: 0.55)
         // Atmosphere.
         style.gradeColor = CGColor(srgbRed: 0.05, green: 0.10, blue: 0.19, alpha: 0.16)
         style.vignetteStrength = 0.42

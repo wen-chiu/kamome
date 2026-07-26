@@ -1,5 +1,6 @@
 @testable import Kamome
 import KamomeConfig
+import KamomeExportEngine
 import KamomeImportKit
 import KamomePersistence
 import KamomeRouteMatching
@@ -46,20 +47,24 @@ final class ImportPipelineE2ETests: XCTestCase {
 
         // The whole point: an imported trip is first-class — RecapComposer maps
         // it into recap inputs with no special-casing.
-        let route = RecapComposer.route(
+        let legs = RecapComposer.legs(
             from: detail.segments,
             epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM
         )
-        XCTAssertGreaterThanOrEqual(route.count, 2)
+        XCTAssertGreaterThanOrEqual(legs.flatMap(\.coordinates).count, 2)
+        // No OSRM server in CI (`matching.base_url` ships ""), so the leg could
+        // not be reconstructed — it must say so rather than pass as road (PD-2).
+        XCTAssertEqual(legs.map(\.provenance), [.inferred])
         let recap = RecapComposer.trip(
             trip: detail.trip,
-            route: route,
+            legs: legs,
             stops: detail.stops,
             stats: nil,
             photosByStop: [:]
         )
         XCTAssertNotNil(recap, "imported trip must produce recap data unchanged")
+        XCTAssertNil(recap?.shareURL, "the MVP film carries no unresolved QR (PD-4)")
         XCTAssertEqual(recap?.stops.count, 2)
     }
 

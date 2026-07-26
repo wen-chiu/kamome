@@ -40,6 +40,16 @@ public extension TrackingConfig {
         /// via-waypoint pair metres apart pins the route to whichever side of
         /// the road the noise landed on, sometimes forcing a U-turn.
         public let routeWaypointMinSpacingM: Double
+        /// How far from a photo the reconstructor may look for a road.
+        ///
+        /// Deliberately **much larger than `radius_m`**, which is a GPS-accuracy
+        /// floor for a dense recorded trace. A photo is almost never taken on the
+        /// road: it is taken at a lookout, a car park, a beach, a restaurant —
+        /// routinely hundreds of metres off. At 25 m every EXIF leg comes back
+        /// `NoSegment` and nothing ever reconstructs. Being generous here is safe
+        /// because `route_max_detour_ratio` is the real guard: a waypoint snapped
+        /// to the wrong road inflates the route and gets rejected.
+        public let routeWaypointRadiusM: Double
 
         enum CodingKeys: String, CodingKey {
             case baseURL = "base_url"
@@ -50,6 +60,7 @@ public extension TrackingConfig {
             case displayEpsilonM = "display_epsilon_m"
             case routeMaxDetourRatio = "route_max_detour_ratio"
             case routeWaypointMinSpacingM = "route_waypoint_min_spacing_m"
+            case routeWaypointRadiusM = "route_waypoint_radius_m"
         }
 
         public init(
@@ -60,7 +71,8 @@ public extension TrackingConfig {
             timeoutS: Double,
             displayEpsilonM: Double,
             routeMaxDetourRatio: Double,
-            routeWaypointMinSpacingM: Double
+            routeWaypointMinSpacingM: Double,
+            routeWaypointRadiusM: Double
         ) {
             self.baseURL = baseURL
             self.chunkSize = chunkSize
@@ -70,6 +82,7 @@ public extension TrackingConfig {
             self.displayEpsilonM = displayEpsilonM
             self.routeMaxDetourRatio = routeMaxDetourRatio
             self.routeWaypointMinSpacingM = routeWaypointMinSpacingM
+            self.routeWaypointRadiusM = routeWaypointRadiusM
         }
 
         /// The shipped tunables pointed at a different server — a stub
@@ -85,7 +98,8 @@ public extension TrackingConfig {
                 timeoutS: timeoutS,
                 displayEpsilonM: displayEpsilonM,
                 routeMaxDetourRatio: routeMaxDetourRatio,
-                routeWaypointMinSpacingM: routeWaypointMinSpacingM
+                routeWaypointMinSpacingM: routeWaypointMinSpacingM,
+                routeWaypointRadiusM: routeWaypointRadiusM
             )
         }
     }

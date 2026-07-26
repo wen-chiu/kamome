@@ -1,5 +1,6 @@
 import Foundation
 import KamomeConfig
+import KamomeTrackingEngine
 
 /// The one story shape the Replay MVP ships: **linear** — establishing → travel
 /// legs → stops → finale, in trip order (render-layers refactor 2026-07-24). A
@@ -26,10 +27,21 @@ public struct LinearTimeline {
     /// exporter iterate; taken straight from the reused `CameraPath`.
     public let frameCount: Int
 
+    /// One leg's window into the flat route array, kept alongside the story it
+    /// tells about itself. The camera works on the concatenated polyline (one
+    /// speed-warped distance axis for the whole trip); the *reveal* is cut back
+    /// apart along these ranges so each leg can be stroked for what it is.
+    private struct LegRange {
+        let range: Range<Int>
+        let mode: TransportMode
+        let provenance: RouteProvenance
+    }
+
     private let path: CameraPath
     private let stops: [RecapTrip.Stop]
     private let holds: [CameraPath.Hold]
     private let routeCoordinates: [RecapCoordinate]
+    private let legRanges: [LegRange]
     private let deck: RecapDeck
     private let titleCardS: Double
     private let endCardS: Double
@@ -37,11 +49,12 @@ public struct LinearTimeline {
     private let subtitle: String
     private let statsLines: [String]
     private let callToAction: String
-    private let shareURL: String
+    private let shareURL: String?
 
     /// Fails on the same degenerate input as `CameraPath` (no usable route).
     public init?(trip: RecapTrip, config: TrackingConfig.Export) {
-        let routePoints = trip.route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+        let route = trip.route
+        let routePoints = route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
         guard let path = CameraPath(
             route: routePoints, stops: stopPoints, config: config, stopHoldsS: trip.stops.map(\.dwellS)
@@ -52,7 +65,13 @@ public struct LinearTimeline {
         frameCount = path.frameCount
         stops = trip.stops
         holds = path.holds
-        routeCoordinates = trip.route
+        routeCoordinates = route
+        var offset = 0
+        legRanges = trip.legs.map { leg in
+            let range = offset..<(offset + leg.coordinates.count)
+            offset = range.upperBound
+            return LegRange(range: range, mode: leg.mode, provenance: leg.provenance)
+        }
         deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
         titleCardS = min(config.titleCardS, path.durationS)
         endCardS = config.endCardS
@@ -93,7 +112,7 @@ public struct LinearTimeline {
     /// while the lead-in label cross-fades out, its identity handed to the pin +
     /// name drawn under the card.
     public func overlayContents(atTime time: Double) -> [OverlayContent] {
-        var contents: [OverlayContent] = [.routeReveal(routePrefix(atTime: time))]
+        var contents: [OverlayContent] = [.routeReveal(revealedLegs(atTime: time))]
         if time < titleCardS {
             contents.append(.titleChrome(title: title, subtitle: subtitle))
         }
@@ -190,8 +209,30 @@ public struct LinearTimeline {
         return min(max(Int((time - rotateStart) / slot), 0), count - 1)
     }
 
-    private func routePrefix(atTime time: Double) -> [RecapCoordinate] {
-        path.routePrefix(atTime: time).map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
+    /// The revealed trail, cut back into legs (typed-leg pass 2026-07-26). The
+    /// camera reveals along one continuous distance axis; this maps the cut back
+    /// onto the leg ranges so a reconstructed motorway and an inferred straight
+    /// line reach the renderer as separate strokes with separate stories.
+    ///
+    /// The leg the head is inside gets the interpolated head point appended, so
+    /// the trail still ends exactly under the vehicle rather than at the last
+    /// whole vertex.
+    private func revealedLegs(atTime time: Double) -> [RecapRouteLeg] {
+        let cut = path.revealCut(atTime: time)
+        let head = RecapCoordinate(lat: cut.head.lat, lon: cut.head.lon)
+        var revealed: [RecapRouteLeg] = []
+
+        for leg in legRanges {
+            guard cut.vertexCount > leg.range.lowerBound else { break }
+            let end = min(cut.vertexCount, leg.range.upperBound)
+            var coordinates = Array(routeCoordinates[leg.range.lowerBound..<end])
+            if cut.vertexCount < leg.range.upperBound { coordinates.append(head) }
+            guard coordinates.count >= 2 else { continue }
+            revealed.append(RecapRouteLeg(
+                coordinates: coordinates, mode: leg.mode, provenance: leg.provenance
+            ))
+        }
+        return revealed
     }
 
     private static func smoothstep(_ fraction: Double) -> Double {

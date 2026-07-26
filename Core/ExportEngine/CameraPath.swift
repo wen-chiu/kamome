@@ -267,16 +267,25 @@ public struct CameraPath {
         state(atTime: time).distanceM
     }
 
+    /// Where the trail reveal has reached at `time`: how many route vertices lie
+    /// fully behind the subject, plus the interpolated head point it stops at.
+    ///
+    /// Exposed as an index rather than only as points (typed-leg pass
+    /// 2026-07-26) so a caller holding the route's leg boundaries can split the
+    /// reveal per leg. `CameraPath` stays the single owner of the speed-warp
+    /// math; the timeline just asks it where the cut fell.
+    public func revealCut(atTime time: Double) -> (vertexCount: Int, head: Point) {
+        let distanceM = traveledDistanceM(atTime: time)
+        var vertexCount = 0
+        for vertexM in cumulativeM where vertexM < distanceM { vertexCount += 1 }
+        return (vertexCount, coordinate(atDistance: distanceM))
+    }
+
     /// Route vertices already passed at `time`, closed with the interpolated
     /// head point, ready for the traveled-polyline stroke (§4.5 step 2).
     public func routePrefix(atTime time: Double) -> [Point] {
-        let distanceM = traveledDistanceM(atTime: time)
-        var prefix: [Point] = []
-        for (index, vertexM) in cumulativeM.enumerated() where vertexM < distanceM {
-            prefix.append(route[index])
-        }
-        prefix.append(coordinate(atDistance: distanceM))
-        return prefix
+        let cut = revealCut(atTime: time)
+        return Array(route[0..<cut.vertexCount]) + [cut.head]
     }
 
     private func state(atTime time: Double) -> (distanceM: Double, holdIndex: Int?) {

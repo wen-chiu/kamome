@@ -137,8 +137,10 @@ public struct OSRMRouteProvider: RouteReconstructing {
         let coordinates = waypoints
             .map { String(format: "%.6f,%.6f", $0.lon, $0.lat) }
             .joined(separator: ";")
+        // `route_waypoint_radius_m`, not the GPS-accuracy floor — see the
+        // tunable's note: photos sit beside roads, not on them.
         let radiuses = waypoints
-            .map { String(Int(max($0.hAccM ?? config.radiusM, config.radiusM))) }
+            .map { String(Int(max($0.hAccM ?? 0, config.routeWaypointRadiusM))) }
             .joined(separator: ";")
         let query = "geometries=polyline&overview=full&steps=false&radiuses=\(radiuses)"
         return URL(string: "\(config.baseURL)/route/v1/driving/\(coordinates)?\(query)")

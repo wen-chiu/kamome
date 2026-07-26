@@ -1,6 +1,7 @@
 import CoreGraphics
 import KamomeConfig
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// Shared harness for the §4.5 golden-frame gates, on the render-layers pipeline
@@ -115,15 +116,16 @@ class RecapRenderTestCase: XCTestCase {
     /// photos, else the uniform `stop_hold_s` (matches RecapComposer).
     func makeTrip(
         route: [RecapCoordinate]? = nil,
+        legs: [RecapTrip.Leg]? = nil,
         stops: [StopSpec] = [],
         title: String = "Trip",
         subtitle: String = "Subtitle",
         statsLines: [String] = ["1 km · 1 stop"],
-        callToAction: String = "Get this route",
-        shareURL: String = "kamome://route/test",
+        callToAction: String = "Record your own journey",
+        shareURL: String? = nil,
         config: TrackingConfig.Export
     ) -> RecapTrip {
-        let coords = route ?? self.route
+        let coords = legs.map { $0.flatMap(\.coordinates) } ?? route ?? self.route
         let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
         let tripStops = stops.map { spec in
             RecapTrip.Stop(
@@ -133,7 +135,8 @@ class RecapRenderTestCase: XCTestCase {
             )
         }
         return RecapTrip(
-            route: coords, stops: tripStops, title: title, subtitle: subtitle,
+            legs: legs ?? [RecapTrip.Leg(coordinates: coords, mode: .drive, provenance: .recorded)],
+            stops: tripStops, title: title, subtitle: subtitle,
             statsLines: statsLines, callToAction: callToAction, shareURL: shareURL
         )
     }

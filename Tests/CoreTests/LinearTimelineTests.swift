@@ -1,5 +1,6 @@
 import KamomeConfig
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// The linear timeline's stop choreography. Since 2026-07-25 the camera holds a
@@ -90,6 +91,74 @@ final class LinearTimelineTests: XCTestCase {
             time += dt
         }
         return samples
+    }
+
+    // MARK: - Typed legs through the reveal (PD-1)
+
+    /// A two-leg trip: a reconstructed drive, then an inferred walk.
+    private func mixedProvenanceTrip(config: TrackingConfig.Export) -> RecapTrip {
+        let drive = (0...20).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.01, lon: 115.75) }
+        // Legs share their seam vertex, as `RecapComposer` produces them.
+        let walk = (0...10).map { RecapCoordinate(lat: -31.80 + Double($0) * 0.001, lon: 115.75) }
+        return RecapTrip(
+            legs: [
+                RecapTrip.Leg(coordinates: drive, mode: .drive, provenance: .reconstructed),
+                RecapTrip.Leg(coordinates: walk, mode: .walk, provenance: .inferred)
+            ],
+            stops: [], title: "Mixed", subtitle: "", statsLines: [], callToAction: ""
+        )
+    }
+
+    private func revealedLegs(_ contents: [OverlayContent]) -> [RecapRouteLeg] {
+        for content in contents {
+            if case let .routeReveal(legs) = content { return legs }
+        }
+        return []
+    }
+
+    /// The reveal is cut along one continuous distance axis but must reach the
+    /// renderer split back into legs, each still carrying its own story — that
+    /// is the whole mechanism behind the dashed inferred stroke.
+    func testRevealSplitsBackIntoLegsCarryingModeAndProvenance() throws {
+        let config = exportConfig()
+        let timeline = try XCTUnwrap(LinearTimeline(trip: mixedProvenanceTrip(config: config), config: config))
+
+        // Early: only the drive leg has been reached.
+        let early = revealedLegs(timeline.overlayContents(atTime: config.targetDurationS * 0.2))
+        XCTAssertEqual(early.count, 1)
+        XCTAssertEqual(early[0].provenance, .reconstructed)
+        XCTAssertEqual(early[0].mode, .drive)
+
+        // At the end: both legs, in travel order, each keeping its own claim.
+        let full = revealedLegs(timeline.overlayContents(atTime: timeline.durationS))
+        XCTAssertEqual(full.map(\.provenance), [.reconstructed, .inferred])
+        XCTAssertEqual(full.map(\.mode), [.drive, .walk])
+    }
+
+    /// The revealed legs must still add up to one continuous trail — no vertices
+    /// dropped or duplicated by the split, and the head still lands under the
+    /// vehicle.
+    func testRevealedLegsStayContinuousAndEndAtTheSubject() throws {
+        let config = exportConfig()
+        let timeline = try XCTUnwrap(LinearTimeline(trip: mixedProvenanceTrip(config: config), config: config))
+
+        var time = 0.5
+        while time < timeline.durationS {
+            let legs = revealedLegs(timeline.overlayContents(atTime: time))
+            let flattened = legs.flatMap(\.coordinates)
+            if let head = flattened.last {
+                let subject = timeline.subjectState(atTime: time)
+                XCTAssertEqual(head.lat, subject.lat, accuracy: 1e-9, "trail head must sit under the vehicle at t=\(time)")
+                XCTAssertEqual(head.lon, subject.lon, accuracy: 1e-9)
+            }
+            // No leg is a stub, and consecutive legs meet.
+            for leg in legs { XCTAssertGreaterThanOrEqual(leg.coordinates.count, 2) }
+            for (previous, next) in zip(legs, legs.dropFirst()) {
+                XCTAssertEqual(previous.coordinates.last?.lat ?? 0, next.coordinates.first?.lat ?? 1, accuracy: 0.02,
+                               "legs must not tear apart at the seam")
+            }
+            time += 0.5
+        }
     }
 
     func testStopSceneOpensAndClosesTheCardWhileTheMapHoldsStill() throws {

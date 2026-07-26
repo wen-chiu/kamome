@@ -90,14 +90,17 @@ final class RecapModel {
         // bitmaps. Refs stay out of the render size.
         let photoRefs = photosEnabled ? selectStopPhotoRefs(detail: detail) : [:]
         let deck = RecapDeck(photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS, labelLeadS: config.export.deckLabelLeadS)
-        let route = RecapComposer.route(
+        // Typed legs (Fable review 2026-07-26): each stretch reaches the film
+        // with its own transport mode and provenance, so a leg Kamome could not
+        // reconstruct renders visibly as a guess rather than as road (PD-1).
+        let legs = RecapComposer.legs(
             from: detail.segments,
             epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM
         )
         guard let trip = RecapComposer.trip(
             trip: detail.trip,
-            route: route,
+            legs: legs,
             stops: detail.stops,
             stats: stats,
             photosByStop: photoRefs,

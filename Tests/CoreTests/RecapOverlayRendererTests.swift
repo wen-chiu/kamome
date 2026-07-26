@@ -1,6 +1,7 @@
 import CoreGraphics
 import KamomeConfig
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// Layer-3 overlay renderer: deterministic drawing of each `OverlayContent` over
@@ -46,8 +47,92 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
 
     func testRouteRevealStrokesTheTrail() async throws {
         let coords = (0...10).map { RecapCoordinate(lat: -32.0 + Double($0 - 5) * 0.001, lon: 115.75) }
-        let frame = try await render([.routeReveal(coords)], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0))
+        let recorded = RecapRouteLeg(coordinates: coords, mode: .drive, provenance: .recorded)
+        let frame = try await render(
+            [.routeReveal([recorded])], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0)
+        )
         XCTAssertGreaterThan(try colorCount(frame, matching: routeRGB), 0, "the trail must stroke in the route color")
+    }
+
+    // MARK: - Honest provenance in the film itself (PD-1)
+
+    /// A long north-south leg down the frame's center, so a dash pattern shows
+    /// up as gaps along a column of pixels.
+    private func meridianLeg(_ provenance: RouteProvenance) -> RecapRouteLeg {
+        RecapRouteLeg(
+            coordinates: (0...40).map { RecapCoordinate(lat: -32.0 + Double($0 - 20) * 0.0004, lon: 115.75) },
+            mode: .drive,
+            provenance: provenance
+        )
+    }
+
+    /// The load-bearing honesty test: a leg Kamome could not reconstruct must be
+    /// visibly a guess **in the exported film**, because the film is the public
+    /// artifact. Solid vs. dashed is the whole point — a viewer must not read an
+    /// inferred straight line as a road we watched.
+    func testInferredLegIsDashedWhileConfidentLegIsSolid() async throws {
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let solid = try await render([.routeReveal([meridianLeg(.recorded)])], resolverImage: green)
+        let dashed = try await render([.routeReveal([meridianLeg(.inferred)])], resolverImage: green)
+
+        let solidRun = try longestPaintedRun(solid, col: widthPx / 2)
+        let dashedRun = try longestPaintedRun(dashed, col: widthPx / 2)
+        XCTAssertGreaterThan(solidRun, 0, "the confident leg must draw")
+        XCTAssertGreaterThan(dashedRun, 0, "the inferred leg must still draw — it happened, we just don't know how")
+        XCTAssertLessThan(dashedRun, solidRun / 2, "an inferred leg is broken by gaps, not one continuous stroke")
+    }
+
+    /// A reconstructed leg is road, even though nobody watched the traveling —
+    /// it gets the confident stroke, same as recorded.
+    func testReconstructedLegDrawsSolidLikeRecorded() async throws {
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let recorded = try await render([.routeReveal([meridianLeg(.recorded)])], resolverImage: green)
+        let reconstructed = try await render([.routeReveal([meridianLeg(.reconstructed)])], resolverImage: green)
+        XCTAssertEqual(
+            try longestPaintedRun(reconstructed, col: widthPx / 2),
+            try longestPaintedRun(recorded, col: widthPx / 2),
+            "snapped-to-road geometry is a confident claim"
+        )
+    }
+
+    /// Mixed provenance in one reveal: both strokes appear, each in its own key.
+    func testMixedLegsDrawEachInItsOwnTreatment() async throws {
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let confident = RecapRouteLeg(
+            coordinates: (0...20).map { RecapCoordinate(lat: -32.004 + Double($0) * 0.0002, lon: 115.75) },
+            mode: .drive, provenance: .reconstructed
+        )
+        let guessed = RecapRouteLeg(
+            coordinates: (0...20).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.0002, lon: 115.75) },
+            mode: .walk, provenance: .inferred
+        )
+        let frame = try await render([.routeReveal([confident, guessed])], resolverImage: green)
+
+        // The confident half runs unbroken; the inferred half is chopped up.
+        let confidentRun = try longestPaintedRun(frame, col: widthPx / 2, rows: (heightPx / 2)..<heightPx)
+        let guessedRun = try longestPaintedRun(frame, col: widthPx / 2, rows: 0..<(heightPx / 2))
+        XCTAssertGreaterThan(confidentRun, 0)
+        XCTAssertGreaterThan(guessedRun, 0)
+        XCTAssertLessThan(guessedRun, confidentRun, "the two legs must not read the same")
+    }
+
+    /// The longest unbroken run of non-background pixels down one column — how a
+    /// dash pattern is told from a solid stroke without golden bitmaps.
+    private func longestPaintedRun(
+        _ image: CGImage, col: Int, rows: Range<Int>? = nil
+    ) throws -> Int {
+        var longest = 0
+        var run = 0
+        for row in rows ?? 0..<heightPx {
+            let sample = try pixel(image, col: col, row: row)
+            if sample != backgroundRGB {
+                run += 1
+                longest = max(longest, run)
+            } else {
+                run = 0
+            }
+        }
+        return longest
     }
 
     func testPhotoDeckDrawsTheFocusPhotoAndGrowsWithReveal() async throws {
@@ -130,7 +215,10 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
     func testOverlayRenderingIsDeterministic() async throws {
         let green = try makeSolidImage(red: 0, green: 1, blue: 0)
         let contents: [OverlayContent] = [
-            .routeReveal([RecapCoordinate(lat: -32.001, lon: 115.75), RecapCoordinate(lat: -32.0, lon: 115.75)]),
+            .routeReveal([RecapRouteLeg(
+                coordinates: [RecapCoordinate(lat: -32.001, lon: 115.75), RecapCoordinate(lat: -32.0, lon: 115.75)],
+                mode: .drive, provenance: .recorded
+            )]),
             .stopLabel(
                 name: "Stop", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75),
                 detail: "步行 21 分鐘", opacity: 0.5

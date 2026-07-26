@@ -37,6 +37,7 @@ final class ConfigLoaderTests: XCTestCase {
         // Route reconstruction for sparse EXIF legs (typed-leg pass 2026-07-26).
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)
         XCTAssertEqual(config.matching.routeWaypointMinSpacingM, 250)
+        XCTAssertEqual(config.matching.routeWaypointRadiusM, 500)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)

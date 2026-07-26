@@ -20,15 +20,17 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(try localizedValue("start_journey", locale: "en"), "Start Journey")
     }
 
-    /// The load-bearing S5 copy: the toggle must read as photo-cards-only,
-    /// and the share CTA matches spec v1.4 wording exactly.
+    /// The load-bearing S5 copy: the toggle must read as photo-cards-only, and
+    /// the end-card CTA must not promise a scan. The MVP film carries no QR
+    /// (PD-4) — "Get this route" invited an interaction nothing could honor, so
+    /// the CTA points at the one thing the viewer *can* do.
     func testRecapStringsResolve() throws {
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "停留照片卡")
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "en"), "Stop photo cards")
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "en").contains("always appear"))
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "zh-Hant").contains("一律會顯示"))
-        XCTAssertEqual(try localizedValue("recap_get_route", locale: "en"), "Get this route")
-        XCTAssertEqual(try localizedValue("recap_get_route", locale: "zh-Hant"), "取得這條路線")
+        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "en"), "Record your own journey")
+        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "zh-Hant"), "記錄你自己的旅程")
     }
 
     func testLimitedPhotosStringsResolve() throws {
