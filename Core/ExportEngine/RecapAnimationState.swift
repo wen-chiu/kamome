@@ -12,7 +12,7 @@ import Foundation
 /// What the map is framed at, at an instant. (Isometric/cinematic tilt is a
 /// Phase 4 addition — it returns here with a `supportsPitch` capability when a
 /// renderer can actually honor it; no dead field ships now.)
-public struct CameraFrame: Equatable {
+public struct CameraFrame: Hashable {
     public let centerLat: Double
     public let centerLon: Double
     /// Ground span (zoom): the horizontal meters the frame covers.
@@ -53,7 +53,7 @@ public struct SubjectState: Equatable {
 /// outro fades and future cross-fades. *Which* concrete style renders is a
 /// `MapRenderer` / `VisualStyle` concern, never the timeline's, so no style id
 /// leaks in here. MVP: constant 1.
-public struct MapState: Equatable {
+public struct MapState: Hashable {
     public let opacity: Double
 
     public init(opacity: Double = 1) {

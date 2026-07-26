@@ -223,7 +223,45 @@ final class RecapFrameTests: RecapRenderTestCase {
         }
 
         XCTAssertEqual(delivered, Array(0..<timeline.frameCount))
-        XCTAssertEqual(provider.requestCount, 5, "keyframe cache should collapse snapshot requests")
+        // The camera holds one fixed frame per act (Chiu 2026-07-25), and this
+        // trip is a single act — so all five keyframes ask for the *same* view
+        // and the value-keyed cache fetches it once (Fable review 2026-07-26).
+        // Keying by keyframe index re-fetched an identical snapshot five times.
+        XCTAssertEqual(provider.requestCount, 1, "one camera value = one snapshot, however many keyframes want it")
+    }
+
+    /// The dedup must not swallow a genuine re-frame: a route with a jump wider
+    /// than `act_split_km` plays as two acts, and the camera cuts between two
+    /// distinct fixed frames — which is exactly where the cross-fade lives.
+    func testActTransitionStillFetchesBothFramesAndCrossFades() async throws {
+        let config = exportConfig(targetDurationS: 2, fps: 5, keyframeIntervalFrames: 3)
+        // Two clusters ~100 km apart: far beyond act_split_km, so the camera
+        // cannot hold both in one honest frame.
+        let jumped = [
+            RecapCoordinate(lat: -32.00, lon: 115.75),
+            RecapCoordinate(lat: -32.01, lon: 115.76),
+            RecapCoordinate(lat: -33.00, lon: 115.80),
+            RecapCoordinate(lat: -33.01, lon: 115.81)
+        ]
+        let trip = RecapTrip(
+            route: jumped, stops: [], title: "Jump", subtitle: "",
+            statsLines: [], callToAction: "", shareURL: ""
+        )
+        let timeline = try makeTimeline(trip, config: config)
+        let compositor = makeCompositor(timeline)
+        let provider = CountingProvider()
+        let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
+
+        var cameras: Set<Double> = []
+        for keyframe in 0...((timeline.frameCount - 1) / 3 + 1) {
+            let time = min(Double(keyframe * 3) / 5, timeline.durationS)
+            cameras.insert(timeline.cameraFrame(atTime: time).centerLat)
+        }
+        XCTAssertGreaterThan(cameras.count, 1, "the jump must actually re-frame the camera")
+
+        try await loop.renderFrames { _, _ in true }
+        XCTAssertEqual(provider.requestCount, cameras.count,
+                       "one snapshot per distinct camera value — the re-frame is still fetched")
     }
 
     func testLoopStopsWhenConsumerCancels() async throws {
