@@ -34,6 +34,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.radiusM, 25)
         XCTAssertEqual(config.matching.timeoutS, 10)
         XCTAssertEqual(config.matching.displayEpsilonM, 5)
+        // Route reconstruction for sparse EXIF legs (typed-leg pass 2026-07-26).
+        XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)
+        XCTAssertEqual(config.matching.routeWaypointMinSpacingM, 250)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)

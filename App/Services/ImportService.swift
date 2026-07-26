@@ -46,15 +46,20 @@ struct ImportService {
             return TripRepository.NewPhoto(assetId: id, takenAt: photo?.timestamp, lat: photo?.lat, lon: photo?.lon)
         }
 
-        // One drive segment carries the whole coarse route (the road-trip
-        // assumption); OSRM snaps it, low-confidence legs render inferred.
-        let segment = TripRepository.NewSegment(
-            mode: TransportMode.drive.rawValue,
-            startedAt: plan.startedAt,
-            endedAt: plan.endedAt,
-            points: plan.routePoints.map { TripRepository.NewTrackpoint(ts: $0.timestamp, lat: $0.lat, lon: $0.lon) },
-            source: SegmentSource.exif.rawValue
-        )
+        // One segment per inter-stop leg (typed-leg pass 2026-07-26), not one
+        // per trip: each leg then carries its own transport mode and its own
+        // reconstruction verdict, which is what lets the film draw a confidently
+        // routed stretch solid and an unroutable one dashed (PD-1). A single
+        // trip-wide segment can only ever make one claim about all of it.
+        let segments = plan.legs.map { leg in
+            TripRepository.NewSegment(
+                mode: mode(for: leg).rawValue,
+                startedAt: leg.startedAt,
+                endedAt: leg.endedAt,
+                points: leg.points.map { TripRepository.NewTrackpoint(ts: $0.timestamp, lat: $0.lat, lon: $0.lon) },
+                source: SegmentSource.exif.rawValue
+            )
+        }
         let stopsWithPhotos = plan.stops.map { stop in
             TripRepository.NewStopWithPhotos(
                 stop: TripRepository.NewStop(
@@ -71,16 +76,30 @@ struct ImportService {
                 startedAt: plan.startedAt,
                 endedAt: plan.endedAt,
                 source: TripSource.importedPhotos.rawValue,
-                segments: [segment],
+                segments: segments,
                 stopsWithPhotos: stopsWithPhotos,
                 routeAttachedPhotos: plan.routeAttachedAssetIds.map(newPhoto)
             )
         )
 
-        // §4.4: snap the drive route to roads, best-effort and idempotent. The
-        // shipped `matching.base_url` is "" (disabled) so this is a no-op until
-        // an OSRM server exists — the trip is already saved and viewable.
+        // §4.4: reconstruct each drivable leg's road geometry, best-effort and
+        // idempotent. The shipped `matching.base_url` is "" (disabled) so this
+        // is a no-op until an OSRM server exists — the trip is already saved and
+        // viewable, and unreconstructed legs render dashed rather than claiming
+        // a road they never proved (PD-2).
         await matcher.matchTrip(tripId: tripId)
         return tripId
+    }
+
+    /// Classifies a leg by its implied pace (PD-8). Walking-pace legs stay
+    /// `walk` and therefore stay raw: the reconstructor runs a car profile, so
+    /// routing a 400 m stroll between two cafés would snap it onto the nearest
+    /// road and invent a journey that never happened. Legs with no elapsed time
+    /// (a pace we cannot know) default to `drive` — the road-trip assumption
+    /// that holds for photo imports — and the confidence gate still protects
+    /// them downstream.
+    private func mode(for leg: ImportedLeg) -> TransportMode {
+        guard let speed = leg.impliedSpeedKmh else { return .drive }
+        return speed <= config.segmentation.speedWalkMaxKmh ? .walk : .drive
     }
 }

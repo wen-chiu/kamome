@@ -55,7 +55,9 @@ let package = Package(
         ),
         .target(
             name: "KamomeRouteMatching",
-            dependencies: ["KamomeConfig"],
+            // KamomeTrackingEngine for `Geo` only — the same reuse
+            // KamomeExportEngine makes, rather than a third haversine.
+            dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/RouteMatching"
         ),
         // Pure photo-EXIF import clustering (spec §4.7). No PhotoKit/GRDB — the

@@ -85,6 +85,85 @@ final class PhotoImportClustererTests: XCTestCase {
         XCTAssertFalse(single.isRenderable, "one photo cannot make a trip")
         XCTAssertEqual(single.stops.count, 0, "one photo is below minPhotosPerStop")
         XCTAssertEqual(single.routeAttachedAssetIds, ["x"])
+        XCTAssertTrue(single.legs.isEmpty, "one point cannot make a leg")
+    }
+
+    // MARK: - Legs (typed-leg pass 2026-07-26)
+
+    /// A ─(lone)─ B ─ C gives two travel legs: within-stop photos are the wander
+    /// around a place, not the journey between places, so they never enter a leg.
+    func testLegsSpanStopToStopCarryingRouteAttachedPhotosBetween() {
+        let plan = PhotoImportClusterer.plan(photos: icelandLikeTrip(), config: config)
+
+        XCTAssertEqual(plan.legs.count, 2, "A→B and B→C; nothing before A or after C")
+        XCTAssertEqual(plan.legs[0].points.map(\.assetId), ["a3", "lone", "b1"],
+                       "the lone photo rides between the two stop anchors as a via-waypoint")
+        XCTAssertEqual(plan.legs[1].points.map(\.assetId), ["b5", "c1"])
+    }
+
+    /// Legs are cut at stop *centroids*, so leg k ends exactly where leg k+1
+    /// begins and the concatenated route has no gap at a stop.
+    func testLegEndpointsAreStopCentroidsSoTheRouteStaysContinuous() {
+        let plan = PhotoImportClusterer.plan(photos: icelandLikeTrip(), config: config)
+        let stopB = plan.stops[1]
+
+        let arrival = plan.legs[0].points.last!
+        let departure = plan.legs[1].points.first!
+        XCTAssertEqual(arrival.lat, stopB.lat, accuracy: 1e-12)
+        XCTAssertEqual(arrival.lon, stopB.lon, accuracy: 1e-12)
+        XCTAssertEqual(departure.lat, arrival.lat, accuracy: 1e-12, "no gap across the stop")
+        XCTAssertEqual(departure.lon, arrival.lon, accuracy: 1e-12)
+
+        // The anchors carry the visit's own edges in time.
+        XCTAssertEqual(arrival.timestamp, stopB.arrivedAt)
+        XCTAssertEqual(departure.timestamp, stopB.departedAt)
+    }
+
+    /// The classifier input (PD-8) — the clusterer measures pace, it never
+    /// decides transport mode.
+    func testLegsCarryDistanceAndImpliedPace() throws {
+        // ~500 m apart, 10 min elapsed → ~3 km/h: walking pace.
+        let strollPhotos = [
+            photo("s1", 0, 63.4040, -19.0410),
+            photo("s2", 60, 63.4044, -19.0405),
+            photo("s3", 600, 63.4080, -19.0400),
+            photo("s4", 660, 63.4084, -19.0395)
+        ]
+        let plan = PhotoImportClusterer.plan(photos: strollPhotos, config: config)
+        XCTAssertEqual(plan.legs.count, 1)
+        let leg = try XCTUnwrap(plan.legs.first)
+        XCTAssertGreaterThan(leg.distanceM, 0)
+        XCTAssertLessThan(try XCTUnwrap(leg.impliedSpeedKmh), 6, "a stroll reads as walking pace")
+    }
+
+    /// No stop clusters at all (every cluster below threshold) still renders:
+    /// one leg over the whole trajectory rather than a film with no route.
+    func testTripWithoutStopsStillProducesOneLeg() {
+        let scattered = [
+            photo("p1", 0, 63.40, -19.04),
+            photo("p2", 3_600, 63.60, -19.40),
+            photo("p3", 7_200, 63.90, -18.90)
+        ]
+        let plan = PhotoImportClusterer.plan(photos: scattered, config: config)
+        XCTAssertTrue(plan.stops.isEmpty)
+        XCTAssertEqual(plan.legs.count, 1)
+        XCTAssertEqual(plan.legs[0].points.map(\.assetId), ["p1", "p2", "p3"])
+        XCTAssertTrue(plan.isRenderable)
+    }
+
+    /// One stop swallowing every photo leaves no inter-stop travel — the
+    /// fallback leg keeps the trip renderable instead of yielding zero segments.
+    func testSingleStopTripFallsBackToAWholeTrajectoryLeg() {
+        let oneplace = [
+            photo("q1", 0, 63.4040, -19.0410),
+            photo("q2", 60, 63.4044, -19.0405),
+            photo("q3", 120, 63.4041, -19.0412)
+        ]
+        let plan = PhotoImportClusterer.plan(photos: oneplace, config: config)
+        XCTAssertEqual(plan.stops.count, 1)
+        XCTAssertEqual(plan.legs.count, 1, "fallback: the whole trajectory")
+        XCTAssertEqual(plan.legs[0].points.count, 3)
+        XCTAssertTrue(plan.isRenderable)
     }
 }
 
