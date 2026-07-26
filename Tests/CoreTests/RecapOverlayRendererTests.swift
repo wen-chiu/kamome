@@ -56,13 +56,15 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         func deck(reveal: Double, opacity: Double) -> OverlayContent {
             .photoDeck(RecapPhotoDeck(
                 photos: [.asset("a"), .asset("b")], focusIndex: 1,
-                reveal: reveal, opacity: opacity, name: "小樽運河"
+                reveal: reveal, opacity: opacity, name: "小樽運河",
+                coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
             ))
         }
 
         let open = try await render([deck(reveal: 1, opacity: 1)], resolverImage: green)
-        let row = Int(Double(heightPx) * 0.5)
-        try assertPixel(open, col: widthPx / 2, row: row, is: greenRGB, "resolved hero photo fills the card")
+        XCTAssertGreaterThan(
+            try colorCount(open, matching: greenRGB), 200, "resolved hero photo fills the card"
+        )
 
         // The reveal drives on-screen size: fully open covers more than the
         // opening size, and both leave the map visible around the card.
@@ -74,7 +76,7 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
 
         // At zero opacity the deck is absent.
         let none = try await render([deck(reveal: 1, opacity: 0)], resolverImage: green)
-        try assertPixel(none, col: widthPx / 2, row: row, is: backgroundRGB, "no deck at zero opacity")
+        XCTAssertEqual(try colorCount(none, matching: greenRGB), 0, "no deck at zero opacity")
     }
 
     /// Beat 1: the pin marks the stop on the map, and the name pill floats clear
@@ -135,7 +137,8 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
             ),
             .photoDeck(RecapPhotoDeck(
                 photos: [.asset("a"), .asset("b")], focusIndex: 0,
-                reveal: 0.7, opacity: 0.7, name: "Stop", detail: "步行 21 分鐘"
+                reveal: 0.7, opacity: 0.7, name: "Stop", detail: "步行 21 分鐘",
+                coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
             ))
         ]
         let first = try await render(contents, resolverImage: green)

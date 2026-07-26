@@ -84,9 +84,10 @@ final class RecapFrameTests: RecapRenderTestCase {
         XCTAssertEqual(deck.name, "Busselton", "the card carries the stop identity in beat 2")
         XCTAssertFalse(hasStopLabel(timeline.overlayContents(atTime: peak)), "the lead label has handed off")
         let frame = try await renderFrame(timeline, compositor, at: peak, config: config)
-        let row = Int(Double(heightPx) * 0.5)
         let greenRGB = RGB(red: 0, green: 255, blue: 0)
-        try assertPixel(frame, col: widthPx / 2, row: row, is: greenRGB, "deck hero photo opens at the stop")
+        XCTAssertGreaterThan(
+            try colorCount(frame, matching: greenRGB), 200, "deck hero photo opens at the stop"
+        )
 
         // Photos off → the stop still holds, but no label and no deck appear.
         let bare = try makeTimeline(makeTrip(stops: [StopSpec(routeIndex: 5)], config: config), config: config)
@@ -136,14 +137,16 @@ final class RecapFrameTests: RecapRenderTestCase {
             "the fully revealed card must still leave the map visible around it"
         )
 
-        // Rotation: the first (highlight) photo leads, the second follows.
-        let row = Int(Double(heightPx) * 0.5)
+        // Rotation: the first (highlight) photo leads, the second follows. The
+        // card tracks the vehicle now, so assert which photo is on screen rather
+        // than probing a fixed point.
         let focus0 = try XCTUnwrap(opaque.first { $0.deck.focusIndex == 0 }).time
         let focus1 = try XCTUnwrap(opaque.first { $0.deck.focusIndex == 1 }).time
         let firstFrame = try await renderFrame(timeline, compositor, at: focus0, config: config)
-        try assertPixel(firstFrame, col: widthPx / 2, row: row, is: green, "highlight photo leads the deck")
+        XCTAssertGreaterThan(try colorCount(firstFrame, matching: green), 200, "highlight photo leads the deck")
+        XCTAssertEqual(try colorCount(firstFrame, matching: blue), 0, "only the focused photo shows")
         let secondFrame = try await renderFrame(timeline, compositor, at: focus1, config: config)
-        try assertPixel(secondFrame, col: widthPx / 2, row: row, is: blue, "deck rotates to the next photo")
+        XCTAssertGreaterThan(try colorCount(secondFrame, matching: blue), 200, "deck rotates to the next photo")
 
         // Deterministic: the same deck frame renders byte-identically.
         let again = try await renderFrame(timeline, compositor, at: focus0, config: config)

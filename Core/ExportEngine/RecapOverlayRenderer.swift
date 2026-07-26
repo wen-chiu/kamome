@@ -45,18 +45,29 @@ public struct RecapOverlayRenderer: OverlayRenderer {
 
     // MARK: - Route reveal (the glowing traveled trail)
 
+    /// Stroked twice when the theme asks for it: a wide translucent glow under a
+    /// crisp core, which is what makes the trail read as *lit* on a dark map
+    /// rather than as a flat polyline. The path is built once and reused.
     private func drawRouteReveal(_ coordinates: [RecapCoordinate], into surface: RenderSurface) {
         guard coordinates.count >= 2 else { return }
         let context = surface.context
-        context.setStrokeColor(style.routeColor)
-        context.setLineWidth(style.routeWidthPx * surface.scale)
+        let path = CGMutablePath()
+        path.move(to: surface.cgPoint(lat: coordinates[0].lat, lon: coordinates[0].lon))
+        for coordinate in coordinates.dropFirst() {
+            path.addLine(to: surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon))
+        }
         context.setLineCap(.round)
         context.setLineJoin(.round)
-        context.beginPath()
-        context.move(to: surface.cgPoint(lat: coordinates[0].lat, lon: coordinates[0].lon))
-        for coordinate in coordinates.dropFirst() {
-            context.addLine(to: surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon))
+
+        if (style.routeGlowColor.alpha) > 0.001 {
+            context.setStrokeColor(style.routeGlowColor)
+            context.setLineWidth(style.routeWidthPx * style.routeGlowWidthMultiple * surface.scale)
+            context.addPath(path)
+            context.strokePath()
         }
+        context.setStrokeColor(style.routeColor)
+        context.setLineWidth(style.routeWidthPx * surface.scale)
+        context.addPath(path)
         context.strokePath()
     }
 
@@ -71,16 +82,32 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         name: String, coordinate: RecapCoordinate, detail: String?, into surface: RenderSurface
     ) {
         let scale = surface.scale
-        let anchor = surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon)
         let radius = style.labelPinRadiusPx * scale
-        let clearance = (style.subjectLengthPx / 2 + style.labelVehicleClearancePx) * scale
-        let pinCenterY = anchor.y + clearance + radius * 1.5
-
-        drawPin(at: CGPoint(x: anchor.x, y: pinCenterY), radius: radius, in: surface)
-        drawNamePill(
-            name: name, detail: detail, centerX: anchor.x,
-            bottomY: pinCenterY + radius * 1.5 + style.labelPinGapPx * scale, in: surface
+        let gap = style.labelPinGapPx * scale
+        let pillH = pillHeight(detail: detail, in: surface)
+        let anchor = surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon)
+        // No card in this beat, so the name band *is* the group: it must clear the
+        // vehicle outright, and stay in frame for a stop near the edge.
+        let layout = place(
+            cardSize: CGSize(width: 0, height: 0),
+            labelBandHeight: pillH + gap + radius * 3,
+            labelBandWidth: pillWidth(name: name, detail: detail, in: surface),
+            anchor: anchor, in: surface
         )
+        let band = layout.labelRect
+        drawPin(at: CGPoint(x: band.midX, y: band.minY + radius * 1.5), radius: radius, in: surface)
+        drawNamePill(
+            name: name, detail: detail, centerX: band.midX,
+            bottomY: band.minY + radius * 3 + gap, in: surface
+        )
+    }
+
+    /// The pill's drawn width — the lead-in group's only horizontal extent.
+    private func pillWidth(name: String, detail: String?, in surface: RenderSurface) -> CGFloat {
+        let padding = style.labelPillPaddingPx * surface.scale
+        let nameW = textWidth(name, fontPx: style.labelFontPx, in: surface)
+        let detailW = detail.map { textWidth($0, fontPx: style.labelDetailFontPx, in: surface) } ?? 0
+        return max(nameW, detailW) + padding * 2
     }
 
     /// A white ring under a colored dot, so the stop point reads on any terrain.
@@ -136,43 +163,71 @@ public struct RecapOverlayRenderer: OverlayRenderer {
 
     /// The card opens from `deckPhotoMinWidthFraction` to
     /// `deckPhotoMaxWidthFraction` on the timeline's `reveal`, so the photo grows
-    /// as the shot pushes in and still leaves the map and trail visible around
-    /// its edges (Chiu 2026-07-25). The stop's pin + name ride under the card
-    /// throughout, so the viewer always knows where the photo was taken.
+    /// as the shot opens and still leaves the map and trail visible around its
+    /// edges (Chiu 2026-07-25). The stop's pin + name ride under the card, and
+    /// the whole group is placed **beside the vehicle** by `RecapStopLayout` —
+    /// with a static camera the vehicle is wherever it really is, so a
+    /// frame-centred card would sit on top of it.
     private func drawPhotoDeck(_ deck: RecapPhotoDeck, into surface: RenderSurface) {
         guard deck.opacity > 0.001, !deck.photos.isEmpty else { return }
         let context = surface.context
+        let scale = surface.scale
         let count = deck.photos.count
         let index = min(max(deck.focusIndex, 0), count - 1)
 
         let minW = CGFloat(surface.widthPx) * style.deckPhotoMinWidthFraction
         let maxW = CGFloat(surface.widthPx) * style.deckPhotoMaxWidthFraction
         let cardW = minW + (maxW - minW) * CGFloat(min(max(deck.reveal, 0), 1))
-        let cardH = cardW * style.deckPhotoAspect
-        let cardCenter = CGPoint(x: CGFloat(surface.widthPx) / 2, y: CGFloat(surface.heightPx) * 0.56)
-        let matteRect = CGRect(x: cardCenter.x - cardW / 2, y: cardCenter.y - cardH / 2, width: cardW, height: cardH)
+        let gap = style.deckLabelGapPx * scale
+        let pinRadius = style.labelPinRadiusPx * scale
+        let pillH = pillHeight(detail: deck.detail, in: surface)
+        let dotsBand = style.deckDotRadiusPx * 2 * scale + style.cardPaddingPx * scale
+        let layout = place(
+            cardSize: CGSize(width: cardW, height: cardW * style.deckPhotoAspect),
+            labelBandHeight: dotsBand + gap + pinRadius * 3 + gap + pillH,
+            labelBandWidth: pillWidth(name: deck.name, detail: deck.detail, in: surface),
+            anchor: surface.cgPoint(lat: deck.coordinate.lat, lon: deck.coordinate.lon),
+            in: surface
+        )
         let image = resolver.image(for: deck.photos[index], targetPx: Int(maxW))
 
         context.saveGState()
         context.setAlpha(CGFloat(deck.opacity))
-        drawDeckStack(matteRect: matteRect, count: count, in: surface)
-        drawDeckHero(image, matteRect: matteRect, in: surface)
-        drawDeckDots(count: count, current: index, below: matteRect, in: surface)
+        drawDeckStack(matteRect: layout.cardRect, count: count, in: surface)
+        drawDeckHero(image, matteRect: layout.cardRect, in: surface)
+        drawDeckDots(count: count, current: index, below: layout.cardRect, in: surface)
 
-        // The stop's identity, anchored under the card: pin then name.
-        let scale = surface.scale
-        let dotsBand = style.deckDotRadiusPx * 2 * scale + style.cardPaddingPx * scale
-        let pinCenterY = matteRect.minY - dotsBand - style.deckLabelGapPx * scale - style.labelPinRadiusPx * 1.5 * scale
-        drawPin(
-            at: CGPoint(x: cardCenter.x, y: pinCenterY), radius: style.labelPinRadiusPx * scale, in: surface
-        )
-        let pillH = pillHeight(detail: deck.detail, in: surface)
+        // Inside the name band the pin sits nearest the card and the name beyond
+        // it, whichever side of the card the band landed on.
+        let band = layout.labelRect
+        let pinY = layout.labelIsAboveCard
+            ? band.minY + dotsBand + gap + pinRadius * 1.5
+            : band.maxY - dotsBand - gap - pinRadius * 1.5
+        drawPin(at: CGPoint(x: band.midX, y: pinY), radius: pinRadius, in: surface)
         drawNamePill(
-            name: deck.name, detail: deck.detail, centerX: cardCenter.x,
-            bottomY: pinCenterY - style.labelPinRadiusPx * 1.5 * scale - style.deckLabelGapPx * scale - pillH,
+            name: deck.name, detail: deck.detail, centerX: band.midX,
+            bottomY: layout.labelIsAboveCard
+                ? pinY + pinRadius * 1.5 + gap
+                : pinY - pinRadius * 1.5 - gap - pillH,
             in: surface
         )
         context.restoreGState()
+    }
+
+    /// Places a stop's card and name band relative to the vehicle.
+    func place(
+        cardSize: CGSize, labelBandHeight: CGFloat, labelBandWidth: CGFloat,
+        anchor: CGPoint, in surface: RenderSurface
+    ) -> RecapStopLayout {
+        RecapStopLayout(
+            anchor: anchor,
+            cardSize: cardSize,
+            labelBandHeight: labelBandHeight,
+            labelBandWidth: labelBandWidth,
+            clearance: (style.subjectLengthPx / 2 + style.labelVehicleClearancePx) * surface.scale,
+            marginPx: style.cardMarginPx * surface.scale,
+            frameSize: CGSize(width: surface.widthPx, height: surface.heightPx)
+        )
     }
 
     /// The pill's drawn height — needed to park it *below* an anchor.

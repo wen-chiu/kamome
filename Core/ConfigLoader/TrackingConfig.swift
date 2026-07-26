@@ -258,13 +258,18 @@ public struct TrackingConfig: Decodable, Equatable {
         public let wideSpanPadding: Double
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
+        /// Split the film into a new fixed camera frame when consecutive route
+        /// points are more than this far apart — a flight, a ferry, or a drive
+        /// resuming in another region. Everything short of that plays inside one
+        /// held frame (Chiu 2026-07-25: a still map is what makes the distance
+        /// covered legible).
+        public let actSplitKm: Double
         /// Rotate the map heading-up (needs a `bearing`-honoring provider; §3).
         public let followHeadingUp: Bool
         /// Photo-deck pacing (§5): label lead, per-photo dwell, grow/shrink each,
         /// dolly-in span while a stop's deck is up (deck zoom = camera track).
         public let deckPhotoHoldS: Double
         public let deckZoomS: Double
-        public let deckSpanM: Double
         public let deckLabelLeadS: Double
         /// One map snapshot per this many frames; in-between frames cross-fade (§4.5).
         public let keyframeIntervalFrames: Int
@@ -277,8 +282,9 @@ public struct TrackingConfig: Decodable, Equatable {
         public init(
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
-            cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double, followHeadingUp: Bool,
-            deckPhotoHoldS: Double, deckZoomS: Double, deckSpanM: Double, deckLabelLeadS: Double,
+            cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
+            actSplitKm: Double, followHeadingUp: Bool,
+            deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
@@ -286,9 +292,10 @@ public struct TrackingConfig: Decodable, Equatable {
             self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
-            self.zoomTransitionS = zoomTransitionS; self.followHeadingUp = followHeadingUp
+            self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
+            self.followHeadingUp = followHeadingUp
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
-            self.deckSpanM = deckSpanM; self.deckLabelLeadS = deckLabelLeadS
+            self.deckLabelLeadS = deckLabelLeadS
             self.keyframeIntervalFrames = keyframeIntervalFrames; self.titleCardS = titleCardS
             self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
         }
@@ -303,9 +310,9 @@ public struct TrackingConfig: Decodable, Equatable {
                 maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
                 frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
                 cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
-                zoomTransitionS: zoomTransitionS, followHeadingUp: resolved,
+                zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: resolved,
                 deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
-                deckSpanM: deckSpanM, deckLabelLeadS: deckLabelLeadS,
+                deckLabelLeadS: deckLabelLeadS,
                 keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
                 endCardS: endCardS, videoBitrateMbps: videoBitrateMbps
             )
@@ -323,10 +330,10 @@ public struct TrackingConfig: Decodable, Equatable {
             case cameraSpanM = "camera_span_m"
             case wideSpanPadding = "wide_span_padding"
             case zoomTransitionS = "zoom_transition_s"
+            case actSplitKm = "act_split_km"
             case followHeadingUp = "follow_heading_up"
             case deckPhotoHoldS = "deck_photo_hold_s"
             case deckZoomS = "deck_zoom_s"
-            case deckSpanM = "deck_span_m"
             case deckLabelLeadS = "deck_label_lead_s"
             case keyframeIntervalFrames = "keyframe_interval_frames"
             case titleCardS = "title_card_s"

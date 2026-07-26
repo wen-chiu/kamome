@@ -14,14 +14,13 @@ import KamomeTrackingEngine
 /// proportionally — travel time never reaches zero.
 ///
 /// The **camera** (`cameraFrame`) is a separate concern from the vehicle
-/// (`position`): the title/end windows sit wide on the whole trip (the
-/// establishing / closing shots), and the body zooms into a close, optionally
-/// heading-up follow-cam locked on the vehicle (prototype §2.3 — "the vehicle
-/// is the subject," not a dot on a wide map). Wide↔close eases over
-/// `export.zoom_transition_s` at each card boundary. During wide shots the
-/// camera centers on the trip, not the vehicle, so the whole route is framed
-/// while the vehicle sits small in its real place — which is why camera and
-/// vehicle are two outputs, not one.
+/// (`position`), and since 2026-07-25 it **holds still**: one fixed frame per
+/// act, re-framed only across a genuine jump (`CameraPathActs.swift`). It does
+/// not follow the vehicle and does not zoom for stops. A static frame is what
+/// makes the distance covered legible — the drawn line grows against a backdrop
+/// the eye can measure — which is exactly what a continuously sliding, scaling
+/// follow-cam destroyed. Camera and vehicle stay two outputs, not one: the
+/// vehicle moves within a frame that does not.
 ///
 /// Pure value math over Doubles: the same trip and config always produce the
 /// same frames, which is what the golden-frame gate tests rely on.
@@ -60,12 +59,14 @@ public struct CameraPath {
         public let bearing: Double
     }
 
-    private enum Phase {
+    // Internal (not private) so the act-framing extension in CameraPathActs.swift
+    // can read the speed-warped timeline it derives act windows from.
+    enum Phase {
         case travel(fromM: Double, toM: Double)
         case hold(stopIndex: Int, atM: Double)
     }
 
-    private struct TimelineEntry {
+    struct TimelineEntry {
         let startS: Double
         let endS: Double
         let phase: Phase
@@ -96,16 +97,12 @@ public struct CameraPath {
     private let cumulativeM: [Double]
     private let timeline: [TimelineEntry]
 
-    // Camera framing (cameraFrame). The wide establishing/closing shots frame
-    // the whole trip; the body zooms into `closeSpanM` on the vehicle.
-    private let closeSpanM: Double
-    private let wideSpanM: Double
-    private let tripCenterLat: Double
-    private let tripCenterLon: Double
+    // Camera framing (cameraFrame). The map is held **still**: one fixed frame
+    // per act, re-framed only where the journey genuinely jumps (Chiu
+    // 2026-07-25). See `Act`.
+    private let acts: [Act]
     private let zoomTransitionS: Double
     private let followHeadingUp: Bool
-    private let bodyStartS: Double
-    private let bodyEndS: Double
 
     /// Fails on degenerate input (fewer than two points or zero length) —
     /// the phantom-trip guard keeps such trips out of the DB, so a caller
@@ -144,19 +141,12 @@ public struct CameraPath {
         durationS = config.targetDurationS
         frameCount = Int((config.targetDurationS * Double(config.fps)).rounded())
 
-        // Establishing-shot framing, all derived from the route geometry.
-        let bounds = Self.bounds(of: route)
-        tripCenterLat = (bounds.minLat + bounds.maxLat) / 2
-        tripCenterLon = (bounds.minLon + bounds.maxLon) / 2
-        closeSpanM = config.cameraSpanM
-        wideSpanM = max(
-            config.cameraSpanM,
-            Self.fittingSpanM(bounds: bounds, config: config) * config.wideSpanPadding
-        )
         zoomTransitionS = config.zoomTransitionS
         followHeadingUp = config.followHeadingUp
-        bodyStartS = min(config.titleCardS, config.targetDurationS)
-        bodyEndS = max(bodyStartS, config.targetDurationS - config.endCardS)
+        acts = Self.buildActs(
+            route: route, cumulativeM: cumulative, timeline: timeline,
+            totalM: totalM, config: config
+        )
     }
 
     /// Anchor each stop to its nearest route vertex, ordered along the path.
@@ -241,29 +231,34 @@ public struct CameraPath {
         )
     }
 
-    /// The base-map framing at `time`: wide over the whole trip during the
-    /// title/end windows, close on the vehicle through the body, eased between.
+    /// The base-map framing at `time`: the current act's **fixed** frame, eased
+    /// into the next one across an act boundary.
+    ///
+    /// The map does not move with the vehicle and does not zoom for stops. A
+    /// still frame is what makes the distance covered legible — the drawn line
+    /// grows against a constant backdrop the eye can measure — and it keeps raw
+    /// GPS wobble at its true, negligible scale instead of magnifying it.
     public func cameraFrame(atTime time: Double) -> CameraFrame {
-        let vehicle = position(atTime: time)
-        let closeness = Self.smoothstep(framing(atTime: time))
-        let spanM = wideSpanM + (closeSpanM - wideSpanM) * closeness
-        // Wide → center the trip so the whole route is in frame; close → center
-        // the vehicle. Small lat/lon lerps are safe (no antimeridian trips).
-        let centerLat = tripCenterLat + (vehicle.lat - tripCenterLat) * closeness
-        let centerLon = tripCenterLon + (vehicle.lon - tripCenterLon) * closeness
-        let bearing = followHeadingUp ? Self.angleLerp(from: 0, to: vehicle.heading, fraction: closeness) : 0
-        return CameraFrame(centerLat: centerLat, centerLon: centerLon, spanM: spanM, bearing: bearing)
-    }
-
-    /// Closeness at `time`: 0 = wide establishing/closing shot, 1 = close
-    /// follow-cam. Wide through the card windows, ramping to close over
-    /// `zoom_transition_s` just inside each boundary.
-    private func framing(atTime time: Double) -> Double {
-        guard time > bodyStartS, time < bodyEndS else { return 0 }
+        guard let current = acts.last(where: { time >= $0.startS }) ?? acts.first else {
+            return CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0)
+        }
+        let bearing = followHeadingUp ? position(atTime: time).heading : 0
+        guard let next = acts.first(where: { $0.startS > current.startS }) else {
+            return CameraFrame(
+                centerLat: current.centerLat, centerLon: current.centerLon,
+                spanM: current.spanM, bearing: bearing
+            )
+        }
+        // Ease across the seam so a jump reads as a deliberate re-frame rather
+        // than a cut. Small lat/lon lerps are safe (no antimeridian trips).
         let transition = max(zoomTransitionS, 1e-6)
-        let rampIn = (time - bodyStartS) / transition
-        let rampOut = (bodyEndS - time) / transition
-        return min(1, min(rampIn, rampOut))
+        let blend = Self.smoothstep(min(max((time - (next.startS - transition)) / transition, 0), 1))
+        return CameraFrame(
+            centerLat: current.centerLat + (next.centerLat - current.centerLat) * blend,
+            centerLon: current.centerLon + (next.centerLon - current.centerLon) * blend,
+            spanM: current.spanM + (next.spanM - current.spanM) * blend,
+            bearing: bearing
+        )
     }
 
     /// Along-route distance covered at `time` — the frame renderer's traveled
@@ -336,7 +331,8 @@ public struct CameraPath {
 
 // MARK: - Framing geometry (pure, deterministic)
 
-private extension CameraPath {
+// Internal, not private: CameraPathActs.swift frames each act with these.
+extension CameraPath {
     struct Bounds {
         let minLat: Double
         let maxLat: Double

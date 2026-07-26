@@ -9,12 +9,14 @@ import KamomeConfig
 ///
 ///   `cameraFrame(atTime:)` · `subjectState(atTime:)` · `mapState(atTime:)` · `overlayContents(atTime:)`
 ///
-/// It reuses `CameraPath`'s speed-warp / hold / easing math for camera framing
-/// and subject motion, and adds the stop choreography: at each stop the camera
-/// **dollies in** to `deckSpanM` and the `photoDeck` overlay blooms, both driven
-/// by one shared 0…1 emphasis envelope (grow `deckZoomS` → hold `n·deckPhotoHoldS`
-/// → shrink `deckZoomS`). The deck zoom lives here, in the camera stream —
-/// overlays never touch the camera.
+/// It reuses `CameraPath`'s speed-warp / hold / easing math for subject motion
+/// and framing, and adds the stop choreography: at each stop the `photoDeck`
+/// overlay opens on its own reveal envelope (grow `deckZoomS` → hold
+/// `n·deckPhotoHoldS` → shrink `deckZoomS`).
+///
+/// The camera does **not** move for a stop (Chiu 2026-07-25). It holds the act's
+/// fixed frame throughout; a stop is told by the label and the card, not by
+/// flying the map. Overlays never touch the camera.
 ///
 /// When a smart `SceneDirector` arrives (Phase 4, deterministic, spec §7), it
 /// slots in above this; the state streams and renderers do not change.
@@ -29,7 +31,6 @@ public struct LinearTimeline {
     private let holds: [CameraPath.Hold]
     private let routeCoordinates: [RecapCoordinate]
     private let deck: RecapDeck
-    private let deckSpanM: Double
     private let titleCardS: Double
     private let endCardS: Double
     private let title: String
@@ -53,7 +54,6 @@ public struct LinearTimeline {
         holds = path.holds
         routeCoordinates = trip.route
         deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
-        deckSpanM = config.deckSpanM
         titleCardS = min(config.titleCardS, path.durationS)
         endCardS = config.endCardS
         title = trip.title
@@ -76,19 +76,14 @@ public struct LinearTimeline {
         MapState(opacity: 1)
     }
 
-    /// Camera framing: the CameraPath wide→close follow, with the stop dolly-in
-    /// laid on top. The label-lead beat stays at the follow span (no dolly); over
-    /// the deck sub-window the span eases to `deckSpanM` and back. This is the
-    /// **map** envelope only — the photo card's own scale envelope is
-    /// `deckReveal`, deliberately a different curve (Chiu 2026-07-25).
+    /// Camera framing: straight through to `CameraPath`, which holds one fixed
+    /// frame per act. Nothing here modulates it — not the stop, not the deck.
     public func cameraFrame(atTime time: Double) -> CameraFrame {
-        let base = path.cameraFrame(atTime: time)
-        guard let active = activeStop(atTime: time), !active.stop.photos.isEmpty else {
-            return CameraFrame(centerLat: base.centerLat, centerLon: base.centerLon, spanM: base.spanM, bearing: base.bearing)
-        }
-        let dolly = cameraDolly(atTime: time, deck: deckWindow(active.hold))
-        let spanM = base.spanM + (deckSpanM - base.spanM) * dolly
-        return CameraFrame(centerLat: base.centerLat, centerLon: base.centerLon, spanM: spanM, bearing: base.bearing)
+        let frame = path.cameraFrame(atTime: time)
+        return CameraFrame(
+            centerLat: frame.centerLat, centerLon: frame.centerLon,
+            spanM: frame.spanM, bearing: frame.bearing
+        )
     }
 
     /// Everything drawn over the map at `time`: the revealed trail, the trip
@@ -121,14 +116,15 @@ public struct LinearTimeline {
                     reveal: deckReveal(atTime: time, deck: window),
                     opacity: deckOpacity(atTime: time, deck: window),
                     name: stop.name,
-                    detail: stop.detail
+                    detail: stop.detail,
+                    coordinate: stop.coordinate
                 )))
             }
         }
         return contents
     }
 
-    // MARK: - Stop choreography (shared by camera + overlay so they stay in sync)
+    // MARK: - Stop choreography (overlay only — the camera holds still)
 
     private func activeStop(atTime time: Double) -> (hold: CameraPath.Hold, stop: RecapTrip.Stop)? {
         for hold in holds where hold.startS <= time && time < hold.endS {
@@ -139,7 +135,7 @@ public struct LinearTimeline {
     }
 
     /// The deck's sub-window inside a stop's hold: the label leads for
-    /// `labelLeadS`, then the deck (dolly + photos) owns the rest.
+    /// `labelLeadS`, then the photo card owns the rest.
     private func deckWindow(_ hold: CameraPath.Hold) -> (start: Double, end: Double) {
         (min(hold.startS + deck.labelLeadS, hold.endS), hold.endS)
     }
@@ -151,21 +147,10 @@ public struct LinearTimeline {
         min(deck.zoomS, (window.end - window.start) * 0.4)
     }
 
-    /// **Map** envelope: 0 at the sub-window edges, 1 across the middle — the
-    /// camera dollies in over `deck_zoom_s`, holds tight on the stop, pulls back
-    /// out. Distinct from `deckReveal`, which keeps opening while this holds.
-    private func cameraDolly(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
-        let zoom = zoomRamp(window)
-        guard zoom > 0 else { return time >= window.start ? 1 : 0 }
-        if time < window.start + zoom { return Self.smoothstep((time - window.start) / zoom) }
-        if time > window.end - zoom { return Self.smoothstep((window.end - time) / zoom) }
-        return 1
-    }
-
     /// **Card** envelope (Chiu 2026-07-25): the photo keeps growing across the
     /// whole hold — not just the camera's dolly-in — so the stop plays as a slow
     /// cinematic reveal rather than a card that pops to full size and sits
-    /// there. It scales back down over the closing ramp as the camera pulls out.
+    /// there. It scales back down over the closing ramp as the scene closes.
     private func deckReveal(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
         let zoom = zoomRamp(window)
         let openEnd = window.end - zoom

@@ -2,22 +2,22 @@ import KamomeConfig
 import KamomeExportEngine
 import XCTest
 
-/// The linear timeline's stop choreography: a stop's deck window is a
-/// zoom-in → hold → zoom-out envelope shared by the camera dolly and the photo
-/// deck, so the map "zooms into" the stop exactly while the photos are up.
+/// The linear timeline's stop choreography. Since 2026-07-25 the camera holds a
+/// **fixed** frame — a stop is told by the label and the photo card, never by
+/// flying the map — so these assert the card's own reveal envelope *and* that
+/// the map stays put underneath it.
 final class LinearTimelineTests: XCTestCase {
     private func exportConfig(
         targetDurationS: Double = 30,
         deckZoomS: Double = 0.5,
         deckPhotoHoldS: Double = 0.8,
-        deckSpanM: Double = 600,
         cameraSpanM: Double = 1500
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
-            cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, followHeadingUp: false,
-            deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckSpanM: deckSpanM, deckLabelLeadS: 0.6,
+            cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
+            deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6,
             keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
         )
     }
@@ -92,7 +92,7 @@ final class LinearTimelineTests: XCTestCase {
         return samples
     }
 
-    func testStopSceneIsZoomInHoldZoomOutSyncedWithCameraDolly() throws {
+    func testStopSceneOpensAndClosesTheCardWhileTheMapHoldsStill() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
@@ -103,15 +103,16 @@ final class LinearTimelineTests: XCTestCase {
         let start = try XCTUnwrap(window.first), end = try XCTUnwrap(window.last)
         XCTAssertEqual(end.time - start.time, 4.2, accuracy: 0.1, "dwell = 2·deckZoomS + n·deckPhotoHoldS")
 
-        // Edges: card barely present, camera at the follow span.
+        // Edges: card barely present. Middle: card solid.
         XCTAssertLessThan(start.opacity, 0.2)
-        XCTAssertGreaterThan(start.spanM, 1400, "camera at the follow span before the dolly-in")
         XCTAssertLessThan(end.opacity, 0.2)
-
-        // Middle (the hold): card solid, camera dollied to deckSpanM.
         let mid = window[window.count / 2]
         XCTAssertEqual(mid.opacity, 1, accuracy: 0.01)
-        XCTAssertEqual(mid.spanM, config.deckSpanM, accuracy: 5, "camera dolled into the stop while the deck holds")
+
+        // The map does not move a metre across the whole stop — that is the
+        // point of the fixed frame (Chiu 2026-07-25).
+        let spans = Set(window.map { ($0.spanM * 100).rounded() })
+        XCTAssertEqual(spans.count, 1, "the camera span must not change during a stop")
 
         // Focus rotates across all four photos.
         XCTAssertEqual(window.map(\.focus).min(), 0, "highlight leads")
@@ -132,38 +133,29 @@ final class LinearTimelineTests: XCTestCase {
         let midLead = labelStart + config.deckLabelLeadS / 2
         XCTAssertTrue(hasStopLabel(timeline.overlayContents(atTime: midLead), name: "Stop 2"))
         XCTAssertNil(activePhotoDeck(timeline.overlayContents(atTime: midLead)), "no deck during the label lead")
-        XCTAssertEqual(timeline.cameraFrame(atTime: midLead).spanM, config.cameraSpanM, accuracy: 1, "no dolly during the lead")
     }
 
-    /// The card's scale envelope and the map's dolly are **synchronized but not
-    /// the same curve** (Chiu 2026-07-25): the camera reaches its tight span over
-    /// `deck_zoom_s` and then holds, while the photo keeps opening across the
-    /// whole hold. One value driving both is exactly what this forbids.
-    func testDeckRevealKeepsOpeningAfterTheCameraDollyHasSettled() throws {
+    /// The card opens on its own envelope across the whole hold, and the map is
+    /// untouched throughout — the reveal is an overlay concern only.
+    func testDeckRevealOpensAcrossTheHoldWithoutMovingTheMap() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
         let window = deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first))
 
-        // The instant the camera first sits at its tight span, the card is still
-        // well short of fully open — the reveal outlasts the dolly.
-        let settled = try XCTUnwrap(
-            window.first { abs($0.spanM - config.deckSpanM) < 5 }, "the camera must reach deck_span_m"
-        )
-        XCTAssertLessThan(settled.reveal, 0.6, "the card is still opening once the map has finished dollying")
-
-        // And it does finish opening, later, while the camera is still parked.
         let opened = try XCTUnwrap(window.last { $0.opacity > 0.99 })
-        XCTAssertGreaterThan(opened.reveal, 0.9, "the card reaches full size before the shot pulls out")
-        XCTAssertEqual(opened.spanM, config.deckSpanM, accuracy: 5, "the map has not moved while it opened")
-        XCTAssertGreaterThan(opened.time, settled.time)
+        XCTAssertGreaterThan(opened.reveal, 0.9, "the card reaches full size before the scene closes")
 
         // The reveal only ever grows through the opening, then eases back down.
         let opening = window.filter { $0.time <= opened.time }
         for (before, after) in zip(opening, opening.dropFirst()) {
             XCTAssertGreaterThanOrEqual(after.reveal, before.reveal - 1e-9, "the reveal must not stutter")
         }
-        XCTAssertLessThan(try XCTUnwrap(window.last).reveal, 0.5, "the card scales back down as the shot pulls out")
+        XCTAssertLessThan(try XCTUnwrap(window.last).reveal, 0.5, "the card scales back down as the scene closes")
+
+        // Nothing the card did moved the camera.
+        let spans = Set(window.map { ($0.spanM * 100).rounded() })
+        XCTAssertEqual(spans.count, 1, "the deck reveal must not touch the camera")
     }
 
     /// The lead-in label hands the stop's identity to the card: it is solid

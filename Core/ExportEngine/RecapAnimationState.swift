@@ -82,10 +82,15 @@ public struct RecapPhotoDeck: Equatable {
     /// The stop's name and optional detail line, drawn under the card.
     public let name: String
     public let detail: String?
+    /// Where the stop is. The renderer projects it and places the whole card
+    /// group *beside the vehicle parked there* — with a static camera the
+    /// vehicle is no longer centred, so a frame-centred card would collide with
+    /// it (Chiu 2026-07-25).
+    public let coordinate: RecapCoordinate
 
     public init(
         photos: [PhotoRef], focusIndex: Int, reveal: Double, opacity: Double,
-        name: String, detail: String? = nil
+        name: String, detail: String? = nil, coordinate: RecapCoordinate
     ) {
         self.photos = photos
         self.focusIndex = focusIndex
@@ -93,6 +98,7 @@ public struct RecapPhotoDeck: Equatable {
         self.opacity = opacity
         self.name = name
         self.detail = detail
+        self.coordinate = coordinate
     }
 }
 

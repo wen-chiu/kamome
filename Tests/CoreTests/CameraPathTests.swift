@@ -31,10 +31,10 @@ final class CameraPathTests: XCTestCase {
             cameraSpanM: 1500,
             wideSpanPadding: 1.15,
             zoomTransitionS: 0.8,
+            actSplitKm: 25,
             followHeadingUp: followHeadingUp,
             deckPhotoHoldS: 0.8,
             deckZoomS: 0.5,
-            deckSpanM: 600,
             deckLabelLeadS: 0.6,
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
@@ -172,31 +172,64 @@ final class CameraPathTests: XCTestCase {
         XCTAssertEqual(Double(holdFrames.count), 450, accuracy: Double(stops.count))
     }
 
-    // MARK: - Follow-cam framing (prototype §2.3)
+    // MARK: - Fixed-frame framing (Chiu 2026-07-25)
 
-    func testCameraWidensForTitleAndEndClosesForBody() throws {
+    /// The camera holds **one** frame for a continuous trip: no establishing
+    /// zoom, no follow-cam, no stop dolly. A still map is what makes the distance
+    /// covered legible, and it keeps GPS wobble at its true scale.
+    func testContinuousTripHoldsASingleFixedFrame() throws {
         let config = exportConfig()
-        let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [], config: config))
+        let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [longRoute[5]], config: config))
 
-        let opening = path.cameraFrame(atTime: 0)
-        let body = path.cameraFrame(atTime: config.targetDurationS / 2)
-        let closing = path.cameraFrame(atTime: config.targetDurationS)
-
-        // Body is the tight follow span; the establishing/closing shots are much wider.
-        XCTAssertEqual(body.spanM, config.cameraSpanM, accuracy: 1e-6, "body sits at the close follow span")
-        XCTAssertGreaterThan(opening.spanM, config.cameraSpanM * 10, "title shot frames the whole trip")
-        XCTAssertGreaterThan(closing.spanM, config.cameraSpanM * 10, "end shot frames the whole trip")
-
-        // Wide shots center on the trip; the body follows the vehicle.
-        let tripCenterLat = (longRoute.first!.lat + longRoute.last!.lat) / 2
-        XCTAssertEqual(opening.centerLat, tripCenterLat, accuracy: 1e-6, "wide shot centers the trip")
-        let vehicle = path.position(atTime: config.targetDurationS / 2)
-        XCTAssertEqual(body.centerLat, vehicle.lat, accuracy: 1e-6, "close shot rides the vehicle")
+        let samples = stride(from: 0.0, through: config.targetDurationS, by: 0.25)
+            .map { path.cameraFrame(atTime: $0) }
+        let first = try XCTUnwrap(samples.first)
+        for frame in samples {
+            XCTAssertEqual(frame.spanM, first.spanM, accuracy: 1e-6, "the span must never change")
+            XCTAssertEqual(frame.centerLat, first.centerLat, accuracy: 1e-9, "the centre must never move")
+            XCTAssertEqual(frame.centerLon, first.centerLon, accuracy: 1e-9, "the centre must never move")
+        }
+        // And that one frame holds the whole route. `spanM` is the *horizontal*
+        // span; this route runs north-south, so compare against what the portrait
+        // frame covers vertically.
+        let extentM = Geo.distanceM(
+            latA: longRoute.first!.lat, lonA: longRoute.first!.lon,
+            latB: longRoute.last!.lat, lonB: longRoute.last!.lon
+        )
+        let verticalCoverM = first.spanM * Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        XCTAssertGreaterThan(verticalCoverM, extentM, "the held frame must contain the whole route")
     }
 
-    func testTinyTripNeverZoomsOutPastCloseSpan() throws {
-        // straightRoute is ~1 km — its fitting span is under the close span, so
-        // the wide floor collapses to the close span and there is no zoom-out.
+    /// A genuine jump — a flight, a ferry, a drive resuming in another region —
+    /// is the one thing that re-frames the camera, and it eases rather than cuts.
+    func testLargeJumpSplitsIntoTwoFramesAndEasesBetweenThem() throws {
+        let config = exportConfig()
+        // Two clusters ~200 km apart: far beyond act_split_km.
+        let near = (0...10).map { CameraPath.Point(lat: -32.0 + Double($0) * 0.001, lon: 115.75) }
+        let far = (0...10).map { CameraPath.Point(lat: -30.2 + Double($0) * 0.001, lon: 115.75) }
+        let path = try XCTUnwrap(CameraPath(route: near + far, stops: [], config: config))
+
+        let opening = path.cameraFrame(atTime: 0.5)
+        let closing = path.cameraFrame(atTime: config.targetDurationS - 0.5)
+        XCTAssertGreaterThan(
+            abs(opening.centerLat - closing.centerLat), 1.0, "each act frames its own cluster"
+        )
+        // Neither act is framed to the whole ~200 km — that is what splitting buys.
+        XCTAssertLessThan(opening.spanM, 100_000, "the first act frames only its own cluster")
+
+        // The seam eases: some sample sits strictly between the two centres.
+        let centres = stride(from: 0.0, through: config.targetDurationS, by: 0.1)
+            .map { path.cameraFrame(atTime: $0).centerLat }
+        let low = min(opening.centerLat, closing.centerLat), high = max(opening.centerLat, closing.centerLat)
+        XCTAssertTrue(
+            centres.contains { $0 > low + 0.05 && $0 < high - 0.05 },
+            "the camera must ease across the jump, not cut"
+        )
+    }
+
+    func testTinyTripNeverZoomsInPastTheSpanFloor() throws {
+        // straightRoute is ~1 km — its fitting span is under camera_span_m, so
+        // the floor holds and a short trip is not framed absurdly tight.
         let config = exportConfig()
         let path = try XCTUnwrap(CameraPath(route: straightRoute, stops: [], config: config))
         XCTAssertEqual(path.cameraFrame(atTime: 0).spanM, config.cameraSpanM, accuracy: 1e-6)

@@ -11,9 +11,29 @@ import Foundation
 /// (the moving subject) and `RecapOverlayRenderer` (route trail, stop label,
 /// photo deck, title/end chrome). The story/timeline never sees it.
 public struct RecapStyle {
-    // Route trail (§4.5 step 2, drawn by OverlayRenderer as `routeReveal`).
+    // Route trail (§4.5 step 2, drawn by OverlayRenderer as `routeReveal`). The
+    // trail is stroked twice: a wide, soft glow pass under a crisp core, so it
+    // reads as a lit line on the dark souvenir map rather than a flat polyline.
     public var routeColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 1)
     public var routeWidthPx: CGFloat = 14
+    /// Glow pass under the trail. `routeGlowWidthMultiple` is relative to
+    /// `routeWidthPx`; set the alpha to 0 to disable the pass entirely.
+    public var routeGlowColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 0)
+    public var routeGlowWidthMultiple: CGFloat = 2.6
+
+    // Atmosphere (§4.5, deferred from the §3 sign-off and landed 2026-07-25).
+    // Applied by `FrameCompositor` over the finished frame, so every layer —
+    // map, trail, subject, overlays — sits inside the same grade. All default to
+    // "off" so the plain look is unchanged unless a theme opts in.
+    /// Multiplied over the frame to tint/darken it before the vignette. Alpha 0
+    /// disables. A cool, low-alpha fill is what pulls a map toward "night film".
+    public var gradeColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0)
+    /// Darkening at the frame corners, 0…1 at full strength in the corners,
+    /// fading to nothing by `vignetteInnerRadius` (as a fraction of the frame's
+    /// half-diagonal). 0 disables.
+    public var vignetteStrength: CGFloat = 0
+    public var vignetteInnerRadius: CGFloat = 0.55
+    public var vignetteColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)
 
     // Trip chrome panels (title / end cards, RecapOverlayChromeDrawing).
     public var cardColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.96)
@@ -85,4 +105,33 @@ public struct RecapStyle {
     public var labelPinGapPx: CGFloat = 16
 
     public init() {}
+
+    /// **Modern Minimal** — the overlay half of the theme whose map half is
+    /// `Config/RecapThemes/modern-minimal.json` (spec §7; the ONE MVP theme).
+    ///
+    /// Tuned against the dark subtractive souvenir map: a glowing cyan trail
+    /// instead of the flat blue polyline, a cool grade, and a soft vignette that
+    /// pulls the eye to the middle of the frame where the car and the photo card
+    /// live. Chrome panels go dark so a white card never punches a hole in a
+    /// night-time film.
+    ///
+    /// This preset is what the app renders; the plain `RecapStyle()` defaults
+    /// stay deliberately neutral for the deterministic golden-frame gates, which
+    /// assert exact pixels and must not move when the theme is retuned.
+    public static var modernMinimal: RecapStyle {
+        var style = RecapStyle()
+        // Glowing trail: a wide translucent pass under a bright, crisp core.
+        style.routeColor = CGColor(srgbRed: 0.42, green: 0.87, blue: 0.98, alpha: 1)
+        style.routeWidthPx = 17
+        style.routeGlowColor = CGColor(srgbRed: 0.22, green: 0.62, blue: 0.92, alpha: 0.32)
+        style.routeGlowWidthMultiple = 3.0
+        // Atmosphere.
+        style.gradeColor = CGColor(srgbRed: 0.05, green: 0.10, blue: 0.19, alpha: 0.16)
+        style.vignetteStrength = 0.42
+        style.vignetteInnerRadius = 0.52
+        // Night chrome: dark panels, light type.
+        style.cardColor = CGColor(srgbRed: 0.07, green: 0.09, blue: 0.13, alpha: 0.90)
+        style.cardTextColor = CGColor(srgbRed: 0.97, green: 0.98, blue: 1, alpha: 1)
+        return style
+    }
 }

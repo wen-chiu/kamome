@@ -109,13 +109,12 @@ final class RecapModel {
         }
         // Layer 3 pipeline. The map stays north-up (product decision, Chiu
         // 2026-07-25) and the 8-direction car sprite carries the heading, so the
-        // hero car renders the same on MapKit today as on MapLibre later — the
-        // base-map switch no longer changes what the subject looks like.
+        // subject looks identical whichever base map renders underneath.
         //
         // `follow_heading_up` ships false; the capability check only stops a
         // renderer that cannot rotate from being handed a bearing it would drop,
         // should the flag ever be turned on.
-        let provider = MapKitSnapshotProvider()
+        let provider = Self.snapshotProvider()
         let exportConfig = config.export.withFollowHeadingUp(
             config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
         )
@@ -123,7 +122,7 @@ final class RecapModel {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }
-        let style = RecapStyle()
+        let style = RecapStyle.modernMinimal
         let resolver = PhotoLibraryPhotoResolver()
         if photosEnabled {
             let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
@@ -133,6 +132,7 @@ final class RecapModel {
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style),
             overlay: RecapOverlayRenderer(style: style, resolver: resolver),
+            style: style,
             widthPx: config.export.frameWidthPx,
             heightPx: config.export.frameHeightPx
         )
@@ -189,6 +189,24 @@ final class RecapModel {
                 shouldContinue: { !flag.isSet }
             )
         }.value
+    }
+
+    /// The base map to render on: the Kamome souvenir map when vector tiles for
+    /// the region are on hand, Apple's otherwise.
+    ///
+    /// This is the §3 "MapLibre production switch", made conditional on purpose.
+    /// A `.pmtiles` file covers a bounded region and there is no planet-sized
+    /// file to bundle, so until tile provisioning exists (spec P7) a hard
+    /// retirement of MapKit would render blank frames for any trip outside the
+    /// shipped region. Falling back keeps every trip exportable; the moment
+    /// tiles are present the film is the designed one.
+    private static func snapshotProvider() -> MapRenderer {
+        guard let tiles = RecapMapTiles.availableTilesURL(),
+              let styleURL = try? RecapMapStyle.resolvedStyleURL(
+                  styleResource: RecapMapTiles.styleResource, tilesURL: tiles
+              )
+        else { return MapKitSnapshotProvider() }
+        return MapLibreSnapshotProvider(styleURL: styleURL)
     }
 
     private func cleanup(videoURL: URL, gifURL: URL?) {

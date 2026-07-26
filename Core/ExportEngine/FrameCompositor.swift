@@ -47,20 +47,27 @@ public struct FrameCompositor {
     private let timeline: LinearTimeline
     private let subject: SubjectRenderer
     private let overlay: OverlayRenderer
+    private let style: RecapStyle
     private let widthPx: Int
     private let heightPx: Int
     private let scale: CGFloat
 
+    /// `style` supplies only the frame-wide atmosphere (grade, vignette) — the
+    /// renderers carry their own copy for the things they draw. Defaults to the
+    /// neutral style, i.e. no atmosphere, which is what the golden-frame gates
+    /// render against.
     public init(
         timeline: LinearTimeline,
         subject: SubjectRenderer,
         overlay: OverlayRenderer,
+        style: RecapStyle = RecapStyle(),
         widthPx: Int,
         heightPx: Int
     ) {
         self.timeline = timeline
         self.subject = subject
         self.overlay = overlay
+        self.style = style
         self.widthPx = widthPx
         self.heightPx = heightPx
         scale = CGFloat(widthPx) / 1080
@@ -104,9 +111,41 @@ public struct FrameCompositor {
         for content in contents where !Self.drawsBelowSubject(content) {
             overlay.render(content, camera: camera, into: surface)
         }
+        drawAtmosphere(in: context, rect: frameRect)
 
         guard let image = context.makeImage() else { throw RenderError() }
         return image
+    }
+
+    /// Grade then vignette, over the finished frame — so map, trail, subject and
+    /// overlays all sit inside one atmosphere instead of the chrome floating
+    /// above it. Both are no-ops unless the theme opts in.
+    private func drawAtmosphere(in context: CGContext, rect: CGRect) {
+        if style.gradeColor.alpha > 0.001 {
+            context.setFillColor(style.gradeColor)
+            context.fill(rect)
+        }
+        guard style.vignetteStrength > 0.001,
+              let space = CGColorSpace(name: CGColorSpace.sRGB)
+        else { return }
+        let clear = style.vignetteColor.copy(alpha: 0) ?? style.vignetteColor
+        let edge = style.vignetteColor.copy(alpha: style.vignetteStrength) ?? style.vignetteColor
+        guard let gradient = CGGradient(
+            colorsSpace: space, colors: [clear, clear, edge] as CFArray,
+            locations: [0, style.vignetteInnerRadius, 1]
+        ) else { return }
+        // A radial ramp out to the frame's half-diagonal, squashed into the
+        // frame's aspect so the darkening reaches every corner evenly.
+        let halfWidth = rect.width / 2, halfHeight = rect.height / 2
+        context.saveGState()
+        context.translateBy(x: rect.midX, y: rect.midY)
+        context.scaleBy(x: halfWidth / halfHeight, y: 1)
+        context.drawRadialGradient(
+            gradient, startCenter: .zero, startRadius: 0,
+            endCenter: .zero, endRadius: sqrt(halfHeight * halfHeight + halfHeight * halfHeight),
+            options: [.drawsAfterEndLocation]
+        )
+        context.restoreGState()
     }
 
     /// The route trail draws beneath the subject; the label, deck, and chrome
