@@ -265,7 +265,9 @@ render wiring, and Chiu signed it off. **See `Docs/handoff-recap-visuals.md`**;
 it also lists what remains before PR #11. Headlines, because they reverse
 decisions recorded further down this file:
 
-- The map is **north-up and never rotates** (heading-up was tried and abandoned);
+- The camera is **static**: one fixed frame per act, re-framed only across a
+  >25 km jump. No follow-cam, no stop dolly. The map is **north-up and never
+  rotates** (heading-up was tried and abandoned);
   the vehicle carries the heading as an **8-direction sprite set**, nearest-bucket
   selected, never rotated at runtime. `FollowCamMode` was removed.
 - The photo deck is a **zoom-in reveal** (0.30 → 0.50 frame width) on its own

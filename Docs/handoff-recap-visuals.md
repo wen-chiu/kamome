@@ -1,8 +1,41 @@
 # Handoff — Recap Layer 3 + visual redesign (2026-07-25)
 
-Branch `phase-3-recap`, commits `ce28db6` (Layer 3 + redesign) and `2917008`
-(final car art). 119 tests green, `swiftlint --strict` clean. **Not merged —
-PR #11 still holds until the §6 three-real-trip gate.**
+Branch `phase-3-recap`, commits `ce28db6` (Layer 3 + redesign), `2917008` (final
+car art) and `f294883` (static camera + MapLibre switch + theme atmosphere).
+131 tests green, `swiftlint --strict` clean. **Not merged — PR #11 holds until
+the §6 three-real-trip gate.**
+
+**This closes the recap-visuals phase.** Nothing in the pipeline is waiting on a
+design decision; what remains before PR #11 is device validation (§7). Read §0
+first if you are picking this up cold — the camera model reverses what earlier
+sections of this document and `handoff-P3.5.md` describe.
+
+## 0. The camera is static — read this before the rest
+
+The final and largest reversal of the session (Chiu 2026-07-25). Sections 1–6
+below describe a camera that flew: a wide establishing shot, a close follow-cam
+riding the vehicle, and a dolly into every stop. **All of that is gone.**
+
+- **One fixed frame per act.** The map does not move and does not zoom. A still
+  frame is what makes the distance covered legible — the drawn line grows against
+  a backdrop the eye can measure — which a continuously sliding, scaling
+  follow-cam destroyed. This restores the web prototype's model, and TravelBoast's.
+- **The route draws itself** progressively down that fixed map while the car
+  moves along it. That is the whole animation now.
+- **Re-framing happens only across a genuine jump**: consecutive route points more
+  than `export.act_split_km` (25 km) apart, which is what a flight, a ferry, or a
+  drive resuming in another region looks like in the data. Act changes ease rather
+  than cut. A continuous trip is a single act — one frame for the whole film.
+- **`deck_span_m` is gone** with the stop dolly. `act_split_km` replaces it.
+- **The GPS-noise problem resolved itself.** Raw wobble was only ever visible
+  because the close zoom magnified it; at a fixed whole-trip frame it sits at its
+  true, negligible scale. That is a *consequence* of the change, not its reason —
+  do not "fix" it by zooming back in.
+
+Implementation: `CameraPath.cameraFrame` plus `CameraPathActs.swift` (the act
+split and per-act framing, kept in its own file for readability). `LinearTimeline`
+passes the frame straight through; nothing modulates it — not the stop, not the
+deck.
 
 **Layer 3 is fully landed, visuals included** — Chiu signed off the car sprites,
 the photo-deck zoom-in reveal, and the two-beat stop label on 2026-07-25. The
@@ -21,7 +54,7 @@ OverlayContent } → three renderers` now runs end to end.
 
 - **`FrameCompositor`** (new) consumes the timeline + the three renderers. The
   render loop pulls the four streams per frame and takes snapshots at the
-  timeline's own `cameraFrame`, so the base map dollies into a stop. Z-order
+  timeline's own `cameraFrame` (see §0 — that frame is now static). Z-order
   (trail under the subject, label/deck/chrome over it) is a rendering decision
   and lives here, not on `OverlayContent`.
 - **`PhotoLibraryPhotoResolver`** (app) resolves `PhotoRef` → `CGImage`. PhotoKit
@@ -97,12 +130,11 @@ is physically correct.
 width, so the map and trail stay visible around it. `RecapPhotoDeck` carries
 `reveal` (0…1, the renderer maps it onto its own size range) and `opacity`.
 
-**The card's scale envelope and the camera dolly are deliberately different
-curves.** The camera reaches `deck_span_m` over `deck_zoom_s` and holds; the card
-keeps opening across the whole dwell. One value driving both is exactly what this
-forbids — locked by
-`LinearTimelineTests.testDeckRevealKeepsOpeningAfterTheCameraDollyHasSettled`,
-which asserts `reveal < 0.6` at the instant the map finishes dollying.
+**The card's scale envelope was deliberately kept separate from the camera.**
+That mattered when a dolly existed; since §0 the camera does not move at all, so
+the reveal is now purely an overlay concern — which is exactly why it survived
+the camera change untouched. `LinearTimelineTests` still asserts the card opens
+across the hold *and* that the map span does not budge while it does.
 
 **Two beats.** Beat 1: the pin **and** its name pill float as a group above the
 vehicle, cleared by the subject's half-length plus `labelVehicleClearancePx`
@@ -141,23 +173,89 @@ on the car's roof — the group floats precisely to avoid that.
   video**, via per-sprite content-centre correction at load — the canvas scaling
   itself must stay, or the car pulses as it turns.
 
-## 7. What is left before PR #11 can go up
+## 7. Base map, theme atmosphere, and stop layout (`f294883`)
+
+### The MapLibre switch is conditional, on purpose
+
+`RecapModel` renders MapLibre when vector tiles for the region are present and
+MapKit otherwise (`RecapMapTiles`, searching `KAMOME_TILES_PATH` → Application
+Support → the app bundle). A `.pmtiles` file covers a bounded region and there is
+no planet-sized file to bundle; serving tiles for wherever someone actually
+travelled is the P7 backend problem. A hard retirement of MapKit today would
+render blank frames for any trip outside a shipped region.
+
+**No tiles ship yet**, so devices still render Apple's map. The demo film used a
+20 MB corridor build generated locally (`Tests/Fixtures/tiles/generate_tiles.sh`
+with widened bounds); that artifact stays out of git.
+
+### Theme atmosphere — and a correction worth knowing
+
+`RecapStyle` gained grade, vignette and route-glow tokens, applied by
+`FrameCompositor` over the finished frame, plus a `modernMinimal` preset that is
+now what the app renders. All tokens default to off so the deterministic
+golden-frame gates do not move.
+
+**The glow in every still reviewed before this commit was not real.** It came
+from a `glowRouteStyle()` helper that existed only in the stills harness;
+production was drawing the flat blue polyline the whole time. The preset is what
+finally makes the shipped pipeline match what was signed off.
+
+### Coastline: partially done, the rest unscoped
+
+The Modern Minimal style already carried coastline layers, but tuned for close
+zoom — 0.6 px strokes that vanished at the far zoom a fixed frame now sits at.
+Retuned for z4–10, which is why the coast reads as a drawn outline.
+
+**That is emphasis on tile data we already have, not the terrain-outline feature.**
+Full island/region outline rendering (draw the whole of Iceland, or the region
+around an inland route) remains **unscoped future work** and is two problems, not
+one: a **geometry source** — tiles only give coastline where the extract covers,
+so an island needs the whole island in the build or a separate simplified
+coastline dataset — and **framing**, since "draw the whole island" means framing
+the island rather than the trip, a different decision from what acts make today.
+Chiu will scope it separately; do not start it opportunistically.
+
+### Stop layout — the static camera's fallout
+
+While the camera dollied into each stop the vehicle was guaranteed centred, so a
+frame-centred card could never collide with it. With the camera static the
+vehicle is wherever it really is, and the stop name printed across the car.
+
+`RecapStopLayout` (pure geometry, no drawing) places the card tracking the
+vehicle horizontally and clamped into the frame, then puts the name band on
+whichever side of the card faces *away* from the vehicle.
+
+**The rule is deliberately split, and this is the part to preserve:** the card
+**may** cover the car — it is opaque, it is the subject of the beat, and a card
+half the frame tall plus its caption cannot always clear a mid-frame vehicle in
+1920 px. The **name band may not** — text across the car is what looked broken.
+An earlier attempt at one blanket "nothing overlaps the vehicle" rule was proved
+impossible by the test sweep before it ever reached a render.
+
+`RecapStopLayoutTests` sweeps **121 anchor positions** across the frame and
+asserts the invariants directly — name band never covers the vehicle, card and
+band both stay in frame, the band always lands on the card's far side, the card
+flips above/below correctly, edges clamp inward. The same layout also fixed the
+beat-1 label, which could previously run off-frame entirely for the same reason.
+
+Several *tests* carried the old assumption too (probing the frame centre for the
+card); they now assert which photo is on screen rather than sampling a fixed
+point, which is what they were actually checking.
+
+## 8. What is left before PR #11 can go up
 
 Nothing in this document blocks. The remaining work is **device validation plus
 two deferred rendering decisions**, in rough dependency order.
 
 ### Code work still outstanding
 
-1. **MapLibre production switch** — `RecapModel` still constructs
-   `MapKitSnapshotProvider`. Flipping it to `MapLibreSnapshotProvider` retires
-   MapKit and the OSM attribution overlay. Deferred at the §3 sign-off
-   (2026-07-22) and *not* re-opened by this session; the 8-direction car renders
-   identically on both, so the switch is now purely a base-map change and no
-   longer gated on the subject.
-2. **Compositor atmosphere** — vignette / route-glow / grade as `RecapTheme`
-   tokens, plus labels/glyphs and the `RecapStyle.modernMinimal` preset. Also
-   deferred from §3. The stills use an ad-hoc `glowRouteStyle()` in the harness;
-   the shipped default is still the plain blue trail.
+1. **Tile provisioning** — the one thing standing between the app and the
+   souvenir map on a real device. Needs a decision on how a region reaches the
+   phone (bundled for the dogfood regions, downloaded, or served — P7). Until
+   then `RecapMapTiles` finds nothing and MapKit renders.
+2. **Labels / glyphs** in the map style — the last piece deferred from the §3
+   sign-off that this session did not pick up.
+3. **Terrain outline** (§7) — unscoped, Chiu's call, do not start unprompted.
 
 ### Device validation (needs a real iPhone — none of it can be faked)
 
