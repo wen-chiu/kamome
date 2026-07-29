@@ -43,7 +43,7 @@ cd Deploy && docker compose up -d
 Point the app at it in `Config/TrackingConfig.json`:
 
 ```json
-"matching": { "base_url": "http://127.0.0.1:5000" }
+"matching": { "base_url": "http://127.0.0.1:5100" }
 ```
 
 From a real iPhone use the Mac's LAN address instead — `ipconfig getifaddr en0`
@@ -52,7 +52,7 @@ From a real iPhone use the Mac's LAN address instead — `ipconfig getifaddr en0
 Verify:
 
 ```bash
-curl -s "http://127.0.0.1:5000/route/v1/driving/-21.94,64.15;-21.13,64.26?overview=false" | head -c 200
+curl -s "http://127.0.0.1:5100/route/v1/driving/-21.94,64.15;-21.13,64.26?overview=false" | head -c 200
 ```
 
 `{"code":"Ok",...}` means the merged dataset covers that region. `NoSegment`
@@ -167,7 +167,7 @@ Before running the §6 three-trip gate:
 
 - [ ] Merged dataset covers every trip region — `curl` a `/route` in each.
 - [ ] `matching.base_url` set: the Mac's LAN address for a device, `127.0.0.1`
-      for the simulator.
+      for the simulator (port 5100 by default — see below).
 - [ ] Phone and Mac on the same Wi-Fi, and OSRM reachable from the phone's
       browser. (Cellular will *not* work locally — that is what the VPS is for.)
 - [ ] One `.pmtiles` per trip side-loaded, each verified with `pmtiles-bounds.sh`

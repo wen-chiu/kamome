@@ -18,7 +18,7 @@ services:
     # deliberately NOT to 0.0.0.0 on a public box — there the `public` profile's
     # Caddy is the only thing that should be listening outward.
     ports:
-      - "${OSRM_BIND:-0.0.0.0}:${OSRM_PORT:-5000}:5000"
+      - "${OSRM_BIND:-0.0.0.0}:${OSRM_PORT:-5100}:5000"
     volumes:
       - "${KAMOME_DATA_DIR:-${HOME}/kamome-osrm}:/data"
     command: >
@@ -49,8 +49,14 @@ services:
       - "443:443"
     environment:
       # Caddy gets a certificate for this name automatically; it must already
-      # resolve to the box's public IP.
-      OSRM_DOMAIN: "${OSRM_DOMAIN:?set OSRM_DOMAIN in Deploy/.env before using the public profile}"
+      # resolve to the box's public IP. Set it in Deploy/.env before using the
+      # public profile — Caddy refuses to start on an empty site address, which
+      # is the failure you want rather than a certificate for nothing.
+      #
+      # Deliberately NOT `${OSRM_DOMAIN:?...}`: Compose interpolates the whole
+      # file before it applies profiles, so a required-variable check here fails
+      # `docker compose up` locally even though this service never starts.
+      OSRM_DOMAIN: "${OSRM_DOMAIN:-}"
     volumes:
       - "./Caddyfile:/etc/caddy/Caddyfile:ro"
       - "caddy-data:/data"

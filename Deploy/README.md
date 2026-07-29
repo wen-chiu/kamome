@@ -32,7 +32,7 @@ cd Deploy && docker compose up -d
 Then point the app at it in `Config/TrackingConfig.json`:
 
 ```json
-"matching": { "base_url": "http://127.0.0.1:5000" }
+"matching": { "base_url": "http://127.0.0.1:5100" }
 ```
 
 Use the Mac's LAN address (`ipconfig getifaddr en0`) instead of `127.0.0.1` when
@@ -41,7 +41,7 @@ testing from a real iPhone rather than the simulator.
 Check it answers:
 
 ```bash
-curl -s "http://127.0.0.1:5000/nearest/v1/driving/-21.94,64.15" | head -c 120
+curl -s "http://127.0.0.1:5100/nearest/v1/driving/-21.94,64.15" | head -c 120
 ```
 
 ## Adding or changing a region

@@ -111,7 +111,7 @@ final class RecapDemoFilmTests: XCTestCase {
     /// Needs a live OSRM covering the region and tiles for it:
     ///
     ///   KAMOME_DEMO_FILM_IMPORT=iceland \
-    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5000 \
+    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
     ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
     ///   KAMOME_RENDER_OUT=/path/to/out
     func testRenderImportedFilm() async throws {
@@ -122,7 +122,7 @@ final class RecapDemoFilmTests: XCTestCase {
         )
         let fixture = requested == "1" ? "margaret-river" : requested
         let full = try AppConfig.loadOrDie()
-        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5000"
+        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5100"
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let service = ImportService(
             repository: repository, config: full,
@@ -163,29 +163,17 @@ final class RecapDemoFilmTests: XCTestCase {
     /// real photo library can be dumped into the same shape without touching
     /// this test (`Tools/exif-to-fixture.sh`).
     static func tripFixture(named name: String) throws -> (title: String, photos: [ImportPhoto]) {
-        struct Fixture: Decodable {
-            struct Photo: Decodable {
-                let id: String
-                let t: Double
-                let lat: Double
-                let lon: Double
-            }
-
-            let title: String
-            let photos: [Photo]
-        }
-
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Fixtures/trips/\(name).json")
-        let fixture = try JSONDecoder().decode(Fixture.self, from: try Data(contentsOf: url))
+        let fixture = try JSONDecoder().decode(TripFixture.self, from: try Data(contentsOf: url))
         // Fixture times are offsets from the trip start, so a fixture reads as a
         // day rather than as a wall-clock date nobody can check.
         let start = 1_752_600_000.0
         return (
             fixture.title,
             fixture.photos.map {
-                ImportPhoto(assetId: $0.id, timestamp: start + $0.t, lat: $0.lat, lon: $0.lon)
+                ImportPhoto(assetId: $0.id, timestamp: start + $0.offsetS, lat: $0.lat, lon: $0.lon)
             }
         )
     }
@@ -354,4 +342,24 @@ private final class GPXFilmParser: NSObject, XMLParserDelegate {
             break
         }
     }
+}
+
+/// On-disk shape of `Tests/Fixtures/trips/*.json` — place and time only, which
+/// is exactly what `ImportService` sees on device.
+private struct TripFixture: Decodable {
+    struct Photo: Decodable {
+        let id: String
+        /// Seconds from the trip's first photo.
+        let offsetS: Double
+        let lat: Double
+        let lon: Double
+
+        enum CodingKeys: String, CodingKey {
+            case id, lat, lon
+            case offsetS = "t"
+        }
+    }
+
+    let title: String
+    let photos: [Photo]
 }
