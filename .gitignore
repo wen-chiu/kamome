@@ -7,3 +7,12 @@ xcuserdata/
 
 # Raw device-test artifacts (drive logs, sqlite dumps, personal photos) stay local
 Docs/tests/
+
+# Local deployment secrets/overrides (Deploy/.env.example is the checked-in template)
+Deploy/.env
+
+# Built routing + tile artifacts are gigabytes and live outside the repo
+# ($KAMOME_DATA_DIR, default ~/kamome-osrm) — this only catches strays.
+*.osm.pbf
+*.pmtiles
+!Tests/Fixtures/tiles/*.pmtiles

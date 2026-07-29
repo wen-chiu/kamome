@@ -1,0 +1,61 @@
+# Kamome self-hosted routing. The same file runs on a laptop and on a VPS —
+# that is the point (Chiu 2026-07-29: local now, Hetzner later, minimal change).
+#
+#   Local (home Wi-Fi, no TLS, no public exposure):
+#     cd Deploy && docker compose up -d
+#
+#   VPS (adds the TLS reverse proxy):
+#     cd Deploy && docker compose --profile public up -d
+#
+# The difference between the two is which port OSRM is published on and whether
+# Caddy runs. Nothing about the dataset or the app changes.
+services:
+  osrm:
+    image: osrm/osrm-backend
+    container_name: kamome-osrm
+    restart: unless-stopped
+    # Bound to the host interface so a phone on the same Wi-Fi can reach it, and
+    # deliberately NOT to 0.0.0.0 on a public box — there the `public` profile's
+    # Caddy is the only thing that should be listening outward.
+    ports:
+      - "${OSRM_BIND:-0.0.0.0}:${OSRM_PORT:-5000}:5000"
+    volumes:
+      - "${KAMOME_DATA_DIR:-${HOME}/kamome-osrm}:/data"
+    command: >
+      osrm-routed --algorithm mld
+      --max-matching-size ${OSRM_MAX_MATCHING_SIZE:-1000}
+      --max-viaroute-size ${OSRM_MAX_VIAROUTE_SIZE:-500}
+      /data/kamome-merged.osrm
+    healthcheck:
+      # Reykjavík: inside the Iceland extract, so a healthy container also proves
+      # the dataset actually loaded rather than just that the process is up.
+      test: ["CMD-SHELL", "wget -qO- 'http://localhost:5000/nearest/v1/driving/-21.94,64.15' | grep -q '\"code\":\"Ok\"'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # Only starts with `--profile public`. Checked in now so the TLS story is
+  # settled before the migration rather than improvised during it (Chiu
+  # 2026-07-29); it does nothing on a local run.
+  caddy:
+    image: caddy:2-alpine
+    container_name: kamome-caddy
+    restart: unless-stopped
+    profiles: ["public"]
+    depends_on: [osrm]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddy gets a certificate for this name automatically; it must already
+      # resolve to the box's public IP.
+      OSRM_DOMAIN: "${OSRM_DOMAIN:?set OSRM_DOMAIN in Deploy/.env before using the public profile}"
+    volumes:
+      - "./Caddyfile:/etc/caddy/Caddyfile:ro"
+      - "caddy-data:/data"
+      - "caddy-config:/config"
+
+volumes:
+  caddy-data:
+  caddy-config:

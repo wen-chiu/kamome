@@ -103,19 +103,26 @@ final class RecapDemoFilmTests: XCTestCase {
     /// car profile would snap it to the nearest street (PD-8) — draws dashed.
     /// Both are in the same frame, which is the point of PD-1.
     ///
-    /// Needs a live OSRM covering the corridor and tiles for it:
+    /// The trip is read from `Tests/Fixtures/trips/<name>.json` — one file per
+    /// dogfood region, so a render is a fixture swap rather than a code change,
+    /// and a real photo library can be dumped straight into that shape
+    /// (`Tools/exif-to-fixture.sh`).
     ///
-    ///   KAMOME_DEMO_FILM_IMPORT=1 \
-    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5001 \
-    ///   KAMOME_TILES_PATH=Tests/Fixtures/tiles/perth-2026-07-19.pmtiles \
+    /// Needs a live OSRM covering the region and tiles for it:
+    ///
+    ///   KAMOME_DEMO_FILM_IMPORT=iceland \
+    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5000 \
+    ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
     ///   KAMOME_RENDER_OUT=/path/to/out
     func testRenderImportedFilm() async throws {
+        let requested = ProcessInfo.processInfo.environment["KAMOME_DEMO_FILM_IMPORT"] ?? ""
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_DEMO_FILM_IMPORT"] == "1",
-            "Manual demo render — set KAMOME_DEMO_FILM_IMPORT=1."
+            !requested.isEmpty,
+            "Manual demo render — set KAMOME_DEMO_FILM_IMPORT to a fixture name (e.g. iceland)."
         )
+        let fixture = requested == "1" ? "margaret-river" : requested
         let full = try AppConfig.loadOrDie()
-        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5001"
+        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5000"
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let service = ImportService(
             repository: repository, config: full,
@@ -125,7 +132,8 @@ final class RecapDemoFilmTests: XCTestCase {
             )
         )
 
-        let tripId = try await service.importTrip(title: "Margaret River", photos: Self.corridorPhotos)
+        let trip = try Self.tripFixture(named: fixture)
+        let tripId = try await service.importTrip(title: trip.title, photos: trip.photos)
         let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
         let legs = RecapComposer.legs(
             from: detail.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
@@ -140,43 +148,47 @@ final class RecapDemoFilmTests: XCTestCase {
                 .prefix(3)
                 .map { PhotoRef.asset($0.phAssetId) }
         }
-        let trip = try XCTUnwrap(RecapComposer.trip(
+        let recap = try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
             photosByStop: photosByStop,
             deck: RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS),
             stopHoldS: config.stopHoldS
         ))
-        try await renderFilm(trip: trip, config: config, named: "kamome-imported-film")
+        try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
     }
 
-    /// A day around Margaret River, inside the committed fixture tiles' bounds
-    /// (114.96…115.16 E, −34.0…−33.78 S). Three places joined by two drives and
-    /// one long coastal walk.
-    private static let corridorPhotos: [ImportPhoto] = {
-        func photo(_ id: String, _ ts: Double, _ lat: Double, _ lon: Double) -> ImportPhoto {
-            ImportPhoto(assetId: id, timestamp: ts, lat: lat, lon: lon)
+    /// One dogfood region's trip, read from `Tests/Fixtures/trips/<name>.json`.
+    ///
+    /// Fixtures rather than literals so the four gate regions are data, and so a
+    /// real photo library can be dumped into the same shape without touching
+    /// this test (`Tools/exif-to-fixture.sh`).
+    static func tripFixture(named name: String) throws -> (title: String, photos: [ImportPhoto]) {
+        struct Fixture: Decodable {
+            struct Photo: Decodable {
+                let id: String
+                let t: Double
+                let lat: Double
+                let lon: Double
+            }
+
+            let title: String
+            let photos: [Photo]
         }
+
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/trips/\(name).json")
+        let fixture = try JSONDecoder().decode(Fixture.self, from: try Data(contentsOf: url))
+        // Fixture times are offsets from the trip start, so a fixture reads as a
+        // day rather than as a wall-clock date nobody can check.
         let start = 1_752_600_000.0
-        return [
-            // Margaret River town, morning.
-            photo("mr1", start, -33.9550, 115.0750),
-            photo("mr2", start + 300, -33.9556, 115.0762),
-            photo("mr3", start + 700, -33.9548, 115.0745),
-            // On the road north — a lone shot that becomes a via-waypoint.
-            photo("via1", start + 2_400, -33.9050, 115.0900),
-            // Cowaramup.
-            photo("cw1", start + 4_200, -33.8560, 115.1040),
-            photo("cw2", start + 4_500, -33.8565, 115.1035),
-            photo("cw3", start + 5_100, -33.8558, 115.1048),
-            // Drive down to the coast at Prevelly.
-            photo("pv1", start + 9_000, -33.9760, 114.9950),
-            photo("pv2", start + 9_400, -33.9765, 114.9944),
-            photo("pv3", start + 9_900, -33.9757, 114.9958),
-            // Cape to Cape: ~5 km up the coast on foot, 75 minutes.
-            photo("ct1", start + 14_400, -33.9300, 114.9850),
-            photo("ct2", start + 14_700, -33.9295, 114.9856)
-        ]
-    }()
+        return (
+            fixture.title,
+            fixture.photos.map {
+                ImportPhoto(assetId: $0.id, timestamp: start + $0.t, lat: $0.lat, lon: $0.lon)
+            }
+        )
+    }
 
     // MARK: - Trip
 

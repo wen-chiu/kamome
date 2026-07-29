@@ -1,135 +1,58 @@
 # Dogfood infrastructure — routing + map regions for the Replay MVP gate
 
-What the §6 gate needs that a laptop cannot provide: an OSRM the phone can reach
-from anywhere, and map tiles for wherever the three real trips actually went.
+What the §6 gate needs that the app cannot provide by itself: an OSRM the phone
+can reach, and map tiles for wherever the real trips actually went.
+
+**Local first** (Chiu 2026-07-29). The gate runs against OSRM on the laptop over
+home Wi-Fi; a VPS comes later, for production. Nothing here is local-only by
+construction — `Deploy/docker-compose.yml` is the same file on both, and the
+migration is a `.env` edit plus `--profile public`.
+
+Everything is declared in [`Deploy/`](../Deploy/README.md). `Deploy/regions.json`
+is the single source for both halves of the stack; the scripts read it, and
+adding a region is an edit there.
 
 Decisions this implements (Fable architecture review, 2026-07-26):
 
-- **PD-5** — one small VPS running a **single merged-extract** OSRM covering
-  every dogfood region. The gate has to be runnable from a phone on cellular,
-  not only on the LAN next to a laptop.
-- **PD-7** — dogfood `.pmtiles` are **side-loaded over Finder**, not bundled
-  into the build. Region files are tens of megabytes and change per trip; putting
-  them in the binary means a rebuild per region and an App Store-sized download
-  for data that is scaffolding.
+- **PD-5** — **one merged routing dataset** covering every region. OSRM serves
+  exactly one dataset per process and `matching.base_url` is a single value, so
+  the app cannot pick a server per trip. Merge first, serve once.
+- **PD-7** — dogfood `.pmtiles` are **side-loaded over Finder**, not bundled.
+  Region files are tens of megabytes and change per trip; bundling means a
+  rebuild per region and an App Store-sized download for scaffolding.
 
-Neither is the long-term answer. Worldwide routing and worldwide tile serving are
-explicitly deferred (spec P7); this is the smallest thing that makes three real
-trips renderable.
+Worldwide routing and worldwide tile serving stay deferred (spec P7). This is the
+smallest thing that makes the gate's real trips renderable.
 
----
+## Regions
 
-## 1. The VPS — one merged extract, one OSRM
+Four, chosen because there are real photos from each (Chiu 2026-07-29):
+**Iceland**, **New Zealand**, **Finland**, **Miyakojima**. Geofabrik files
+Okinawa under `asia/japan/kyushu`, so Miyakojima is clipped out of that extract
+rather than downloaded on its own.
 
-### Why merged rather than one process per region
-
-`Docs/osrm-setup.md` runs one OSRM per extract on its own port, because OSRM
-serves exactly one dataset per process. That is fine on a laptop where the app is
-pointed at a port by hand, but `matching.base_url` is a **single** value in
-`Config/TrackingConfig.json` — the app cannot pick a port per trip, and teaching
-it to would be building the region-routing infrastructure that PD-5 exists to
-avoid. Merging the extracts first gives one dataset, one process, one URL.
-
-### Sizing
-
-`osrm-extract` is the memory-hungry step. Rough figures for the car profile:
-
-| Merged extract | RAM for extract | Disk after customize |
-|---|---|---|
-| Western Australia + Taiwan | ~6 GB | ~4 GB |
-| + one European country | ~10 GB | ~8 GB |
-
-A **4 vCPU / 8 GB** VPS with 40 GB disk handles the first row. Preprocessing can
-also be done on a bigger machine (or your laptop) and the `.osrm.*` files copied
-up — the server only needs `osrm-routed`, which is comparatively light.
-
-### Setup
+## 1. Build and run it locally
 
 ```bash
-ssh root@YOUR_VPS
-apt-get update && apt-get install -y docker.io osmium-tool curl
-mkdir -p /srv/kamome-osrm && cd /srv/kamome-osrm
+./Deploy/bin/fetch-extracts.sh     # Geofabrik sources, ~1.4 GB
+./Deploy/bin/build-osrm.sh         # clip → merge → one routing dataset
+./Deploy/bin/build-tiles.sh        # one .pmtiles per region
+cd Deploy && docker compose up -d
 ```
 
-Download one extract per dogfood region (`Docs/osrm-setup.md` §1 has the URL
-shape; prefer state/country-level extracts over continents):
-
-```bash
-curl -LO https://download.geofabrik.de/australia-oceania/australia/western-australia-latest.osm.pbf
-curl -LO https://download.geofabrik.de/asia/taiwan-latest.osm.pbf
-```
-
-Merge them into a single dataset:
-
-```bash
-osmium merge western-australia-latest.osm.pbf taiwan-latest.osm.pbf \
-  -o kamome-dogfood.osm.pbf
-```
-
-Preprocess once (MLD pipeline, car profile — drive and scooter legs both use it;
-walks stay raw by design, PD-8):
-
-```bash
-for step in "osrm-extract -p /opt/car.lua /data/kamome-dogfood.osm.pbf" \
-            "osrm-partition /data/kamome-dogfood.osrm" \
-            "osrm-customize /data/kamome-dogfood.osrm"; do
-  docker run --rm -t -v "$PWD:/data" osrm/osrm-backend $step
-done
-```
-
-Serve it, restarting on reboot:
-
-```bash
-docker run -d --name kamome-osrm --restart unless-stopped \
-  -p 127.0.0.1:5000:5000 -v "$PWD:/data" osrm/osrm-backend \
-  osrm-routed --algorithm mld --max-matching-size 1000 /data/kamome-dogfood.osrm
-```
-
-### Put TLS in front of it
-
-Bind OSRM to localhost (above) and terminate TLS with Caddy, which gets a
-certificate automatically:
-
-```bash
-apt-get install -y caddy
-cat >/etc/caddy/Caddyfile <<'EOF'
-osrm.example.com {
-    reverse_proxy 127.0.0.1:5000
-}
-EOF
-systemctl restart caddy
-```
-
-**Do not expose port 5000 directly.** OSRM has no authentication and no rate
-limiting; an open instance is someone else's free routing service, and iOS ATS
-blocks plain HTTP from the app anyway.
-
-For a private dogfood box, also require a token:
-
-```
-osrm.example.com {
-    @unauthorized not header X-Kamome-Token "PASTE_A_LONG_RANDOM_STRING"
-    respond @unauthorized 403
-    reverse_proxy 127.0.0.1:5000
-}
-```
-
-⚠️ The app does **not** send that header today — `OSRMMatchProvider` and
-`OSRMRouteProvider` build a bare `URLRequest`. Use the token block only if you
-also add the header to those two providers; otherwise stick to the plain
-reverse-proxy above and keep the hostname unpublished.
-
-### Point the app at it
+Point the app at it in `Config/TrackingConfig.json`:
 
 ```json
-"matching": { "base_url": "https://osrm.example.com" }
+"matching": { "base_url": "http://127.0.0.1:5000" }
 ```
 
-Everything else in the `matching` block stays as shipped. Verify from the VPS
-and then from the phone's browser:
+From a real iPhone use the Mac's LAN address instead — `ipconfig getifaddr en0`
+— and keep both on the same Wi-Fi. The simulator can use `127.0.0.1`.
+
+Verify:
 
 ```bash
-curl -s "https://osrm.example.com/route/v1/driving/115.075,-33.955;115.104,-33.856?overview=false" | head -c 200
+curl -s "http://127.0.0.1:5000/route/v1/driving/-21.94,64.15;-21.13,64.26?overview=false" | head -c 200
 ```
 
 `{"code":"Ok",...}` means the merged dataset covers that region. `NoSegment`
@@ -137,17 +60,57 @@ means the coordinates are further from a road than `route_waypoint_radius_m`
 (500 m); `NoRoute` means there is genuinely no drivable path — both are handled,
 and the leg renders dashed rather than inventing a road (PD-2).
 
----
+### Sizing
 
-## 2. Map regions — build and side-load
+`osrm-extract` is the memory-hungry step, and it is what decides whether this
+builds on a laptop. Rough figures for the car profile:
 
-### Build one region per trip
+| Merged extract | RAM for extract | Disk after customize |
+|---|---|---|
+| Iceland + Miyakojima | ~1 GB | ~1 GB |
+| + New Zealand | ~4 GB | ~6 GB |
+| + Finland | ~8 GB | ~14 GB |
 
-```bash
-./Tools/build-dogfood-region.sh margaret-river 114.8,-34.3,115.4,-33.5
-```
+If `osrm-extract` is killed (exit 137 = out of memory), add or tighten a `bbox`
+in `Deploy/regions.json` — that is the intended lever, and clipping a country to
+the area you actually travelled costs nothing you will miss.
 
-Bounds are `W,S,E,N`. **Pad them.** `RecapMapTiles` requires a region to cover
+## 2. Later: moving to a VPS
+
+Not provisioned yet. When it happens (Hetzner, tentatively):
+
+1. Copy `Deploy/` and `$KAMOME_DATA_DIR` up, or rebuild there — only the
+   `.osrm.*` files are slow to produce.
+2. `cp Deploy/.env.example Deploy/.env`; set `OSRM_BIND=127.0.0.1` and
+   `OSRM_DOMAIN`.
+3. Point the DNS name at the box.
+4. `docker compose --profile public up -d` — this starts Caddy, which gets a
+   Let's Encrypt certificate automatically and proxies only `/route`, `/match`
+   and `/nearest`.
+5. Set `matching.base_url` to `https://your-domain`.
+
+⚠️ **`OSRM_BIND=127.0.0.1` is not optional on a public box.** Left at `0.0.0.0`,
+OSRM is exposed directly: no authentication, no rate limiting, no request
+budget — someone else's free routing service. iOS ATS blocks plain HTTP from the
+app anyway, so TLS is required regardless.
+
+⚠️ **Token auth is written down but not implemented.** `Deploy/Caddyfile` carries
+the server half commented out; the app half does not exist — `OSRMMatchProvider`
+and `OSRMRouteProvider` both send bare requests. Enabling the Caddy block alone
+makes every request 403, and because a routing failure means "keep the raw leg"
+(PD-2), **every leg would silently render dashed** with nothing in the UI saying
+why. Ship both halves in one change. Tracked in `Docs/handoff-P3.5.md` under
+"VPS migration — deferred security work".
+
+## 3. Map regions — build and side-load
+
+### Build
+
+`./Deploy/bin/build-tiles.sh` builds every region in the manifest;
+`KAMOME_REGIONS="iceland" ./Deploy/bin/build-tiles.sh` builds one.
+
+Bounds come from the manifest's `bbox` (`W,S,E,N`, `null` = whole extract).
+**Pad them.** `RecapMapTiles` requires a region to cover
 the *whole* trip and falls back to Apple's map otherwise — partial coverage would
 render half the film as blank ocean, which reads as a broken app rather than a
 missing download.
@@ -155,11 +118,12 @@ missing download.
 Check what the app will actually read, optionally against the trip's own bounds:
 
 ```bash
-./Tools/pmtiles-bounds.sh ~/kamome-osrm/planetiler-out/margaret-river-2026-07-26.pmtiles \
-  114.99,-33.98,115.10,-33.86
+./Tools/pmtiles-bounds.sh ~/kamome-osrm/tiles/iceland-2026-07-29.pmtiles \
+  -21.95,63.41,-19.00,64.33
 ```
 
 It prints the header bounds and exits non-zero if they do not cover the trip.
+`Tools/exif-to-fixture.sh` prints a trip's bbox in exactly this form.
 
 ### Side-load over Finder
 
@@ -197,13 +161,15 @@ There is no manifest. A region announces its own extent, so nothing can go stale
 
 ---
 
-## 3. Gate checklist
+## 4. Gate checklist
 
 Before running the §6 three-trip gate:
 
-- [ ] Merged extract covers all three trip regions — `curl` a `/route` in each.
-- [ ] `matching.base_url` points at the HTTPS hostname, not an IP or `http://`.
-- [ ] OSRM reachable from the phone **off** the LAN (cellular, Wi-Fi off).
+- [ ] Merged dataset covers every trip region — `curl` a `/route` in each.
+- [ ] `matching.base_url` set: the Mac's LAN address for a device, `127.0.0.1`
+      for the simulator.
+- [ ] Phone and Mac on the same Wi-Fi, and OSRM reachable from the phone's
+      browser. (Cellular will *not* work locally — that is what the VPS is for.)
 - [ ] One `.pmtiles` per trip side-loaded, each verified with `pmtiles-bounds.sh`
       against that trip's bounds.
 - [ ] A render of each trip shows the souvenir map, not Apple's — an Apple-looking
@@ -211,8 +177,8 @@ Before running the §6 three-trip gate:
 - [ ] Reconstructed legs draw solid and unroutable ones dashed (PD-1). All-dashed
       means the app never reached OSRM.
 
-## Cost
+## Cost, when the VPS happens
 
-A 4 vCPU / 8 GB VPS runs about **$20–25/month** (Hetzner CPX31, DigitalOcean
-8 GB). It can be destroyed between dogfood sessions — preprocessing is the only
-slow part, and the `.osrm.*` files can be kept in object storage or rebuilt.
+A 4 vCPU / 8 GB box is about **€15–25/month** (Hetzner CPX31 or CCX13). It can be
+destroyed between sessions — preprocessing is the only slow part, and the
+`.osrm.*` files can be kept in object storage or rebuilt from the manifest.

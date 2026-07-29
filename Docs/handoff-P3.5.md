@@ -357,6 +357,39 @@ Demo artifacts in `Docs/demos/phase3_5/`. This gate = Replay MVP release candida
 passes. §1–§5 land the machinery; §6 validates it on three real trips; the whole
 Replay MVP lands on `main` as one PR (or a tight stack).
 
+### Local routing + map regions for this gate (Chiu 2026-07-29)
+
+The gate runs against a **local** OSRM on home Wi-Fi, not a VPS. Everything is
+declared in `Deploy/` — `regions.json` is the single source for both halves of
+the stack, and the same `docker-compose.yml` runs locally and on a VPS later
+(`--profile public` adds Caddy). Setup: `Docs/dogfood-infrastructure.md`.
+
+Four regions, chosen because Chiu has real photos from each: **Iceland, New
+Zealand, Finland, Miyakojima**. Routing merges them into one dataset (the app has
+one `matching.base_url`); tiles stay one `.pmtiles` per region, side-loaded over
+Finder.
+
+### VPS migration — deferred security work ⚠️
+
+Tracked here so it is not silently skipped when the migration happens (Chiu
+2026-07-29 — explicitly deferred, explicitly not dropped).
+
+- [ ] **Shared-token auth on OSRM, server *and* app in the same change.**
+      `Deploy/Caddyfile` carries the server half commented out. The app half does
+      **not exist**: `OSRMMatchProvider.swift` and `OSRMRouteProvider.swift` both
+      build a bare `URLRequest` with no headers. Enabling the Caddy block alone
+      makes every route and match request 403, and because both providers treat a
+      failure as "keep raw geometry" (PD-2), **every leg would silently render
+      dashed** — indistinguishable from a routing failure, with nothing in the UI
+      saying why. Ship both halves together or neither.
+- [ ] Token in `Deploy/.env` (git-ignored), never in `TrackingConfig.json` —
+      that file is bundled into the app and readable from any IPA.
+- [ ] Re-check the endpoint allow-list in `Deploy/Caddyfile` still matches what
+      the providers call (`/route`, `/match`, `/nearest`).
+
+Not blocking the §6 gate: on home Wi-Fi the service is not reachable from the
+internet, so there is nothing to authenticate against.
+
 ## Not in the Replay MVP (do not build here)
 
 - Passive / background capture, region-resume, ≥ 3-day battery, "arm once" —

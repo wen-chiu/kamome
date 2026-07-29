@@ -1,0 +1,47 @@
+{
+  "_comment": [
+    "The regions Kamome's self-hosted routing and map tiles cover.",
+    "",
+    "Single source of truth for both halves of the stack: Deploy/bin/build-osrm.sh",
+    "merges these into ONE routing dataset (matching.base_url is a single value —",
+    "the app cannot pick a server per trip), and Deploy/bin/build-tiles.sh builds",
+    "ONE .pmtiles per region (a tile file covers a bounded area, and the app picks",
+    "the region covering each trip by reading its header).",
+    "",
+    "Adding a region is an edit here, not a change to any script.",
+    "",
+    "bbox is W,S,E,N in degrees, or null for the whole Geofabrik extract. Clip when",
+    "the extract is far larger than anywhere you actually travelled: it cuts",
+    "osrm-extract's peak RAM and the disk the .osrm.* files take, which is what",
+    "decides whether this builds on a laptop at all.",
+    "",
+    "Tile bounds must COVER a trip or the app falls back to Apple's map, so leave",
+    "padding. Verify a built region with Tools/pmtiles-bounds.sh before side-loading."
+  ],
+  "regions": [
+    {
+      "name": "iceland",
+      "geofabrik": "europe/iceland",
+      "bbox": null,
+      "note": "Whole island (61 MB) — the ring road is the trip, so clipping saves nothing worth having."
+    },
+    {
+      "name": "new-zealand",
+      "geofabrik": "australia-oceania/new-zealand",
+      "bbox": null,
+      "note": "Both islands (382 MB). Clip to one island if osrm-extract runs out of memory."
+    },
+    {
+      "name": "finland",
+      "geofabrik": "europe/finland",
+      "bbox": null,
+      "note": "Whole country (703 MB) — the largest source here, and the first to clip if the merge is too heavy."
+    },
+    {
+      "name": "miyakojima",
+      "geofabrik": "asia/japan/kyushu",
+      "bbox": "125.10,24.60,125.55,25.00",
+      "note": "Geofabrik files Okinawa under kyushu (294 MB); the Miyako islands are a rounding error of it, so this one is clipped hard. Covers Miyako, Irabu, Shimoji, Kurima and Ikema."
+    }
+  ]
+}
