@@ -36,9 +36,17 @@ public struct SubjectState: Equatable {
     public let lon: Double
     /// Travel bearing, degrees (the route tangent).
     public let heading: Double
-    /// 0…1 presentation weight — e.g. the subject scaling up at a stop. MVP = 1.
+    /// 0…1 **presence**: how much of the subject is on screen right now. 1 while
+    /// travelling; 0 while parked at a stop; in between during the park / pull-away
+    /// transitions (Chiu 2026-07-26).
+    ///
+    /// Continuous rather than a boolean because a stop is a scene, not a toggle:
+    /// the car has to *arrive and park*, handing the stop's identity to the pin as
+    /// it goes, and pull away again as the next leg starts. A hard cut reads as the
+    /// car being deleted. How presence is drawn is the renderer's business — alpha
+    /// today, alpha plus a settle in scale if a style wants it later.
     public let emphasis: Double
-    /// Hidden during pure-chrome beats (title / finale) if a style wants that.
+    /// Hidden outright — fully parked, or a pure-chrome beat a style wants clear.
     public let isVisible: Bool
 
     public init(lat: Double, lon: Double, heading: Double, emphasis: Double = 1, isVisible: Bool = true) {

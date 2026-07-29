@@ -35,7 +35,7 @@ final class CameraPathTests: XCTestCase {
             followHeadingUp: followHeadingUp,
             deckPhotoHoldS: 0.8,
             deckZoomS: 0.5,
-            deckLabelLeadS: 0.6,
+            deckLabelLeadS: 0.6, subjectParkS: 0.4,
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
             endCardS: 3,

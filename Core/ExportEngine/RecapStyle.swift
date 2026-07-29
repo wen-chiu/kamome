@@ -82,18 +82,16 @@ public struct RecapStyle {
     public var markerOutlineColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
 
     /// How much room the subject occupies, whichever visual is drawn — the
-    /// larger of the two, so the floating stop label clears the car *and* the
-    /// fallback marker without the overlay needing to know which one rendered.
+    /// larger of the two, so callers can reason about the vehicle's footprint
+    /// without knowing which visual rendered.
     public var subjectLengthPx: CGFloat { max(carSpriteLengthPx, fallbackMarkerLengthPx) }
 
     // Photo deck (§5; zoom-in reveal, Chiu 2026-07-25): the card opens from
     // `min` to `max` frame width as the shot pushes in, so the map and trail
-    // stay visible around it. The stop's pin + name ride under the card.
+    // stay visible around it. The card opens above the stop's pin + name.
     public var deckPhotoMinWidthFraction: CGFloat = 0.30
     public var deckPhotoMaxWidthFraction: CGFloat = 0.50
     public var deckPhotoAspect: CGFloat = 1.25         // portrait card (h / w)
-    /// Card bottom → the pin + name group under it.
-    public var deckLabelGapPx: CGFloat = 40
     public var deckMatteColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     public var deckMattePx: CGFloat = 14
     public var deckCornerPx: CGFloat = 28
@@ -102,9 +100,9 @@ public struct RecapStyle {
     public var deckDotOnColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     public var deckDotOffColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.4)
 
-    // Stop label (§5 two-beat lead): a pin at the stop + a name pill that floats
-    // clear above the vehicle, so neither overlaps (Chiu 2026-07-25). Drawn by
-    // OverlayRenderer.
+    // Stop label (§5 two-beat lead): the pin sits **on** the stop and the name
+    // pill stands on the pin (Chiu 2026-07-26 — the car parks and disappears for
+    // the stop, so nothing has to be dodged). Drawn by OverlayRenderer.
     public var labelPinColor = CGColor(srgbRed: 0.35, green: 0.85, blue: 0.95, alpha: 1)
     public var labelPinRingColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
     public var labelPinRadiusPx: CGFloat = 16
@@ -114,11 +112,7 @@ public struct RecapStyle {
     public var labelFontPx: CGFloat = 46
     public var labelDetailFontPx: CGFloat = 32
     public var labelPillPaddingPx: CGFloat = 24
-    /// Clear air between the top of the vehicle and the bottom of the floating
-    /// pin + name group, at the 1080 reference (the renderer adds the vehicle's
-    /// own half-length on top, so neither element ever prints over the car).
-    public var labelVehicleClearancePx: CGFloat = 50
-    /// Pin → name pill gap inside the floating group.
+    /// Pin → name pill, and pill → card, inside the stop group.
     public var labelPinGapPx: CGFloat = 16
 
     public init() {}

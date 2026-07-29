@@ -164,9 +164,12 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         XCTAssertEqual(try colorCount(none, matching: greenRGB), 0, "no deck at zero opacity")
     }
 
-    /// Beat 1: the pin marks the stop on the map, and the name pill floats clear
-    /// above where the vehicle sits — they must never overlap (Chiu 2026-07-25).
-    func testStopLabelPinsTheStopAndFloatsTheNameClearOfTheVehicle() async throws {
+    /// Beat 1: the pin marks the stop **on the stop's own point**, and the name
+    /// pill stands on it (Chiu 2026-07-26). The pin used to be pushed clear of
+    /// the parked car by a pixel-sized clearance, which at a wide framing put it
+    /// kilometres from the place it was labelling; the car now parks and vanishes
+    /// for the stop, so the pin belongs on the spot.
+    func testStopLabelPinsTheStopItselfWithTheNameStandingOnIt() async throws {
         // An opaque pill so its fill is an exact color to hunt for.
         var style = opaqueCardStyle
         let pillRGB = RGB(red: 26, green: 31, blue: 41)
@@ -178,26 +181,23 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
             [label], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0), style: style
         )
 
-        // The stop projects to the frame center — where the parked car sits.
+        // The stop projects to the frame center.
         let stopRow = heightPx / 2
         let scale = Double(widthPx) / 1080
-        let clearedRows = Int((Double(style.subjectLengthPx) / 2 + Double(style.labelVehicleClearancePx)) * scale)
+        let pinRadiusRows = Int(Double(style.labelPinRadiusPx) * 1.5 * scale)
 
-        // Rows count downward, so each element's bottom edge is its largest row.
+        // Rows count downward, so an element's bottom edge is its largest row.
         let pinRGB = RGB(red: 89, green: 217, blue: 242)  // labelPinColor
-        let pinBottomRow = try XCTUnwrap(
-            lastRow(of: frame, matching: pinRGB), "the pin must draw"
-        )
-        let pillBottomRow = try XCTUnwrap(
-            lastRow(of: frame, matching: pillRGB), "the name pill must draw"
-        )
+        let pinBottomRow = try XCTUnwrap(lastRow(of: frame, matching: pinRGB), "the pin must draw")
+        let pillBottomRow = try XCTUnwrap(lastRow(of: frame, matching: pillRGB), "the name pill must draw")
 
-        // Both float clear of the car: neither may reach into its footprint.
-        XCTAssertLessThanOrEqual(
-            pinBottomRow, stopRow - clearedRows,
-            "the pin must clear the vehicle's half-length + clearance"
+        // The pin is centred on the stop itself — its bottom edge sits one pin
+        // radius below the stop's row, not a car's length away from it.
+        XCTAssertEqual(
+            pinBottomRow, stopRow + pinRadiusRows, accuracy: 2,
+            "the pin must be drawn on the stop, not offset from it"
         )
-        XCTAssertLessThan(pillBottomRow, pinBottomRow, "the name sits above the pin in the floating group")
+        XCTAssertLessThan(pillBottomRow, pinBottomRow, "the name stands on the pin")
     }
 
     /// The largest row containing `target` — an element's bottom edge.

@@ -7,77 +7,90 @@ import Foundation
 /// rules here are exactly the kind of thing a visual review is bad at checking
 /// and a unit test is good at.
 ///
-/// **Why this exists.** The camera used to dolly into every stop, which
-/// guaranteed the vehicle sat dead centre — so a frame-centred card could never
-/// collide with it. Since the camera went static (Chiu 2026-07-25) the vehicle is
-/// wherever it really is on the map, which can be anywhere.
+/// **The pin owns the stop's point** (Chiu 2026-07-26). Everything else — the
+/// name pill, then the photo card — stacks off it, so the whole scene visibly
+/// grows out of the place the journey actually paused. That ordering *is* the
+/// product behaviour: the car arrives there, parks, and hands the spot to the pin.
 ///
-/// **What is and is not allowed to overlap.** The photo card *may* cover the
-/// vehicle: it is opaque, it is the subject of the beat, and on a 1920-tall frame
-/// a card half the frame high plus its caption cannot always clear a vehicle
-/// sitting in the middle. The **name band** (pin + stop name) may not — text
-/// printed across the car is what looked broken. So the card is placed first and
-/// the name band goes on whichever side of it faces *away* from the vehicle.
+/// It did not used to work this way. The group was pushed clear of the vehicle by
+/// the vehicle's own half-length plus a margin — in *pixels*, sized from a 380 px
+/// car sprite, which at a wide act framing is nearly three kilometres of ground.
+/// A pin meant to mark a stop landed kilometres from it. The car now parks and
+/// disappears for the duration of a stop scene (`LinearTimeline.subjectState`),
+/// so there is nothing to dodge.
+///
+/// The only thing that still moves the group is the **frame edge**: a stop hard
+/// against the border would otherwise draw half off-screen. The pin is nudged in
+/// by the margin and no further, so it stays as close to the truth as being
+/// visible allows.
 public struct RecapStopLayout {
-    /// The photo card's rect (CG bottom-left origin). Zero height for the lead-in
+    /// Where the pin is drawn: the stop's own projected point, moved only far
+    /// enough to keep the marker on screen.
+    public let pinPoint: CGPoint
+    /// The name pill, sitting directly on the pin.
+    public let labelRect: CGRect
+    /// The photo card, clear of the pin + name group. Zero-sized for the lead-in
     /// beat, which has no card.
     public let cardRect: CGRect
-    /// The pin + name band, always clear of the vehicle.
-    public let labelRect: CGRect
-    /// True when the name band sits above the card rather than below it.
-    public let labelIsAboveCard: Bool
+    /// True when the card floats above the pin group rather than below it.
+    public let cardIsAbovePin: Bool
 
     public init(
         anchor: CGPoint,
         cardSize: CGSize,
+        pinHeight: CGFloat,
         labelBandHeight: CGFloat,
         labelBandWidth: CGFloat,
-        clearance: CGFloat,
+        gap: CGFloat,
         marginPx: CGFloat,
         frameSize: CGSize
     ) {
-        // The card tracks the vehicle horizontally and prefers to sit clear of it
-        // vertically; where it cannot, it is clamped into the frame and simply
-        // covers the vehicle. Limits leave room for the name band on either side.
-        let halfCard = cardSize.height / 2
-        let above = anchor.y + clearance + halfCard
-        let below = anchor.y - clearance - halfCard
-        let topLimit = frameSize.height - marginPx - halfCard - labelBandHeight
-        let bottomLimit = marginPx + halfCard + labelBandHeight
-        var cardCenterY = above <= topLimit ? above : below
-        cardCenterY = min(max(cardCenterY, min(bottomLimit, topLimit)), max(bottomLimit, topLimit))
+        // The pin: the stop's point, nudged in only to stay visible. The group
+        // above it needs room too, so the top clamp accounts for the pill.
+        let pinX = Self.clamp(anchor.x, marginPx + labelBandWidth / 2, frameSize.width - marginPx - labelBandWidth / 2)
+        let pinY = Self.clamp(anchor.y, marginPx + pinHeight, frameSize.height - marginPx - pinHeight - labelBandHeight)
+        pinPoint = CGPoint(x: pinX, y: pinY)
 
+        // The name pill stands on the pin, so reading upward gives point → place.
+        let labelBottom = pinY + pinHeight / 2 + gap
+        labelRect = CGRect(
+            x: Self.clamp(pinX - labelBandWidth / 2, marginPx, max(frameSize.width - marginPx - labelBandWidth, marginPx)),
+            y: labelBottom,
+            width: labelBandWidth,
+            height: labelBandHeight
+        )
+
+        guard cardSize.height > 0 else {
+            cardRect = CGRect(origin: CGPoint(x: pinX, y: labelRect.maxY), size: .zero)
+            cardIsAbovePin = true
+            return
+        }
+
+        // The card floats clear of the whole pin group, preferring above. It flips
+        // below only when there is no room, so a stop high in frame still reads.
+        let halfCard = cardSize.height / 2
+        let above = labelRect.maxY + gap + halfCard
+        let below = pinY - pinHeight / 2 - gap - halfCard
+        let fitsAbove = above + halfCard <= frameSize.height - marginPx
+        cardIsAbovePin = fitsAbove || below - halfCard < marginPx
+        let preferred = cardIsAbovePin ? above : below
+        // Last resort: a frame too short for either side clamps the card in, and
+        // it may then cover the pin. That is allowed — the card is opaque and it
+        // is the subject of the beat; a pin under it is not what breaks the shot.
+        let cardCenterY = Self.clamp(
+            preferred, marginPx + halfCard, max(frameSize.height - marginPx - halfCard, marginPx + halfCard)
+        )
         let halfWidth = cardSize.width / 2
-        let cardCenterX = min(
-            max(anchor.x, marginPx + halfWidth),
-            max(frameSize.width - marginPx - halfWidth, marginPx + halfWidth)
+        let cardCenterX = Self.clamp(
+            pinX, marginPx + halfWidth, max(frameSize.width - marginPx - halfWidth, marginPx + halfWidth)
         )
         cardRect = CGRect(
             x: cardCenterX - halfWidth, y: cardCenterY - halfCard,
             width: cardSize.width, height: cardSize.height
         )
-
-        // The name band goes on the far side of the card from the vehicle, so it
-        // never lands on the car even when the card itself had to cover it.
-        labelIsAboveCard = anchor.y <= cardRect.midY
-        let labelY = labelIsAboveCard ? cardRect.maxY : cardRect.minY - labelBandHeight
-        let labelX = min(
-            max(cardCenterX - labelBandWidth / 2, marginPx),
-            max(frameSize.width - marginPx - labelBandWidth, marginPx)
-        )
-        labelRect = CGRect(
-            x: labelX,
-            y: min(max(labelY, marginPx), max(frameSize.height - marginPx - labelBandHeight, marginPx)),
-            width: labelBandWidth, height: labelBandHeight
-        )
     }
 
-    /// Does the **name band** land on the vehicle? The layout's job is to keep
-    /// this false; the card is deliberately exempt (see the type's note).
-    public func labelOverlaps(vehicleAt anchor: CGPoint, lengthPx: CGFloat) -> Bool {
-        labelRect.intersects(CGRect(
-            x: anchor.x - lengthPx / 2, y: anchor.y - lengthPx / 2,
-            width: lengthPx, height: lengthPx
-        ))
+    private static func clamp(_ value: CGFloat, _ lower: CGFloat, _ upper: CGFloat) -> CGFloat {
+        min(max(value, min(lower, upper)), max(lower, upper))
     }
 }

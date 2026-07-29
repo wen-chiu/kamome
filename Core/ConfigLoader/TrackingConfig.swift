@@ -224,6 +224,12 @@ public struct TrackingConfig: Decodable, Equatable {
         public let deckPhotoHoldS: Double
         public let deckZoomS: Double
         public let deckLabelLeadS: Double
+        /// How long the subject takes to park on arriving at a stop, and to pull
+        /// away again when the next leg starts (§5, Chiu 2026-07-26). A stop is a
+        /// scene, not a visibility toggle: the car hands the stop's identity over
+        /// to the pin as it fades, and takes it back as it returns. Long enough
+        /// to read as parking, short enough not to eat the stop's own beat.
+        public let subjectParkS: Double
         /// One map snapshot per this many frames; in-between frames cross-fade (§4.5).
         public let keyframeIntervalFrames: Int
         /// Trip chrome windows (§4.5 step 4): title over the open, end over the close.
@@ -237,7 +243,7 @@ public struct TrackingConfig: Decodable, Equatable {
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
             actSplitKm: Double, followHeadingUp: Bool,
-            deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double,
+            deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
@@ -249,6 +255,7 @@ public struct TrackingConfig: Decodable, Equatable {
             self.followHeadingUp = followHeadingUp
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
             self.deckLabelLeadS = deckLabelLeadS
+            self.subjectParkS = subjectParkS
             self.keyframeIntervalFrames = keyframeIntervalFrames; self.titleCardS = titleCardS
             self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
         }
@@ -266,6 +273,7 @@ public struct TrackingConfig: Decodable, Equatable {
                 zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: resolved,
                 deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
                 deckLabelLeadS: deckLabelLeadS,
+                subjectParkS: subjectParkS,
                 keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
                 endCardS: endCardS, videoBitrateMbps: videoBitrateMbps
             )
@@ -288,6 +296,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case deckPhotoHoldS = "deck_photo_hold_s"
             case deckZoomS = "deck_zoom_s"
             case deckLabelLeadS = "deck_label_lead_s"
+            case subjectParkS = "subject_park_s"
             case keyframeIntervalFrames = "keyframe_interval_frames"
             case titleCardS = "title_card_s"
             case endCardS = "end_card_s"

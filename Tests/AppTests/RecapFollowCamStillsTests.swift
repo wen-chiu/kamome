@@ -38,7 +38,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             targetDurationS: 12, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.6,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: width, frameHeightPx: height,
             cameraSpanM: 1200, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: headingUp,
-            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6,
+            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             keyframeIntervalFrames: 15, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
         )
     }

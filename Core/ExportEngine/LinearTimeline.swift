@@ -43,6 +43,7 @@ public struct LinearTimeline {
     private let routeCoordinates: [RecapCoordinate]
     private let legRanges: [LegRange]
     private let deck: RecapDeck
+    private let subjectParkS: Double
     private let titleCardS: Double
     private let endCardS: Double
     private let title: String
@@ -56,8 +57,13 @@ public struct LinearTimeline {
         let route = trip.route
         let routePoints = route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
+        // A stop's hold has to cover the whole scene, not just the photos: the car
+        // parks on the way in and pulls away on the way out, and those beats are
+        // *added* around the deck rather than taken out of it — otherwise every
+        // stop would silently lose `2 · subject_park_s` of photo time.
         guard let path = CameraPath(
-            route: routePoints, stops: stopPoints, config: config, stopHoldsS: trip.stops.map(\.dwellS)
+            route: routePoints, stops: stopPoints, config: config,
+            stopHoldsS: trip.stops.map { $0.dwellS + 2 * config.subjectParkS }
         ) else { return nil }
 
         self.path = path
@@ -73,6 +79,7 @@ public struct LinearTimeline {
             return LegRange(range: range, mode: leg.mode, provenance: leg.provenance)
         }
         deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        subjectParkS = config.subjectParkS
         titleCardS = min(config.titleCardS, path.durationS)
         endCardS = config.endCardS
         title = trip.title
@@ -84,10 +91,46 @@ public struct LinearTimeline {
 
     // MARK: - The four state streams
 
-    /// Subject motion (the route tangent) — straight from the reused CameraPath.
+    /// Subject motion (the route tangent) — straight from the reused CameraPath —
+    /// plus the stop's **park / pull-away** presence (Chiu 2026-07-26).
+    ///
+    /// The car arrives at the stop, parks, and is gone while the stop tells its
+    /// own story; it returns as the next leg begins. Before this, the car sat
+    /// parked on the map for the whole hold and the stop's pin had to be shoved
+    /// aside to avoid printing text across it — which put the pin kilometres from
+    /// the place it was marking. Removing the car during the stop is what lets the
+    /// pin sit exactly where the journey actually paused.
     public func subjectState(atTime time: Double) -> SubjectState {
         let position = path.position(atTime: time)
-        return SubjectState(lat: position.lat, lon: position.lon, heading: position.heading)
+        let presence = subjectPresence(atTime: time)
+        return SubjectState(
+            lat: position.lat, lon: position.lon, heading: position.heading,
+            emphasis: presence, isVisible: presence > 0.001
+        )
+    }
+
+    /// 1 while travelling, 0 while parked, smoothstepped across `subjectParkS` at
+    /// each edge of a stop scene. Only scenes that actually *show* something park
+    /// the car: a hold with nothing to reveal (the route-only path) would otherwise
+    /// delete the car and leave an empty map, which reads as a glitch rather than
+    /// as a stop.
+    private func subjectPresence(atTime time: Double) -> Double {
+        guard let scene = activeScene(atTime: time) else { return 1 }
+        let park = parkRamp(scene.hold)
+        guard park > 0 else { return 0 }
+        if time < scene.hold.startS + park {
+            return 1 - Self.smoothstep((time - scene.hold.startS) / park)
+        }
+        if time > scene.hold.endS - park {
+            return Self.smoothstep((time - (scene.hold.endS - park)) / park)
+        }
+        return 0
+    }
+
+    /// The park ramp, clamped so a hold squeezed by `max_hold_fraction` still has
+    /// a middle where the car is actually away.
+    private func parkRamp(_ hold: CameraPath.Hold) -> Double {
+        min(subjectParkS, (hold.endS - hold.startS) * 0.25)
     }
 
     /// Map presentation. MVP: fully opaque throughout (fades are a later addition).
@@ -119,10 +162,10 @@ public struct LinearTimeline {
         if time >= durationS - endCardS {
             contents.append(.endChrome(stats: statsLines, callToAction: callToAction, shareURL: shareURL))
         }
-        if let active = activeStop(atTime: time), !active.stop.photos.isEmpty {
+        if let active = activeScene(atTime: time) {
             let stop = active.stop
             let window = deckWindow(active.hold)
-            let labelOpacity = leadLabelOpacity(atTime: time, deck: window)
+            let labelOpacity = leadLabelOpacity(atTime: time, hold: active.hold, deck: window)
             if labelOpacity > 0.001 {
                 contents.append(.stopLabel(
                     name: stop.name, coordinate: stop.coordinate, detail: stop.detail, opacity: labelOpacity
@@ -143,20 +186,31 @@ public struct LinearTimeline {
         return contents
     }
 
-    // MARK: - Stop choreography (overlay only — the camera holds still)
+    // MARK: - Stop choreography (overlay + subject — the camera still holds still)
 
-    private func activeStop(atTime time: Double) -> (hold: CameraPath.Hold, stop: RecapTrip.Stop)? {
+    /// The stop scene playing at `time`, if any. A hold only counts as a scene
+    /// when its stop has something to reveal — the subject and the overlays both
+    /// read this, so the car can never park for a stop that draws nothing.
+    private func activeScene(atTime time: Double) -> (hold: CameraPath.Hold, stop: RecapTrip.Stop)? {
         for hold in holds where hold.startS <= time && time < hold.endS {
             guard stops.indices.contains(hold.stopIndex) else { continue }
-            return (hold, stops[hold.stopIndex])
+            let stop = stops[hold.stopIndex]
+            guard !stop.photos.isEmpty else { return nil }
+            return (hold, stop)
         }
         return nil
     }
 
-    /// The deck's sub-window inside a stop's hold: the label leads for
-    /// `labelLeadS`, then the photo card owns the rest.
+    /// The deck's sub-window inside a stop's hold. The scene runs
+    /// **park → label → deck → pull away**, so the card opens after the car has
+    /// finished parking plus `labelLeadS`, and — importantly — *closes before the
+    /// car comes back*. Without that last reservation the card is still covering
+    /// the spot while the vehicle fades in behind it, and the departure never
+    /// reads on screen.
     private func deckWindow(_ hold: CameraPath.Hold) -> (start: Double, end: Double) {
-        (min(hold.startS + deck.labelLeadS, hold.endS), hold.endS)
+        let park = parkRamp(hold)
+        let end = max(hold.endS - park, hold.startS)
+        return (min(hold.startS + park + deck.labelLeadS, end), end)
     }
 
     /// The zoom ramp used at both edges of a deck window, clamped to 40% of the
@@ -189,13 +243,20 @@ public struct LinearTimeline {
         return 1
     }
 
-    /// The lead-in label above the vehicle: solid through beat 1, then handing
-    /// the stop's identity to the card's own pin + name as the deck fades in.
-    private func leadLabelOpacity(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
-        guard time >= window.start else { return 1 }
+    /// The stop's pin and name. It **fades up exactly as the car parks**, so the
+    /// stop's identity is handed from the vehicle to the pin at the same place
+    /// rather than appearing somewhere else on the map; solid through the rest of
+    /// beat 1; then handed on again to the card's own pin + name as the deck
+    /// opens.
+    private func leadLabelOpacity(
+        atTime time: Double, hold: CameraPath.Hold, deck window: (start: Double, end: Double)
+    ) -> Double {
+        let park = parkRamp(hold)
+        let arriving = park > 0 ? Self.smoothstep((time - hold.startS) / park) : 1
+        guard time >= window.start else { return arriving }
         let zoom = zoomRamp(window)
         guard zoom > 0 else { return 0 }
-        return 1 - Self.smoothstep((time - window.start) / zoom)
+        return min(arriving, 1 - Self.smoothstep((time - window.start) / zoom))
     }
 
     /// Which photo is in focus: the rotate phase (between the zoom edges) split

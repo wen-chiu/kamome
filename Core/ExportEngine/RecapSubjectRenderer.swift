@@ -47,13 +47,18 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
         )
     }
 
+    /// `emphasis` is drawn as alpha, so the subject parks and pulls away rather
+    /// than blinking out of existence at a stop (Chiu 2026-07-26).
     public func render(_ state: SubjectState, camera: CameraFrame, into surface: RenderSurface) {
-        guard state.isVisible else { return }
+        guard state.isVisible, state.emphasis > 0.001 else { return }
         let center = surface.cgPoint(lat: state.lat, lon: state.lon)
         let screenBearing = VehicleMarker.screenRotationDegrees(
             heading: state.heading, bearing: camera.bearing
         )
         let size = lengthPx * surface.scale
+        surface.context.saveGState()
+        surface.context.setAlpha(CGFloat(min(state.emphasis, 1)))
+        defer { surface.context.restoreGState() }
         switch visual {
         case let .rasterSprite(set):
             let direction = SpriteDirection.nearest(toBearing: screenBearing)

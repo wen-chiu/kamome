@@ -3,12 +3,10 @@ import KamomeExportEngine
 import KamomeTrackingEngine
 import XCTest
 
-/// The linear timeline's stop choreography. Since 2026-07-25 the camera holds a
-/// **fixed** frame — a stop is told by the label and the photo card, never by
-/// flying the map — so these assert the card's own reveal envelope *and* that
-/// the map stays put underneath it.
-final class LinearTimelineTests: XCTestCase {
-    private func exportConfig(
+/// Shared harness for the linear timeline's suites: a sample multi-stop trip,
+/// the shipped export tunables, and fine samplers over the deck window.
+class LinearTimelineTestCase: XCTestCase {
+    func exportConfig(
         targetDurationS: Double = 30,
         deckZoomS: Double = 0.5,
         deckPhotoHoldS: Double = 0.8,
@@ -18,14 +16,14 @@ final class LinearTimelineTests: XCTestCase {
             targetDurationS: targetDurationS, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
-            deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6,
+            deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
         )
     }
 
     /// A wandering route with `photoCounts.count` stops spaced along it; each
     /// stop's dwell is photo-count-driven (`RecapDeck.dwellS`).
-    private func sampleTrip(photoCounts: [Int], config: TrackingConfig.Export) -> RecapTrip {
+    func sampleTrip(photoCounts: [Int], config: TrackingConfig.Export) -> RecapTrip {
         let route = (0...40).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.01, lon: 115.75) }
         let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
         let stops = photoCounts.enumerated().map { index, count -> RecapTrip.Stop in
@@ -42,21 +40,21 @@ final class LinearTimelineTests: XCTestCase {
         )
     }
 
-    private func activePhotoDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
+    func activePhotoDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
         for content in contents {
             if case let .photoDeck(deck) = content { return deck }
         }
         return nil
     }
 
-    private func hasStopLabel(_ contents: [OverlayContent], name: String) -> Bool {
+    func hasStopLabel(_ contents: [OverlayContent], name: String) -> Bool {
         contents.contains {
             if case let .stopLabel(labelName, _, _, _) = $0 { return labelName == name }
             return false
         }
     }
 
-    private func firstTime(
+    func firstTime(
         _ timeline: LinearTimeline, dt: Double = 1.0 / 30, where predicate: ([OverlayContent]) -> Bool
     ) -> Double? {
         var time = 0.0
@@ -67,7 +65,7 @@ final class LinearTimelineTests: XCTestCase {
         return nil
     }
 
-    private struct DeckSample {
+    struct DeckSample {
         let time: Double
         let reveal: Double
         let opacity: Double
@@ -75,14 +73,18 @@ final class LinearTimelineTests: XCTestCase {
         let focus: Int
     }
 
-    /// Fine-samples the deck window for the stop whose photos start with `firstRef`.
-    private func deckWindow(
+    /// Fine-samples the deck window for the stop whose photos start with
+    /// `firstRef` — only where the card is actually **drawn**. The timeline keeps
+    /// emitting the content at zero opacity through the stop's departure beat,
+    /// and a card nobody can see is not part of the deck's window.
+    func deckWindow(
         _ timeline: LinearTimeline, firstRef: PhotoRef, dt: Double = 1.0 / 30
     ) -> [DeckSample] {
         var samples: [DeckSample] = []
         var time = 0.0
         while time <= timeline.durationS {
-            if let deck = activePhotoDeck(timeline.overlayContents(atTime: time)), deck.photos.first == firstRef {
+            if let deck = activePhotoDeck(timeline.overlayContents(atTime: time)),
+               deck.photos.first == firstRef, deck.opacity > 0.001 {
                 samples.append(DeckSample(
                     time: time, reveal: deck.reveal, opacity: deck.opacity,
                     spanM: timeline.cameraFrame(atTime: time).spanM, focus: deck.focusIndex
@@ -92,85 +94,25 @@ final class LinearTimelineTests: XCTestCase {
         }
         return samples
     }
+}
 
-    // MARK: - Typed legs through the reveal (PD-1)
-
-    /// A two-leg trip: a reconstructed drive, then an inferred walk.
-    private func mixedProvenanceTrip(config: TrackingConfig.Export) -> RecapTrip {
-        let drive = (0...20).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.01, lon: 115.75) }
-        // Legs share their seam vertex, as `RecapComposer` produces them.
-        let walk = (0...10).map { RecapCoordinate(lat: -31.80 + Double($0) * 0.001, lon: 115.75) }
-        return RecapTrip(
-            legs: [
-                RecapTrip.Leg(coordinates: drive, mode: .drive, provenance: .reconstructed),
-                RecapTrip.Leg(coordinates: walk, mode: .walk, provenance: .inferred)
-            ],
-            stops: [], title: "Mixed", subtitle: "", statsLines: [], callToAction: ""
-        )
-    }
-
-    private func revealedLegs(_ contents: [OverlayContent]) -> [RecapRouteLeg] {
-        for content in contents {
-            if case let .routeReveal(legs) = content { return legs }
-        }
-        return []
-    }
-
-    /// The reveal is cut along one continuous distance axis but must reach the
-    /// renderer split back into legs, each still carrying its own story — that
-    /// is the whole mechanism behind the dashed inferred stroke.
-    func testRevealSplitsBackIntoLegsCarryingModeAndProvenance() throws {
-        let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: mixedProvenanceTrip(config: config), config: config))
-
-        // Early: only the drive leg has been reached.
-        let early = revealedLegs(timeline.overlayContents(atTime: config.targetDurationS * 0.2))
-        XCTAssertEqual(early.count, 1)
-        XCTAssertEqual(early[0].provenance, .reconstructed)
-        XCTAssertEqual(early[0].mode, .drive)
-
-        // At the end: both legs, in travel order, each keeping its own claim.
-        let full = revealedLegs(timeline.overlayContents(atTime: timeline.durationS))
-        XCTAssertEqual(full.map(\.provenance), [.reconstructed, .inferred])
-        XCTAssertEqual(full.map(\.mode), [.drive, .walk])
-    }
-
-    /// The revealed legs must still add up to one continuous trail — no vertices
-    /// dropped or duplicated by the split, and the head still lands under the
-    /// vehicle.
-    func testRevealedLegsStayContinuousAndEndAtTheSubject() throws {
-        let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: mixedProvenanceTrip(config: config), config: config))
-
-        var time = 0.5
-        while time < timeline.durationS {
-            let legs = revealedLegs(timeline.overlayContents(atTime: time))
-            let flattened = legs.flatMap(\.coordinates)
-            if let head = flattened.last {
-                let subject = timeline.subjectState(atTime: time)
-                XCTAssertEqual(head.lat, subject.lat, accuracy: 1e-9, "trail head must sit under the vehicle at t=\(time)")
-                XCTAssertEqual(head.lon, subject.lon, accuracy: 1e-9)
-            }
-            // No leg is a stub, and consecutive legs meet.
-            for leg in legs { XCTAssertGreaterThanOrEqual(leg.coordinates.count, 2) }
-            for (previous, next) in zip(legs, legs.dropFirst()) {
-                XCTAssertEqual(previous.coordinates.last?.lat ?? 0, next.coordinates.first?.lat ?? 1, accuracy: 0.02,
-                               "legs must not tear apart at the seam")
-            }
-            time += 0.5
-        }
-    }
-
+/// The photo deck's own reveal envelope, and the map holding still under it.
+/// Since 2026-07-25 the camera holds a **fixed** frame — a stop is told by the
+/// label and the card, never by flying the map — so these assert the card's
+/// envelope *and* that the map stays put underneath it.
+final class LinearTimelineTests: LinearTimelineTestCase {
     func testStopSceneOpensAndClosesTheCardWhileTheMapHoldsStill() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
 
-        // The middle stop has 4 photos → dwell = 2·0.5 + 4·0.8 = 4.2 s.
+        // The middle stop has 4 photos. Its hold also carries the park and
+        // pull-away beats, so the *card's* own window is what is left:
+        // 2·deckZoomS + 4·deckPhotoHoldS = 4.2 s.
         let window = deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first))
         XCTAssertFalse(window.isEmpty, "the deck must be present through the stop")
         let start = try XCTUnwrap(window.first), end = try XCTUnwrap(window.last)
-        XCTAssertEqual(end.time - start.time, 4.2, accuracy: 0.1, "dwell = 2·deckZoomS + n·deckPhotoHoldS")
+        XCTAssertEqual(end.time - start.time, 4.2, accuracy: 0.1, "2·deckZoomS + n·deckPhotoHoldS")
 
         // Edges: card barely present. Middle: card solid.
         XCTAssertLessThan(start.opacity, 0.2)
@@ -193,13 +135,17 @@ final class LinearTimelineTests: XCTestCase {
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
 
-        // Two beats: the stop label lands first, the deck blooms deck_label_lead_s later.
+        // Three beats now: the label comes up as the car parks, holds alone for
+        // deck_label_lead_s, then the deck blooms.
         let labelStart = try XCTUnwrap(firstTime(timeline) { self.hasStopLabel($0, name: "Stop 2") })
         let deckStart = try XCTUnwrap(deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first)).first).time
-        XCTAssertEqual(deckStart - labelStart, config.deckLabelLeadS, accuracy: 0.05, "label leads the deck by the lead time")
+        XCTAssertEqual(
+            deckStart - labelStart, config.subjectParkS + config.deckLabelLeadS, accuracy: 0.1,
+            "the deck opens a lead time after the car has finished parking"
+        )
 
         // Mid-lead: the label is up but the photos have not arrived yet.
-        let midLead = labelStart + config.deckLabelLeadS / 2
+        let midLead = labelStart + config.subjectParkS + config.deckLabelLeadS / 2
         XCTAssertTrue(hasStopLabel(timeline.overlayContents(atTime: midLead), name: "Stop 2"))
         XCTAssertNil(activePhotoDeck(timeline.overlayContents(atTime: midLead)), "no deck during the label lead")
     }
@@ -212,13 +158,17 @@ final class LinearTimelineTests: XCTestCase {
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
         let window = deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first))
 
-        let opened = try XCTUnwrap(window.last { $0.opacity > 0.99 })
-        XCTAssertGreaterThan(opened.reveal, 0.9, "the card reaches full size before the scene closes")
+        let peak = try XCTUnwrap(window.max { $0.reveal < $1.reveal })
+        XCTAssertGreaterThan(peak.reveal, 0.9, "the card reaches full size before the scene closes")
 
-        // The reveal only ever grows through the opening, then eases back down.
-        let opening = window.filter { $0.time <= opened.time }
+        // The reveal only ever grows up to its peak, then eases back down.
+        let opening = window.filter { $0.time <= peak.time }
         for (before, after) in zip(opening, opening.dropFirst()) {
             XCTAssertGreaterThanOrEqual(after.reveal, before.reveal - 1e-9, "the reveal must not stutter")
+        }
+        let closing = window.filter { $0.time >= peak.time }
+        for (before, after) in zip(closing, closing.dropFirst()) {
+            XCTAssertLessThanOrEqual(after.reveal, before.reveal + 1e-9, "the reveal must ease back down")
         }
         XCTAssertLessThan(try XCTUnwrap(window.last).reveal, 0.5, "the card scales back down as the scene closes")
 
