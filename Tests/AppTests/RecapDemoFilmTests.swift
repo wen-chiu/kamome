@@ -59,7 +59,7 @@ final class RecapDemoFilmTests: XCTestCase {
             if case let .asset(id) = ref { images[id] = try photoTile(index: index) }
         }
 
-        let provider = try snapshotProvider()
+        let provider = try snapshotProvider(covering: trip)
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style),
@@ -232,10 +232,11 @@ final class RecapDemoFilmTests: XCTestCase {
 
     // MARK: - Providers and assets
 
-    private func snapshotProvider() throws -> MapRenderer {
+    private func snapshotProvider(covering trip: RecapTrip) throws -> MapRenderer {
         #if canImport(MapLibre)
-        guard let tiles = RecapMapTiles.availableTilesURL() else {
-            XCTFail("no tiles — set TEST_RUNNER_KAMOME_TILES_PATH to a corridor .pmtiles")
+        let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
+        guard let tiles = RecapMapTiles.tilesURL(covering: bounds) else {
+            XCTFail("no tiles covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
             return MapKitSnapshotProvider()
         }
         let styleURL = try RecapMapStyle.resolvedStyleURL(

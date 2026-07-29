@@ -117,7 +117,7 @@ final class RecapModel {
         // `follow_heading_up` ships false; the capability check only stops a
         // renderer that cannot rotate from being handed a bearing it would drop,
         // should the flag ever be turned on.
-        let provider = Self.snapshotProvider()
+        let provider = Self.snapshotProvider(covering: trip.route)
         let exportConfig = config.export.withFollowHeadingUp(
             config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
         )
@@ -194,17 +194,22 @@ final class RecapModel {
         }.value
     }
 
-    /// The base map to render on: the Kamome souvenir map when vector tiles for
-    /// the region are on hand, Apple's otherwise.
+    /// The base map to render on: the Kamome souvenir map when vector tiles
+    /// covering **this trip** are on hand, Apple's otherwise.
     ///
     /// This is the §3 "MapLibre production switch", made conditional on purpose.
     /// A `.pmtiles` file covers a bounded region and there is no planet-sized
     /// file to bundle, so until tile provisioning exists (spec P7) a hard
     /// retirement of MapKit would render blank frames for any trip outside the
-    /// shipped region. Falling back keeps every trip exportable; the moment
-    /// tiles are present the film is the designed one.
-    private static func snapshotProvider() -> MapRenderer {
-        guard let tiles = RecapMapTiles.availableTilesURL(),
+    /// installed regions. Falling back keeps every trip exportable; the moment
+    /// tiles for its area are present the film is the designed one.
+    ///
+    /// The region is chosen per trip (Fable review 2026-07-26): the §6 gate is
+    /// three real trips in three places, side-loaded over Finder, so the lookup
+    /// matches each render against what it actually covers.
+    private static func snapshotProvider(covering route: [RecapCoordinate]) -> MapRenderer {
+        guard let bounds = GeoBox.enclosing(route.map { (lat: $0.lat, lon: $0.lon) }),
+              let tiles = RecapMapTiles.tilesURL(covering: bounds),
               let styleURL = try? RecapMapStyle.resolvedStyleURL(
                   styleResource: RecapMapTiles.styleResource, tilesURL: tiles
               )
