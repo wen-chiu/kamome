@@ -48,13 +48,30 @@ public struct RecapStyle {
     public var vignetteInnerRadius: CGFloat = 0.55
     public var vignetteColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 1)
 
-    // Trip chrome panels (title / end cards, RecapOverlayChromeDrawing).
+    // Trip chrome (title / end cards, RecapOverlayChromeDrawing). Full-bleed
+    // cinematic title screens rather than panels (Chiu 2026-07-30): a dark wash
+    // across the whole frame with the map receding behind it, and a centred
+    // stack of mark → title → metadata.
+    /// The wash pushing the map back. `centerBoost` deepens it where the text
+    /// sits, so the map still reads at the edges instead of the card looking
+    /// like a flat black slide.
+    public var chromeScrimColor = CGColor(srgbRed: 0.02, green: 0.04, blue: 0.07, alpha: 0.55)
+    public var chromeScrimCenterBoost: CGFloat = 0.32
+    public var chromeTitleColor = CGColor(srgbRed: 0.93, green: 0.95, blue: 0.97, alpha: 1)
+    public var chromeMetaColor = CGColor(srgbRed: 0.72, green: 0.78, blue: 0.84, alpha: 1)
+    /// The warm accent the prototype uses for the mark and the closing line —
+    /// the one non-teal colour in the film, so it reads as brand rather than map.
+    public var chromeAccentColor = CGColor(srgbRed: 0.95, green: 0.55, blue: 0.32, alpha: 1)
+    /// Side of the brand mark on the title and end cards.
+    public var titleMarkSidePx: CGFloat = 132
+
+    // Legacy panel tokens, still used by the stop label's pill.
     public var cardColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.96)
     public var cardTextColor = CGColor(srgbRed: 0.1, green: 0.1, blue: 0.12, alpha: 1)
     public var cardMarginPx: CGFloat = 48
     public var cardCornerPx: CGFloat = 32
     public var cardPaddingPx: CGFloat = 28
-    public var titleFontPx: CGFloat = 72
+    public var titleFontPx: CGFloat = 104
     public var subtitleFontPx: CGFloat = 40
     public var statFontPx: CGFloat = 44
     public var qrSidePx: CGFloat = 320

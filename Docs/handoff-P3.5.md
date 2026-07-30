@@ -390,6 +390,20 @@ Tracked here so it is not silently skipped when the migration happens (Chiu
 Not blocking the §6 gate: on home Wi-Fi the service is not reachable from the
 internet, so there is nothing to authenticate against.
 
+### Photo deck → fan/stack carousel (future, scoped separately) 📌
+
+Explicitly **not** in the 2026-07-30 cinematic pass (Chiu). The deck today is a
+single card that cross-fades between photos; the prototype opens a **fanned
+stack**: the stop arrives, the stack fans out, the front card advances roughly
+every second through 3-8 photos, with a dot-progress indicator, the photo as the
+visual focus (larger than now — the map may shrink or recede behind it).
+
+This is a visual redesign, not a sizing tweak — it changes what `RecapPhotoDeck`
+has to express (a stack with per-card transforms, not one focused index), so it
+needs its own scoping pass rather than being folded into a styling round. The
+2026-07-30 pass raised the card to 0.42→0.58 frame width and gave it a settle
+overshoot; that is the interim, not the destination.
+
 ## Not in the Replay MVP (do not build here)
 
 - Passive / background capture, region-resume, ≥ 3-day battery, "arm once" —

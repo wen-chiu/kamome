@@ -115,7 +115,7 @@
     "subject_park_s": 0.4,
     "opening_country_s": 3.0,
     "opening_regional_s": 3.5,
-    "opening_route_s": 2.5,
+    "opening_route_s": 0.4,
     "country_view_padding": 2.2,
     "first_stop_dwell_scale": 0.55,
     "stop_dwell_min_s": 6,

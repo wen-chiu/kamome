@@ -91,6 +91,12 @@ public struct RecapPhotoDeck: Equatable {
     /// The stop's name and optional detail line, drawn under the card.
     public let name: String
     public let detail: String?
+    /// "Day 7" — which day of the trip this stop belongs to. Already computed
+    /// per stop by `RecapComposer`; surfaced here so the caption can carry it.
+    public let dayLabel: String
+    /// Distance travelled so far, in metres. Formatted by the renderer, which
+    /// owns presentation; the timeline only knows how far the subject has come.
+    public let travelledM: Double
     /// Where the stop is. The renderer projects it and places the whole card
     /// group *beside the vehicle parked there* — with a static camera the
     /// vehicle is no longer centred, so a frame-centred card would collide with
@@ -99,7 +105,8 @@ public struct RecapPhotoDeck: Equatable {
 
     public init(
         photos: [PhotoRef], focusIndex: Int, reveal: Double, opacity: Double,
-        name: String, detail: String? = nil, coordinate: RecapCoordinate
+        name: String, detail: String? = nil, dayLabel: String = "",
+        travelledM: Double = 0, coordinate: RecapCoordinate
     ) {
         self.photos = photos
         self.focusIndex = focusIndex
@@ -107,6 +114,8 @@ public struct RecapPhotoDeck: Equatable {
         self.opacity = opacity
         self.name = name
         self.detail = detail
+        self.dayLabel = dayLabel
+        self.travelledM = travelledM
         self.coordinate = coordinate
     }
 }
@@ -141,7 +150,10 @@ public enum OverlayContent: Equatable {
     /// A stop pin on the map with its name label floating clear above the
     /// vehicle (the lead-in beat). `opacity` fades it out as the photo deck
     /// takes over the stop's identity below the card.
-    case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?, opacity: Double)
+    case stopLabel(
+        name: String, coordinate: RecapCoordinate, detail: String?,
+        dayLabel: String, travelledM: Double, opacity: Double
+    )
     /// The enlarged photo deck at a stop.
     case photoDeck(RecapPhotoDeck)
     /// Opening chrome: trip name + dates/distance.

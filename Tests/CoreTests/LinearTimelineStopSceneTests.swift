@@ -133,7 +133,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
 
         func labelOpacity(_ time: Double) -> Double {
             for content in timeline.overlayContents(atTime: time) {
-                if case let .stopLabel(_, _, _, opacity) = content { return opacity }
+                if case let .stopLabel(_, _, _, _, _, opacity) = content { return opacity }
             }
             return 0
         }

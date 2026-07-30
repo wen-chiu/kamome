@@ -28,11 +28,15 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         switch content {
         case let .routeReveal(legs):
             for leg in legs { drawRouteLeg(leg, into: surface) }
-        case let .stopLabel(name, coordinate, detail, opacity):
+        case let .stopLabel(name, coordinate, detail, dayLabel, travelledM, opacity):
             guard opacity > 0.001 else { return }
             surface.context.saveGState()
             surface.context.setAlpha(CGFloat(opacity))
-            drawStopLabel(name: name, coordinate: coordinate, detail: detail, into: surface)
+            drawStopLabel(
+                name: name, coordinate: coordinate,
+                detail: Self.caption(dayLabel: dayLabel, travelledM: travelledM, detail: detail),
+                into: surface
+            )
             surface.context.restoreGState()
         case let .photoDeck(deck):
             drawPhotoDeck(deck, into: surface)
@@ -41,6 +45,18 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         case let .endChrome(stats, callToAction, shareURL):
             drawEndChrome(stats: stats, callToAction: callToAction, shareURL: shareURL, into: surface)
         }
+    }
+
+    /// The caption under a stop's name: which day of the trip it is, and how far
+    /// the journey has come by the time it arrives (Chiu 2026-07-30). Both are
+    /// data the trip already carries — the day from its dates, the distance from
+    /// the route's own leg lengths — so this is presentation, not new modelling.
+    static func caption(dayLabel: String, travelledM: Double, detail: String?) -> String? {
+        var parts: [String] = []
+        if !dayLabel.isEmpty { parts.append(dayLabel) }
+        if travelledM >= 100 { parts.append("\(Int((travelledM / 1000).rounded())) km") }
+        if let detail, !detail.isEmpty { parts.append(detail) }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     // MARK: - Stop label (§5 beat 1: the pin lands on the stop, name above it)
@@ -146,7 +162,8 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         let cardW = minW + (maxW - minW) * reveal
         let layout = place(
             cardSize: CGSize(width: cardW, height: cardW * style.deckPhotoAspect),
-            name: deck.name, detail: deck.detail,
+            name: deck.name,
+            detail: Self.caption(dayLabel: deck.dayLabel, travelledM: deck.travelledM, detail: deck.detail),
             anchor: surface.cgPoint(lat: deck.coordinate.lat, lon: deck.coordinate.lon),
             in: surface
         )
@@ -159,8 +176,9 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         drawDeckDots(count: count, current: index, below: layout.cardRect, in: surface)
         drawPin(at: layout.pinPoint, radius: style.labelPinRadiusPx * surface.scale, in: surface)
         drawNamePill(
-            name: deck.name, detail: deck.detail, centerX: layout.labelRect.midX,
-            bottomY: layout.labelRect.minY, in: surface
+            name: deck.name,
+            detail: Self.caption(dayLabel: deck.dayLabel, travelledM: deck.travelledM, detail: deck.detail),
+            centerX: layout.labelRect.midX, bottomY: layout.labelRect.minY, in: surface
         )
         context.restoreGState()
     }

@@ -17,7 +17,7 @@ class LinearTimelineTestCase: XCTestCase {
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
             deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
-            openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 2.5,
+            openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
@@ -53,7 +53,7 @@ class LinearTimelineTestCase: XCTestCase {
 
     func hasStopLabel(_ contents: [OverlayContent], name: String) -> Bool {
         contents.contains {
-            if case let .stopLabel(labelName, _, _, _) = $0 { return labelName == name }
+            if case let .stopLabel(labelName, _, _, _, _, _) = $0 { return labelName == name }
             return false
         }
     }
@@ -192,7 +192,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
 
         func labelOpacity(atTime time: Double) -> Double? {
             for content in timeline.overlayContents(atTime: time) {
-                if case let .stopLabel(_, _, _, opacity) = content { return opacity }
+                if case let .stopLabel(_, _, _, _, _, opacity) = content { return opacity }
             }
             return nil
         }
@@ -260,7 +260,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
             let kinds = contents.map { content -> String in
                 switch content {
                 case let .routeReveal(points): return "route(\(points.count))"
-                case let .stopLabel(_, _, _, opacity): return String(format: "label(o%.2f)", opacity)
+                case let .stopLabel(_, _, _, _, _, opacity): return String(format: "label(o%.2f)", opacity)
                 case let .photoDeck(deck):
                     return String(format: "deck(f%d,r%.2f,o%.2f)", deck.focusIndex, deck.reveal, deck.opacity)
                 case .titleChrome: return "title"

@@ -50,6 +50,9 @@ public extension TrackingConfig {
         /// (Chiu 2026-07-25, unchanged).
         public let openingCountryS: Double
         public let openingRegionalS: Double
+        /// Deliberately near-zero (Chiu 2026-07-30): the journey begins the
+        /// instant the establishing shot resolves. A multi-second hold on a
+        /// finished zoom with nothing moving is a scroll-away moment.
         public let openingRouteS: Double
         /// How far past the trip's own bounds the country view reaches when no
         /// map region extent is available (Apple's map, so no tiles declare one).

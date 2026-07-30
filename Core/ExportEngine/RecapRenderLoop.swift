@@ -55,15 +55,23 @@ public struct RecapRenderLoop {
     /// Renders every frame in order. `frame` is the frame index; the closure
     /// returns false to cancel the render (user backed out of S5).
     public func renderFrames(_ deliver: (Int, CGImage) throws -> Bool) async throws {
+        // `keyframe_interval_frames` (15 → two map updates a second) is sized for
+        // a **static** camera, where consecutive keyframes are identical and the
+        // value cache makes them free. The opening prologue is the one stretch
+        // where the camera actually moves, and at that interval the map steps
+        // twice a second while the overlays run at 30 — which is exactly what
+        // read as a janky zoom. Snapshot every frame there and nowhere else.
         let interval = max(config.keyframeIntervalFrames, 1)
-        // The last frame blends toward this keyframe; never fetch past it.
+        let movingUntilFrame = Int((timeline.openingS * Double(config.fps)).rounded())
+        // The last frame blends toward this keyframe; never fetch past it. Uses
+        // the coarse interval because the fine one only applies to the opening.
         let lastKeyframe = (timeline.frameCount - 1) / interval + 1
         var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
         defer { fetches.values.forEach { $0.cancel() } }
 
         /// What the camera and map are doing at a keyframe — pure, so it is
         /// cheap to ask repeatedly.
-        func key(_ keyframe: Int) -> SnapshotKey {
+        func key(_ keyframe: Int, interval: Int) -> SnapshotKey {
             let time = min(Double(keyframe * interval) / Double(config.fps), timeline.durationS)
             return SnapshotKey(camera: timeline.cameraFrame(atTime: time), map: timeline.mapState(atTime: time))
         }
@@ -82,17 +90,18 @@ public struct RecapRenderLoop {
 
         var currentKeyframe = -1
         for frame in 0..<timeline.frameCount {
+            let interval = frame < movingUntilFrame ? 1 : interval
             let keyframe = frame / interval
-            let previousKey = key(keyframe)
-            let nextKey = key(keyframe + 1)
+            let previousKey = key(keyframe, interval: interval)
+            let nextKey = key(keyframe + 1, interval: interval)
 
-            if keyframe != currentKeyframe {
+            if keyframe != currentKeyframe || interval == 1 {
                 currentKeyframe = keyframe
                 // Evict anything outside the live window — with value keys the
                 // window has to be named explicitly rather than compared by index.
                 var live: Set<SnapshotKey> = [previousKey, nextKey]
                 for ahead in 2...(2 + Self.prefetchDepth) where keyframe + ahead <= lastKeyframe {
-                    let ahead = key(keyframe + ahead)
+                    let ahead = key(keyframe + ahead, interval: interval)
                     live.insert(ahead)
                     _ = fetch(ahead)
                 }

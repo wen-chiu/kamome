@@ -177,7 +177,8 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         let pillRGB = RGB(red: 26, green: 31, blue: 41)
         style.labelPillColor = CGColor(srgbRed: 26 / 255, green: 31 / 255, blue: 41 / 255, alpha: 1)
         let label = OverlayContent.stopLabel(
-            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil, opacity: 1
+            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil,
+            dayLabel: "Day 1", travelledM: 0, opacity: 1
         )
         let frame = try await render(
             [label], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0), style: style
@@ -223,7 +224,7 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
             )]),
             .stopLabel(
                 name: "Stop", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75),
-                detail: "步行 21 分鐘", opacity: 0.5
+                detail: "步行 21 分鐘", dayLabel: "Day 1", travelledM: 0, opacity: 0.5
             ),
             .photoDeck(RecapPhotoDeck(
                 photos: [.asset("a"), .asset("b")], focusIndex: 0,

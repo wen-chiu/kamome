@@ -85,7 +85,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.countryViewPadding, 2.2)
         XCTAssertEqual(config.export.firstStopDwellScale, 0.55)
         XCTAssertEqual(config.export.openingRegionalS, 3.5)
-        XCTAssertEqual(config.export.openingRouteS, 2.5)
+        XCTAssertEqual(config.export.openingRouteS, 0.4)
         XCTAssertEqual(config.export.stopDwellMinS, 6)
         XCTAssertEqual(config.export.stopDwellMaxS, 25)
         XCTAssertEqual(config.export.totalDurationMinS, 60)

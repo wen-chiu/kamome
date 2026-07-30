@@ -21,7 +21,7 @@ final class RecapPacingTests: XCTestCase {
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 2.5,
             actSplitKm: 25, followHeadingUp: false,
             deckPhotoHoldS: 2.5, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
-            openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 2.5,
+            openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,
             stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
             totalDurationMinS: totalMinS, totalDurationMaxS: totalMaxS,
