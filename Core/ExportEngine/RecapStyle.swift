@@ -89,9 +89,16 @@ public struct RecapStyle {
     // Photo deck (§5; zoom-in reveal, Chiu 2026-07-25): the card opens from
     // `min` to `max` frame width as the shot pushes in, so the map and trail
     // stay visible around it. The card opens above the stop's pin + name.
-    public var deckPhotoMinWidthFraction: CGFloat = 0.30
-    public var deckPhotoMaxWidthFraction: CGFloat = 0.50
+    //
+    // Sized up on 2026-07-30 for photo recall — a stop's photograph is the point
+    // of the beat, and at 0.30-0.50 it read as a thumbnail. `overshoot` lets the
+    // bloom settle back from slightly past full size, which is what makes the
+    // card arrive rather than merely appear.
+    public var deckPhotoMinWidthFraction: CGFloat = 0.42
+    public var deckPhotoMaxWidthFraction: CGFloat = 0.58
     public var deckPhotoAspect: CGFloat = 1.25         // portrait card (h / w)
+    /// How far past `max` the opening bloom reaches before settling back.
+    public var deckRevealOvershoot: CGFloat = 0.06
     public var deckMatteColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     public var deckMattePx: CGFloat = 14
     public var deckCornerPx: CGFloat = 28

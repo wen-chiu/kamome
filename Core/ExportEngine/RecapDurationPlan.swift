@@ -51,9 +51,13 @@ public struct RecapDurationPlan: Equatable {
         let opening = config.openingCountryS + config.openingRegionalS + config.openingRouteS
             + 2 * config.zoomTransitionS
 
-        let asked = photoCounts.map { count in
-            min(max(deck.dwellS(photoCount: count) + 2 * config.subjectParkS,
-                    config.stopDwellMinS), config.stopDwellMaxS)
+        let asked = photoCounts.enumerated().map { index, count in
+            let earned = min(max(deck.dwellS(photoCount: count) + 2 * config.subjectParkS,
+                                 config.stopDwellMinS), config.stopDwellMaxS)
+            // The first stop is the journey's origin: the prologue has just
+            // finished and no travel has been shown yet, so giving it a later
+            // stop's full weight makes the film feel stuck right as it starts.
+            return index == 0 ? earned * config.firstStopDwellScale : earned
         }
         let askedTotal = asked.reduce(0, +)
 

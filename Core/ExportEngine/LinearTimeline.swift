@@ -47,6 +47,10 @@ public struct LinearTimeline {
     private let legRanges: [LegRange]
     private let deck: RecapDeck
     private let subjectParkS: Double
+    /// When the subject fades in during the opening: the final zoom toward the
+    /// route. Zero when there is no prologue.
+    private let subjectArrivalStartS: Double
+    private let subjectArrivalEndS: Double
     private let titleCardS: Double
     private let endCardS: Double
     private let title: String
@@ -73,25 +77,19 @@ public struct LinearTimeline {
         // parks on the way in and pulls away on the way out, and those beats are
         // *added* around the deck rather than taken out of it — otherwise every
         // stop would silently lose `2 · subject_park_s` of photo time.
-        let deckPacing = RecapDeck(
-            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
-        )
-        let plan: RecapDurationPlan? = establishing == nil ? nil : RecapDurationPlan.plan(
-            photoCounts: trip.stops.map(\.photos.count), config: config, deck: deckPacing
-        )
-        let stopHolds = plan.map { plan in
-            trip.stops.indices.map { index in
-                (index < plan.stopDwellS.count ? plan.stopDwellS[index] : trip.stops[index].dwellS)
-                    + 2 * config.subjectParkS
-            }
-        } ?? trip.stops.map { $0.dwellS + 2 * config.subjectParkS }
+        let (plan, stopHolds) = Self.pacing(for: trip, config: config, establishing: establishing)
 
         guard let path = CameraPath(
             route: routePoints, stops: stopPoints, config: config,
             stopHoldsS: stopHolds,
             totalDurationS: plan?.totalS,
             establishing: establishing,
-            openingS: plan?.openingS ?? 0
+            openingS: plan?.openingS ?? 0,
+            // The finale gets the frame to itself: the journey lands before the
+            // end card appears, so the closing panel never prints across a stop's
+            // photo card. Without this the last hold ran to the final frame and
+            // the two overlapped.
+            journeyEndsBeforeS: plan.map { _ in config.endCardS } ?? 0
         ) else { return nil }
 
         self.path = path
@@ -109,6 +107,19 @@ public struct LinearTimeline {
         }
         deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
         subjectParkS = config.subjectParkS
+        // The car does not exist until the journey does. Through the country and
+        // regional beats there is no vehicle on screen — it would be a sprite the
+        // size of a mountain range, and narratively the trip has not begun. It
+        // fades in across the last zoom, so by the time the route is framed the
+        // car is there, ready to move.
+        if let plan {
+            let toRoute = config.openingCountryS + config.zoomTransitionS + config.openingRegionalS
+            subjectArrivalStartS = toRoute
+            subjectArrivalEndS = min(toRoute + config.zoomTransitionS, plan.openingS)
+        } else {
+            subjectArrivalStartS = 0
+            subjectArrivalEndS = 0
+        }
         titleCardS = min(config.titleCardS, path.durationS)
         endCardS = config.endCardS
         title = trip.title
@@ -116,6 +127,29 @@ public struct LinearTimeline {
         statsLines = trip.statsLines
         callToAction = trip.callToAction
         shareURL = trip.shareURL
+    }
+
+    /// The film's pacing: a content-derived plan when a map region is installed,
+    /// otherwise the trip's own dwells at the old fixed duration. Either way the
+    /// returned holds already carry the park beats, which are *added* around each
+    /// deck rather than taken out of it.
+    private static func pacing(
+        for trip: RecapTrip, config: TrackingConfig.Export, establishing: RecapBounds?
+    ) -> (plan: RecapDurationPlan?, holds: [Double]) {
+        let deckPacing = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
+        )
+        guard establishing != nil else {
+            return (nil, trip.stops.map { $0.dwellS + 2 * config.subjectParkS })
+        }
+        let plan = RecapDurationPlan.plan(
+            photoCounts: trip.stops.map(\.photos.count), config: config, deck: deckPacing
+        )
+        let holds = trip.stops.indices.map { index in
+            (index < plan.stopDwellS.count ? plan.stopDwellS[index] : trip.stops[index].dwellS)
+                + 2 * config.subjectParkS
+        }
+        return (plan, holds)
     }
 
     // MARK: - The four state streams
@@ -144,6 +178,11 @@ public struct LinearTimeline {
     /// delete the car and leave an empty map, which reads as a glitch rather than
     /// as a stop.
     private func subjectPresence(atTime time: Double) -> Double {
+        // The opening: absent, then fading in across the zoom toward the route.
+        if subjectArrivalEndS > 0, time < subjectArrivalEndS {
+            guard time > subjectArrivalStartS else { return 0 }
+            return Self.smoothstep((time - subjectArrivalStartS) / (subjectArrivalEndS - subjectArrivalStartS))
+        }
         guard let scene = activeScene(atTime: time) else { return 1 }
         let park = parkRamp(scene.hold)
         guard park > 0 else { return 0 }
@@ -258,10 +297,22 @@ public struct LinearTimeline {
         let openEnd = window.end - zoom
         let opening = openEnd - window.start
         guard opening > 0 else { return 0 }
-        if time <= openEnd { return Self.smoothstep((time - window.start) / opening) }
+        if time <= openEnd {
+            // The card blooms: it rises quickly, passes full size, and settles
+            // back — an arrival rather than a grow. The overshoot decays across
+            // the opening so the card is exactly at rest by the time it holds.
+            let progress = (time - window.start) / opening
+            let eased = Self.smoothstep(progress)
+            let overshoot = sin(min(max(progress, 0), 1) * .pi) * Self.deckBloomOvershoot
+            return eased + overshoot * (1 - eased)
+        }
         guard zoom > 0 else { return 0 }
         return Self.smoothstep((window.end - time) / zoom)
     }
+
+    /// Peak of the bloom past full size, as a fraction. Matches the renderer's
+    /// `deckRevealOvershoot` ceiling; the style clamps to it.
+    private static let deckBloomOvershoot = 0.06
 
     /// Card opacity: fades in over the opening ramp, out over the closing one.
     private func deckOpacity(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {

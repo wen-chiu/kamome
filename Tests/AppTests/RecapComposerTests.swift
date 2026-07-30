@@ -155,6 +155,20 @@ final class RecapComposerTests: XCTestCase {
         XCTAssertFalse(recap.callToAction.isEmpty, "the CTA stays — only the unresolved code goes")
     }
 
+    /// The opening title's date range is the trip's **real** span, straight from
+    /// `trip.startedAt`/`endedAt` — which for an import are the first and last
+    /// photo's EXIF times. A one-day fixture reads as one date because the trip
+    /// is one day, not because anything is hardcoded to look that way.
+    func testTitleSubtitleShowsTheTripsRealDateRange() {
+        let oneDay = RecapComposer.titleSubtitle(trip: trip(daysLong: 0), stats: nil)
+        let nineDays = RecapComposer.titleSubtitle(trip: trip(daysLong: 9), stats: nil)
+        XCTAssertNotEqual(oneDay, nineDays, "a nine-day trip must not print like a one-day one")
+        // A multi-day trip prints a range; a same-day trip collapses to one date.
+        XCTAssertTrue(nineDays.contains("–") || nineDays.contains("-") || nineDays.contains("—"),
+                      "expected a range, got: \(nineDays)")
+        XCTAssertFalse(oneDay.contains("–"), "expected a single date, got: \(oneDay)")
+    }
+
     func testDayLabelsUseS3DayMath() {
         // Same-day arrival → day 1; 25 h in → day 2.
         XCTAssertTrue(RecapComposer.dayLabel(for: tripStart + 600, tripStartedAt: tripStart).contains("1"))

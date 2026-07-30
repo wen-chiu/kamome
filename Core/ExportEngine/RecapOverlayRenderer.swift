@@ -139,7 +139,11 @@ public struct RecapOverlayRenderer: OverlayRenderer {
 
         let minW = CGFloat(surface.widthPx) * style.deckPhotoMinWidthFraction
         let maxW = CGFloat(surface.widthPx) * style.deckPhotoMaxWidthFraction
-        let cardW = minW + (maxW - minW) * CGFloat(min(max(deck.reveal, 0), 1))
+        // Clamped to the overshoot ceiling, not to 1: the timeline's bloom
+        // deliberately passes full size and settles back, and clamping here
+        // would flatten that into a plain grow.
+        let reveal = min(max(CGFloat(deck.reveal), 0), 1 + style.deckRevealOvershoot)
+        let cardW = minW + (maxW - minW) * reveal
         let layout = place(
             cardSize: CGSize(width: cardW, height: cardW * style.deckPhotoAspect),
             name: deck.name, detail: deck.detail,

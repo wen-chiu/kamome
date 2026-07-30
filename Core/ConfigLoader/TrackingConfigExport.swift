@@ -56,6 +56,11 @@ public extension TrackingConfig {
         /// A guess, deliberately modest: an offline app cannot know where the
         /// surrounding coastline is, and over-claiming would frame empty space.
         public let countryViewPadding: Double
+        /// The opening stop is the journey's origin, reached before any travel
+        /// has been shown, so giving it a later stop's full weight makes the film
+        /// feel stuck right after the prologue. It gets this fraction of the
+        /// dwell its photo count would otherwise earn.
+        public let firstStopDwellScale: Double
         /// Per-stop dwell bounds. Stops are deliberately *not* given equal time —
         /// a photo-rich stop earns more (`RecapDurationPlan`) — but neither a
         /// single-photo stop nor an eight-photo one should leave this window.
@@ -81,7 +86,7 @@ public extension TrackingConfig {
             actSplitKm: Double, followHeadingUp: Bool,
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double, openingRouteS: Double,
-            countryViewPadding: Double,
+            countryViewPadding: Double, firstStopDwellScale: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
@@ -100,6 +105,7 @@ public extension TrackingConfig {
             self.openingRegionalS = openingRegionalS
             self.openingRouteS = openingRouteS
             self.countryViewPadding = countryViewPadding
+            self.firstStopDwellScale = firstStopDwellScale
             self.stopDwellMinS = stopDwellMinS
             self.stopDwellMaxS = stopDwellMaxS
             self.totalDurationMinS = totalDurationMinS
@@ -126,6 +132,7 @@ public extension TrackingConfig {
                 openingRegionalS: openingRegionalS,
                 openingRouteS: openingRouteS,
                 countryViewPadding: countryViewPadding,
+                firstStopDwellScale: firstStopDwellScale,
                 stopDwellMinS: stopDwellMinS,
                 stopDwellMaxS: stopDwellMaxS,
                 totalDurationMinS: totalDurationMinS,
@@ -157,6 +164,7 @@ public extension TrackingConfig {
             case openingRegionalS = "opening_regional_s"
             case openingRouteS = "opening_route_s"
             case countryViewPadding = "country_view_padding"
+            case firstStopDwellScale = "first_stop_dwell_scale"
             case stopDwellMinS = "stop_dwell_min_s"
             case stopDwellMaxS = "stop_dwell_max_s"
             case totalDurationMinS = "total_duration_min_s"

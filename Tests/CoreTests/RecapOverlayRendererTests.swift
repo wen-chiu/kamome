@@ -157,7 +157,9 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         let openArea = try colorCount(open, matching: greenRGB)
         let openingArea = try colorCount(opening, matching: greenRGB)
         XCTAssertGreaterThan(openArea, Int(Double(openingArea) * 1.3), "the card grows with reveal")
-        XCTAssertLessThan(Double(openArea) / Double(widthPx * heightPx), 0.35, "the map stays visible around the card")
+        // The card was sized up for photo recall (Chiu 2026-07-30); it must still
+        // leave the map and trail visible around its edges.
+        XCTAssertLessThan(Double(openArea) / Double(widthPx * heightPx), 0.5, "the map stays visible around the card")
 
         // At zero opacity the deck is absent.
         let none = try await render([deck(reveal: 1, opacity: 0)], resolverImage: green)

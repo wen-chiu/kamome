@@ -105,14 +105,29 @@ extension CameraPath {
         )
     }
 
-    /// Straight-line interpolation between two framings. Small lat/lon lerps are
-    /// safe here — a prologue never crosses the antimeridian, because both frames
-    /// come from one region's extent.
+    /// Interpolation between two framings.
+    ///
+    /// **Span moves geometrically, not linearly** — this is what made the opening
+    /// zoom look janky. Zoom is perceived as a ratio: dropping from a 1,500 km
+    /// country view to a 350 km regional one by equal metre-steps burns most of
+    /// the apparent scale change in the first third and then crawls. Stepping by
+    /// equal *ratios* makes the rate of apparent zoom constant, which is what
+    /// every map library's flyTo does and what reads as smooth.
+    ///
+    /// Centre still lerps linearly; small lat/lon moves are safe here because a
+    /// prologue never crosses the antimeridian, both frames coming from one
+    /// region's extent.
     static func lerp(_ from: CameraFrame, _ to: CameraFrame, _ fraction: Double) -> CameraFrame {
-        CameraFrame(
+        let span: Double
+        if from.spanM > 0, to.spanM > 0 {
+            span = from.spanM * pow(to.spanM / from.spanM, fraction)
+        } else {
+            span = from.spanM + (to.spanM - from.spanM) * fraction
+        }
+        return CameraFrame(
             centerLat: from.centerLat + (to.centerLat - from.centerLat) * fraction,
             centerLon: from.centerLon + (to.centerLon - from.centerLon) * fraction,
-            spanM: from.spanM + (to.spanM - from.spanM) * fraction,
+            spanM: span,
             bearing: 0
         )
     }

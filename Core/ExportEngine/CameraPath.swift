@@ -131,7 +131,10 @@ public struct CameraPath {
         establishing: RecapBounds? = nil,
         /// Length of the opening. Zero disables it entirely, which is what keeps
         /// every pre-existing test rendering exactly as before.
-        openingS: Double = 0
+        openingS: Double = 0,
+        /// Time reserved at the end for the closing chrome. The journey's last
+        /// hold finishes before it, so the end card never lands on a stop.
+        journeyEndsBeforeS: Double = 0
     ) {
         guard route.count >= 2 else { return nil }
         var cumulative = [0.0]
@@ -155,7 +158,8 @@ public struct CameraPath {
         let opening = max(min(openingS, total), 0)
         timeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
-            stopHoldsS: stopHoldsS, startS: opening, targetS: total
+            stopHoldsS: stopHoldsS, startS: opening,
+            targetS: max(total - journeyEndsBeforeS, opening)
         )
         self.fps = config.fps
         durationS = total
@@ -196,59 +200,6 @@ public struct CameraPath {
             return (index, cumulativeM[bestVertex])
         }
         .sorted { $0.distanceM < $1.distanceM }
-    }
-
-    /// Time budget: holds first (their sum capped at `max_hold_fraction`), the
-    /// rest is travel, split across legs in proportion to leg distance. Each
-    /// anchor's hold is its per-stop `stopHoldsS` value (photo-deck length) or
-    /// the uniform `stop_hold_s` fallback; the cap scales every hold by one
-    /// factor so photo-heavy stops keep their relative weight.
-    private static func buildTimeline(
-        anchors: [(stopIndex: Int, distanceM: Double)],
-        totalM: Double,
-        config: TrackingConfig.Export,
-        stopHoldsS: [Double]?,
-        startS: Double = 0,
-        targetS: Double
-    ) -> [TimelineEntry] {
-        var holds = anchors.map { anchor -> Double in
-            if let stopHoldsS, anchor.stopIndex < stopHoldsS.count {
-                return max(0, stopHoldsS[anchor.stopIndex])
-            }
-            return config.stopHoldS
-        }
-        let totalHold = holds.reduce(0, +)
-        let cap = max(targetS - startS, 0) * config.maxHoldFraction
-        if totalHold > cap, totalHold > 0 {
-            let factor = cap / totalHold
-            holds = holds.map { $0 * factor }
-        }
-        let travelS = max(targetS - startS - holds.reduce(0, +), 0)
-
-        var timeline: [TimelineEntry] = []
-        var clock = startS
-        if startS > 0 {
-            // The prologue: the vehicle waits at the route's start, so the trail
-            // has not begun and the camera has the frame to itself.
-            timeline.append(.init(startS: 0, endS: startS, phase: .travel(fromM: 0, toM: 0)))
-        }
-        var legStartM = 0.0
-        for (index, anchor) in anchors.enumerated() {
-            let holdS = holds[index]
-            let legM = max(0, anchor.distanceM - legStartM)
-            let legS = travelS * legM / totalM
-            timeline.append(
-                .init(startS: clock, endS: clock + legS, phase: .travel(fromM: legStartM, toM: anchor.distanceM))
-            )
-            clock += legS
-            timeline.append(
-                .init(startS: clock, endS: clock + holdS, phase: .hold(stopIndex: anchor.stopIndex, atM: anchor.distanceM))
-            )
-            clock += holdS
-            legStartM = anchor.distanceM
-        }
-        timeline.append(.init(startS: clock, endS: targetS, phase: .travel(fromM: legStartM, toM: totalM)))
-        return timeline
     }
 
     public func position(atFrame frame: Int) -> Position {
