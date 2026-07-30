@@ -35,9 +35,9 @@
       "type": "hillshade",
       "source": "kamome-terrain",
       "paint": {
-        "hillshade-exaggeration": 0.62,
-        "hillshade-shadow-color": "#04080f",
-        "hillshade-highlight-color": "#3d6478",
+        "hillshade-exaggeration": 0.85,
+        "hillshade-shadow-color": "#03070d",
+        "hillshade-highlight-color": "#4f7f95",
         "hillshade-accent-color": "#0a1420",
         "hillshade-illumination-direction": 315,
         "hillshade-illumination-anchor": "map"
@@ -172,9 +172,17 @@
       "source": "kamome",
       "source-layer": "water",
       "filter": [
-        "==",
-        "$type",
-        "Polygon"
+        "all",
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ],
+        [
+          "==",
+          "class",
+          "ocean"
+        ]
       ],
       "layout": {
         "line-cap": "round",
@@ -233,9 +241,17 @@
       "source": "kamome",
       "source-layer": "water",
       "filter": [
-        "==",
-        "$type",
-        "Polygon"
+        "all",
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ],
+        [
+          "==",
+          "class",
+          "ocean"
+        ]
       ],
       "layout": {
         "line-cap": "round",
@@ -274,6 +290,54 @@
       }
     },
     {
+      "id": "inland-water-edge",
+      "type": "line",
+      "source": "kamome",
+      "source-layer": "water",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ],
+        [
+          "!=",
+          "class",
+          "ocean"
+        ]
+      ],
+      "paint": {
+        "line-color": "#4d7f86",
+        "line-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          4,
+          0.3,
+          12,
+          0.38
+        ],
+        "line-width": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          4,
+          0.6,
+          12,
+          1.1
+        ]
+      }
+    },
+    {
       "id": "waterway",
       "type": "line",
       "source": "kamome",
@@ -285,8 +349,20 @@
         "LineString"
       ],
       "paint": {
-        "line-color": "#6fb7ad",
-        "line-opacity": 0.4,
+        "line-color": "#3f6b72",
+        "line-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.2,
+          12,
+          0.3
+        ],
         "line-width": [
           "interpolate",
           [

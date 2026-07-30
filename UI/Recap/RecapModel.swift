@@ -117,7 +117,12 @@ final class RecapModel {
         // `follow_heading_up` ships false; the capability check only stops a
         // renderer that cannot rotate from being handed a bearing it would drop,
         // should the flag ever be turned on.
-        let provider = Self.snapshotProvider(covering: trip.route)
+        // One question, asked once (`RecapMapRegion` is the seam): which region
+        // covers this trip? Its tiles feed the renderer, its DEM feeds hillshade,
+        // and its extent is what the opening establishing shot frames.
+        let region = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) })
+            .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
+        let provider = Self.snapshotProvider(for: region)
         let exportConfig = config.export.withFollowHeadingUp(
             config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
         )
@@ -207,15 +212,14 @@ final class RecapModel {
     /// The region is chosen per trip (Fable review 2026-07-26): the §6 gate is
     /// three real trips in three places, side-loaded over Finder, so the lookup
     /// matches each render against what it actually covers.
-    private static func snapshotProvider(covering route: [RecapCoordinate]) -> MapRenderer {
-        guard let bounds = GeoBox.enclosing(route.map { (lat: $0.lat, lon: $0.lon) }),
-              let tiles = RecapMapTiles.tilesURL(covering: bounds),
+    private static func snapshotProvider(for region: RecapMapRegion?) -> MapRenderer {
+        guard let region,
               let styleURL = try? RecapMapStyle.resolvedStyleURL(
                   styleResource: RecapMapTiles.styleResource,
-                  tilesURL: tiles,
+                  tilesURL: region.tilesURL,
                   // Hillshade when a DEM for this area is installed; the style
                   // strips the layer when it is not (Chiu 2026-07-30).
-                  terrainURL: RecapMapTiles.terrainURL(covering: bounds)
+                  terrainURL: region.terrainURL
               )
         else { return MapKitSnapshotProvider() }
         return MapLibreSnapshotProvider(styleURL: styleURL)

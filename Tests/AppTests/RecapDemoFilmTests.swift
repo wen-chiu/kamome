@@ -235,13 +235,14 @@ final class RecapDemoFilmTests: XCTestCase {
     private func snapshotProvider(covering trip: RecapTrip) throws -> MapRenderer {
         #if canImport(MapLibre)
         let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
-        guard let tiles = RecapMapTiles.tilesURL(covering: bounds) else {
-            XCTFail("no tiles covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
+        guard let region = RecapMapRegionResolver.resolve(covering: bounds) else {
+            XCTFail("no region covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
             return MapKitSnapshotProvider()
         }
+        print("KAMOME_DEMO_FILM region bounds \(region.bounds), terrain: \(region.terrainURL != nil)")
         let styleURL = try RecapMapStyle.resolvedStyleURL(
-            styleResource: RecapMapTiles.styleResource, tilesURL: tiles,
-            terrainURL: RecapMapTiles.terrainURL(covering: bounds)
+            styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL,
+            terrainURL: region.terrainURL
         )
         return MapLibreSnapshotProvider(styleURL: styleURL)
         #else

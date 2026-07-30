@@ -177,4 +177,72 @@ final class RecapMapTilesTests: XCTestCase {
         let bounds = try XCTUnwrap(PMTilesHeader.bounds(ofFileAt: fixtureTiles))
         XCTAssertTrue(bounds.contains(margaretRiver), "the demo corridor must sit inside the fixture crop")
     }
+
+    // MARK: - Terrain (hillshade is additive, never required)
+
+    /// A region with no DEM must still render. The theme always declares the
+    /// hillshade source so the checked-in style stays editable, so resolution
+    /// has to remove it — leaving a `pmtiles://` path that does not resolve is
+    /// reported by MapLibre as a load failure and renders as a blank map.
+    func testStyleStripsHillshadeWhenNoTerrainIsInstalled() throws {
+        let json = try RecapMapStyle.resolvedStyleJSON(
+            styleResource: RecapMapTiles.styleResource,
+            tilesPath: "file:///tiles/nz.pmtiles",
+            terrainPath: nil,
+            in: .main
+        )
+        XCTAssertFalse(json.contains(RecapMapStyle.terrainSourceID), "the DEM source must be gone")
+        XCTAssertFalse(json.contains(RecapMapStyle.terrainPlaceholder), "no placeholder may survive")
+        XCTAssertFalse(json.contains("\"hillshade\""), "and no layer may be left drawing from it")
+        // The rest of the style is untouched and still loadable.
+        XCTAssertTrue(json.contains("pmtiles://file:///tiles/nz.pmtiles"))
+        XCTAssertNotNil(try JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any])
+    }
+
+    func testStyleKeepsHillshadeAndInjectsTheDEMPathWhenTerrainExists() throws {
+        let json = try RecapMapStyle.resolvedStyleJSON(
+            styleResource: RecapMapTiles.styleResource,
+            tilesPath: "file:///tiles/nz.pmtiles",
+            terrainPath: "file:///terrain/nz-terrain.pmtiles",
+            in: .main
+        )
+        XCTAssertTrue(json.contains("pmtiles://file:///terrain/nz-terrain.pmtiles"))
+        XCTAssertTrue(json.contains("terrarium"), "the DEM encoding must reach MapLibre")
+        XCTAssertFalse(json.contains(RecapMapStyle.terrainPlaceholder))
+    }
+
+    /// Foundation escapes `/` as `\/` by default, which is valid JSON but makes
+    /// every tile URL in the resolved style unreadable — and it only bit because
+    /// stripping terrain re-serializes. Both halves are guarded here.
+    func testResolutionNeverEscapesSlashesInTileURLs() throws {
+        let json = try RecapMapStyle.resolvedStyleJSON(
+            styleResource: RecapMapTiles.styleResource,
+            tilesPath: "file:///tiles/nz.pmtiles",
+            terrainPath: nil,
+            in: .main
+        )
+        XCTAssertFalse(json.contains("\\/"), "escaped slashes in: \(json.prefix(200))")
+    }
+
+    /// The seam (Chiu 2026-07-30): one place knows a trip maps to one region.
+    /// It answers with the tiles, the optional DEM, and the extent the opening
+    /// establishing shot frames — the camera never learns files exist.
+    func testRegionResolverAnswersWithTilesAndTheEstablishingExtent() throws {
+        setenv("KAMOME_TILES_PATH", fixtureTiles.path, 1)
+        defer { unsetenv("KAMOME_TILES_PATH") }
+
+        let region = try XCTUnwrap(RecapMapRegionResolver.resolve(covering: margaretRiver))
+        XCTAssertEqual(region.tilesURL, fixtureTiles)
+        // The extent is the region's own declared bounds, which must contain the
+        // trip — that is what makes it safe to frame the opening to.
+        XCTAssertTrue(region.bounds.contains(margaretRiver))
+        XCTAssertNil(region.terrainURL, "no DEM installed for the fixture corridor")
+    }
+
+    func testRegionResolverAnswersNilWhenNothingCoversTheTrip() throws {
+        let directory = try makeTilesDirectory()
+        setenv("KAMOME_TILES_PATH", directory.path, 1)
+        defer { unsetenv("KAMOME_TILES_PATH") }
+        XCTAssertNil(RecapMapRegionResolver.resolve(covering: margaretRiver))
+    }
 }
