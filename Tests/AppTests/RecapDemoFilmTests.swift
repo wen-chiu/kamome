@@ -240,7 +240,8 @@ final class RecapDemoFilmTests: XCTestCase {
             return MapKitSnapshotProvider()
         }
         let styleURL = try RecapMapStyle.resolvedStyleURL(
-            styleResource: RecapMapTiles.styleResource, tilesURL: tiles
+            styleResource: RecapMapTiles.styleResource, tilesURL: tiles,
+            terrainURL: RecapMapTiles.terrainURL(covering: bounds)
         )
         return MapLibreSnapshotProvider(styleURL: styleURL)
         #else

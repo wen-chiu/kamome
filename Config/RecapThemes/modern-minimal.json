@@ -1,18 +1,25 @@
 {
   "version": 8,
-  "name": "Kamome Souvenir Map (dark) — draft v2",
+  "name": "Kamome Souvenir Map (dark) \u2014 draft v2",
   "metadata": {
     "kamome:role": "theme-draft",
-    "kamome:status": "DRAFT v2 — NOT signed off. Rewritten 2026-07-22 toward the DARK ATMOSPHERIC SOUVENIR MAP validated in the prototype + WIP demo (Docs/prototype, artifact 'Kamome Recap 冰島環島'), replacing the earlier pale 'desaturated OSM' draft Chiu rejected. Direction: dark navy sea, dark-slate land silhouette, a GLOWING coastline, pale ice; no roads/POI/labels. Half the crafted feeling (vignette, route glow, grade) is a COMPOSITOR job (RecapTheme) — NOT in this style — so judge this as the substrate, with that atmosphere still to come.",
-    "kamome:reference": "prototype land fill #24343c→#182530 on sea #08111A→#04070C, coastline stroke rgba(140,214,204,.28), route #FF8A5B glow. See Docs/prototype/recap_engine.html.",
+    "kamome:status": "DRAFT v2 \u2014 NOT signed off. Rewritten 2026-07-22 toward the DARK ATMOSPHERIC SOUVENIR MAP validated in the prototype + WIP demo (Docs/prototype, artifact 'Kamome Recap \u51b0\u5cf6\u74b0\u5cf6'), replacing the earlier pale 'desaturated OSM' draft Chiu rejected. Direction: dark navy sea, dark-slate land silhouette, a GLOWING coastline, pale ice; no roads/POI/labels. Half the crafted feeling (vignette, route glow, grade) is a COMPOSITOR job (RecapTheme) \u2014 NOT in this style \u2014 so judge this as the substrate, with that atmosphere still to come.",
+    "kamome:reference": "prototype land fill #24343c\u2192#182530 on sea #08111A\u2192#04070C, coastline stroke rgba(140,214,204,.28), route #FF8A5B glow. See Docs/prototype/recap_engine.html.",
     "kamome:schema": "OpenMapTiles (Planetiler default)"
   },
   "sources": {
     "kamome": {
       "type": "vector",
       "url": "pmtiles://__KAMOME_TILES__",
-      "attribution": "© OpenMapTiles © OpenStreetMap contributors",
+      "attribution": "\u00a9 OpenMapTiles \u00a9 OpenStreetMap contributors",
       "maxzoom": 14
+    },
+    "kamome-terrain": {
+      "type": "raster-dem",
+      "url": "pmtiles://__KAMOME_TERRAIN__",
+      "encoding": "terrarium",
+      "tileSize": 256,
+      "maxzoom": 10
     }
   },
   "layers": [
@@ -21,6 +28,56 @@
       "type": "background",
       "paint": {
         "background-color": "#1e2b33"
+      }
+    },
+    {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "kamome-terrain",
+      "paint": {
+        "hillshade-exaggeration": 0.62,
+        "hillshade-shadow-color": "#04080f",
+        "hillshade-highlight-color": "#3d6478",
+        "hillshade-accent-color": "#0a1420",
+        "hillshade-illumination-direction": 315,
+        "hillshade-illumination-anchor": "map"
+      }
+    },
+    {
+      "id": "landcover-scrub",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "landcover",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ],
+        [
+          "in",
+          "class",
+          "scrub",
+          "grass",
+          "wetland",
+          "sand"
+        ]
+      ],
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          "wetland",
+          "#12303a",
+          "sand",
+          "#26313a",
+          "#132b32"
+        ],
+        "fill-opacity": 0.45
       }
     },
     {
@@ -46,6 +103,21 @@
       "paint": {
         "fill-color": "#213039",
         "fill-opacity": 0.55
+      }
+    },
+    {
+      "id": "park",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "park",
+      "filter": [
+        "==",
+        "$type",
+        "Polygon"
+      ],
+      "paint": {
+        "fill-color": "#102a2a",
+        "fill-opacity": 0.35
       }
     },
     {
@@ -283,6 +355,44 @@
           14,
           2.0
         ]
+      }
+    },
+    {
+      "id": "mountain-peak",
+      "type": "circle",
+      "source": "kamome",
+      "source-layer": "mountain_peak",
+      "minzoom": 6,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          ">=",
+          "ele",
+          600
+        ]
+      ],
+      "paint": {
+        "circle-radius": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          1.1,
+          10,
+          2.4
+        ],
+        "circle-color": "#9fd8e8",
+        "circle-opacity": 0.5,
+        "circle-blur": 0.4
       }
     }
   ]

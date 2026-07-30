@@ -28,8 +28,8 @@
     {
       "name": "new-zealand",
       "geofabrik": "australia-oceania/new-zealand",
-      "bbox": null,
-      "note": "Both islands (382 MB). Clip to one island if osrm-extract runs out of memory."
+      "bbox": "166.0,-47.5,179.2,-34.0",
+      "note": "North + South Island. Clipped because the Geofabrik extract also carries the Chatham Islands (-176°) and the Kermadecs, which straddle the antimeridian — unclipped, the built tiles declare bounds of -180…180 and the region claims to cover half the planet. Selection still works (latitude saves it), but the declared extent means nothing and the file is bigger for territory no trip will visit."
     },
     {
       "name": "finland",

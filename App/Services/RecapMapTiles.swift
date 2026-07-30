@@ -29,7 +29,28 @@ enum RecapMapTiles {
 
     /// Sub-directory holding regions in each searched location.
     static let tilesDirectoryName = "tiles"
+    static let terrainDirectoryName = "terrain"
     static let fileExtension = "pmtiles"
+
+    /// The DEM covering `trip`, or nil — hillshade is additive, and a region
+    /// without a terrain build still renders (flatter) rather than failing.
+    /// Terrain files are named `<region>-terrain.pmtiles`; matching is by the
+    /// same bounds-containment rule as the vector regions, since a DEM carries
+    /// its own header bounds too.
+    static func terrainURL(covering trip: GeoBox, bundle: Bundle = .main) -> URL? {
+        if let override = ProcessInfo.processInfo.environment["KAMOME_TERRAIN_PATH"], !override.isEmpty {
+            let url = URL(fileURLWithPath: override)
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) {
+                if !isDirectory.boolValue { return url }
+                if let match = bestRegion(in: url, covering: trip) { return match }
+            }
+        }
+        for directory in searchDirectories(bundle: bundle).map({ $0.appendingPathComponent(terrainDirectoryName) }) {
+            if let match = bestRegion(in: directory, covering: trip) { return match }
+        }
+        return nil
+    }
 
     /// The tiles to render `trip` with, or nil when no region covers it — the
     /// caller then uses the MapKit provider.

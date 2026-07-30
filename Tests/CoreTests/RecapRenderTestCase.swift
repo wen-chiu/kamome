@@ -96,6 +96,9 @@ class RecapRenderTestCase: XCTestCase {
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: followHeadingUp,
             deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 4.5, openingRegionalS: 3.5, openingRouteS: 2.5,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: keyframeIntervalFrames,
             titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
         )

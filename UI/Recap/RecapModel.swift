@@ -211,7 +211,11 @@ final class RecapModel {
         guard let bounds = GeoBox.enclosing(route.map { (lat: $0.lat, lon: $0.lon) }),
               let tiles = RecapMapTiles.tilesURL(covering: bounds),
               let styleURL = try? RecapMapStyle.resolvedStyleURL(
-                  styleResource: RecapMapTiles.styleResource, tilesURL: tiles
+                  styleResource: RecapMapTiles.styleResource,
+                  tilesURL: tiles,
+                  // Hillshade when a DEM for this area is installed; the style
+                  // strips the layer when it is not (Chiu 2026-07-30).
+                  terrainURL: RecapMapTiles.terrainURL(covering: bounds)
               )
         else { return MapKitSnapshotProvider() }
         return MapLibreSnapshotProvider(styleURL: styleURL)
