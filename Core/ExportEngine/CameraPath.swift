@@ -103,6 +103,9 @@ public struct CameraPath {
     private let acts: [Act]
     private let zoomTransitionS: Double
     private let followHeadingUp: Bool
+    /// The one-time opening establishing sequence. Everything after `prologue`
+    /// is the static per-act camera, unchanged (Chiu 2026-07-30).
+    private let prologue: Prologue?
 
     /// Fails on degenerate input (fewer than two points or zero length) —
     /// the phantom-trip guard keeps such trips out of the DB, so a caller
@@ -118,7 +121,17 @@ public struct CameraPath {
         route: [Point],
         stops: [Point],
         config: TrackingConfig.Export,
-        stopHoldsS: [Double]? = nil
+        stopHoldsS: [Double]? = nil,
+        /// The film's whole length. Defaults to `export.target_duration_s` so
+        /// existing callers and golden-frame tests are unaffected; `LinearTimeline`
+        /// passes a content-derived total (`RecapDurationPlan`).
+        totalDurationS: Double? = nil,
+        /// The map region's extent, for the country view. nil = no tiles, so the
+        /// opening widens the trip's own bounds instead.
+        establishing: RecapBounds? = nil,
+        /// Length of the opening. Zero disables it entirely, which is what keeps
+        /// every pre-existing test rendering exactly as before.
+        openingS: Double = 0
     ) {
         guard route.count >= 2 else { return nil }
         var cumulative = [0.0]
@@ -136,10 +149,17 @@ public struct CameraPath {
 
         self.route = route
         self.cumulativeM = cumulative
-        timeline = Self.buildTimeline(anchors: anchors, totalM: totalM, config: config, stopHoldsS: stopHoldsS)
+        let total = totalDurationS ?? config.targetDurationS
+        // The journey's clock starts after the prologue: the vehicle sits at the
+        // route's start while the camera establishes the geography.
+        let opening = max(min(openingS, total), 0)
+        timeline = Self.buildTimeline(
+            anchors: anchors, totalM: totalM, config: config,
+            stopHoldsS: stopHoldsS, startS: opening, targetS: total
+        )
         self.fps = config.fps
-        durationS = config.targetDurationS
-        frameCount = Int((config.targetDurationS * Double(config.fps)).rounded())
+        durationS = total
+        frameCount = Int((total * Double(config.fps)).rounded())
 
         zoomTransitionS = config.zoomTransitionS
         followHeadingUp = config.followHeadingUp
@@ -147,6 +167,14 @@ public struct CameraPath {
             route: route, cumulativeM: cumulative, timeline: timeline,
             totalM: totalM, config: config
         )
+        prologue = opening > 0
+            ? Self.buildPrologue(
+                route: route, establishing: establishing, config: config,
+                routeFrame: acts.first.map {
+                    CameraFrame(centerLat: $0.centerLat, centerLon: $0.centerLon, spanM: $0.spanM, bearing: 0)
+                } ?? Self.frame(for: Self.bounds(of: route), config: config, padding: config.wideSpanPadding)
+            )
+            : nil
     }
 
     /// Anchor each stop to its nearest route vertex, ordered along the path.
@@ -179,9 +207,10 @@ public struct CameraPath {
         anchors: [(stopIndex: Int, distanceM: Double)],
         totalM: Double,
         config: TrackingConfig.Export,
-        stopHoldsS: [Double]?
+        stopHoldsS: [Double]?,
+        startS: Double = 0,
+        targetS: Double
     ) -> [TimelineEntry] {
-        let targetS = config.targetDurationS
         var holds = anchors.map { anchor -> Double in
             if let stopHoldsS, anchor.stopIndex < stopHoldsS.count {
                 return max(0, stopHoldsS[anchor.stopIndex])
@@ -189,15 +218,20 @@ public struct CameraPath {
             return config.stopHoldS
         }
         let totalHold = holds.reduce(0, +)
-        let cap = targetS * config.maxHoldFraction
+        let cap = max(targetS - startS, 0) * config.maxHoldFraction
         if totalHold > cap, totalHold > 0 {
             let factor = cap / totalHold
             holds = holds.map { $0 * factor }
         }
-        let travelS = targetS - holds.reduce(0, +)
+        let travelS = max(targetS - startS - holds.reduce(0, +), 0)
 
         var timeline: [TimelineEntry] = []
-        var clock = 0.0
+        var clock = startS
+        if startS > 0 {
+            // The prologue: the vehicle waits at the route's start, so the trail
+            // has not begun and the camera has the frame to itself.
+            timeline.append(.init(startS: 0, endS: startS, phase: .travel(fromM: 0, toM: 0)))
+        }
         var legStartM = 0.0
         for (index, anchor) in anchors.enumerated() {
             let holdS = holds[index]
@@ -239,6 +273,11 @@ public struct CameraPath {
     /// grows against a constant backdrop the eye can measure — and it keeps raw
     /// GPS wobble at its true, negligible scale instead of magnifying it.
     public func cameraFrame(atTime time: Double) -> CameraFrame {
+        // The opening owns the camera until the route is framed; after that the
+        // act frames take over and never move again (Chiu 2026-07-30).
+        if let prologue, time < prologue.totalS {
+            return prologue.frame(atTime: time)
+        }
         guard let current = acts.last(where: { time >= $0.startS }) ?? acts.first else {
             return CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0)
         }
@@ -331,64 +370,13 @@ public struct CameraPath {
         return Self.bearingDeg(from: route[low], to: route[high])
     }
 
+    /// Same easing, reachable from the prologue extension so the opening moves
+    /// feel like the act seams rather than like a separate title sequence.
+    static func smoothstepPublic(_ progress: Double) -> Double { smoothstep(progress) }
+
     /// Ease-in/out (§4.5): zero velocity at both ends of every travel leg.
     private static func smoothstep(_ progress: Double) -> Double {
         let clamped = min(max(progress, 0), 1)
         return clamped * clamped * (3 - 2 * clamped)
-    }
-}
-
-// MARK: - Framing geometry (pure, deterministic)
-
-// Internal, not private: CameraPathActs.swift frames each act with these.
-extension CameraPath {
-    struct Bounds {
-        let minLat: Double
-        let maxLat: Double
-        let minLon: Double
-        let maxLon: Double
-    }
-
-    static func bounds(of route: [Point]) -> Bounds {
-        var minLat = route[0].lat, maxLat = route[0].lat
-        var minLon = route[0].lon, maxLon = route[0].lon
-        for point in route {
-            minLat = min(minLat, point.lat); maxLat = max(maxLat, point.lat)
-            minLon = min(minLon, point.lon); maxLon = max(maxLon, point.lon)
-        }
-        return Bounds(minLat: minLat, maxLat: maxLat, minLon: minLon, maxLon: maxLon)
-    }
-
-    /// Horizontal span that fits the whole route into the (portrait) frame:
-    /// wide enough for the east-west extent, and for the north-south extent
-    /// once scaled by the frame's aspect (vertical span = spanM · h/w).
-    static func fittingSpanM(bounds: Bounds, config: TrackingConfig.Export) -> Double {
-        let midLat = (bounds.minLat + bounds.maxLat) / 2
-        let lonExtentM = Geo.distanceM(latA: midLat, lonA: bounds.minLon, latB: midLat, lonB: bounds.maxLon)
-        let latExtentM = Geo.distanceM(latA: bounds.minLat, lonA: bounds.minLon, latB: bounds.maxLat, lonB: bounds.minLon)
-        let aspect = Double(config.frameWidthPx) / Double(config.frameHeightPx)
-        return max(lonExtentM, latExtentM * aspect)
-    }
-
-    /// Planar bearing (deg, 0 = north, clockwise) — `atan2(east, north)` with a
-    /// cos(lat) correction. Enough for a follow-cam at recap zoom; degenerate
-    /// (coincident) points face north.
-    static func bearingDeg(from start: Point, to end: Point) -> Double {
-        let meanLatRad = (start.lat + end.lat) / 2 * .pi / 180
-        let east = (end.lon - start.lon) * cos(meanLatRad)
-        let north = end.lat - start.lat
-        guard east != 0 || north != 0 else { return 0 }
-        let deg = atan2(east, north) * 180 / .pi
-        return deg < 0 ? deg + 360 : deg
-    }
-
-    /// Interpolate along the shortest arc from `start` to `end` (degrees), so a
-    /// heading near 360° eases toward 0° the short way, not backwards.
-    static func angleLerp(from start: Double, to end: Double, fraction: Double) -> Double {
-        var delta = (end - start).truncatingRemainder(dividingBy: 360)
-        if delta > 180 { delta -= 360 }
-        if delta < -180 { delta += 360 }
-        let result = (start + delta * fraction).truncatingRemainder(dividingBy: 360)
-        return result < 0 ? result + 360 : result
     }
 }

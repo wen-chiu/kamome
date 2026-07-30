@@ -37,6 +37,7 @@ final class CameraPathTests: XCTestCase {
             deckZoomS: 0.5,
             deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 4.5, openingRegionalS: 3.5, openingRouteS: 2.5,
+            countryViewPadding: 2.2,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: 15,

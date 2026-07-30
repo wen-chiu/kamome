@@ -49,7 +49,17 @@ final class RecapDemoFilmTests: XCTestCase {
 
     /// Renders `trip` the way the shipped app would and prints where it landed.
     private func renderFilm(trip: RecapTrip, config: TrackingConfig.Export, named: String) async throws {
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
+        let region = RecapMapRegionResolver.resolve(covering: bounds)
+        let establishing = region.map {
+            RecapBounds(
+                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
+                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
+            )
+        }
+        let timeline = try XCTUnwrap(
+            LinearTimeline(trip: trip, config: config, establishing: establishing)
+        )
         let style = RecapStyle.modernMinimal
 
         // Stand-in photos: the simulator has no real library, and the deck beats
@@ -59,7 +69,7 @@ final class RecapDemoFilmTests: XCTestCase {
             if case let .asset(id) = ref { images[id] = try photoTile(index: index) }
         }
 
-        let provider = try snapshotProvider(covering: trip)
+        let provider = try snapshotProvider(region: region)
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style),
@@ -90,6 +100,40 @@ final class RecapDemoFilmTests: XCTestCase {
             format: "KAMOME_DEMO_FILM %@  %d stops · %d legs · %d frames · %.1fs video · %.1f MB · rendered in %.0fs",
             videoURL.path, trip.stops.count, trip.legs.count, timeline.frameCount, duration, sizeMB, seconds
         ))
+        reportPacing(timeline, trip: trip)
+    }
+
+    /// Measures what the film actually does — dwell per stop read off the
+    /// timeline rather than assumed — so a before/after comparison reports
+    /// observed pacing instead of intended pacing.
+    private func reportPacing(_ timeline: LinearTimeline, trip: RecapTrip) {
+        let dwells = trip.stops.map { stop -> Double in
+            var first: Double?, last: Double?
+            var time = 0.0
+            while time <= timeline.durationS {
+                if let deck = activeDeck(timeline.overlayContents(atTime: time)),
+                   deck.photos.first == stop.photos.first, deck.opacity > 0.001 {
+                    if first == nil { first = time }
+                    last = time
+                }
+                time += 1.0 / 30
+            }
+            guard let first, let last else { return 0 }
+            return last - first
+        }
+        let mean = dwells.isEmpty ? 0 : dwells.reduce(0, +) / Double(dwells.count)
+        print(String(
+            format: "KAMOME_DEMO_PACING opening %.1fs · dwell mean %.1fs · range %.1f-%.1fs · per-stop %@",
+            timeline.openingS, mean, dwells.min() ?? 0, dwells.max() ?? 0,
+            dwells.map { String(format: "%.1f", $0) }.joined(separator: "/")
+        ))
+    }
+
+    private func activeDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
+        for content in contents {
+            if case let .photoDeck(deck) = content { return deck }
+        }
+        return nil
     }
 
     // MARK: - Imported film (photos → legs → OSRM → recap)
@@ -157,27 +201,6 @@ final class RecapDemoFilmTests: XCTestCase {
         try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
     }
 
-    /// One dogfood region's trip, read from `Tests/Fixtures/trips/<name>.json`.
-    ///
-    /// Fixtures rather than literals so the four gate regions are data, and so a
-    /// real photo library can be dumped into the same shape without touching
-    /// this test (`Tools/exif-to-fixture.sh`).
-    static func tripFixture(named name: String) throws -> (title: String, photos: [ImportPhoto]) {
-        let url = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Fixtures/trips/\(name).json")
-        let fixture = try JSONDecoder().decode(TripFixture.self, from: try Data(contentsOf: url))
-        // Fixture times are offsets from the trip start, so a fixture reads as a
-        // day rather than as a wall-clock date nobody can check.
-        let start = 1_752_600_000.0
-        return (
-            fixture.title,
-            fixture.photos.map {
-                ImportPhoto(assetId: $0.id, timestamp: start + $0.offsetS, lat: $0.lat, lon: $0.lon)
-            }
-        )
-    }
-
     // MARK: - Trip
 
     /// The committed day-1 GPX through the real engine, then the same composition
@@ -232,10 +255,9 @@ final class RecapDemoFilmTests: XCTestCase {
 
     // MARK: - Providers and assets
 
-    private func snapshotProvider(covering trip: RecapTrip) throws -> MapRenderer {
+    private func snapshotProvider(region: RecapMapRegion?) throws -> MapRenderer {
         #if canImport(MapLibre)
-        let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
-        guard let region = RecapMapRegionResolver.resolve(covering: bounds) else {
+        guard let region else {
             XCTFail("no region covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
             return MapKitSnapshotProvider()
         }
@@ -344,24 +366,4 @@ private final class GPXFilmParser: NSObject, XMLParserDelegate {
             break
         }
     }
-}
-
-/// On-disk shape of `Tests/Fixtures/trips/*.json` — place and time only, which
-/// is exactly what `ImportService` sees on device.
-private struct TripFixture: Decodable {
-    struct Photo: Decodable {
-        let id: String
-        /// Seconds from the trip's first photo.
-        let offsetS: Double
-        let lat: Double
-        let lon: Double
-
-        enum CodingKeys: String, CodingKey {
-            case id, lat, lon
-            case offsetS = "t"
-        }
-    }
-
-    let title: String
-    let photos: [Photo]
 }

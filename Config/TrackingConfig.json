@@ -116,6 +116,7 @@
     "opening_country_s": 4.5,
     "opening_regional_s": 3.5,
     "opening_route_s": 2.5,
+    "country_view_padding": 2.2,
     "stop_dwell_min_s": 6,
     "stop_dwell_max_s": 25,
     "total_duration_min_s": 60,

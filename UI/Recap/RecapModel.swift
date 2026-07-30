@@ -126,7 +126,16 @@ final class RecapModel {
         let exportConfig = config.export.withFollowHeadingUp(
             config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
         )
-        guard let timeline = LinearTimeline(trip: trip, config: exportConfig) else {
+        // The region's extent drives the opening establishing shot and switches
+        // the film onto content-derived pacing (Chiu 2026-07-30). No region means
+        // Apple's map, no prologue, and the previous fixed duration.
+        let establishing = region.map {
+            RecapBounds(
+                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
+                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
+            )
+        }
+        guard let timeline = LinearTimeline(trip: trip, config: exportConfig, establishing: establishing) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }

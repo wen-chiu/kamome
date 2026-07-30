@@ -84,3 +84,58 @@ extension CameraPath {
         return durationS
     }
 }
+
+// MARK: - Framing geometry (pure, deterministic)
+
+// Internal, not private: CameraPathActs.swift frames each act with these.
+extension CameraPath {
+    struct Bounds {
+        let minLat: Double
+        let maxLat: Double
+        let minLon: Double
+        let maxLon: Double
+    }
+
+    static func bounds(of route: [Point]) -> Bounds {
+        var minLat = route[0].lat, maxLat = route[0].lat
+        var minLon = route[0].lon, maxLon = route[0].lon
+        for point in route {
+            minLat = min(minLat, point.lat); maxLat = max(maxLat, point.lat)
+            minLon = min(minLon, point.lon); maxLon = max(maxLon, point.lon)
+        }
+        return Bounds(minLat: minLat, maxLat: maxLat, minLon: minLon, maxLon: maxLon)
+    }
+
+    /// Horizontal span that fits the whole route into the (portrait) frame:
+    /// wide enough for the east-west extent, and for the north-south extent
+    /// once scaled by the frame's aspect (vertical span = spanM · h/w).
+    static func fittingSpanM(bounds: Bounds, config: TrackingConfig.Export) -> Double {
+        let midLat = (bounds.minLat + bounds.maxLat) / 2
+        let lonExtentM = Geo.distanceM(latA: midLat, lonA: bounds.minLon, latB: midLat, lonB: bounds.maxLon)
+        let latExtentM = Geo.distanceM(latA: bounds.minLat, lonA: bounds.minLon, latB: bounds.maxLat, lonB: bounds.minLon)
+        let aspect = Double(config.frameWidthPx) / Double(config.frameHeightPx)
+        return max(lonExtentM, latExtentM * aspect)
+    }
+
+    /// Planar bearing (deg, 0 = north, clockwise) — `atan2(east, north)` with a
+    /// cos(lat) correction. Enough for a follow-cam at recap zoom; degenerate
+    /// (coincident) points face north.
+    static func bearingDeg(from start: Point, to end: Point) -> Double {
+        let meanLatRad = (start.lat + end.lat) / 2 * .pi / 180
+        let east = (end.lon - start.lon) * cos(meanLatRad)
+        let north = end.lat - start.lat
+        guard east != 0 || north != 0 else { return 0 }
+        let deg = atan2(east, north) * 180 / .pi
+        return deg < 0 ? deg + 360 : deg
+    }
+
+    /// Interpolate along the shortest arc from `start` to `end` (degrees), so a
+    /// heading near 360° eases toward 0° the short way, not backwards.
+    static func angleLerp(from start: Double, to end: Double, fraction: Double) -> Double {
+        var delta = (end - start).truncatingRemainder(dividingBy: 360)
+        if delta > 180 { delta -= 360 }
+        if delta < -180 { delta += 360 }
+        let result = (start + delta * fraction).truncatingRemainder(dividingBy: 360)
+        return result < 0 ? result + 360 : result
+    }
+}

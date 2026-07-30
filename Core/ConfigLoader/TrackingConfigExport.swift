@@ -51,6 +51,11 @@ public extension TrackingConfig {
         public let openingCountryS: Double
         public let openingRegionalS: Double
         public let openingRouteS: Double
+        /// How far past the trip's own bounds the country view reaches when no
+        /// map region extent is available (Apple's map, so no tiles declare one).
+        /// A guess, deliberately modest: an offline app cannot know where the
+        /// surrounding coastline is, and over-claiming would frame empty space.
+        public let countryViewPadding: Double
         /// Per-stop dwell bounds. Stops are deliberately *not* given equal time —
         /// a photo-rich stop earns more (`RecapDurationPlan`) — but neither a
         /// single-photo stop nor an eight-photo one should leave this window.
@@ -76,6 +81,7 @@ public extension TrackingConfig {
             actSplitKm: Double, followHeadingUp: Bool,
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double, openingRouteS: Double,
+            countryViewPadding: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
@@ -93,6 +99,7 @@ public extension TrackingConfig {
             self.openingCountryS = openingCountryS
             self.openingRegionalS = openingRegionalS
             self.openingRouteS = openingRouteS
+            self.countryViewPadding = countryViewPadding
             self.stopDwellMinS = stopDwellMinS
             self.stopDwellMaxS = stopDwellMaxS
             self.totalDurationMinS = totalDurationMinS
@@ -118,6 +125,7 @@ public extension TrackingConfig {
                 openingCountryS: openingCountryS,
                 openingRegionalS: openingRegionalS,
                 openingRouteS: openingRouteS,
+                countryViewPadding: countryViewPadding,
                 stopDwellMinS: stopDwellMinS,
                 stopDwellMaxS: stopDwellMaxS,
                 totalDurationMinS: totalDurationMinS,
@@ -148,6 +156,7 @@ public extension TrackingConfig {
             case openingCountryS = "opening_country_s"
             case openingRegionalS = "opening_regional_s"
             case openingRouteS = "opening_route_s"
+            case countryViewPadding = "country_view_padding"
             case stopDwellMinS = "stop_dwell_min_s"
             case stopDwellMaxS = "stop_dwell_max_s"
             case totalDurationMinS = "total_duration_min_s"

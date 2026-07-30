@@ -26,6 +26,28 @@ public enum PhotoRef: Equatable {
     case file(URL)
 }
 
+/// A lat/lon extent for the camera to frame — the opening establishing shot's
+/// widest view (Chiu 2026-07-30).
+///
+/// Deliberately **not** part of `RecapTrip`: it is neither trip content nor
+/// visual style but a fact about which map region is installed, so it travels
+/// beside the trip rather than inside it. The app resolves it once
+/// (`RecapMapRegion`); the camera receives four numbers and never learns that
+/// regions or tile files exist.
+public struct RecapBounds: Equatable {
+    public let minLat: Double
+    public let minLon: Double
+    public let maxLat: Double
+    public let maxLon: Double
+
+    public init(minLat: Double, minLon: Double, maxLat: Double, maxLon: Double) {
+        self.minLat = minLat
+        self.minLon = minLon
+        self.maxLat = maxLat
+        self.maxLon = maxLon
+    }
+}
+
 /// How a stretch of route came to have the shape it has (Fable review
 /// 2026-07-26, PD-1). **Release-critical, not bookkeeping:** the published film
 /// is the public artifact, so honesty has to be a property of the *pixels*, not

@@ -26,6 +26,9 @@ public struct LinearTimeline {
     /// Total rendered frames (`durationS · fps`) — what the render loop and
     /// exporter iterate; taken straight from the reused `CameraPath`.
     public let frameCount: Int
+    /// How much of the film is the opening establishing sequence — 0 when there
+    /// is no prologue. Exposed so a render can report its own pacing.
+    public let openingS: Double
 
     /// One leg's window into the flat route array, kept alongside the story it
     /// tells about itself. The camera works on the concatenated polyline (one
@@ -53,22 +56,48 @@ public struct LinearTimeline {
     private let shareURL: String?
 
     /// Fails on the same degenerate input as `CameraPath` (no usable route).
-    public init?(trip: RecapTrip, config: TrackingConfig.Export) {
+    ///
+    /// `establishing` is the installed map region's extent — what the opening
+    /// establishing shot frames (Chiu 2026-07-30). Passing nil keeps the film
+    /// exactly as it was: no prologue, `export.target_duration_s`, so every
+    /// golden-frame test renders unchanged.
+    public init?(trip: RecapTrip, config: TrackingConfig.Export, establishing: RecapBounds? = nil) {
         let route = trip.route
         let routePoints = route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
+        // Duration follows content when an establishing extent is supplied — the
+        // cinematic path. `RecapDurationPlan` sizes each stop from its own photo
+        // count and fits the whole film into the target window.
+        //
         // A stop's hold has to cover the whole scene, not just the photos: the car
         // parks on the way in and pulls away on the way out, and those beats are
         // *added* around the deck rather than taken out of it — otherwise every
         // stop would silently lose `2 · subject_park_s` of photo time.
+        let deckPacing = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
+        )
+        let plan: RecapDurationPlan? = establishing == nil ? nil : RecapDurationPlan.plan(
+            photoCounts: trip.stops.map(\.photos.count), config: config, deck: deckPacing
+        )
+        let stopHolds = plan.map { plan in
+            trip.stops.indices.map { index in
+                (index < plan.stopDwellS.count ? plan.stopDwellS[index] : trip.stops[index].dwellS)
+                    + 2 * config.subjectParkS
+            }
+        } ?? trip.stops.map { $0.dwellS + 2 * config.subjectParkS }
+
         guard let path = CameraPath(
             route: routePoints, stops: stopPoints, config: config,
-            stopHoldsS: trip.stops.map { $0.dwellS + 2 * config.subjectParkS }
+            stopHoldsS: stopHolds,
+            totalDurationS: plan?.totalS,
+            establishing: establishing,
+            openingS: plan?.openingS ?? 0
         ) else { return nil }
 
         self.path = path
         durationS = path.durationS
         frameCount = path.frameCount
+        openingS = plan?.openingS ?? 0
         stops = trip.stops
         holds = path.holds
         routeCoordinates = route
