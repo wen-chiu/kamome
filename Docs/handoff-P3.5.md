@@ -328,6 +328,11 @@ stop the camera eases to the place and a **photo deck** blooms — a 3-card fan
 
 ## 6. Three-trip dogfood + Replay MVP release gate (needs Chiu + iPhone + real photos)
 
+**Running the gate: `Docs/gate-P3.5-checklist.md`** — the owner runbook, in the
+order to do it in (desk-first: real fixtures → per-trip pacing/still/pilot → the
+one iPhone sitting → sign-off). The items below are the gate itself and stay
+authoritative; the checklist sequences them and carries the pre-flight traps.
+
 This replaces the old "combined device day." The Replay MVP does **not** need a
 drive — it needs **three of Chiu's real past trips of different character**, each
 run fully in-app: **photos import → matching → recap → MP4 → share.**
