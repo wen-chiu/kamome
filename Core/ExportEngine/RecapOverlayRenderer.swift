@@ -48,17 +48,19 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         switch content {
         case let .routeReveal(legs):
             for leg in legs { drawRouteLeg(leg, into: surface) }
-        case let .stopLabel(name, coordinate, detail, dayLabel, _, opacity):
+        case let .stopLabel(name, coordinate, detail, opacity):
             guard opacity > 0.001 else { return }
             surface.context.saveGState()
             surface.context.setAlpha(CGFloat(opacity))
             drawStopLabel(
-                identity: RecapStopIdentity(name: name, subtitle: Self.strap(dayLabel: dayLabel, detail: detail)),
+                identity: RecapStopIdentity(name: name, subtitle: Self.strap(detail: detail)),
                 coordinate: coordinate, into: surface
             )
             surface.context.restoreGState()
         case let .photoDeck(deck):
             drawPhotoDeck(deck, into: surface)
+        case let .hud(dayLabel, place, travelledM):
+            drawHUD(dayLabel: dayLabel, place: place, travelledM: travelledM, into: surface)
         case let .titleChrome(title, subtitle):
             drawTitleChrome(title: title, subtitle: subtitle, into: surface)
         case let .endChrome(stats, callToAction, shareURL):
@@ -66,24 +68,23 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         }
     }
 
-    /// The strap under a stop's name: which day of the trip it is, and whatever
-    /// second identity the stop carries (`detail` — the Latin/secondary name in
-    /// the prototype, a walk's duration for a walk-visit). Uppercased and
-    /// letter-spaced at draw time.
+    /// The strap under a stop's name: whatever second identity the stop carries
+    /// (`detail` — the Latin/secondary name in the prototype, a walk's duration
+    /// for a walk-visit). Uppercased and letter-spaced at draw time; absent when
+    /// the stop has no second line, rather than padded with something to say.
     ///
-    /// The distance deliberately does **not** live here: it belongs to the
-    /// metadata pill over the photo (`Self.distance`), opposite the day + place,
-    /// exactly as in the prototype's HUD. Putting it in both reads as a stutter.
-    static func strap(dayLabel: String, detail: String?) -> String? {
-        var parts: [String] = []
-        if !dayLabel.isEmpty { parts.append(dayLabel) }
-        if let detail, !detail.isEmpty { parts.append(detail) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ").uppercased()
+    /// The day and the distance deliberately do **not** live here: they belong to
+    /// the persistent HUD, which carries them on the road as well as at the stop
+    /// (Chiu 2026-07-31). Repeating them under the photo would say the same thing
+    /// twice in one frame and then take one copy away.
+    static func strap(detail: String?) -> String? {
+        guard let detail, !detail.isEmpty else { return nil }
+        return detail.uppercased()
     }
 
-    /// How far the journey has come by the time it reaches this stop, split into
-    /// number and unit so the unit can recede (`.hud .km small`). Under 100 m is
-    /// the start of the film, where a "0 km" readout says nothing.
+    /// How far the journey has come, split into number and unit so the unit can
+    /// recede (`.hud .km small`). Under 100 m is the opening of the film, where a
+    /// "0 km" readout says nothing.
     static func distance(travelledM: Double) -> (value: String, unit: String)? {
         guard travelledM >= 100 else { return nil }
         return (grouped(Int((travelledM / 1000).rounded())), "km")

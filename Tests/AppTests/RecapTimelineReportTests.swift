@@ -79,7 +79,7 @@ final class RecapTimelineReportTests: XCTestCase {
 
             if report.carAt == nil, subject.isVisible, subject.emphasis > 0.01 { report.carAt = time }
             for overlay in overlays {
-                if case .stopLabel(_, _, _, _, _, let opacity) = overlay, opacity > 0.01, report.firstStopAt == nil {
+                if case .stopLabel(_, _, _, let opacity) = overlay, opacity > 0.01, report.firstStopAt == nil {
                     report.firstStopAt = time
                 }
                 if case .photoDeck = overlay, report.firstDeckAt == nil { report.firstDeckAt = time }

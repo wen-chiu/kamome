@@ -21,6 +21,34 @@ extension LinearTimeline {
         return nil
     }
 
+    /// The stop the film is **parked at**, if any — unlike `activeScene`, this
+    /// does not require the stop to have photos. The HUD names where the vehicle
+    /// is, and a stop with nothing to show is still a place the journey stopped;
+    /// on the road between stops it is nil and the HUD shows the day alone.
+    func holdingStop(atTime time: Double) -> RecapTrip.Stop? {
+        for hold in holds where hold.startS <= time && time < hold.endS {
+            guard stops.indices.contains(hold.stopIndex) else { continue }
+            return stops[hold.stopIndex]
+        }
+        return nil
+    }
+
+    /// Which day of the trip the film is on: the day of the **most recent stop
+    /// reached**, held until the next one is.
+    ///
+    /// A leg belongs to no stop, so it has to inherit a day from one of them, and
+    /// inheriting from the stop just left is the honest direction — you drive on
+    /// the day you set out, and the counter turns over on arrival, not somewhere
+    /// out on the road. Before the first stop the trip is on its first day.
+    func dayLabel(atTime time: Double) -> String {
+        var label = stops.first?.dayLabel ?? ""
+        for hold in holds where hold.startS <= time {
+            guard stops.indices.contains(hold.stopIndex) else { continue }
+            label = stops[hold.stopIndex].dayLabel
+        }
+        return label
+    }
+
     /// The deck's sub-window inside a stop's hold. The scene runs
     /// **park → label → deck → pull away**, so the card opens after the car has
     /// finished parking plus `labelLeadS`, and — importantly — *closes before the

@@ -260,7 +260,7 @@ final class RecapPacingTests: XCTestCase {
         var time = 0.0
         while time <= line.durationS {
             for content in line.overlayContents(atTime: time) {
-                if case let .stopLabel(_, _, _, _, _, opacity) = content, opacity > 0.001 { return time }
+                if case let .stopLabel(_, _, _, opacity) = content, opacity > 0.001 { return time }
                 if case let .photoDeck(deck) = content, deck.opacity > 0.001 { return time }
             }
             time += 1.0 / 30

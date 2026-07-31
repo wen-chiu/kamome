@@ -160,33 +160,30 @@ public struct RecapStyle {
     public var deckDotOnColor = RecapStyle.routeAccent
     public var deckDotOffColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.28)
 
-    // The metadata pill over the top of the hero photo — `.hud .badge`
-    // (`rgba(8,12,18,.55)`, `backdrop-filter: blur(8px)`, `1px solid
-    // rgba(255,255,255,.09)`, `border-radius: 999px`, `padding: 6px 12px`,
-    // `font-size: 12.5px`) with the distance readout opposite it (`.hud .km`,
-    // its unit in `--muted` at the `<small>` size).
+    // The persistent HUD in the frame's top corners — `.hud` / `.hud .badge`
+    // (`top/left/right: 22px`, `rgba(8,12,18,.55)`, `backdrop-filter: blur(8px)`,
+    // `1px solid rgba(255,255,255,.09)`, `border-radius: 999px`, `padding: 6px
+    // 12px`, `font-size: 12.5px`), with the distance readout opposite it
+    // (`.hud .km`, its unit in `--muted` at the `<small>` size).
     //
     // **CoreGraphics has no backdrop blur.** Blurring what is already composited
-    // under the pill would mean reading back the frame buffer per stop frame, and
-    // the pill's job is legibility over an arbitrary photograph. The closest
-    // native primitive is a flat fill, so the alpha is raised from .55 to .72 to
-    // buy back the contrast the blur was providing.
-    public var deckMetaFillColor = CGColor(srgbRed: 0.031, green: 0.047, blue: 0.071, alpha: 0.72)
-    public var deckMetaBorderColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.09)
-    public var deckMetaBorderPx: CGFloat = 3
-    public var deckMetaFontPx: CGFloat = 33
-    public var deckMetaTextColor = CGColor(srgbRed: 0.953, green: 0.961, blue: 0.969, alpha: 1)
+    // under the pill would mean reading back the frame buffer per frame, and the
+    // pill's job is legibility over an arbitrary photograph. The closest native
+    // primitive is a flat fill, so the alpha is raised from .55 to .72 to buy back
+    // the contrast the blur was providing.
+    public var hudPillColor = CGColor(srgbRed: 0.031, green: 0.047, blue: 0.071, alpha: 0.72)
+    public var hudPillBorderColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.09)
+    public var hudPillBorderPx: CGFloat = 3
+    public var hudFontPx: CGFloat = 33
+    public var hudTextColor = CGColor(srgbRed: 0.953, green: 0.961, blue: 0.969, alpha: 1)
     /// `--muted` — the "km" unit, which must not compete with the number.
-    public var deckMetaUnitColor = CGColor(srgbRed: 0.541, green: 0.592, blue: 0.651, alpha: 1)
-    public var deckMetaPaddingXPx: CGFloat = 31
-    public var deckMetaPaddingYPx: CGFloat = 16
-    /// `.hud { top: 22px; left: 22px; right: 22px }` — the row spans the frame,
-    /// so the pill can start left of a centred card exactly as it does in the
-    /// prototype.
-    public var deckMetaMarginPx: CGFloat = 58
-    /// How far below the card's top edge the pill sits. The pill belongs to the
-    /// photo, so it rides down with a card that opens lower in frame.
-    public var deckMetaInsetPx: CGFloat = 97
+    public var hudUnitColor = CGColor(srgbRed: 0.541, green: 0.592, blue: 0.651, alpha: 1)
+    public var hudPillPaddingXPx: CGFloat = 31
+    public var hudPillPaddingYPx: CGFloat = 16
+    /// `.hud { top: 22px; left: 22px; right: 22px }` — inset from the frame's own
+    /// corners, so the row is film chrome rather than something attached to
+    /// whatever happens to be on screen.
+    public var hudMarginPx: CGFloat = 58
 
     // Stop identity (§5 two-beat lead): the pin sits **on** the stop and the
     // stop's name stands on the pin (Chiu 2026-07-26 — the car parks and

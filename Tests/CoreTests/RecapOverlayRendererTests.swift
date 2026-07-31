@@ -180,8 +180,7 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         let nameRGB = RGB(red: 255, green: 0, blue: 255)
         style.labelTextColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
         let label = OverlayContent.stopLabel(
-            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil,
-            dayLabel: "Day 1", travelledM: 0, opacity: 1
+            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil, opacity: 1
         )
         let frame = try await render(
             [label], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0), style: style
@@ -226,11 +225,10 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
 
     // MARK: - The stop's typography layer (2026-07-31 prototype port)
 
-    private func deckContent(photos: [PhotoRef], focusIndex: Int = 0, travelledM: Double = 0) -> OverlayContent {
+    private func deckContent(photos: [PhotoRef], focusIndex: Int = 0) -> OverlayContent {
         .photoDeck(RecapPhotoDeck(
             photos: photos, focusIndex: focusIndex, reveal: 1, opacity: 1,
-            name: "小樽運河", dayLabel: "Day 3", travelledM: travelledM,
-            coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
+            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
         ))
     }
 
@@ -251,26 +249,52 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         XCTAssertEqual(try colorCount(one, matching: dotRGB), 0, "a one-photo stop has nothing to page through")
     }
 
-    /// The metadata pill belongs to the **photograph** — it rides on the card, so
-    /// the lead-in beat (pin + name, no card yet) must not draw it.
-    func testMetadataPillRidesOnThePhotoAndNotOnTheLeadInLabel() async throws {
+    /// The HUD is **film chrome, not stop chrome** (Chiu 2026-07-31). The day and
+    /// the running distance answer "where are we in this trip" at any instant, so
+    /// they must draw on their own — on the road, with no stop and no card in the
+    /// frame — and must not be something a photo card brings with it.
+    func testHUDDrawsOnItsOwnAndTheStopOverlaysDoNot() async throws {
         var style = opaqueCardStyle
         let pillRGB = RGB(red: 255, green: 0, blue: 255)
-        style.deckMetaFillColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        style.hudPillColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
         let green = try makeSolidImage(red: 0, green: 1, blue: 0)
 
-        let deck = try await render(
-            [deckContent(photos: [.asset("a"), .asset("b")], travelledM: 114_000)],
+        let travelling = try await render(
+            [.hud(dayLabel: "Day 3", place: nil, travelledM: 114_000)], resolverImage: green, style: style
+        )
+        XCTAssertGreaterThan(
+            try colorCount(travelling, matching: pillRGB), 0, "the HUD draws mid-leg, with no stop on screen"
+        )
+
+        // Neither stop overlay carries it any more — the HUD is the only source.
+        let stopOnly = try await render(
+            [
+                deckContent(photos: [.asset("a"), .asset("b")]),
+                .stopLabel(name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil, opacity: 1)
+            ],
             resolverImage: green, style: style
         )
-        XCTAssertGreaterThan(try colorCount(deck, matching: pillRGB), 0, "the deck beat carries the metadata pill")
+        XCTAssertEqual(try colorCount(stopOnly, matching: pillRGB), 0, "a stop must not draw its own metadata pill")
+    }
 
-        let lead = OverlayContent.stopLabel(
-            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil,
-            dayLabel: "Day 3", travelledM: 114_000, opacity: 1
+    /// The HUD names the place only while the film is parked at one; on the road
+    /// it is the day alone, so the pill is narrower.
+    func testHUDNamesThePlaceOnlyWhileParkedAtIt() async throws {
+        var style = opaqueCardStyle
+        let pillRGB = RGB(red: 255, green: 0, blue: 255)
+        style.hudPillColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+
+        let parked = try await render(
+            [.hud(dayLabel: "Day 3", place: "小樽運河", travelledM: 114_000)], resolverImage: green, style: style
         )
-        let label = try await render([lead], resolverImage: green, style: style)
-        XCTAssertEqual(try colorCount(label, matching: pillRGB), 0, "the lead-in beat has no photo to pin it to")
+        let travelling = try await render(
+            [.hud(dayLabel: "Day 3", place: nil, travelledM: 114_000)], resolverImage: green, style: style
+        )
+        XCTAssertGreaterThan(
+            try colorCount(parked, matching: pillRGB), try colorCount(travelling, matching: pillRGB),
+            "the pill grows to carry the stop's name while parked at it"
+        )
     }
 
     func testOverlayRenderingIsDeterministic() async throws {
@@ -282,13 +306,14 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
             )]),
             .stopLabel(
                 name: "Stop", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75),
-                detail: "步行 21 分鐘", dayLabel: "Day 1", travelledM: 0, opacity: 0.5
+                detail: "步行 21 分鐘", opacity: 0.5
             ),
             .photoDeck(RecapPhotoDeck(
                 photos: [.asset("a"), .asset("b")], focusIndex: 0,
                 reveal: 0.7, opacity: 0.7, name: "Stop", detail: "步行 21 分鐘",
                 coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
-            ))
+            )),
+            .hud(dayLabel: "Day 1", place: "Stop", travelledM: 1358_000)
         ]
         let first = try await render(contents, resolverImage: green)
         let second = try await render(contents, resolverImage: green)

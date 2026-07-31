@@ -54,7 +54,7 @@ class LinearTimelineTestCase: XCTestCase {
 
     func hasStopLabel(_ contents: [OverlayContent], name: String) -> Bool {
         contents.contains {
-            if case let .stopLabel(labelName, _, _, _, _, _) = $0 { return labelName == name }
+            if case let .stopLabel(labelName, _, _, _) = $0 { return labelName == name }
             return false
         }
     }
@@ -193,7 +193,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
 
         func labelOpacity(atTime time: Double) -> Double? {
             for content in timeline.overlayContents(atTime: time) {
-                if case let .stopLabel(_, _, _, _, _, opacity) = content { return opacity }
+                if case let .stopLabel(_, _, _, opacity) = content { return opacity }
             }
             return nil
         }
@@ -261,11 +261,13 @@ final class LinearTimelineTests: LinearTimelineTestCase {
             let kinds = contents.map { content -> String in
                 switch content {
                 case let .routeReveal(points): return "route(\(points.count))"
-                case let .stopLabel(_, _, _, _, _, opacity): return String(format: "label(o%.2f)", opacity)
+                case let .stopLabel(_, _, _, opacity): return String(format: "label(o%.2f)", opacity)
                 case let .photoDeck(deck):
                     return String(format: "deck(f%d,r%.2f,o%.2f)", deck.focusIndex, deck.reveal, deck.opacity)
                 case .titleChrome: return "title"
                 case .endChrome: return "end"
+                case let .hud(day, place, travelledM):
+                    return String(format: "hud(%@/%@,%.0fm)", day, place ?? "-", travelledM)
                 }
             }
             // reveal (card size) and span (map dolly) are separate curves — this

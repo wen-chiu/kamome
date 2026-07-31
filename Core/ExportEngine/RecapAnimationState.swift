@@ -89,14 +89,14 @@ public struct RecapPhotoDeck: Equatable {
     /// 0…1 fade, so the card can cross-fade with the lead-in stop label.
     public let opacity: Double
     /// The stop's name and optional detail line, drawn under the card.
+    ///
+    /// **Which day it is and how far the journey has come are deliberately not
+    /// here** (Chiu 2026-07-31). Those belong to the film, not to one photograph,
+    /// so they live in the persistent `hud` overlay — on screen while driving as
+    /// well as while stopped. A card that carried them repeated the HUD for a few
+    /// seconds and then took them away again.
     public let name: String
     public let detail: String?
-    /// "Day 7" — which day of the trip this stop belongs to. Already computed
-    /// per stop by `RecapComposer`; surfaced here so the caption can carry it.
-    public let dayLabel: String
-    /// Distance travelled so far, in metres. Formatted by the renderer, which
-    /// owns presentation; the timeline only knows how far the subject has come.
-    public let travelledM: Double
     /// Where the stop is. The renderer projects it and places the whole card
     /// group *beside the vehicle parked there* — with a static camera the
     /// vehicle is no longer centred, so a frame-centred card would collide with
@@ -105,8 +105,7 @@ public struct RecapPhotoDeck: Equatable {
 
     public init(
         photos: [PhotoRef], focusIndex: Int, reveal: Double, opacity: Double,
-        name: String, detail: String? = nil, dayLabel: String = "",
-        travelledM: Double = 0, coordinate: RecapCoordinate
+        name: String, detail: String? = nil, coordinate: RecapCoordinate
     ) {
         self.photos = photos
         self.focusIndex = focusIndex
@@ -114,8 +113,6 @@ public struct RecapPhotoDeck: Equatable {
         self.opacity = opacity
         self.name = name
         self.detail = detail
-        self.dayLabel = dayLabel
-        self.travelledM = travelledM
         self.coordinate = coordinate
     }
 }
@@ -150,12 +147,22 @@ public enum OverlayContent: Equatable {
     /// A stop pin on the map with its name label floating clear above the
     /// vehicle (the lead-in beat). `opacity` fades it out as the photo deck
     /// takes over the stop's identity below the card.
-    case stopLabel(
-        name: String, coordinate: RecapCoordinate, detail: String?,
-        dayLabel: String, travelledM: Double, opacity: Double
-    )
+    case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?, opacity: Double)
     /// The enlarged photo deck at a stop.
     case photoDeck(RecapPhotoDeck)
+    /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
+    /// and how far the journey has come, in the frame's top corners, for the whole
+    /// body of the film — driving as well as stopped.
+    ///
+    /// This is a fact about the *journey at this instant*, which is why it is one
+    /// overlay rather than something each stop carries: the distance has to keep
+    /// climbing while the car moves, and the day has to be readable on a leg that
+    /// belongs to no stop at all. `place` is the stop the film is parked at, and
+    /// is nil on the road between them.
+    ///
+    /// Suppressed under the title and end cards, which are full-bleed and own the
+    /// frame for their few seconds.
+    case hud(dayLabel: String, place: String?, travelledM: Double)
     /// Opening chrome: trip name + dates/distance.
     case titleChrome(title: String, subtitle: String)
     /// Closing chrome: stats, the call to action, and the share payload the

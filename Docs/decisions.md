@@ -1003,3 +1003,32 @@ the blur was providing.
 **Unchanged, checked:** film pacing (iceland: total 90.00 s, opening ends 5.90 s,
 first stop 5.93 s, car 11.37 s, longest still 2.97 s), the camera, the route glow,
 the 380 px car sprite and the modern-minimal map style.
+
+## 2026-07-31 — Day and distance become persistent HUD, not stop chrome
+
+**Context:** The day and the running distance were drawn by the photo card, so
+they appeared for a few seconds at each stop and vanished on the road in between.
+Two problems, one visible and one conceptual: pause the film mid-leg and it told
+you nothing about where you were in the trip, and a distance rendered *by a stop*
+reads as a property of that stop rather than of the journey.
+
+**Decision:** a new `OverlayContent.hud(dayLabel:place:travelledM:)`, emitted by
+`LinearTimeline` on **every frame of the body** and drawn in the frame's top
+corners (the prototype's `.hud`) — day (plus the place, while parked at one) on
+the left, running total on the right. `RecapPhotoDeck` and `.stopLabel` lost
+`dayLabel`/`travelledM` outright rather than keeping them unused; the strap under
+a stop's name is now its `detail` alone, and absent when it has none.
+
+- **The day on a leg is the day of the stop just left**, held until the next is
+  reached. A leg belongs to no stop and must inherit from one; inheriting
+  backwards is the honest direction, because you drive on the day you set out and
+  the counter should turn over on arrival, not somewhere out on the road.
+- **Suppressed under the title and end cards.** They are full-bleed and own their
+  seconds; chrome across a centred title stack is clutter, and the readout there
+  is "0 km". This follows the prototype, which also drops the HUD for both cards.
+
+**Rejected:** keeping a copy on the card as well (the prototype does exactly that
+— its badge and its strap both read "Day 10 · Fjaðrárgljúfur"). Saying it twice in
+one frame and then taking one copy away is worse than saying it once, everywhere.
+Also rejected: deriving the day from elapsed film time, which would drift against
+the trip's real dates.

@@ -274,9 +274,7 @@ public struct LinearTimeline {
             let labelOpacity = leadLabelOpacity(atTime: time, hold: active.hold, deck: window)
             if labelOpacity > 0.001 {
                 contents.append(.stopLabel(
-                    name: stop.name, coordinate: stop.coordinate, detail: stop.detail,
-                    dayLabel: stop.dayLabel, travelledM: path.traveledDistanceM(atTime: time),
-                    opacity: labelOpacity
+                    name: stop.name, coordinate: stop.coordinate, detail: stop.detail, opacity: labelOpacity
                 ))
             }
             if time >= window.start {
@@ -287,11 +285,18 @@ public struct LinearTimeline {
                     opacity: deckOpacity(atTime: time, deck: window),
                     name: stop.name,
                     detail: stop.detail,
-                    dayLabel: stop.dayLabel,
-                    travelledM: path.traveledDistanceM(atTime: time),
                     coordinate: stop.coordinate
                 )))
             }
+        }
+        // Last, so it sits on top of everything it overlaps — and only across the
+        // body: the title and end cards are full-bleed and own their seconds.
+        if time >= titleCardS, time < durationS - endCardS {
+            contents.append(.hud(
+                dayLabel: dayLabel(atTime: time),
+                place: holdingStop(atTime: time)?.name,
+                travelledM: path.traveledDistanceM(atTime: time)
+            ))
         }
         return contents
     }

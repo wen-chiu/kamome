@@ -17,8 +17,10 @@ import Foundation
 ///   2. **photo** — two secondary cards peeking out behind the hero, offset and
 ///      rotated, then the hero itself: portrait, strongly rounded, white
 ///      keyline, heavy drop shadow.
-///   3. **typography** — the metadata pill over the top of the photo, then the
-///      place's name and its accent strap under it.
+///   3. **typography** — the place's name and its accent strap under the photo.
+///      Which day it is and how far the journey has come are *not* here: they are
+///      facts about the film, not about one photograph, and live in the
+///      persistent `hud` overlay (Chiu 2026-07-31).
 ///
 /// What this is *not*: the fanned-stack carousel the prototype also shows. That
 /// changes what a deck has to express (per-card transforms driven by a moving
@@ -48,8 +50,7 @@ extension RecapOverlayRenderer {
         let reveal = min(max(CGFloat(deck.reveal), 0), 1 + style.deckRevealOvershoot)
         let cardW = minW + (maxW - minW) * reveal
         let identity = RecapStopIdentity(
-            name: deck.name, subtitle: Self.strap(dayLabel: deck.dayLabel, detail: deck.detail),
-            photoCount: count, focusIndex: index
+            name: deck.name, subtitle: Self.strap(detail: deck.detail), photoCount: count, focusIndex: index
         )
         // The frame-edge clamp is given the *cluster's* width — hero plus the two
         // peeks sticking out either side — so a stop near the edge keeps its whole
@@ -71,7 +72,6 @@ extension RecapOverlayRenderer {
             resolver.image(for: deck.photos[index], targetPx: Int(maxW)),
             in: heroRect, rotationDegrees: 0, cardScale: 1, in: surface
         )
-        drawMetaPill(deck, cardRect: heroRect, in: surface)
         drawIdentity(identity, in: layout.labelRect, surface: surface)
         context.restoreGState()
     }
@@ -142,79 +142,5 @@ extension RecapOverlayRenderer {
             x: imageRect.midX - drawSize.width / 2, y: imageRect.midY - drawSize.height / 2,
             width: drawSize.width, height: drawSize.height
         ))
-    }
-
-    // MARK: - Typography layer
-
-    /// The metadata row over the top of the photo — `.hud`: a dark translucent
-    /// pill carrying *day + place* on the left, and the distance travelled so far
-    /// opposite it on the right, its unit set back in the muted grey.
-    ///
-    /// Secondary to the photograph by construction: it is small, it sits *inside*
-    /// the picture rather than pushing it down, and it never takes the accent
-    /// colour — that belongs to the strap under the name.
-    private func drawMetaPill(_ deck: RecapPhotoDeck, cardRect: CGRect, in surface: RenderSurface) {
-        let scale = surface.scale
-        let margin = style.deckMetaMarginPx * scale
-        let fontPx = style.deckMetaFontPx
-        let padding = CGSize(width: style.deckMetaPaddingXPx * scale, height: style.deckMetaPaddingYPx * scale)
-        let badge = [deck.dayLabel, deck.name].filter { !$0.isEmpty }.joined(separator: " · ")
-        let distance = Self.distance(travelledM: deck.travelledM)
-        guard !badge.isEmpty || distance != nil else { return }
-
-        let pillH = fontPx * scale + padding.height * 2
-        let top = min(
-            max(cardRect.maxY - style.deckMetaInsetPx * scale, pillH + margin),
-            CGFloat(surface.heightPx) - margin
-        )
-        let baselineY = top - padding.height - fontPx * scale * 0.82
-
-        if !badge.isEmpty {
-            let fitted = fittedFontPx(
-                badge, preferred: fontPx,
-                maxWidth: CGFloat(surface.widthPx) * 0.62 - padding.width * 2, in: surface
-            )
-            let pill = CGRect(
-                x: margin, y: top - pillH,
-                width: textWidth(badge, fontPx: fitted, in: surface) + padding.width * 2, height: pillH
-            )
-            surface.context.setFillColor(style.deckMetaFillColor)
-            surface.context.addPath(CGPath(roundedRect: pill, cornerWidth: pillH / 2, cornerHeight: pillH / 2, transform: nil))
-            surface.context.fillPath()
-            surface.context.setStrokeColor(style.deckMetaBorderColor)
-            surface.context.setLineWidth(style.deckMetaBorderPx * scale)
-            surface.context.addPath(CGPath(roundedRect: pill, cornerWidth: pillH / 2, cornerHeight: pillH / 2, transform: nil))
-            surface.context.strokePath()
-            drawText(
-                badge, at: CGPoint(x: pill.minX + padding.width, y: baselineY),
-                fontPx: fitted, color: style.deckMetaTextColor, in: surface
-            )
-        }
-
-        guard let distance else { return }
-        drawDistance(distance, rightEdge: CGFloat(surface.widthPx) - margin, baselineY: baselineY, in: surface)
-    }
-
-    /// "925 km", right-aligned: the number at the row's size, the unit smaller and
-    /// muted (`.hud .km small`), so the figure reads at a glance and the unit does
-    /// not compete with it.
-    private func drawDistance(
-        _ distance: (value: String, unit: String), rightEdge: CGFloat, baselineY: CGFloat, in surface: RenderSurface
-    ) {
-        let scale = surface.scale
-        let valuePx = style.deckMetaFontPx
-        let unitPx = valuePx * 0.8
-        let gap = 8 * scale
-        let valueW = textWidth(distance.value, fontPx: valuePx, in: surface)
-        let unitW = textWidth(distance.unit, fontPx: unitPx, in: surface)
-        let originX = rightEdge - (valueW + gap + unitW)
-        drawText(
-            distance.value, at: CGPoint(x: originX, y: baselineY),
-            fontPx: valuePx, color: style.deckMetaTextColor, in: surface
-        )
-        drawText(
-            distance.unit, at: CGPoint(x: originX + valueW + gap, y: baselineY),
-            fontPx: unitPx, color: style.deckMetaUnitColor, in: surface
-        )
     }
 }
