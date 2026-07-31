@@ -92,10 +92,12 @@ Then, per trip:
 
 - [ ] **Import from the real photo library** → first time PD-3's outlier gate
       meets real EXIF.
-- [ ] **Open the trip detail screen and let the stop names land** before
-      exporting. Geocoding runs from S3 only (`TripDetailModel` → `StopNamer`), so
-      a film exported without visiting S3 is full of "Unnamed stop". This is the
-      most likely way to waste an export.
+- [ ] **Let the stop names land before exporting.** Import pushes you to trip
+      detail automatically, which is what starts geocoding (`TripDetailModel` →
+      `StopNamer`), so nothing is skipped — but names arrive one every
+      `geocode.min_interval_s` (2 s), so a nine-stop trip needs ~16 s on that
+      screen. Tap the film button immediately and the early stops are named and
+      the late ones say "Unnamed stop".
 - [ ] **Export MP4**, note the render-time readout (device-test-P3 item F).
 - [ ] **Share sheet** → plays in Photos/Messages.
 
@@ -116,6 +118,75 @@ Once, not per trip:
       publishing" — not "the map beats Apple Maps".
 
 ---
+
+---
+
+## Appendix — first device install (going straight to the phone)
+
+For running the real app on real photos without the desk stages. Everything here
+is one-time except step 2.
+
+**1 · Signing.** The `.xcodeproj` is generated and git-ignored, so a team picked
+by hand in Xcode is **lost on the next `xcodegen generate`**. Add it to
+`project.yml` once instead, under the app target's `settings: base:`:
+
+```yaml
+        DEVELOPMENT_TEAM: <your 10-char team id>
+        CODE_SIGN_STYLE: Automatic
+```
+
+Then `xcodegen generate`. Bundle id is `com.chiu.kamome.dev`; on a free Apple ID
+the install expires after 7 days and needs a re-run.
+
+**2 · Point the app at your Mac's OSRM.** `matching.base_url` ships `""` and there
+is **no environment override in the app** — it is read from the bundled
+`Config/TrackingConfig.json`, so this is an edit plus a rebuild:
+
+```bash
+ipconfig getifaddr en0        # e.g. 192.168.0.6
+```
+
+```json
+"matching": { "base_url": "http://192.168.0.6:5100", ... }
+```
+
+The compose file already binds `0.0.0.0:5100`, so nothing to change server-side.
+**Revert this before committing** — a LAN address in the shipped config is wrong
+for everyone else.
+
+**3 · Device prerequisites.** iOS 17+; Developer Mode on (Settings → Privacy &
+Security → Developer Mode); phone and Mac on the same Wi-Fi. On a free account,
+first launch also needs Settings → General → VPN & Device Management → trust.
+
+**4 · Prove OSRM is reachable *from the phone*, in Safari, before importing:**
+
+```
+http://192.168.0.6:5100/route/v1/driving/-21.94,64.14;-21.13,64.25?overview=false
+```
+
+JSON with `"code":"Ok"` means good. Do not skip this: `importTrip` awaits
+`matchTrip` but treats failure as "keep raw geometry" (PD-2), so a wrong address,
+a different Wi-Fi, or the macOS firewall gives you a **complete, plausible trip
+with every leg dashed** — not an error. If macOS prompts to allow incoming
+connections, allow it.
+
+**5 · Side-load tiles** for the regions you will import — `<region>.pmtiles` and
+`<region>-terrain.pmtiles` — per §3 of `dogfood-infrastructure.md`. Without them
+the film renders on Apple's map instead of the souvenir map; without the terrain
+file it renders flat.
+
+**6 · Use the app.** Home → **Import from photos** → the date range (defaults to
+`import.default_range_days` = 7 days back) → Import.
+- Photos permission: choose **Full Library** for the first run; Limited is a
+  separate gate item and worth its own attempt afterwards.
+- **Local Network** permission is prompted on the first routing call — allow it,
+  or every leg draws dashed.
+- Photos cluster into stops at `import.stop_radius_m` = 4 km, split by gaps over
+  3 h. A dense city day may come out as one stop; that is the tuning to report.
+
+**7 · Read the result on trip detail.** The route on S3's map is the tell: it
+follows roads if OSRM answered, and runs in straight lines between stops if it did
+not. Wait for the stop names (~2 s each), then film button → S5 → MP4 → share.
 
 ## Not on this list, on purpose
 
