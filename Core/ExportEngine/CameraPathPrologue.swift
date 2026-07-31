@@ -16,38 +16,48 @@ import KamomeTrackingEngine
 /// deliberately no per-stop approach: a stop is told by the pin and the card, and
 /// the two-beat presentation already gives it presence without flying the map.
 extension CameraPath {
-    /// The three framings the opening moves through, and how long each is held.
+    /// One held framing in the opening.
+    struct Beat {
+        let frame: CameraFrame
+        let holdS: Double
+    }
+
+    /// The opening as a sequence of held framings joined by eased transitions.
+    ///
+    /// **Beats that do not move are dropped** (Chiu 2026-07-31). A trip that fits
+    /// in one act frames its region and its route identically, so the "regional →
+    /// route" transition moved nothing and the two holds either side of it were a
+    /// frozen picture — 6.4 s of a film in which literally nothing changed, right
+    /// before the first stop. A list of beats with near-duplicates collapsed
+    /// spends time only where the camera is actually going somewhere.
     struct Prologue {
-        let country: CameraFrame
-        let regional: CameraFrame
-        let route: CameraFrame
-        let countryS: Double
-        let regionalS: Double
-        let routeS: Double
+        let beats: [Beat]
         let transitionS: Double
 
         /// Where the journey's clock starts. Everything before this is prologue.
         var totalS: Double {
-            countryS + transitionS + regionalS + transitionS + routeS
+            beats.reduce(0) { $0 + $1.holdS } + Double(max(beats.count - 1, 0)) * transitionS
         }
 
-        /// The framing at `time`, for `time < totalS`. Holds, then eases, then
-        /// holds — the same smoothstep the act seams use, so the opening feels
-        /// like the rest of the film rather than a separate title sequence.
+        /// The framing at `time`. Holds, then eases, then holds — the same
+        /// smoothstep the act seams use, so the opening feels like the rest of the
+        /// film rather than a separate title sequence.
         func frame(atTime time: Double) -> CameraFrame {
-            let easeOut = countryS + transitionS
-            let regionalEnd = easeOut + regionalS
-            let easeIn = regionalEnd + transitionS
-
-            if time <= countryS { return country }
-            if time < easeOut {
-                return CameraPath.lerp(country, regional, CameraPath.smoothstepPublic((time - countryS) / transitionS))
+            guard let first = beats.first else {
+                return CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0)
             }
-            if time <= regionalEnd { return regional }
-            if time < easeIn {
-                return CameraPath.lerp(regional, route, CameraPath.smoothstepPublic((time - regionalEnd) / transitionS))
+            var cursor = 0.0
+            for (index, beat) in beats.enumerated() {
+                if time <= cursor + beat.holdS { return beat.frame }
+                cursor += beat.holdS
+                guard index + 1 < beats.count else { return beat.frame }
+                let next = beats[index + 1].frame
+                if time < cursor + transitionS {
+                    return CameraPath.lerp(beat.frame, next, CameraPath.smoothstepPublic((time - cursor) / transitionS))
+                }
+                cursor += transitionS
             }
-            return route
+            return beats.last?.frame ?? first.frame
         }
     }
 
@@ -83,15 +93,44 @@ extension CameraPath {
             : config.wideSpanPadding
         let country = frame(for: countryBounds, config: config, padding: countryPadding)
 
-        return Prologue(
-            country: country,
-            regional: regional,
-            route: routeFrame,
-            countryS: config.openingCountryS,
-            regionalS: config.openingRegionalS,
-            routeS: config.openingRouteS,
-            transitionS: config.zoomTransitionS
+        let wanted = [
+            Beat(frame: country, holdS: config.openingCountryS),
+            Beat(frame: regional, holdS: config.openingRegionalS),
+            Beat(frame: routeFrame, holdS: config.openingRouteS)
+        ]
+        return Prologue(beats: collapse(wanted, config: config), transitionS: config.zoomTransitionS)
+    }
+
+    /// Drops beats that would not move the camera. When two consecutive framings
+    /// are effectively the same picture, the later one wins — it is the one
+    /// closest to the journey starting, and it carries the shorter hold, so the
+    /// film gets on with it instead of sitting on a duplicate.
+    static func collapse(_ beats: [Beat], config: TrackingConfig.Export) -> [Beat] {
+        var kept: [Beat] = []
+        for beat in beats {
+            guard let previous = kept.last else { kept.append(beat); continue }
+            if isEffectivelyTheSame(previous.frame, beat.frame, config: config) {
+                kept[kept.count - 1] = beat
+            } else {
+                kept.append(beat)
+            }
+        }
+        return kept
+    }
+
+    /// Two framings the eye cannot tell apart: near-identical zoom *and* centre.
+    /// Both matter — a pan at the same zoom is still movement worth spending time
+    /// on, and a zoom in place likewise.
+    static func isEffectivelyTheSame(
+        _ lhs: CameraFrame, _ rhs: CameraFrame, config: TrackingConfig.Export
+    ) -> Bool {
+        guard lhs.spanM > 0, rhs.spanM > 0 else { return true }
+        let zoomRatio = max(lhs.spanM, rhs.spanM) / min(lhs.spanM, rhs.spanM)
+        guard zoomRatio <= config.openingCollapseZoomRatio else { return false }
+        let driftM = Geo.distanceM(
+            latA: lhs.centerLat, lonA: lhs.centerLon, latB: rhs.centerLat, lonB: rhs.centerLon
         )
+        return driftM <= min(lhs.spanM, rhs.spanM) * config.openingCollapseDriftFraction
     }
 
     /// A camera frame that fits `bounds`, floored at `camera_span_m` so a tiny

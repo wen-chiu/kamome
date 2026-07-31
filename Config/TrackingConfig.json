@@ -117,6 +117,8 @@
     "opening_regional_s": 3.5,
     "opening_route_s": 0.4,
     "country_view_padding": 2.2,
+    "opening_collapse_zoom_ratio": 1.25,
+    "opening_collapse_drift_fraction": 0.15,
     "first_stop_dwell_scale": 0.55,
     "stop_dwell_min_s": 6,
     "stop_dwell_max_s": 25,

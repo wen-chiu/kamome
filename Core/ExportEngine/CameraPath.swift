@@ -153,9 +153,28 @@ public struct CameraPath {
         self.route = route
         self.cumulativeM = cumulative
         let total = totalDurationS ?? config.targetDurationS
-        // The journey's clock starts after the prologue: the vehicle sits at the
-        // route's start while the camera establishes the geography.
-        let opening = max(min(openingS, total), 0)
+        // The prologue's real length is only known once its beats are built —
+        // duplicates get collapsed, so a trip whose region and route frame the
+        // same picture opens in far less than the configured sum. Lay out a
+        // provisional timeline just to derive the act framing the prologue ends
+        // on, then build the real one at the offset the prologue actually needs.
+        let provisional = Self.buildTimeline(
+            anchors: anchors, totalM: totalM, config: config,
+            stopHoldsS: stopHoldsS, startS: 0, targetS: total
+        )
+        let provisionalActs = Self.buildActs(
+            route: route, cumulativeM: cumulative, timeline: provisional,
+            totalM: totalM, config: config
+        )
+        let builtPrologue = openingS > 0
+            ? Self.buildPrologue(
+                route: route, establishing: establishing, config: config,
+                routeFrame: provisionalActs.first.map {
+                    CameraFrame(centerLat: $0.centerLat, centerLon: $0.centerLon, spanM: $0.spanM, bearing: 0)
+                } ?? Self.frame(for: Self.bounds(of: route), config: config, padding: config.wideSpanPadding)
+            )
+            : nil
+        let opening = max(min(builtPrologue?.totalS ?? 0, total), 0)
         timeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
             stopHoldsS: stopHoldsS, startS: opening,
@@ -171,15 +190,12 @@ public struct CameraPath {
             route: route, cumulativeM: cumulative, timeline: timeline,
             totalM: totalM, config: config
         )
-        prologue = opening > 0
-            ? Self.buildPrologue(
-                route: route, establishing: establishing, config: config,
-                routeFrame: acts.first.map {
-                    CameraFrame(centerLat: $0.centerLat, centerLon: $0.centerLon, spanM: $0.spanM, bearing: 0)
-                } ?? Self.frame(for: Self.bounds(of: route), config: config, padding: config.wideSpanPadding)
-            )
-            : nil
+        prologue = builtPrologue
     }
+
+    /// How long the opening actually runs, after collapsing beats that do not
+    /// move the camera. Exposed so the timeline reports its real pacing.
+    public var openingS: Double { prologue?.totalS ?? 0 }
 
     /// Anchor each stop to its nearest route vertex, ordered along the path.
     private static func stopAnchors(

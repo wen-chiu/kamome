@@ -59,6 +59,11 @@ public extension TrackingConfig {
         /// A guess, deliberately modest: an offline app cannot know where the
         /// surrounding coastline is, and over-claiming would frame empty space.
         public let countryViewPadding: Double
+        /// When two opening framings are this close in zoom *and* centre, the
+        /// camera would not visibly move between them, so the beat is dropped
+        /// rather than spending a transition and a hold on a frozen picture.
+        public let openingCollapseZoomRatio: Double
+        public let openingCollapseDriftFraction: Double
         /// The opening stop is the journey's origin, reached before any travel
         /// has been shown, so giving it a later stop's full weight makes the film
         /// feel stuck right after the prologue. It gets this fraction of the
@@ -90,6 +95,7 @@ public extension TrackingConfig {
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double, openingRouteS: Double,
             countryViewPadding: Double, firstStopDwellScale: Double,
+            openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
@@ -108,6 +114,8 @@ public extension TrackingConfig {
             self.openingRegionalS = openingRegionalS
             self.openingRouteS = openingRouteS
             self.countryViewPadding = countryViewPadding
+            self.openingCollapseZoomRatio = openingCollapseZoomRatio
+            self.openingCollapseDriftFraction = openingCollapseDriftFraction
             self.firstStopDwellScale = firstStopDwellScale
             self.stopDwellMinS = stopDwellMinS
             self.stopDwellMaxS = stopDwellMaxS
@@ -136,6 +144,8 @@ public extension TrackingConfig {
                 openingRouteS: openingRouteS,
                 countryViewPadding: countryViewPadding,
                 firstStopDwellScale: firstStopDwellScale,
+                openingCollapseZoomRatio: openingCollapseZoomRatio,
+                openingCollapseDriftFraction: openingCollapseDriftFraction,
                 stopDwellMinS: stopDwellMinS,
                 stopDwellMaxS: stopDwellMaxS,
                 totalDurationMinS: totalDurationMinS,
@@ -167,6 +177,8 @@ public extension TrackingConfig {
             case openingRegionalS = "opening_regional_s"
             case openingRouteS = "opening_route_s"
             case countryViewPadding = "country_view_padding"
+            case openingCollapseZoomRatio = "opening_collapse_zoom_ratio"
+            case openingCollapseDriftFraction = "opening_collapse_drift_fraction"
             case firstStopDwellScale = "first_stop_dwell_scale"
             case stopDwellMinS = "stop_dwell_min_s"
             case stopDwellMaxS = "stop_dwell_max_s"

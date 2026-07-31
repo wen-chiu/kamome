@@ -41,6 +41,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: 15, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5

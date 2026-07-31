@@ -104,7 +104,7 @@ public struct LinearTimeline {
         self.path = path
         durationS = path.durationS
         frameCount = path.frameCount
-        openingS = plan?.openingS ?? 0
+        openingS = path.openingS
         stops = trip.stops
         holds = path.holds
         routeCoordinates = route
@@ -122,7 +122,7 @@ public struct LinearTimeline {
         // fades in across the last zoom, so by the time the route is framed the
         // car is there, ready to move.
         let arrival = Self.subjectArrival(
-            plan: plan, holds: path.holds, stops: trip.stops, config: config
+            plan: plan, openingS: path.openingS, holds: path.holds, stops: trip.stops, config: config
         )
         subjectArrivalStartS = arrival.startS
         subjectArrivalEndS = arrival.endS
@@ -138,32 +138,33 @@ public struct LinearTimeline {
     /// When the subject first appears, and the two sequences that decide it
     /// (Chiu 2026-07-31) — see `subjectArrivalStartS`.
     private static func subjectArrival(
-        plan: RecapDurationPlan?, holds: [CameraPath.Hold],
+        plan: RecapDurationPlan?, openingS: Double, holds: [CameraPath.Hold],
         stops: [RecapTrip.Stop], config: TrackingConfig.Export
     ) -> (startS: Double, endS: Double) {
-        guard let plan else { return (0, 0) }
+        guard plan != nil, openingS > 0 else { return (0, 0) }
 
         // Does the journey open *on* a stop worth presenting? That is a stop
         // whose hold begins the moment the prologue ends (so it sits at the
         // trip's origin) and which actually has photos to show.
         let opensOnStop = holds.first.flatMap { hold -> CameraPath.Hold? in
-            guard hold.startS <= plan.openingS + 0.01,
+            guard hold.startS <= openingS + 0.01,
                   stops.indices.contains(hold.stopIndex),
                   !stops[hold.stopIndex].photos.isEmpty
             else { return nil }
             return hold
         }
         guard let opensOnStop else {
-            // Sequence B: nothing to present, so the car simply arrives with the
-            // route and starts driving.
-            let toRoute = config.openingCountryS + config.zoomTransitionS + config.openingRegionalS
-            return (toRoute, min(toRoute + config.zoomTransitionS, plan.openingS))
+            // Sequence B: nothing to present, so the car arrives with the route
+            // and starts driving. Anchored to the prologue's **real** end, not to
+            // the configured beat times — the opening collapses beats that do not
+            // move the camera, so those two numbers are not the same.
+            return (max(openingS - config.zoomTransitionS, 0), openingS)
         }
         // Sequence A: the stop tells itself first, with no vehicle on screen at
         // all, and the car arrives as that scene closes — the same pull-away ramp
         // every other stop ends on.
         let park = min(config.subjectParkS, (opensOnStop.endS - opensOnStop.startS) * 0.25)
-        return (max(opensOnStop.endS - park, plan.openingS), opensOnStop.endS)
+        return (max(opensOnStop.endS - park, openingS), opensOnStop.endS)
     }
 
     /// The film's pacing: a content-derived plan when a map region is installed,

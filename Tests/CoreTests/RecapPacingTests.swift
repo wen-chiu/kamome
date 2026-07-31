@@ -23,6 +23,7 @@ final class RecapPacingTests: XCTestCase {
             deckPhotoHoldS: 2.5, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
             totalDurationMinS: totalMinS, totalDurationMaxS: totalMaxS,
             keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
@@ -137,26 +138,44 @@ final class RecapPacingTests: XCTestCase {
         XCTAssertEqual(opening.bearing, 0, "north-up throughout")
     }
 
-    /// Country → regional → route, each eased over `zoom_transition_s`, and the
-    /// whole opening is exactly the budgeted length.
-    func testOpeningRunsCountryThenRegionalThenRouteOverTheBudgetedTime() throws {
+    /// The opening spends time only where the camera is actually going somewhere.
+    ///
+    /// A trip that fits in one act frames its region and its route identically,
+    /// so the regional→route transition moved nothing and the holds either side
+    /// of it were a frozen picture. Those beats collapse, and the opening comes
+    /// in well under the configured sum rather than sitting on a still frame.
+    func testOpeningCollapsesBeatsThatDoNotMoveTheCamera() throws {
         let export = config()
         let line = try timeline(trip(photoCounts: [3, 3]), export)
-        XCTAssertEqual(
-            line.openingS,
-            export.openingCountryS + export.openingRegionalS + export.openingRouteS + 2 * export.zoomTransitionS,
-            accuracy: 0.01
+        let configured = export.openingCountryS + export.openingRegionalS
+            + export.openingRouteS + 2 * export.zoomTransitionS
+        XCTAssertLessThan(line.openingS, configured - 2, "duplicate beats must be dropped")
+        XCTAssertGreaterThan(line.openingS, export.zoomTransitionS, "but the zoom itself still runs")
+
+        // No stretch of the opening longer than one hold sits completely still.
+        var frozenRun = 0.0
+        var previous = line.cameraFrame(atTime: 0).spanM
+        var longestFrozen = 0.0
+        for time in stride(from: 0.0, through: line.openingS, by: 1.0 / 30) {
+            let span = line.cameraFrame(atTime: time).spanM
+            if abs(span - previous) < 1 { frozenRun += 1.0 / 30 } else { frozenRun = 0 }
+            longestFrozen = max(longestFrozen, frozenRun)
+            previous = span
+        }
+        XCTAssertLessThan(
+            longestFrozen, max(export.openingCountryS, export.openingRegionalS) + 0.5,
+            "the opening froze for \(longestFrozen)s — that is the hang"
         )
 
         // Held through the country beat, then monotonically zooming in.
         let country = line.cameraFrame(atTime: 0).spanM
         XCTAssertEqual(line.cameraFrame(atTime: export.openingCountryS - 0.1).spanM, country, accuracy: 1)
 
-        var previous = country
+        var widest = country
         for time in stride(from: export.openingCountryS, through: line.openingS, by: 0.25) {
             let span = line.cameraFrame(atTime: time).spanM
-            XCTAssertLessThanOrEqual(span, previous + 1, "the opening must only ever zoom in (t=\(time))")
-            previous = span
+            XCTAssertLessThanOrEqual(span, widest + 1, "the opening must only ever zoom in (t=\(time))")
+            widest = span
         }
     }
 
@@ -293,6 +312,7 @@ final class RecapPacingTests: XCTestCase {
             carAt, line.openingS + 0.05,
             "with nothing to present, the car arrives with the route rather than waiting"
         )
+        XCTAssertGreaterThan(carAt, 0, "but not before the establishing shot has run")
         // It is moving shortly after, not parked.
         let start = try XCTUnwrap(tripOpeningOnAStop(photoBearing: false).route.first)
         let moved = line.subjectState(atTime: line.openingS + (line.durationS - line.openingS) * 0.3)

@@ -165,6 +165,13 @@ final class RecapDemoFilmTests: XCTestCase {
             "Manual demo render — set KAMOME_DEMO_FILM_IMPORT to a fixture name (e.g. iceland)."
         )
         let fixture = requested == "1" ? "margaret-river" : requested
+        let (recap, config) = try await Self.importedRecap(named: fixture)
+        try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
+    }
+
+    static func importedRecap(
+        named fixture: String
+    ) async throws -> (RecapTrip, TrackingConfig.Export) {
         let full = try AppConfig.loadOrDie()
         let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5100"
         let repository = TripRepository(database: try AppDatabase.inMemory())
@@ -198,7 +205,7 @@ final class RecapDemoFilmTests: XCTestCase {
             deck: RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS),
             stopHoldS: config.stopHoldS
         ))
-        try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
+        return (recap, config)
     }
 
     // MARK: - Trip
