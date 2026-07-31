@@ -111,42 +111,129 @@ public struct RecapStyle {
     // of the beat, and at 0.30-0.50 it read as a thumbnail. `overshoot` lets the
     // bloom settle back from slightly past full size, which is what makes the
     // card arrive rather than merely appear.
+    //
+    // **Everything below is ported from the validated web prototype**
+    // (`Docs/prototype/recap_engine.html`, `.cards` / `.card` / `.dots` /
+    // `.hud`), not eyeballed from its screenshots. The prototype's 9:16 stage is
+    // ~413 CSS px wide, so a prototype pixel is **×2.62** at this file's 1080
+    // reference; each token below carries the CSS declaration it came from.
     public var deckPhotoMinWidthFraction: CGFloat = 0.42
     public var deckPhotoMaxWidthFraction: CGFloat = 0.58
-    public var deckPhotoAspect: CGFloat = 1.25         // portrait card (h / w)
+    /// `.card { aspect-ratio: 3/4 }` — a portrait frame, so a portrait photo
+    /// fills it and a landscape one is cropped to the card rather than the card
+    /// stretching to the photo.
+    public var deckPhotoAspect: CGFloat = 4.0 / 3.0    // portrait card (h / w)
     /// How far past `max` the opening bloom reaches before settling back.
     public var deckRevealOvershoot: CGFloat = 0.06
     public var deckMatteColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
-    public var deckMattePx: CGFloat = 14
-    public var deckCornerPx: CGFloat = 28
-    public var deckShadowColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.35)
-    public var deckDotRadiusPx: CGFloat = 7
-    public var deckDotOnColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
-    public var deckDotOffColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.4)
+    /// `.card { border: 3px solid #fff }` — a keyline, not a passe-partout. The
+    /// *frame* the card reads as comes from the drop shadow under it, not from a
+    /// fat white margin.
+    public var deckMattePx: CGFloat = 8
+    /// `.card { border-radius: 14px }`.
+    public var deckCornerPx: CGFloat = 37
+    /// `.card { box-shadow: 0 20px 44px -16px rgba(0,0,0,.85) }`. CoreGraphics
+    /// has no shadow *spread*, so the −16 px inset is folded into the blur.
+    public var deckShadowColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.85)
+    public var deckShadowOffsetPx: CGFloat = 52
+    public var deckShadowBlurPx: CGFloat = 74
 
-    // Stop label (§5 two-beat lead): the pin sits **on** the stop and the name
-    // pill stands on the pin (Chiu 2026-07-26 — the car parks and disappears for
-    // the stop, so nothing has to be dodged). Drawn by OverlayRenderer.
+    // Secondary photos peeking out behind the hero — `.cluster.show .peekL/.peekR`
+    // (`translateX(±52px) rotate(±8deg) scale(.9)` on a 204 px card). Static: the
+    // deck is one hero cross-fading through the stop's photos, and these two are
+    // depth, not a carousel the viewer is meant to track. The offset is a
+    // *fraction of the card* so it survives the reveal's scale envelope.
+    public var deckPeekOffsetFraction: CGFloat = 0.255
+    public var deckPeekRotationDegrees: CGFloat = 8
+    public var deckPeekScale: CGFloat = 0.9
+
+    // Progress dots — `.dots i { width/height: 5px; gap: 5px }`, off
+    // `rgba(255,255,255,.28)`, on `var(--route)` at `scale(1.35)`. Non-interactive:
+    // they say "3 of 8 photos", they are not a control.
+    public var deckDotRadiusPx: CGFloat = 7
+    /// Centre-to-centre, as a multiple of the radius: 5 px dot + 5 px gap.
+    public var deckDotSpacingMultiple: CGFloat = 4
+    /// `.dots i.on { transform: scale(1.35) }`.
+    public var deckDotActiveScale: CGFloat = 1.35
+    /// `.dots { margin-top: 9px }` — below the stop's name, not below the card.
+    public var deckDotGapPx: CGFloat = 24
+    public var deckDotOnColor = RecapStyle.routeAccent
+    public var deckDotOffColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.28)
+
+    // The metadata pill over the top of the hero photo — `.hud .badge`
+    // (`rgba(8,12,18,.55)`, `backdrop-filter: blur(8px)`, `1px solid
+    // rgba(255,255,255,.09)`, `border-radius: 999px`, `padding: 6px 12px`,
+    // `font-size: 12.5px`) with the distance readout opposite it (`.hud .km`,
+    // its unit in `--muted` at the `<small>` size).
     //
-    // Typography raised 2026-07-31 toward the prototype's hierarchy: the stop
-    // name is a headline, not a map annotation, so it carries real size and the
-    // caption under it takes the warm accent. This is a type + contrast change
-    // within the existing layout — the fanned card stack the prototype also
-    // shows is a separate redesign (handoff §"Photo deck → fan/stack carousel").
+    // **CoreGraphics has no backdrop blur.** Blurring what is already composited
+    // under the pill would mean reading back the frame buffer per stop frame, and
+    // the pill's job is legibility over an arbitrary photograph. The closest
+    // native primitive is a flat fill, so the alpha is raised from .55 to .72 to
+    // buy back the contrast the blur was providing.
+    public var deckMetaFillColor = CGColor(srgbRed: 0.031, green: 0.047, blue: 0.071, alpha: 0.72)
+    public var deckMetaBorderColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.09)
+    public var deckMetaBorderPx: CGFloat = 3
+    public var deckMetaFontPx: CGFloat = 33
+    public var deckMetaTextColor = CGColor(srgbRed: 0.953, green: 0.961, blue: 0.969, alpha: 1)
+    /// `--muted` — the "km" unit, which must not compete with the number.
+    public var deckMetaUnitColor = CGColor(srgbRed: 0.541, green: 0.592, blue: 0.651, alpha: 1)
+    public var deckMetaPaddingXPx: CGFloat = 31
+    public var deckMetaPaddingYPx: CGFloat = 16
+    /// `.hud { top: 22px; left: 22px; right: 22px }` — the row spans the frame,
+    /// so the pill can start left of a centred card exactly as it does in the
+    /// prototype.
+    public var deckMetaMarginPx: CGFloat = 58
+    /// How far below the card's top edge the pill sits. The pill belongs to the
+    /// photo, so it rides down with a card that opens lower in frame.
+    public var deckMetaInsetPx: CGFloat = 97
+
+    // Stop identity (§5 two-beat lead): the pin sits **on** the stop and the
+    // stop's name stands on the pin (Chiu 2026-07-26 — the car parks and
+    // disappears for the stop, so nothing has to be dodged). Drawn by
+    // OverlayRenderer, identically in both beats, so beat 1's label and beat 2's
+    // caption cross-fade in place instead of jumping.
+    //
+    // Restyled 2026-07-31 to the prototype's `.clabel`: **no pill**. The name is
+    // set as free type over the map with a soft drop shadow
+    // (`text-shadow: 0 2px 12px rgba(0,0,0,.6)`), which is what makes it read as
+    // a film title rather than a map annotation — a rounded plate behind it
+    // reads as UI chrome no matter how big the type gets. The secondary line
+    // takes the warm route accent, uppercase and letter-spaced.
     public var labelPinColor = CGColor(srgbRed: 0.35, green: 0.85, blue: 0.95, alpha: 1)
     public var labelPinRingColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
     public var labelPinRadiusPx: CGFloat = 16
-    public var labelPillColor = CGColor(srgbRed: 0.06, green: 0.08, blue: 0.11, alpha: 0.95)
     public var labelTextColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
-    /// The day/distance caption. Warm accent rather than grey, matching the
-    /// prototype's hierarchy: the name is the headline, the caption is the
-    /// coloured strap under it, and the two never compete.
-    public var labelDetailColor = CGColor(srgbRed: 0.95, green: 0.6, blue: 0.38, alpha: 1)
-    public var labelFontPx: CGFloat = 68
-    public var labelDetailFontPx: CGFloat = 40
-    public var labelPillPaddingPx: CGFloat = 30
-    /// Pin → name pill, and pill → card, inside the stop group.
+    /// `.clabel span` — the uppercase Latin strap under the name. Warm accent
+    /// rather than grey: the name is the headline, this is the coloured strap,
+    /// and the two never compete.
+    public var labelDetailColor = RecapStyle.routeAccent
+    /// `.clabel b` — the prototype sets this at 20 px on its ~413 px stage (≈52 px
+    /// here). Kamome runs it larger: the film is watched on a phone at arm's
+    /// length, and the place name is the one word a viewer should still have
+    /// after the stop is gone.
+    public var labelFontPx: CGFloat = 76
+    /// `.clabel span { font-size: 11px }` — the prototype's 20:11 ratio held
+    /// against the larger headline above.
+    public var labelDetailFontPx: CGFloat = 42
+    /// `.clabel span { letter-spacing: .16em }`, as a fraction of the font size.
+    public var labelDetailTrackingEm: CGFloat = 0.16
+    /// `.clabel b { letter-spacing: -.01em }`.
+    public var labelTrackingEm: CGFloat = -0.01
+    /// `.clabel span { margin-top: 4px }`.
+    public var labelDetailGapPx: CGFloat = 11
+    /// `text-shadow: 0 2px 12px rgba(0,0,0,.6)` — what keeps unplated type legible
+    /// over a bright photograph or a pale glacier.
+    public var labelShadowColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.6)
+    public var labelShadowOffsetPx: CGFloat = 5
+    public var labelShadowBlurPx: CGFloat = 31
+    /// Pin → name, and name group → card, inside the stop group.
     public var labelPinGapPx: CGFloat = 16
+
+    /// `--route: #FF8A5B` — the prototype's single warm accent, shared by the
+    /// trail's brand colour, the active progress dot and the stop's strap line,
+    /// so the film has one accent rather than three near-misses.
+    public static let routeAccent = CGColor(srgbRed: 1, green: 0.541, blue: 0.357, alpha: 1)
 
     public init() {}
 

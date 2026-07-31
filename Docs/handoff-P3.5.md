@@ -404,6 +404,31 @@ needs its own scoping pass rather than being folded into a styling round. The
 2026-07-30 pass raised the card to 0.42→0.58 frame width and gave it a settle
 overshoot; that is the interim, not the destination.
 
+### Stop presentation — CSS port landed 2026-07-31 ✅
+
+The 2026-07-31 pass ported the stop's *look* from the prototype's actual CSS
+(`Docs/prototype/recap_engine.html`) rather than from its screenshots — every
+token in `RecapStyle`'s deck/label block now cites its source declaration.
+Details + rationale: `decisions.md` 2026-07-31. Landed:
+
+- Portrait 3:4 hero card, 14 px radius, 3 px white keyline, the prototype's heavy
+  drop shadow; two **static** peek cards (`translateX(±52px) rotate(±8deg)
+  scale(.9)`) behind it.
+- `.hud` metadata pill on the photo (day + place, distance opposite it), and the
+  `.clabel` identity block under it: **no plate**, big name over an uppercase
+  letter-spaced accent strap, progress dots under that.
+- `RecapStopLayout` now mirrors the **whole cluster** rather than flipping the card
+  alone — the caption follows its photograph. Swept regression test.
+- Pacing unchanged (iceland report identical); camera, route glow, sprite scale and
+  map style untouched.
+- New review harness `KamomeTests/RecapStopStillTests` — renders **one stop** of a
+  real imported trip over live tiles, with real photographs from
+  `KAMOME_STOP_PHOTOS`. Use it instead of an MP4 render for still-frame questions.
+
+Still open here: the fan/stack carousel above; "Unnamed stop" geocoding in the
+demo fixtures; the pin can touch the card's top edge when a stop sits high in
+frame (the deferred overlap item).
+
 ## Not in the Replay MVP (do not build here)
 
 - Passive / background capture, region-resume, ≥ 3-day battery, "arm once" —

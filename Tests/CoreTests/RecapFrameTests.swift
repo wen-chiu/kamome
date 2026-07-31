@@ -140,11 +140,19 @@ final class RecapFrameTests: RecapRenderTestCase {
         // Rotation: the first (highlight) photo leads, the second follows. The
         // card tracks the vehicle now, so assert which photo is on screen rather
         // than probing a fixed point.
+        //
+        // The stop's other photos also peek out from behind the hero (2026-07-31
+        // prototype port) — so the test is *which photo is the hero*, not which
+        // photo is the only one drawn: the focused one must dominate the frame,
+        // and the peek behind it must stay a sliver.
         let focus0 = try XCTUnwrap(opaque.first { $0.deck.focusIndex == 0 }).time
         let focus1 = try XCTUnwrap(opaque.first { $0.deck.focusIndex == 1 }).time
         let firstFrame = try await renderFrame(timeline, compositor, at: focus0, config: config)
-        XCTAssertGreaterThan(try colorCount(firstFrame, matching: green), 200, "highlight photo leads the deck")
-        XCTAssertEqual(try colorCount(firstFrame, matching: blue), 0, "only the focused photo shows")
+        let heroArea = try colorCount(firstFrame, matching: green)
+        let peekArea = try colorCount(firstFrame, matching: blue)
+        XCTAssertGreaterThan(heroArea, 200, "highlight photo leads the deck")
+        XCTAssertGreaterThan(peekArea, 0, "the stop's other photos peek out behind the hero")
+        XCTAssertGreaterThan(heroArea, peekArea * 2, "the focused photo is the subject; the peeks are depth")
         let secondFrame = try await renderFrame(timeline, compositor, at: focus1, config: config)
         XCTAssertGreaterThan(try colorCount(secondFrame, matching: blue), 200, "deck rotates to the next photo")
 

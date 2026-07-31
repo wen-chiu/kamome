@@ -951,3 +951,55 @@ still the shipping base map, so merging now would land a half-finished redesign 
 which can't rotate); a generic multi-camera abstraction (boundary discipline — extend
 `CameraFrame`/`RecapSnapshotProviding` additively when a consumer needs it); guessing a
 new close-span value in code (it's a device-tuned feel, left at the prior default).
+
+## 2026-07-31 — Stop presentation ported from the prototype's CSS, and the stop group flips as one cluster
+
+**Context:** The stop scene was the last part of the recap still reading as UI
+rather than as a film: a photo card that looked like a thumbnail, the place name
+on a rounded plate, and no metadata over the picture. The target was never a
+screenshot to eyeball — the 2026-07-20 validation prototype
+(`Docs/prototype/recap_engine.html`) is a working implementation with exact
+values, and the 2026-07-30 screenshots beside it are its output, not its spec.
+
+**Decision — the prototype's CSS is the source of truth for the stop's look.**
+Every token in `RecapStyle`'s deck/label block now cites the declaration it came
+from (`.card { border-radius: 14px; border: 3px solid #fff; box-shadow: 0 20px
+44px -16px rgba(0,0,0,.85) }`, `.clabel`, `.dots`, `.hud .badge`), converted at
+the prototype's ~413 px stage → 1080 reference ratio (×2.62). Three layers, drawn
+back to front and enforced by draw order: **map** (pin, trail — never covered by
+a scrim), **photo** (two static peek cards behind a portrait hero), **typography**
+(metadata pill on the photo; name + accent strap + progress dots under it).
+
+- **No pill behind the stop's name.** The prototype sets it as free type with
+  `text-shadow: 0 2px 12px rgba(0,0,0,.6)`. A rounded plate reads as chrome at any
+  size; the shadow is what makes big type sit *in* the film. Both beats of the
+  stop draw the same identity block, so beat 1 → beat 2 still cross-fades in place.
+- **Day + place + distance moved onto the photo** as `.hud`'s pill + right-aligned
+  km readout; the strap under the name carries day + the stop's secondary detail.
+  The figure appears once, not in two places.
+- **The stop group is one cluster and mirrors as one** (`RecapStopLayout`). It used
+  to flip only the *card* below the pin when a stop sat high in frame, stranding
+  that card's own caption at the other end of the composition — visible immediately
+  in the first render of this pass. The name is the photograph's caption, so the
+  cluster now hangs pin → name → card above the pin, or pin → card → name below it.
+  The pin still sits exactly on the stop; only which side the cluster hangs on
+  changes. New regression test: photo and caption are always one gap apart, swept
+  over every anchor in frame.
+- **The frame-edge clamp is given the cluster's width**, hero plus peek overhang, so
+  a stop near the border keeps both peeks instead of losing one off-screen.
+
+**Alternative rejected:** the prototype's **fanned card stack** — still deferred
+(handoff §"Photo deck → fan/stack carousel"). It changes what `RecapPhotoDeck` has
+to express (per-card transforms driven by a moving front index, not one focused
+photo) and needs its own scoping pass, not a styling round. Also rejected: clamping
+the whole cluster into frame *without* mirroring, which would drift the pin off the
+stop it marks — the one thing the 2026-07-26 layout rule exists to prevent.
+
+**Not 1:1 with CSS:** `backdrop-filter: blur(8px)` on the metadata pill has no
+CoreGraphics equivalent that does not mean reading the frame buffer back per frame,
+so the pill is a flat fill with its alpha raised .55 → .72 to buy back the contrast
+the blur was providing.
+
+**Unchanged, checked:** film pacing (iceland: total 90.00 s, opening ends 5.90 s,
+first stop 5.93 s, car 11.37 s, longest still 2.97 s), the camera, the route glow,
+the 380 px car sprite and the modern-minimal map style.

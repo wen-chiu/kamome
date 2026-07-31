@@ -166,16 +166,19 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         XCTAssertEqual(try colorCount(none, matching: greenRGB), 0, "no deck at zero opacity")
     }
 
-    /// Beat 1: the pin marks the stop **on the stop's own point**, and the name
-    /// pill stands on it (Chiu 2026-07-26). The pin used to be pushed clear of
+    /// Beat 1: the pin marks the stop **on the stop's own point**, and the stop's
+    /// name stands on it (Chiu 2026-07-26). The pin used to be pushed clear of
     /// the parked car by a pixel-sized clearance, which at a wide framing put it
     /// kilometres from the place it was labelling; the car now parks and vanishes
     /// for the stop, so the pin belongs on the spot.
+    ///
+    /// The name is unplated type (the 2026-07-31 prototype port dropped the pill),
+    /// so the probe hunts the glyph fill itself rather than a panel behind it.
     func testStopLabelPinsTheStopItselfWithTheNameStandingOnIt() async throws {
-        // An opaque pill so its fill is an exact color to hunt for.
+        // Distinctive ink so the name's own pixels are findable over the map.
         var style = opaqueCardStyle
-        let pillRGB = RGB(red: 26, green: 31, blue: 41)
-        style.labelPillColor = CGColor(srgbRed: 26 / 255, green: 31 / 255, blue: 41 / 255, alpha: 1)
+        let nameRGB = RGB(red: 255, green: 0, blue: 255)
+        style.labelTextColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
         let label = OverlayContent.stopLabel(
             name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil,
             dayLabel: "Day 1", travelledM: 0, opacity: 1
@@ -192,7 +195,7 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         // Rows count downward, so an element's bottom edge is its largest row.
         let pinRGB = RGB(red: 89, green: 217, blue: 242)  // labelPinColor
         let pinBottomRow = try XCTUnwrap(lastRow(of: frame, matching: pinRGB), "the pin must draw")
-        let pillBottomRow = try XCTUnwrap(lastRow(of: frame, matching: pillRGB), "the name pill must draw")
+        let nameBottomRow = try XCTUnwrap(lastRow(of: frame, matching: nameRGB), "the stop's name must draw")
 
         // The pin is centred on the stop itself — its bottom edge sits one pin
         // radius below the stop's row, not a car's length away from it.
@@ -200,19 +203,74 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
             pinBottomRow, stopRow + pinRadiusRows, accuracy: 2,
             "the pin must be drawn on the stop, not offset from it"
         )
-        XCTAssertLessThan(pillBottomRow, pinBottomRow, "the name stands on the pin")
+        XCTAssertLessThan(nameBottomRow, pinBottomRow, "the name stands on the pin")
     }
 
-    /// The largest row containing `target` — an element's bottom edge.
-    private func lastRow(of frame: CGImage, matching target: RGB) throws -> Int? {
+    /// The largest row containing `target` — an element's bottom edge. Matched
+    /// with a tolerance because antialiased type never lands on an exact tone.
+    private func lastRow(of frame: CGImage, matching target: RGB, tolerance: Int = 12) throws -> Int? {
         var found: Int?
         for row in 0..<heightPx {
-            for col in 0..<widthPx where try pixel(frame, col: col, row: row) == target {
-                found = row
-                break
+            for col in 0..<widthPx {
+                let sample = try pixel(frame, col: col, row: row)
+                if abs(sample.red - target.red) <= tolerance,
+                   abs(sample.green - target.green) <= tolerance,
+                   abs(sample.blue - target.blue) <= tolerance {
+                    found = row
+                    break
+                }
             }
         }
         return found
+    }
+
+    // MARK: - The stop's typography layer (2026-07-31 prototype port)
+
+    private func deckContent(photos: [PhotoRef], focusIndex: Int = 0, travelledM: Double = 0) -> OverlayContent {
+        .photoDeck(RecapPhotoDeck(
+            photos: photos, focusIndex: focusIndex, reveal: 1, opacity: 1,
+            name: "小樽運河", dayLabel: "Day 3", travelledM: travelledM,
+            coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
+        ))
+    }
+
+    /// The dots say "which of this stop's photos you are looking at". A stop with
+    /// one photo has nothing to page through, so it must show none — an indicator
+    /// with a single dot reads as a broken control.
+    func testProgressDotsAppearOnlyWhenAStopHasPhotosToPageThrough() async throws {
+        var style = opaqueCardStyle
+        let dotRGB = RGB(red: 255, green: 0, blue: 255)
+        style.deckDotOnColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        style.deckDotOffColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let refs = (0..<4).map { PhotoRef.asset("p\($0)") }
+
+        let many = try await render([deckContent(photos: refs)], resolverImage: green, style: style)
+        XCTAssertGreaterThan(try colorCount(many, matching: dotRGB), 0, "a four-photo stop pages, so it shows dots")
+        let one = try await render([deckContent(photos: [refs[0]])], resolverImage: green, style: style)
+        XCTAssertEqual(try colorCount(one, matching: dotRGB), 0, "a one-photo stop has nothing to page through")
+    }
+
+    /// The metadata pill belongs to the **photograph** — it rides on the card, so
+    /// the lead-in beat (pin + name, no card yet) must not draw it.
+    func testMetadataPillRidesOnThePhotoAndNotOnTheLeadInLabel() async throws {
+        var style = opaqueCardStyle
+        let pillRGB = RGB(red: 255, green: 0, blue: 255)
+        style.deckMetaFillColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+
+        let deck = try await render(
+            [deckContent(photos: [.asset("a"), .asset("b")], travelledM: 114_000)],
+            resolverImage: green, style: style
+        )
+        XCTAssertGreaterThan(try colorCount(deck, matching: pillRGB), 0, "the deck beat carries the metadata pill")
+
+        let lead = OverlayContent.stopLabel(
+            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil,
+            dayLabel: "Day 3", travelledM: 114_000, opacity: 1
+        )
+        let label = try await render([lead], resolverImage: green, style: style)
+        XCTAssertEqual(try colorCount(label, matching: pillRGB), 0, "the lead-in beat has no photo to pin it to")
     }
 
     func testOverlayRenderingIsDeterministic() async throws {

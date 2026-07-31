@@ -83,27 +83,46 @@ final class RecapStopLayoutTests: XCTestCase {
         }
     }
 
-    /// Reading upward the group is point → place → photos, so the name always
-    /// stands on the pin.
-    func testNamePillStandsOnThePin() {
+    /// When the cluster hangs above the pin — the preferred side — reading upward
+    /// is point → place → photos, so the name stands on the pin.
+    func testNameStandsOnThePinWheneverTheClusterOpensUpward() {
         for anchor in anchorSweep {
             let placed = layout(anchor: anchor)
+            guard placed.cardIsAbovePin else { continue }
             XCTAssertGreaterThanOrEqual(
-                placed.labelRect.minY, placed.pinPoint.y - 0.5, "name pill fell below its pin at \(anchor)"
+                placed.labelRect.minY, placed.pinPoint.y - 0.5, "the name fell below its pin at \(anchor)"
             )
         }
     }
 
-    /// The card prefers to open above the pin group and flips below only when
-    /// there is no room — so a stop high in frame still reads.
-    func testCardOpensAboveThePinAndFlipsBelowWhenThereIsNoRoom() {
+    /// The load-bearing composition rule (2026-07-31): the name is the *caption of
+    /// the photograph*, so the card sits directly on the name band with only the
+    /// gap between them — **everywhere in frame**, on either side of the pin.
+    ///
+    /// This is the regression net for the bug the prototype port surfaced: the
+    /// card alone used to flip below the pin while its own name stayed above,
+    /// splitting one composition across half the frame.
+    func testTheCardAndItsNameStayOneContiguousCluster() {
+        for anchor in anchorSweep {
+            let placed = layout(anchor: anchor)
+            XCTAssertEqual(
+                placed.cardRect.minY - placed.labelRect.maxY, gap, accuracy: 0.5,
+                "photo and its caption drifted apart at \(anchor)"
+            )
+        }
+    }
+
+    /// The cluster prefers to open above the pin and mirrors below only when there
+    /// is no room — so a stop high in frame still reads, as one group.
+    func testClusterOpensAboveThePinAndMirrorsBelowWhenThereIsNoRoom() {
         let low = layout(anchor: CGPoint(x: frame.width / 2, y: 300))
         XCTAssertTrue(low.cardIsAbovePin)
         XCTAssertGreaterThan(low.cardRect.minY, low.labelRect.minY, "with room above, the card opens above")
 
         let high = layout(anchor: CGPoint(x: frame.width / 2, y: frame.height - 200))
         XCTAssertFalse(high.cardIsAbovePin)
-        XCTAssertLessThan(high.cardRect.maxY, high.pinPoint.y, "with no room above, it flips below")
+        XCTAssertLessThan(high.cardRect.maxY, high.pinPoint.y, "with no room above, the group mirrors below")
+        XCTAssertLessThan(high.labelRect.maxY, high.cardRect.minY + 0.5, "and the name follows its photo down")
     }
 
     /// The card tracks the stop horizontally rather than sitting frame-centred.
