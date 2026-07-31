@@ -58,13 +58,20 @@ different trip.
 - [ ] **Decide, per trip: is this worth publishing?** This is the gate's real
       question and you can answer most of it here.
 
-**Set `KAMOME_TERRAIN_PATH` on every render.** Found 2026-07-31: it is a
-*separate* variable from `KAMOME_TILES_PATH`, and every render made before that
-date silently had no hillshade. The map is markedly better with it.
+**Terrain is handled now** (2026-07-31). It lives behind its own
+`KAMOME_TERRAIN_PATH`, which nobody was setting, so every render before that date
+silently had no hillshade. `RecapReviewScene` now defaults it from the tiles path
+and **prints the DEM it resolved**, so a flat render says so:
+
+```
+KAMOME_REVIEW region iceland-2026-07-29.pmtiles · terrain iceland-terrain.pmtiles
+```
+
+If that line ever says `terrain NONE — the map will be flat`, stop and fix it
+before judging the film.
 
 ```
 TEST_RUNNER_KAMOME_TILES_PATH=$HOME/kamome-osrm/tiles \
-TEST_RUNNER_KAMOME_TERRAIN_PATH=$HOME/kamome-osrm/terrain \
 TEST_RUNNER_KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
 TEST_RUNNER_KAMOME_STOP_PHOTOS=<folder of the trip's real jpegs> \
 TEST_RUNNER_KAMOME_RENDER_OUT=<out> …
@@ -76,12 +83,10 @@ Pre-flight, or the first three items will fail confusingly:
 
 - [ ] `matching.base_url` = the **Mac's LAN address** (not `127.0.0.1`), phone and
       Mac on the same Wi-Fi, OSRM reachable from the phone's browser.
-- [ ] Side-load the three regions' `.pmtiles` over Finder (Files → Kamome).
-- [ ] **Terrain needs a `terrain/` folder.** Vector tiles are found loose at the
-      Documents root; terrain is only looked for under `Documents/terrain/`. Make
-      the folder in Finder's Files pane and drag `<region>-terrain.pmtiles` into
-      it, or accept a flat map. (A one-line lookup change would remove this
-      wrinkle — deliberately not made without a call.)
+- [ ] Side-load the three regions' `.pmtiles` over Finder (Files → Kamome),
+      **and each region's `<name>-terrain.pmtiles` beside it** — the DEM carries
+      the hillshade. Both may sit loose at the top level; the lookup tells them
+      apart by the `-terrain` suffix (fixed 2026-07-31, was `terrain/`-only).
 
 Then, per trip:
 

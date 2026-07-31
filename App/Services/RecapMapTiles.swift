@@ -43,13 +43,38 @@ enum RecapMapTiles {
             var isDirectory: ObjCBool = false
             if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) {
                 if !isDirectory.boolValue { return url }
-                if let match = bestRegion(in: url, covering: trip) { return match }
+                // A directory override gets the same two-place rule as the
+                // installed locations, so pointing at either the data root or the
+                // `terrain/` folder inside it both work — the render command is
+                // typed by hand and should not have one correct spelling.
+                for directory in [url.appendingPathComponent(terrainDirectoryName), url] {
+                    if let match = bestRegion(in: directory, covering: trip, kind: .terrain) { return match }
+                }
             }
         }
-        for directory in searchDirectories(bundle: bundle).map({ $0.appendingPathComponent(terrainDirectoryName) }) {
-            if let match = bestRegion(in: directory, covering: trip) { return match }
+        for directory in terrainDirectories(bundle: bundle) {
+            if let match = bestRegion(in: directory, covering: trip, kind: .terrain) { return match }
         }
         return nil
+    }
+
+    /// Where a DEM may live: a `terrain/` subfolder of each searched location,
+    /// **and the locations themselves**.
+    ///
+    /// The root is searched because of how a region actually arrives (PD-7,
+    /// 2026-07-31): a file dragged into Finder's Files pane lands loose at the top
+    /// of Documents, and making a subfolder there first is a step nobody guesses.
+    /// Terrain used to be looked for only under `terrain/`, so the normal drag
+    /// produced a flat map with no error anywhere — the failure a fallback exists
+    /// to prevent. Vector tiles already had this fallback; this gives the DEM the
+    /// same one.
+    ///
+    /// Sharing a directory with the vector regions is safe because the two are
+    /// told apart by name (`terrainSuffix`), not by location — see `regions(in:)`.
+    private static func terrainDirectories(bundle: Bundle) -> [URL] {
+        searchDirectories(bundle: bundle).flatMap {
+            [$0.appendingPathComponent(terrainDirectoryName), $0]
+        }
     }
 
     /// The tiles to render `trip` with, or nil when no region covers it — the
@@ -99,19 +124,39 @@ enum RecapMapTiles {
         return directories
     }
 
-    private static func bestRegion(in directory: URL, covering trip: GeoBox) -> URL? {
-        regions(in: directory)
+    /// What a `.pmtiles` file in a searched directory is. Both kinds carry v3
+    /// header bounds, so bounds alone cannot tell them apart — only the filename
+    /// can, and `build-terrain.sh` writes `<region>-terrain.pmtiles`.
+    ///
+    /// This matters in both directions now that they can share a directory: a DEM
+    /// picked as the vector source would render a map of nothing, and a vector
+    /// region picked as the DEM would hillshade with road data.
+    enum RegionKind {
+        case vector
+        case terrain
+
+        func matches(_ url: URL) -> Bool {
+            let isTerrain = url.deletingPathExtension().lastPathComponent.hasSuffix(terrainSuffix)
+            return self == .terrain ? isTerrain : !isTerrain
+        }
+    }
+
+    /// The filename marker `Deploy/bin/build-terrain.sh` writes.
+    static let terrainSuffix = "-terrain"
+
+    private static func bestRegion(in directory: URL, covering trip: GeoBox, kind: RegionKind = .vector) -> URL? {
+        regions(in: directory, kind: kind)
             .filter { $0.bounds.contains(trip) }
             .min { $0.bounds.degreeArea < $1.bounds.degreeArea }?
             .url
     }
 
-    private static func regions(in directory: URL) -> [(url: URL, bounds: GeoBox)] {
+    private static func regions(in directory: URL, kind: RegionKind = .vector) -> [(url: URL, bounds: GeoBox)] {
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
         )) ?? []
         return contents
-            .filter { $0.pathExtension.lowercased() == fileExtension }
+            .filter { $0.pathExtension.lowercased() == fileExtension && kind.matches($0) }
             .compactMap { url in
                 guard let bounds = PMTilesHeader.bounds(ofFileAt: url) else { return nil }
                 return (url, bounds)

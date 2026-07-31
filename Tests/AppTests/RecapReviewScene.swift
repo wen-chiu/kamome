@@ -34,8 +34,11 @@ struct RecapReviewScene {
 
     static func make(fixture: String) async throws -> RecapReviewScene {
         let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture)
+        adoptTilesPathForTerrain()
         guard let bounds = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }),
               let region = RecapMapRegionResolver.resolve(covering: bounds) else { throw SetupError.noRegion }
+        print("KAMOME_REVIEW region \(region.tilesURL.lastPathComponent) · terrain "
+            + (region.terrainURL?.lastPathComponent ?? "NONE — the map will be flat"))
         let establishing = RecapBounds(
             minLat: region.bounds.minLat, minLon: region.bounds.minLon,
             maxLat: region.bounds.maxLat, maxLon: region.bounds.maxLon
@@ -56,6 +59,24 @@ struct RecapReviewScene {
             ),
             provider: try Self.provider(region: region)
         )
+    }
+
+    /// Terrain lives behind its **own** environment variable, and every review
+    /// render made before 2026-07-31 silently had no hillshade because only the
+    /// tiles path was ever set. A missing DEM does not fail — it just renders a
+    /// flat map, which reads as a styling regression rather than as a forgotten
+    /// variable, so it can go unnoticed for weeks.
+    ///
+    /// A reviewer who supplied tiles wants terrain: point it at the same data root
+    /// (`…/kamome-osrm/tiles` → `…/kamome-osrm`, whose `terrain/` folder the
+    /// lookup now also scans). Explicit settings are never overridden, and the
+    /// resolved DEM is printed either way, so a flat render says so out loud.
+    private static func adoptTilesPathForTerrain() {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["KAMOME_TERRAIN_PATH"]?.isEmpty ?? true,
+              let tiles = environment["KAMOME_TILES_PATH"], !tiles.isEmpty else { return }
+        let root = URL(fileURLWithPath: tiles).deletingLastPathComponent()
+        setenv("KAMOME_TERRAIN_PATH", root.path, 1)
     }
 
     /// One composited frame at `time`, over a fresh snapshot at the timeline's own

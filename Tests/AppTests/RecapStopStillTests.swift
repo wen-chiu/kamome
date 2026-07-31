@@ -19,6 +19,7 @@ import XCTest
 ///   TEST_RUNNER_KAMOME_STOP_STILL=iceland \
 ///   TEST_RUNNER_KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
 ///   TEST_RUNNER_KAMOME_TILES_PATH=$HOME/kamome-osrm/tiles \
+///   TEST_RUNNER_KAMOME_TERRAIN_PATH=$HOME/kamome-osrm/terrain \
 ///   TEST_RUNNER_KAMOME_STOP_PHOTOS=/path/to/jpegs \
 ///   TEST_RUNNER_KAMOME_RENDER_OUT=/path/to/out \
 ///   xcodebuild -scheme Kamome test -destination '…' \

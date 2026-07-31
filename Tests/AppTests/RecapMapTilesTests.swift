@@ -137,6 +137,63 @@ final class RecapMapTilesTests: XCTestCase {
         XCTAssertNil(lookup(in: try makeTilesDirectory(), covering: margaretRiver))
     }
 
+    // MARK: - Vector and DEM sharing one directory (2026-07-31)
+
+    private func terrainLookup(in directory: URL, covering trip: GeoBox) -> URL? {
+        setenv("KAMOME_TERRAIN_PATH", directory.path, 1)
+        defer { unsetenv("KAMOME_TERRAIN_PATH") }
+        return RecapMapTiles.terrainURL(covering: trip)
+    }
+
+    /// A DEM dragged into Finder lands **loose at the top of Documents**, beside
+    /// the vector regions, because making a `terrain/` subfolder first is a step
+    /// nobody guesses. It used to be looked for only under `terrain/`, so the
+    /// normal drag produced a flat map and no error anywhere.
+    func testTerrainIsFoundLooseBesideTheVectorRegions() throws {
+        let directory = try makeTilesDirectory()
+        try writeRegion("perth", GeoBox(minLat: -34.5, minLon: 114.5, maxLat: -33.0, maxLon: 116.0), into: directory)
+        try writeRegion("perth-terrain", GeoBox(minLat: -34.5, minLon: 114.5, maxLat: -33.0, maxLon: 116.0), into: directory)
+
+        XCTAssertEqual(
+            try XCTUnwrap(terrainLookup(in: directory, covering: margaretRiver)).lastPathComponent,
+            "perth-terrain.pmtiles"
+        )
+    }
+
+    /// The other half of sharing a directory: both kinds carry v3 header bounds,
+    /// so only the filename tells them apart. A DEM chosen as the vector source
+    /// renders a map of nothing; a vector region chosen as the DEM hillshades with
+    /// road data. Neither may happen.
+    func testTheTwoKindsAreNeverMistakenForEachOther() throws {
+        let box = GeoBox(minLat: -34.5, minLon: 114.5, maxLat: -33.0, maxLon: 116.0)
+
+        // A DEM alone must not be offered as vector tiles — even though it is the
+        // only covering file present, and even though its bounds fit.
+        let demOnly = try makeTilesDirectory()
+        try writeRegion("perth-terrain", box, into: demOnly)
+        XCTAssertNil(lookup(in: demOnly, covering: margaretRiver), "a DEM is not a base map")
+
+        // ...and vector tiles alone must not be offered as a DEM.
+        let vectorOnly = try makeTilesDirectory()
+        try writeRegion("perth", box, into: vectorOnly)
+        XCTAssertNil(terrainLookup(in: vectorOnly, covering: margaretRiver), "road tiles are not a DEM")
+    }
+
+    /// The `terrain/` subfolder still works — a managed download would file it
+    /// there, and the existing dogfood layout uses it.
+    func testTerrainSubfolderStillWins() throws {
+        let directory = try makeTilesDirectory()
+        let nested = directory.appendingPathComponent("terrain", isDirectory: true)
+        try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+        try writeRegion(
+            "perth-terrain", GeoBox(minLat: -34.5, minLon: 114.5, maxLat: -33.0, maxLon: 116.0), into: nested
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(terrainLookup(in: directory, covering: margaretRiver)).lastPathComponent,
+            "perth-terrain.pmtiles"
+        )
+    }
+
     /// A corrupt or half-copied file must not take the whole lookup down with it
     /// — a side-load is a drag-and-drop, and interrupted copies happen.
     func testAnUnreadableRegionIsSkippedRatherThanFatal() throws {

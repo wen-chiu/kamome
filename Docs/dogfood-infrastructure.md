@@ -138,6 +138,13 @@ Multiple regions can sit there at once; the app matches each render against the
 trip it is rendering. Files land loose at the top level, which the lookup
 handles, and a `tiles/` subfolder works too.
 
+**Drag the terrain file in too.** `build-terrain.sh` writes
+`<region>-terrain.pmtiles` beside the vector region, and it carries the hillshade
+— without it the souvenir map renders flat. It goes in the same place, loose or
+under `terrain/`; the two are told apart by the `-terrain` suffix in the
+filename, not by which folder they are in (2026-07-31 — terrain used to be found
+only under `terrain/`, so a plain drag gave a flat map with no error anywhere).
+
 No rebuild is needed — drop a region in and export again.
 
 ### How a region gets chosen
