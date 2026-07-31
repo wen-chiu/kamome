@@ -127,15 +127,24 @@ public struct RecapStyle {
     // Stop label (§5 two-beat lead): the pin sits **on** the stop and the name
     // pill stands on the pin (Chiu 2026-07-26 — the car parks and disappears for
     // the stop, so nothing has to be dodged). Drawn by OverlayRenderer.
+    //
+    // Typography raised 2026-07-31 toward the prototype's hierarchy: the stop
+    // name is a headline, not a map annotation, so it carries real size and the
+    // caption under it takes the warm accent. This is a type + contrast change
+    // within the existing layout — the fanned card stack the prototype also
+    // shows is a separate redesign (handoff §"Photo deck → fan/stack carousel").
     public var labelPinColor = CGColor(srgbRed: 0.35, green: 0.85, blue: 0.95, alpha: 1)
     public var labelPinRingColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
     public var labelPinRadiusPx: CGFloat = 16
-    public var labelPillColor = CGColor(srgbRed: 0.1, green: 0.12, blue: 0.16, alpha: 0.92)
+    public var labelPillColor = CGColor(srgbRed: 0.06, green: 0.08, blue: 0.11, alpha: 0.95)
     public var labelTextColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
-    public var labelDetailColor = CGColor(srgbRed: 0.7, green: 0.75, blue: 0.8, alpha: 1)
-    public var labelFontPx: CGFloat = 46
-    public var labelDetailFontPx: CGFloat = 32
-    public var labelPillPaddingPx: CGFloat = 24
+    /// The day/distance caption. Warm accent rather than grey, matching the
+    /// prototype's hierarchy: the name is the headline, the caption is the
+    /// coloured strap under it, and the two never compete.
+    public var labelDetailColor = CGColor(srgbRed: 0.95, green: 0.6, blue: 0.38, alpha: 1)
+    public var labelFontPx: CGFloat = 68
+    public var labelDetailFontPx: CGFloat = 40
+    public var labelPillPaddingPx: CGFloat = 30
     /// Pin → name pill, and pill → card, inside the stop group.
     public var labelPinGapPx: CGFloat = 16
 

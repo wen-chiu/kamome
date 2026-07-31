@@ -27,11 +27,28 @@ services:
       --max-viaroute-size ${OSRM_MAX_VIAROUTE_SIZE:-500}
       /data/kamome-merged.osrm
     healthcheck:
-      # Reykjavík: inside the Iceland extract, so a healthy container also proves
+      # Reykjavík: inside the merged extract, so a healthy container also proves
       # the dataset actually loaded rather than just that the process is up.
-      test: ["CMD-SHELL", "wget -qO- 'http://localhost:5000/nearest/v1/driving/-21.94,64.15' | grep -q '\"code\":\"Ok\"'"]
+      #
+      # Probed with bash's /dev/tcp rather than curl or wget: the
+      # osrm/osrm-backend image ships **neither** (nor nc, nor python), so the
+      # obvious healthcheck can never run and the container sits permanently
+      # "unhealthy" while serving traffic perfectly. A check that always fails is
+      # worse than none — it trains you to ignore the signal, and on a host with
+      # restart-on-unhealthy it can cause a restart loop under a working service.
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5000 &&
+          printf 'GET /nearest/v1/driving/-21.94,64.15 HTTP/1.0\r\n\r\n' >&3 &&
+          grep -q '"code":"Ok"' <&3
       interval: 30s
-      timeout: 5s
+      # 10s, not 5: OSRM holds the connection open after answering, so the probe
+      # blocks until its keep-alive window closes — measured at ~5.1s, which sat
+      # exactly on a 5s timeout and reported a working service as unhealthy.
+      timeout: 10s
       retries: 3
       start_period: 60s
 

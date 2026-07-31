@@ -40,17 +40,26 @@ public struct LinearTimeline {
         let provenance: RouteProvenance
     }
 
-    private let path: CameraPath
-    private let stops: [RecapTrip.Stop]
-    private let holds: [CameraPath.Hold]
+    let path: CameraPath
+    let stops: [RecapTrip.Stop]
+    let holds: [CameraPath.Hold]
     private let routeCoordinates: [RecapCoordinate]
     private let legRanges: [LegRange]
-    private let deck: RecapDeck
-    private let subjectParkS: Double
-    /// When the subject fades in during the opening: the final zoom toward the
-    /// route. Zero when there is no prologue.
-    private let subjectArrivalStartS: Double
-    private let subjectArrivalEndS: Double
+    let deck: RecapDeck
+    let subjectParkS: Double
+    /// When the subject first appears. Zero when there is no prologue.
+    ///
+    /// **Two sequences, chosen by what the trip opens on** (Chiu 2026-07-31):
+    ///
+    ///   opening → [first stop's pin/title/photos] → car appears → first leg
+    ///   opening → car appears → first leg
+    ///
+    /// The first applies when the journey *starts at* a photo-bearing stop. The
+    /// car must never appear only to park a moment later at the origin — that
+    /// reads as a false start, and it is a sequencing fault, not a duration one:
+    /// no dwell tuning can fix a car that should not have been on screen yet.
+    let subjectArrivalStartS: Double
+    let subjectArrivalEndS: Double
     private let titleCardS: Double
     private let endCardS: Double
     private let title: String
@@ -112,14 +121,11 @@ public struct LinearTimeline {
         // size of a mountain range, and narratively the trip has not begun. It
         // fades in across the last zoom, so by the time the route is framed the
         // car is there, ready to move.
-        if let plan {
-            let toRoute = config.openingCountryS + config.zoomTransitionS + config.openingRegionalS
-            subjectArrivalStartS = toRoute
-            subjectArrivalEndS = min(toRoute + config.zoomTransitionS, plan.openingS)
-        } else {
-            subjectArrivalStartS = 0
-            subjectArrivalEndS = 0
-        }
+        let arrival = Self.subjectArrival(
+            plan: plan, holds: path.holds, stops: trip.stops, config: config
+        )
+        subjectArrivalStartS = arrival.startS
+        subjectArrivalEndS = arrival.endS
         titleCardS = min(config.titleCardS, path.durationS)
         endCardS = config.endCardS
         title = trip.title
@@ -127,6 +133,37 @@ public struct LinearTimeline {
         statsLines = trip.statsLines
         callToAction = trip.callToAction
         shareURL = trip.shareURL
+    }
+
+    /// When the subject first appears, and the two sequences that decide it
+    /// (Chiu 2026-07-31) — see `subjectArrivalStartS`.
+    private static func subjectArrival(
+        plan: RecapDurationPlan?, holds: [CameraPath.Hold],
+        stops: [RecapTrip.Stop], config: TrackingConfig.Export
+    ) -> (startS: Double, endS: Double) {
+        guard let plan else { return (0, 0) }
+
+        // Does the journey open *on* a stop worth presenting? That is a stop
+        // whose hold begins the moment the prologue ends (so it sits at the
+        // trip's origin) and which actually has photos to show.
+        let opensOnStop = holds.first.flatMap { hold -> CameraPath.Hold? in
+            guard hold.startS <= plan.openingS + 0.01,
+                  stops.indices.contains(hold.stopIndex),
+                  !stops[hold.stopIndex].photos.isEmpty
+            else { return nil }
+            return hold
+        }
+        guard let opensOnStop else {
+            // Sequence B: nothing to present, so the car simply arrives with the
+            // route and starts driving.
+            let toRoute = config.openingCountryS + config.zoomTransitionS + config.openingRegionalS
+            return (toRoute, min(toRoute + config.zoomTransitionS, plan.openingS))
+        }
+        // Sequence A: the stop tells itself first, with no vehicle on screen at
+        // all, and the car arrives as that scene closes — the same pull-away ramp
+        // every other stop ends on.
+        let park = min(config.subjectParkS, (opensOnStop.endS - opensOnStop.startS) * 0.25)
+        return (max(opensOnStop.endS - park, plan.openingS), opensOnStop.endS)
     }
 
     /// The film's pacing: a content-derived plan when a map region is installed,
@@ -197,7 +234,7 @@ public struct LinearTimeline {
 
     /// The park ramp, clamped so a hold squeezed by `max_hold_fraction` still has
     /// a middle where the car is actually away.
-    private func parkRamp(_ hold: CameraPath.Hold) -> Double {
+    func parkRamp(_ hold: CameraPath.Hold) -> Double {
         min(subjectParkS, (hold.endS - hold.startS) * 0.25)
     }
 
@@ -258,102 +295,6 @@ public struct LinearTimeline {
         return contents
     }
 
-    // MARK: - Stop choreography (overlay + subject — the camera still holds still)
-
-    /// The stop scene playing at `time`, if any. A hold only counts as a scene
-    /// when its stop has something to reveal — the subject and the overlays both
-    /// read this, so the car can never park for a stop that draws nothing.
-    private func activeScene(atTime time: Double) -> (hold: CameraPath.Hold, stop: RecapTrip.Stop)? {
-        for hold in holds where hold.startS <= time && time < hold.endS {
-            guard stops.indices.contains(hold.stopIndex) else { continue }
-            let stop = stops[hold.stopIndex]
-            guard !stop.photos.isEmpty else { return nil }
-            return (hold, stop)
-        }
-        return nil
-    }
-
-    /// The deck's sub-window inside a stop's hold. The scene runs
-    /// **park → label → deck → pull away**, so the card opens after the car has
-    /// finished parking plus `labelLeadS`, and — importantly — *closes before the
-    /// car comes back*. Without that last reservation the card is still covering
-    /// the spot while the vehicle fades in behind it, and the departure never
-    /// reads on screen.
-    private func deckWindow(_ hold: CameraPath.Hold) -> (start: Double, end: Double) {
-        let park = parkRamp(hold)
-        let end = max(hold.endS - park, hold.startS)
-        return (min(hold.startS + park + deck.labelLeadS, end), end)
-    }
-
-    /// The zoom ramp used at both edges of a deck window, clamped to 40% of the
-    /// window so it always fits even when a stop-dense trip squeezed the hold
-    /// (`max_hold_fraction`).
-    private func zoomRamp(_ window: (start: Double, end: Double)) -> Double {
-        min(deck.zoomS, (window.end - window.start) * 0.4)
-    }
-
-    /// **Card** envelope (Chiu 2026-07-25): the photo keeps growing across the
-    /// whole hold — not just the camera's dolly-in — so the stop plays as a slow
-    /// cinematic reveal rather than a card that pops to full size and sits
-    /// there. It scales back down over the closing ramp as the scene closes.
-    private func deckReveal(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
-        let zoom = zoomRamp(window)
-        let openEnd = window.end - zoom
-        let opening = openEnd - window.start
-        guard opening > 0 else { return 0 }
-        if time <= openEnd {
-            // The card blooms: it rises quickly, passes full size, and settles
-            // back — an arrival rather than a grow. The overshoot decays across
-            // the opening so the card is exactly at rest by the time it holds.
-            let progress = (time - window.start) / opening
-            let eased = Self.smoothstep(progress)
-            let overshoot = sin(min(max(progress, 0), 1) * .pi) * Self.deckBloomOvershoot
-            return eased + overshoot * (1 - eased)
-        }
-        guard zoom > 0 else { return 0 }
-        return Self.smoothstep((window.end - time) / zoom)
-    }
-
-    /// Peak of the bloom past full size, as a fraction. Matches the renderer's
-    /// `deckRevealOvershoot` ceiling; the style clamps to it.
-    private static let deckBloomOvershoot = 0.06
-
-    /// Card opacity: fades in over the opening ramp, out over the closing one.
-    private func deckOpacity(atTime time: Double, deck window: (start: Double, end: Double)) -> Double {
-        let zoom = zoomRamp(window)
-        guard zoom > 0 else { return time >= window.start ? 1 : 0 }
-        if time < window.start + zoom { return Self.smoothstep((time - window.start) / zoom) }
-        if time > window.end - zoom { return Self.smoothstep((window.end - time) / zoom) }
-        return 1
-    }
-
-    /// The stop's pin and name. It **fades up exactly as the car parks**, so the
-    /// stop's identity is handed from the vehicle to the pin at the same place
-    /// rather than appearing somewhere else on the map; solid through the rest of
-    /// beat 1; then handed on again to the card's own pin + name as the deck
-    /// opens.
-    private func leadLabelOpacity(
-        atTime time: Double, hold: CameraPath.Hold, deck window: (start: Double, end: Double)
-    ) -> Double {
-        let park = parkRamp(hold)
-        let arriving = park > 0 ? Self.smoothstep((time - hold.startS) / park) : 1
-        guard time >= window.start else { return arriving }
-        let zoom = zoomRamp(window)
-        guard zoom > 0 else { return 0 }
-        return min(arriving, 1 - Self.smoothstep((time - window.start) / zoom))
-    }
-
-    /// Which photo is in focus: the rotate phase (between the zoom edges) split
-    /// into `count` equal slots. Grow holds photo 0 (highlight leads); shrink
-    /// holds the last.
-    private func focusIndex(atTime time: Double, deck window: (start: Double, end: Double), count: Int) -> Int {
-        let zoom = zoomRamp(window)
-        let rotateStart = window.start + zoom
-        let rotateLength = max((window.end - zoom) - rotateStart, 1e-6)
-        let slot = rotateLength / Double(count)
-        return min(max(Int((time - rotateStart) / slot), 0), count - 1)
-    }
-
     /// The revealed trail, cut back into legs (typed-leg pass 2026-07-26). The
     /// camera reveals along one continuous distance axis; this maps the cut back
     /// onto the leg ranges so a reconstructed motorway and an inferred straight
@@ -380,7 +321,7 @@ public struct LinearTimeline {
         return revealed
     }
 
-    private static func smoothstep(_ fraction: Double) -> Double {
+    static func smoothstep(_ fraction: Double) -> Double {
         let clamped = min(max(fraction, 0), 1)
         return clamped * clamped * (3 - 2 * clamped)
     }
