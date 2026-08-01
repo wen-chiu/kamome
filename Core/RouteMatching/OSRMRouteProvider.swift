@@ -41,36 +41,85 @@ public struct OSRMRouteProvider: RouteReconstructing {
         }
     }
 
-    public func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome? {
-        guard !config.baseURL.isEmpty else { return nil }
-        let thinned = Self.thinned(waypoints, minSpacingM: config.routeWaypointMinSpacingM, limit: config.chunkSize)
-        guard thinned.count >= 2, let url = requestURL(for: thinned) else { return nil }
-
+    /// One request, with the two failures that matter told apart in the log.
+    ///
+    /// Returns nil for OSRM's own "these waypoints cannot be joined by road"
+    /// (`NoRoute` / `NoSegment`, answered as HTTP 400) — a clean keep-raw verdict,
+    /// and what a leg across water correctly gets. **Throws** for anything else,
+    /// because a transport failure is not a verdict about the geography: on a
+    /// dogfood build it is an unreachable Mac, an ATS refusal, a denied
+    /// local-network prompt or the wrong Wi-Fi. All four produce an identical
+    /// all-dashed film and completely different log lines.
+    private func fetch(_ url: URL) async throws -> Data? {
         var request = URLRequest(url: url)
         request.timeoutInterval = config.timeoutS
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await transport(request)
+        } catch {
+            KamomeLog.routing.error("""
+                route: TRANSPORT FAILED against \(config.baseURL, privacy: .public) — \
+                \(error.localizedDescription, privacy: .public)
+                """)
+            throw error
+        }
+        guard let http = response as? HTTPURLResponse, http.statusCode != 200 else { return data }
+        if let body = try? JSONDecoder().decode(Response.self, from: data), body.code != "Ok" {
+            KamomeLog.routing.notice(
+                "route: OSRM said \(body.code, privacy: .public) (HTTP \(http.statusCode)) — leg stays raw"
+            )
+            return nil
+        }
+        KamomeLog.routing.error("route: HTTP \(http.statusCode) from \(config.baseURL, privacy: .public)")
+        throw URLError(.badServerResponse)
+    }
 
-        let (data, response) = try await transport(request)
-        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            // OSRM answers 400 with code "NoRoute"/"NoSegment" when the
-            // waypoints cannot be joined by road — a clean "keep raw geometry",
-            // not a transport error. Legs across water land here.
-            if let body = try? JSONDecoder().decode(Response.self, from: data), body.code != "Ok" {
-                return nil
-            }
-            throw URLError(.badServerResponse)
+    /// Every `return nil` here is a leg that will draw dashed, and every one of
+    /// them used to be indistinguishable from the others in the finished film
+    /// (2026-08-01). They are now named in the log as they happen — "disabled",
+    /// "NoSegment", "detour 4.1×" and a transport failure are four very different
+    /// problems with one identical symptom.
+    public func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome? {
+        guard !config.baseURL.isEmpty else {
+            KamomeLog.routing.notice("route: skipped — matching.base_url is empty, so the leg stays raw (PD-2)")
+            return nil
+        }
+        let thinned = Self.thinned(waypoints, minSpacingM: config.routeWaypointMinSpacingM, limit: config.chunkSize)
+        guard thinned.count >= 2, let url = requestURL(for: thinned) else {
+            KamomeLog.routing.notice("route: skipped — \(thinned.count) usable waypoints after thinning")
+            return nil
         }
 
+        guard let data = try await fetch(url) else { return nil }
         let body = try JSONDecoder().decode(Response.self, from: data)
-        guard body.code == "Ok", let route = body.routes?.first else { return nil }
+        guard body.code == "Ok", let route = body.routes?.first else {
+            KamomeLog.routing.notice("route: OSRM said \(body.code, privacy: .public) — leg stays raw")
+            return nil
+        }
         let geometry = EncodedPolyline.decode(route.geometry)
-        guard geometry.count >= 2 else { return nil }
+        guard geometry.count >= 2 else {
+            KamomeLog.routing.notice("route: OSRM returned \(geometry.count) points — leg stays raw")
+            return nil
+        }
 
         // The sanity gate (PD-3 outlier protection). `/route` always answers
         // *something* drivable, so without this a single wrong EXIF fix would
         // silently produce a confident 300 km detour drawn as real road.
         let straightM = Self.straightLineM(thinned)
         guard straightM > 0 else { return nil }
-        guard route.distance <= straightM * config.routeMaxDetourRatio else { return nil }
+        guard route.distance <= straightM * config.routeMaxDetourRatio else {
+            KamomeLog.routing.notice("""
+                route: REJECTED by the detour gate — \(route.distance / 1000, format: .fixed(precision: 1)) km routed \
+                vs \(straightM / 1000, format: .fixed(precision: 1)) km straight \
+                (\(route.distance / straightM, format: .fixed(precision: 1))× > \
+                \(config.routeMaxDetourRatio, format: .fixed(precision: 1))×) — leg stays raw (PD-3)
+                """)
+            return nil
+        }
+        KamomeLog.routing.notice(
+            "route: reconstructed \(route.distance / 1000, format: .fixed(precision: 1)) km from \(thinned.count) waypoints"
+        )
 
         // `/route` reports no confidence. Passing the gate is the verdict:
         // the caller stores the geometry, which is what marks the leg

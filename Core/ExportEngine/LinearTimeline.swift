@@ -171,6 +171,26 @@ public struct LinearTimeline {
     /// otherwise the trip's own dwells at the old fixed duration. Either way the
     /// returned holds already carry the park beats, which are *added* around each
     /// deck rather than taken out of it.
+    /// How long the film runs and how its time is shared out.
+    ///
+    /// ⚠️ **Known defect, deliberately still here (2026-08-01).** Pacing is gated
+    /// on `establishing != nil` — that is, on whether a vector-tile region happens
+    /// to be installed for this trip. It should not be: how many stops a trip has
+    /// and how many photographs each one carries is a *story* fact, while which
+    /// tiles are on the device is a *rendering* fact.
+    ///
+    /// A trip no single region covers therefore falls back to the retired flat
+    /// `target_duration_s`, with no prologue. The first real-device import found
+    /// it the hard way: a six-day Taiwan → Miyakojima trip spans two regions, so
+    /// it came out **30 seconds long with a broken opening** — one root cause
+    /// wearing two symptoms.
+    ///
+    /// Not fixed in this pass by owner call: the only trips affected are the
+    /// multi-region ones, and that work is scoped separately (handoff §"Trips that
+    /// span two map regions"). The removal is one line — this `guard` — plus
+    /// re-basing the test harnesses that use a nil extent to mean "short
+    /// deterministic film". `RecapModel` now logs when it fires, so it can never
+    /// again be silent.
     private static func pacing(
         for trip: RecapTrip, config: TrackingConfig.Export, establishing: RecapBounds?
     ) -> (plan: RecapDurationPlan?, holds: [Double]) {

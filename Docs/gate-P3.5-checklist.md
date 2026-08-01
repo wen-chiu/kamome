@@ -188,6 +188,40 @@ file it renders flat.
 follows roads if OSRM answered, and runs in straight lines between stops if it did
 not. Wait for the stop names (~2 s each), then film button → S5 → MP4 → share.
 
+---
+
+## Appendix — reading the log when a film comes out wrong
+
+Kamome degrades rather than failing: an unreachable routing server keeps raw
+geometry and draws it dashed (PD-2), and a trip no installed region covers falls
+back to Apple's map. Both produce a finished film that is quietly wrong. Since
+2026-08-01 every one of those decisions says so in the unified log.
+
+Attach the phone, open **Console.app**, select the device, and filter:
+
+```
+subsystem:com.chiu.kamome
+```
+
+Or afterwards, without Console: `log collect --device --last 30m`, then open the
+archive in Console.
+
+What to look for, in order:
+
+| line | means |
+|---|---|
+| `matchTrip …: 0/4 legs routable against "(none — matching disabled)"` | the build has `matching.base_url` empty — you are running a config that never asks |
+| `matchTrip …: 4/4 legs routable against "http://192.168.0.6:5100"` | it asked; read on for what came back |
+| `route: TRANSPORT FAILED … ` | it could not reach the server at all — ATS, the local-network prompt, wrong Wi-Fi, firewall. **The message names which** |
+| `route: OSRM said NoSegment` | reached the server; there is no road network there. Correct for a leg outside the merged extract, or across water |
+| `route: REJECTED by the detour gate — 41.0 km routed vs 8.2 km straight` | PD-3 refused an implausible route (usually one bad EXIF fix) |
+| `matchTrip …: 0/4 legs reconstructed` | the headline: how much of the film draws as road |
+| `no installed map region covers this trip` | Apple's map, no prologue **and** the legacy 30 s duration, all at once |
+| `film: 90.0s · 2700 frames · opening 5.9s · 9 stops · 0/5 legs dashed` | what was actually rendered |
+
+The first two lines answer the question a finished film cannot: *did the app ask,
+and what did it ask?*
+
 ## Not on this list, on purpose
 
 - **OSRM, not ORS.** There is no OpenRouteService integration anywhere in the

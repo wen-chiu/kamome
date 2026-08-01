@@ -139,6 +139,23 @@ final class RecapModel {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }
+        // The single most useful line in the log when a film comes out wrong
+        // (2026-08-01). No covering region silently costs the souvenir map, the
+        // opening prologue *and* content-derived pacing at once — a six-day trip
+        // rendering as a 30-second Apple-map film looked like three separate bugs
+        // and was one missing tile set.
+        if region == nil {
+            KamomeLog.recap.error("""
+                no installed map region covers this trip — falling back to Apple's map, \
+                no prologue, and the legacy \(exportConfig.targetDurationS, format: .fixed(precision: 0))s duration. \
+                A trip spanning two regions hits this (handoff §"Trips that span two map regions").
+                """)
+        }
+        KamomeLog.recap.notice("""
+            film: \(timeline.durationS, format: .fixed(precision: 1))s · \
+            \(timeline.frameCount) frames · opening \(timeline.openingS, format: .fixed(precision: 1))s · \
+            \(trip.stops.count) stops · \(trip.legs.filter(\.provenance.isInferred).count)/\(trip.legs.count) legs dashed
+            """)
         let style = RecapStyle.modernMinimal
         let resolver = PhotoLibraryPhotoResolver()
         if photosEnabled {

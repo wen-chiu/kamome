@@ -22,6 +22,10 @@ struct RouteMatchService {
     private let repository: TripRepository
     private let matcher: RouteMatchProviding
     private let reconstructor: RouteReconstructing
+    /// Logged, not used: the providers own the requests. What it answers is
+    /// "which server did this build actually ask?" — the first question of the
+    /// all-dashed failure, and one a finished film cannot answer.
+    private let baseURL: String
 
     init(
         repository: TripRepository,
@@ -32,13 +36,25 @@ struct RouteMatchService {
         self.repository = repository
         matcher = provider ?? OSRMMatchProvider(config: config.matching)
         self.reconstructor = reconstructor ?? OSRMRouteProvider(config: config.matching)
+        baseURL = config.matching.baseURL.isEmpty ? "(none — matching disabled)" : config.matching.baseURL
     }
 
     /// Idempotent: already-matched segments are skipped, so every caller
     /// (trip end, import, recap export) can fire it freely.
+    ///
+    /// Logs what it attempted and what came back (2026-08-01). The first real
+    /// device import produced a film with every leg dashed and no way to tell
+    /// whether the requests had failed, been refused, or correctly declined —
+    /// this is the tally that answers it, and the base URL it used.
     func matchTrip(tripId: String) async {
         guard let detail = try? repository.detail(tripId: tripId) else { return }
-        for item in detail.segments where shouldReconstruct(item.segment, points: item.points) {
+        let attempted = detail.segments.filter { shouldReconstruct($0.segment, points: $0.points) }
+        KamomeLog.routing.notice("""
+            matchTrip \(tripId, privacy: .public): \(attempted.count)/\(detail.segments.count) legs routable \
+            against "\(baseURL, privacy: .public)"
+            """)
+        var reconstructed = 0
+        for item in attempted {
             let trace = item.points.map {
                 RouteMatchPoint(ts: $0.ts, lat: $0.lat, lon: $0.lon, hAccM: $0.hAcc)
             }
@@ -54,7 +70,15 @@ struct RouteMatchService {
                 segmentId: item.segment.id,
                 encodedPolyline: outcome.encodedPolyline
             )
+            reconstructed += 1
         }
+        // The headline a dogfooder needs: how much of the film will draw as road.
+        // Zero out of several, with legs that *should* have routed, is the
+        // all-dashed failure — and it now says so at the moment it happens.
+        KamomeLog.routing.notice("""
+            matchTrip \(tripId, privacy: .public): \(reconstructed)/\(attempted.count) legs reconstructed; \
+            the rest draw dashed (PD-1)
+            """)
     }
 
     private func shouldReconstruct(_ segment: SegmentRecord, points: [TrackpointRecord]) -> Bool {

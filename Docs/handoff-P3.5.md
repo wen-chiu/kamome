@@ -395,6 +395,54 @@ Tracked here so it is not silently skipped when the migration happens (Chiu
 Not blocking the §6 gate: on home Wi-Fi the service is not reachable from the
 internet, so there is nothing to authenticate against.
 
+### Trips that span two map regions — OPEN, first hit 2026-08-01 🔴
+
+Found on the first real-device import: a six-day Miyakojima trip whose **day 1
+starts at a Taiwan airport**. Diagnosed, deliberately not fixed (owner call —
+see how single-region trips behave first).
+
+**One cause, three symptoms.** `RecapMapTiles.tilesURL` requires *containment*,
+not overlap, so a trip that leaves its region matches nothing:
+
+```
+trip bbox        W 121.230  S 24.790  E 125.470  N 25.100
+miyakojima       W 125.100  S 24.600  E 125.550  N 25.000   → does not contain
+```
+
+`RecapMapRegionResolver.resolve` therefore returns nil, and `RecapModel` turns
+that one nil into three separate degradations at once:
+
+1. **Apple's map** instead of the souvenir map (`snapshotProvider(for:)`).
+2. **No prologue** — `establishing` is nil, so `LinearTimeline.pacing` returns no
+   duration plan and `openingS` is 0. This is the "opening zoom broke" symptom.
+3. **30 s flat** — with no plan the film falls back to the retired
+   `export.target_duration_s`. A six-day trip came out at 30 seconds.
+
+Symptoms 2 and 3 are **not really about tiles at all** — they are a coupling bug.
+Pacing is a story fact (how many stops, how many photos); which tiles are
+installed is a rendering fact. The `guard establishing != nil` in
+`LinearTimeline.pacing` is the whole of it, and removing it is one line — plus
+re-basing the test harnesses that pass a nil extent to mean "short deterministic
+film" (~8 suites assume no prologue and a 30 s duration; the clean migration is to
+express that in their `TrackingConfig.Export` — `opening_*_s: 0` and
+`total_duration_min/max_s == target_duration_s` — rather than through a nil
+extent). Attempted and reverted 2026-08-01: correct, but its only beneficiary
+today is the multi-region case, so it ships with this.
+
+Symptom 1 is the real multi-region question, and it has several possible shapes —
+none chosen: merge the covering regions into one PMTiles; render per-act with a
+different region each; accept Apple's map for the crossing act only; or build a
+region per trip. **Decide after seeing single-region trips (Iceland/NZ/Finland)
+render end to end.**
+
+Now loud, at least: `RecapModel` logs `no installed map region covers this trip`
+with the three consequences named, and every film logs its duration, prologue,
+stop count and dashed-leg count (`KamomeLog.recap`).
+
+Related, also deferred: the airport-departure animation (a flight leg is a genuine
+discontinuity — `act_split_km` already cuts a new act there, but nothing tells the
+story of the hop).
+
 ### Photo deck → fan/stack carousel (future, scoped separately) 📌
 
 Explicitly **not** in the 2026-07-30 cinematic pass (Chiu). The deck today is a
