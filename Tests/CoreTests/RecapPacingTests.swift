@@ -20,6 +20,8 @@ final class RecapPacingTests: XCTestCase {
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 2.5,
             actSplitKm: 25, followHeadingUp: false,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7,
+            cameraResponsiveness: 6.0, endRevealS: 2.5,
             deckPhotoHoldS: 2.5, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,
@@ -140,15 +142,25 @@ final class RecapPacingTests: XCTestCase {
 
     /// The opening spends time only where the camera is actually going somewhere.
     ///
-    /// A trip that fits in one act frames its region and its route identically,
-    /// so the regional→route transition moved nothing and the holds either side
-    /// of it were a frozen picture. Those beats collapse, and the opening comes
-    /// in well under the configured sum rather than sitting on a still frame.
+    /// When the installed region's extent *is* the trip's own extent — a tightly
+    /// cut dogfood region — the country and regional beats frame the identical
+    /// picture, so one of them is dropped rather than spending a transition and a
+    /// hold on a frozen frame.
+    ///
+    /// (The beat this test used to guard, regional→route, is gone entirely: the
+    /// route beat was a stored frame held with the vehicle pinned at distance
+    /// zero, and deleting it beat collapsing it.)
     func testOpeningCollapsesBeatsThatDoNotMoveTheCamera() throws {
         let export = config()
-        let line = try timeline(trip(photoCounts: [3, 3]), export)
-        let configured = export.openingCountryS + export.openingRegionalS
-            + export.openingRouteS + 2 * export.zoomTransitionS
+        let sample = trip(photoCounts: [3, 3])
+        let lats = sample.route.map(\.lat), lons = sample.route.map(\.lon)
+        let line = try XCTUnwrap(LinearTimeline(
+            trip: sample, config: export,
+            establishing: RecapBounds(
+                minLat: lats.min()!, minLon: lons.min()!, maxLat: lats.max()!, maxLon: lons.max()!
+            )
+        ))
+        let configured = export.openingCountryS + export.openingRegionalS + 2 * export.zoomTransitionS
         XCTAssertLessThan(line.openingS, configured - 2, "duplicate beats must be dropped")
         XCTAssertGreaterThan(line.openingS, export.zoomTransitionS, "but the zoom itself still runs")
 
@@ -181,37 +193,53 @@ final class RecapPacingTests: XCTestCase {
 
     /// The subject waits at the route's start while the camera establishes, so the
     /// trail has not begun and the opening has the frame to itself.
-    func testSubjectHoldsAtTheRouteStartThroughTheOpening() throws {
+    func testSubjectHoldsAtTheRouteStartThroughTheWideOpening() throws {
         let export = config()
         let sample = trip(photoCounts: [3, 3])
         let line = try timeline(sample, export)
         let start = try XCTUnwrap(sample.route.first)
 
-        for time in stride(from: 0.0, to: line.openingS - 0.1, by: 0.5) {
+        // Only through the *wide* beats. The journey deliberately starts before
+        // the opening finishes (Chiu 2026-08-01): the closing zoom plays over a
+        // moving car and a growing trail, which is what removed the freeze that
+        // survived every round of dwell tuning.
+        for time in stride(from: 0.0, to: line.journeyStartS - 0.1, by: 0.5) {
             let subject = line.subjectState(atTime: time)
-            XCTAssertEqual(subject.lat, start.lat, accuracy: 1e-6, "vehicle moved during the opening (t=\(time))")
+            XCTAssertEqual(subject.lat, start.lat, accuracy: 1e-6, "vehicle moved during the wide opening (t=\(time))")
         }
-        // And it does move once the journey starts.
-        let moved = line.subjectState(atTime: line.openingS + (line.durationS - line.openingS) * 0.5)
-        XCTAssertGreaterThan(abs(moved.lat - start.lat), 1e-4)
+        XCTAssertLessThan(line.journeyStartS, line.openingS, "the journey must start before the opening ends")
+        // It is already rolling by the time the opening resolves.
+        let rolling = line.subjectState(atTime: line.openingS)
+        XCTAssertGreaterThan(abs(rolling.lat - start.lat), 1e-7, "the car should be moving as the opening settles")
     }
 
-    /// **The body camera never moves again** (Chiu 2026-07-30). The opening is the
-    /// only camera movement in the film: no per-stop approach, no drift. This is
-    /// the guard on the static-camera decision surviving the cinematic pass.
-    func testCameraIsCompletelyStillAfterTheOpening() throws {
+    /// **The body never zooms, and never cuts** (Chiu 2026-08-01). The camera may
+    /// translate — that is the dolly following the journey — but the span is
+    /// fixed for the whole trip and consecutive frames always share their ground.
+    ///
+    /// This replaced an assertion that the camera was *completely* still after
+    /// the opening. That rule came from the act camera, where holding still was
+    /// the only way to stay legible; it is exactly what forced a cut whenever the
+    /// journey outgrew one frame.
+    func testBodyTranslatesWithoutZoomingOrCutting() throws {
         let export = config()
         let line = try timeline(trip(photoCounts: [3, 4, 2]), export)
 
         let settled = line.cameraFrame(atTime: line.openingS + 0.5)
+        let step = 1.0 / Double(export.fps)
+        var previous = settled
         var time = line.openingS + 0.5
-        while time <= line.durationS {
+        while time <= line.durationS - export.endCardS - export.endRevealS {
             let frame = line.cameraFrame(atTime: time)
             XCTAssertEqual(frame.spanM, settled.spanM, accuracy: 0.5, "camera zoomed at t=\(time)")
-            XCTAssertEqual(frame.centerLat, settled.centerLat, accuracy: 1e-6, "camera panned at t=\(time)")
-            XCTAssertEqual(frame.centerLon, settled.centerLon, accuracy: 1e-6, "camera panned at t=\(time)")
             XCTAssertEqual(frame.bearing, 0, "camera rotated at t=\(time)")
-            time += 0.25
+            let moved = Geo.distanceM(
+                latA: previous.centerLat, lonA: previous.centerLon,
+                latB: frame.centerLat, lonB: frame.centerLon
+            )
+            XCTAssertLessThan(moved, frame.spanM * 0.5, "camera cut at t=\(time)")
+            previous = frame
+            time += step
         }
     }
 
@@ -281,7 +309,10 @@ final class RecapPacingTests: XCTestCase {
         let stopAt = try XCTUnwrap(firstStopPresentation(line), "the opening stop must present itself")
         let carAt = try XCTUnwrap(firstSubjectAppearance(line), "the car must eventually arrive")
 
-        XCTAssertGreaterThanOrEqual(stopAt, line.openingS - 0.05, "the stop belongs after the prologue")
+        XCTAssertGreaterThanOrEqual(
+            stopAt, line.journeyStartS - 0.05,
+            "the stop belongs to the journey, which starts as the opening's closing zoom begins"
+        )
         XCTAssertGreaterThan(carAt, stopAt, "the car must not exist before the stop has been presented")
 
         // Not drawn anywhere across the prologue or the stop's own scene.

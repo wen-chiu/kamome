@@ -16,6 +16,8 @@ class LinearTimelineTestCase: XCTestCase {
             targetDurationS: targetDurationS, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7,
+            cameraResponsiveness: 6.0, endRevealS: 2.5,
             deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,

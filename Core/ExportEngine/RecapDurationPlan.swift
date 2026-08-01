@@ -26,10 +26,61 @@ public struct RecapDurationPlan: Equatable {
     /// The journey itself — travel plus stops, after the prologue.
     public var bodyS: Double { totalS - openingS }
 
+    /// Film seconds actually spent travelling — what is left once the prologue,
+    /// the stop dwells and the end card are paid for. The camera only moves
+    /// during these, so this is the denominator the body span is sized against.
+    public var travelS: Double {
+        max(bodyS - stopDwellS.reduce(0, +), 0)
+    }
+
     public init(totalS: Double, openingS: Double, stopDwellS: [Double]) {
         self.totalS = totalS
         self.openingS = openingS
         self.stopDwellS = stopDwellS
+    }
+
+    /// **The body camera's span — one number per trip, fixed for the whole film**
+    /// (Chiu 2026-08-01).
+    ///
+    /// Derived rather than configured, because the failure it prevents is a
+    /// *rate* failure. The camera must cross `routeDistanceM` in `travelS`
+    /// seconds; how watchable that is depends entirely on how much of a window
+    /// it crosses per second. Pin that rate and the span falls out:
+    ///
+    ///     span = routeDistance / (travelSeconds × panRate)
+    ///
+    /// `camera_pan_window_fraction_per_s` is that rate — 0.35 means the view
+    /// slides one full window every ~3 seconds. The same quantity is what
+    /// `RecapCameraContinuityTests` measures, so the formula and its gate cannot
+    /// drift apart.
+    ///
+    /// Deliberately **not** adaptive: not per-leg, not per-act, not city-versus-
+    /// highway. Recomputing it mid-film is how the old act camera produced a 97×
+    /// zoom-out three seconds before the end card. Different trips get different
+    /// spans; one trip gets one span.
+    ///
+    /// The clamps are guardrails, not the mechanism — on every committed fixture
+    /// the formula itself binds:
+    /// - floored at `camera_span_m`, so a trip round one block does not zoom to
+    ///   the width of a street;
+    /// - ceilinged at the whole route's own framing, so the camera never frames
+    ///   ground the trip never visits. When that ceiling binds the whole route is
+    ///   already on screen, so the subject barely reaches the dead-zone edge and
+    ///   the body camera is **all but static** — the 2026-07-25 "held still"
+    ///   behaviour, reached by this rule rather than special-cased.
+    static func bodySpanM(
+        routeDistanceM: Double,
+        travelS: Double,
+        routeBounds: CameraPath.Bounds,
+        config: TrackingConfig.Export
+    ) -> Double {
+        let ceiling = max(
+            CameraPath.fittingSpanM(bounds: routeBounds, config: config) * config.wideSpanPadding,
+            config.cameraSpanM
+        )
+        guard travelS > 0, routeDistanceM > 0, config.cameraPanWindowFractionPerS > 0 else { return ceiling }
+        let raw = routeDistanceM / (travelS * config.cameraPanWindowFractionPerS)
+        return min(max(raw, config.cameraSpanM), ceiling)
     }
 
     /// Plans a film for `photoCounts` (one entry per stop, in trip order).

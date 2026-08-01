@@ -86,7 +86,7 @@ public struct RecapStyle {
     /// shared canvas rather than by each drawing's content is what keeps the car
     /// from pulsing as it turns; the car itself fills 52–74% of it, so the drawn
     /// vehicle runs roughly 200–280 px.
-    public var carSpriteLengthPx: CGFloat = 380
+    public var carSpriteLengthPx: CGFloat = 300
     /// Drawn only when the sprite set fails to load. Vector, so it rotates
     /// freely. The gull is the brand mascot and reads as a light glyph over the
     /// dark souvenir map — deliberately not the car's red, so the two are never

@@ -29,6 +29,10 @@ public struct LinearTimeline {
     /// How much of the film is the opening establishing sequence — 0 when there
     /// is no prologue. Exposed so a render can report its own pacing.
     public let openingS: Double
+    /// When the trail and the vehicle start moving. Earlier than `openingS`: the
+    /// opening's closing zoom plays over an already-moving journey, which is what
+    /// removed the frozen opening (Chiu 2026-08-01).
+    public let journeyStartS: Double
 
     /// One leg's window into the flat route array, kept alongside the story it
     /// tells about itself. The camera works on the concatenated polyline (one
@@ -105,6 +109,7 @@ public struct LinearTimeline {
         durationS = path.durationS
         frameCount = path.frameCount
         openingS = path.openingS
+        journeyStartS = path.journeyStartS
         stops = trip.stops
         holds = path.holds
         routeCoordinates = route

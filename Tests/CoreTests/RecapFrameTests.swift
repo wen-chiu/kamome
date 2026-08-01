@@ -238,13 +238,19 @@ final class RecapFrameTests: RecapRenderTestCase {
         XCTAssertEqual(provider.requestCount, 1, "one camera value = one snapshot, however many keyframes want it")
     }
 
-    /// The dedup must not swallow a genuine re-frame: a route with a jump wider
-    /// than `act_split_km` plays as two acts, and the camera cuts between two
-    /// distinct fixed frames — which is exactly where the cross-fade lives.
-    func testActTransitionStillFetchesBothFramesAndCrossFades() async throws {
+    /// The dedup must not swallow real movement. A route with a 100 km leap is
+    /// now **panned** across rather than cut across (Chiu 2026-08-01: acts no
+    /// longer frame anything), so every keyframe sits at its own camera value and
+    /// each one is fetched — the cache dedups identical views, never distinct
+    /// ones.
+    ///
+    /// This is the cost side of the redesign, recorded deliberately: a camera
+    /// that moves cannot reuse snapshots the way a camera frozen per act could,
+    /// so a moving film fetches more of them.
+    func testMovingCameraFetchesOneSnapshotPerDistinctView() async throws {
         let config = exportConfig(targetDurationS: 2, fps: 5, keyframeIntervalFrames: 3)
-        // Two clusters ~100 km apart: far beyond act_split_km, so the camera
-        // cannot hold both in one honest frame.
+        // Two clusters ~100 km apart: far beyond act_split_km, and once upon a
+        // time two separate fixed frames with a cut between them.
         let jumped = [
             RecapCoordinate(lat: -32.00, lon: 115.75),
             RecapCoordinate(lat: -32.01, lon: 115.76),
@@ -265,11 +271,10 @@ final class RecapFrameTests: RecapRenderTestCase {
             let time = min(Double(keyframe * 3) / 5, timeline.durationS)
             cameras.insert(timeline.cameraFrame(atTime: time).centerLat)
         }
-        XCTAssertGreaterThan(cameras.count, 1, "the jump must actually re-frame the camera")
 
         try await loop.renderFrames { _, _ in true }
         XCTAssertEqual(provider.requestCount, cameras.count,
-                       "one snapshot per distinct camera value — the re-frame is still fetched")
+                       "one snapshot per distinct camera value")
     }
 
     func testLoopStopsWhenConsumerCancels() async throws {

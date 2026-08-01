@@ -31,6 +31,26 @@ public extension TrackingConfig {
         public let actSplitKm: Double
         /// Rotate the map heading-up (needs a `bearing`-honoring provider; §3).
         public let followHeadingUp: Bool
+        /// How much of a window the travel camera may cross per second — the
+        /// dead-zone dolly's whole budget, and what `bodySpanM` inverts to size
+        /// the span (Chiu 2026-08-01). 0.35 slides one full window every ~3 s.
+        /// `RecapCameraContinuityTests` measures this same quantity, so raising
+        /// it past what the gate allows fails the suite rather than shipping.
+        public let cameraPanWindowFractionPerS: Double
+        /// The middle fraction of the frame in which the subject may move with
+        /// the camera completely still. The dead zone is what lets a viewer keep
+        /// their bearings: the world holds while the journey advances across it,
+        /// instead of the map sliding under a pinned cursor.
+        public let cameraDeadZoneFraction: Double
+        /// Spring rate (rad/s) of the dolly that chases the subject once it
+        /// leaves the dead zone. Critically damped, so this sets how hard the
+        /// camera leans into a move; higher is snappier, lower is heavier. Too
+        /// low and the subject outruns the frame on fast legs.
+        public let cameraResponsiveness: Double
+        /// The closing reveal: after the last stop the camera eases out to frame
+        /// the whole journey, so the film ends on what was actually travelled.
+        /// A distinct beat *after* the body — the body itself never zooms.
+        public let endRevealS: Double
         /// Photo-deck pacing (§5): label lead, per-photo dwell, grow/shrink each,
         /// dolly-in span while a stop's deck is up (deck zoom = camera track).
         public let deckPhotoHoldS: Double
@@ -92,6 +112,8 @@ public extension TrackingConfig {
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
             actSplitKm: Double, followHeadingUp: Bool,
+            cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double,
+            cameraResponsiveness: Double, endRevealS: Double,
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double, openingRouteS: Double,
             countryViewPadding: Double, firstStopDwellScale: Double,
@@ -107,6 +129,10 @@ public extension TrackingConfig {
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.followHeadingUp = followHeadingUp
+            self.cameraPanWindowFractionPerS = cameraPanWindowFractionPerS
+            self.cameraDeadZoneFraction = cameraDeadZoneFraction
+            self.cameraResponsiveness = cameraResponsiveness
+            self.endRevealS = endRevealS
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
             self.deckLabelLeadS = deckLabelLeadS
             self.subjectParkS = subjectParkS
@@ -136,6 +162,9 @@ public extension TrackingConfig {
                 frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
                 cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
                 zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: resolved,
+                cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
+                cameraDeadZoneFraction: cameraDeadZoneFraction,
+                cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
                 deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
                 deckLabelLeadS: deckLabelLeadS,
                 subjectParkS: subjectParkS,
@@ -156,6 +185,10 @@ public extension TrackingConfig {
         }
 
         enum CodingKeys: String, CodingKey {
+            case cameraPanWindowFractionPerS = "camera_pan_window_fraction_per_s"
+            case cameraDeadZoneFraction = "camera_dead_zone_fraction"
+            case cameraResponsiveness = "camera_responsiveness"
+            case endRevealS = "end_reveal_s"
             case targetDurationS = "target_duration_s"
             case fps
             case stopHoldS = "stop_hold_s"

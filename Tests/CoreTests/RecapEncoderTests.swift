@@ -18,6 +18,8 @@ final class RecapEncoderTests: XCTestCase {
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7,
+            cameraResponsiveness: 6.0, endRevealS: 2.5,
             deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
             countryViewPadding: 2.2, firstStopDwellScale: 0.55,

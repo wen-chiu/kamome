@@ -169,11 +169,18 @@ final class RecapDemoFilmTests: XCTestCase {
         try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
     }
 
+    /// `baseURL` nil takes the ambient OSRM (review renders want real roads);
+    /// passing `""` forces every leg to stay raw, which is what the offline
+    /// continuity gate needs — and what the shipped app does today, since
+    /// `matching.base_url` ships empty.
     static func importedRecap(
-        named fixture: String
+        named fixture: String,
+        baseURL requestedBaseURL: String? = nil
     ) async throws -> (RecapTrip, TrackingConfig.Export) {
         let full = try AppConfig.loadOrDie()
-        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5100"
+        let baseURL = requestedBaseURL
+            ?? ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"]
+            ?? "http://127.0.0.1:5100"
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let service = ImportService(
             repository: repository, config: full,

@@ -2,10 +2,17 @@ import Foundation
 import KamomeConfig
 import KamomeTrackingEngine
 
-/// How the camera decides what to hold in frame (Chiu 2026-07-25).
+/// The film's **time budget**, and where the journey genuinely leaps.
 ///
-/// Split out of `CameraPath` to keep both files readable; the behaviour is
-/// documented on `Act` below.
+/// This file used to also decide camera framing — one fixed frame per "act",
+/// fitted to that act's own bounds. That is what the 2026-08-01 redesign
+/// removed: framing derived from data shape is exactly how the camera came to
+/// cut between unrelated views, so it now belongs to `FollowCamera`, which only
+/// ever *moves* the frame it already has.
+///
+/// What survives here is the half that was never about the camera: how long each
+/// stop holds and each leg travels, and which gaps in the route are real leaps
+/// rather than fast driving.
 extension CameraPath {
     /// Time budget: holds first (their sum capped at `max_hold_fraction`), the
     /// rest is travel, split across legs in proportion to leg distance. Each
@@ -60,69 +67,43 @@ extension CameraPath {
         return timeline
     }
 
-    /// A stretch of the journey the camera can hold in one fixed frame.
+    /// A genuine leap in the journey: two consecutive route vertices further
+    /// apart than `export.act_split_km`. A flight, a ferry, or a drive resuming
+    /// in another region — a gap no honest continuous camera move can cover.
     ///
-    /// The camera used to fly: wide establishing shot, then a close follow-cam
-    /// riding the vehicle, plus a dolly into every stop. That made "how far did
-    /// I actually go" illegible — the map slid and scaled continuously, so the
-    /// eye had nothing to measure against — and it magnified raw GPS noise at
-    /// close zoom. The prototype and TravelBoast both hold the map still and let
-    /// the *line* do the work, which is what this restores.
-    ///
-    /// A new act starts only at a genuine discontinuity: consecutive route
-    /// points more than `export.act_split_km` apart. That is what a flight, a
-    /// ferry, or a drive resuming in another region looks like in the data — a
-    /// leap no honest single frame can hold. Everything else, stops included,
-    /// plays inside one held frame.
-    struct Act {
-        let startS: Double
-        let endS: Double
-        let centerLat: Double
-        let centerLon: Double
-        let spanM: Double
+    /// **This is the only place the camera may break continuity.** Everywhere
+    /// else the frame must stay spatially continuous (camera continuity rule,
+    /// Chiu 2026-08-01), and `RecapCameraContinuityTests` enforces exactly that:
+    /// a jump anywhere but here fails the suite.
+    struct Discontinuity: Equatable {
+        /// The vertex the leap lands *on* — the first point of the new stretch.
+        let vertexIndex: Int
+        /// Along-route distance at the leap, for mapping onto the film clock.
+        let distanceM: Double
+        /// How far the leap is, so a transition can be sized to it.
+        let leapM: Double
     }
 
-    /// Splits the route at genuine jumps and frames each resulting act to its own
-    /// extent. One continuous drive yields a single act — one fixed frame for the
-    /// whole film, which is the common case and the point of the design.
-    static func buildActs(
-        route: [Point],
-        cumulativeM: [Double],
-        timeline: [TimelineEntry],
-        totalM: Double,
-        config: TrackingConfig.Export
-    ) -> [Act] {
+    /// Every genuine leap in `route`, in travel order.
+    ///
+    /// All that remains of the acts system (2026-08-01), and deliberately so:
+    /// detection is a fact about the *journey* — a ferry is a ferry — while
+    /// framing was a decision about the *camera*, and conflating the two is what
+    /// made acts visible to the audience.
+    static func discontinuities(
+        route: [Point], cumulativeM: [Double], config: TrackingConfig.Export
+    ) -> [Discontinuity] {
+        guard route.count > 1 else { return [] }
         let splitM = config.actSplitKm * 1000
-        var startVertex = 0
-        var spans: [(from: Int, to: Int)] = []
-        for vertex in 1..<route.count where cumulativeM[vertex] - cumulativeM[vertex - 1] > splitM {
-            spans.append((startVertex, vertex - 1))
-            startVertex = vertex
-        }
-        spans.append((startVertex, route.count - 1))
-
-        let durationS = config.targetDurationS
-        return spans.map { span in
-            let slice = Array(route[span.from...span.to])
-            let bounds = Self.bounds(of: slice)
-            // Floor at camera_span_m so a tiny act (a single city block) does not
-            // zoom absurdly far in; pad so the line never touches the edge.
-            let spanM = max(
-                config.cameraSpanM,
-                Self.fittingSpanM(bounds: bounds, config: config) * config.wideSpanPadding
-            )
-            return Act(
-                startS: Self.time(atDistance: cumulativeM[span.from], timeline: timeline, durationS: durationS),
-                endS: Self.time(atDistance: cumulativeM[span.to], timeline: timeline, durationS: durationS),
-                centerLat: (bounds.minLat + bounds.maxLat) / 2,
-                centerLon: (bounds.minLon + bounds.maxLon) / 2,
-                spanM: spanM
-            )
+        return (1..<route.count).compactMap { vertex in
+            let leapM = cumulativeM[vertex] - cumulativeM[vertex - 1]
+            guard leapM > splitM else { return nil }
+            return Discontinuity(vertexIndex: vertex, distanceM: cumulativeM[vertex], leapM: leapM)
         }
     }
 
     /// When the vehicle reaches `distanceM` — the inverse of the speed-warped
-    /// timeline, used to give each act its time window.
+    /// timeline. Used to place a discontinuity on the film clock.
     static func time(
         atDistance distanceM: Double, timeline: [TimelineEntry], durationS: Double
     ) -> Double {
@@ -140,7 +121,8 @@ extension CameraPath {
 
 // MARK: - Framing geometry (pure, deterministic)
 
-// Internal, not private: CameraPathActs.swift frames each act with these.
+// Internal, not private: the opening's wide beats and the body span are
+// framed with these.
 extension CameraPath {
     struct Bounds {
         let minLat: Double

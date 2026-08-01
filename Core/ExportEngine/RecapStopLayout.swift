@@ -13,7 +13,7 @@ import Foundation
 /// product behaviour: the car arrives there, parks, and hands the spot to the pin.
 ///
 /// It did not used to work this way. The group was pushed clear of the vehicle by
-/// the vehicle's own half-length plus a margin — in *pixels*, sized from a 380 px
+/// the vehicle's own half-length plus a margin — in *pixels*, sized from a 300 px
 /// car sprite, which at a wide act framing is nearly three kilometres of ground.
 /// A pin meant to mark a stop landed kilometres from it. The car now parks and
 /// disappears for the duration of a stop scene (`LinearTimeline.subjectState`),

@@ -34,9 +34,15 @@ extension CameraPath {
         let beats: [Beat]
         let transitionS: Double
 
-        /// Where the journey's clock starts. Everything before this is prologue.
+        /// When the wide beats are done — the moment the journey's clock starts
+        /// and the closing zoom into the body camera begins.
         var totalS: Double {
             beats.reduce(0) { $0 + $1.holdS } + Double(max(beats.count - 1, 0)) * transitionS
+        }
+
+        /// The last wide framing — what the closing zoom eases *from*.
+        var finalFrame: CameraFrame {
+            beats.last?.frame ?? CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0)
         }
 
         /// The framing at `time`. Holds, then eases, then holds — the same
@@ -61,18 +67,28 @@ extension CameraPath {
         }
     }
 
-    /// Builds the opening for a trip.
+    /// Builds the **wide** half of the opening: country, then region.
     ///
     /// `establishing` is the installed map region's own extent — the honest
     /// country/island unit, and never wider than the tiles we have. Without it
     /// (no vector tiles, so Apple's map renders) the country view falls back to
     /// the trip's own bounds widened by `country_view_padding`, which is the most
     /// an offline app can claim to know about the surrounding geography.
-    static func buildPrologue(
+    ///
+    /// **The third beat is gone** (Chiu 2026-08-01). It used to be a stored copy
+    /// of the first act's frame, held for `opening_route_s` with the vehicle
+    /// still pinned at distance zero — a picture in which, by construction,
+    /// nothing on screen could move. `CameraPath` now zooms from the last wide
+    /// beat straight into the live follow camera while the journey is already
+    /// running, so the opening resolves *onto* motion instead of into a freeze.
+    ///
+    /// `bodySpanM` is passed only so a wide beat that already frames the body
+    /// tightly can collapse against it; the body's own framing stays live.
+    static func buildWideOpening(
         route: [Point],
         establishing: RecapBounds?,
         config: TrackingConfig.Export,
-        routeFrame: CameraFrame
+        bodySpanM: Double
     ) -> Prologue {
         let tripBounds = bounds(of: route)
         let regional = frame(for: tripBounds, config: config, padding: config.wideSpanPadding)
@@ -95,8 +111,7 @@ extension CameraPath {
 
         let wanted = [
             Beat(frame: country, holdS: config.openingCountryS),
-            Beat(frame: regional, holdS: config.openingRegionalS),
-            Beat(frame: routeFrame, holdS: config.openingRouteS)
+            Beat(frame: regional, holdS: config.openingRegionalS)
         ]
         return Prologue(beats: collapse(wanted, config: config), transitionS: config.zoomTransitionS)
     }
