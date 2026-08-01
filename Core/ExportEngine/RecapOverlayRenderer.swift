@@ -111,8 +111,11 @@ public struct RecapOverlayRenderer: OverlayRenderer {
     private func drawStopLabel(
         identity: RecapStopIdentity, coordinate: RecapCoordinate, into surface: RenderSurface
     ) {
+        // Beat 1 is placed against the card that is *about* to open, not against
+        // the nothing it currently has. Otherwise the name picks a side on its
+        // own and the card arriving flips the whole cluster underneath it.
         let layout = place(
-            cardSize: .zero, identity: identity,
+            cardSize: .zero, maxCardHeight: settledCardHeight(in: surface), identity: identity,
             anchor: surface.cgPoint(lat: coordinate.lat, lon: coordinate.lon), in: surface
         )
         drawPin(at: layout.pinPoint, radius: style.labelPinRadiusPx * surface.scale, in: surface)
@@ -130,15 +133,23 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         context.fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
     }
 
+    /// The photo card's height once fully revealed. One definition, shared by
+    /// both stop beats, so they can never disagree about which side to hang on.
+    func settledCardHeight(in surface: RenderSurface) -> CGFloat {
+        CGFloat(surface.widthPx) * style.deckPhotoMaxWidthFraction * style.deckPhotoAspect
+    }
+
     /// Places a stop's pin, name group and card — all anchored on the stop itself.
     func place(
-        cardSize: CGSize, identity: RecapStopIdentity, anchor: CGPoint, in surface: RenderSurface
+        cardSize: CGSize, maxCardHeight: CGFloat, identity: RecapStopIdentity,
+        anchor: CGPoint, in surface: RenderSurface
     ) -> RecapStopLayout {
         let scale = surface.scale
         let metrics = identityMetrics(identity, in: surface)
         return RecapStopLayout(
             anchor: anchor,
             cardSize: cardSize,
+            maxCardHeight: maxCardHeight,
             pinHeight: style.labelPinRadiusPx * 3 * scale,
             labelBandHeight: metrics.height,
             labelBandWidth: metrics.width,

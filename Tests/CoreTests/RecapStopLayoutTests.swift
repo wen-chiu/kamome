@@ -21,10 +21,16 @@ final class RecapStopLayoutTests: XCTestCase {
     private let gap: CGFloat = 16
     private let margin: CGFloat = 48
 
-    private func layout(anchor: CGPoint, cardSize: CGSize? = nil) -> RecapStopLayout {
+    private func layout(
+        anchor: CGPoint, cardSize: CGSize? = nil, maxCardHeight: CGFloat? = nil
+    ) -> RecapStopLayout {
         RecapStopLayout(
             anchor: anchor,
             cardSize: cardSize ?? self.cardSize,
+            // Defaults to the card's own height: the side-choosing input only
+            // differs from it while the card is mid-reveal, which is the case
+            // `testClusterSideIsFixedWhileTheCardGrows` covers explicitly.
+            maxCardHeight: maxCardHeight ?? (cardSize ?? self.cardSize).height,
             pinHeight: pinHeight,
             labelBandHeight: bandHeight,
             labelBandWidth: bandWidth,
@@ -153,6 +159,25 @@ final class RecapStopLayoutTests: XCTestCase {
                 CGRect(origin: .zero, size: frame).contains(placed.labelRect),
                 "lead-in label leaves the frame at \(anchor)"
             )
+        }
+    }
+
+    /// **The cluster picks a side once, and keeps it while the card grows**
+    /// (2026-08-01). The Miyakojima film flipped above → below → above inside a
+    /// second: `reach` was measured from the card's *current* height, which grows
+    /// across the deck reveal, so the fits-above test changed answer mid-scene.
+    func testClusterSideIsFixedWhileTheCardGrows() {
+        let settled = cardSize.height
+        for fraction in stride(from: 0.05, through: 1.0, by: 0.05) {
+            let growing = CGSize(width: cardSize.width, height: settled * CGFloat(fraction))
+            for anchor in anchorSweep {
+                let early = layout(anchor: anchor, cardSize: growing, maxCardHeight: settled)
+                let final = layout(anchor: anchor, cardSize: cardSize, maxCardHeight: settled)
+                XCTAssertEqual(
+                    early.cardIsAbovePin, final.cardIsAbovePin,
+                    "the cluster flipped sides at \(Int(fraction * 100))% reveal, anchor \(anchor)"
+                )
+            }
         }
     }
 }

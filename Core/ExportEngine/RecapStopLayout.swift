@@ -48,6 +48,10 @@ public struct RecapStopLayout {
     public init(
         anchor: CGPoint,
         cardSize: CGSize,
+        /// The card's height once fully revealed. The side the cluster hangs on
+        /// is decided from this rather than from `cardSize`, so it cannot change
+        /// while the card is still growing.
+        maxCardHeight: CGFloat,
         pinHeight: CGFloat,
         labelBandHeight: CGFloat,
         labelBandWidth: CGFloat,
@@ -66,8 +70,20 @@ public struct RecapStopLayout {
         // mirroring reorders the same pieces, it does not resize them.
         let cardBlock = cardSize.height > 0 ? cardSize.height + gap : 0
         let reach = pinHeight / 2 + gap + labelBandHeight + cardBlock
-        let fitsAbove = pinY + reach <= frameSize.height - marginPx
-        cardIsAbovePin = fitsAbove || pinY - reach < marginPx
+
+        // **Which side is decided from the card's FINAL size, not its current
+        // one** (2026-08-01). The card grows across the deck's reveal, so a reach
+        // measured from the live size crosses the fits-above threshold *during*
+        // the animation — the Miyakojima film flipped above → below → above
+        // inside one second. The side a cluster hangs on must be a property of
+        // the stop, not of how far through its own animation it happens to be.
+        //
+        // Camera drift used to be a second way in; the follow camera is now
+        // frozen outright while parked, so the pin cannot move mid-scene either.
+        let settledCardBlock = maxCardHeight > 0 ? maxCardHeight + gap : 0
+        let settledReach = pinHeight / 2 + gap + labelBandHeight + settledCardBlock
+        let fitsAbove = pinY + settledReach <= frameSize.height - marginPx
+        cardIsAbovePin = fitsAbove || pinY - settledReach < marginPx
 
         let labelX = Self.clamp(
             pinX - labelBandWidth / 2, marginPx, max(frameSize.width - marginPx - labelBandWidth, marginPx)

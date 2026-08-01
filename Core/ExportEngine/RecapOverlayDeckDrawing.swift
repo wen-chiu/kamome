@@ -59,6 +59,9 @@ extension RecapOverlayRenderer {
         let overhang = count > 1 ? cardW * style.deckPeekOffsetFraction : 0
         let layout = place(
             cardSize: CGSize(width: cardW + overhang * 2, height: cardW * style.deckPhotoAspect),
+            // The settled height, so which side the cluster hangs on is fixed for
+            // the whole scene rather than recomputed as the card grows.
+            maxCardHeight: settledCardHeight(in: surface),
             identity: identity,
             anchor: surface.cgPoint(lat: deck.coordinate.lat, lon: deck.coordinate.lon), in: surface
         )

@@ -63,6 +63,69 @@ final class RecapCameraContinuityTests: XCTestCase {
         print("KAMOME_CONTINUITY\n" + report.joined(separator: "\n"))
     }
 
+    /// **The subject may never reach the edge of frame** (Chiu 2026-08-01).
+    ///
+    /// A hard constraint, not a preference. The vehicle is what the audience is
+    /// watching; if it drifts into the outer margin they have to hunt for it, and
+    /// if it leaves the frame the film has lost its own subject. It does not need
+    /// to be centred — only never to be out there.
+    ///
+    /// This is separate from the continuity scan on purpose. Continuity is about
+    /// the *world* staying coherent between frames; this is about the *subject*
+    /// staying findable within one. A camera can be perfectly smooth and still
+    /// leave the car behind, which is exactly what the dead-zone spring did on
+    /// fast legs before the safe-zone clamp was added.
+    func testSubjectNeverEntersTheOuterMargin() async throws {
+        for fixture in Self.fixtures {
+            let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture, baseURL: "")
+            let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
+            let line = try XCTUnwrap(LinearTimeline(
+                trip: trip, config: config,
+                establishing: RecapBounds(
+                    minLat: bounds.minLat, minLon: bounds.minLon,
+                    maxLat: bounds.maxLat, maxLon: bounds.maxLon
+                )
+            ))
+            // Only once the journey exists: through the opening the subject is
+            // parked at the origin and deliberately not drawn at all.
+            let step = 1.0 / Double(config.fps)
+            var worst = 0.0
+            var worstAt = 0.0
+            var reaches: [Double] = []
+            for frame in Int(line.journeyStartS / step)..<line.frameCount {
+                let timeS = Double(frame) * step
+                let camera = line.cameraFrame(atTime: timeS)
+                let subject = line.subjectState(atTime: timeS)
+                // Offset from frame centre, as a fraction of the half-frame.
+                let east = Self.meters(camera.centerLat, camera.centerLon, camera.centerLat, subject.lon)
+                let north = Self.meters(camera.centerLat, camera.centerLon, subject.lat, camera.centerLon)
+                let fractionX = east / (camera.spanM / 2)
+                let fractionY = north / (camera.spanM * 1920 / 1080 / 2)
+                let reach = max(fractionX, fractionY)
+                if reach > worst { worst = reach; worstAt = timeS }
+                reaches.append(reach)
+            }
+            // The peak alone says little — it is usually one moment in the end
+            // reveal. Where the subject *sits* is what a viewer experiences.
+            let sorted = reaches.sorted()
+            func percentile(_ fraction: Double) -> Double {
+                sorted.isEmpty ? 0 : sorted[min(Int(Double(sorted.count - 1) * fraction), sorted.count - 1)]
+            }
+            print(String(
+                format: "KAMOME_SAFEZONE %-16@ median %3.0f%% · p95 %3.0f%% · worst %3.0f%% at %5.1fs (limit %.0f%%)",
+                fixture as NSString, percentile(0.5) * 100, percentile(0.95) * 100,
+                worst * 100, worstAt, config.cameraSafeZoneFraction * 100))
+            XCTAssertLessThanOrEqual(
+                worst, config.cameraSafeZoneFraction + 0.02,
+                String(
+                    format: "%@: the subject reached %.0f%% of the way to the frame edge at %.1fs "
+                        + "— the safe zone is %.0f%%",
+                    fixture, worst * 100, worstAt, config.cameraSafeZoneFraction * 100
+                )
+            )
+        }
+    }
+
     // MARK: - The scan
 
     private struct Violation {

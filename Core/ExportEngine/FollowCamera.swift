@@ -47,6 +47,7 @@ enum FollowCamera {
     /// window per second, so no leg needs special handling to stay watchable.
     static func track(
         subject: [CameraPath.Point],
+        parked: [Bool],
         routeBounds: CameraPath.Bounds,
         spanM: Double,
         config: TrackingConfig.Export
@@ -102,7 +103,27 @@ enum FollowCamera {
         var frames: [CameraPath.CameraFrame] = []
         frames.reserveCapacity(subject.count)
 
-        for point in subject {
+        // The hard guarantee (Chiu 2026-08-01): the subject may never leave the
+        // inner `camera_safe_zone_fraction` of the frame. It does not have to be
+        // centred, but the audience must never have to chase it toward the edge.
+        let safeWidthM = spanM / 2 * config.cameraSafeZoneFraction
+        let safeHeightM = spanM * aspect / 2 * config.cameraSafeZoneFraction
+
+        for (index, point) in subject.enumerated() {
+            // **Parked: the camera is frozen outright.** A stop is a static beat
+            // by product rule, and letting the spring settle through it was not
+            // harmless — a pin drifting a few pixels re-triggered the stop card's
+            // above/below decision mid-scene. The subject is not moving here, so
+            // there is nothing to follow anyway.
+            if index < parked.count, parked[index] {
+                velocityEast = 0
+                velocityNorth = 0
+                frames.append(CameraPath.CameraFrame(
+                    centerLat: centreLat, centerLon: centreLon, spanM: spanM, bearing: 0
+                ))
+                continue
+            }
+
             // How far the subject sits from the frame centre, in metres.
             let offsetEastM = (point.lon - centreLon) * metresPerDegreeLon
             let offsetNorthM = (point.lat - centreLat) * metresPerDegreeLat
@@ -128,16 +149,56 @@ enum FollowCamera {
             // Held at the world's edge, the spring would keep winding up and then
             // fire the moment the subject turned back. Killing the velocity it
             // cannot spend keeps the camera dead still against the boundary.
-            let clampedLat = min(max(centreLat, latRange.low), latRange.high)
-            let clampedLon = min(max(centreLon, lonRange.low), lonRange.high)
-            if clampedLat != centreLat { velocityNorth = 0; centreLat = clampedLat }
-            if clampedLon != centreLon { velocityEast = 0; centreLon = clampedLon }
+            //
+            // **The world clamp yields to the subject.** Not framing unvisited
+            // ground is a preference; keeping the subject comfortably in frame is
+            // not. At a route's extremes the two disagree — the clamp wants to
+            // stop while the journey keeps going — and taking the clamp anyway
+            // pushed the car out to the hard safe-zone limit, where it sat in the
+            // corner of frame. So the clamp is applied only while the subject
+            // stays inside the dead zone; past that the camera follows and shows
+            // a little ground beyond the trip's own box, which nobody notices.
+            let worldLat = min(max(centreLat, latRange.low), latRange.high)
+            let worldLon = min(max(centreLon, lonRange.low), lonRange.high)
+            if worldLat != centreLat,
+               abs(point.lat - worldLat) * metresPerDegreeLat <= halfHeightM {
+                velocityNorth = 0
+                centreLat = worldLat
+            }
+            if worldLon != centreLon,
+               abs(point.lon - worldLon) * metresPerDegreeLon <= halfWidthM {
+                velocityEast = 0
+                centreLon = worldLon
+            }
+
+            // **The constraint wins.** Applied last, so it overrides both the
+            // spring's lag and the world clamp: on a fast leg the dolly simply
+            // cannot accelerate hard enough, and at the route's ends the world
+            // clamp would rather sit still than follow. Either way the subject
+            // would drift into the margin, so here the camera is dragged the
+            // minimum distance that puts it back on the safe boundary. Smoothness
+            // is what gets sacrificed, and that is the right way round.
+            centreLon = confine(
+                centre: centreLon, subject: point.lon, halfExtentM: safeWidthM, metresPerDegree: metresPerDegreeLon
+            )
+            centreLat = confine(
+                centre: centreLat, subject: point.lat, halfExtentM: safeHeightM, metresPerDegree: metresPerDegreeLat
+            )
 
             frames.append(CameraPath.CameraFrame(
                 centerLat: centreLat, centerLon: centreLon, spanM: spanM, bearing: 0
             ))
         }
         return frames
+    }
+
+    /// Pulls `centre` just far enough that `subject` sits no further than
+    /// `halfExtentM` from it. A no-op whenever the subject is already inside.
+    private static func confine(
+        centre: Double, subject: Double, halfExtentM: Double, metresPerDegree: Double
+    ) -> Double {
+        let halfExtentDeg = halfExtentM / metresPerDegree
+        return min(max(centre, subject - halfExtentDeg), subject + halfExtentDeg)
     }
 
     /// A clamp range that degenerates to a single value when the window is wider

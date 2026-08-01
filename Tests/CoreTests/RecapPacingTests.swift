@@ -20,11 +20,10 @@ final class RecapPacingTests: XCTestCase {
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 2.5,
             actSplitKm: 25, followHeadingUp: false,
-            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5,
             deckPhotoHoldS: 2.5, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
-            openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
-            countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
             totalDurationMinS: totalMinS, totalDurationMaxS: totalMaxS,
@@ -193,24 +192,25 @@ final class RecapPacingTests: XCTestCase {
 
     /// The subject waits at the route's start while the camera establishes, so the
     /// trail has not begun and the opening has the frame to itself.
-    func testSubjectHoldsAtTheRouteStartThroughTheWideOpening() throws {
+    func testSubjectHoldsAtTheRouteStartThroughTheOpening() throws {
         let export = config()
         let sample = trip(photoCounts: [3, 3])
         let line = try timeline(sample, export)
         let start = try XCTUnwrap(sample.route.first)
 
-        // Only through the *wide* beats. The journey deliberately starts before
-        // the opening finishes (Chiu 2026-08-01): the closing zoom plays over a
-        // moving car and a growing trail, which is what removed the freeze that
-        // survived every round of dwell tuning.
-        for time in stride(from: 0.0, to: line.journeyStartS - 0.1, by: 0.5) {
+        // The journey waits for the opening to resolve completely. An earlier
+        // pass started it during the closing zoom so that something would be
+        // moving through the wide beats; that made the first stop present itself
+        // mid-zoom, against the rule that the camera never zooms while the
+        // journey is on screen. The dead air it was hiding is fixed at source —
+        // the wide beats are capped (`testOpeningHasNoHeldBeat…`).
+        XCTAssertEqual(line.journeyStartS, line.openingS, accuracy: 1e-9)
+        for time in stride(from: 0.0, to: line.openingS - 0.1, by: 0.5) {
             let subject = line.subjectState(atTime: time)
-            XCTAssertEqual(subject.lat, start.lat, accuracy: 1e-6, "vehicle moved during the wide opening (t=\(time))")
+            XCTAssertEqual(subject.lat, start.lat, accuracy: 1e-6, "vehicle moved during the opening (t=\(time))")
         }
-        XCTAssertLessThan(line.journeyStartS, line.openingS, "the journey must start before the opening ends")
-        // It is already rolling by the time the opening resolves.
-        let rolling = line.subjectState(atTime: line.openingS)
-        XCTAssertGreaterThan(abs(rolling.lat - start.lat), 1e-7, "the car should be moving as the opening settles")
+        let moved = line.subjectState(atTime: line.openingS + (line.durationS - line.openingS) * 0.5)
+        XCTAssertGreaterThan(abs(moved.lat - start.lat), 1e-4)
     }
 
     /// **The body never zooms, and never cuts** (Chiu 2026-08-01). The camera may

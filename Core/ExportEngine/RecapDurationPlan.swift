@@ -99,8 +99,7 @@ public struct RecapDurationPlan: Equatable {
         config: TrackingConfig.Export,
         deck: RecapDeck
     ) -> RecapDurationPlan {
-        let opening = config.openingCountryS + config.openingRegionalS + config.openingRouteS
-            + 2 * config.zoomTransitionS
+        let opening = config.openingCountryS + config.openingRegionalS + 2 * config.zoomTransitionS
 
         let asked = photoCounts.enumerated().map { index, count in
             let earned = min(max(deck.dwellS(photoCount: count) + 2 * config.subjectParkS,

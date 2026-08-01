@@ -125,10 +125,14 @@ public struct CameraPath {
     /// blended into over `zoomTransitionS`, which is what makes the handoff exact
     /// rather than approximately equal (Chiu 2026-08-01).
     private let prologue: Prologue?
-    /// When the wide beats end and the closing zoom into the body begins. **The
-    /// journey clock starts here**, not at `openingS`: the car is already rolling
-    /// and the trail already drawing as the opening settles, which is what kills
-    /// the frozen 0:05–0:12 that survived every round of dwell tuning.
+    /// When the wide beats end and the closing zoom into the body begins.
+    ///
+    /// The journey does **not** start here — it starts when the zoom finishes.
+    /// An earlier pass started it here so the closing zoom would play over a
+    /// moving car, but that made the first stop reveal itself mid-zoom, against
+    /// the rule that the camera never zooms while the journey is being presented.
+    /// The freeze it was working around is fixed at its source instead: the wide
+    /// beats are capped at ~1 s each, so the opening is continuous motion.
     private let wideEndS: Double
     /// The closing reveal: eases out to frame the whole journey once the last
     /// stop is done, landing exactly as the end card arrives.
@@ -208,8 +212,6 @@ public struct CameraPath {
         let builtPrologue = openingS > 0
             ? Self.buildWideOpening(route: route, establishing: establishing, config: config, bodySpanM: span)
             : nil
-        // The journey starts when the wide beats end, so the closing zoom of the
-        // opening plays *over* a moving car and a growing trail.
         let wideEnd = max(min(builtPrologue?.totalS ?? 0, total), 0)
         let opening = builtPrologue == nil ? 0 : min(wideEnd + config.zoomTransitionS, total)
         wideEndS = wideEnd
@@ -217,10 +219,10 @@ public struct CameraPath {
         // The closing reveal is its own beat after the journey, never a zoom
         // during it: the body's span is fixed by product rule.
         let reveal = builtPrologue == nil ? 0 : config.endRevealS
-        let journeyEnd = max(total - journeyEndsBeforeS - reveal, wideEnd)
+        let journeyEnd = max(total - journeyEndsBeforeS - reveal, opening)
         let journeyTimeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
-            stopHoldsS: stopHoldsS, startS: wideEnd, targetS: journeyEnd
+            stopHoldsS: stopHoldsS, startS: opening, targetS: journeyEnd
         )
         timeline = journeyTimeline
         self.fps = config.fps
@@ -233,16 +235,21 @@ public struct CameraPath {
         prologue = builtPrologue
         openingEndsS = opening
 
-        // Simulate the body once. Before `wideEndS` the subject is pinned at the
-        // route's start, so those frames come out static for free and the track
-        // is already settled when the opening hands over to it.
-        let subject = (0..<frames).map { frame -> Point in
+        // Simulate the body once. Through the opening the subject is pinned at
+        // the route's start, so those frames come out static for free and the
+        // track is already settled when the opening hands over to it.
+        let sampled = (0..<frames).map { frame -> (point: Point, parked: Bool) in
             let time = Double(frame) / Double(config.fps)
+            let entry = journeyTimeline.last(where: { $0.startS <= min(max(time, 0), total) })
+                ?? journeyTimeline[0]
             let distanceM = Self.distance(atTime: time, timeline: journeyTimeline, durationS: total)
-            return Self.coordinate(atDistance: distanceM, route: route, cumulativeM: cumulative)
+            let parked: Bool
+            if case .hold = entry.phase { parked = true } else { parked = false }
+            return (Self.coordinate(atDistance: distanceM, route: route, cumulativeM: cumulative), parked)
         }
         track = FollowCamera.track(
-            subject: subject, routeBounds: Self.bounds(of: route), spanM: span, config: config
+            subject: sampled.map(\.point), parked: sampled.map(\.parked),
+            routeBounds: Self.bounds(of: route), spanM: span, config: config
         )
         endRevealStartS = reveal > 0 ? journeyEnd : nil
         endRevealFrame = Self.frame(
@@ -257,9 +264,9 @@ public struct CameraPath {
     /// opening is a zoom played over an already-moving car (Chiu 2026-08-01).
     public var openingS: Double { openingEndsS }
 
-    /// When the trail and the vehicle start moving — the beginning of the
-    /// opening's closing zoom, not its end.
-    public var journeyStartS: Double { wideEndS }
+    /// When the trail and the vehicle start moving: once the opening has fully
+    /// resolved onto the body camera, never during its zoom.
+    public var journeyStartS: Double { openingEndsS }
 
     /// Film times at which the camera is **allowed** to break spatial continuity
     /// — one per genuine route discontinuity (flight / ferry / data gap).
@@ -327,20 +334,53 @@ public struct CameraPath {
     /// whole apparent zoom in its first third and then crawls — which is what
     /// made the old ending feel wrong.
     public func cameraFrame(atTime time: Double) -> CameraFrame {
-        let bearing = followHeadingUp ? position(atTime: time).heading : 0
+        let subject = position(atTime: time)
+        let bearing = followHeadingUp ? subject.heading : 0
         let live = trackFrame(atTime: time)
 
+        let composed: CameraFrame
         if let endRevealStartS, time >= endRevealStartS {
             let reveal = max(cutConfig.endRevealS, 1e-6)
             let blend = Self.smoothstep(min(max((time - endRevealStartS) / reveal, 0), 1))
-            return Self.lerp(live, endRevealFrame, blend).withBearing(bearing)
+            composed = Self.lerp(live, endRevealFrame, blend)
+        } else if let prologue, time < openingEndsS {
+            if time < wideEndS {
+                composed = prologue.frame(atTime: time)
+            } else {
+                let transition = max(zoomTransitionS, 1e-6)
+                let blend = Self.smoothstep(min(max((time - wideEndS) / transition, 0), 1))
+                composed = Self.lerp(prologue.finalFrame, live, blend)
+            }
+        } else {
+            composed = live
         }
-        guard let prologue, time < openingEndsS else { return live.withBearing(bearing) }
-        if time < wideEndS { return prologue.frame(atTime: time).withBearing(bearing) }
+        // **The safe-zone guarantee is a post-condition of the whole camera**, not
+        // a property of the follow simulation alone (Chiu 2026-08-01). The end
+        // reveal is why: it translates its centre linearly toward the route's
+        // bounds while the span grows geometrically, so mid-blend the two are out
+        // of step and the subject can be carried clean off the frame — measured at
+        // 157% of the way to the edge on Iceland. Applying the clamp here covers
+        // every beat by construction, including any added later.
+        guard time >= openingEndsS else { return composed.withBearing(bearing) }
+        return Self.confine(composed, around: subject, config: cutConfig).withBearing(bearing)
+    }
 
-        let transition = max(zoomTransitionS, 1e-6)
-        let blend = Self.smoothstep(min(max((time - wideEndS) / transition, 0), 1))
-        return Self.lerp(prologue.finalFrame, live, blend).withBearing(bearing)
+    /// Pulls a frame the minimum distance that keeps `subject` inside the inner
+    /// `camera_safe_zone_fraction`. A no-op whenever it already is.
+    private static func confine(
+        _ frame: CameraFrame, around subject: Position, config: TrackingConfig.Export
+    ) -> CameraFrame {
+        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        let metresPerDegreeLat = 111_320.0
+        let metresPerDegreeLon = 111_320.0 * cos(subject.lat * .pi / 180)
+        let halfLonDeg = frame.spanM / 2 * config.cameraSafeZoneFraction / metresPerDegreeLon
+        let halfLatDeg = frame.spanM * aspect / 2 * config.cameraSafeZoneFraction / metresPerDegreeLat
+        return CameraFrame(
+            centerLat: min(max(frame.centerLat, subject.lat - halfLatDeg), subject.lat + halfLatDeg),
+            centerLon: min(max(frame.centerLon, subject.lon - halfLonDeg), subject.lon + halfLonDeg),
+            spanM: frame.spanM,
+            bearing: frame.bearing
+        )
     }
 
     /// The simulated body frame covering `time`, clamped to the track.

@@ -41,11 +41,39 @@ public extension TrackingConfig {
         /// the camera completely still. The dead zone is what lets a viewer keep
         /// their bearings: the world holds while the journey advances across it,
         /// instead of the map sliding under a pinned cursor.
+        ///
+        /// **It also decides where the subject sits during sustained travel**, and
+        /// that is the constraint that actually sets it. A journey advancing at a
+        /// steady pace pushes to the dead zone's edge within a second and then
+        /// rides there for the rest of the film, so the subject settles at
+        /// `dead_zone + 4·pan_rate/ω` of the half-frame. At 0.7 that is 0.78 —
+        /// technically inside the safe zone, and visibly a car parked in the
+        /// corner of the screen for most of the film. 0.4 settles it near half
+        /// way out: off-centre, which is the point, but never hunted for.
         public let cameraDeadZoneFraction: Double
+        /// The inner fraction of the frame the subject may **never** leave — a
+        /// hard constraint, not a preference (Chiu 2026-08-01). The dead zone is
+        /// where the camera chooses not to move; this is where it has no choice.
+        /// Applied after the spring and after the world clamp, so when smoothness
+        /// and this conflict, smoothness loses: the audience must never have to
+        /// chase the subject toward the edge of frame.
+        public let cameraSafeZoneFraction: Double
         /// Spring rate (rad/s) of the dolly that chases the subject once it
         /// leaves the dead zone. Critically damped, so this sets how hard the
-        /// camera leans into a move; higher is snappier, lower is heavier. Too
-        /// low and the subject outruns the frame on fast legs.
+        /// camera leans into a move.
+        ///
+        /// **Not a taste value — it has a floor that can be derived.** A critically
+        /// damped spring trails a constant-speed target by `2v/ω`, so the subject
+        /// settles at `dead_zone + 4·pan_rate/ω` of the half-frame. Because the
+        /// span formula pins `v/span` to `pan_rate`, that expression has no trip
+        /// scale in it and one value serves every film:
+        ///
+        ///     ω ≥ 4 · pan_rate / (safe_zone − dead_zone)   →   ≥ 14 at today's values
+        ///
+        /// Below it the spring can *never* keep up and the hard safe-zone clamp
+        /// becomes the camera's normal operating mode rather than its backstop —
+        /// which is what pinned the car into the corner of frame at ω = 6.
+        /// 12, with a 0.4 dead zone, settles the subject at 0.52.
         public let cameraResponsiveness: Double
         /// The closing reveal: after the last stop the camera eases out to frame
         /// the whole journey, so the film ends on what was actually travelled.
@@ -62,18 +90,19 @@ public extension TrackingConfig {
         /// to the pin as it fades, and takes it back as it returns. Long enough
         /// to read as parking, short enough not to eat the stop's own beat.
         public let subjectParkS: Double
-        /// The one-time opening prologue (Chiu 2026-07-30): the film establishes
-        /// *where* before it shows *what*. Country/island extent, then the trip's
-        /// region, then the route — each eased into the next over
-        /// `zoom_transition_s`. This is the **only** camera movement in the film;
-        /// once the route is framed the camera holds still per act, north-up
-        /// (Chiu 2026-07-25, unchanged).
+        /// The one-time opening prologue: the film establishes *where* before it
+        /// shows *what*. Country extent, then the trip's region, then the body —
+        /// each eased into the next over `zoom_transition_s`.
+        ///
+        /// **These are held beats, and they are capped hard at ~1 s** (Chiu
+        /// 2026-08-01). The same continuity philosophy the body camera now
+        /// follows applies here: the opening should be continuous motion end to
+        /// end. A 3.5 s hold on a finished zoom, with the journey not yet begun
+        /// and so nothing on screen able to move, was dead air that survived
+        /// several rounds of tuning because shortening a hold cannot add motion —
+        /// only removing the hold can. `RecapPacingTests` enforces the cap.
         public let openingCountryS: Double
         public let openingRegionalS: Double
-        /// Deliberately near-zero (Chiu 2026-07-30): the journey begins the
-        /// instant the establishing shot resolves. A multi-second hold on a
-        /// finished zoom with nothing moving is a scroll-away moment.
-        public let openingRouteS: Double
         /// How far past the trip's own bounds the country view reaches when no
         /// map region extent is available (Apple's map, so no tiles declare one).
         /// A guess, deliberately modest: an offline app cannot know where the
@@ -112,11 +141,10 @@ public extension TrackingConfig {
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
             actSplitKm: Double, followHeadingUp: Bool,
-            cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double,
+            cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double,
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
-            openingCountryS: Double, openingRegionalS: Double, openingRouteS: Double,
-            countryViewPadding: Double, firstStopDwellScale: Double,
+            openingCountryS: Double, openingRegionalS: Double,            countryViewPadding: Double, firstStopDwellScale: Double,
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
@@ -131,6 +159,7 @@ public extension TrackingConfig {
             self.followHeadingUp = followHeadingUp
             self.cameraPanWindowFractionPerS = cameraPanWindowFractionPerS
             self.cameraDeadZoneFraction = cameraDeadZoneFraction
+            self.cameraSafeZoneFraction = cameraSafeZoneFraction
             self.cameraResponsiveness = cameraResponsiveness
             self.endRevealS = endRevealS
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
@@ -138,7 +167,6 @@ public extension TrackingConfig {
             self.subjectParkS = subjectParkS
             self.openingCountryS = openingCountryS
             self.openingRegionalS = openingRegionalS
-            self.openingRouteS = openingRouteS
             self.countryViewPadding = countryViewPadding
             self.openingCollapseZoomRatio = openingCollapseZoomRatio
             self.openingCollapseDriftFraction = openingCollapseDriftFraction
@@ -164,13 +192,13 @@ public extension TrackingConfig {
                 zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: resolved,
                 cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
                 cameraDeadZoneFraction: cameraDeadZoneFraction,
+                cameraSafeZoneFraction: cameraSafeZoneFraction,
                 cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
                 deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
                 deckLabelLeadS: deckLabelLeadS,
                 subjectParkS: subjectParkS,
                 openingCountryS: openingCountryS,
                 openingRegionalS: openingRegionalS,
-                openingRouteS: openingRouteS,
                 countryViewPadding: countryViewPadding,
                 firstStopDwellScale: firstStopDwellScale,
                 openingCollapseZoomRatio: openingCollapseZoomRatio,
@@ -187,6 +215,7 @@ public extension TrackingConfig {
         enum CodingKeys: String, CodingKey {
             case cameraPanWindowFractionPerS = "camera_pan_window_fraction_per_s"
             case cameraDeadZoneFraction = "camera_dead_zone_fraction"
+            case cameraSafeZoneFraction = "camera_safe_zone_fraction"
             case cameraResponsiveness = "camera_responsiveness"
             case endRevealS = "end_reveal_s"
             case targetDurationS = "target_duration_s"
@@ -208,7 +237,6 @@ public extension TrackingConfig {
             case subjectParkS = "subject_park_s"
             case openingCountryS = "opening_country_s"
             case openingRegionalS = "opening_regional_s"
-            case openingRouteS = "opening_route_s"
             case countryViewPadding = "country_view_padding"
             case openingCollapseZoomRatio = "opening_collapse_zoom_ratio"
             case openingCollapseDriftFraction = "opening_collapse_drift_fraction"

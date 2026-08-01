@@ -33,13 +33,12 @@ final class CameraPathTests: XCTestCase {
             zoomTransitionS: 0.8,
             actSplitKm: 25,
             followHeadingUp: followHeadingUp,
-            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5,
             deckPhotoHoldS: 0.8,
             deckZoomS: 0.5,
             deckLabelLeadS: 0.6, subjectParkS: 0.4,
-            openingCountryS: 3.0, openingRegionalS: 3.5, openingRouteS: 0.4,
-            countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
@@ -221,14 +220,33 @@ final class CameraPathTests: XCTestCase {
     /// While the journey's leading edge is inside the dead zone the camera does
     /// not move *at all*. Without this the map slides under a pinned cursor,
     /// which is the GPS-viewport feel the redesign exists to remove.
-    func testCameraIsCompletelyStillWhileSubjectIsInsideTheDeadZone() throws {
+    ///
+    /// Asserted as "there is a real stretch of stillness", not "frame 1 matches
+    /// frame 0": where the dead zone is entered depends on the world clamp and on
+    /// where the route starts inside its own bounding box, and pinning the test to
+    /// one instant tests the fixture rather than the behaviour.
+    func testCameraHoldsCompletelyStillWhileSubjectCrossesTheDeadZone() throws {
         let config = exportConfig()
         let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [], config: config))
-        // The route's first metres are dead centre, so nothing should move yet.
-        let settled = path.cameraFrame(atTime: 0)
-        let early = path.cameraFrame(atTime: 1.0 / Double(config.fps))
-        XCTAssertEqual(early.centerLat, settled.centerLat, accuracy: 1e-12)
-        XCTAssertEqual(early.centerLon, settled.centerLon, accuracy: 1e-12)
+
+        let step = 1.0 / Double(config.fps)
+        var longestStill = 0.0
+        var run = 0.0
+        var previous = path.cameraFrame(atTime: 0)
+        for frame in 1..<path.frameCount {
+            let now = path.cameraFrame(atTime: Double(frame) * step)
+            let moved = Geo.distanceM(
+                latA: previous.centerLat, lonA: previous.centerLon,
+                latB: now.centerLat, lonB: now.centerLon
+            )
+            run = moved < 0.01 ? run + step : 0
+            longestStill = max(longestStill, run)
+            previous = now
+        }
+        XCTAssertGreaterThan(
+            longestStill, 1.0,
+            "the dead zone should buy at least a second of a genuinely motionless map"
+        )
     }
 
     /// A short trip is framed by its own extent rather than by the pan-rate
@@ -273,6 +291,49 @@ final class CameraPathTests: XCTestCase {
             XCTAssertLessThan(moved, now.spanM * 0.5, "the camera cut across the leap at frame \(frame)")
             previous = now
         }
+    }
+
+    /// **The opening is continuous motion, end to end** (Chiu 2026-08-01).
+    ///
+    /// The freeze at 0:05–0:08 outlived several rounds of tuning because it was
+    /// never a duration problem: during a wide beat the journey has not started,
+    /// so there is nothing on screen that *can* move, and shortening a hold only
+    /// makes the dead frame shorter. The fix is that no held beat is allowed to
+    /// last long enough to read as a stall — the same continuity philosophy the
+    /// body camera follows, applied to the opening.
+    func testOpeningHasNoHeldBeatLongEnoughToReadAsAStall() throws {
+        let export = exportConfig()
+        // An opening only exists when there is an establishing extent to open on.
+        let line = try XCTUnwrap(CameraPath(
+            route: longRoute, stops: [longRoute[5]], config: export,
+            totalDurationS: export.totalDurationMinS,
+            establishing: RecapBounds(minLat: -33, minLon: 115, maxLat: -31, maxLon: 117),
+            openingS: export.openingCountryS + export.openingRegionalS + 2 * export.zoomTransitionS
+        ))
+        let step = 1.0 / Double(export.fps)
+
+        var longestStill = 0.0
+        var run = 0.0
+        var previous = line.cameraFrame(atTime: 0)
+        for time in stride(from: step, through: line.openingS, by: step) {
+            let frame = line.cameraFrame(atTime: time)
+            let moved = Geo.distanceM(
+                latA: previous.centerLat, lonA: previous.centerLon,
+                latB: frame.centerLat, lonB: frame.centerLon
+            )
+            // "Still" means neither panning nor zooming perceptibly.
+            if moved < frame.spanM * 1e-4, abs(frame.spanM - previous.spanM) < frame.spanM * 1e-4 {
+                run += step
+            } else {
+                run = 0
+            }
+            longestStill = max(longestStill, run)
+            previous = frame
+        }
+        XCTAssertLessThanOrEqual(
+            longestStill, 1.05,
+            "the opening sits still for \(longestStill)s — capped at ~1 s so it never reads as a freeze"
+        )
     }
 
     func testZoomOnlyTightensFromWideIntoBody() throws {

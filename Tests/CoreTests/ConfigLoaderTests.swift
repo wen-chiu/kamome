@@ -81,11 +81,10 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.deckLabelLeadS, 0.6)
         // Cinematic pass (Chiu 2026-07-30): a one-time opening prologue, and a
         // film whose length follows its content instead of a flat 30 s.
-        XCTAssertEqual(config.export.openingCountryS, 3.0)
+        XCTAssertEqual(config.export.openingCountryS, 1.0)
         XCTAssertEqual(config.export.countryViewPadding, 2.2)
         XCTAssertEqual(config.export.firstStopDwellScale, 0.55)
-        XCTAssertEqual(config.export.openingRegionalS, 3.5)
-        XCTAssertEqual(config.export.openingRouteS, 0.4)
+        XCTAssertEqual(config.export.openingRegionalS, 1.0)
         XCTAssertEqual(config.export.stopDwellMinS, 6)
         XCTAssertEqual(config.export.stopDwellMaxS, 25)
         XCTAssertEqual(config.export.totalDurationMinS, 60)
