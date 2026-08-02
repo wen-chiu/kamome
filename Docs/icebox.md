@@ -55,4 +55,6 @@ beats as a storytelling device. **Distinct from static map labels**: this is
 narration with its own timing, not annotation the map carries continuously, and
 the two answer different questions ("what am I arriving at" vs "where am I
 right now"). Raised while comparing span/label options for the legibility
-problem; parked so the two are not conflated.
+problem; parked so the two are not conflated. The static-label counterpart is
+scoped in `handoff-P3.5.md` §"Map reference labels" — wanted, blocked on a
+fontstack, and to be done as a real pass rather than an afterthought.

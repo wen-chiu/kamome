@@ -91,13 +91,13 @@ public struct RecapStyle {
     public var titleMarkSidePx: CGFloat = 132
     /// How much of the frame the opening title's band occupies, measured from the
     /// bottom. Everything above it is left clear for the establishing shot.
-    public var titleBandHeightFraction: CGFloat = 0.42
+    public var titleBandHeightFraction: CGFloat = 0.27
     /// Opacity at the band's bottom edge; it fades to nothing at the top.
     public var titleBandOpacity: CGFloat = 0.9
     /// How much of the band holds full opacity before the fade begins.
-    public var titleBandSolidFraction: CGFloat = 0.62
+    public var titleBandSolidFraction: CGFloat = 0.55
     /// Where the type sits inside the band, as a fraction of its height.
-    public var titleStackCenterFraction: CGFloat = 0.42
+    public var titleStackCenterFraction: CGFloat = 0.46
     /// The title's side margin, as a multiple of `cardMarginPx`.
     public var titleSideMarginScale: CGFloat = 1.6
     /// The mark shrinks inside the band — branding signs the opening, it is not

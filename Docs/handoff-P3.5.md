@@ -443,6 +443,59 @@ Related, also deferred: the airport-departure animation (a flight leg is a genui
 discontinuity — `act_split_km` already cuts a new act there, but nothing tells the
 story of the hop).
 
+### Map reference labels — scoped, wanted, not urgent 📌
+
+**Status: a real implementation pass, deliberately deferred** (Chiu 2026-08-02).
+Not a maybe — revisit it properly rather than bolting labels on later.
+
+**The problem it solves.** At body zoom the souvenir map is landform and water
+with no names, so a viewer cannot anchor "where am I". Chiu, on the 11-day NZ
+film: *once zoomed in I lose all sense of geographic orientation.* A travel
+memory film has to let someone recognise where they were, not just watch a line
+move. The **wide baseline** (2026-08-02: `wide_span_padding` 1.5,
+`camera_pan_window_fraction_per_s` 0.05, so the span ceiling binds and the whole
+trip is framed) solves most of it by showing a recognisable country silhouette.
+Labels are what is left: *which* lake, *which* pass.
+
+**PD-6 is reopened by this.** The label-less map was a deliberate decision
+(2026-07-19, subtractive style = souvenir map). Anything built here must not
+drift back toward the Apple-tiles look that decision rejected — the bar is
+place and water names at low density, never POIs.
+
+**⚠️ The blocker, found 2026-08-02.** `Config/RecapThemes/modern-minimal.json`
+has **no `glyphs` URL**, and there are no glyph PBFs on any dev machine.
+MapLibre Native cannot render Latin labels without a fontstack; its local-font
+path (`MLNIdeographicFontFamilyName`) covers CJK ideographs only. So this is
+**not** a style-JSON-only change, contrary to a first estimate — a symbol layer
+added today renders nothing. Two unblock paths, neither yet taken because both
+pull third-party code:
+
+1. **Prebuilt pack** — `openmaptiles/fonts` (Noto Sans). Fastest; adds a binary
+   font asset to ship or side-load, and a licence to check.
+2. **Generate SDF PBFs** from a system TTF with `fontnik` (Node is present on
+   the dev Mac). No third-party binaries, but it is a native npm build and adds
+   a generation step to the tile pipeline (`Deploy/bin/`).
+
+**Data is not a blocker.** The regions are standard Planetiler builds and
+already carry `place`, `water_name` and `mountain_peak`; the current style
+simply omits those layers. No re-tiling needed.
+
+**Scope when it is picked up.**
+- Style: `glyphs` URL + symbol layers for `place` (city/town/village) and
+  `water_name` only. Low density, tuned per zoom.
+- **The real work is collision with Kamome's own overlays.** MapLibre places
+  labels knowing nothing about the photo deck, the stop cluster or the vehicle,
+  so a town name can land under a card or across the trail. Either feed
+  exclusion zones into the style per frame (MapLibre cannot do this cleanly from
+  a static style) or draw labels in `RecapOverlayRenderer` — the second is a
+  subsystem: sourcing, placement, priority, collision.
+- Validate the same way the camera was: render NZ and one island trip, judge
+  side by side, and consider a gate on labels never overlapping the deck rect.
+
+**Related but separate:** landmark title cards as narrative rhythm
+(`icebox.md`, 2026-08-02). That is narration with its own timing; this is
+annotation the map carries continuously. Do not conflate them.
+
 ### Photo deck → fan/stack carousel (future, scoped separately) 📌
 
 Explicitly **not** in the 2026-07-30 cinematic pass (Chiu). The deck today is a

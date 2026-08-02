@@ -152,6 +152,19 @@ extension CameraPath {
         return max(lonExtentM, latExtentM * aspect)
     }
 
+    /// The widest horizontal span that still fits *entirely inside* `bounds`.
+    ///
+    /// The mirror of `fittingSpanM`, which finds the span that contains the
+    /// bounds. Used for the establishing shot, where overshooting means drawing
+    /// ground the tiles do not cover.
+    static func containedSpanM(bounds: Bounds, config: TrackingConfig.Export) -> Double {
+        let midLat = (bounds.minLat + bounds.maxLat) / 2
+        let lonExtentM = Geo.distanceM(latA: midLat, lonA: bounds.minLon, latB: midLat, lonB: bounds.maxLon)
+        let latExtentM = Geo.distanceM(latA: bounds.minLat, lonA: bounds.minLon, latB: bounds.maxLat, lonB: bounds.minLon)
+        let aspect = Double(config.frameWidthPx) / Double(config.frameHeightPx)
+        return min(lonExtentM, latExtentM * aspect)
+    }
+
     /// Planar bearing (deg, 0 = north, clockwise) — `atan2(east, north)` with a
     /// cos(lat) correction. Enough for a follow-cam at recap zoom; degenerate
     /// (coincident) points face north.

@@ -104,15 +104,39 @@ extension CameraPath {
         } else {
             countryBounds = tripBounds
         }
-        let countryPadding = establishing == nil
-            ? config.countryViewPadding
-            : config.wideSpanPadding
-        let country = frame(for: countryBounds, config: config, padding: countryPadding)
+        // **The country beat is framed to fit *inside* the region, not to contain
+        // it** (2026-08-02). Framing to contain, then padding, puts the tiles'
+        // own edge on screen: outside them there is no water layer, only the
+        // style's background, so the data boundary draws itself as a lighter
+        // rectangle across the establishing shot. Fitting within the extent shows
+        // as much of the country as a portrait frame can hold and never a pixel
+        // of nothing.
+        //
+        // Without an extent there are no tiles to fall off, so the trip's own
+        // bounds are widened by `country_view_padding` as before — the most an
+        // offline app can claim to know about the surrounding geography.
+        let country = establishing == nil
+            ? frame(for: countryBounds, config: config, padding: config.countryViewPadding)
+            : CameraFrame(
+                centerLat: (countryBounds.minLat + countryBounds.maxLat) / 2,
+                centerLon: (countryBounds.minLon + countryBounds.maxLon) / 2,
+                spanM: max(config.cameraSpanM, containedSpanM(bounds: countryBounds, config: config)),
+                bearing: 0
+            )
 
-        let wanted = [
-            Beat(frame: country, holdS: config.openingCountryS),
-            Beat(frame: regional, holdS: config.openingRegionalS)
-        ]
+        // A region cut tightly around one trip is not a wider context — framed to
+        // fit inside its own extent it can come out *narrower* than the trip's
+        // padded view, which would open the film by zooming out and then back in.
+        // When the region has nothing wider to say, the country beat is simply not
+        // built, and the regional view carries the title.
+        let countryAddsContext = country.spanM > regional.spanM * config.openingCollapseZoomRatio
+        let wanted = countryAddsContext
+            ? [
+                Beat(frame: country, holdS: config.openingCountryS),
+                Beat(frame: regional, holdS: config.openingRegionalS)
+            ]
+            // The title always belongs to the first beat, whichever that is.
+            : [Beat(frame: regional, holdS: config.openingCountryS)]
         return Prologue(beats: collapse(wanted, config: config), transitionS: config.zoomTransitionS)
     }
 

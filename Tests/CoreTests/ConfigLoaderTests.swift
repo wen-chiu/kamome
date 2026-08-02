@@ -71,7 +71,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.frameHeightPx, 1920)
         XCTAssertEqual(config.export.cameraSpanM, 1500)
         // Follow-cam framing (§4.5 step 1, prototype §2.3).
-        XCTAssertEqual(config.export.wideSpanPadding, 1.15)
+        XCTAssertEqual(config.export.wideSpanPadding, 1.5)
         XCTAssertEqual(config.export.zoomTransitionS, 2.5)
         XCTAssertFalse(config.export.followHeadingUp)
         // Photo-deck pacing (§5, Chiu 2026-07-23).

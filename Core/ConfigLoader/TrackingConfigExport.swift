@@ -75,6 +75,11 @@ public extension TrackingConfig {
         /// which is what pinned the car into the corner of frame at ω = 6.
         /// 12, with a 0.4 dead zone, settles the subject at 0.52.
         public let cameraResponsiveness: Double
+        /// How far past the route's own extent the closing reveal opens out.
+        /// Wider than `wide_span_padding` on purpose: with a wide body span the
+        /// two would frame the same picture and the reveal would have nothing to
+        /// reveal, so the film would simply stop rather than land.
+        public let endRevealPadding: Double
         /// Which closing treatment the film signs off with — `full` (the default,
         /// and the free tier) or `minimal` (a corner wordmark over the revealed
         /// route, held for a future paid tier). A string rather than a Bool so a
@@ -152,7 +157,7 @@ public extension TrackingConfig {
             cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
             actSplitKm: Double, followHeadingUp: Bool,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
-            cameraResponsiveness: Double, endRevealS: Double, endCardStyle: String,
+            cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double,            countryViewPadding: Double, firstStopDwellScale: Double,
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
@@ -172,6 +177,7 @@ public extension TrackingConfig {
             self.cameraSafeZoneFraction = cameraSafeZoneFraction
             self.cameraResponsiveness = cameraResponsiveness
             self.endRevealS = endRevealS
+            self.endRevealPadding = endRevealPadding
             self.endCardStyle = endCardStyle
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
             self.deckLabelLeadS = deckLabelLeadS
@@ -204,7 +210,7 @@ public extension TrackingConfig {
                 cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
                 cameraDeadZoneFraction: cameraDeadZoneFraction,
                 cameraSafeZoneFraction: cameraSafeZoneFraction,
-                cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+                cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS, endRevealPadding: endRevealPadding,
                 endCardStyle: endCardStyle,
                 deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
                 deckLabelLeadS: deckLabelLeadS,
@@ -230,6 +236,7 @@ public extension TrackingConfig {
             case cameraSafeZoneFraction = "camera_safe_zone_fraction"
             case cameraResponsiveness = "camera_responsiveness"
             case endRevealS = "end_reveal_s"
+            case endRevealPadding = "end_reveal_padding"
             case endCardStyle = "end_card_style"
             case targetDurationS = "target_duration_s"
             case fps

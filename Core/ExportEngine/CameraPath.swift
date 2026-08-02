@@ -213,7 +213,27 @@ public struct CameraPath {
             ? Self.buildWideOpening(route: route, establishing: establishing, config: config, bodySpanM: span)
             : nil
         let wideEnd = max(min(builtPrologue?.totalS ?? 0, total), 0)
-        let opening = builtPrologue == nil ? 0 : min(wideEnd + config.zoomTransitionS, total)
+        // **The closing zoom is skipped when it would not go anywhere** (Chiu
+        // 2026-08-02). Once the body span is wide enough to bind on the route's
+        // own extent, the body frame *is* the regional beat — same centre, same
+        // span — and the transition degenerates into 2.5 s of a camera easing
+        // from a picture to itself.
+        //
+        // Worse than idle: because the body camera centres on the journey's
+        // start rather than on the journey, a tighter body frame made this beat
+        // both a zoom and a ~150 km translate toward the first stop, which read
+        // as a redundant pan between the opening and the first stop's scene.
+        // Collapsing it cuts the opening straight into that scene.
+        let closingZoomMoves = builtPrologue.map { wide in
+            !Self.isEffectivelyTheSame(
+                wide.finalFrame,
+                Self.bodyFrame(route: route, spanM: span, config: config),
+                config: config
+            )
+        } ?? false
+        let opening = builtPrologue == nil
+            ? 0
+            : min(wideEnd + (closingZoomMoves ? config.zoomTransitionS : 0), total)
         wideEndS = wideEnd
 
         // The closing reveal is its own beat after the journey, never a zoom
@@ -252,8 +272,12 @@ public struct CameraPath {
             routeBounds: Self.bounds(of: route), spanM: span, config: config
         )
         endRevealStartS = reveal > 0 ? journeyEnd : nil
+        // The closing frame opens out *past* the body, so the film lands on the
+        // whole journey with room around it rather than merely stopping. With a
+        // wide body span the two would otherwise be the same picture and the
+        // reveal would have nothing to reveal (Chiu 2026-08-02).
         endRevealFrame = Self.frame(
-            for: Self.bounds(of: route), config: config, padding: config.wideSpanPadding
+            for: Self.bounds(of: route), config: config, padding: config.endRevealPadding
         )
     }
 
@@ -363,6 +387,31 @@ public struct CameraPath {
         // every beat by construction, including any added later.
         guard time >= openingEndsS else { return composed.withBearing(bearing) }
         return Self.confine(composed, around: subject, config: cutConfig).withBearing(bearing)
+    }
+
+    /// Where the body camera settles: the route's own framing at `spanM`, which
+    /// is what the follow simulation converges on once the world clamp has had
+    /// its say. Computed here too so the opening can ask "would my closing zoom
+    /// actually move?" before the track exists.
+    private static func bodyFrame(
+        route: [Point], spanM: Double, config: TrackingConfig.Export
+    ) -> CameraFrame {
+        let bounds = Self.bounds(of: route)
+        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        let metresPerDegreeLat = 111_320.0
+        let midLat = (bounds.minLat + bounds.maxLat) / 2
+        let metresPerDegreeLon = 111_320.0 * cos(midLat * .pi / 180)
+        // The same clamp `FollowCamera` applies: start on the route's first point,
+        // held inside the route's own box.
+        let halfLat = spanM * aspect / 2 / metresPerDegreeLat
+        let halfLon = spanM / 2 / metresPerDegreeLon
+        let lat = bounds.minLat + halfLat > bounds.maxLat - halfLat
+            ? midLat
+            : min(max(route[0].lat, bounds.minLat + halfLat), bounds.maxLat - halfLat)
+        let lon = bounds.minLon + halfLon > bounds.maxLon - halfLon
+            ? (bounds.minLon + bounds.maxLon) / 2
+            : min(max(route[0].lon, bounds.minLon + halfLon), bounds.maxLon - halfLon)
+        return CameraFrame(centerLat: lat, centerLon: lon, spanM: spanM, bearing: 0)
     }
 
     /// Pulls a frame the minimum distance that keeps `subject` inside the inner

@@ -34,7 +34,7 @@ final class CameraPathTests: XCTestCase {
             actSplitKm: 25,
             followHeadingUp: followHeadingUp,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
-            cameraResponsiveness: 6.0, endRevealS: 2.5, endCardStyle: "full",
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
             deckPhotoHoldS: 0.8,
             deckZoomS: 0.5,
             deckLabelLeadS: 0.6, subjectParkS: 0.4,
