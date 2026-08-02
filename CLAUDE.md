@@ -94,108 +94,69 @@ spec header v1.6 ("stories you can relive and share"). Forward directions
 recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
 "beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
 
-## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **recap OUTPUT / video-format redesign — follow-cam CAMERA CORE landed 2026-07-23; vehicle marker + photo deck next**
+## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **§6 three-trip gate; camera/legibility work CLOSED 2026-08-02**
 
-**Read `Docs/handoff-P3.5.md` before doing anything — it is the Replay MVP
-work order, in mandatory sequence.** §1 Photo EXIF Import ✅ (2026-07-21), §2
-**MapLibre souvenir-map substrate** ✅ (2026-07-21), and **§3 base-map substrate
-✅ SIGNED OFF for now** (Chiu, 2026-07-22) are landed.
+**Read `Docs/handoff-P3.5.md` before doing anything** — the Replay MVP work
+order. §1 Photo EXIF Import ✅, §2 MapLibre substrate ✅, §3 base-map substrate ✅,
+§4/§5 camera + stop presentation ✅ (2026-08-02). **§6 is the remaining item**, and
+`Docs/gate-P3.5-checklist.md` is the runbook.
 
-- **§4 follow-cam — camera core landed 2026-07-23** (commit `3eac0ab`, on
-  `phase-3-recap`, CI green; handoff §4 Status; decisions.md 2026-07-23). The
-  **framing half** is done: `CameraPath` now emits a `Position` (vehicle: lat/lon
-  + `heading`) *and* a new `CameraFrame` (snapshot: center/span/`bearing`) — wide
-  establishing shot over the whole trip in the title/end windows, easing to a
-  close vehicle-locked span through the body. `RecapSnapshotProviding` gained
-  `bearing` (MapLibre honors, Flat rotates for CI, MapKit accepts-and-ignores).
-  New tunables `wide_span_padding` / `zoom_transition_s` / `follow_heading_up`
-  (**default false** = north-up + rotating marker; heading-up is a MapLibre-era
-  opt-in). **The visual half is next** — vehicle marker sprite + photo deck (with
-  Chiu's zoom-in/rotate/zoom-back revision, handoff §5) — on branch
-  `feature/vehicle-marker-photo-deck` (off `3eac0ab`, not started). **Not merged
-  to main: PR #11 still holds until the §6 three-trip gate** (owner call
-  2026-07-23 — reaffirmed the documented hold; the redesign is mid-flight and
-  MapKit is still shipping).
+### ⚠️ Two blockers stand in front of §6 (diagnosed 2026-08-01, NOT fixed)
 
-**The open thread is the
-overall recap OUTPUT / video format** — Chiu: "not what I want, but *not* the
-MapLibre issue; the output video format doesn't meet my expectation — we'll
-revisit all the difference in another session." So the base-map style is settled
-(dark atmospheric **souvenir map**, draft v2 `Config/RecapThemes/modern-minimal.json`;
-the pale v1 was rejected), and these are **deferred to that redesign session**
-(decisions.md 2026-07-22; handoff §3 Status): the **compositor atmosphere**
-(vignette/route-glow/grade — `RecapTheme` tokens), labels/glyphs, the overlay
-`RecapStyle.modernMinimal` preset, and the `RecapModel`→MapLibre **production
-switch** (retires `MapKitSnapshotProvider` + OSM attribution). **MapKit is still
-the shipping base map — do NOT flip production early** (mid-redesign). P3 is
-engineering-complete; its device items are redistributed (export/photo → Replay
-MVP gate; 2 h drive + region-resume → Capture Beta), none faked passed
-(`Docs/device-test-P3.md`). State at handoff:
+Both are invisible on the committed fixtures and only appear on real data, so the
+desk stages pass with them present. **Fix before spending an iPhone sitting** —
+details and suggested shapes in the checklist's "Blocking dev work" section.
 
-- **§2 MapLibre substrate landed 2026-07-21** (`handoff-P3.5.md` §2 Status;
-  decisions.md 2026-07-21). MapLibre `6.27.0` (SPM, exact, app target) confined
-  to `App/Services/MapLibreSnapshotProvider.swift` (**not** the SwiftPM core —
-  keeps package tests SDK-free; CI grep gate enforces `import MapLibre` in that
-  one file). Conforms to the existing `RecapSnapshotProviding`; projection travels
-  with the snapshot (`MLNMapSnapshot.point(for:)`); span→zoom via Web Mercator,
-  `scale = 1`. Pure `RecapMapStyle` resolver injects the on-disk tiles path into
-  the theme's `pmtiles://__KAMOME_TILES__` sentinel (unit-tested, no Metal).
-  First theme = `Config/RecapThemes/functional-base.json` (subtractive: land/
-  water/road skeleton, **no POI/labels** — NOT Modern Minimal). Fixture tiles via
-  `Tests/Fixtures/tiles/generate_tiles.sh` (Planetiler/Docker). **MapKit is still
-  the shipping base map** — `RecapModel` unchanged until §3 clears the design
-  review, then MapKit dies in that PR. Golden-frame CI unchanged
-  (`FlatSnapshotProvider`, bit-stable). **Device/sim-only, flagged NOT passed:**
-  actual MapLibre pixel render + `pmtiles://`-vs-`mbtiles://` confirmation (Metal,
-  not in CI) → §3 review + §6 gate. Ingestion scheme is theme-JSON-declared, so a
-  fallback is a one-line edit.
+1. **Multi-day trips type every inter-day leg `.walk`** — `ImportService.mode`
+   divides distance by wall-clock gap, so an overnight gap implies walking pace;
+   walks are never routed, so the leg stays a dashed straight line. 7 of 9 legs
+   on the real NZ trip. Fails the gate's "no mountain-crossing straight line".
+2. **iCloud-optimised photos resolve to empty grey cards** —
+   `PhotoLibraryPhotoResolver` sets `isNetworkAccessAllowed = false`. EXIF import
+   still works (metadata needs no download), so this survives every desk stage.
 
-- **§1 Photo EXIF Import landed 2026-07-21** (`handoff-P3.5.md` §1 Status).
-  Engine (schema v2 provenance, `Core/ImportKit/`,
-  `TripRepository.saveImportedTrip`, `ImportService`, `PhotoLibraryImportSource`)
-  shipped earlier; this pass added the **S1 UI + provenance labels**:
-  `Import from photos` hero on S1 (`HomeView`; live capture demoted to a
-  secondary section), `ImportSheet` (date-range → import → progress/errors →
-  push S3; `ImportFlowModel`), S1 `From photos` badge + S3
-  "reconstructed from photos" note (never "verified"), all copy zh-Hant-first
-  in the catalog (`LocalizationTests` guards it, incl. that the note omits
-  "verified"). New tunable `import.default_range_days` (picker default;
-  ConfigLoaderTests). Demo: `Docs/demos/phase3_5/import/`. **Device-only,
-  flagged NOT passed:** live PhotoKit date-range fetch + Limited-Library path
-  (`presentLimitedLibraryPicker`) — folds into the §6 three-trip gate.
-  Device-test follow-ups landed 2026-07-21: import date pickers made friendlier
-  (tap-to-expand rows that collapse on pick; end date snaps to the start's
-  month), and **stop names now surface progressively** — `StopNamer` gained an
-  `onNamed` callback and `TripDetailModel` reloads as each name lands, fixing
-  many-stop imported trips that the old one-shot `t+3 s` reload left unnamed
-  (shared path; recorded trips benefit too).
+### Camera architecture (rebuilt 2026-08-01 → 2026-08-02, Chiu)
 
-- §4.4 matching app side landed on `phase-3-recap` (decisions.md 2026-07-19
-  matching): `Core/RouteMatching/` (`EncodedPolyline`, `RouteMatchProviding`
-  boundary, `OSRMMatchProvider` — OSRM types confined to that one file,
-  injectable transport for recorded-response CI), `RouteMatchService`
-  (drive/scooter only; fire-and-forget at End Trip, idempotent at export),
-  `RecapComposer` prefers snapped geometry at `matching.display_epsilon_m`.
-  `matching.base_url` ships "" = disabled — no server exists yet.
-- Handoff §1 (matching end-to-end) done 2026-07-19: local OSRM live (WA
-  extract :5001 for perth, TW :5002; servers in `~/kamome-osrm`), matched
-  recap export proven in-sim via env-gated `RecapMatchingE2ETests` (real
-  RecapModel pipeline; all four drive segments snapped, worst chunk
-  confidence ≈ 0.98), before/after artifact + notes in
-  `Docs/demos/phase3_5/matching/`, recorded `/match` response replayed in
-  CI (`OSRMRecordedFixtureTests` + `Tests/Fixtures/osrm/`). **Perth
-  fixture regenerated with road-matched drive legs** (`route_leg` in
-  `generate_fixtures.py`, needs the local server to regenerate): §1
-  exposed that the old straight-line legs sat kilometers off-road (the
-  Geographe Bay crossing was the fixture's own geometry) and the §4.4
-  confidence gate correctly refused to invent a route — the gate was NOT
-  loosened. Stops/walks/timing structure unchanged; full suite green.
-  Fixture-regen decision + artifact pair still need Chiu's eyes.
-- Next (Replay MVP order, `handoff-P3.5.md`): §1 Photo EXIF Import ✅ (2026-07-21)
-  → §2 MapLibre souvenir map ✅ (2026-07-21) → §3 base-map substrate ✅ signed off
-  (2026-07-22) → **recap OUTPUT / video-format redesign 🗣️ (own session; carries
-  the deferred compositor atmosphere + MapLibre production switch)** → §4 follow-cam
-  → §5 photo deck → §6 three-real-trip dogfood = the Replay MVP release gate.
+The recap camera was rebuilt after the NZ device film. `CameraPathActs` framed
+each act to its own bounds while timing came from a separate clock, so motion
+came from **data shape** rather than spatial continuity — acts collapsed onto the
+`camera_span_m` floor and the camera crossed 110 km between them. What replaced
+it, all of which is load-bearing:
+
+- **`FollowCamera`** — a dead-zone dolly, pre-simulated once at build time so
+  `cameraFrame(atTime:)` stays pure and random-access. Inertia is simulation
+  state, never a post-process. A world-bounds clamp keeps the frame inside the
+  route's extent, and **yields to the subject** when the two disagree.
+- **One span per trip**, from `RecapDurationPlan.bodySpanM`. Never adaptive —
+  recomputing mid-film is what produced a 97× zoom-out before the end card.
+- **Wide baseline adopted 2026-08-02**: `wide_span_padding` 1.5,
+  `camera_pan_window_fraction_per_s` 0.05, so the ceiling binds and the whole
+  trip is framed (NZ = 425 km). This is what makes a film legible as *a place*.
+- **`CameraPathActs` keeps only discontinuity detection** — a ferry is a fact
+  about the journey; framing was a decision about the camera, and conflating them
+  is what made acts visible to the audience.
+- **The opening** is country → region → body, the country beat framed to fit
+  *inside* the tile extent (never shows past the data), dropped entirely when the
+  region is no wider than the trip. Held beats are capped at ~1 s **after the
+  title card**; the title beat itself holds `title_card_s`. The closing zoom is
+  skipped when the body frame already matches the regional beat.
+- **The ending** pulls back past the body (`end_reveal_padding` 1.9) so the last
+  frame is the complete journey; `end_card_style` selects `.full` (free) or
+  `.minimal` (held for a paid tier).
+
+**Two gates guard all of it** (`RecapCameraContinuityTests`, offline, every
+fixture, `base_url=""` for worst-case inferred legs):
+- consecutive frames share ≥50% of their ground (measured ≥97%);
+- the subject never passes 80% of the half-frame (measured 43–54%).
+Do not relax either — they exist because a still frame is trivially correct and a
+strobing one is only wrong *between* frames.
+
+**Deferred, scoped, wanted:** map reference labels — handoff §"Map reference
+labels". Blocked on a missing `glyphs` fontstack (MapLibre cannot draw Latin
+labels without one); tile data already carries the names. Related but separate:
+landmark title cards as narrative rhythm (`icebox.md`).
+
+**Still not merged to main:** PR #11 holds until §6 passes (owner call).
 
 ## Phase 3 history (recap pipeline, spec §4.5/§7) — started 2026-07-16
 

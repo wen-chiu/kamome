@@ -199,11 +199,17 @@ final class LinearTimelineTests: LinearTimelineTestCase {
             return nil
         }
 
+        // The hand-off is deliberately shorter than the card's grow (2026-08-02):
+        // at a wide span the pin and the card sit far apart, and a slow crossfade
+        // reads as the place being named twice rather than as one hand-off.
+        let handoff = RecapDeck().labelHandoffS
+        XCTAssertLessThan(handoff, config.deckZoomS, "the name must clear faster than the card opens")
+
         XCTAssertEqual(labelOpacity(atTime: deckStart - 0.2) ?? 0, 1, accuracy: 0.01, "solid through the lead beat")
-        let midFade = labelOpacity(atTime: deckStart + config.deckZoomS / 2) ?? 0
+        let midFade = labelOpacity(atTime: deckStart + handoff / 2) ?? 0
         XCTAssertGreaterThan(midFade, 0.05)
         XCTAssertLessThan(midFade, 0.95, "mid cross-fade with the card")
-        XCTAssertNil(labelOpacity(atTime: deckStart + config.deckZoomS + 0.1), "gone once the card owns the name")
+        XCTAssertNil(labelOpacity(atTime: deckStart + handoff + 0.05), "gone once the card owns the name")
     }
 
     func testPhotolessStopGetsNoDeckAndNoDolly() throws {

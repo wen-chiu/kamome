@@ -117,9 +117,15 @@ extension LinearTimeline {
         let park = parkRamp(hold)
         let arriving = park > 0 ? Self.smoothstep((time - hold.startS) / park) : 1
         guard time >= window.start else { return arriving }
-        let zoom = zoomRamp(window)
-        guard zoom > 0 else { return 0 }
-        return min(arriving, 1 - Self.smoothstep((time - window.start) / zoom))
+        // **The hand-off is faster than the card's own grow** (Chiu 2026-08-02).
+        // Both names used to fade across the deck's full zoom ramp, which reads as
+        // a crossfade only while the pin and the card are close together. At the
+        // wide body span they are far apart vertically, and half a second of both
+        // being legible reads as the place being labelled twice. Clearing the pin's
+        // name quickly keeps it a hand-off at any zoom.
+        let handoff = min(deck.labelHandoffS, zoomRamp(window))
+        guard handoff > 0 else { return 0 }
+        return min(arriving, 1 - Self.smoothstep((time - window.start) / handoff))
     }
 
     /// Which photo is in focus: the rotate phase (between the zoom edges) split

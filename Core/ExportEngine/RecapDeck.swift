@@ -7,13 +7,20 @@ import Foundation
 /// paces sensibly.
 public struct RecapDeck {
     public var photoHoldS: Double
+    /// How long the pin's name takes to clear as the card's own name arrives.
+    /// Shorter than `zoomS` on purpose — see `leadLabelOpacity`.
+    public var labelHandoffS: Double = 0.18
     public var zoomS: Double
     /// The pin/label leads (spec §5, Chiu 2026-07-24 two-beat): it lands first
     /// at the follow span, then the camera dollies in and the photos bloom.
     public var labelLeadS: Double
 
-    public init(photoHoldS: Double = 0.8, zoomS: Double = 0.5, labelLeadS: Double = 0.6) {
+    public init(
+        photoHoldS: Double = 0.8, zoomS: Double = 0.5, labelLeadS: Double = 0.6,
+        labelHandoffS: Double = 0.18
+    ) {
         self.photoHoldS = photoHoldS
+        self.labelHandoffS = labelHandoffS
         self.zoomS = zoomS
         self.labelLeadS = labelLeadS
     }

@@ -1,6 +1,8 @@
 # §6 Replay MVP gate — owner runbook
 
-Consolidated 2026-07-31, after the visual/pacing work closed. The gate items
+Consolidated 2026-07-31; **revised 2026-08-02 after the camera/legibility work
+closed** — see "Blocking dev work" below, which did not exist when this was
+first written. The gate items
 themselves live in `Docs/handoff-P3.5.md` §6 and are unchanged; this is the
 **order to do them in**, and it is written for Chiu rather than for an
 implementer. Everything here needs a human, a phone, or real photos — there is no
@@ -10,6 +12,49 @@ The ordering principle: **every judgment you can make at the desk, make at the
 desk.** A film that isn't worth publishing is a design problem, and finding that
 out on the phone costs a side-load, an import and an export per attempt. Stages 0
 and 1 are cheap and repeatable; stage 2 is not.
+
+---
+
+## ⚠️ Blocking dev work — two known defects, diagnosed, NOT fixed
+
+Both were found on 2026-08-01 while diagnosing the NZ device film, and both were
+deliberately left while the camera architecture was rebuilt. **Neither is
+visible on the committed fixtures**, so the desk stages will pass with them
+present and stage 2 is where they bite. Fix them before spending an iPhone
+sitting.
+
+### 1. Multi-day trips type every inter-day leg as a walk 🔴
+
+`ImportService.mode(for:)` computes pace as distance ÷ **wall-clock gap**. On a
+multi-day trip the gap between one day's last photo and the next day's first is
+mostly sleeping, so a 60 km drive across 47 hours implies 1.3 km/h → `.walk` →
+walks are deliberately never routed → the leg stays a straight line and draws
+dashed.
+
+Measured on the real 11-day NZ trip: **7 of 9 legs**. The gate item *"no obvious
+sea-crossing / mountain-crossing straight line"* fails outright on any trip
+longer than a day — the straight lines cross Lake Pukaki and the Southern Alps.
+
+The fix is not "raise the walk threshold": overnight gaps are not travel time at
+all, so the pace signal has to come from something other than the raw gap
+(per-day segmentation, or a gap ceiling above which pace is simply unknowable
+and the leg defaults to `.drive`, which is the road-trip assumption the code
+already makes for zero-elapsed legs).
+
+### 2. iCloud-optimised photos resolve to empty cards 🔴
+
+`PhotoLibraryPhotoResolver.loadAsset` sets `isNetworkAccessAllowed = false`, so
+an asset whose full-size data lives in iCloud rather than on the device returns
+nil and the deck blooms an **empty grey matte**. EXIF import still works, because
+place and time are metadata that need no download — which is exactly why this
+survives the desk stages and only appears on the phone.
+
+Real trips from previous years are the most likely to be optimised away. Every
+stop card silently blank is a direct fail of *"films Chiu wants to keep."*
+
+Confidence: high but **device-only, never reproduced** — the simulator has no
+iCloud library. Worth deciding the behaviour deliberately (allow the download
+with progress, or detect and tell the user) rather than flipping the flag blind.
 
 ---
 
@@ -35,6 +80,8 @@ the trip.
 - [ ] **Check coverage** with the `pmtiles-bounds.sh` line the script prints. A
       trip that escapes its region renders as Apple Maps, not as a broken map, so
       this fails quietly if you skip it.
+- [ ] **Prefer single-day trips until blocker 1 is fixed**, or accept that
+      multi-day candidates will render their inter-day legs dashed and straight.
 - [ ] **Pick the three gate trips** from the four candidates — "different
       character" is the requirement: a long drive, a dense walk-heavy day, and
       something with an inferred leg in it.
@@ -50,7 +97,8 @@ different trip.
       ```
       Watch for: total duration inside 60–90 s, a longest-still that is not
       absurd, and the leg list — `drive/inferred` and `walk/inferred` are the legs
-      that will draw dashed.
+      that will draw dashed. **A multi-day trip showing mostly `walk/inferred` is
+      the blocker above, not a property of the trip.**
 - [ ] **One stop still** (`RecapStopStillTests`) — is the busiest stop's
       composition right on this trip's real photographs?
 - [ ] **32 s pilot** (`RecapPilotFilmTests`) — the opening and the first two stops
