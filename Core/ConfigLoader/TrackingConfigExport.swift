@@ -75,6 +75,11 @@ public extension TrackingConfig {
         /// which is what pinned the car into the corner of frame at ω = 6.
         /// 12, with a 0.4 dead zone, settles the subject at 0.52.
         public let cameraResponsiveness: Double
+        /// Which closing treatment the film signs off with — `full` (the default,
+        /// and the free tier) or `minimal` (a corner wordmark over the revealed
+        /// route, held for a future paid tier). A string rather than a Bool so a
+        /// third treatment does not need a schema change.
+        public let endCardStyle: String
         /// The closing reveal: after the last stop the camera eases out to frame
         /// the whole journey, so the film ends on what was actually travelled.
         /// A distinct beat *after* the body — the body itself never zooms.
@@ -94,13 +99,18 @@ public extension TrackingConfig {
         /// shows *what*. Country extent, then the trip's region, then the body —
         /// each eased into the next over `zoom_transition_s`.
         ///
-        /// **These are held beats, and they are capped hard at ~1 s** (Chiu
-        /// 2026-08-01). The same continuity philosophy the body camera now
-        /// follows applies here: the opening should be continuous motion end to
-        /// end. A 3.5 s hold on a finished zoom, with the journey not yet begun
-        /// and so nothing on screen able to move, was dead air that survived
-        /// several rounds of tuning because shortening a hold cannot add motion —
-        /// only removing the hold can. `RecapPacingTests` enforces the cap.
+        /// **Held beats are capped at ~1 s once the title is gone** (Chiu
+        /// 2026-08-01, refined 2026-08-02). The same continuity philosophy the
+        /// body camera follows: after the title, the opening should be continuous
+        /// motion. A 3.5 s hold on a finished zoom with the journey not yet begun
+        /// — nothing on screen able to move — was dead air that survived several
+        /// rounds of tuning, because shortening a hold cannot add motion; only
+        /// removing it can.
+        ///
+        /// The country beat is the exception, and deliberately: it is the **title
+        /// beat**, and a title card holding still with the trip's name on it is
+        /// content, not a stall. It runs `title_card_s` so the two cannot drift
+        /// apart. `CameraPathTests` enforces the cap on everything after it.
         public let openingCountryS: Double
         public let openingRegionalS: Double
         /// How far past the trip's own bounds the country view reaches when no
@@ -142,7 +152,7 @@ public extension TrackingConfig {
             cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
             actSplitKm: Double, followHeadingUp: Bool,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
-            cameraResponsiveness: Double, endRevealS: Double,
+            cameraResponsiveness: Double, endRevealS: Double, endCardStyle: String,
             deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double,            countryViewPadding: Double, firstStopDwellScale: Double,
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
@@ -162,6 +172,7 @@ public extension TrackingConfig {
             self.cameraSafeZoneFraction = cameraSafeZoneFraction
             self.cameraResponsiveness = cameraResponsiveness
             self.endRevealS = endRevealS
+            self.endCardStyle = endCardStyle
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
             self.deckLabelLeadS = deckLabelLeadS
             self.subjectParkS = subjectParkS
@@ -194,6 +205,7 @@ public extension TrackingConfig {
                 cameraDeadZoneFraction: cameraDeadZoneFraction,
                 cameraSafeZoneFraction: cameraSafeZoneFraction,
                 cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+                endCardStyle: endCardStyle,
                 deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
                 deckLabelLeadS: deckLabelLeadS,
                 subjectParkS: subjectParkS,
@@ -218,6 +230,7 @@ public extension TrackingConfig {
             case cameraSafeZoneFraction = "camera_safe_zone_fraction"
             case cameraResponsiveness = "camera_responsiveness"
             case endRevealS = "end_reveal_s"
+            case endCardStyle = "end_card_style"
             case targetDurationS = "target_duration_s"
             case fps
             case stopHoldS = "stop_hold_s"

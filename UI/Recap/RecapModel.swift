@@ -156,7 +156,7 @@ final class RecapModel {
             \(timeline.frameCount) frames · opening \(timeline.openingS, format: .fixed(precision: 1))s · \
             \(trip.stops.count) stops · \(trip.legs.filter(\.provenance.isInferred).count)/\(trip.legs.count) legs dashed
             """)
-        let style = RecapStyle.modernMinimal
+        let style = RecapStyle.modernMinimal.withEndCard(config.export.endCardStyle)
         let resolver = PhotoLibraryPhotoResolver()
         if photosEnabled {
             let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)

@@ -10,7 +10,32 @@ import Foundation
 /// Consumed by the render-side of the narrow waist: `SpriteSubjectRenderer`
 /// (the moving subject) and `RecapOverlayRenderer` (route trail, stop label,
 /// photo deck, title/end chrome). The story/timeline never sees it.
+/// How the film signs off.
+///
+/// A **style** choice, not a branch in the renderer: the closing beat is one of
+/// the clearest places a tier can differ, and the difference is entirely visual.
+/// Kept as a named treatment so the swap is a value, never an `if premium`
+/// scattered through the drawing code.
+public enum RecapEndCardTreatment: String, Sendable {
+    /// The default, and what the free tier ships: a full-bleed closing card —
+    /// scrim, mark, wordmark, the trip's stats, and the call to action.
+    case full
+    /// A small wordmark in the corner and nothing else. The reveal still plays,
+    /// so the film ends on the journey itself rather than on a panel about it.
+    ///
+    /// **Intended for a paid tier** (Chiu 2026-08-02). No tier system exists yet —
+    /// this is the visual option existing and being swappable ahead of one, so
+    /// when entitlements land they select a treatment rather than needing this
+    /// built. Selected today by `export.end_card_style`.
+    case minimal
+}
+
 public struct RecapStyle {
+    /// Which closing treatment this style uses. See `RecapEndCardTreatment`.
+    public var endCard: RecapEndCardTreatment = .full
+    /// Corner mark size for the minimal ending — small enough to sign the film
+    /// without competing with the route it is signing.
+    public var minimalMarkSidePx: CGFloat = 56
     // Route trail (§4.5 step 2, drawn by OverlayRenderer as `routeReveal`). The
     // trail is stroked twice: a wide, soft glow pass under a crisp core, so it
     // reads as a lit line on the dark souvenir map rather than a flat polyline.
@@ -64,6 +89,20 @@ public struct RecapStyle {
     public var chromeAccentColor = CGColor(srgbRed: 0.95, green: 0.55, blue: 0.32, alpha: 1)
     /// Side of the brand mark on the title and end cards.
     public var titleMarkSidePx: CGFloat = 132
+    /// How much of the frame the opening title's band occupies, measured from the
+    /// bottom. Everything above it is left clear for the establishing shot.
+    public var titleBandHeightFraction: CGFloat = 0.42
+    /// Opacity at the band's bottom edge; it fades to nothing at the top.
+    public var titleBandOpacity: CGFloat = 0.9
+    /// How much of the band holds full opacity before the fade begins.
+    public var titleBandSolidFraction: CGFloat = 0.62
+    /// Where the type sits inside the band, as a fraction of its height.
+    public var titleStackCenterFraction: CGFloat = 0.42
+    /// The title's side margin, as a multiple of `cardMarginPx`.
+    public var titleSideMarginScale: CGFloat = 1.6
+    /// The mark shrinks inside the band — branding signs the opening, it is not
+    /// the subject of it.
+    public var titleBandMarkScale: CGFloat = 0.55
 
     // Legacy panel tokens, still used by the stop label's pill.
     public var cardColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.96)
@@ -264,5 +303,16 @@ public struct RecapStyle {
         style.cardColor = CGColor(srgbRed: 0.07, green: 0.09, blue: 0.13, alpha: 0.90)
         style.cardTextColor = CGColor(srgbRed: 0.97, green: 0.98, blue: 1, alpha: 1)
         return style
+    }
+}
+
+public extension RecapStyle {
+    /// This style with `export.end_card_style` applied. An unknown value falls
+    /// back to `.full` rather than failing a render — a bad config string should
+    /// cost the premium look, not the film.
+    func withEndCard(_ raw: String) -> RecapStyle {
+        var copy = self
+        copy.endCard = RecapEndCardTreatment(rawValue: raw) ?? .full
+        return copy
     }
 }

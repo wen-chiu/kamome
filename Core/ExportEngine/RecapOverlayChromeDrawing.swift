@@ -10,47 +10,71 @@ enum RecapWordmark {
 /// Trip chrome for the overlay renderer (§4.5 step 4): the opening title and the
 /// closing card.
 ///
-/// **Full-bleed, not a panel** (Chiu 2026-07-30, matching the prototype). Both
-/// cards used to be a rounded white plate parked against one edge, with the map
-/// as the subject. They are now cinematic title screens: a dark scrim across the
-/// whole frame, the map receding behind it, and a centred stack — mark, title,
-/// then a metadata line. The map is background, not content, for these few
-/// seconds.
+/// **The closing card is full-bleed; the opening title is not** (Chiu
+/// 2026-08-02). Both used to be a rounded white plate against one edge; both then
+/// became full-frame scrims with a centred stack. That is still right for the
+/// ending, which is a card *about* the trip.
+///
+/// It was wrong for the opening. A scrim across the whole frame makes the map
+/// decorative — a texture behind the type — at the one moment its only job is to
+/// say *where this happened*. The establishing shot already frames the whole
+/// country; a viewer should recognise it from its own coastline, not be told by
+/// text lying on top of it. So the title now sits in a **lower band**: the type
+/// has its own ground to stand on and stays fully legible, while the upper frame
+/// is left completely clear for the map to be read as a place.
 extension RecapOverlayRenderer {
-    /// Opening title: the trip's name over its own geography.
+    /// Opening title: the trip's name **under** its own geography.
+    ///
+    /// Three things, in the order a viewer needs them: the branding (small — it
+    /// signs the film, it is not the subject), the trip's name, and its dates.
+    /// All inside the lower band, so the establishing shot above stays untouched.
     func drawTitleChrome(title: String, subtitle: String, into surface: RenderSurface) {
         let scale = surface.scale
-        drawScrim(into: surface)
+        let bandHeight = CGFloat(surface.heightPx) * style.titleBandHeightFraction
+        drawTitleBand(height: bandHeight, into: surface)
 
-        // The stack is centred as a group, so a long title and a short one both
-        // sit balanced rather than one riding high.
-        // A trip title is user data of any length, so the type shrinks to fit
-        // rather than running off both edges — which is exactly what
-        // "Iceland — Golden Circle" did at the full size.
+        // A wider margin than the rest of the chrome: this is the one line a
+        // viewer reads cold, and type running edge to edge reads as a caption
+        // rather than as a title.
+        let sideMargin = style.cardMarginPx * scale * style.titleSideMarginScale
         let titleFontPx = fittedFontPx(
             title, preferred: style.titleFontPx,
-            maxWidth: CGFloat(surface.widthPx) - style.cardMarginPx * 2 * scale, in: surface
+            maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface
         )
-        let markSide = style.titleMarkSidePx * scale
+        let markSide = style.titleMarkSidePx * scale * style.titleBandMarkScale
+        let brandPx = style.subtitleFontPx
         let titleH = titleFontPx * scale
         let metaH = style.subtitleFontPx * scale
         let gap = style.cardPaddingPx * scale
-        let stackH = markSide + gap * 1.5 + titleH + gap + metaH
-        var cursorY = (CGFloat(surface.heightPx) + stackH) / 2
         let centerX = CGFloat(surface.widthPx) / 2
 
-        cursorY -= markSide
-        drawMark(centeredAt: CGPoint(x: centerX, y: cursorY + markSide / 2), side: markSide, in: surface)
+        // Walk down from the top of the stack, the same idiom the end card uses:
+        // branding, then the trip's name, then its dates.
+        let stackH = markSide + gap * 1.2 + titleH + gap * 0.8 + metaH
+        var cursorY = (bandHeight * style.titleStackCenterFraction) + stackH / 2
 
-        cursorY -= gap * 1.5 + titleH
+        cursorY -= markSide
+        let brandW = textWidth(RecapWordmark.text, fontPx: brandPx, in: surface)
+        let lockupW = markSide + gap * 0.5 + brandW
+        drawMark(
+            centeredAt: CGPoint(x: centerX - lockupW / 2 + markSide / 2, y: cursorY + markSide / 2),
+            side: markSide, in: surface
+        )
+        drawText(
+            RecapWordmark.text,
+            at: CGPoint(x: centerX - lockupW / 2 + markSide + gap * 0.5, y: cursorY + markSide * 0.32),
+            fontPx: brandPx, color: style.chromeMetaColor, in: surface
+        )
+
+        cursorY -= gap * 1.2 + titleH
         drawCenteredText(
-            title, centerX: centerX, baselineY: cursorY + titleH * 0.2,
+            title, centerX: centerX, baselineY: cursorY + titleH * 0.22,
             fontPx: titleFontPx, color: style.chromeTitleColor, in: surface
         )
 
-        cursorY -= gap + metaH
+        cursorY -= gap * 0.8 + metaH
         drawCenteredText(
-            subtitle.uppercased(), centerX: centerX, baselineY: cursorY + metaH * 0.2,
+            subtitle.uppercased(), centerX: centerX, baselineY: cursorY + metaH * 0.22,
             fontPx: style.subtitleFontPx, color: style.chromeMetaColor, in: surface
         )
     }
@@ -66,6 +90,7 @@ extension RecapOverlayRenderer {
     /// share URL exists (spec P6/P7). The QR path below is untouched and returns
     /// the moment `shareURL` is non-nil.
     func drawEndChrome(stats: [String], callToAction: String, shareURL: String?, into surface: RenderSurface) {
+        guard style.endCard == .full else { return drawMinimalEndChrome(into: surface) }
         let scale = surface.scale
         drawScrim(into: surface)
 
@@ -113,6 +138,37 @@ extension RecapOverlayRenderer {
         )
     }
 
+    /// The premium sign-off: a small mark and wordmark in the top-right corner,
+    /// over an unobscured map.
+    ///
+    /// The reveal has just opened the frame onto the whole journey, and this
+    /// treatment's whole argument is that *that* is the ending — the route you
+    /// travelled, held for a beat — rather than a panel of numbers drawn over the
+    /// top of it. So there is no scrim, no stats, and no call to action: nothing
+    /// that would ask the map to recede at the exact moment it finally shows
+    /// everything.
+    private func drawMinimalEndChrome(into surface: RenderSurface) {
+        let scale = surface.scale
+        let markSide = style.minimalMarkSidePx * scale
+        let margin = style.cardMarginPx * scale
+        let wordmarkPx = style.subtitleFontPx
+        let wordmarkW = textWidth(RecapWordmark.text, fontPx: wordmarkPx, in: surface)
+        let gap = markSide * 0.35
+
+        // Right-aligned as a unit: mark, then wordmark, hugging the top-right.
+        let rightEdge = CGFloat(surface.widthPx) - margin
+        let centreY = CGFloat(surface.heightPx) - margin - markSide / 2
+        drawMark(
+            centeredAt: CGPoint(x: rightEdge - wordmarkW - gap - markSide / 2, y: centreY),
+            side: markSide, in: surface
+        )
+        drawText(
+            RecapWordmark.text,
+            at: CGPoint(x: rightEdge - wordmarkW, y: centreY - wordmarkPx * scale * 0.35),
+            fontPx: wordmarkPx, color: style.chromeTitleColor, in: surface
+        )
+    }
+
     /// The largest size at or below `preferred` that fits `maxWidth`. Text in a
     /// film cannot be truncated or wrapped away — it is on screen for seconds and
     /// then gone — so it scales instead.
@@ -123,6 +179,30 @@ extension RecapOverlayRenderer {
         let measured = textWidth(text, fontPx: preferred, in: surface)
         guard measured > maxWidth, measured > 0 else { return preferred }
         return preferred * (maxWidth / measured)
+    }
+
+    /// The band the opening title stands on.
+    ///
+    /// **Solid where the type is, fading only above it.** A gradient running the
+    /// whole height puts the text in the middle of the ramp, at roughly half the
+    /// opacity — which is where a title over dark terrain stops being readable.
+    /// So the wash holds full strength up to `titleBandSolidFraction` and does all
+    /// its fading in the remainder, leaving no visible edge against the map.
+    private func drawTitleBand(height: CGFloat, into surface: RenderSurface) {
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let solid = style.chromeScrimColor.copy(alpha: style.titleBandOpacity),
+              let clear = style.chromeScrimColor.copy(alpha: 0),
+              let gradient = CGGradient(
+                  colorsSpace: space, colors: [solid, solid, clear] as CFArray,
+                  locations: [0, style.titleBandSolidFraction, 1]
+              )
+        else { return }
+        surface.context.saveGState()
+        surface.context.clip(to: CGRect(x: 0, y: 0, width: CGFloat(surface.widthPx), height: height))
+        surface.context.drawLinearGradient(
+            gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: height), options: []
+        )
+        surface.context.restoreGState()
     }
 
     /// The full-frame dark wash that pushes the map back. Strongest at the centre

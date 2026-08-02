@@ -25,6 +25,27 @@ import XCTest
 ///   xcodebuild -scheme Kamome test -destination '…' \
 ///     -only-testing:KamomeTests/RecapStopStillTests
 final class RecapStopStillTests: XCTestCase {
+    /// One frame of the **opening title beat**, for confirming its layout before
+    /// a full film is rendered against it (Chiu 2026-08-02).
+    ///
+    ///     TEST_RUNNER_KAMOME_TITLE_STILL=nz-real …
+    func testRenderTitleStill() async throws {
+        let fixture = ProcessInfo.processInfo.environment["KAMOME_TITLE_STILL"] ?? ""
+        try XCTSkipUnless(!fixture.isEmpty, "Manual review harness — set KAMOME_TITLE_STILL.")
+        let scene = try await RecapReviewScene.make(fixture: fixture)
+
+        // Mid-title, where the card is fully up and the establishing shot has
+        // settled — the frame a viewer actually reads.
+        let peak = scene.config.titleCardS / 2
+        let image = try await scene.frame(at: peak)
+
+        let outDir = RecapReviewScene.outputDirectory()
+        try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
+        let url = outDir.appendingPathComponent("title-\(fixture).png")
+        try write(image, to: url)
+        print("KAMOME_TITLE_STILL \(url.path) — t=\(peak)s of a \(scene.timeline.durationS)s film")
+    }
+
     func testRenderStopStill() async throws {
         let fixture = ProcessInfo.processInfo.environment["KAMOME_STOP_STILL"] ?? ""
         try XCTSkipUnless(

@@ -34,7 +34,7 @@ final class CameraPathTests: XCTestCase {
             actSplitKm: 25,
             followHeadingUp: followHeadingUp,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
-            cameraResponsiveness: 6.0, endRevealS: 2.5,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endCardStyle: "full",
             deckPhotoHoldS: 0.8,
             deckZoomS: 0.5,
             deckLabelLeadS: 0.6, subjectParkS: 0.4,
@@ -315,7 +315,9 @@ final class CameraPathTests: XCTestCase {
         var longestStill = 0.0
         var run = 0.0
         var previous = line.cameraFrame(atTime: 0)
-        for time in stride(from: step, through: line.openingS, by: step) {
+        // From the end of the title card: a still frame *with the title on it* is
+        // the title beat working. Dead air is stillness after the card is gone.
+        for time in stride(from: export.titleCardS + step, through: line.openingS, by: step) {
             let frame = line.cameraFrame(atTime: time)
             let moved = Geo.distanceM(
                 latA: previous.centerLat, lonA: previous.centerLon,
@@ -332,7 +334,8 @@ final class CameraPathTests: XCTestCase {
         }
         XCTAssertLessThanOrEqual(
             longestStill, 1.05,
-            "the opening sits still for \(longestStill)s — capped at ~1 s so it never reads as a freeze"
+            "the opening sits still for \(longestStill)s after the title card — "
+                + "capped at ~1 s so it never reads as a freeze"
         )
     }
 

@@ -47,7 +47,7 @@ struct RecapReviewScene {
             throw SetupError.noRegion
         }
 
-        let style = RecapStyle.modernMinimal
+        let style = RecapStyle.modernMinimal.withEndCard(config.endCardStyle)
         return RecapReviewScene(
             trip: trip, config: config, timeline: timeline,
             compositor: FrameCompositor(

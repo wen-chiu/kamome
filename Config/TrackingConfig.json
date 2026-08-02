@@ -114,11 +114,12 @@
     "camera_safe_zone_fraction": 0.8,
     "camera_responsiveness": 12.0,
     "end_reveal_s": 2.5,
+    "end_card_style": "full",
     "deck_photo_hold_s": 2.5,
     "deck_zoom_s": 0.5,
     "deck_label_lead_s": 0.6,
     "subject_park_s": 0.4,
-    "opening_country_s": 1.0,
+    "opening_country_s": 3.0,
     "opening_regional_s": 1.0,
     "country_view_padding": 2.2,
     "opening_collapse_zoom_ratio": 1.25,
@@ -129,7 +130,7 @@
     "total_duration_min_s": 60,
     "total_duration_max_s": 90,
     "keyframe_interval_frames": 15,
-    "title_card_s": 2.5,
+    "title_card_s": 3.0,
     "end_card_s": 3.0,
     "video_bitrate_mbps": 5
   }
