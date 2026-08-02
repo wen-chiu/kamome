@@ -47,3 +47,12 @@ the no-music call), cap clip count. Blocked on: §4.5 steps 2–5 landed and the
 <90 s render budget measured — per-frame video decode + composite is the
 single biggest render-cost risk in the whole pipeline. (Decision record:
 `decisions.md` 2026-07-17.)
+
+### Place names as narrative rhythm (2026-08-02, Chiu)
+
+Brief landmark title cards — "Lake Tekapo" — inserted between travel and stop
+beats as a storytelling device. **Distinct from static map labels**: this is
+narration with its own timing, not annotation the map carries continuously, and
+the two answer different questions ("what am I arriving at" vs "where am I
+right now"). Raised while comparing span/label options for the legibility
+problem; parked so the two are not conflated.
