@@ -29,6 +29,19 @@ struct RecapView: View {
                     Text("recap_photos_note")
                 }
 
+                if let shortfall = model.photoShortfall {
+                    Section {
+                        Label("recap_photos_missing", systemImage: "icloud.slash")
+                            .foregroundStyle(.orange)
+                        Text(String.localizedStringWithFormat(
+                            String(localized: "recap_photos_missing_detail"),
+                            shortfall.missing, shortfall.requested
+                        ))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section {
                     switch model.phase {
                     case .idle:

@@ -45,6 +45,12 @@ final class RecapModel {
     var format: Format = .mp4
     private(set) var phase: Phase = .idle
 
+    /// Set when warming could not load every deck photo — see
+    /// `PhotoLibraryPhotoResolver.WarmSummary`. Surfaced rather than swallowed:
+    /// the symptom is blank cards in a finished film, which reads as a rendering
+    /// bug rather than as photos that are not on this device.
+    private(set) var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
+
     private let tripId: String
     private let config: TrackingConfig
     private let repository: TripRepository
@@ -158,9 +164,18 @@ final class RecapModel {
             """)
         let style = RecapStyle.modernMinimal.withEndCard(config.export.endCardStyle)
         let resolver = PhotoLibraryPhotoResolver()
+        photoShortfall = nil
         if photosEnabled {
             let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
-            await resolver.warm(trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1))
+            let warmed = await resolver.warm(trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1))
+            if warmed.missing > 0 {
+                photoShortfall = warmed
+                KamomeLog.recap.error("""
+                    \(warmed.missing) of \(warmed.requested) deck photos could not be loaded \
+                    (\(warmed.inCloud) are in iCloud, not on this device) — those stops will render \
+                    blank cards. The route is unaffected: EXIF place and time need no download.
+                    """)
+            }
         }
         let compositor = FrameCompositor(
             timeline: timeline,

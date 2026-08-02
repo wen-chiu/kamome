@@ -49,7 +49,7 @@ trips show a lot of `drive/inferred`, check the log for `NoSegment` before
 assuming the detour gate: they fail for different reasons and only one is a
 tuning question.
 
-### 2. iCloud-optimised photos resolve to empty cards 🔴
+### 2. iCloud-optimised photos resolve to empty cards ⚠️ NAMED, not solved
 
 `PhotoLibraryPhotoResolver.loadAsset` sets `isNetworkAccessAllowed = false`, so
 an asset whose full-size data lives in iCloud rather than on the device returns
@@ -60,9 +60,25 @@ survives the desk stages and only appears on the phone.
 Real trips from previous years are the most likely to be optimised away. Every
 stop card silently blank is a direct fail of *"films Chiu wants to keep."*
 
-Confidence: high but **device-only, never reproduced** — the simulator has no
-iCloud library. Worth deciding the behaviour deliberately (allow the download
-with progress, or detect and tell the user) rather than flipping the flag blind.
+**What landed 2026-08-02 (option C, owner call):** nothing is downloaded — the
+resolver still refuses network access — but warming now *reports* what it could
+not load, and the recap screen says so before the film finishes: *"38 of 47
+photos couldn't be loaded, so those stops show blank cards. Open them in Photos
+to download them first."* The route is stated as unaffected, because it is.
+
+So on the gate sitting a blank-card film **tells you why** instead of looking
+like a rendering bug. That is the whole value; the photos are still blank.
+
+**What is still owed (option B, deferred):** actually fetching the originals,
+which needs its own phase — progress, cancel, and copy — because `warm` loops
+every deck photo sequentially and an unbounded download behind a progress bar
+that reports *render* progress would turn a visible bug into an invisible hang.
+When B is built, that is also the moment for the copy-catalog pass
+(zh-Hant-first, per Chiu 2026-08-02).
+
+Confidence in the diagnosis: high but **device-only, never reproduced** — the
+simulator has no iCloud library. The first real import confirms or refutes it,
+and the new notice is what will tell you which.
 
 ---
 

@@ -632,6 +632,40 @@
         }
       }
     },
+    "recap_photos_missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some photos aren’t on this device"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分照片不在這台裝置上"
+          }
+        }
+      }
+    },
+    "recap_photos_missing_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d of %2$d photos couldn’t be loaded, so those stops show blank cards. Open them in Photos to download them first, then export again. The route itself is unaffected."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 張（共 %2$d 張）無法載入，這些停留點會顯示空白卡片。請先在「照片」開啟它們以完成下載，再重新輸出。路線本身不受影響。"
+          }
+        }
+      }
+    },
     "recap_photos_note": {
       "extractionState": "manual",
       "localizations": {
