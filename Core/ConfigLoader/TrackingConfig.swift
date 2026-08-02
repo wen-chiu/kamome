@@ -100,6 +100,21 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Recap photo-deck size bounds (basic MVP presentation; §5).
         public let deckMinPhotos: Int
         public let deckMaxPhotos: Int
+        /// Past this gap between a leg's endpoints, its implied pace stops
+        /// meaning anything and the leg is treated as a drive (Chiu 2026-08-02).
+        ///
+        /// Pace is distance over elapsed time, which assumes the elapsed time was
+        /// spent travelling. Across a night it was not: a 60 km drive photographed
+        /// at 10 pm and again at 9 am the next morning implies 1.3 km/h, reads as
+        /// walking pace, and walking legs are deliberately never routed — so the
+        /// leg stayed a straight line through whatever lay between. On the real
+        /// 11-day New Zealand trip that was **7 of 9 legs**, drawn straight across
+        /// Lake Pukaki and the Southern Alps.
+        ///
+        /// The fix is not a higher walking threshold. An overnight gap is not slow
+        /// travel, it is *no signal*, so above this the leg falls back to the same
+        /// road-trip assumption already made for legs with no elapsed time at all.
+        public let paceUnknowableGapS: Double
         /// How many days back the S1 import date-range picker defaults to
         /// (UI default only — the user adjusts it; kept here so it isn't a
         /// magic number, §0 rule 2).
@@ -111,6 +126,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case minPhotosPerStop = "min_photos_per_stop"
             case deckMinPhotos = "deck_min_photos"
             case deckMaxPhotos = "deck_max_photos"
+            case paceUnknowableGapS = "pace_unknowable_gap_s"
             case defaultRangeDays = "default_range_days"
         }
     }

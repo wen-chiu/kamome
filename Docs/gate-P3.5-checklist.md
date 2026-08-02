@@ -17,13 +17,12 @@ and 1 are cheap and repeatable; stage 2 is not.
 
 ## ⚠️ Blocking dev work — two known defects, diagnosed, NOT fixed
 
-Both were found on 2026-08-01 while diagnosing the NZ device film, and both were
-deliberately left while the camera architecture was rebuilt. **Neither is
-visible on the committed fixtures**, so the desk stages will pass with them
-present and stage 2 is where they bite. Fix them before spending an iPhone
-sitting.
+Both were found on 2026-08-01 while diagnosing the NZ device film. **Neither is
+visible on the committed fixtures**, so the desk stages pass with them present
+and stage 2 is where they bite. #1 is fixed; **#2 is still open** and is a
+behaviour decision, not only a bug fix.
 
-### 1. Multi-day trips type every inter-day leg as a walk 🔴
+### 1. Multi-day trips type every inter-day leg as a walk ✅ FIXED 2026-08-02
 
 `ImportService.mode(for:)` computes pace as distance ÷ **wall-clock gap**. On a
 multi-day trip the gap between one day's last photo and the next day's first is
@@ -35,11 +34,20 @@ Measured on the real 11-day NZ trip: **7 of 9 legs**. The gate item *"no obvious
 sea-crossing / mountain-crossing straight line"* fails outright on any trip
 longer than a day — the straight lines cross Lake Pukaki and the Southern Alps.
 
-The fix is not "raise the walk threshold": overnight gaps are not travel time at
-all, so the pace signal has to come from something other than the raw gap
-(per-day segmentation, or a gap ceiling above which pace is simply unknowable
-and the leg defaults to `.drive`, which is the road-trip assumption the code
-already makes for zero-elapsed legs).
+**Fixed** with a gap ceiling (`import.pace_unknowable_gap_s`, 4 h): past it the
+elapsed time was not spent travelling, so pace carries no signal and the leg
+falls back to the road-trip assumption already made for zero-elapsed legs.
+Raising the walk threshold was rejected — an overnight gap is not slow travel.
+On the NZ reconstruction: **7 walk-typed legs → 0**.
+
+⚠️ **A different knob to watch at Stage 1.** OSRM is asked to snap each leg
+endpoint within `matching.route_waypoint_radius_m` (500 m). A leg endpoint is a
+*stop centroid* — the middle of a photo cluster — so a beach day, a lakeside
+lookout or a summit can sit further from a drivable road than that, and the
+whole leg then comes back `NoSegment` and stays dashed. Honest, but if real
+trips show a lot of `drive/inferred`, check the log for `NoSegment` before
+assuming the detour gate: they fail for different reasons and only one is a
+tuning question.
 
 ### 2. iCloud-optimised photos resolve to empty cards 🔴
 

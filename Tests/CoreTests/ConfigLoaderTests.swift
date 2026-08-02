@@ -59,6 +59,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.minPhotosPerStop, 2)
         XCTAssertEqual(config.photoImport.deckMinPhotos, 3)
         XCTAssertEqual(config.photoImport.deckMaxPhotos, 8)
+        XCTAssertEqual(config.photoImport.paceUnknowableGapS, 14_400)
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
     }
 

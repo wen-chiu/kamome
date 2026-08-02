@@ -94,12 +94,18 @@ struct ImportService {
     /// Classifies a leg by its implied pace (PD-8). Walking-pace legs stay
     /// `walk` and therefore stay raw: the reconstructor runs a car profile, so
     /// routing a 400 m stroll between two cafés would snap it onto the nearest
-    /// road and invent a journey that never happened. Legs with no elapsed time
-    /// (a pace we cannot know) default to `drive` — the road-trip assumption
-    /// that holds for photo imports — and the confidence gate still protects
-    /// them downstream.
+    /// road and invent a journey that never happened.
+    ///
+    /// **Pace is only a signal while the elapsed time was plausibly spent
+    /// travelling** (Chiu 2026-08-02). Past `import.pace_unknowable_gap_s` it was
+    /// not — an overnight gap is a night's sleep, not slow travel — so the leg
+    /// falls back to the same road-trip assumption already made for legs with no
+    /// elapsed time at all. Without that, every inter-day leg of a multi-day trip
+    /// typed as a walk and drew as a straight line across whatever lay between.
     private func mode(for leg: ImportedLeg) -> TransportMode {
-        guard let speed = leg.impliedSpeedKmh else { return .drive }
+        guard let speed = leg.impliedSpeedKmh,
+              leg.endedAt - leg.startedAt <= config.photoImport.paceUnknowableGapS
+        else { return .drive }
         return speed <= config.segmentation.speedWalkMaxKmh ? .walk : .drive
     }
 }

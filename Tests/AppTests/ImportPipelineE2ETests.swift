@@ -94,6 +94,33 @@ final class ImportPipelineE2ETests: XCTestCase {
                        "pace decides the mode, not a blanket road-trip assumption")
     }
 
+    /// **An overnight gap is not slow travel** (Chiu 2026-08-02). Pace is only a
+    /// signal while the elapsed time was plausibly spent moving; across a night
+    /// it was not, and treating it as pace typed every inter-day leg of a
+    /// multi-day trip as a walk — which is never routed, so it drew as a straight
+    /// line through whatever lay between. On the real 11-day New Zealand trip
+    /// that was 7 of 9 legs, crossing a lake and an alpine range.
+    func testOvernightGapsAreDrivenNotWalked() async throws {
+        let config = AppConfig.loadOrDie()
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let service = ImportService(repository: repository, config: config)
+
+        // 60 km apart, photographed 13 hours apart: 4.6 km/h — walking pace by
+        // the numbers, and impossible as an actual walk.
+        let night = config.photoImport.paceUnknowableGapS + 3_600
+        let photos = [
+            photo("a1", 0, 64.1466, -21.9426),
+            photo("a2", 120, 64.1467, -21.9427),
+            photo("b1", night, 64.6800, -21.9420),
+            photo("b2", night + 120, 64.6801, -21.9421)
+        ]
+        let tripId = try await service.importTrip(title: "Two days", photos: photos)
+        let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+
+        XCTAssertEqual(detail.segments.map(\.segment.mode), ["drive"],
+                       "a gap this long carries no pace signal — fall back to the road-trip assumption")
+    }
+
     /// The dispatch (typed-leg pass): EXIF legs go to `/route` with vias, never
     /// to `/match`, whose Hidden-Markov model expects a dense trace.
     func testExifLegsAreDispatchedToTheRouteReconstructorNotTheMatcher() async throws {
