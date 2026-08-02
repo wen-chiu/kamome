@@ -109,14 +109,35 @@ struct RecapReviewScene {
         }
     }
 
+    /// **Matched by filename first** (2026-08-02). `exif-to-fixture.sh` writes each
+    /// photo's own basename as its id, so a fixture dumped from a real folder can
+    /// show each stop the photographs actually taken there — which is the whole
+    /// point of a Stage 1 "is this worth publishing?" judgement. Dealing images
+    /// round-robin puts a mountain on a harbour and tells you nothing.
+    ///
+    /// Falls back to dealing in filename order for hand-written fixtures, whose
+    /// ids are labels like `tek-1` rather than files, and to a generated tile when
+    /// there are no real photos at all.
     private static func resolver(for trip: RecapTrip) throws -> RecapPhotoResolving {
         let files = photoFiles()
         if files.isEmpty { print("KAMOME_REVIEW no real photos — set KAMOME_STOP_PHOTOS for a truthful render") }
+        let byName = Dictionary(files.map { ($0.lastPathComponent, $0) }, uniquingKeysWith: { first, _ in first })
+
         var images: [String: CGImage] = [:]
+        var matched = 0
         for (index, ref) in trip.stops.flatMap(\.photos).enumerated() {
             guard case let .asset(id) = ref else { continue }
-            let real = files.isEmpty ? nil : load(files[index % files.count])
-            images[id] = try real ?? photoTile(index: index)
+            if let exact = byName[id], let image = load(exact) {
+                images[id] = image
+                matched += 1
+                continue
+            }
+            let dealt = files.isEmpty ? nil : load(files[index % files.count])
+            images[id] = try dealt ?? photoTile(index: index)
+        }
+        if !files.isEmpty {
+            print("KAMOME_REVIEW deck photos: \(matched)/\(images.count) matched by filename"
+                + (matched == images.count ? "" : " — the rest dealt in order"))
         }
         return FolderResolver(images: images)
     }

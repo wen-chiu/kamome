@@ -198,11 +198,20 @@ public struct CameraPath {
             anchors: anchors, totalM: totalM, config: config,
             stopHoldsS: stopHoldsS, startS: 0, targetS: total
         )
-        let span = RecapDurationPlan.bodySpanM(
-            routeDistanceM: totalM,
-            travelS: Self.travelSeconds(in: provisional),
-            routeBounds: Self.bounds(of: route),
-            config: config
+        // Capped to what the installed region can actually draw. A trip that
+        // covers most of its region — the real Iceland ring road does — asks for
+        // a padded frame wider than the tiles, and beyond them there is no water
+        // layer, only the style's background, so the data boundary appears as a
+        // grey band across the film. The country beat learned this on 2026-08-02;
+        // the body span and the closing reveal had not (real-data Stage 0).
+        let span = Self.cappedToRegion(
+            RecapDurationPlan.bodySpanM(
+                routeDistanceM: totalM,
+                travelS: Self.travelSeconds(in: provisional),
+                routeBounds: Self.bounds(of: route),
+                config: config
+            ),
+            establishing: establishing, config: config
         )
         bodySpanM = span
 
@@ -276,8 +285,13 @@ public struct CameraPath {
         // whole journey with room around it rather than merely stopping. With a
         // wide body span the two would otherwise be the same picture and the
         // reveal would have nothing to reveal (Chiu 2026-08-02).
-        endRevealFrame = Self.frame(
+        let revealFrame = Self.frame(
             for: Self.bounds(of: route), config: config, padding: config.endRevealPadding
+        )
+        endRevealFrame = CameraFrame(
+            centerLat: revealFrame.centerLat, centerLon: revealFrame.centerLon,
+            spanM: Self.cappedToRegion(revealFrame.spanM, establishing: establishing, config: config),
+            bearing: 0
         )
     }
 
@@ -387,6 +401,19 @@ public struct CameraPath {
         // every beat by construction, including any added later.
         guard time >= openingEndsS else { return composed.withBearing(bearing) }
         return Self.confine(composed, around: subject, config: cutConfig).withBearing(bearing)
+    }
+
+    /// A span no wider than the installed region can cover. Without an extent
+    /// there are no tiles to fall off, so the ask stands.
+    static func cappedToRegion(
+        _ spanM: Double, establishing: RecapBounds?, config: TrackingConfig.Export
+    ) -> Double {
+        guard let establishing else { return spanM }
+        let bounds = Bounds(
+            minLat: establishing.minLat, maxLat: establishing.maxLat,
+            minLon: establishing.minLon, maxLon: establishing.maxLon
+        )
+        return min(spanM, max(containedSpanM(bounds: bounds, config: config), config.cameraSpanM))
     }
 
     /// Where the body camera settles: the route's own framing at `spanM`, which

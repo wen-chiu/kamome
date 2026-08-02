@@ -91,7 +91,14 @@ extension CameraPath {
         bodySpanM: Double
     ) -> Prologue {
         let tripBounds = bounds(of: route)
-        let regional = frame(for: tripBounds, config: config, padding: config.wideSpanPadding)
+        let regionalAsked = frame(for: tripBounds, config: config, padding: config.wideSpanPadding)
+        // Same cap as the body: a trip covering most of its region asks for more
+        // frame than there are tiles to fill it with.
+        let regional = CameraFrame(
+            centerLat: regionalAsked.centerLat, centerLon: regionalAsked.centerLon,
+            spanM: cappedToRegion(regionalAsked.spanM, establishing: establishing, config: config),
+            bearing: 0
+        )
 
         let countryBounds: Bounds
         if let establishing {

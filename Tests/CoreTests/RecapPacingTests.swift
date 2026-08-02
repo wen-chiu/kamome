@@ -163,18 +163,21 @@ final class RecapPacingTests: XCTestCase {
         XCTAssertLessThan(line.openingS, configured - 2, "duplicate beats must be dropped")
         XCTAssertGreaterThan(line.openingS, export.zoomTransitionS, "but the zoom itself still runs")
 
-        // No stretch of the opening longer than one hold sits completely still.
+        // No stretch of the opening longer than one hold sits completely still —
+        // measured from the end of the title card, like the gate in
+        // `CameraPathTests`. A still frame *with the title on it* is the title
+        // beat working; only stillness after the card is gone is a hang.
         var frozenRun = 0.0
-        var previous = line.cameraFrame(atTime: 0).spanM
+        var previous = line.cameraFrame(atTime: export.titleCardS).spanM
         var longestFrozen = 0.0
-        for time in stride(from: 0.0, through: line.openingS, by: 1.0 / 30) {
+        for time in stride(from: export.titleCardS, through: line.openingS, by: 1.0 / 30) {
             let span = line.cameraFrame(atTime: time).spanM
             if abs(span - previous) < 1 { frozenRun += 1.0 / 30 } else { frozenRun = 0 }
             longestFrozen = max(longestFrozen, frozenRun)
             previous = span
         }
         XCTAssertLessThan(
-            longestFrozen, max(export.openingCountryS, export.openingRegionalS) + 0.5,
+            longestFrozen, export.openingRegionalS + 0.5,
             "the opening froze for \(longestFrozen)s — that is the hang"
         )
 
