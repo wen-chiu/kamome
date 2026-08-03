@@ -8,6 +8,13 @@ xcuserdata/
 # Raw device-test artifacts (drive logs, sqlite dumps, personal photos) stay local
 Docs/tests/
 
+# **Real trip dumps never enter the repo** (privacy principle, CLAUDE.md §0).
+# `Tools/exif-to-fixture.sh` writes here, and the render harnesses prefer it over
+# the committed synthetic fixture of the same name. A whole-directory rule on
+# purpose: a filename pattern is one `mytrip.json` away from being defeated, and
+# what leaks is a person's movements, not a build artifact.
+Tests/Fixtures/trips/local/
+
 # Local deployment secrets/overrides (Deploy/.env.example is the checked-in template)
 Deploy/.env
 

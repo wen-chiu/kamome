@@ -2,7 +2,14 @@
 # Turn a folder of geotagged photos into a trip fixture the render tests can use.
 #
 #   ./Tools/exif-to-fixture.sh ~/Pictures/iceland-2024 iceland "Iceland — ring road"
-#     → Tests/Fixtures/trips/iceland.json
+#     → Tests/Fixtures/trips/local/iceland.json
+#
+# ** The output is a LOCAL WORKING FILE and is never committed.** It is a log of
+# where a real person was and when. `Tests/Fixtures/trips/local/` is gitignored;
+# the render harnesses prefer a dump found there over the committed synthetic
+# fixture of the same name, so `iceland` means your trip at the desk and the
+# deterministic placeholder in CI. See CLAUDE.md §0 — location data never leaves
+# the device by default.
 #
 # Why this exists: the §6 gate is three real trips, and the films are worth
 # looking at long before an iPhone is in the loop. Dumping place+time out of the
@@ -21,7 +28,9 @@ FOLDER="${1:?usage: exif-to-fixture.sh <photo-folder> <fixture-name> [title]}"
 NAME="${2:?missing fixture name, e.g. iceland}"
 TITLE="${3:-$NAME}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="$REPO_DIR/Tests/Fixtures/trips/${NAME}.json"
+OUT_DIR="$REPO_DIR/Tests/Fixtures/trips/local"
+mkdir -p "$OUT_DIR"
+OUT="$OUT_DIR/${NAME}.json"
 
 [ -d "$FOLDER" ] || { echo "no such folder: $FOLDER" >&2; exit 1; }
 

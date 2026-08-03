@@ -7,10 +7,22 @@ import XCTest
 /// so a real photo library can be dumped into the same shape
 /// (`Tools/exif-to-fixture.sh`).
 extension RecapDemoFilmTests {
+    /// **A local dump of the same name wins** (privacy principle, CLAUDE.md §0).
+    ///
+    /// `Tools/exif-to-fixture.sh` writes real trips to `Fixtures/trips/local/`,
+    /// which is gitignored, so `iceland` means *your* photographs at the desk and
+    /// the committed synthetic placeholder in CI. Neither the harnesses nor the
+    /// gates need to know which they got — that is the point. Real coordinates are
+    /// a record of where a person was, and they never enter the repository.
     static func tripFixture(named name: String) throws -> (title: String, photos: [ImportPhoto]) {
-        let url = URL(fileURLWithPath: #filePath)
+        let trips = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Fixtures/trips/\(name).json")
+            .appendingPathComponent("Fixtures/trips")
+        let local = trips.appendingPathComponent("local/\(name).json")
+        let url = FileManager.default.fileExists(atPath: local.path)
+            ? local
+            : trips.appendingPathComponent("\(name).json")
+        if url == local { print("KAMOME_FIXTURE \(name): using the local dump (not committed)") }
         let fixture = try JSONDecoder().decode(TripFixture.self, from: try Data(contentsOf: url))
         // Fixture times are offsets from the trip start, so a fixture reads as a
         // day rather than as a wall-clock date nobody can check.

@@ -12,6 +12,36 @@ Rules of Engagement: spec §0 — phase gates are hard gates, no magic numbers
 phase, flag anything needing the physical device, honest provenance (never
 "Verified Trip" — recorded vs reconstructed-from-photos is a product rule).
 
+## §0 · Location data never leaves the device by default (Chiu 2026-08-03)
+
+**A standing principle, not a checklist item.** Kamome's subject matter *is* a
+record of where someone was and when. That is among the most sensitive data a
+phone holds, and the product's whole claim is that it is safe to keep here.
+
+A user's real trip, route or location history is **never** logged off-device,
+transmitted, synced, sent to analytics or crash reporting, or committed to this
+repository. The single exception is an explicit, user-initiated share of one
+trip that the user actively chooses — never a default, never bundled into
+another action, never opt-out.
+
+This governs work that does not exist yet, which is the point of writing it
+here: any P7 backend sync, any analytics or crash reporter, any telemetry, any
+"help us improve" toggle is designed against this rule rather than measured
+against it afterwards. If a feature needs real coordinates to leave the device,
+that is a product decision for Chiu, not an implementation detail.
+
+Concretely, today:
+- `Tools/exif-to-fixture.sh` writes to `Tests/Fixtures/trips/local/`, which is
+  gitignored as a whole directory. The render harnesses prefer a dump there over
+  the committed synthetic fixture of the same name, so real trips drive desk
+  review while CI keeps deterministic placeholders.
+- Committed fixtures are hand-written plausible coordinates only.
+- `KamomeLog` may name *which* stop failed to geocode; it may not log the
+  coordinates.
+
+It was broken once, on 2026-08-02: a real 160-photo dump of an actual trip was
+committed. Caught before any push and rewritten out of history the same day.
+
 ## Replay MVP repositioning (spec v1.7, 2026-07-20, Chiu) — READ FIRST
 
 Long-term vision unchanged (Kamome auto-remembers a journey and directs it
