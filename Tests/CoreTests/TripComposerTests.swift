@@ -1,3 +1,4 @@
+import KamomeConfig
 import KamomeTrackingEngine
 import KamomeTripComposer
 import XCTest
@@ -108,5 +109,41 @@ final class GeocodePolicyTests: XCTestCase {
         )
         // Different spot after the interval → lookup.
         XCTAssertEqual(policy.decision(lat: -33.955, lon: 115.075, now: 103), .lookup)
+    }
+}
+
+/// **A failed reverse-geocode must still cost the throttle** (2026-08-03).
+///
+/// `StopNamer` only calls `recordLookup` when a placemark comes back, so a
+/// failure left `lastLookupAt` untouched and the very next stop was allowed to
+/// fire immediately. One transient error therefore disengages the throttle for
+/// the whole remaining queue, and CLGeocoder — which rate-limits per app — sees
+/// a burst instead of one request every `min_interval_s`. That is the shape of
+/// "the first few stops are named and the rest say Unnamed stop".
+final class GeocodeThrottleTests: XCTestCase {
+    private func policy() -> GeocodePolicy {
+        GeocodePolicy(config: .init(minIntervalS: 2, cachePrecisionDeg: 0.001))
+    }
+
+    func testFailedLookupStillHoldsTheThrottleClosed() {
+        var policy = policy()
+        XCTAssertEqual(policy.decision(lat: 64.0, lon: -21.0, now: 100), .lookup)
+
+        // The lookup happens and comes back empty — no name to record.
+        policy.recordAttempt(at: 100)
+
+        // A different place, half a second later: must still be throttled.
+        guard case .throttled = policy.decision(lat: 65.0, lon: -22.0, now: 100.5) else {
+            return XCTFail("a failed lookup let the next request through immediately")
+        }
+    }
+
+    func testSuccessfulLookupStillCachesAndThrottles() {
+        var policy = policy()
+        policy.recordLookup(lat: 64.0, lon: -21.0, name: "Reykjavík", at: 100)
+        XCTAssertEqual(policy.decision(lat: 64.0, lon: -21.0, now: 100.5), .cached("Reykjavík"))
+        guard case .throttled = policy.decision(lat: 65.0, lon: -22.0, now: 100.5) else {
+            return XCTFail("an unrelated place must wait its turn")
+        }
     }
 }

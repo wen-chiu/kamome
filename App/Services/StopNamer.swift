@@ -47,13 +47,29 @@ final class StopNamer {
         case .lookup:
             isWorking = true
             let location = CLLocation(latitude: stop.lat, longitude: stop.lon)
-            geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
+            geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, error in
                 guard let self else { return }
                 self.isWorking = false
+                let finishedAt = Date.now.timeIntervalSince1970
                 if let name = Self.displayName(from: placemarks?.first) {
-                    self.policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: Date.now.timeIntervalSince1970)
+                    self.policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
                     try? self.repository.setStopName(stopId: stop.id, name: name)
                     self.onNamed?()
+                } else {
+                    // **Charge the throttle anyway.** Advancing the clock only on
+                    // success let one failure release the throttle for the whole
+                    // remaining queue, so CLGeocoder — which rate-limits per app —
+                    // got a burst instead of one request every `min_interval_s`,
+                    // and every stop after the first failure failed with it.
+                    self.policy.recordAttempt(at: finishedAt)
+                    // And say so. This was `_`, so a rate-limited trip produced a
+                    // film full of "Unnamed stop" with nothing anywhere naming a
+                    // cause (Chiu 2026-08-03).
+                    KamomeLog.geocode.error("""
+                        stop naming failed for \(stop.id, privacy: .public) — \
+                        \(error?.localizedDescription ?? "no placemark returned", privacy: .public). \
+                        The stop stays unnamed; reopening trip detail re-queues it.
+                        """)
                 }
                 self.drain()
             }

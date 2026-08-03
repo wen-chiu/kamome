@@ -26,6 +26,9 @@ public enum KamomeLog {
     /// Which map region, which duration plan, which base map — the choices that
     /// silently reshape a film (`RecapModel`, `LinearTimeline`).
     public static let recap = Logger(subsystem: subsystem, category: "recap")
+    /// Reverse-geocoding for stop names (§4.2). Its failures used to be silent,
+    /// which made a film of "Unnamed stop" cards impossible to explain.
+    public static let geocode = Logger(subsystem: subsystem, category: "geocode")
     /// Photo import: how many photos, how they clustered.
     public static let importing = Logger(subsystem: subsystem, category: "import")
 

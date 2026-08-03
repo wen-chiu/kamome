@@ -30,6 +30,19 @@ public struct GeocodePolicy {
 
     public mutating func recordLookup(lat: Double, lon: Double, name: String, at now: Double) {
         cache[key(lat: lat, lon: lon)] = name
+        recordAttempt(at: now)
+    }
+
+    /// Marks that a lookup was *made*, whether or not it produced a name.
+    ///
+    /// **The throttle has to charge for failures too** (2026-08-03). It used to
+    /// advance only on success, so one empty or errored reverse-geocode left the
+    /// clock where it was and the very next stop fired immediately. CLGeocoder
+    /// rate-limits per app, so that turns a single transient failure into a burst
+    /// against a service that is already refusing — and every remaining stop in
+    /// the queue fails with it. It reads on screen as "the first few stops are
+    /// named and the rest say Unnamed stop".
+    public mutating func recordAttempt(at now: Double) {
         lastLookupAt = now
     }
 

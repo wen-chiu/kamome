@@ -137,6 +137,11 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Coordinates round to this grid for cache lookups (~110 m at 0.001°).
         public let cachePrecisionDeg: Double
 
+        public init(minIntervalS: Double, cachePrecisionDeg: Double) {
+            self.minIntervalS = minIntervalS
+            self.cachePrecisionDeg = cachePrecisionDeg
+        }
+
         enum CodingKeys: String, CodingKey {
             case minIntervalS = "min_interval_s"
             case cachePrecisionDeg = "cache_precision_deg"
