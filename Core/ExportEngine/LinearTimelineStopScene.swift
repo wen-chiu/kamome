@@ -131,6 +131,23 @@ extension LinearTimeline {
     /// Which photo is in focus: the rotate phase (between the zoom edges) split
     /// into `count` equal slots. Grow holds photo 0 (highlight leads); shrink
     /// holds the last.
+    /// How many of a stop's photographs its deck window can actually afford at
+    /// `photoMinHoldS` each (Chiu 2026-08-03).
+    ///
+    /// The film's length is bounded, so a stop-dense or photo-dense trip has its
+    /// dwells scaled down to fit — and a scaled dwell divided by every photo the
+    /// stop owns produced slots well under a second, which reads as a flicker
+    /// rather than as a photograph. Given the choice between showing all of them
+    /// too fast and showing fewer properly, the picture wins.
+    ///
+    /// Never returns zero: a stop whose deck is on screen has something to show.
+    func affordablePhotoCount(deck window: (start: Double, end: Double), requested: Int) -> Int {
+        guard requested > 1, deck.photoMinHoldS > 0 else { return max(requested, 1) }
+        let zoom = zoomRamp(window)
+        let rotate = max((window.end - zoom) - (window.start + zoom), 0)
+        return min(requested, max(Int(rotate / deck.photoMinHoldS), 1))
+    }
+
     func focusIndex(atTime time: Double, deck window: (start: Double, end: Double), count: Int) -> Int {
         let zoom = zoomRamp(window)
         let rotateStart = window.start + zoom

@@ -119,7 +119,10 @@ public struct LinearTimeline {
             offset = range.upperBound
             return LegRange(range: range, mode: leg.mode, provenance: leg.provenance)
         }
-        deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         subjectParkS = config.subjectParkS
         // The car does not exist until the journey does. Through the country and
         // regional beats there is no vehicle on screen — it would be a sprite the
@@ -303,9 +306,11 @@ public struct LinearTimeline {
                 ))
             }
             if time >= window.start {
+                // Only as many as the window can hold at `photoMinHoldS` each.
+                let shown = affordablePhotoCount(deck: window, requested: stop.photos.count)
                 contents.append(.photoDeck(RecapPhotoDeck(
-                    photos: stop.photos,
-                    focusIndex: focusIndex(atTime: time, deck: window, count: stop.photos.count),
+                    photos: Array(stop.photos.prefix(shown)),
+                    focusIndex: focusIndex(atTime: time, deck: window, count: shown),
                     reveal: deckReveal(atTime: time, deck: window),
                     opacity: deckOpacity(atTime: time, deck: window),
                     name: stop.name,

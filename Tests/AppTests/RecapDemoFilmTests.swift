@@ -209,7 +209,10 @@ final class RecapDemoFilmTests: XCTestCase {
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
             photosByStop: photosByStop,
-            deck: RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS),
+            deck: RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        ),
             stopHoldS: config.stopHoldS
         ))
         return (recap, config)

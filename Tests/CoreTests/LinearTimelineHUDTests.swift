@@ -18,7 +18,10 @@ final class LinearTimelineHUDTests: LinearTimelineTestCase {
     /// A three-day trip, so the day counter has something to roll over.
     private func multiDayTrip(config: TrackingConfig.Export) -> RecapTrip {
         let route = (0...40).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.01, lon: 115.75) }
-        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         let stops = (0..<3).map { index -> RecapTrip.Stop in
             RecapTrip.Stop(
                 coordinate: route[(index + 1) * 9],

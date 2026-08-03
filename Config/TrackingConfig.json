@@ -118,6 +118,7 @@
     "end_reveal_padding": 1.9,
     "end_card_style": "full",
     "deck_photo_hold_s": 2.5,
+    "deck_photo_min_hold_s": 1.0,
     "deck_zoom_s": 0.5,
     "deck_label_lead_s": 0.6,
     "subject_park_s": 0.4,

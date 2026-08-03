@@ -92,6 +92,11 @@ public extension TrackingConfig {
         /// Photo-deck pacing (§5): label lead, per-photo dwell, grow/shrink each,
         /// dolly-in span while a stop's deck is up (deck zoom = camera track).
         public let deckPhotoHoldS: Double
+        /// The floor a photograph is never shown for less than. `deck_photo_hold_s`
+        /// is the ask; the duration plan scales stops down to fit the film's
+        /// ceiling, and past this floor a stop drops photos rather than flicking
+        /// through them (Chiu 2026-08-03).
+        public let deckPhotoMinHoldS: Double
         public let deckZoomS: Double
         public let deckLabelLeadS: Double
         /// How long the subject takes to park on arriving at a stop, and to pull
@@ -158,7 +163,7 @@ public extension TrackingConfig {
             actSplitKm: Double, followHeadingUp: Bool,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
-            deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
+            deckPhotoHoldS: Double, deckPhotoMinHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
             openingCountryS: Double, openingRegionalS: Double,            countryViewPadding: Double, firstStopDwellScale: Double,
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
@@ -179,7 +184,8 @@ public extension TrackingConfig {
             self.endRevealS = endRevealS
             self.endRevealPadding = endRevealPadding
             self.endCardStyle = endCardStyle
-            self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
+            self.deckPhotoHoldS = deckPhotoHoldS; self.deckPhotoMinHoldS = deckPhotoMinHoldS
+            self.deckZoomS = deckZoomS
             self.deckLabelLeadS = deckLabelLeadS
             self.subjectParkS = subjectParkS
             self.openingCountryS = openingCountryS
@@ -212,7 +218,8 @@ public extension TrackingConfig {
                 cameraSafeZoneFraction: cameraSafeZoneFraction,
                 cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS, endRevealPadding: endRevealPadding,
                 endCardStyle: endCardStyle,
-                deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
+                deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+                deckZoomS: deckZoomS,
                 deckLabelLeadS: deckLabelLeadS,
                 subjectParkS: subjectParkS,
                 openingCountryS: openingCountryS,
@@ -252,6 +259,7 @@ public extension TrackingConfig {
             case actSplitKm = "act_split_km"
             case followHeadingUp = "follow_heading_up"
             case deckPhotoHoldS = "deck_photo_hold_s"
+            case deckPhotoMinHoldS = "deck_photo_min_hold_s"
             case deckZoomS = "deck_zoom_s"
             case deckLabelLeadS = "deck_label_lead_s"
             case subjectParkS = "subject_park_s"

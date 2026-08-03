@@ -10,6 +10,7 @@ class LinearTimelineTestCase: XCTestCase {
         targetDurationS: Double = 30,
         deckZoomS: Double = 0.5,
         deckPhotoHoldS: Double = 0.8,
+        deckPhotoMinHoldS: Double = 0.2,
         cameraSpanM: Double = 1500
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
@@ -18,7 +19,7 @@ class LinearTimelineTestCase: XCTestCase {
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
-            deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
@@ -31,7 +32,10 @@ class LinearTimelineTestCase: XCTestCase {
     /// stop's dwell is photo-count-driven (`RecapDeck.dwellS`).
     func sampleTrip(photoCounts: [Int], config: TrackingConfig.Export) -> RecapTrip {
         let route = (0...40).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.01, lon: 115.75) }
-        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         let stops = photoCounts.enumerated().map { index, count -> RecapTrip.Stop in
             RecapTrip.Stop(
                 coordinate: route[(index + 1) * 9],
@@ -284,5 +288,66 @@ final class LinearTimelineTests: LinearTimelineTestCase {
                          deck?.reveal ?? 0, deck.map { "\($0.focusIndex)" } ?? "-", kinds.joined(separator: ", ")))
             time += 0.1
         }
+    }
+}
+
+/// **No photograph is ever shown for less than a second** (Chiu 2026-08-03).
+///
+/// `deck_photo_hold_s` is what a photo asks for, but `RecapDurationPlan` scales
+/// every stop down to fit the film's ceiling, so a photo-dense stop could page
+/// its deck faster than the eye resolves — a flicker, not a picture. Given the
+/// choice, the stop shows fewer photographs rather than faster ones.
+///
+/// Measured off the timeline the renderer actually consumes, not off the helper
+/// that decides it: the rule is about what reaches the screen.
+final class DeckPhotoFloorTests: LinearTimelineTestCase {
+    /// Longest run each distinct photo stays on screen, per stop.
+    private func photoDurations(_ line: LinearTimeline, fps: Int) -> [Double] {
+        let step = 1.0 / Double(fps)
+        var runs: [Double] = []
+        var currentKey: String?
+        var runLength = 0.0
+        for frame in 0...Int(line.durationS * Double(fps)) {
+            let time = Double(frame) * step
+            var key: String?
+            for content in line.overlayContents(atTime: time) {
+                if case let .photoDeck(deck) = content, deck.opacity > 0.5, !deck.photos.isEmpty {
+                    key = "\(deck.name)#\(deck.focusIndex)"
+                }
+            }
+            if key == currentKey {
+                runLength += step
+            } else {
+                if currentKey != nil { runs.append(runLength) }
+                currentKey = key
+                runLength = step
+            }
+        }
+        if currentKey != nil { runs.append(runLength) }
+        return runs
+    }
+
+    func testEveryPhotoStaysOnScreenForAtLeastTheFloor() throws {
+        let export = exportConfig(deckPhotoMinHoldS: 1.0)
+        // Eight photos on every stop — the most the importer selects — so the
+        // duration plan has to scale the dwells down to fit the film. That
+        // squeeze is what produced sub-second slots. (Four stops is the sample
+        // route's limit.)
+        let trip = sampleTrip(photoCounts: [8, 8, 8, 8], config: export)
+        let lats = trip.route.map { $0.lat }, lons = trip.route.map { $0.lon }
+        let line = try XCTUnwrap(LinearTimeline(
+            trip: trip, config: export,
+            establishing: RecapBounds(
+                minLat: lats.min()!, minLon: lons.min()!, maxLat: lats.max()!, maxLon: lons.max()!
+            )
+        ))
+
+        let durations = photoDurations(line, fps: export.fps)
+        let shortest = durations.min() ?? 0
+        XCTAssertFalse(durations.isEmpty, "the fixture must actually show photos")
+        XCTAssertGreaterThanOrEqual(
+            shortest, export.deckPhotoMinHoldS - 2.0 / Double(export.fps),
+            "a photo was on screen for \(shortest)s — the floor is \(export.deckPhotoMinHoldS)s"
+        )
     }
 }

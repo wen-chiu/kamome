@@ -95,7 +95,10 @@ final class RecapModel {
         // Deck photo refs are selected here (data); the resolver loads the
         // bitmaps. Refs stay out of the render size.
         let photoRefs = photosEnabled ? selectStopPhotoRefs(detail: detail) : [:]
-        let deck = RecapDeck(photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS, labelLeadS: config.export.deckLabelLeadS)
+        let deck = RecapDeck(
+            photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
+            labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
+        )
         // Typed legs (Fable review 2026-07-26): each stretch reaches the film
         // with its own transport mode and provenance, so a leg Kamome could not
         // reconstruct renders visibly as a guess rather than as road (PD-1).
