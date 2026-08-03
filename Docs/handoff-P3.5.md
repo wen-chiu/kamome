@@ -496,6 +496,49 @@ simply omits those layers. No re-tiling needed.
 (`icebox.md`, 2026-08-02). That is narration with its own timing; this is
 annotation the map carries continuously. Do not conflate them.
 
+### Vatnajökull grey cross — diagnosed, mitigation NOT applied 📌
+
+**A tile seam, not the DEM and not the source data** (2026-08-03). A pale cross
+lies across Vatnajökull in every Iceland render, at every display zoom.
+
+Ruled out by experiment:
+- **Not terrain.** Rendered with the DEM disabled — the cross is still there.
+- **Not overlapping ice/glacier classes.** The style filter matches both; filtered
+  to `glacier` alone every Icelandic icecap disappears, so Planetiler emits them
+  all as `class: ice` and there is no cross-class double-draw.
+
+Confirmed by measurement. Rendering Vatnajökull at a fixed 100 km span and
+shifting the centre, the cross tracks the ground exactly (74 px predicted,
+75 px observed). Converting the intersection to tile coordinates:
+
+```
+observed cross   lat 64.1754  lon -16.8693
+zoom 6           tile-x 29.0010   tile-y 16.9970   ← within 0.1% / 0.3% of a corner
+```
+
+It sits on a **z6 tile corner**. A z6 corner is also a corner at every higher
+zoom, which is why power-of-two zoom comparisons could not tell it apart from
+ground-fixed data — that test is confounded and the centre-shift plus this
+arithmetic is what settles it.
+
+**Mechanism.** The ice polygon extends into the tile buffer, both neighbouring
+tiles draw the overlap, and at `fill-opacity: 0.26` the doubled region
+composites to ~45% — a pale band along the seam. Vatnajökull is the only feature
+large enough to straddle a z6 corner, hence exactly one cross rather than a grid.
+The same latent flaw sits on every translucent fill (`landcover-scrub` 0.45,
+`landcover-wood` 0.55, `park` 0.35); their polygons are too small and fragmented
+to show it.
+
+**Two fixes, and the cheap one has a cost:**
+1. *Style, one line:* make the ice fill opaque and bake the blend into the colour
+   (≈ `#4E5C64`). An opaque fill cannot double-blend. **But `hillshade` is layer
+   1 and `ice` is layer 5, so an opaque glacier loses its terrain texture and
+   goes flat.** That is a look tradeoff — **Chiu wants to see it before deciding,
+   so it is deliberately not applied.**
+2. *Tile build, correct:* reduce or clip the landcover polygon buffer in
+   Planetiler so neighbouring tiles do not overlap, keeping translucency. Costs a
+   rebuild of all four regions.
+
 ### Photo deck → fan/stack carousel (future, scoped separately) 📌
 
 Explicitly **not** in the 2026-07-30 cinematic pass (Chiu). The deck today is a
