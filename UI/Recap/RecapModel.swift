@@ -169,19 +169,7 @@ final class RecapModel {
             """)
         let style = RecapStyle.modernMinimal.withEndCard(config.export.endCardStyle)
         let resolver = PhotoLibraryPhotoResolver()
-        photoShortfall = nil
-        if photosEnabled {
-            let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
-            let warmed = await resolver.warm(trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1))
-            if warmed.missing > 0 {
-                photoShortfall = warmed
-                KamomeLog.recap.error("""
-                    \(warmed.missing) of \(warmed.requested) deck photos could not be loaded \
-                    (\(warmed.inCloud) are in iCloud, not on this device) — those stops will render \
-                    blank cards. The route is unaffected: EXIF place and time need no download.
-                    """)
-            }
-        }
+        await warmDeckPhotos(trip: trip, style: style, resolver: resolver)
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style),
@@ -283,6 +271,25 @@ final class RecapModel {
     /// photo-dense stop samples the whole visit rather than just its first burst
     /// (`PhotoDeckSelector`, shared with import). Pure data — no PhotoKit, no
     /// bitmaps; the render layer resolves the refs.
+    /// Decodes every deck photo up front, so a stop that will render a blank card
+    /// is reported before the export rather than discovered in the finished film.
+    /// iCloud-optimised originals are the usual cause (`PhotoLibraryPhotoResolver`).
+    private func warmDeckPhotos(
+        trip: RecapTrip, style: RecapStyle, resolver: PhotoLibraryPhotoResolver
+    ) async {
+        photoShortfall = nil
+        guard photosEnabled else { return }
+        let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
+        let warmed = await resolver.warm(trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1))
+        guard warmed.missing > 0 else { return }
+        photoShortfall = warmed
+        KamomeLog.recap.error("""
+            \(warmed.missing) of \(warmed.requested) deck photos could not be loaded \
+            (\(warmed.inCloud) are in iCloud, not on this device) — those stops will render \
+            blank cards. The route is unaffected: EXIF place and time need no download.
+            """)
+    }
+
     /// Every stop's **raw** photograph count — what `StopWeighting` judges the
     /// place on, before `deck_max_photos` caps what the film can show.
     private func rawPhotoCounts(detail: TripRepository.TripDetail) -> [String: Int] {
