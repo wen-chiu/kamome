@@ -22,7 +22,7 @@ final class TripDetailModel {
         self.config = config
         self.repository = repository
         photoService = PhotoLibraryService(config: config, repository: repository)
-        namer = StopNamer(config: config, repository: repository)
+        namer = StopNamer(config: config.geocode, repository: repository)
     }
 
     func load() {
@@ -44,11 +44,23 @@ final class TripDetailModel {
             // Reload as each name lands, not once on a timer: a photo-dense
             // imported trip has many stops geocoded over ~30 s (§4.2 throttle),
             // well past any single refresh.
-            namer.nameUnnamedStops(unnamed) { [weak self] in
+            namer.nameUnnamedStops(unnamed) { [weak self] progress in
+                self?.naming = progress
                 self?.scheduleReload()
             }
         }
     }
+
+    /// How far stop naming has got, for the S3 banner and the export gate.
+    private(set) var naming = StopNamer.Progress()
+
+    /// **True while stops are still being identified.** Exporting now would bake
+    /// "Unnamed stop" into the film for every stop the geocoder has not reached
+    /// yet — naming is throttled at `geocode.min_interval_s`, so an 18-stop trip
+    /// needs ~36 s. `RecapModel` re-reads the DB at export time, so waiting is all
+    /// that is required; the UI simply has to stop offering the button first
+    /// (Chiu 2026-08-04).
+    var isNamingStops: Bool { naming.total > 0 && !naming.isFinished }
 
     func reload() {
         detail = try? repository.detail(tripId: tripId)

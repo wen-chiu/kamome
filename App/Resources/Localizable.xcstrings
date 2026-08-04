@@ -377,6 +377,23 @@
         }
       }
     },
+    "naming_stops_progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifying stops… %1$d of %2$d"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在辨識停留地點… %1$d / %2$d"
+          }
+        }
+      }
+    },
     "priming_allow": {
       "extractionState": "manual",
       "localizations": {

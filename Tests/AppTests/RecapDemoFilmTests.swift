@@ -201,10 +201,22 @@ final class RecapDemoFilmTests: XCTestCase {
         let config = full.export
         var photosByStop: [String: [PhotoRef]] = [:]
         for stop in detail.stops {
-            photosByStop[stop.id] = detail.photos
+            // **The app's own selection** (`RecapModel.selectStopPhotoRefs`):
+            // highlight first, then evenly spread across the visit, capped at
+            // `deck_max_photos`. This used to be a hardcoded `.prefix(3)`, which
+            // meant no review render could ever show what the shipped app shows —
+            // a stop the app gives eight photographs was reviewed with three.
+            let ordered = detail.photos
                 .filter { $0.stopId == stop.id }
-                .prefix(3)
-                .map { PhotoRef.asset($0.phAssetId) }
+                .sorted { lhs, rhs in
+                    if lhs.isHighlight != rhs.isHighlight { return lhs.isHighlight > rhs.isHighlight }
+                    return (lhs.takenAt ?? 0) < (rhs.takenAt ?? 0)
+                }
+                .map(\.phAssetId)
+            let selected = PhotoDeckSelector.evenlySpread(
+                ordered, min: full.photoImport.deckMinPhotos, max: full.photoImport.deckMaxPhotos
+            )
+            if !selected.isEmpty { photosByStop[stop.id] = selected.map(PhotoRef.asset) }
         }
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
