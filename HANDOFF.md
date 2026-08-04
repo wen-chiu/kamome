@@ -104,6 +104,58 @@ fixed long cut.
 
 ---
 
+## Duration and stop weighting — measured 2026-08-04, decision open
+
+**Duration alone cannot fix a many-stop trip.** What a stop gets is the dwell
+budget divided by the number of stops *presented*, and the budget is capped at
+`max_hold_fraction` (0.6) of the film. Measured on the real fixtures:
+
+| trip | presented stops | film | photos per stop |
+|---|---:|---:|---|
+| Iceland | 65 | 30 / 60 / 90 / 180 / 195 s | **1 at every length** |
+| Iceland | 25 | 195 s | 1 |
+| Iceland | 14 | 195 s | 2 |
+| Iceland | 7 | 195 s | 6 |
+| New Zealand | 20 | 90 s | 1 |
+| New Zealand | 20 | 195 s | 2.9 mean |
+
+Implied ratio: about **10 s of film per presented stop** to reach 3 photographs
+each — roughly 3× more generous than "10 stops per 30 s". And above ~20 presented
+stops there is no watchable length that works, so the lever has to be *how many
+stops the film presents*, not how long it runs.
+
+`StopWeighting` (experimental, `stop_weighting_enabled` ships **false**) demotes
+thin, brief stops to waypoints. On the real trips the conservative threshold
+demotes 8 of 65 (Iceland) and 1 of 20 (NZ) — correct but nowhere near enough,
+because Iceland's stops carry between 2 and 252 photographs. Tuning the threshold
+to leave 14 highlights does produce a visibly different film. A budget-driven
+selection (keep the top N by photo count, where N is derived from the dwell
+budget) is the shape that actually follows from the numbers; it is not built.
+
+Measurement aids kept and marked temporary: `Export.withTotalDuration` and
+`RecapDeckBudgetTests.testReportRealFixtureBudgetSweep`
+(`KAMOME_BUDGET_FIXTURE`, `KAMOME_BUDGET_DURATIONS`), plus
+`KAMOME_FORCE_DURATION_S` in the render harness.
+
+## Base map — MapKit is what actually renders today
+
+`RecapModel.snapshotProvider(for:)` picks the provider, and it is chosen **per
+trip** by whether a `.pmtiles` region covers it (`RecapMapTiles.tilesURL`). No
+region ⇒ `MapKitSnapshotProvider`. MapLibre is fully wired and its framework is
+embedded in the app; the simulator simply has no region installed, so every
+in-app recap there renders on Apple's map.
+
+Two things to know before promoting MapKit to primary:
+
+1. **Visual parity does not exist.** The souvenir-map look is a Kamome-authored
+   style JSON that only MapLibre consumes; MapKit renders Apple's own tiles —
+   the look rejected in the v1.5 pivot. Overlays, subject, chrome and the camera
+   are renderer-independent and already work over either.
+2. **No region also silently degrades pacing.** `establishing == nil` drops the
+   film to the retired flat `target_duration_s` with no prologue — the documented
+   defect at `LinearTimeline.swift:184`. Any MapKit-primary decision has to fix
+   that first, or MapKit trips get a 30 s film for unrelated reasons.
+
 ## Fixtures and the §6 gate — Stage 0
 
 `Tools/exif-to-fixture.sh` re-run 2026-08-04 with `exiftool` 13.55 (Homebrew).
