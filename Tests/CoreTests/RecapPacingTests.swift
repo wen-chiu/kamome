@@ -27,7 +27,8 @@ final class RecapPacingTests: XCTestCase {
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
             totalDurationMinS: totalMinS, totalDurationMaxS: totalMaxS,
-            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
+            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8
         )
     }
 

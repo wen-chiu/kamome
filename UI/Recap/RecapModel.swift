@@ -114,7 +114,9 @@ final class RecapModel {
             stats: stats,
             photosByStop: photoRefs,
             deck: deck,
-            stopHoldS: config.export.stopHoldS
+            stopHoldS: config.export.stopHoldS,
+            rawPhotoCounts: rawPhotoCounts(detail: detail),
+            weighting: config.export
         ) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
@@ -281,6 +283,17 @@ final class RecapModel {
     /// photo-dense stop samples the whole visit rather than just its first burst
     /// (`PhotoDeckSelector`, shared with import). Pure data — no PhotoKit, no
     /// bitmaps; the render layer resolves the refs.
+    /// Every stop's **raw** photograph count — what `StopWeighting` judges the
+    /// place on, before `deck_max_photos` caps what the film can show.
+    private func rawPhotoCounts(detail: TripRepository.TripDetail) -> [String: Int] {
+        var counts: [String: Int] = [:]
+        for photo in detail.photos {
+            guard let stopId = photo.stopId else { continue }
+            counts[stopId, default: 0] += 1
+        }
+        return counts
+    }
+
     private func selectStopPhotoRefs(detail: TripRepository.TripDetail) -> [String: [PhotoRef]] {
         var result: [String: [PhotoRef]] = [:]
         for stop in detail.stops {

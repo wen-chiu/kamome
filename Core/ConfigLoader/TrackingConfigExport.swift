@@ -156,6 +156,24 @@ public extension TrackingConfig {
         /// H.264 average bitrate; unconstrained output was ~51 MB/30 s (unshareable).
         public let videoBitrateMbps: Double
 
+        // MARK: - Stop weighting (EXPERIMENTAL, Chiu 2026-08-04)
+
+        /// Treat thin, brief stops as **waypoints**: a point on the route with no
+        /// photo card, whose screen time goes to the stops worth looking at.
+        ///
+        /// Ships `false` — this is an experiment, not a decided policy. See
+        /// `StopWeighting` for the heuristic and what the real trips do under it.
+        public let stopWeightingEnabled: Bool
+        /// A stop is a waypoint only if it has **at most** this many photographs
+        /// *and* was over within `waypoint_max_dwell_s`. Both, deliberately: a
+        /// long lunch you barely photographed is still a place you stopped.
+        public let waypointMaxPhotos: Int
+        public let waypointMaxDwellS: Double
+        /// What a waypoint costs the film — a passing beat, not a dwell. Sits
+        /// outside `stop_dwell_min_s`, which exists to protect stops that have
+        /// something to show.
+        public let waypointHoldS: Double
+
         public init(
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
@@ -168,7 +186,8 @@ public extension TrackingConfig {
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
-            keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
+            keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double,
+            stopWeightingEnabled: Bool, waypointMaxPhotos: Int, waypointMaxDwellS: Double, waypointHoldS: Double
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
             self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
@@ -200,6 +219,10 @@ public extension TrackingConfig {
             self.totalDurationMaxS = totalDurationMaxS
             self.keyframeIntervalFrames = keyframeIntervalFrames; self.titleCardS = titleCardS
             self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
+            self.stopWeightingEnabled = stopWeightingEnabled
+            self.waypointMaxPhotos = waypointMaxPhotos
+            self.waypointMaxDwellS = waypointMaxDwellS
+            self.waypointHoldS = waypointHoldS
         }
 
         /// A copy with `follow_heading_up` forced to `resolved`. The composition
@@ -233,7 +256,39 @@ public extension TrackingConfig {
                 totalDurationMinS: totalDurationMinS,
                 totalDurationMaxS: totalDurationMaxS,
                 keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
-                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps
+                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
+                stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
+                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS
+            )
+        }
+
+        /// A copy with the duration window overridden. Measurement aid for the
+        /// duration-by-stop-count experiment (2026-08-04) — lets a sweep try
+        /// several film lengths without rewriting the config file between runs.
+        public func withTotalDuration(min minS: Double, max maxS: Double) -> Export {
+            Export(
+                targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
+                maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
+                frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+                cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
+                zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: followHeadingUp,
+                cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
+                cameraDeadZoneFraction: cameraDeadZoneFraction,
+                cameraSafeZoneFraction: cameraSafeZoneFraction,
+                cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+                endRevealPadding: endRevealPadding, endCardStyle: endCardStyle,
+                deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+                deckZoomS: deckZoomS, deckLabelLeadS: deckLabelLeadS, subjectParkS: subjectParkS,
+                openingCountryS: openingCountryS, openingRegionalS: openingRegionalS,
+                countryViewPadding: countryViewPadding, firstStopDwellScale: firstStopDwellScale,
+                openingCollapseZoomRatio: openingCollapseZoomRatio,
+                openingCollapseDriftFraction: openingCollapseDriftFraction,
+                stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
+                totalDurationMinS: minS, totalDurationMaxS: maxS,
+                keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
+                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
+                stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
+                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS
             )
         }
 
@@ -277,6 +332,10 @@ public extension TrackingConfig {
             case titleCardS = "title_card_s"
             case endCardS = "end_card_s"
             case videoBitrateMbps = "video_bitrate_mbps"
+            case stopWeightingEnabled = "stop_weighting_enabled"
+            case waypointMaxPhotos = "waypoint_max_photos"
+            case waypointMaxDwellS = "waypoint_max_dwell_s"
+            case waypointHoldS = "waypoint_hold_s"
         }
     }
 }

@@ -135,6 +135,10 @@
     "keyframe_interval_frames": 15,
     "title_card_s": 3.0,
     "end_card_s": 3.0,
-    "video_bitrate_mbps": 5
+    "video_bitrate_mbps": 5,
+    "stop_weighting_enabled": false,
+    "waypoint_max_photos": 2,
+    "waypoint_max_dwell_s": 900,
+    "waypoint_hold_s": 0.8
   }
 }

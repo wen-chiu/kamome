@@ -102,6 +102,13 @@ public struct RecapDurationPlan: Equatable {
         let opening = config.openingCountryS + config.openingRegionalS + 2 * config.zoomTransitionS
 
         let asked = photoCounts.enumerated().map { index, count in
+            // A stop with nothing to show is a waypoint: the route passes through
+            // it, the film does not stop at it (Chiu 2026-08-04). Deliberately
+            // outside `stop_dwell_min_s` — that floor protects stops that have
+            // something to present, and applying it here spent six seconds of a
+            // bounded film holding on a petrol station. Before this, a photo-less
+            // stop was clamped up to the floor and then drew nothing for it.
+            guard count > 0 else { return config.waypointHoldS }
             let earned = min(max(deck.dwellS(photoCount: count) + 2 * config.subjectParkS,
                                  config.stopDwellMinS), config.stopDwellMaxS)
             // The first stop is the journey's origin: the prologue has just

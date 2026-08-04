@@ -103,7 +103,8 @@ class RecapRenderTestCase: XCTestCase {
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: keyframeIntervalFrames,
-            titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
+            titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8
         )
     }
 

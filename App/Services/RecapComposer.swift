@@ -88,12 +88,27 @@ enum RecapComposer {
         stats: TripStats?,
         photosByStop: [String: [PhotoRef]],
         deck: RecapDeck = RecapDeck(),
-        stopHoldS: Double = 1.5
+        stopHoldS: Double = 1.5,
+        rawPhotoCounts: [String: Int] = [:],
+        weighting: TrackingConfig.Export? = nil
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
 
         let tripStops = stops.map { stop -> RecapTrip.Stop in
-            let photos = photosByStop[stop.id] ?? []
+            var photos = photosByStop[stop.id] ?? []
+            // Stop weighting (experimental, off by default). A waypoint keeps its
+            // pin and its name — the journey really did pass through — but gives
+            // up its deck, and with it the park/pull-away beat, because
+            // `LinearTimeline.activeScene` only counts a stop that has something
+            // to reveal. Classified on the **raw** count: the deck cap is a
+            // rendering decision and must not feed a judgement about the place.
+            if let weighting, weighting.stopWeightingEnabled {
+                let raw = rawPhotoCounts[stop.id] ?? photos.count
+                let dwell = (stop.departedAt ?? stop.arrivedAt) - stop.arrivedAt
+                if StopWeighting.classify(photoCount: raw, dwellS: dwell, config: weighting) == .waypoint {
+                    photos = []
+                }
+            }
             return RecapTrip.Stop(
                 coordinate: RecapCoordinate(lat: stop.lat, lon: stop.lon),
                 name: stop.name ?? String(localized: "stop_unnamed"),

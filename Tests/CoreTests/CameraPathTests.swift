@@ -45,7 +45,8 @@ final class CameraPathTests: XCTestCase {
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
             endCardS: 3,
-            videoBitrateMbps: 5
+            videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8
         )
     }
 

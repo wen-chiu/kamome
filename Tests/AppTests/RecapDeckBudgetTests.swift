@@ -148,6 +148,37 @@ final class RecapDeckBudgetTests: XCTestCase {
         )
     }
 
+    /// TEMPORARY (2026-08-04): sweeps film durations against a **real** fixture so
+    /// the duration-by-stop-count ratio can be judged on real data. Delete once the
+    /// ratio is decided.
+    ///
+    ///     TEST_RUNNER_KAMOME_BUDGET_FIXTURE=iceland …
+    func testReportRealFixtureBudgetSweep() async throws {
+        let fixture = ProcessInfo.processInfo.environment["KAMOME_BUDGET_FIXTURE"] ?? ""
+        try XCTSkipUnless(!fixture.isEmpty, "Manual measurement — set KAMOME_BUDGET_FIXTURE.")
+        let (recap, base) = try await RecapDemoFilmTests.importedRecap(named: fixture)
+        let waypoints = recap.stops.filter(\.photos.isEmpty).count
+        print("KAMOME_SWEEP \(fixture): \(recap.stops.count) stops (\(waypoints) waypoints, "
+            + "\(recap.stops.count - waypoints) highlights)")
+
+        let durations = (ProcessInfo.processInfo.environment["KAMOME_BUDGET_DURATIONS"] ?? "30,60,90,180")
+            .split(separator: ",").compactMap { Double($0) }
+        for duration in durations {
+            let config = base.withTotalDuration(min: duration, max: duration)
+            let line = try timeline(recap, config: config)
+            let shown = photosShownPerStop(line, trip: recap)
+            let deck = shown.filter { $0 > 0 }
+            let selected = recap.stops.reduce(0) { $0 + $1.photos.count }
+            print(String(
+                format: "  %5.0fs film · shown/stop min %d max %d mean %.1f · %d of %d selected photos · "
+                    + "%d stops on 1 photo",
+                line.durationS, deck.min() ?? 0, deck.max() ?? 0,
+                deck.isEmpty ? 0 : Double(deck.reduce(0, +)) / Double(deck.count),
+                shown.reduce(0, +), selected, deck.filter { $0 <= 1 }.count
+            ))
+        }
+    }
+
     /// The measurement behind the guard, so a change in the numbers is visible in
     /// the log even while the expectation above is suppressing the failure.
     func testReportRealScaleDeckBudget() async throws {

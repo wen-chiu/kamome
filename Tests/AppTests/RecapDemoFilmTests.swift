@@ -198,9 +198,17 @@ final class RecapDemoFilmTests: XCTestCase {
         )
         print("KAMOME_DEMO_FILM_IMPORT legs: " + legs.map { "\($0.mode.rawValue)/\($0.provenance)" }.joined(separator: ", "))
 
-        let config = full.export
+        // TEMPORARY (2026-08-04, duration-ratio experiment): pin the film length
+        // for a review render without editing the config between runs.
+        var config = full.export
+        if let forced = ProcessInfo.processInfo.environment["KAMOME_FORCE_DURATION_S"].flatMap(Double.init) {
+            config = config.withTotalDuration(min: forced, max: forced)
+            print("KAMOME_FORCE_DURATION_S \(forced)")
+        }
         var photosByStop: [String: [PhotoRef]] = [:]
+        var rawPhotoCounts: [String: Int] = [:]
         for stop in detail.stops {
+            rawPhotoCounts[stop.id] = detail.photos.filter { $0.stopId == stop.id }.count
             // **The app's own selection** (`RecapModel.selectStopPhotoRefs`):
             // highlight first, then evenly spread across the visit, capped at
             // `deck_max_photos`. This used to be a hardcoded `.prefix(3)`, which
@@ -225,8 +233,14 @@ final class RecapDemoFilmTests: XCTestCase {
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
             labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
         ),
-            stopHoldS: config.stopHoldS
+            stopHoldS: config.stopHoldS,
+            rawPhotoCounts: rawPhotoCounts,
+            weighting: config
         ))
+        let waypoints = recap.stops.filter(\.photos.isEmpty).count
+        print("KAMOME_STOP_WEIGHTS \(recap.stops.count) stops · \(waypoints) waypoints · "
+            + "\(recap.stops.count - waypoints) highlights · weighting "
+            + (config.stopWeightingEnabled ? "ON" : "off"))
         return (recap, config)
     }
 
