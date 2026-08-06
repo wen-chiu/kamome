@@ -175,7 +175,7 @@ public enum PhotoImportClusterer {
 
     /// Great-circle distance in meters (Haversine). Matches the prototype's
     /// `haversine_km`, scaled to meters for the schema's distance units.
-    static func haversineMeters(_ aLat: Double, _ aLon: Double, _ bLat: Double, _ bLon: Double) -> Double {
+    public static func haversineMeters(_ aLat: Double, _ aLon: Double, _ bLat: Double, _ bLon: Double) -> Double {
         let radius = 6_371_000.0
         let phi1 = aLat * .pi / 180
         let phi2 = bLat * .pi / 180

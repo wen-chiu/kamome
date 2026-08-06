@@ -5,6 +5,7 @@ import KamomeExportEngine
 import KamomePersistence
 import KamomeRouteMatching
 import KamomeTrackingEngine
+import KamomeImportKit
 import KamomeTripComposer
 
 /// Maps one trip's records into §4.5 recap inputs (S5). Pure value mapping —
@@ -90,18 +91,66 @@ enum RecapComposer {
         deck: RecapDeck = RecapDeck(),
         stopHoldS: Double = 1.5,
         rawPhotoCounts: [String: Int] = [:],
+        favoriteCounts: [String: Int] = [:],
         weighting: TrackingConfig.Export? = nil
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
 
-        let tripStops = stops.map { stop -> RecapTrip.Stop in
+        // Variable allocation (experimental): rank the stops against each other
+        // and hand out 0–3 photographs by share. Computed once for the whole trip
+        // because it is a *relative* judgement — a stop's allocation depends on
+        // the others, which is the entire point.
+        var allocation: [String: Int] = [:]
+        // Variant B: triage first, and a skipped stop is removed from the trip
+        // outright — that is what makes the car drive through instead of pausing.
+        var kept = stops
+        if let weighting, weighting.tieringEnabled {
+            let signals = stops.map { stop in
+                StopPhotoAllocator.Signal(
+                    photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
+                    favoriteCount: favoriteCounts[stop.id] ?? 0
+                )
+            }
+            let tiers = StopPhotoAllocator.triage(signals, config: weighting, durationS: weighting.totalDurationMaxS)
+            kept = zip(stops, tiers).compactMap { stop, tier in
+                guard let tier else { return nil }
+                allocation[stop.id] = tier
+                return stop
+            }
+        }
+        if let weighting, weighting.photoAllocationEnabled, !weighting.tieringEnabled {
+            let signals = stops.map { stop in
+                StopPhotoAllocator.Signal(
+                    photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
+                    favoriteCount: favoriteCounts[stop.id] ?? 0
+                )
+            }
+            let counts = StopPhotoAllocator.allocate(signals, config: weighting)
+            for (stop, count) in zip(stops, counts) { allocation[stop.id] = count }
+        }
+
+        let tripStops = kept.map { stop -> RecapTrip.Stop in
             var photos = photosByStop[stop.id] ?? []
+            if let allocated = allocation[stop.id] {
+                photos = Array(photos.prefix(allocated))
+            }
             // Stop weighting (experimental, off by default). A waypoint keeps its
             // pin and its name — the journey really did pass through — but gives
             // up its deck, and with it the park/pull-away beat, because
             // `LinearTimeline.activeScene` only counts a stop that has something
             // to reveal. Classified on the **raw** count: the deck cap is a
             // rendering decision and must not feed a judgement about the place.
+            // Uncapped mode (experimental): every stop shows exactly one
+            // photograph, so the film's length is a straight function of how many
+            // places the journey visited. The selector already put the highlight
+            // first, so the one kept is the one worth keeping.
+            // Uncapped mode on its own means the fixed one-photo-per-stop film.
+            // With the allocator on it means *only* "no duration ceiling" — the
+            // allocator owns how many photographs each stop shows, and squashing
+            // that back to one here would silently undo it.
+            if let weighting, weighting.uncappedEnabled, !weighting.photoAllocationEnabled {
+                photos = Array(photos.prefix(1))
+            }
             if let weighting, weighting.stopWeightingEnabled {
                 let raw = rawPhotoCounts[stop.id] ?? photos.count
                 let dwell = (stop.departedAt ?? stop.arrivedAt) - stop.arrivedAt
@@ -110,7 +159,7 @@ enum RecapComposer {
                 }
             }
             return RecapTrip.Stop(
-                coordinate: RecapCoordinate(lat: stop.lat, lon: stop.lon),
+                coordinate: snapped(lat: stop.lat, lon: stop.lon, to: legs),
                 name: stop.name ?? String(localized: "stop_unnamed"),
                 dayLabel: dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt),
                 detail: walkDetail(for: stop),
@@ -128,6 +177,64 @@ enum RecapComposer {
             callToAction: String(localized: "recap_end_cta"),
             shareURL: nil
         )
+    }
+
+    /// The stop's pin, moved onto the route the film actually draws
+    /// (Chiu 2026-08-06).
+    ///
+    /// A stop's stored coordinate is the **centroid of the photographs taken
+    /// there** — where the person stood, which is the honest record and stays in
+    /// the database untouched. The route drawn is the OSRM road-snapped geometry.
+    /// Those are different places by however far the layby is from the centreline,
+    /// so on every reconstructed leg the pin floated beside its own trail.
+    ///
+    /// Display-only, and a no-op on unreconstructed legs: those are drawn from the
+    /// stop anchors themselves, so the polyline already passes through the centroid
+    /// and the nearest point is the centroid.
+    /// **Projects onto the segments, not the vertices** (2026-08-06). Snapping to
+    /// the nearest *vertex* looks right wherever the polyline is dense and wrong
+    /// wherever it is sparse — and it is sparse by construction, because every leg
+    /// goes through Douglas-Peucker before it is drawn. On a long straight highway
+    /// the nearest vertex can be kilometres from the nearest point on the road, so
+    /// the pin still floated. That is why the first fix looked correct on Variant B
+    /// (12 stops, all at dense landmark geometry) and still failed on Variant A
+    /// (every stop, including the ones out on simplified straights).
+    static func snapped(lat: Double, lon: Double, to legs: [RecapTrip.Leg]) -> RecapCoordinate {
+        var best = RecapCoordinate(lat: lat, lon: lon)
+        var bestDistance = Double.greatestFiniteMagnitude
+        for leg in legs {
+            for (start, end) in zip(leg.coordinates, leg.coordinates.dropFirst()) {
+                let candidate = projection(lat: lat, lon: lon, start: start, end: end)
+                let distance = PhotoImportClusterer.haversineMeters(lat, lon, candidate.lat, candidate.lon)
+                if distance < bestDistance {
+                    bestDistance = distance
+                    best = candidate
+                }
+            }
+        }
+        return best
+    }
+
+    /// The closest point on one segment, in a local equirectangular frame.
+    ///
+    /// Longitude is scaled by cos(latitude) so a degree east matches a degree
+    /// north in metres; over a single simplified segment that approximation is far
+    /// below the width of the road being drawn, and it keeps this to arithmetic
+    /// rather than a spherical solve.
+    private static func projection(
+        lat: Double, lon: Double, start: RecapCoordinate, end: RecapCoordinate
+    ) -> RecapCoordinate {
+        let scale = cos(lat * .pi / 180)
+        let startX = (start.lon - lon) * scale, startY = start.lat - lat
+        let endX = (end.lon - lon) * scale, endY = end.lat - lat
+        let dx = endX - startX, dy = endY - startY
+        let lengthSquared = dx * dx + dy * dy
+        guard lengthSquared > 0 else { return start }
+        // Clamped, so a stop beside the *middle* of a leg projects onto the road
+        // while a stop beyond either end lands on that end rather than off the map.
+        let t = min(max(-(startX * dx + startY * dy) / lengthSquared, 0), 1)
+        return RecapCoordinate(lat: start.lat + (end.lat - start.lat) * t,
+                               lon: start.lon + (end.lon - start.lon) * t)
     }
 
     /// Same day math as S3's filter chips (TripDetailModel.dayIndex).

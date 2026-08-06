@@ -59,11 +59,25 @@ public struct RecapStopLayout {
         marginPx: CGFloat,
         frameSize: CGSize
     ) {
-        // The pin: the stop's point, nudged in only far enough to keep the marker
-        // itself on screen. The cluster hangs off whichever side has room, so the
-        // pin no longer has to reserve space for it in advance.
-        let pinX = Self.clamp(anchor.x, marginPx + labelBandWidth / 2, frameSize.width - marginPx - labelBandWidth / 2)
-        let pinY = Self.clamp(anchor.y, marginPx + pinHeight, frameSize.height - marginPx - pinHeight)
+        // The pin: the stop's point, nudged in only far enough to keep **the
+        // marker itself** on screen — its own footprint, nothing else.
+        //
+        // It used to be clamped by `labelBandWidth / 2`, reserving the width of the
+        // name band on the X axis (2026-08-06). That is the label's requirement,
+        // and the label already clamps itself below; borrowing it here moved the
+        // pin off the route by up to half a name band whenever a stop came near the
+        // frame edge — which the wide baseline makes routine, since the camera
+        // frames the whole trip and the outermost stops sit against the margin.
+        // The comment already claimed the pin no longer reserved that space; the
+        // code had simply never been changed to match.
+        //
+        // This is a *drawing* offset, not a coordinate one: the stop's projected
+        // point is exact (measured 0 m from the polyline for all 20 NZ stops), and
+        // it is the clamp that moved the marker away from it. Distinct from the
+        // vertex-versus-segment snap bug, and it survived that fix untouched.
+        let pinInset = pinHeight / 2
+        let pinX = Self.clamp(anchor.x, marginPx + pinInset, max(frameSize.width - marginPx - pinInset, marginPx))
+        let pinY = Self.clamp(anchor.y, marginPx + pinInset, max(frameSize.height - marginPx - pinInset, marginPx))
         pinPoint = CGPoint(x: pinX, y: pinY)
 
         // How far the cluster reaches from the pin. Identical on both sides —
