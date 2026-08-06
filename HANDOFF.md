@@ -1,6 +1,6 @@
 # HANDOFF — current state
 
-**Updated 2026-08-04.** Branch `feature/typed-legs-routing`. Written so a fresh
+**Updated 2026-08-06.** Branch `feature/typed-legs-routing`. Written so a fresh
 session (or a fresh person) can pick this up without being briefed by hand.
 
 Read `CLAUDE.md` first for the standing rules — especially **§0, location data
@@ -15,21 +15,28 @@ state* on top of them — what is done, what is open, and why.
 
 ## Committed on this branch
 
-- `7fabb38` **fix(naming): a film can no longer be exported before its stops have
-  names.** Closes the "Unnamed stop" item (see below). Also replaced the review
-  harness's hardcoded `.prefix(3)` photo selection with the app's own
-  `PhotoDeckSelector`, so a review render finally shows what the app shows.
-- `71caf77` and earlier — see `git log`.
+- `6f44b57` **docs(adr)** — the budget law, written down once (`Docs/decisions.md`).
+- `ea32ce9` **feat(recap)** — kept-stop count derived from the film's duration.
+- `69b5ad5` **fix(recap)** — stop pins sit on the route (two bugs, one symptom).
+- `2b7b657` **fix(naming)** — landmark → town → address, never "Unnamed stop".
+- `229ab39` and earlier — see `git log`.
 
 **Not merged to main:** PR #11 holds until the §6 gate passes (owner call).
 
-## Uncommitted
+## Uncommitted — the experiments still under evaluation
 
-Nothing but the new deck-budget guard if it has not been committed yet — check
-`git status`. `Tests/Fixtures/trips/local/` is gitignored and always dirty by
-design; that is real trip data and must never be added.
+Deliberately out of history until Chiu picks a direction. All flags ship `false`,
+so none of it changes default behaviour:
 
----
+- `StopPhotoAllocator.allocate` — the 0–3 variable allocation (Variant A).
+- Uncapped duration (`RecapDurationPlan.uncapped`, `uncapped_enabled`).
+- `RecapReviewGeocoder` — real stop names in pilots (`KAMOME_GEOCODE_STOPS=1`).
+- `PHAsset.isFavorite` plumbed through `ImportPhoto` into `is_highlight`.
+- The opaque ice layer (see the glacier tradeoff below).
+- Quiet-stop pins for zero-photo stops (`LinearTimelineStopScene.quietStop`).
+
+`Tests/Fixtures/trips/local/` is gitignored and always dirty by design; that is
+real trip data and must never be added.
 
 ## "Unnamed stop" — CLOSED 2026-08-04
 
@@ -61,46 +68,47 @@ Now in place:
 
 ---
 
-## Open: the deck budget (1-photo-per-stop)
+## Deck budget — RESOLVED 2026-08-06 (`ea32ce9`, ADR in `Docs/decisions.md`)
 
-**The defect.** Above roughly ten stops, every stop in the film shows a single
-photograph. `total_duration_max_s` (90) caps the film, all dwells are scaled down
-by one global factor, and `deck_photo_min_hold_s` (1.0) then truncates each deck
-to what its window can afford at a second apiece.
+**The defect.** Above roughly ten presented stops, every stop showed a single
+photograph: the duration ceiling scaled all dwells down by one global factor and
+`deck_photo_min_hold_s` then truncated each deck to what its window could afford.
 
-Measured (`Tests/AppTests/RecapDeckBudgetTests.swift`, prints `KAMOME_DECK_BUDGET`):
+**The fix.** How many stops a film may present is now *derived from its duration*
+rather than configured — see the ADR for the formula and the reasoning. A 120 s
+film keeps 11 stops for a 65-stop trip and a 20-stop trip alike, each showing 3
+photographs, with no per-trip tuning.
 
-| stops | shown/stop | photos reaching the screen |
-|------:|-----------:|---------------------------:|
-| 4     | 5–8        | 29 of 32                   |
-| 10    | 1–2        | 19 of 80                   |
-| 20    | 1          | 20 of 160                  |
-| 40    | 1          | 40 of 320                  |
+**The evidence, kept because it is what the law was built from:**
+
+| trip | presented stops | film | photos per stop |
+|---|---:|---:|---|
+| Iceland | 65 | 30 / 60 / 90 / 180 / 195 s | **1 at every length** |
+| Iceland | 25 | 195 s | 1 |
+| Iceland | 14 | 195 s | 2 |
+| Iceland | 7 | 195 s | 6 |
+| New Zealand | 20 | 90 s | 1 |
+| New Zealand | 20 | 195 s | 2.9 mean |
+
+Duration alone never fixed it — above ~20 presented stops no watchable length
+works, so the lever is *how many stops the film presents*.
 
 **Why CI never caught it.** The committed fixtures are Iceland 16 photos/6 stops
-and New Zealand 13/3 — both sit just under the cliff.
+and New Zealand 13/3, both just under the cliff.
+`RecapDeckBudgetTests.testARealScaleTripDoesNotCollapseToOnePhotoPerStop` builds a
+20-stop trip arithmetically and guards it. It is still wrapped in
+`XCTExpectFailure` **because it measures the default policy, which has not
+changed** — the fix lives behind `tiering_enabled`. Remove the expectation if and
+when the tiering policy becomes the default.
 
-**The guard now in CI**: `testARealScaleTripDoesNotCollapseToOnePhotoPerStop`
-builds a 20-stop trip *arithmetically* (synthetic coordinates on a line, through
-the real `ImportService`) and asserts the collapse does not happen. It is wrapped
-in `XCTExpectFailure` because the defect is real and unfixed, so CI stays green
-while the defect stays encoded — **the day someone fixes it the test will fail
-with "expected failure but none recorded"**, which is the signal to delete the
-expectation.
+**Superseded and gone:** `tier_skip_share` as a tuning knob (it needed 0.82 for
+Iceland and 0.5 for NZ, which is what prompted the ADR). `StopWeighting`'s
+waypoint threshold remains in the tree but was measured as far too conservative to
+matter — 8 of 65 stops on Iceland — and is not the mechanism anything relies on.
 
-**Owner decision still needed** (Chiu). A 180 s long-cut was rendered as an
-experiment (config reverted afterwards; films delivered 2026-08-04). Doubling the
-film does not double the photographs — it splits stops into two classes, because
-a stop's asked-for dwell is clamped at `stop_dwell_min_s` and the 1 s floor is a
-step function:
-
-- Iceland 18 stops: 90 s → 18 of 95 photos shown; 180 s → 52 of 95, but **10 of
-  the 18 stops still show one photograph**.
-- New Zealand 20 stops: 90 s → 20 of 86; 180 s → 45 of 86.
-
-So the ceiling is not the only lever — `max_hold_fraction` (0.6) and the 1 s floor
-both bind. Duration that scales with stop count attacks it more directly than a
-fixed long cut.
+**Measurement aids, marked temporary in-code:** `Export.withTotalDuration`,
+`RecapDeckBudgetTests.testReportRealFixtureBudgetSweep` (`KAMOME_BUDGET_FIXTURE`,
+`KAMOME_BUDGET_DURATIONS`), and `KAMOME_FORCE_DURATION_S` in the render harness.
 
 ---
 
@@ -133,39 +141,6 @@ matter only for an App Store release and are deliberately not being solved now
 - **Device-representative run.** No import→Trip Detail→export run has ever been
   done with the experimental modes on. iCloud-resident photos, memory and thermals
   at 12k frames are all untested.
-
-## Duration and stop weighting — measured 2026-08-04, decision open
-
-**Duration alone cannot fix a many-stop trip.** What a stop gets is the dwell
-budget divided by the number of stops *presented*, and the budget is capped at
-`max_hold_fraction` (0.6) of the film. Measured on the real fixtures:
-
-| trip | presented stops | film | photos per stop |
-|---|---:|---:|---|
-| Iceland | 65 | 30 / 60 / 90 / 180 / 195 s | **1 at every length** |
-| Iceland | 25 | 195 s | 1 |
-| Iceland | 14 | 195 s | 2 |
-| Iceland | 7 | 195 s | 6 |
-| New Zealand | 20 | 90 s | 1 |
-| New Zealand | 20 | 195 s | 2.9 mean |
-
-Implied ratio: about **10 s of film per presented stop** to reach 3 photographs
-each — roughly 3× more generous than "10 stops per 30 s". And above ~20 presented
-stops there is no watchable length that works, so the lever has to be *how many
-stops the film presents*, not how long it runs.
-
-`StopWeighting` (experimental, `stop_weighting_enabled` ships **false**) demotes
-thin, brief stops to waypoints. On the real trips the conservative threshold
-demotes 8 of 65 (Iceland) and 1 of 20 (NZ) — correct but nowhere near enough,
-because Iceland's stops carry between 2 and 252 photographs. Tuning the threshold
-to leave 14 highlights does produce a visibly different film. A budget-driven
-selection (keep the top N by photo count, where N is derived from the dwell
-budget) is the shape that actually follows from the numbers; it is not built.
-
-Measurement aids kept and marked temporary: `Export.withTotalDuration` and
-`RecapDeckBudgetTests.testReportRealFixtureBudgetSweep`
-(`KAMOME_BUDGET_FIXTURE`, `KAMOME_BUDGET_DURATIONS`), plus
-`KAMOME_FORCE_DURATION_S` in the render harness.
 
 ## Base map — MapKit is what actually renders today
 
