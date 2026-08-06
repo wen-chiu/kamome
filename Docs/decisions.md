@@ -1032,3 +1032,57 @@ a stop's name is now its `detail` alone, and absent when it has none.
 one frame and then taking one copy away is worse than saying it once, everywhere.
 Also rejected: deriving the day from elapsed film time, which would drift against
 the trip's real dates.
+
+---
+
+## 2026-08-06 · Stop presentation is budget-constrained — derive the count, never assume one
+
+**Status:** accepted. Implemented as `StopPhotoAllocator.keptStopCount` /
+`presentationCostS`; supersedes the hand-tuned `tier_skip_share`.
+
+**Context.** The same law has now been re-derived three times, from three
+different directions, each time as if it were new:
+
+1. *The 90 s vs 180 s duration study* (2026-08-04). Doubling the film did not
+   double the photographs. Iceland's 65 stops showed **one photograph each at
+   30, 60, 90, 180 and 195 s** — every length tried.
+2. *The "10 stops per 30 s" ratio test* (2026-08-05). The proposed ratio was
+   ~3× too aggressive; the data supported roughly 10 s of *film* per presented
+   stop, and above ~20 presented stops no watchable length worked at all.
+3. *The Variant B skip share* (2026-08-06). A fixed share needed hand-tuning per
+   trip — 0.82 for Iceland's 65 stops, 0.5 for New Zealand's 20 — because a share
+   scales with the trip while the budget does not.
+
+**Decision.** How many stops a film may present is **derived from its duration**,
+never configured as a count and never as a share of the trip:
+
+```
+keptStops = (duration − opening − endCard) × maxHoldFraction ÷ presentationCost
+presentationCost = labelLead + 2·deckZoom + 2·subjectPark + standardPhotos × photoMinHold
+```
+
+Both terms are computed from existing tunables, so no second constant can drift
+away from them. At the shipped values a stop costs **5.4 s of dwell**, and a 120 s
+film keeps **11 stops** — for Iceland (65 stops) and New Zealand (20) alike, with
+no per-trip input.
+
+**Consequences.**
+
+- *A trip's size stops mattering.* A 20-stop and a 65-stop trip both fill a 120 s
+  film to the same density. Trip size decides what is left out, not the pacing.
+- *Dwell seconds and film seconds are different denominators, and confusing them
+  costs a factor of two.* Dwell is only `max_hold_fraction` of the body, so 5.4 s
+  of dwell ≈ 9–10 s of film. The first implementation divided the dwell budget by
+  the film-seconds figure and returned 6 stops where the measurements said 12.
+  Any future work on this must say which one it means.
+- *Ranking is deterministic* — score descending, original trip order for ties — so
+  re-exporting a trip keeps the same stops. A film that reshuffled between renders
+  could be re-rolled but not evaluated.
+- *The failure mode is silent.* Overrun does not error; it scales every dwell down
+  until `deck_photo_min_hold_s` truncates the decks, and the film simply shows one
+  photograph per stop. `RecapDeckBudgetTests` exists to make that audible.
+
+**Rejected:** a fixed stop count (breaks the moment duration changes); a fixed
+share of the trip (needs per-trip tuning, which is what prompted this); and a
+hand-set `stop_presentation_s` constant (a fourth number to keep in sync with the
+three it is computed from).

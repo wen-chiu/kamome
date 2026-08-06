@@ -104,6 +104,36 @@ fixed long cut.
 
 ---
 
+## Known cosmetic tradeoff — flat glacier (Chiu 2026-08-06: leave it)
+
+`Config/RecapThemes/modern-minimal.json` draws the `ice` layer **opaque**
+(`#4e5c64`) to kill the pale cross over Vatnajökull — a z6 tile seam where the ice
+polygon runs into the tile buffer and both neighbours draw the overlap
+(diagnosed `71caf77`). An opaque fill cannot double-blend.
+
+The cost: `hillshade` is layer 1 and `ice` is layer 5, so **the glacier renders
+flat, without terrain texture**. Chiu has seen it and chosen to keep it for now —
+cosmetic polish, not urgent. The proper fix is clipping the landcover buffer in
+Planetiler and rebuilding all four regions, which keeps translucency; do not do
+that rebuild without asking.
+
+## Phase 2 (real app release) — parked, not blockers for Phase 1
+
+Phase 1 is Chiu's own desk-rendered films at release visual quality. These three
+matter only for an App Store release and are deliberately not being solved now
+(Chiu 2026-08-05):
+
+- **On-device render time is unmeasured.** Iceland at 6m44s is 12,110 frames and
+  took ~1000 s on this Mac. The only budget ever discussed is "<90 s for a 30 s
+  film". A long film on a phone could be tens of minutes — this is the single
+  biggest viability risk for uncapped mode on device.
+- **Routing endpoint.** The app ships `matching.base_url: ""`, so a real user's
+  film is dashed everywhere while desk pilots (pointed at a live OSRM) draw solid.
+  Either ship a server, bundle route data, or accept dashed — a product decision.
+- **Device-representative run.** No import→Trip Detail→export run has ever been
+  done with the experimental modes on. iCloud-resident photos, memory and thermals
+  at 12k frames are all untested.
+
 ## Duration and stop weighting — measured 2026-08-04, decision open
 
 **Duration alone cannot fix a many-stop trip.** What a stop gets is the dwell
