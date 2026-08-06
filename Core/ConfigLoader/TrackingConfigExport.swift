@@ -174,6 +174,55 @@ public extension TrackingConfig {
         /// something to show.
         public let waypointHoldS: Double
 
+        // MARK: - Uncapped mode (EXPERIMENTAL, Chiu 2026-08-05)
+
+        /// Drop `total_duration_max_s` entirely and let the film's length fall out
+        /// of its content: one photograph per stop held for
+        /// `uncapped_photo_hold_s`, plus the travel between them. Ships `false`.
+        public let uncappedEnabled: Bool
+        /// The photograph's own slot. Everything else in a stop beat — the label
+        /// lead, the deck's grow and shrink, the car parking and pulling away —
+        /// is added on top, so a stop costs noticeably more than this.
+        public let uncappedPhotoHoldS: Double
+
+        // MARK: - Variable photo allocation (EXPERIMENTAL, Chiu 2026-08-05)
+
+        /// Give each stop 0–3 photographs by how much attention it got, instead of
+        /// the same number to all of them. Ships `false`.
+        public let photoAllocationEnabled: Bool
+        /// Shares of the trip's stops, ranked by attention, that get 0 / 1 / 2
+        /// photographs. Whatever is left gets `allocation_max_photos`.
+        ///
+        /// **Shares, not absolute thresholds** — the lesson of 2026-08-04. A real
+        /// trip's stops carry anywhere from 2 to 252 photographs, so any absolute
+        /// cut either demotes nothing or demotes everything; the shape of the
+        /// distribution is stable across trips, its scale is not.
+        public let allocationZeroShare: Double
+        public let allocationOneShare: Double
+        public let allocationTwoShare: Double
+        public let allocationMaxPhotos: Int
+        /// What one favourited photograph is worth, in photographs, when ranking a
+        /// stop. Zero on a trip with no favourites, which is every desk fixture —
+        /// see `StopPhotoAllocator`.
+        public let favoriteWeight: Double
+
+        // MARK: - Variant B tiering (EXPERIMENTAL, Chiu 2026-08-06)
+
+        /// Aggressive triage: skip / standard / top. Ships `false`.
+        ///
+        /// Distinct from `photo_allocation_enabled` in one decisive way — a
+        /// *skipped* stop leaves the film entirely: no pin, no name, no pause, no
+        /// park beat. The allocator's zero-photo stops still stop the story to name
+        /// themselves; a skipped one is driven straight past.
+        public let tieringEnabled: Bool
+        /// Share of stops, ranked by attention, dropped from the film.
+        public let tierSkipShare: Double
+        /// Share of stops eligible for the top tier — and eligibility also requires
+        /// a favourite, so this is a ceiling rather than a quota.
+        public let tierTopShare: Double
+        public let tierStandardPhotos: Int
+        public let tierTopPhotos: Int
+
         public init(
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
@@ -187,7 +236,12 @@ public extension TrackingConfig {
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double,
-            stopWeightingEnabled: Bool, waypointMaxPhotos: Int, waypointMaxDwellS: Double, waypointHoldS: Double
+            stopWeightingEnabled: Bool, waypointMaxPhotos: Int, waypointMaxDwellS: Double, waypointHoldS: Double,
+            uncappedEnabled: Bool, uncappedPhotoHoldS: Double,
+            photoAllocationEnabled: Bool, allocationZeroShare: Double, allocationOneShare: Double,
+            allocationTwoShare: Double, allocationMaxPhotos: Int, favoriteWeight: Double,
+            tieringEnabled: Bool, tierSkipShare: Double, tierTopShare: Double,
+            tierStandardPhotos: Int, tierTopPhotos: Int
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
             self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
@@ -223,6 +277,19 @@ public extension TrackingConfig {
             self.waypointMaxPhotos = waypointMaxPhotos
             self.waypointMaxDwellS = waypointMaxDwellS
             self.waypointHoldS = waypointHoldS
+            self.uncappedEnabled = uncappedEnabled
+            self.uncappedPhotoHoldS = uncappedPhotoHoldS
+            self.photoAllocationEnabled = photoAllocationEnabled
+            self.allocationZeroShare = allocationZeroShare
+            self.allocationOneShare = allocationOneShare
+            self.allocationTwoShare = allocationTwoShare
+            self.allocationMaxPhotos = allocationMaxPhotos
+            self.favoriteWeight = favoriteWeight
+            self.tieringEnabled = tieringEnabled
+            self.tierSkipShare = tierSkipShare
+            self.tierTopShare = tierTopShare
+            self.tierStandardPhotos = tierStandardPhotos
+            self.tierTopPhotos = tierTopPhotos
         }
 
         /// A copy with `follow_heading_up` forced to `resolved`. The composition
@@ -258,7 +325,13 @@ public extension TrackingConfig {
                 keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
                 endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
                 stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
-                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS
+                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
+                uncappedEnabled: uncappedEnabled, uncappedPhotoHoldS: uncappedPhotoHoldS,
+                photoAllocationEnabled: photoAllocationEnabled, allocationZeroShare: allocationZeroShare,
+                allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
+                allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
+                tieringEnabled: tieringEnabled, tierSkipShare: tierSkipShare, tierTopShare: tierTopShare,
+                tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos
             )
         }
 
@@ -288,7 +361,13 @@ public extension TrackingConfig {
                 keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
                 endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
                 stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
-                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS
+                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
+                uncappedEnabled: uncappedEnabled, uncappedPhotoHoldS: uncappedPhotoHoldS,
+                photoAllocationEnabled: photoAllocationEnabled, allocationZeroShare: allocationZeroShare,
+                allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
+                allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
+                tieringEnabled: tieringEnabled, tierSkipShare: tierSkipShare, tierTopShare: tierTopShare,
+                tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos
             )
         }
 
@@ -336,6 +415,19 @@ public extension TrackingConfig {
             case waypointMaxPhotos = "waypoint_max_photos"
             case waypointMaxDwellS = "waypoint_max_dwell_s"
             case waypointHoldS = "waypoint_hold_s"
+            case uncappedEnabled = "uncapped_enabled"
+            case uncappedPhotoHoldS = "uncapped_photo_hold_s"
+            case photoAllocationEnabled = "photo_allocation_enabled"
+            case allocationZeroShare = "allocation_zero_share"
+            case allocationOneShare = "allocation_one_share"
+            case allocationTwoShare = "allocation_two_share"
+            case allocationMaxPhotos = "allocation_max_photos"
+            case favoriteWeight = "favorite_weight"
+            case tieringEnabled = "tiering_enabled"
+            case tierSkipShare = "tier_skip_share"
+            case tierTopShare = "tier_top_share"
+            case tierStandardPhotos = "tier_standard_photos"
+            case tierTopPhotos = "tier_top_photos"
         }
     }
 }

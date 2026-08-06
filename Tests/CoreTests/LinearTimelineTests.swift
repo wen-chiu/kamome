@@ -26,7 +26,12 @@ class LinearTimelineTestCase: XCTestCase {
             totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
             // Stop weighting off: these gates measure the unweighted pacing.
-            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedEnabled: false, uncappedPhotoHoldS: 1.0,
+            photoAllocationEnabled: false, allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tieringEnabled: false, tierSkipShare: 0.5, tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5
         )
     }
 
