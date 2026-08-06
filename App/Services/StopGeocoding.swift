@@ -51,7 +51,8 @@ final class CLGeocoderStopGeocoder: StopGeocoding {
             administrativeArea: placemark.administrativeArea,
             country: placemark.country,
             inlandWater: placemark.inlandWater,
-            ocean: placemark.ocean
+            ocean: placemark.ocean,
+            areasOfInterest: placemark.areasOfInterest
         )
     }
 }
