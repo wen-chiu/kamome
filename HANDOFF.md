@@ -13,6 +13,85 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
+## ▶ RESUME HERE — CI is RED on the camera continuity gate (2026-08-07)
+
+**Read this before the lint section below.** That section says the gates "pass" —
+they pass *locally*, against fixtures CI does not have. On CI they fail. The lint
+work it describes is genuinely done; its green-gate claim is not transferable.
+
+### The failure
+
+`RecapCameraContinuityTests.testCameraNeverBreaksSpatialContinuity`, fixture
+`new-zealand`, CI run 31181735522:
+
+```
+continuity broken at 4.03s: only 39% of the frame's ground survives
+(camera moved 24538 m across a 41430 m window)
+```
+
+**Nothing about the gate itself has been touched** — no threshold, no assertion,
+no tolerance. Reconfirmed immediately before writing this. CLAUDE.md's rule holds.
+
+### Why local runs never saw it — fixture shadowing
+
+`RecapTripFixtures.tripFixture(named:)` prefers
+`Tests/Fixtures/trips/local/<name>.json` over the committed
+`Tests/Fixtures/trips/<name>.json`. Deliberate (§0 keeps real dumps gitignored),
+but the consequence is:
+
+| | New Zealand fixture actually used | stops |
+|---|---|---|
+| local | `local/new-zealand.json` — real dump | **20** |
+| CI | committed `new-zealand.json` | **3** |
+
+**Different geometry, so a different camera path.** To reproduce CI locally, move
+`Tests/Fixtures/trips/local/` aside and re-run — that is how the table below was
+produced. A local "gates pass" says nothing about CI until this is done.
+
+Third instance this session of validating under a different configuration than CI
+enforces (`swiftlint` without `--strict`; the macos-15 / Xcode-26.6 gap; now this).
+**Check local-vs-CI parity explicitly; do not assume it.**
+
+### Bisect table — committed fixtures, `local/` moved aside
+
+| commit | result |
+|---|---|
+| `origin/phase-3-recap` (base) | **passes** |
+| `2b7b657` fix(naming) | **fails** — 3 violations |
+| `69b5ad5` fix(recap) pins | **VOID — does not compile.** References `StopPhotoAllocator` and `tieringEnabled`, neither committed until later. An earlier reading of "0 violations" here was a miscounted build failure, not a pass. |
+| `94a864e` | **fails** — identical numbers |
+| `6ae62a7` (HEAD), `recap_mode: highlight` | **fails** — identical numbers |
+| `6ae62a7` (HEAD), `recap_mode: full` | **fails** — byte-identical to highlight |
+
+### What that establishes
+
+1. **Unrelated to the enum / `RecapMode` work.** `.highlight` and `.full` fail with
+   byte-identical numbers (4.03/4.07/4.10 s; 24538/25095/25611 m). The default
+   moving off the legacy path is **not** the cause.
+2. **`2b7b657` is the earliest known-bad commit.** The regression is inside this
+   branch's 45 commits, at or before the naming fix.
+3. The obvious suspect — `69b5ad5`, which moves every stop coordinate onto the
+   route via `RecapComposer.snapped` — is **neither confirmed nor ruled out**,
+   because it cannot be built in isolation. Testing it needs a scratch commit
+   supplying the missing files, or applying the pin change on top of `2b7b657`'s
+   parent.
+
+### Suggested next step
+
+Bisect between `origin/phase-3-recap` and `2b7b657` on committed fixtures. Note
+`2b7b657` is the naming commit and should not touch geometry — so either it does,
+or that gap holds more than one candidate.
+
+### Known history wart — `850a995` does not compile
+
+`refactor(recap): clear the remaining 7 swiftlint --strict violations` carries a
+`CameraPathTests.swift` referencing `recapMode` without the config change defining
+it; an uncommitted edit from a parallel session was swept in, and CI never caught
+it because that run died at lint before building. **Harmless at the tip**
+(`6ae62a7` builds, suite green), but `git bisect` across it will hit it.
+
+---
+
 ## ▶ RESUME HERE — lint split done, ready to commit and push (2026-08-07)
 
 **Status: `swiftlint --strict` is clean project-wide (0 violations, 141 files),
