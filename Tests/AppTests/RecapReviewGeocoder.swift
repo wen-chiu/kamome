@@ -1,5 +1,5 @@
-@testable import Kamome
 import Foundation
+@testable import Kamome
 
 /// Real stop names in a review render, without paying for them twice
 /// (Chiu 2026-08-05).

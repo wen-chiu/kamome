@@ -296,6 +296,16 @@ public struct LinearTimeline {
         if time >= durationS - endCardS {
             contents.append(.endChrome(stats: statsLines, callToAction: callToAction, shareURL: shareURL))
         }
+        // A stop the allocator gave no photographs to still happened, and the film
+        // should say where it was (Chiu 2026-08-05): the pin lands with its name
+        // and the journey moves on. It gets no deck and — via `activeScene` —
+        // no park beat, so the car drives through rather than stopping.
+        if activeScene(atTime: time) == nil, let quiet = quietStop(atTime: time) {
+            contents.append(.stopLabel(
+                name: quiet.stop.name, coordinate: quiet.stop.coordinate, detail: quiet.stop.detail,
+                opacity: quietLabelOpacity(atTime: time, hold: quiet.hold)
+            ))
+        }
         if let active = activeScene(atTime: time) {
             let stop = active.stop
             let window = deckWindow(active.hold)

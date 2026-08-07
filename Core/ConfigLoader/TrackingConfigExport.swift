@@ -161,8 +161,9 @@ public extension TrackingConfig {
         /// Treat thin, brief stops as **waypoints**: a point on the route with no
         /// photo card, whose screen time goes to the stops worth looking at.
         ///
-        /// Ships `false` — this is an experiment, not a decided policy. See
-        /// `StopWeighting` for the heuristic and what the real trips do under it.
+        /// Ships `false`. Measured 2026-08-07 as having no reachable effect beyond
+        /// what `RecapMode` already does — see HANDOFF. Kept pending a separate
+        /// decision, deliberately not folded into the mode migration.
         public let stopWeightingEnabled: Bool
         /// A stop is a waypoint only if it has **at most** this many photographs
         /// *and* was over within `waypoint_max_dwell_s`. Both, deliberately: a
@@ -176,10 +177,6 @@ public extension TrackingConfig {
 
         // MARK: - Uncapped mode (EXPERIMENTAL, Chiu 2026-08-05)
 
-        /// Drop `total_duration_max_s` entirely and let the film's length fall out
-        /// of its content: one photograph per stop held for
-        /// `uncapped_photo_hold_s`, plus the travel between them. Ships `false`.
-        public let uncappedEnabled: Bool
         /// The photograph's own slot. Everything else in a stop beat — the label
         /// lead, the deck's grow and shrink, the car parking and pulling away —
         /// is added on top, so a stop costs noticeably more than this.
@@ -187,9 +184,6 @@ public extension TrackingConfig {
 
         // MARK: - Variable photo allocation (EXPERIMENTAL, Chiu 2026-08-05)
 
-        /// Give each stop 0–3 photographs by how much attention it got, instead of
-        /// the same number to all of them. Ships `false`.
-        public let photoAllocationEnabled: Bool
         /// Shares of the trip's stops, ranked by attention, that get 0 / 1 / 2
         /// photographs. Whatever is left gets `allocation_max_photos`.
         ///
@@ -208,20 +202,15 @@ public extension TrackingConfig {
 
         // MARK: - Variant B tiering (EXPERIMENTAL, Chiu 2026-08-06)
 
-        /// Aggressive triage: skip / standard / top. Ships `false`.
-        ///
-        /// Distinct from `photo_allocation_enabled` in one decisive way — a
-        /// *skipped* stop leaves the film entirely: no pin, no name, no pause, no
-        /// park beat. The allocator's zero-photo stops still stop the story to name
-        /// themselves; a skipped one is driven straight past.
-        public let tieringEnabled: Bool
-        /// Share of stops, ranked by attention, dropped from the film.
-        public let tierSkipShare: Double
         /// Share of stops eligible for the top tier — and eligibility also requires
         /// a favourite, so this is a ceiling rather than a quota.
         public let tierTopShare: Double
         public let tierStandardPhotos: Int
         public let tierTopPhotos: Int
+
+        /// **Which film this trip becomes** — one value, replacing the three
+        /// booleans that used to encode it. See `RecapMode`.
+        public let recapMode: RecapMode
 
         public init(
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
@@ -231,17 +220,17 @@ public extension TrackingConfig {
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
             deckPhotoHoldS: Double, deckPhotoMinHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
-            openingCountryS: Double, openingRegionalS: Double,            countryViewPadding: Double, firstStopDwellScale: Double,
+            openingCountryS: Double, openingRegionalS: Double, countryViewPadding: Double, firstStopDwellScale: Double,
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
             keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double,
             stopWeightingEnabled: Bool, waypointMaxPhotos: Int, waypointMaxDwellS: Double, waypointHoldS: Double,
-            uncappedEnabled: Bool, uncappedPhotoHoldS: Double,
-            photoAllocationEnabled: Bool, allocationZeroShare: Double, allocationOneShare: Double,
+            uncappedPhotoHoldS: Double,
+            allocationZeroShare: Double, allocationOneShare: Double,
             allocationTwoShare: Double, allocationMaxPhotos: Int, favoriteWeight: Double,
-            tieringEnabled: Bool, tierSkipShare: Double, tierTopShare: Double,
-            tierStandardPhotos: Int, tierTopPhotos: Int
+            tierTopShare: Double,
+            tierStandardPhotos: Int, tierTopPhotos: Int, recapMode: RecapMode
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
             self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
@@ -277,98 +266,16 @@ public extension TrackingConfig {
             self.waypointMaxPhotos = waypointMaxPhotos
             self.waypointMaxDwellS = waypointMaxDwellS
             self.waypointHoldS = waypointHoldS
-            self.uncappedEnabled = uncappedEnabled
             self.uncappedPhotoHoldS = uncappedPhotoHoldS
-            self.photoAllocationEnabled = photoAllocationEnabled
             self.allocationZeroShare = allocationZeroShare
             self.allocationOneShare = allocationOneShare
             self.allocationTwoShare = allocationTwoShare
             self.allocationMaxPhotos = allocationMaxPhotos
             self.favoriteWeight = favoriteWeight
-            self.tieringEnabled = tieringEnabled
-            self.tierSkipShare = tierSkipShare
             self.tierTopShare = tierTopShare
             self.tierStandardPhotos = tierStandardPhotos
             self.tierTopPhotos = tierTopPhotos
-        }
-
-        /// A copy with `follow_heading_up` forced to `resolved`. The composition
-        /// root resolves the configured request against what the base-map
-        /// renderer can actually honor, so a provider
-        /// that cannot rotate is never handed a bearing it would silently drop.
-        public func withFollowHeadingUp(_ resolved: Bool) -> Export {
-            Export(
-                targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-                maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-                frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
-                cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
-                zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: resolved,
-                cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
-                cameraDeadZoneFraction: cameraDeadZoneFraction,
-                cameraSafeZoneFraction: cameraSafeZoneFraction,
-                cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS, endRevealPadding: endRevealPadding,
-                endCardStyle: endCardStyle,
-                deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
-                deckZoomS: deckZoomS,
-                deckLabelLeadS: deckLabelLeadS,
-                subjectParkS: subjectParkS,
-                openingCountryS: openingCountryS,
-                openingRegionalS: openingRegionalS,
-                countryViewPadding: countryViewPadding,
-                firstStopDwellScale: firstStopDwellScale,
-                openingCollapseZoomRatio: openingCollapseZoomRatio,
-                openingCollapseDriftFraction: openingCollapseDriftFraction,
-                stopDwellMinS: stopDwellMinS,
-                stopDwellMaxS: stopDwellMaxS,
-                totalDurationMinS: totalDurationMinS,
-                totalDurationMaxS: totalDurationMaxS,
-                keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
-                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
-                stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
-                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
-                uncappedEnabled: uncappedEnabled, uncappedPhotoHoldS: uncappedPhotoHoldS,
-                photoAllocationEnabled: photoAllocationEnabled, allocationZeroShare: allocationZeroShare,
-                allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
-                allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
-                tieringEnabled: tieringEnabled, tierSkipShare: tierSkipShare, tierTopShare: tierTopShare,
-                tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos
-            )
-        }
-
-        /// A copy with the duration window overridden. Measurement aid for the
-        /// duration-by-stop-count experiment (2026-08-04) — lets a sweep try
-        /// several film lengths without rewriting the config file between runs.
-        public func withTotalDuration(min minS: Double, max maxS: Double) -> Export {
-            Export(
-                targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-                maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-                frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
-                cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
-                zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: followHeadingUp,
-                cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
-                cameraDeadZoneFraction: cameraDeadZoneFraction,
-                cameraSafeZoneFraction: cameraSafeZoneFraction,
-                cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
-                endRevealPadding: endRevealPadding, endCardStyle: endCardStyle,
-                deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
-                deckZoomS: deckZoomS, deckLabelLeadS: deckLabelLeadS, subjectParkS: subjectParkS,
-                openingCountryS: openingCountryS, openingRegionalS: openingRegionalS,
-                countryViewPadding: countryViewPadding, firstStopDwellScale: firstStopDwellScale,
-                openingCollapseZoomRatio: openingCollapseZoomRatio,
-                openingCollapseDriftFraction: openingCollapseDriftFraction,
-                stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
-                totalDurationMinS: minS, totalDurationMaxS: maxS,
-                keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
-                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
-                stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
-                waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
-                uncappedEnabled: uncappedEnabled, uncappedPhotoHoldS: uncappedPhotoHoldS,
-                photoAllocationEnabled: photoAllocationEnabled, allocationZeroShare: allocationZeroShare,
-                allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
-                allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
-                tieringEnabled: tieringEnabled, tierSkipShare: tierSkipShare, tierTopShare: tierTopShare,
-                tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos
-            )
+            self.recapMode = recapMode
         }
 
         enum CodingKeys: String, CodingKey {
@@ -415,19 +322,16 @@ public extension TrackingConfig {
             case waypointMaxPhotos = "waypoint_max_photos"
             case waypointMaxDwellS = "waypoint_max_dwell_s"
             case waypointHoldS = "waypoint_hold_s"
-            case uncappedEnabled = "uncapped_enabled"
             case uncappedPhotoHoldS = "uncapped_photo_hold_s"
-            case photoAllocationEnabled = "photo_allocation_enabled"
             case allocationZeroShare = "allocation_zero_share"
             case allocationOneShare = "allocation_one_share"
             case allocationTwoShare = "allocation_two_share"
             case allocationMaxPhotos = "allocation_max_photos"
             case favoriteWeight = "favorite_weight"
-            case tieringEnabled = "tiering_enabled"
-            case tierSkipShare = "tier_skip_share"
             case tierTopShare = "tier_top_share"
             case tierStandardPhotos = "tier_standard_photos"
             case tierTopPhotos = "tier_top_photos"
+            case recapMode = "recap_mode"
         }
     }
 }

@@ -19,7 +19,8 @@ class LinearTimelineTestCase: XCTestCase {
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
-            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+            deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
             openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
@@ -27,11 +28,11 @@ class LinearTimelineTestCase: XCTestCase {
             keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
             // Stop weighting off: these gates measure the unweighted pacing.
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
-            uncappedEnabled: false, uncappedPhotoHoldS: 1.0,
-            photoAllocationEnabled: false, allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
             allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
-            tieringEnabled: false, tierSkipShare: 0.5, tierTopShare: 0.15,
-            tierStandardPhotos: 3, tierTopPhotos: 5
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 

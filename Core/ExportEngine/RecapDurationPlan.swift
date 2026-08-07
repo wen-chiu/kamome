@@ -83,6 +83,56 @@ public struct RecapDurationPlan: Equatable {
         return min(max(raw, config.cameraSpanM), ceiling)
     }
 
+    /// **Uncapped mode** (EXPERIMENTAL, Chiu 2026-08-05): the film has no target
+    /// length. Every stop gets the same beat — one photograph, held for
+    /// `uncapped_photo_hold_s` — and the total is simply what that adds up to.
+    ///
+    /// The one thing still borrowed from the capped plan is `max_hold_fraction`,
+    /// which here stops being a *cap* and becomes the film's **rhythm**: stops
+    /// occupy that share of the body and travel gets the rest, so a journey with
+    /// twice as many stops also gets twice as much road between them and the film
+    /// keeps its shape instead of turning into a slideshow. Nothing is scaled to
+    /// fit, so no stop can be squeezed under the photo floor — which is the whole
+    /// point of the experiment.
+    private static func uncapped(
+        photoCounts: [Int], config: TrackingConfig.Export, deck: RecapDeck, opening: Double
+    ) -> RecapDurationPlan {
+        // **Per-stop, not one flat beat** (Chiu 2026-08-05). With the variable
+        // allocator on, stops no longer cost the same: a three-photograph stop
+        // needs three slots, and pricing every stop as one would under-buy the
+        // film's length and put the extra photographs straight back under the
+        // `deck_photo_min_hold_s` floor — the exact failure this mode exists to
+        // avoid. The fixed overhead (label lead, both zoom ramps, park in and out)
+        // is charged once per stop; only the slots scale.
+        let overhead = deck.labelLeadS + 2 * deck.zoomS + 2 * config.subjectParkS
+        let dwells = photoCounts.map { count in
+            count > 0 ? overhead + Double(count) * config.uncappedPhotoHoldS : config.waypointHoldS
+        }
+        let holdTotal = dwells.reduce(0, +)
+        guard holdTotal > 0 else {
+            return RecapDurationPlan(totalS: config.totalDurationMinS, openingS: opening, stopDwellS: [])
+        }
+        // **Size the body against the holds the timeline will actually use.**
+        // `LinearTimeline.pacing` adds a park ramp at each edge of every dwell on
+        // top of what this plan returns, so a body sized from `holdTotal` alone
+        // lands the real holds just *over* `max_hold_fraction`, and `CameraPath`
+        // trims them back — putting the extra photographs straight back under the
+        // min-hold floor. Charging for that ramp here is the difference between a
+        // three-photograph stop showing three and showing two.
+        let parked = holdTotal + Double(dwells.count) * 2 * config.subjectParkS
+        let body = parked / max(config.maxHoldFraction, 0.01)
+        // **The floor still applies.** Uncapped removes the *ceiling*, not the
+        // minimum: a trip with few stops buys a short body, and travel is only
+        // what is left over, so a three-stop trip across a whole country left the
+        // camera a couple of seconds to cross it and `RecapCameraContinuityTests`
+        // caught the strobe. Duration follows content, but content includes the
+        // distance between the content.
+        return RecapDurationPlan(
+            totalS: max(opening + body + config.endCardS, config.totalDurationMinS),
+            openingS: opening, stopDwellS: dwells
+        )
+    }
+
     /// Plans a film for `photoCounts` (one entry per stop, in trip order).
     ///
     /// 1. Each stop asks for what its content justifies: a fixed presentation
@@ -100,6 +150,13 @@ public struct RecapDurationPlan: Equatable {
         deck: RecapDeck
     ) -> RecapDurationPlan {
         let opening = config.openingCountryS + config.openingRegionalS + 2 * config.zoomTransitionS
+
+        switch config.recapMode {
+        case .full:
+            return uncapped(photoCounts: photoCounts, config: config, deck: deck, opening: opening)
+        case .highlight:
+            break
+        }
 
         let asked = photoCounts.enumerated().map { index, count in
             // A stop with nothing to show is a waypoint: the route passes through

@@ -140,18 +140,15 @@
     "waypoint_max_photos": 2,
     "waypoint_max_dwell_s": 900,
     "waypoint_hold_s": 0.8,
-    "uncapped_enabled": false,
     "uncapped_photo_hold_s": 1.0,
-    "photo_allocation_enabled": false,
     "allocation_zero_share": 0.4,
     "allocation_one_share": 0.3,
     "allocation_two_share": 0.2,
     "allocation_max_photos": 3,
     "favorite_weight": 3.0,
-    "tiering_enabled": false,
-    "tier_skip_share": 0.5,
     "tier_top_share": 0.15,
     "tier_standard_photos": 3,
-    "tier_top_photos": 5
+    "tier_top_photos": 5,
+    "recap_mode": "highlight"
   }
 }

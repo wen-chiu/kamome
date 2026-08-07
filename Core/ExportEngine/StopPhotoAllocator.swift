@@ -48,9 +48,6 @@ public enum StopPhotoAllocator {
     /// Ties are broken by original order so the result is deterministic — a
     /// requirement for golden-frame CI and for re-exporting the same film twice.
     public static func allocate(_ signals: [Signal], config: TrackingConfig.Export) -> [Int] {
-        guard config.photoAllocationEnabled else {
-            return signals.map { min($0.photoCount, config.allocationMaxPhotos) }
-        }
         guard !signals.isEmpty else { return [] }
 
         let scored = signals.enumerated()
@@ -144,9 +141,7 @@ public enum StopPhotoAllocator {
     public static func triage(
         _ signals: [Signal], config: TrackingConfig.Export, durationS: Double
     ) -> [Int?] {
-        guard config.tieringEnabled, !signals.isEmpty else {
-            return signals.map { min($0.photoCount, config.allocationMaxPhotos) }
-        }
+        guard !signals.isEmpty else { return [] }
         // **Deterministic ranking.** Score descending, then original trip order for
         // ties — never the input order alone and never anything unordered, so the
         // same trip re-exported twice keeps the same stops. A film that reshuffled

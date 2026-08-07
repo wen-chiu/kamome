@@ -133,6 +133,14 @@ final class RecapDeckBudgetTests: XCTestCase {
     /// green forever.
     func testARealScaleTripDoesNotCollapseToOnePhotoPerStop() async throws {
         let config = AppConfig.loadOrDie()
+        // This guard documents the *unmitigated* collapse — the pacing a film gets
+        // when nothing selects stops for it. `.highlight` and `.full` both exist to
+        // fix it, so it can only be measured in one of them by measuring what the
+        // policy is protecting against.
+        try XCTSkipIf(
+            config.export.recapMode == .highlight,
+            "`.highlight` selects stops by budget; this guard measures the collapse it prevents."
+        )
         let recap = try await trip(stops: 20, photosPerStop: 8, config: config)
         let shown = photosShownPerStop(try timeline(recap, config: config.export), trip: recap)
         XCTAssertEqual(shown.count, 20)

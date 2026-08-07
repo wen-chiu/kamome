@@ -21,6 +21,41 @@ extension LinearTimeline {
         return nil
     }
 
+    /// A stop being held that has **no photographs to show** (Chiu 2026-08-05).
+    ///
+    /// The variable allocator gives the long tail of a trip zero photographs, and
+    /// those places still deserve to be named where they happened rather than only
+    /// in the HUD. Kept separate from `activeScene` on purpose: that one also
+    /// decides whether the car parks, and a stop with nothing to reveal must not
+    /// stop the vehicle — the film drives past and reads the sign.
+    func quietStop(atTime time: Double) -> (hold: CameraPath.Hold, stop: RecapTrip.Stop)? {
+        // **Only when the film is showing photographs at all.** A stop with no
+        // photos means two different things: the allocator ranked this place into
+        // the tail (name it — the journey stopped there), or the user turned photo
+        // cards off entirely (draw nothing — that toggle means route-only, and has
+        // meant that since decisions.md 2026-07-18). Telling them apart is exactly
+        // "does any stop in this film have a photograph".
+        guard stops.contains(where: { !$0.photos.isEmpty }) else { return nil }
+        for hold in holds where hold.startS <= time && time < hold.endS {
+            guard stops.indices.contains(hold.stopIndex) else { continue }
+            let stop = stops[hold.stopIndex]
+            return stop.photos.isEmpty ? (hold, stop) : nil
+        }
+        return nil
+    }
+
+    /// The quiet stop's label: up and down inside its own brief hold, so the name
+    /// arrives and leaves rather than popping.
+    func quietLabelOpacity(atTime time: Double, hold: CameraPath.Hold) -> Double {
+        let span = hold.endS - hold.startS
+        guard span > 0 else { return 0 }
+        let ramp = Swift.min(deck.zoomS, span * 0.4)
+        guard ramp > 0 else { return 1 }
+        if time < hold.startS + ramp { return Self.smoothstep((time - hold.startS) / ramp) }
+        if time > hold.endS - ramp { return Self.smoothstep((hold.endS - time) / ramp) }
+        return 1
+    }
+
     /// The stop the film is **parked at**, if any — unlike `activeScene`, this
     /// does not require the stop to have photos. The HUD names where the vehicle
     /// is, and a stop with nothing to show is still a place the journey stopped;

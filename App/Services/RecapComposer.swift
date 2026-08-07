@@ -2,10 +2,10 @@ import CoreGraphics
 import Foundation
 import KamomeConfig
 import KamomeExportEngine
+import KamomeImportKit
 import KamomePersistence
 import KamomeRouteMatching
 import KamomeTrackingEngine
-import KamomeImportKit
 import KamomeTripComposer
 
 /// Maps one trip's records into §4.5 recap inputs (S5). Pure value mapping —
@@ -96,61 +96,20 @@ enum RecapComposer {
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
 
-        // Variable allocation (experimental): rank the stops against each other
-        // and hand out 0–3 photographs by share. Computed once for the whole trip
-        // because it is a *relative* judgement — a stop's allocation depends on
-        // the others, which is the entire point.
-        var allocation: [String: Int] = [:]
-        // Variant B: triage first, and a skipped stop is removed from the trip
-        // outright — that is what makes the car drive through instead of pausing.
-        var kept = stops
-        if let weighting, weighting.tieringEnabled {
-            let signals = stops.map { stop in
-                StopPhotoAllocator.Signal(
-                    photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
-                    favoriteCount: favoriteCounts[stop.id] ?? 0
-                )
-            }
-            let tiers = StopPhotoAllocator.triage(signals, config: weighting, durationS: weighting.totalDurationMaxS)
-            kept = zip(stops, tiers).compactMap { stop, tier in
-                guard let tier else { return nil }
-                allocation[stop.id] = tier
-                return stop
-            }
-        }
-        if let weighting, weighting.photoAllocationEnabled, !weighting.tieringEnabled {
-            let signals = stops.map { stop in
-                StopPhotoAllocator.Signal(
-                    photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
-                    favoriteCount: favoriteCounts[stop.id] ?? 0
-                )
-            }
-            let counts = StopPhotoAllocator.allocate(signals, config: weighting)
-            for (stop, count) in zip(stops, counts) { allocation[stop.id] = count }
-        }
+        let selection = select(stops: stops, photosByStop: photosByStop,
+                               rawPhotoCounts: rawPhotoCounts, favoriteCounts: favoriteCounts,
+                               weighting: weighting)
+        let kept = selection.kept
+        let allocation = selection.allocation
 
         let tripStops = kept.map { stop -> RecapTrip.Stop in
             var photos = photosByStop[stop.id] ?? []
             if let allocated = allocation[stop.id] {
                 photos = Array(photos.prefix(allocated))
             }
-            // Stop weighting (experimental, off by default). A waypoint keeps its
-            // pin and its name — the journey really did pass through — but gives
-            // up its deck, and with it the park/pull-away beat, because
-            // `LinearTimeline.activeScene` only counts a stop that has something
-            // to reveal. Classified on the **raw** count: the deck cap is a
-            // rendering decision and must not feed a judgement about the place.
-            // Uncapped mode (experimental): every stop shows exactly one
-            // photograph, so the film's length is a straight function of how many
-            // places the journey visited. The selector already put the highlight
-            // first, so the one kept is the one worth keeping.
-            // Uncapped mode on its own means the fixed one-photo-per-stop film.
-            // With the allocator on it means *only* "no duration ceiling" — the
-            // allocator owns how many photographs each stop shows, and squashing
-            // that back to one here would silently undo it.
-            if let weighting, weighting.uncappedEnabled, !weighting.photoAllocationEnabled {
-                photos = Array(photos.prefix(1))
-            }
+            // Stop weighting: an independent legacy flag, shipping `false`, that
+            // survives the mode migration by explicit decision (HANDOFF). Measured
+            // as having no reachable effect beyond what the modes already do.
             if let weighting, weighting.stopWeightingEnabled {
                 let raw = rawPhotoCounts[stop.id] ?? photos.count
                 let dwell = (stop.departedAt ?? stop.arrivedAt) - stop.arrivedAt
@@ -232,9 +191,51 @@ enum RecapComposer {
         guard lengthSquared > 0 else { return start }
         // Clamped, so a stop beside the *middle* of a leg projects onto the road
         // while a stop beyond either end lands on that end rather than off the map.
-        let t = min(max(-(startX * dx + startY * dy) / lengthSquared, 0), 1)
-        return RecapCoordinate(lat: start.lat + (end.lat - start.lat) * t,
-                               lon: start.lon + (end.lon - start.lon) * t)
+        let along = min(max(-(startX * dx + startY * dy) / lengthSquared, 0), 1)
+        return RecapCoordinate(lat: start.lat + (end.lat - start.lat) * along,
+                               lon: start.lon + (end.lon - start.lon) * along)
+    }
+
+    /// Which stops the film presents, and how many photographs each shows.
+    ///
+    /// **One switch, one decision.** This used to be three conditionals over three
+    /// booleans, each carrying a negation of the others. Exhaustive with no
+    /// `default:` on purpose: adding a `RecapMode` case must break the build here
+    /// rather than fall silently into an existing branch.
+    private static func select(
+        stops: [StopRecord],
+        photosByStop: [String: [PhotoRef]],
+        rawPhotoCounts: [String: Int],
+        favoriteCounts: [String: Int],
+        weighting: TrackingConfig.Export?
+    ) -> (kept: [StopRecord], allocation: [String: Int]) {
+        guard let weighting else { return (stops, [:]) }
+        let signals = stops.map { stop in
+            StopPhotoAllocator.Signal(
+                photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
+                favoriteCount: favoriteCounts[stop.id] ?? 0
+            )
+        }
+        var allocation: [String: Int] = [:]
+        switch weighting.recapMode {
+        case .highlight:
+            // A skipped stop leaves the film entirely — no pin, no name, no pause,
+            // no park beat.
+            let tiers = StopPhotoAllocator.triage(
+                signals, config: weighting, durationS: weighting.totalDurationMaxS
+            )
+            let kept = zip(stops, tiers).compactMap { stop, tier -> StopRecord? in
+                guard let tier else { return nil }
+                allocation[stop.id] = tier
+                return stop
+            }
+            return (kept, allocation)
+        case .full:
+            // Every stop survives; rank decides how many photographs it shows.
+            let counts = StopPhotoAllocator.allocate(signals, config: weighting)
+            for (stop, count) in zip(stops, counts) { allocation[stop.id] = count }
+            return (stops, allocation)
+        }
     }
 
     /// Same day math as S3's filter chips (TripDetailModel.dayIndex).
