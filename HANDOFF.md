@@ -112,6 +112,28 @@ matter — 8 of 65 stops on Iceland — and is not the mechanism anything relies
 
 ---
 
+## Open question — RecapMode may be two axes, not one (Chiu 2026-08-06)
+
+`RecapMode` is being introduced as a two-case enum (`highlight` | `full`).
+**Deliberately no placeholder cases**: every `switch` over it is exhaustive with
+no `default:`, so the compiler forces every call site to be revisited when a case
+is added. That is the extensibility mechanism — not speculative cases sitting
+unused.
+
+The note worth keeping: the next variant Chiu has in mind — *full stop coverage,
+zero photographs* — mixes **two independent axes**:
+
+| axis | today's cases differ on it |
+|---|---|
+| which stops survive | `highlight` keeps ~11, `full` keeps all |
+| how many photographs each gets | `highlight` gives 3, `full` gives 0–3 |
+
+"Full stops, no photos" is the first combination that needs one axis without the
+other, and a third case would encode a *pair* of choices as a single name. If a
+fourth follows, `RecapMode` should probably split into two orthogonal enums rather
+than grow. **Not acting on this now** — recorded so the pressure is recognised
+when it arrives instead of being rediscovered.
+
 ## Known cosmetic tradeoff — flat glacier (Chiu 2026-08-06: leave it)
 
 `Config/RecapThemes/modern-minimal.json` draws the `ice` layer **opaque**

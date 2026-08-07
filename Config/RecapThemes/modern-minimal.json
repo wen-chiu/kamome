@@ -1,17 +1,17 @@
 {
   "version": 8,
-  "name": "Kamome Souvenir Map (dark) \u2014 draft v2",
+  "name": "Kamome Souvenir Map (dark) — draft v2",
   "metadata": {
     "kamome:role": "theme-draft",
-    "kamome:status": "DRAFT v2 \u2014 NOT signed off. Rewritten 2026-07-22 toward the DARK ATMOSPHERIC SOUVENIR MAP validated in the prototype + WIP demo (Docs/prototype, artifact 'Kamome Recap \u51b0\u5cf6\u74b0\u5cf6'), replacing the earlier pale 'desaturated OSM' draft Chiu rejected. Direction: dark navy sea, dark-slate land silhouette, a GLOWING coastline, pale ice; no roads/POI/labels. Half the crafted feeling (vignette, route glow, grade) is a COMPOSITOR job (RecapTheme) \u2014 NOT in this style \u2014 so judge this as the substrate, with that atmosphere still to come.",
-    "kamome:reference": "prototype land fill #24343c\u2192#182530 on sea #08111A\u2192#04070C, coastline stroke rgba(140,214,204,.28), route #FF8A5B glow. See Docs/prototype/recap_engine.html.",
+    "kamome:status": "DRAFT v2 — NOT signed off. Rewritten 2026-07-22 toward the DARK ATMOSPHERIC SOUVENIR MAP validated in the prototype + WIP demo (Docs/prototype, artifact 'Kamome Recap 冰島環島'), replacing the earlier pale 'desaturated OSM' draft Chiu rejected. Direction: dark navy sea, dark-slate land silhouette, a GLOWING coastline, pale ice; no roads/POI/labels. Half the crafted feeling (vignette, route glow, grade) is a COMPOSITOR job (RecapTheme) — NOT in this style — so judge this as the substrate, with that atmosphere still to come.",
+    "kamome:reference": "prototype land fill #24343c→#182530 on sea #08111A→#04070C, coastline stroke rgba(140,214,204,.28), route #FF8A5B glow. See Docs/prototype/recap_engine.html.",
     "kamome:schema": "OpenMapTiles (Planetiler default)"
   },
   "sources": {
     "kamome": {
       "type": "vector",
       "url": "pmtiles://__KAMOME_TILES__",
-      "attribution": "\u00a9 OpenMapTiles \u00a9 OpenStreetMap contributors",
+      "attribution": "© OpenMapTiles © OpenStreetMap contributors",
       "maxzoom": 14
     },
     "kamome-terrain": {
@@ -140,8 +140,10 @@
         ]
       ],
       "paint": {
-        "fill-color": "#d6e8ee",
-        "fill-opacity": 0.26
+        "fill-color": "#4e5c64"
+      },
+      "metadata": {
+        "kamome-note": "Opaque on purpose (2026-08-06). At fill-opacity 0.26 the Vatnajokull polygon ran into the tile buffer, both neighbouring z6 tiles drew the overlap, and the doubled region composited to ~45% - the pale cross. An opaque fill cannot double-blend. Cost: the glacier loses hillshade texture, because hillshade is layer 1 and this is layer 5. The correct fix is clipping the landcover buffer in Planetiler and rebuilding all four regions, which keeps translucency. See Docs/handoff-P3.5.md."
       }
     },
     {

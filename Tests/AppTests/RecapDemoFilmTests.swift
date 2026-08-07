@@ -192,6 +192,13 @@ final class RecapDemoFilmTests: XCTestCase {
 
         let trip = try Self.tripFixture(named: fixture)
         let tripId = try await service.importTrip(title: trip.title, photos: trip.photos)
+        // Real stop names, opt-in and cached (`RecapReviewGeocoder`). Without this
+        // the harness composes straight out of the importer, which cannot name a
+        // stop, and every card in the pilot reads "Unnamed stop" — a difference
+        // from the shipped app that has twice been mistaken for a regression.
+        if RecapReviewGeocoder.isEnabled {
+            try await Self.nameStops(tripId: tripId, fixture: fixture, repository: repository, config: full)
+        }
         let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
         let legs = RecapComposer.legs(
             from: detail.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
@@ -207,8 +214,11 @@ final class RecapDemoFilmTests: XCTestCase {
         }
         var photosByStop: [String: [PhotoRef]] = [:]
         var rawPhotoCounts: [String: Int] = [:]
+        var favoriteCounts: [String: Int] = [:]
         for stop in detail.stops {
-            rawPhotoCounts[stop.id] = detail.photos.filter { $0.stopId == stop.id }.count
+            let atStop = detail.photos.filter { $0.stopId == stop.id }
+            rawPhotoCounts[stop.id] = atStop.count
+            favoriteCounts[stop.id] = atStop.filter { $0.isHighlight != 0 }.count
             // **The app's own selection** (`RecapModel.selectStopPhotoRefs`):
             // highlight first, then evenly spread across the visit, capped at
             // `deck_max_photos`. This used to be a hardcoded `.prefix(3)`, which
@@ -235,6 +245,7 @@ final class RecapDemoFilmTests: XCTestCase {
         ),
             stopHoldS: config.stopHoldS,
             rawPhotoCounts: rawPhotoCounts,
+            favoriteCounts: favoriteCounts,
             weighting: config
         ))
         let waypoints = recap.stops.filter(\.photos.isEmpty).count
@@ -242,6 +253,30 @@ final class RecapDemoFilmTests: XCTestCase {
             + "\(recap.stops.count - waypoints) highlights · weighting "
             + (config.stopWeightingEnabled ? "ON" : "off"))
         return (recap, config)
+    }
+
+    /// Runs the **shipped** `StopNamer` over the trip's stops and waits for it to
+    /// finish, so what the pilot renders is what the app would have written.
+    private static func nameStops(
+        tripId: String, fixture: String, repository: TripRepository, config: TrackingConfig
+    ) async throws {
+        let stops = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
+        let geocoder = RecapReviewGeocoder(fixture: fixture)
+        let namer = StopNamer(config: config.geocode, repository: repository, geocoder: geocoder)
+        let started = Date.now
+        await withCheckedContinuation { continuation in
+            var resumed = false
+            namer.nameUnnamedStops(stops) { progress in
+                guard progress.isFinished, !resumed else { return }
+                resumed = true
+                continuation.resume()
+            }
+        }
+        print(String(
+            format: "KAMOME_GEOCODE_STOPS %d/%d named · %d cached, %d looked up · %.0fs",
+            namer.progress.named, namer.progress.total, geocoder.hits, geocoder.misses,
+            Date.now.timeIntervalSince(started)
+        ))
     }
 
     // MARK: - Trip

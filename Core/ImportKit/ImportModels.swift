@@ -10,12 +10,19 @@ public struct ImportPhoto: Equatable, Sendable {
     public let timestamp: Double
     public let lat: Double
     public let lon: Double
+    /// `PHAsset.isFavorite` — an explicit judgement by the person who was there,
+    /// and the strongest signal this app has about which stops mattered
+    /// (`StopPhotoAllocator`). Only a real photo library has it: fixtures dumped
+    /// from exported files carry place and time only, so a desk render sees
+    /// `false` everywhere.
+    public let isFavorite: Bool
 
-    public init(assetId: String, timestamp: Double, lat: Double, lon: Double) {
+    public init(assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false) {
         self.assetId = assetId
         self.timestamp = timestamp
         self.lat = lat
         self.lon = lon
+        self.isFavorite = isFavorite
     }
 }
 
@@ -77,12 +84,19 @@ public struct ImportedRoutePoint: Equatable, Sendable {
     public let timestamp: Double
     public let lat: Double
     public let lon: Double
+    /// `PHAsset.isFavorite` — an explicit judgement by the person who was there,
+    /// and the strongest signal this app has about which stops mattered
+    /// (`StopPhotoAllocator`). Only a real photo library has it: fixtures dumped
+    /// from exported files carry place and time only, so a desk render sees
+    /// `false` everywhere.
+    public let isFavorite: Bool
 
-    public init(assetId: String, timestamp: Double, lat: Double, lon: Double) {
+    public init(assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false) {
         self.assetId = assetId
         self.timestamp = timestamp
         self.lat = lat
         self.lon = lon
+        self.isFavorite = isFavorite
     }
 }
 

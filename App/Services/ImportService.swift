@@ -43,7 +43,13 @@ struct ImportService {
         let byId = Dictionary(photos.map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
         func newPhoto(_ id: String) -> TripRepository.NewPhoto {
             let photo = byId[id]
-            return TripRepository.NewPhoto(assetId: id, takenAt: photo?.timestamp, lat: photo?.lat, lon: photo?.lon)
+            // The favourite flag lands in the existing `is_highlight` column: both
+            // mean "this one matters", the deck selector already orders by it, and
+            // a user retagging in S4 overwrites it. One concept, one column.
+            return TripRepository.NewPhoto(
+                assetId: id, takenAt: photo?.timestamp, lat: photo?.lat, lon: photo?.lon,
+                isHighlight: photo?.isFavorite ?? false
+            )
         }
 
         // One segment per inter-stop leg (typed-leg pass 2026-07-26), not one

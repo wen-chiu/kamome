@@ -116,6 +116,7 @@ final class RecapModel {
             deck: deck,
             stopHoldS: config.export.stopHoldS,
             rawPhotoCounts: rawPhotoCounts(detail: detail),
+            favoriteCounts: favoriteCounts(detail: detail),
             weighting: config.export
         ) else {
             phase = .failed(message: String(localized: "recap_failed"))
@@ -295,6 +296,17 @@ final class RecapModel {
     private func rawPhotoCounts(detail: TripRepository.TripDetail) -> [String: Int] {
         var counts: [String: Int] = [:]
         for photo in detail.photos {
+            guard let stopId = photo.stopId else { continue }
+            counts[stopId, default: 0] += 1
+        }
+        return counts
+    }
+
+    /// Favourited photographs per stop — `PHAsset.isFavorite` at import time,
+    /// stored in `is_highlight`. Zero on trips imported before that landed.
+    private func favoriteCounts(detail: TripRepository.TripDetail) -> [String: Int] {
+        var counts: [String: Int] = [:]
+        for photo in detail.photos where photo.isHighlight != 0 {
             guard let stopId = photo.stopId else { continue }
             counts[stopId, default: 0] += 1
         }
