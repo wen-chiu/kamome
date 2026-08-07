@@ -1,6 +1,6 @@
 # HANDOFF — current state
 
-**Updated 2026-08-06.** Branch `feature/typed-legs-routing`. Written so a fresh
+**Updated 2026-08-07.** Branch `feature/typed-legs-routing`. Written so a fresh
 session (or a fresh person) can pick this up without being briefed by hand.
 
 Read `CLAUDE.md` first for the standing rules — especially **§0, location data
@@ -10,6 +10,117 @@ anything else here.
 Scope notes: `Docs/handoff-P3.5.md` is the Replay MVP work order;
 `Docs/gate-P3.5-checklist.md` is the §6 gate runbook. This file is the *session
 state* on top of them — what is done, what is open, and why.
+
+---
+
+## ▶ RESUME HERE — lint split done, ready to commit and push (2026-08-07)
+
+**Status: `swiftlint --strict` is clean project-wide (0 violations, 141 files),
+full suite green (249 tests, 0 failures), both `RecapCameraContinuityTests` gates
+pass.** The 10 violations tracked below are all fixed. Verified with:
+
+```
+XCODE_DEFAULT_TOOLCHAIN_OVERRIDE=/Library/Developer/CommandLineTools swiftlint lint --strict
+```
+
+**What actually shipped, vs. the plan this section used to describe:** the
+`CameraPath.init` extraction alone (`openingPlan`, as originally planned) got the
+initialiser from 82→71 lines — nowhere near the ≤50 limit, because most of the
+82 lines were comments (excluded from the count either way). Getting
+`CameraPath.swift` clean needed the full "option 1" struct/statics split below
+*and* two more initializer extractions (`bodySpan`, `simulatedTrack`) beyond what
+was written here. Left as a record for next time a "roughly N lines" estimate
+shows up in a handoff: re-derive it from `swiftlint --strict` output, don't trust
+the arithmetic.
+
+| file | was | now |
+|---|---|---|
+| `Core/ExportEngine/CameraPath.swift` | file 555, struct body 325, init 71 | 0 violations |
+| `Tests/AppTests/RecapDemoFilmTests.swift` | file 447, class 283, func 63 | 0 violations |
+| `Tests/CoreTests/CameraPathTests.swift` | file 404, class 301 | 0 violations |
+| `Core/ExportEngine/FollowCamera.swift` | func 71 | 0 violations |
+| `Tests/CoreTests/RecapPacingTests.swift` | class 253 | 0 violations |
+
+### `CameraPath.swift` — "option 1" landed as designed
+
+Moved `Position`, `Phase`, `TimelineEntry`, `Hold`, plus the pure statics
+(`distance`, `travelSeconds`, `coordinate(atDistance:route:cumulativeM:)`,
+`smoothstep`, `stopAnchors`, `cappedToRegion`, `bodyFrame`, `confine`) into a new
+file, `Core/ExportEngine/CameraPathCore.swift` — an `extension CameraPath`
+alongside the existing `CameraPathActs.swift` / `CameraPathPrologue.swift`
+pattern. `bodyFrame` and `confine` went `private static` → `static`, same as the
+existing statics in that file; nothing else changed access level. No instance
+member moved or widened — the construction/sampling split Chiu rejected earlier
+stays rejected.
+
+Two more pure-static extractions came out of the initializer beyond the original
+plan, once "extract `openingPlan`" alone proved insufficient (see above): `bodySpan`
+(the provisional-timeline + capped-span calculation) and `simulatedTrack` (the
+per-frame body-camera simulation), both also in `CameraPathCore.swift`. Both took
+>6 positional parameters, so each got a small request struct
+(`BodySpanRequest`, `TrackRequest`) rather than tripping
+`function_parameter_count` — same shape as `OpeningRequest`/`OpeningPlan` in
+`CameraPathPrologue.swift`.
+
+### The other four files — mechanical, same recipe throughout
+
+Every fix was "split a class/file, or extract one self-contained function,"
+never a behavior change:
+
+- **`FollowCamera.track`** (71-line function): the per-frame physics step
+  extracted into a private `step(_:point:parked:constants:)`, carrying state
+  through a new `SimState` struct and constants through `StepConstants` — the
+  `for` loop in `track` now just calls `step` once per frame. Same computation,
+  same order, nothing behavioral changed.
+- **`CameraPathTests.swift`** (file 404, class 301): the "Dead-zone follow
+  camera" `MARK` section (10 tests) moved to `CameraPathContinuityTests.swift`
+  as `extension CameraPathTests`. Its fixtures (`straightRoute`, `longRoute`,
+  `exportConfig`) went `private` → internal (no `private` keyword) since
+  `private` is file-scoped and the extension is a different file — the same
+  constraint that shaped the `CameraPath.swift` split above.
+- **`RecapPacingTests.swift`** (class 253, only 3 over): the "Opening sequence"
+  `MARK` section (3 tests) moved to `RecapPacingOpeningSequenceTests.swift` the
+  same way; `config`, `deck`, `timeline`, `establishing` went internal.
+- **`RecapDemoFilmTests.swift`** (file 447, class 283, func 63): `GPXFilmParser`
+  (self-contained, unrelated to the class) moved to its own file unchanged.
+  `photoTile(index:)` never used `self`, so it became a free function in
+  `RecapDemoFilmAssets.swift` — the call site didn't even need to change.
+  `importedRecap`'s per-stop photo-selection loop became
+  `RecapDemoFilmTests.stopPhotoSelections(detail:full:)` in
+  `RecapDemoFilmStopPhotos.swift`, returning a `StopPhotoSelections` struct
+  (three dictionaries would have tripped `large_tuple`).
+
+**Ran `xcodegen generate` after adding each new file** — the `.xcodeproj` is
+generated and didn't pick up new files under `Tests/AppTests` until regenerated
+(silent "cannot find X in scope" otherwise; `Core/ExportEngine` picked up its new
+file without regenerating, so this is inconsistent — worth remembering, not worth
+chasing down further right now).
+
+### Two gates guard `CameraPath.swift` — reconfirmed green, not just assumed
+
+`RecapCameraContinuityTests` samples `cameraFrame(atTime:)` frame by frame (≥50%
+shared ground) and the subject-margin gate samples `position(atTime:)` (≤80% of
+the half-frame). Both ran and passed after the full split, not just after the
+`openingPlan` step.
+
+### Not yet done — the actual next action
+
+Everything above is done and verified. **Not yet committed or pushed.** Split
+into two commits, in this order, per Chiu's ask to read the `CameraPath` diff in
+isolation:
+
+1. **CameraPath split** — `Core/ExportEngine/CameraPath.swift`,
+   `CameraPathPrologue.swift`, `CameraPathCore.swift` (new).
+2. **The other four files' lint fixes** — `FollowCamera.swift`,
+   `CameraPathTests.swift` + `CameraPathContinuityTests.swift` (new),
+   `RecapPacingTests.swift` + `RecapPacingOpeningSequenceTests.swift` (new),
+   `RecapDemoFilmTests.swift` + `GPXFilmParser.swift` + `RecapDemoFilmAssets.swift`
+   + `RecapDemoFilmStopPhotos.swift` (all three new).
+
+Neither commit should include the unrelated uncommitted work below (`RecapMode`
+migration, `RecapReviewGeocoder`, etc.) — none of those files were touched by
+this pass. Push after both land; this gives CI its first real verdict on these
+90 commits.
 
 ---
 
@@ -23,17 +134,24 @@ state* on top of them — what is done, what is open, and why.
 
 **Not merged to main:** PR #11 holds until the §6 gate passes (owner call).
 
-## Uncommitted — the experiments still under evaluation
+## Uncommitted — as of 2026-08-07
 
-Deliberately out of history until Chiu picks a direction. All flags ship `false`,
-so none of it changes default behaviour:
+Verify against `git status`; this list goes stale fast.
 
-- `StopPhotoAllocator.allocate` — the 0–3 variable allocation (Variant A).
-- Uncapped duration (`RecapDurationPlan.uncapped`, `uncapped_enabled`).
-- `RecapReviewGeocoder` — real stop names in pilots (`KAMOME_GEOCODE_STOPS=1`).
-- `PHAsset.isFavorite` plumbed through `ImportPhoto` into `is_highlight`.
-- The opaque ice layer (see the glacier tradeoff below).
-- Quiet-stop pins for zero-photo stops (`LinearTimelineStopScene.quietStop`).
+**The `RecapMode` migration (complete, suite green, lint red):** `RecapMode.swift`,
+`TrackingConfigExportCopies.swift`, `RecapModeTests.swift` (4 tests, passing), and
+the exhaustive switches in `RecapComposer` / `RecapDurationPlan` /
+`StopPhotoAllocator`. `recap_mode: "highlight"` replaced `tiering_enabled`,
+`uncapped_enabled`, `photo_allocation_enabled` and `tier_skip_share` — **those keys
+no longer exist**; earlier notes in this file that mention them describe history.
+
+**Also uncommitted:** `RecapReviewGeocoder` (real pilot names,
+`KAMOME_GEOCODE_STOPS=1`), quiet-stop pins (`LinearTimelineStopScene.quietStop`),
+and in-progress edits to `CameraPath.swift` / `CameraPathPrologue.swift` from the
+lint work above.
+
+**Already committed** (do not redo): `PHAsset.isFavorite` plumbing and the opaque
+ice layer, both in `94a864e`.
 
 `Tests/Fixtures/trips/local/` is gitignored and always dirty by design; that is
 real trip data and must never be added.
@@ -98,11 +216,13 @@ and New Zealand 13/3, both just under the cliff.
 `RecapDeckBudgetTests.testARealScaleTripDoesNotCollapseToOnePhotoPerStop` builds a
 20-stop trip arithmetically and guards it. It is still wrapped in
 `XCTExpectFailure` **because it measures the default policy, which has not
-changed** — the fix lives behind `tiering_enabled`. Remove the expectation if and
-when the tiering policy becomes the default.
+changed** — it skips itself under `.highlight` (see `RecapDeckBudgetTests`), which
+is now the shipped `recap_mode`. Remove the expectation only when the default mode
+is one that provably prevents the collapse for every trip size.
 
-**Superseded and gone:** `tier_skip_share` as a tuning knob (it needed 0.82 for
-Iceland and 0.5 for NZ, which is what prompted the ADR). `StopWeighting`'s
+**Superseded and gone:** `tier_skip_share` as a tuning knob — the config key no
+longer exists (it needed 0.82 for Iceland and 0.5 for NZ, which is what prompted
+the ADR). `StopWeighting`'s
 waypoint threshold remains in the tree but was measured as far too conservative to
 matter — 8 of 65 stops on Iceland — and is not the mechanism anything relies on.
 
@@ -111,6 +231,86 @@ matter — 8 of 65 stops on Iceland — and is not the mechanism anything relies
 `KAMOME_BUDGET_DURATIONS`), and `KAMOME_FORCE_DURATION_S` in the render harness.
 
 ---
+
+## `stop_weighting_enabled` — reachable in BOTH modes, containment only empirical
+
+**Corrected 2026-08-07.** An earlier note in this file claimed it was "unreachable
+by construction" under `.highlight`. **That was wrong**, and the error was
+overclaiming a structural property from two datasets. Chiu asked for the verdict
+to be split per mode, which is what exposed it. Classified separately, both
+answers are *empirical*, and neither is safe to rely on for a removal PR.
+
+### Under `.highlight` — NOT dead by construction. Empirically zero on big trips only.
+
+Tiering keeps the top `keptStopCount` stops by score, and `StopWeighting` demotes
+stops with ≤ `waypoint_max_photos` (2) *and* a short dwell. Those sets are disjoint
+**only while the trip has more stops than the film can keep** — because then only
+heavily-photographed stops survive the cut.
+
+**When a trip has fewer stops than the budget keeps, every stop survives, including
+two-photo ones, and `StopWeighting` fires.** Measured at a 120 s film
+(`keptStopCount` = 11):
+
+| fixture | stops | waypoints under `.highlight` + weighting |
+|---|---:|---:|
+| Iceland | 65 | 0 |
+| New Zealand | 20 | 0 |
+| **Margaret River** | **4** | **1** ← fires |
+| Finland | 3 | 0 |
+
+So the "0 waypoints" result on Iceland and NZ is a consequence of those trips being
+*large*, not of the filters being mutually exclusive. A short trip reaches it.
+
+### Under `.full` — non-dead, and the containment is empirical too.
+
+It fires: 8 of 65 on Iceland, 1 of 20 on NZ. The claim that its targets are always
+inside the allocator's bottom-`allocation_zero_share` (40%) zeroing is **not
+structural**: the allocator ranks by *relative* score, so whether a two-photograph
+stop lands in the bottom 40% depends on the distribution of the rest of the trip.
+On a trip where most stops carry two photographs, a two-photograph stop can rank
+well above the 40th percentile and be given photos by the allocator that
+`StopWeighting` then strips.
+
+Iceland and New Zealand both have long, heavily-skewed tails (2 → 252 photographs),
+which is exactly the shape that makes containment hold. **It has not been shown to
+hold on a flat distribution, and no such trip has been tested.**
+
+### What this means before running `.full` on new data
+
+Chiu intends to use `.full`. Margaret River, Miyakojima and the WA trip have **not**
+been measured under it. `StopWeighting` applies *after* the mode in
+`RecapComposer`, so it can strip photographs the allocator granted — the mechanism
+is live, not theoretical.
+
+### The removal criterion (Chiu 2026-08-07) — decided in advance so it is not re-litigated
+
+Two **separate** questions, to be measured separately on Margaret River,
+Miyakojima and the WA trip under `.full`:
+
+1. **Structural eligibility** — does `stop_count <= keptStopCount` reliably predict
+   when `StopWeighting` fires? This is the technical question above: *can* the code
+   path execute, and is there a rule that says when.
+2. **Perceptual impact** — when it *does* fire, is the rendered film perceptibly
+   different? Render both ways and compare the actual output, not the stop table.
+
+They are complementary, not alternatives. A path can be technically live and
+visually irrelevant.
+
+**The criterion: if question 2 comes back "not distinguishable" consistently across
+all three trips, that is grounds to remove the feature outright — regardless of
+whether the code path still technically executes.** A live-but-invisible branch is
+not a reason to keep configuration surface.
+
+Conversely, a single trip where the film is visibly different keeps it, and the
+answer to question 1 then decides whether the trigger needs to become structural
+rather than incidental.
+
+**A removal PR must not cite "provably contained".** It must either measure the new
+datasets, or make the containment structural (e.g. run the classifier *before*
+allocation, or fold its threshold into the allocator's scoring).
+
+**Not removed** (Chiu 2026-08-07): timing and review scope, decided separately after
+the `RecapMode` migration lands and passes CI.
 
 ## Open question — RecapMode may be two axes, not one (Chiu 2026-08-06)
 

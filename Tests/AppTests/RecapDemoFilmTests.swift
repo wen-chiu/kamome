@@ -212,40 +212,17 @@ final class RecapDemoFilmTests: XCTestCase {
             config = config.withTotalDuration(min: forced, max: forced)
             print("KAMOME_FORCE_DURATION_S \(forced)")
         }
-        var photosByStop: [String: [PhotoRef]] = [:]
-        var rawPhotoCounts: [String: Int] = [:]
-        var favoriteCounts: [String: Int] = [:]
-        for stop in detail.stops {
-            let atStop = detail.photos.filter { $0.stopId == stop.id }
-            rawPhotoCounts[stop.id] = atStop.count
-            favoriteCounts[stop.id] = atStop.filter { $0.isHighlight != 0 }.count
-            // **The app's own selection** (`RecapModel.selectStopPhotoRefs`):
-            // highlight first, then evenly spread across the visit, capped at
-            // `deck_max_photos`. This used to be a hardcoded `.prefix(3)`, which
-            // meant no review render could ever show what the shipped app shows —
-            // a stop the app gives eight photographs was reviewed with three.
-            let ordered = detail.photos
-                .filter { $0.stopId == stop.id }
-                .sorted { lhs, rhs in
-                    if lhs.isHighlight != rhs.isHighlight { return lhs.isHighlight > rhs.isHighlight }
-                    return (lhs.takenAt ?? 0) < (rhs.takenAt ?? 0)
-                }
-                .map(\.phAssetId)
-            let selected = PhotoDeckSelector.evenlySpread(
-                ordered, min: full.photoImport.deckMinPhotos, max: full.photoImport.deckMaxPhotos
-            )
-            if !selected.isEmpty { photosByStop[stop.id] = selected.map(PhotoRef.asset) }
-        }
+        let selections = Self.stopPhotoSelections(detail: detail, full: full)
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
-            photosByStop: photosByStop,
+            photosByStop: selections.photosByStop,
             deck: RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
             labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
         ),
             stopHoldS: config.stopHoldS,
-            rawPhotoCounts: rawPhotoCounts,
-            favoriteCounts: favoriteCounts,
+            rawPhotoCounts: selections.rawPhotoCounts,
+            favoriteCounts: selections.favoriteCounts,
             weighting: config
         ))
         let waypoints = recap.stops.filter(\.photos.isEmpty).count
@@ -357,91 +334,4 @@ final class RecapDemoFilmTests: XCTestCase {
         return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-demo-film", isDirectory: true)
     }
 
-    /// A stand-in photo: a diagonal gradient with a big index, so each deck slot
-    /// is visibly a different picture.
-    private func photoTile(index: Int) throws -> CGImage {
-        let side = 900
-        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
-        let context = try XCTUnwrap(CGContext(
-            data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
-            space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        let palettes: [(CGColor, CGColor)] = [
-            (CGColor(srgbRed: 0.20, green: 0.45, blue: 0.70, alpha: 1),
-             CGColor(srgbRed: 0.10, green: 0.22, blue: 0.35, alpha: 1)),
-            (CGColor(srgbRed: 0.75, green: 0.45, blue: 0.30, alpha: 1),
-             CGColor(srgbRed: 0.38, green: 0.22, blue: 0.15, alpha: 1)),
-            (CGColor(srgbRed: 0.35, green: 0.60, blue: 0.40, alpha: 1),
-             CGColor(srgbRed: 0.18, green: 0.30, blue: 0.20, alpha: 1))
-        ]
-        let (top, bottom) = palettes[index % palettes.count]
-        let gradient = try XCTUnwrap(CGGradient(
-            colorsSpace: space, colors: [top, bottom] as CFArray, locations: [0, 1]
-        ))
-        context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: side, y: side), options: [])
-        let font = CTFontCreateWithName("HelveticaNeue-Bold" as CFString, 300, nil)
-        let attrs = [
-            kCTFontAttributeName: font,
-            kCTForegroundColorAttributeName: CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.85)
-        ] as CFDictionary
-        let line = CTLineCreateWithAttributedString(
-            CFAttributedStringCreate(kCFAllocatorDefault, "\(index + 1)" as CFString, attrs)!
-        )
-        let bounds = CTLineGetImageBounds(line, context)
-        context.textPosition = CGPoint(x: (CGFloat(side) - bounds.width) / 2, y: (CGFloat(side) - bounds.height) / 2)
-        CTLineDraw(line, context)
-        return try XCTUnwrap(context.makeImage())
-    }
-}
-
-/// Minimal GPX 1.1 `<trkpt>` reader — a hosted app test cannot import the
-/// CoreTests harness parser.
-private final class GPXFilmParser: NSObject, XMLParserDelegate {
-    private var points: [LocationSample] = []
-    private var currentLat: Double?
-    private var currentLon: Double?
-    private var currentTime: Double?
-    private var textBuffer = ""
-    private let iso = ISO8601DateFormatter()
-
-    func parse(contentsOf url: URL) throws -> [LocationSample] {
-        let parser = XMLParser(data: try Data(contentsOf: url))
-        parser.delegate = self
-        guard parser.parse() else {
-            throw parser.parserError ?? NSError(domain: "GPXFilmParser", code: 1)
-        }
-        return points
-    }
-
-    func parser(
-        _ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?,
-        qualifiedName: String?, attributes: [String: String] = [:]
-    ) {
-        textBuffer = ""
-        if elementName == "trkpt" {
-            currentLat = attributes["lat"].flatMap(Double.init)
-            currentLon = attributes["lon"].flatMap(Double.init)
-            currentTime = nil
-        }
-    }
-
-    func parser(_ parser: XMLParser, foundCharacters string: String) {
-        textBuffer += string
-    }
-
-    func parser(
-        _ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?
-    ) {
-        switch elementName {
-        case "time":
-            currentTime = iso.date(from: textBuffer.trimmingCharacters(in: .whitespacesAndNewlines))?
-                .timeIntervalSince1970
-        case "trkpt":
-            if let lat = currentLat, let lon = currentLon, let ts = currentTime {
-                points.append(LocationSample(ts: ts, lat: lat, lon: lon, hAccM: 10))
-            }
-        default:
-            break
-        }
-    }
 }
