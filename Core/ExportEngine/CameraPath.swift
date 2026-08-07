@@ -40,19 +40,6 @@ public struct CameraPath {
         }
     }
 
-    /// The vehicle (the subject): where the marker is drawn and which way it
-    /// faces. Projected through the snapshot by the compositor.
-    public struct Position: Equatable {
-        public let lat: Double
-        public let lon: Double
-        /// Direction of travel in degrees, 0 = north, clockwise. The route
-        /// tangent while travelling; the approach heading while holding.
-        public let heading: Double
-        /// Index into the `stops` array passed at init while the vehicle is
-        /// holding there, else nil. Drives the photo-card animation.
-        public let holdingStopIndex: Int?
-    }
-
     /// What the base-map snapshot is taken at (§4.5 step 2). `bearing` rotates
     /// the map heading-up; `spanM` is the horizontal ground span. Distinct from
     /// `Position`: in wide shots the camera frames the trip while the vehicle
@@ -68,25 +55,6 @@ public struct CameraPath {
         func withBearing(_ bearing: Double) -> CameraFrame {
             CameraFrame(centerLat: centerLat, centerLon: centerLon, spanM: spanM, bearing: bearing)
         }
-    }
-
-    // Internal (not private) so the time-budget extension in CameraPathActs.swift
-    // can build and read the speed-warped timeline.
-    enum Phase {
-        case travel(fromM: Double, toM: Double)
-        case hold(stopIndex: Int, atM: Double)
-    }
-
-    struct TimelineEntry {
-        let startS: Double
-        let endS: Double
-        let phase: Phase
-    }
-
-    public struct Hold: Equatable {
-        public let stopIndex: Int
-        public let startS: Double
-        public let endS: Double
     }
 
     public let frameCount: Int
@@ -189,69 +157,27 @@ public struct CameraPath {
         let total = totalDurationS ?? config.targetDurationS
         let frames = Int((total * Double(config.fps)).rounded())
 
-        // The prologue's real length is only known once its beats are built —
-        // near-duplicate beats collapse, so a trip whose region and route frame
-        // the same picture opens in far less than the configured sum. Lay out a
-        // provisional timeline first, purely to size the body span against a
-        // realistic travel budget.
-        let provisional = Self.buildTimeline(
-            anchors: anchors, totalM: totalM, config: config,
-            stopHoldsS: stopHoldsS, startS: 0, targetS: total
-        )
-        // Capped to what the installed region can actually draw. A trip that
-        // covers most of its region — the real Iceland ring road does — asks for
-        // a padded frame wider than the tiles, and beyond them there is no water
-        // layer, only the style's background, so the data boundary appears as a
-        // grey band across the film. The country beat learned this on 2026-08-02;
-        // the body span and the closing reveal had not (real-data Stage 0).
-        let span = Self.cappedToRegion(
-            RecapDurationPlan.bodySpanM(
-                routeDistanceM: totalM,
-                travelS: Self.travelSeconds(in: provisional),
-                routeBounds: Self.bounds(of: route),
-                config: config
-            ),
+        let span = Self.bodySpan(BodySpanRequest(
+            route: route, anchors: anchors, totalM: totalM,
+            stopHoldsS: stopHoldsS, totalDurationS: total,
             establishing: establishing, config: config
-        )
+        ))
         bodySpanM = span
 
-        // The wide beats only. The old third beat — a *stored* frame of the
-        // first act — is gone: the opening now zooms into the live follow camera,
-        // so the two can never disagree at the seam.
-        let builtPrologue = openingS > 0
-            ? Self.buildWideOpening(route: route, establishing: establishing, config: config, bodySpanM: span)
-            : nil
-        let wideEnd = max(min(builtPrologue?.totalS ?? 0, total), 0)
-        // **The closing zoom is skipped when it would not go anywhere** (Chiu
-        // 2026-08-02). Once the body span is wide enough to bind on the route's
-        // own extent, the body frame *is* the regional beat — same centre, same
-        // span — and the transition degenerates into 2.5 s of a camera easing
-        // from a picture to itself.
-        //
-        // Worse than idle: because the body camera centres on the journey's
-        // start rather than on the journey, a tighter body frame made this beat
-        // both a zoom and a ~150 km translate toward the first stop, which read
-        // as a redundant pan between the opening and the first stop's scene.
-        // Collapsing it cuts the opening straight into that scene.
-        let closingZoomMoves = builtPrologue.map { wide in
-            !Self.isEffectivelyTheSame(
-                wide.finalFrame,
-                Self.bodyFrame(route: route, spanM: span, config: config),
-                config: config
-            )
-        } ?? false
-        let opening = builtPrologue == nil
-            ? 0
-            : min(wideEnd + (closingZoomMoves ? config.zoomTransitionS : 0), total)
-        wideEndS = wideEnd
-
-        // The closing reveal is its own beat after the journey, never a zoom
-        // during it: the body's span is fixed by product rule.
-        let reveal = builtPrologue == nil ? 0 : config.endRevealS
-        let journeyEnd = max(total - journeyEndsBeforeS - reveal, opening)
+        // The wide beats, the closing-zoom handoff, and where the journey
+        // timeline itself starts and ends — all sized together in one call
+        // because each value depends on the one before it (Chiu 2026-08-07:
+        // pulled out of the initializer so the dependency chain reads as a
+        // single plan rather than six lets threaded through it).
+        let plan = Self.openingPlan(OpeningRequest(
+            route: route, establishing: establishing, config: config,
+            bodySpanM: span, openingS: openingS, totalDurationS: total,
+            journeyEndsBeforeS: journeyEndsBeforeS
+        ))
+        wideEndS = plan.wideEndS
         let journeyTimeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
-            stopHoldsS: stopHoldsS, startS: opening, targetS: journeyEnd
+            stopHoldsS: stopHoldsS, startS: plan.openingEndsS, targetS: plan.journeyEndS
         )
         timeline = journeyTimeline
         self.fps = config.fps
@@ -261,38 +187,15 @@ public struct CameraPath {
 
         zoomTransitionS = config.zoomTransitionS
         followHeadingUp = config.followHeadingUp
-        prologue = builtPrologue
-        openingEndsS = opening
+        prologue = plan.prologue
+        openingEndsS = plan.openingEndsS
 
-        // Simulate the body once. Through the opening the subject is pinned at
-        // the route's start, so those frames come out static for free and the
-        // track is already settled when the opening hands over to it.
-        let sampled = (0..<frames).map { frame -> (point: Point, parked: Bool) in
-            let time = Double(frame) / Double(config.fps)
-            let entry = journeyTimeline.last(where: { $0.startS <= min(max(time, 0), total) })
-                ?? journeyTimeline[0]
-            let distanceM = Self.distance(atTime: time, timeline: journeyTimeline, durationS: total)
-            let parked: Bool
-            if case .hold = entry.phase { parked = true } else { parked = false }
-            return (Self.coordinate(atDistance: distanceM, route: route, cumulativeM: cumulative), parked)
-        }
-        track = FollowCamera.track(
-            subject: sampled.map(\.point), parked: sampled.map(\.parked),
-            routeBounds: Self.bounds(of: route), spanM: span, config: config
-        )
-        endRevealStartS = reveal > 0 ? journeyEnd : nil
-        // The closing frame opens out *past* the body, so the film lands on the
-        // whole journey with room around it rather than merely stopping. With a
-        // wide body span the two would otherwise be the same picture and the
-        // reveal would have nothing to reveal (Chiu 2026-08-02).
-        let revealFrame = Self.frame(
-            for: Self.bounds(of: route), config: config, padding: config.endRevealPadding
-        )
-        endRevealFrame = CameraFrame(
-            centerLat: revealFrame.centerLat, centerLon: revealFrame.centerLon,
-            spanM: Self.cappedToRegion(revealFrame.spanM, establishing: establishing, config: config),
-            bearing: 0
-        )
+        track = Self.simulatedTrack(TrackRequest(
+            route: route, cumulativeM: cumulative, journeyTimeline: journeyTimeline,
+            frameCount: frames, fps: config.fps, durationS: total, spanM: span, config: config
+        ))
+        endRevealStartS = plan.revealS > 0 ? plan.journeyEndS : nil
+        endRevealFrame = Self.endRevealFrame(route: route, establishing: establishing, config: config)
     }
 
     /// How long the opening actually runs, after collapsing beats that do not
@@ -316,27 +219,6 @@ public struct CameraPath {
     public var permittedCutTimesS: [Double] {
         Self.discontinuities(route: route, cumulativeM: cumulativeM, config: cutConfig)
             .map { Self.time(atDistance: $0.distanceM, timeline: timeline, durationS: durationS) }
-    }
-
-    /// Anchor each stop to its nearest route vertex, ordered along the path.
-    private static func stopAnchors(
-        route: [Point],
-        cumulativeM: [Double],
-        stops: [Point]
-    ) -> [(stopIndex: Int, distanceM: Double)] {
-        stops.enumerated().map { index, stop in
-            var bestVertex = 0
-            var bestDistance = Double.greatestFiniteMagnitude
-            for (vertex, point) in route.enumerated() {
-                let distance = Geo.distanceM(latA: stop.lat, lonA: stop.lon, latB: point.lat, lonB: point.lon)
-                if distance < bestDistance {
-                    bestDistance = distance
-                    bestVertex = vertex
-                }
-            }
-            return (index, cumulativeM[bestVertex])
-        }
-        .sorted { $0.distanceM < $1.distanceM }
     }
 
     public func position(atFrame frame: Int) -> Position {
@@ -403,62 +285,6 @@ public struct CameraPath {
         return Self.confine(composed, around: subject, config: cutConfig).withBearing(bearing)
     }
 
-    /// A span no wider than the installed region can cover. Without an extent
-    /// there are no tiles to fall off, so the ask stands.
-    static func cappedToRegion(
-        _ spanM: Double, establishing: RecapBounds?, config: TrackingConfig.Export
-    ) -> Double {
-        guard let establishing else { return spanM }
-        let bounds = Bounds(
-            minLat: establishing.minLat, maxLat: establishing.maxLat,
-            minLon: establishing.minLon, maxLon: establishing.maxLon
-        )
-        return min(spanM, max(containedSpanM(bounds: bounds, config: config), config.cameraSpanM))
-    }
-
-    /// Where the body camera settles: the route's own framing at `spanM`, which
-    /// is what the follow simulation converges on once the world clamp has had
-    /// its say. Computed here too so the opening can ask "would my closing zoom
-    /// actually move?" before the track exists.
-    private static func bodyFrame(
-        route: [Point], spanM: Double, config: TrackingConfig.Export
-    ) -> CameraFrame {
-        let bounds = Self.bounds(of: route)
-        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
-        let metresPerDegreeLat = 111_320.0
-        let midLat = (bounds.minLat + bounds.maxLat) / 2
-        let metresPerDegreeLon = 111_320.0 * cos(midLat * .pi / 180)
-        // The same clamp `FollowCamera` applies: start on the route's first point,
-        // held inside the route's own box.
-        let halfLat = spanM * aspect / 2 / metresPerDegreeLat
-        let halfLon = spanM / 2 / metresPerDegreeLon
-        let lat = bounds.minLat + halfLat > bounds.maxLat - halfLat
-            ? midLat
-            : min(max(route[0].lat, bounds.minLat + halfLat), bounds.maxLat - halfLat)
-        let lon = bounds.minLon + halfLon > bounds.maxLon - halfLon
-            ? (bounds.minLon + bounds.maxLon) / 2
-            : min(max(route[0].lon, bounds.minLon + halfLon), bounds.maxLon - halfLon)
-        return CameraFrame(centerLat: lat, centerLon: lon, spanM: spanM, bearing: 0)
-    }
-
-    /// Pulls a frame the minimum distance that keeps `subject` inside the inner
-    /// `camera_safe_zone_fraction`. A no-op whenever it already is.
-    private static func confine(
-        _ frame: CameraFrame, around subject: Position, config: TrackingConfig.Export
-    ) -> CameraFrame {
-        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
-        let metresPerDegreeLat = 111_320.0
-        let metresPerDegreeLon = 111_320.0 * cos(subject.lat * .pi / 180)
-        let halfLonDeg = frame.spanM / 2 * config.cameraSafeZoneFraction / metresPerDegreeLon
-        let halfLatDeg = frame.spanM * aspect / 2 * config.cameraSafeZoneFraction / metresPerDegreeLat
-        return CameraFrame(
-            centerLat: min(max(frame.centerLat, subject.lat - halfLatDeg), subject.lat + halfLatDeg),
-            centerLon: min(max(frame.centerLon, subject.lon - halfLonDeg), subject.lon + halfLonDeg),
-            spanM: frame.spanM,
-            bearing: frame.bearing
-        )
-    }
-
     /// The simulated body frame covering `time`, clamped to the track.
     private func trackFrame(atTime time: Double) -> CameraFrame {
         guard !track.isEmpty else { return CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0) }
@@ -508,45 +334,6 @@ public struct CameraPath {
         }
     }
 
-    /// Along-route distance at `time`, without needing an instance — the camera
-    /// track is simulated during `init`, before `self` is usable.
-    static func distance(atTime time: Double, timeline: [TimelineEntry], durationS: Double) -> Double {
-        let clamped = min(max(time, 0), durationS)
-        let entry = timeline.last(where: { $0.startS <= clamped }) ?? timeline[0]
-        switch entry.phase {
-        case let .hold(_, atM):
-            return atM
-        case let .travel(fromM, toM):
-            let span = entry.endS - entry.startS
-            let progress = span > 0 ? (clamped - entry.startS) / span : 1
-            return fromM + (toM - fromM) * smoothstep(min(max(progress, 0), 1))
-        }
-    }
-
-    /// Film seconds spent travelling in `timeline` — the body span's denominator.
-    static func travelSeconds(in timeline: [TimelineEntry]) -> Double {
-        timeline.reduce(0.0) { total, entry in
-            guard case let .travel(fromM, toM) = entry.phase, toM > fromM else { return total }
-            return total + max(entry.endS - entry.startS, 0)
-        }
-    }
-
-    static func coordinate(atDistance distanceM: Double, route: [Point], cumulativeM: [Double]) -> Point {
-        var low = 0
-        var high = cumulativeM.count - 1
-        while low + 1 < high {
-            let mid = (low + high) / 2
-            if cumulativeM[mid] <= distanceM { low = mid } else { high = mid }
-        }
-        let spanM = cumulativeM[high] - cumulativeM[low]
-        guard spanM > 0 else { return route[low] }
-        let fraction = min(max((distanceM - cumulativeM[low]) / spanM, 0), 1)
-        return Point(
-            lat: route[low].lat + (route[high].lat - route[low].lat) * fraction,
-            lon: route[low].lon + (route[high].lon - route[low].lon) * fraction
-        )
-    }
-
     private func coordinate(atDistance distanceM: Double) -> Point {
         Self.coordinate(atDistance: distanceM, route: route, cumulativeM: cumulativeM)
     }
@@ -566,10 +353,4 @@ public struct CameraPath {
     /// Same easing, reachable from the prologue extension so the opening moves
     /// feel like the act seams rather than like a separate title sequence.
     static func smoothstepPublic(_ progress: Double) -> Double { smoothstep(progress) }
-
-    /// Ease-in/out (§4.5): zero velocity at both ends of every travel leg.
-    private static func smoothstep(_ progress: Double) -> Double {
-        let clamped = min(max(progress, 0), 1)
-        return clamped * clamped * (3 - 2 * clamped)
-    }
 }

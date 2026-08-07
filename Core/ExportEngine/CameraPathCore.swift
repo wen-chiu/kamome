@@ -1,0 +1,263 @@
+import Foundation
+import KamomeConfig
+import KamomeTrackingEngine
+
+/// Nested types and pure statics moved out of `CameraPath` itself (Chiu
+/// 2026-08-07, "option 1" of the lint split). None of this touches instance
+/// state — every function here takes what it needs as arguments, which is
+/// exactly what let it move without widening any stored property's access.
+///
+/// **Why this shape, not the construction/sampling split that was tried
+/// first:** `private` is file-scoped in Swift, so an `extension CameraPath` in
+/// another file cannot see the stored properties (`fps`, `followHeadingUp`,
+/// `prologue`, `endRevealStartS`, `endRevealFrame`, `cutConfig`, …). Splitting
+/// along "what builds the path" vs. "what samples it" would have forced ~10 of
+/// them from `private` to `internal` just to satisfy the compiler — trading the
+/// camera's encapsulation for a lint rule, on a file two continuity gates
+/// depend on. Chiu rejected that. This split instead takes only what was
+/// already free of `self`: two small value types used as the timeline's
+/// currency, and the static math that computes over them.
+extension CameraPath {
+    /// The vehicle (the subject): where the marker is drawn and which way it
+    /// faces. Projected through the snapshot by the compositor.
+    public struct Position: Equatable {
+        public let lat: Double
+        public let lon: Double
+        /// Direction of travel in degrees, 0 = north, clockwise. The route
+        /// tangent while travelling; the approach heading while holding.
+        public let heading: Double
+        /// Index into the `stops` array passed at init while the vehicle is
+        /// holding there, else nil. Drives the photo-card animation.
+        public let holdingStopIndex: Int?
+    }
+
+    // Internal (not private) so the time-budget extension in CameraPathActs.swift
+    // can build and read the speed-warped timeline.
+    enum Phase {
+        case travel(fromM: Double, toM: Double)
+        case hold(stopIndex: Int, atM: Double)
+    }
+
+    struct TimelineEntry {
+        let startS: Double
+        let endS: Double
+        let phase: Phase
+    }
+
+    public struct Hold: Equatable {
+        public let stopIndex: Int
+        public let startS: Double
+        public let endS: Double
+    }
+
+    /// Anchor each stop to its nearest route vertex, ordered along the path.
+    static func stopAnchors(
+        route: [Point],
+        cumulativeM: [Double],
+        stops: [Point]
+    ) -> [(stopIndex: Int, distanceM: Double)] {
+        stops.enumerated().map { index, stop in
+            var bestVertex = 0
+            var bestDistance = Double.greatestFiniteMagnitude
+            for (vertex, point) in route.enumerated() {
+                let distance = Geo.distanceM(latA: stop.lat, lonA: stop.lon, latB: point.lat, lonB: point.lon)
+                if distance < bestDistance {
+                    bestDistance = distance
+                    bestVertex = vertex
+                }
+            }
+            return (index, cumulativeM[bestVertex])
+        }
+        .sorted { $0.distanceM < $1.distanceM }
+    }
+
+    /// A span no wider than the installed region can cover. Without an extent
+    /// there are no tiles to fall off, so the ask stands.
+    static func cappedToRegion(
+        _ spanM: Double, establishing: RecapBounds?, config: TrackingConfig.Export
+    ) -> Double {
+        guard let establishing else { return spanM }
+        let bounds = Bounds(
+            minLat: establishing.minLat, maxLat: establishing.maxLat,
+            minLon: establishing.minLon, maxLon: establishing.maxLon
+        )
+        return min(spanM, max(containedSpanM(bounds: bounds, config: config), config.cameraSpanM))
+    }
+
+    /// Where the body camera settles: the route's own framing at `spanM`, which
+    /// is what the follow simulation converges on once the world clamp has had
+    /// its say. Computed here too so the opening can ask "would my closing zoom
+    /// actually move?" before the track exists.
+    static func bodyFrame(
+        route: [Point], spanM: Double, config: TrackingConfig.Export
+    ) -> CameraFrame {
+        let bounds = Self.bounds(of: route)
+        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        let metresPerDegreeLat = 111_320.0
+        let midLat = (bounds.minLat + bounds.maxLat) / 2
+        let metresPerDegreeLon = 111_320.0 * cos(midLat * .pi / 180)
+        // The same clamp `FollowCamera` applies: start on the route's first point,
+        // held inside the route's own box.
+        let halfLat = spanM * aspect / 2 / metresPerDegreeLat
+        let halfLon = spanM / 2 / metresPerDegreeLon
+        let lat = bounds.minLat + halfLat > bounds.maxLat - halfLat
+            ? midLat
+            : min(max(route[0].lat, bounds.minLat + halfLat), bounds.maxLat - halfLat)
+        let lon = bounds.minLon + halfLon > bounds.maxLon - halfLon
+            ? (bounds.minLon + bounds.maxLon) / 2
+            : min(max(route[0].lon, bounds.minLon + halfLon), bounds.maxLon - halfLon)
+        return CameraFrame(centerLat: lat, centerLon: lon, spanM: spanM, bearing: 0)
+    }
+
+    /// Pulls a frame the minimum distance that keeps `subject` inside the inner
+    /// `camera_safe_zone_fraction`. A no-op whenever it already is.
+    static func confine(
+        _ frame: CameraFrame, around subject: Position, config: TrackingConfig.Export
+    ) -> CameraFrame {
+        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        let metresPerDegreeLat = 111_320.0
+        let metresPerDegreeLon = 111_320.0 * cos(subject.lat * .pi / 180)
+        let halfLonDeg = frame.spanM / 2 * config.cameraSafeZoneFraction / metresPerDegreeLon
+        let halfLatDeg = frame.spanM * aspect / 2 * config.cameraSafeZoneFraction / metresPerDegreeLat
+        return CameraFrame(
+            centerLat: min(max(frame.centerLat, subject.lat - halfLatDeg), subject.lat + halfLatDeg),
+            centerLon: min(max(frame.centerLon, subject.lon - halfLonDeg), subject.lon + halfLonDeg),
+            spanM: frame.spanM,
+            bearing: frame.bearing
+        )
+    }
+
+    /// Along-route distance at `time`, without needing an instance — the camera
+    /// track is simulated during `init`, before `self` is usable.
+    static func distance(atTime time: Double, timeline: [TimelineEntry], durationS: Double) -> Double {
+        let clamped = min(max(time, 0), durationS)
+        let entry = timeline.last(where: { $0.startS <= clamped }) ?? timeline[0]
+        switch entry.phase {
+        case let .hold(_, atM):
+            return atM
+        case let .travel(fromM, toM):
+            let span = entry.endS - entry.startS
+            let progress = span > 0 ? (clamped - entry.startS) / span : 1
+            return fromM + (toM - fromM) * smoothstep(min(max(progress, 0), 1))
+        }
+    }
+
+    /// Film seconds spent travelling in `timeline` — the body span's denominator.
+    static func travelSeconds(in timeline: [TimelineEntry]) -> Double {
+        timeline.reduce(0.0) { total, entry in
+            guard case let .travel(fromM, toM) = entry.phase, toM > fromM else { return total }
+            return total + max(entry.endS - entry.startS, 0)
+        }
+    }
+
+    static func coordinate(atDistance distanceM: Double, route: [Point], cumulativeM: [Double]) -> Point {
+        var low = 0
+        var high = cumulativeM.count - 1
+        while low + 1 < high {
+            let mid = (low + high) / 2
+            if cumulativeM[mid] <= distanceM { low = mid } else { high = mid }
+        }
+        let spanM = cumulativeM[high] - cumulativeM[low]
+        guard spanM > 0 else { return route[low] }
+        let fraction = min(max((distanceM - cumulativeM[low]) / spanM, 0), 1)
+        return Point(
+            lat: route[low].lat + (route[high].lat - route[low].lat) * fraction,
+            lon: route[low].lon + (route[high].lon - route[low].lon) * fraction
+        )
+    }
+
+    /// Ease-in/out (§4.5): zero velocity at both ends of every travel leg.
+    static func smoothstep(_ progress: Double) -> Double {
+        let clamped = min(max(progress, 0), 1)
+        return clamped * clamped * (3 - 2 * clamped)
+    }
+
+    /// What `bodySpan` needs — grouped so the call reads as one value instead
+    /// of seven positional arguments.
+    struct BodySpanRequest {
+        let route: [Point]
+        let anchors: [(stopIndex: Int, distanceM: Double)]
+        let totalM: Double
+        let stopHoldsS: [Double]?
+        let totalDurationS: Double
+        let establishing: RecapBounds?
+        let config: TrackingConfig.Export
+    }
+
+    /// The trip's one body span, capped to whatever region tiles are installed.
+    ///
+    /// Needs a provisional timeline first: the prologue's real length is only
+    /// known once its beats are built (near-duplicate beats collapse), so a
+    /// trip whose region and route frame the same picture opens in far less
+    /// than the configured sum, and the body span has to be sized against that
+    /// *realistic* travel budget rather than the nominal one.
+    static func bodySpan(_ request: BodySpanRequest) -> Double {
+        let provisional = buildTimeline(
+            anchors: request.anchors, totalM: request.totalM, config: request.config,
+            stopHoldsS: request.stopHoldsS, startS: 0, targetS: request.totalDurationS
+        )
+        // Capped to what the installed region can actually draw. A trip that
+        // covers most of its region — the real Iceland ring road does — asks for
+        // a padded frame wider than the tiles, and beyond them there is no water
+        // layer, only the style's background, so the data boundary appears as a
+        // grey band across the film. The country beat learned this on 2026-08-02;
+        // the body span and the closing reveal had not (real-data Stage 0).
+        return cappedToRegion(
+            RecapDurationPlan.bodySpanM(
+                routeDistanceM: request.totalM,
+                travelS: travelSeconds(in: provisional),
+                routeBounds: bounds(of: request.route),
+                config: request.config
+            ),
+            establishing: request.establishing, config: request.config
+        )
+    }
+
+    /// What `simulatedTrack` needs — grouped so the call reads as one value
+    /// instead of eight positional arguments.
+    struct TrackRequest {
+        let route: [Point]
+        let cumulativeM: [Double]
+        let journeyTimeline: [TimelineEntry]
+        let frameCount: Int
+        let fps: Int
+        let durationS: Double
+        let spanM: Double
+        let config: TrackingConfig.Export
+    }
+
+    /// Pre-simulates the body camera for every frame of the journey. Through
+    /// the opening the subject is pinned at the route's start, so those frames
+    /// come out static for free and the track is already settled when the
+    /// opening hands over to it.
+    static func simulatedTrack(_ request: TrackRequest) -> [CameraFrame] {
+        let sampled = (0..<request.frameCount).map { frame -> (point: Point, parked: Bool) in
+            let time = Double(frame) / Double(request.fps)
+            let entry = request.journeyTimeline.last(where: { $0.startS <= min(max(time, 0), request.durationS) })
+                ?? request.journeyTimeline[0]
+            let distanceM = distance(atTime: time, timeline: request.journeyTimeline, durationS: request.durationS)
+            let parked: Bool
+            if case .hold = entry.phase { parked = true } else { parked = false }
+            return (coordinate(atDistance: distanceM, route: request.route, cumulativeM: request.cumulativeM), parked)
+        }
+        return FollowCamera.track(
+            subject: sampled.map(\.point), parked: sampled.map(\.parked),
+            routeBounds: bounds(of: request.route), spanM: request.spanM, config: request.config
+        )
+    }
+
+    /// The closing reveal frame: opens out *past* the body so the film lands on
+    /// the whole journey with room around it rather than merely stopping. With
+    /// a wide body span the two would otherwise be the same picture and the
+    /// reveal would have nothing to reveal (Chiu 2026-08-02).
+    static func endRevealFrame(
+        route: [Point], establishing: RecapBounds?, config: TrackingConfig.Export
+    ) -> CameraFrame {
+        let revealFrame = frame(for: bounds(of: route), config: config, padding: config.endRevealPadding)
+        return CameraFrame(
+            centerLat: revealFrame.centerLat, centerLon: revealFrame.centerLon,
+            spanM: cappedToRegion(revealFrame.spanM, establishing: establishing, config: config),
+            bearing: 0
+        )
+    }
+}

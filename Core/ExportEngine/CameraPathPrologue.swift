@@ -190,6 +190,80 @@ extension CameraPath {
         )
     }
 
+    /// What `openingPlan` needs from the initializer — grouped so the call
+    /// reads as one value instead of seven positional arguments.
+    struct OpeningRequest {
+        let route: [Point]
+        let establishing: RecapBounds?
+        let config: TrackingConfig.Export
+        let bodySpanM: Double
+        let openingS: Double
+        let totalDurationS: Double
+        let journeyEndsBeforeS: Double
+    }
+
+    /// Where the opening ends and the journey begins — everything `CameraPath.init`
+    /// used to compute as six separate `let`s between the body span and the
+    /// journey timeline.
+    struct OpeningPlan {
+        let prologue: Prologue?
+        let wideEndS: Double
+        let openingEndsS: Double
+        let revealS: Double
+        let journeyEndS: Double
+    }
+
+    /// Lays out the opening and the handoff into the journey, in the order each
+    /// value depends on the last: the wide beats first (they need the body span
+    /// to know whether they'd collapse against it), then whether the closing
+    /// zoom moves at all, then when the opening hands over to the body camera,
+    /// then how long the closing reveal holds, then where the journey timeline
+    /// itself ends. Pulled out of `CameraPath.init` (Chiu 2026-08-07) so that
+    /// chain reads as one place rather than six `let`s threaded through the
+    /// initializer.
+    static func openingPlan(_ request: OpeningRequest) -> OpeningPlan {
+        let route = request.route, establishing = request.establishing, config = request.config
+        let bodySpanM = request.bodySpanM, total = request.totalDurationS
+        // The wide beats only. The old third beat — a *stored* frame of the
+        // first act — is gone: the opening now zooms into the live follow
+        // camera, so the two can never disagree at the seam.
+        let builtPrologue = request.openingS > 0
+            ? buildWideOpening(route: route, establishing: establishing, config: config, bodySpanM: bodySpanM)
+            : nil
+        let wideEnd = max(min(builtPrologue?.totalS ?? 0, total), 0)
+        // **The closing zoom is skipped when it would not go anywhere** (Chiu
+        // 2026-08-02). Once the body span is wide enough to bind on the route's
+        // own extent, the body frame *is* the regional beat — same centre, same
+        // span — and the transition degenerates into 2.5 s of a camera easing
+        // from a picture to itself.
+        //
+        // Worse than idle: because the body camera centres on the journey's
+        // start rather than on the journey, a tighter body frame made this beat
+        // both a zoom and a ~150 km translate toward the first stop, which read
+        // as a redundant pan between the opening and the first stop's scene.
+        // Collapsing it cuts the opening straight into that scene.
+        let closingZoomMoves = builtPrologue.map { wide in
+            !isEffectivelyTheSame(
+                wide.finalFrame,
+                CameraPath.bodyFrame(route: route, spanM: bodySpanM, config: config),
+                config: config
+            )
+        } ?? false
+        let opening = builtPrologue == nil
+            ? 0
+            : min(wideEnd + (closingZoomMoves ? config.zoomTransitionS : 0), total)
+
+        // The closing reveal is its own beat after the journey, never a zoom
+        // during it: the body's span is fixed by product rule.
+        let reveal = builtPrologue == nil ? 0 : config.endRevealS
+        let journeyEnd = max(total - request.journeyEndsBeforeS - reveal, opening)
+
+        return OpeningPlan(
+            prologue: builtPrologue, wideEndS: wideEnd,
+            openingEndsS: opening, revealS: reveal, journeyEndS: journeyEnd
+        )
+    }
+
     /// Interpolation between two framings.
     ///
     /// **Span moves geometrically, not linearly** — this is what made the opening
