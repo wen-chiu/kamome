@@ -37,6 +37,8 @@ for name in $(region_names); do
 
   echo "✓ $name — $(du -h "$TILE_DIR/$out" | cut -f1)"
   "$REPO_DIR/Tools/pmtiles-bounds.sh" "$TILE_DIR/$out"
+  # Covering the trip is not enough — regions.json _establishing_headroom.
+  "$REPO_DIR/Tools/tile-headroom.sh" "$TILE_DIR/$out"
   echo
 done
 

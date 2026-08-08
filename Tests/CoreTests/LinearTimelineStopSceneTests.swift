@@ -36,7 +36,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     /// is the whole mechanism behind the dashed inferred stroke.
     func testRevealSplitsBackIntoLegsCarryingModeAndProvenance() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: mixedProvenanceTrip(config: config), config: config))
+        let timeline = try fixedTimeline(mixedProvenanceTrip(config: config), config)
 
         // Early: only the drive leg has been reached.
         let early = revealedLegs(timeline.overlayContents(atTime: config.targetDurationS * 0.2))
@@ -55,7 +55,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     /// vehicle.
     func testRevealedLegsStayContinuousAndEndAtTheSubject() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: mixedProvenanceTrip(config: config), config: config))
+        let timeline = try fixedTimeline(mixedProvenanceTrip(config: config), config)
 
         var time = 0.5
         while time < timeline.durationS {
@@ -97,7 +97,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     /// the next leg — never blink out.
     func testCarArrivesParksStaysAwayThenPullsAwayAgain() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: sampleTrip(photoCounts: [3], config: config), config: config))
+        let timeline = try fixedTimeline(sampleTrip(photoCounts: [3], config: config), config)
         let window = try firstHoldWindow(timeline)
 
         XCTAssertEqual(timeline.subjectState(atTime: window.start - 0.1).emphasis, 1, accuracy: 1e-6,
@@ -128,7 +128,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     /// car; if it lagged, the map would be briefly empty.
     func testStopIdentityIsHandedFromTheCarToThePinAsItParks() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: sampleTrip(photoCounts: [3], config: config), config: config))
+        let timeline = try fixedTimeline(sampleTrip(photoCounts: [3], config: config), config)
         let window = try firstHoldWindow(timeline)
 
         func labelOpacity(_ time: Double) -> Double {
@@ -153,7 +153,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     func testThePinIsWhereTheCarParked() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         let window = try firstHoldWindow(timeline)
 
         let parkedAt = timeline.subjectState(atTime: window.start)
@@ -175,7 +175,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     func testTheCardIsGoneBeforeTheCarComesBack() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
         func visibleDeck(_ time: Double) -> Bool {
             guard let deck = activePhotoDeck(timeline.overlayContents(atTime: time)) else { return false }
@@ -201,7 +201,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
     /// glitch, not as a stop. The route-only path (photos off) hits this.
     func testAPhotolessStopNeverParksTheCar() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: sampleTrip(photoCounts: [0], config: config), config: config))
+        let timeline = try fixedTimeline(sampleTrip(photoCounts: [0], config: config), config)
 
         for time in stride(from: 0.0, through: timeline.durationS, by: 1.0 / 30) {
             XCTAssertEqual(timeline.subjectState(atTime: time).emphasis, 1, accuracy: 1e-6,

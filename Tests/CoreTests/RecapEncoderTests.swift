@@ -43,7 +43,7 @@ final class RecapEncoderTests: XCTestCase {
             route: route, stops: [stop], title: "Trip", subtitle: "Sub",
             statsLines: [], callToAction: "", shareURL: "kamome://route/test"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = RecapStyle()
         let compositor = FrameCompositor(
             timeline: timeline,

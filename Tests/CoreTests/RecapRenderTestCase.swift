@@ -157,7 +157,7 @@ class RecapRenderTestCase: XCTestCase {
     }
 
     func makeTimeline(_ trip: RecapTrip, config: TrackingConfig.Export) throws -> LinearTimeline {
-        try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
     }
 
     /// A compositor over the subject + overlay renderers, on the shipped north-up

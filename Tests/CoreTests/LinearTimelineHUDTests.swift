@@ -55,7 +55,7 @@ final class LinearTimelineHUDTests: LinearTimelineTestCase {
     /// no day and no distance at all.
     func testHUDIsOnScreenWhileTravellingNotOnlyAtStops() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: multiDayTrip(config: config), config: config))
+        let timeline = try fixedTimeline(multiDayTrip(config: config), config)
         let samples = sample(timeline)
 
         XCTAssertFalse(samples.isEmpty, "the HUD must draw at all")
@@ -74,7 +74,7 @@ final class LinearTimelineHUDTests: LinearTimelineTestCase {
     /// than jumping at each stop.
     func testDistanceIsARunningTotalThatOnlyClimbs() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: multiDayTrip(config: config), config: config))
+        let timeline = try fixedTimeline(multiDayTrip(config: config), config)
         let samples = sample(timeline)
 
         for (previous, next) in zip(samples, samples.dropFirst()) {
@@ -100,7 +100,7 @@ final class LinearTimelineHUDTests: LinearTimelineTestCase {
     /// just left rather than from the one not yet arrived at.
     func testDayHoldsFromTheStopJustLeftUntilTheNextIsReached() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: multiDayTrip(config: config), config: config))
+        let timeline = try fixedTimeline(multiDayTrip(config: config), config)
         let samples = sample(timeline)
 
         XCTAssertEqual(try XCTUnwrap(samples.first).dayLabel, "Day 1", "the film opens on the trip's first day")
@@ -123,7 +123,7 @@ final class LinearTimelineHUDTests: LinearTimelineTestCase {
     /// a centred title stack is clutter, and the distance there reads "0 km".
     func testHUDStandsDownUnderTheTitleAndEndCards() throws {
         let config = exportConfig()
-        let timeline = try XCTUnwrap(LinearTimeline(trip: multiDayTrip(config: config), config: config))
+        let timeline = try fixedTimeline(multiDayTrip(config: config), config)
         let samples = sample(timeline)
         let times = samples.map(\.time)
 

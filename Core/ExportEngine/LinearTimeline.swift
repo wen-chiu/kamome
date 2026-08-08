@@ -74,28 +74,46 @@ public struct LinearTimeline {
 
     /// Fails on the same degenerate input as `CameraPath` (no usable route).
     ///
-    /// `establishing` is the installed map region's extent — what the opening
-    /// establishing shot frames (Chiu 2026-07-30). Passing nil keeps the film
-    /// exactly as it was: no prologue, `export.target_duration_s`, so every
-    /// golden-frame test renders unchanged.
-    public init?(trip: RecapTrip, config: TrackingConfig.Export, establishing: RecapBounds? = nil) {
+    /// **`establishing` and `pacing` are two different facts** (Chiu 2026-08-08).
+    ///
+    /// `establishing` is the installed map region's extent: a **rendering** fact,
+    /// true only of the vector-tile substrate, and used for exactly two things —
+    /// what the opening establishing shot frames, and the span cap that stops the
+    /// camera framing ground the tiles cannot draw.
+    ///
+    /// `pacing` is a **story** fact: how long the film runs and how its time is
+    /// shared between stops, which follows from how many stops there are and how
+    /// many photographs each carries. It must never depend on which tiles happen
+    /// to be installed.
+    ///
+    /// Until now a nil `establishing` meant *both* "no tiles" and "give me a short
+    /// fixed-length film with no prologue", because the deterministic harnesses
+    /// used nil to ask for the latter. That coupling made every trip outside an
+    /// installed region come out 30 s long with no opening, for reasons that had
+    /// nothing to do with its content. Harnesses now say `.fixed` and mean it.
+    public init?(
+        trip: RecapTrip,
+        config: TrackingConfig.Export,
+        establishing: RecapBounds? = nil,
+        pacing: RecapPacing = .contentDerived
+    ) {
         let route = trip.route
         let routePoints = route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
-        // Duration follows content when an establishing extent is supplied — the
-        // cinematic path. `RecapDurationPlan` sizes each stop from its own photo
-        // count and fits the whole film into the target window.
+        // `RecapDurationPlan` sizes each stop from its own photo count and fits
+        // the whole film into the target window; `.fixed` skips it for a known
+        // length. Either way this reads the trip, never the map.
         //
         // A stop's hold has to cover the whole scene, not just the photos: the car
         // parks on the way in and pulls away on the way out, and those beats are
         // *added* around the deck rather than taken out of it — otherwise every
         // stop would silently lose `2 · subject_park_s` of photo time.
-        let (plan, stopHolds) = Self.pacing(for: trip, config: config, establishing: establishing)
+        let (plan, stopHolds) = Self.pacing(for: trip, config: config, pacing: pacing)
 
         guard let path = CameraPath(
             route: routePoints, stops: stopPoints, config: config,
             stopHoldsS: stopHolds,
-            totalDurationS: plan?.totalS,
+            totalDurationS: plan?.totalS ?? pacing.fixedTotalS,
             establishing: establishing,
             openingS: plan?.openingS ?? 0,
             // The finale gets the frame to itself: the journey lands before the
@@ -175,47 +193,38 @@ public struct LinearTimeline {
         return (max(opensOnStop.endS - park, openingS), opensOnStop.endS)
     }
 
-    /// The film's pacing: a content-derived plan when a map region is installed,
-    /// otherwise the trip's own dwells at the old fixed duration. Either way the
-    /// returned holds already carry the park beats, which are *added* around each
-    /// deck rather than taken out of it.
     /// How long the film runs and how its time is shared out.
     ///
-    /// ⚠️ **Known defect, deliberately still here (2026-08-01).** Pacing is gated
-    /// on `establishing != nil` — that is, on whether a vector-tile region happens
-    /// to be installed for this trip. It should not be: how many stops a trip has
-    /// and how many photographs each one carries is a *story* fact, while which
-    /// tiles are on the device is a *rendering* fact.
+    /// A **story** decision, so it reads only the trip and the config — never the
+    /// map. `.contentDerived` sizes the film from its own content
+    /// (`RecapDurationPlan`); `.fixed` is the deterministic harness path, which
+    /// wants a known length and no prologue so a golden frame means something.
     ///
-    /// A trip no single region covers therefore falls back to the retired flat
-    /// `target_duration_s`, with no prologue. The first real-device import found
-    /// it the hard way: a six-day Taiwan → Miyakojima trip spans two regions, so
-    /// it came out **30 seconds long with a broken opening** — one root cause
-    /// wearing two symptoms.
-    ///
-    /// Not fixed in this pass by owner call: the only trips affected are the
-    /// multi-region ones, and that work is scoped separately (handoff §"Trips that
-    /// span two map regions"). The removal is one line — this `guard` — plus
-    /// re-basing the test harnesses that use a nil extent to mean "short
-    /// deterministic film". `RecapModel` now logs when it fires, so it can never
-    /// again be silent.
+    /// Either way the returned holds already carry the park beats, which are
+    /// *added* around each deck rather than taken out of it.
     private static func pacing(
-        for trip: RecapTrip, config: TrackingConfig.Export, establishing: RecapBounds?
+        for trip: RecapTrip, config: TrackingConfig.Export, pacing: RecapPacing
     ) -> (plan: RecapDurationPlan?, holds: [Double]) {
         let deckPacing = RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
         )
-        guard establishing != nil else {
+        switch pacing {
+        case .fixed:
+            // No plan means `CameraPath` runs at its own `totalDurationS` with
+            // `openingS` 0 — no prologue, so `zoom_transition_s` never enters the
+            // opening and the subject-arrival ramp collapses to (0, 0). The stops
+            // keep the dwells the trip itself carries.
             return (nil, trip.stops.map { $0.dwellS + 2 * config.subjectParkS })
+        case .contentDerived:
+            let plan = RecapDurationPlan.plan(
+                photoCounts: trip.stops.map(\.photos.count), config: config, deck: deckPacing
+            )
+            let holds = trip.stops.indices.map { index in
+                (index < plan.stopDwellS.count ? plan.stopDwellS[index] : trip.stops[index].dwellS)
+                    + 2 * config.subjectParkS
+            }
+            return (plan, holds)
         }
-        let plan = RecapDurationPlan.plan(
-            photoCounts: trip.stops.map(\.photos.count), config: config, deck: deckPacing
-        )
-        let holds = trip.stops.indices.map { index in
-            (index < plan.stopDwellS.count ? plan.stopDwellS[index] : trip.stops[index].dwellS)
-                + 2 * config.subjectParkS
-        }
-        return (plan, holds)
     }
 
     // MARK: - The four state streams

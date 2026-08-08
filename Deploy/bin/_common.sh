@@ -42,6 +42,13 @@ for region in json.load(open(manifest))["regions"]:
 PY
 }
 
+# A region must be big enough that the opening establishing shot can be WIDER
+# than the body shot, or the film opens flat. Not a taste value: it is
+# (frame_height / frame_width) x export.wide_span_padding. Derivation and the
+# Iceland case that produced it: Deploy/regions.json _establishing_headroom.
+KAMOME_ESTABLISHING_HEADROOM="${KAMOME_ESTABLISHING_HEADROOM:-2.67}"
+export KAMOME_ESTABLISHING_HEADROOM
+
 # Free space on the data volume, in GB.
 free_gb() {
   df -g "$KAMOME_DATA_DIR" 2>/dev/null | tail -1 | awk '{print $4}'

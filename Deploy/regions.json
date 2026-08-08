@@ -3,7 +3,7 @@
     "The regions Kamome's self-hosted routing and map tiles cover.",
     "",
     "Single source of truth for both halves of the stack: Deploy/bin/build-osrm.sh",
-    "merges these into ONE routing dataset (matching.base_url is a single value —",
+    "merges these into ONE routing dataset (matching.base_url is a single value \u2014",
     "the app cannot pick a server per trip), and Deploy/bin/build-tiles.sh builds",
     "ONE .pmtiles per region (a tile file covers a bounded area, and the app picks",
     "the region covering each trip by reading its header).",
@@ -22,20 +22,20 @@
     {
       "name": "iceland",
       "geofabrik": "europe/iceland",
-      "bbox": null,
-      "note": "Whole island (61 MB) — the ring road is the trip, so clipping saves nothing worth having."
+      "bbox": "-28.54,57.22,-9.26,71.93",
+      "note": "Island + establishing headroom (2026-08-08). Was null = whole extract: a 518 km-tall region that pinned establishing and body to the same 291.5 km span. Sized per _establishing_headroom against the ring road's 491 km fitting span: needs containedSpan >= 1.875 x 491 = 921 km, so 1637 km of latitude and 921 km of longitude. Measured after rebuild: establishing 921.1 km vs body 736.8 km = 1.25x zoom, openingS 3.00 s -> 6.50 s. All added area is open sea; 158.7 MB -> 176 MB."
     },
     {
       "name": "new-zealand",
       "geofabrik": "australia-oceania/new-zealand",
       "bbox": "166.0,-47.5,179.2,-34.0",
-      "note": "North + South Island. Clipped because the Geofabrik extract also carries the Chatham Islands (-176°) and the Kermadecs, which straddle the antimeridian — unclipped, the built tiles declare bounds of -180…180 and the region claims to cover half the planet. Selection still works (latitude saves it), but the declared extent means nothing and the file is bigger for territory no trip will visit."
+      "note": "North + South Island. Clipped because the Geofabrik extract also carries the Chatham Islands (-176\u00b0) and the Kermadecs, which straddle the antimeridian \u2014 unclipped, the built tiles declare bounds of -180\u2026180 and the region claims to cover half the planet. Selection still works (latitude saves it), but the declared extent means nothing and the file is bigger for territory no trip will visit. Headroom already satisfied (2026-08-08): containedSpan 845 km against a 340 km fitting span is 2.48x, well over the 1.875x floor, and it renders a 1.66x establishing zoom. Untouched by the Iceland rebuild."
     },
     {
       "name": "finland",
       "geofabrik": "europe/finland",
       "bbox": null,
-      "note": "Whole country (703 MB) — the largest source here, and the first to clip if the merge is too heavy."
+      "note": "Whole country (703 MB) \u2014 the largest source here, and the first to clip if the merge is too heavy."
     },
     {
       "name": "miyakojima",
@@ -43,5 +43,52 @@
       "bbox": "125.10,24.60,125.55,25.00",
       "note": "Geofabrik files Okinawa under kyushu (294 MB); the Miyako islands are a rounding error of it, so this one is clipped hard. Covers Miyako, Irabu, Shimoji, Kurima and Ikema."
     }
-  ]
+  ],
+  "_establishing_headroom": {
+    "value": 1.875,
+    "summary": "containedSpan(region) >= 1.875 x fittingSpan(trip), or the opening has nothing to zoom out to.",
+    "why": [
+      "Covering the trip is not enough. CameraPath.cappedToRegion refuses to frame",
+      "ground the tiles cannot draw, and that cap lands on the establishing beat and",
+      "the body span alike. Iceland shipped with region 518 km tall: both pinned to",
+      "291.5 km, so the 'closing zoom' had no zoom in it (Docs/decisions.md 2026-08-08).",
+      "",
+      "Enlarging the region does NOT help on its own. Two asks have to clear it:",
+      "",
+      "  body ceiling  = fittingSpan(trip) x export.wide_span_padding   (1.5)",
+      "  regional beat = the SAME expression \u2014 they are the same formula, so a",
+      "                  region sized only to the body ask makes them equal and",
+      "                  CameraPath collapses the pair. Measured: rebuilding Iceland",
+      "                  to exactly 1.5x left openingS at 3.00 s, still flat.",
+      "  country beat  = containedSpan(region), and it survives only if it beats the",
+      "                  regional beat by export.opening_collapse_zoom_ratio (1.25).",
+      "",
+      "So the binding requirement is the country beat:",
+      "",
+      "    containedSpan(region) >= opening_collapse_zoom_ratio x wide_span_padding",
+      "                             x fittingSpan(trip)",
+      "                          =  1.25 x 1.5 = 1.875 x fittingSpan(trip)",
+      "",
+      "containedSpan is the widest PORTRAIT frame fitting inside the region, so for a",
+      "wide region it is bounded by latitude: 0.5625 x latExtent (0.5625 = 1080/1920).",
+      "In latitude that is 1.875 / 0.5625 = 3.33 x fittingSpan(trip).",
+      "",
+      "1.875 is a floor, not a target: it yields exactly a 1.25x zoom, sitting on the",
+      "collapse threshold. New Zealand, which nobody tuned, gets 1.66x from having a",
+      "much larger region than its trip. Build wider where you can.",
+      "",
+      "A uniform margin on the trip's own bbox does NOT satisfy this and can make",
+      "things worse: 1.4 x Iceland's trip bbox is 365 km tall, SMALLER than the",
+      "518 km region it already had."
+    ],
+    "cost": [
+      "Cheap while the margin falls on water: empty tiles dedupe in PMTiles.",
+      "Iceland 158.7 MB -> 176 MB (+11%) going from 518 km to 1637 km of latitude.",
+      "A margin falling on LAND is different in kind, and not just for size: the",
+      "Geofabrik extract stops at the country, so a neighbouring landmass inside the",
+      "bounds has no OSM data and renders as OCEAN. Iceland's margin is open sea, so",
+      "this does not bite here \u2014 check it before widening a continental region.",
+      "Flagged for Phase 2, see HANDOFF.md."
+    ]
+  }
 }

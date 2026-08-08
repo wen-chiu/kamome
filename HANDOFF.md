@@ -14,20 +14,32 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ⏳ AWAITING OWNER REVIEW — camera continuity gate green, NOT closed (2026-08-08)
+## ⏳ AWAITING OWNER REVIEW — two rounds of renders, nothing closed (2026-08-08)
 
-**Per the standing rule, this bug is not closed until Chiu has reviewed the
-rendered before/after.** CI is green and the measurements are below, but a render
-review is a gate, not a formality — do not mark it closed anywhere.
+**Per the standing rule, no bug here is closed until Chiu has reviewed the
+rendered before/after.** CI is green on both branches and the measurements are
+below; a render review is a gate, not a formality.
 
-Renders produced 2026-08-08 (`RecapPilotFilmTests`, 12 s of the real 90 s film,
-MapLibre souvenir map + real photographs, local OSRM):
-`before/after · pilot-iceland.mp4` and `before/after · pilot-new-zealand.mp4`.
+**The current render set supersedes the earlier one.** Round 1 (`762b8cb`, PR #12)
+removed a defective flat-span slide; round 2 (branch
+`feature/tile-margin-and-pacing-param`) restored a *real* establishing zoom by
+rebuilding Iceland's tile region with headroom. Review round 2 — round 1's Iceland
+opening no longer exists in the form it was rendered.
 
-`762b8cb`. CI run 31181735522 failed `RecapCameraContinuityTests` on the
-`new-zealand` fixture; it now passes on all six committed fixtures **and** on the
-real Iceland/New Zealand dumps. `swiftlint --strict` clean, full suite green.
-**Nothing about the gate was touched** — no threshold, no assertion, no tolerance.
+| render | Iceland opening | car | first photo | establishing → body |
+|---|---|---|---|---|
+| before any fix | 5.50 s | 4.27 s | 8.90 s | 291.5 → 291.5 km (**no zoom**; 120 km sideways slide) |
+| round 1 (PR #12) | 3.00 s | 1.77 s | 6.50 s | 291.5 → 291.5 km (slide removed, still flat) |
+| **round 2 (current)** | **6.50 s** | **5.27 s** | **9.90 s** | **921.1 → 736.8 km = 1.25× zoom** |
+
+New Zealand is **unchanged across all three** (opening 6.50 s, car 5.27 s, first
+stop 6.70 s, first photo 7.70 s) and already rendered a 1.66× establishing zoom —
+it never had the defect, because its region is far larger than its trip.
+
+**Car timing must be re-decided.** It was provisionally accepted at 1.77 s only in
+the no-zoom context of round 1. With the zoom restored it moves to **5.27 s**,
+back inside the closing zoom where the anchor (`openingS − zoom_transition_s`)
+intends it. The anchor logic was not touched.
 
 ### What it actually was
 
@@ -608,3 +620,58 @@ dumps (Iceland, New Zealand); the third is not collected. Photo sources live at
 - Tiles/terrain: `~/kamome-osrm/tiles`, `~/kamome-osrm/terrain`.
 - `simctl addmedia` fails with LaunchdSimError 133 unless the device is actually
   booted — boot it first, the error does not say so.
+
+## Tile regions need establishing headroom, not just coverage (2026-08-08)
+
+**A region that merely covers a trip renders a flat opening.** Full derivation and
+the numbers live in `Deploy/regions.json` `_establishing_headroom`; the rule is:
+
+    containedSpan(region) >= 1.875 x fittingSpan(trip)
+                          =  opening_collapse_zoom_ratio x wide_span_padding
+
+`containedSpan` is the widest **portrait** frame that fits inside the region, so
+for a wide region it is bounded by *latitude*: `0.5625 x latExtent`. In latitude
+the rule is **3.33 x** the trip's fitting span.
+
+Three things that cost a build each to learn, worth not relearning:
+
+1. **Sizing the region to the body's ask is not enough.** The regional beat and
+   the body ceiling are the *same expression* (`fittingSpan x wide_span_padding`),
+   so a region built to exactly 1.5× makes them equal and `CameraPath` collapses
+   the pair. Measured: Iceland rebuilt at 1.5× still opened at 3.00 s, flat. The
+   binding constraint is the **country** beat, which must beat the regional beat
+   by `opening_collapse_zoom_ratio`.
+2. **A margin on the trip's own bbox is the wrong mechanism** and can shrink
+   coverage: 1.4× Iceland's trip bbox is 365 km tall, smaller than the 518 km
+   region it already had. There is also no code that sizes coverage to a trip —
+   regions are hand-authored in `Deploy/regions.json`.
+3. **1.875 is a floor, not a target.** It buys exactly a 1.25× zoom, sitting on
+   the collapse threshold. New Zealand, untuned, gets 1.66× from having a much
+   larger region than its trip. Build wider where the margin falls on water.
+
+`Tools/tile-headroom.sh` reports this for any `.pmtiles`, and `build-tiles.sh`
+runs it after every build so a region that will render flat is visible at build
+time rather than in a finished film.
+
+### Size cost, and the Phase 2 flag
+
+Iceland **158.7 MB → 176 MB (+11%)** going from 518 km to 1637 km of latitude —
+cheap because the added area is open sea and empty tiles dedupe in PMTiles.
+
+**Flagged for Phase 2, not solved now:** a margin that falls on **land** is
+different in kind, and not only for size. The Geofabrik extract stops at the
+country, so a neighbouring landmass inside the bounds has no OSM data and
+**renders as ocean**. Iceland's margin is open sea so it does not bite here; a
+continental region cannot be widened this way without also widening the extract.
+At App Store scale both the size and the extract-boundary question need answering
+before regions ship to users.
+
+**Local tile state:** `~/kamome-osrm/tiles/iceland-2026-08-08.pmtiles` is the
+headroom build and is what the render harnesses now pick up. The superseded
+region is parked at `~/kamome-osrm/tiles-superseded/iceland-2026-07-29.pmtiles`
+(outside the scanned directory, so it cannot be selected by accident).
+
+**Terrain was not rebuilt.** `iceland-terrain.pmtiles` still covers the old
+island bounds, so the establishing shot's outer margin has no hillshade. It is
+open sea, so nothing is visibly missing — but a wider terrain build is the honest
+follow-up if the region widens again.
