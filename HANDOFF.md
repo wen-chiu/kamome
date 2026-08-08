@@ -1,6 +1,7 @@
 # HANDOFF — current state
 
-**Updated 2026-08-07.** Branch `feature/typed-legs-routing`. Written so a fresh
+**Updated 2026-08-08.** Branch `feature/typed-legs-routing` (PR #12 → `phase-3-recap`;
+PR #11 is `phase-3-recap` → `main` and holds until the §6 gate). Written so a fresh
 session (or a fresh person) can pick this up without being briefed by hand.
 
 Read `CLAUDE.md` first for the standing rules — especially **§0, location data
@@ -13,86 +14,139 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ▶ RESUME HERE — CI is RED on the camera continuity gate (2026-08-07)
+## ✅ CLOSED — the camera continuity gate is green again (2026-08-08)
 
-**Read this before the lint section below.** That section says the gates "pass" —
-they pass *locally*, against fixtures CI does not have. On CI they fail. The lint
-work it describes is genuinely done; its green-gate claim is not transferable.
+`762b8cb`. CI run 31181735522 failed `RecapCameraContinuityTests` on the
+`new-zealand` fixture; it now passes on all six committed fixtures **and** on the
+real Iceland/New Zealand dumps. `swiftlint --strict` clean, full suite green.
+**Nothing about the gate was touched** — no threshold, no assertion, no tolerance.
 
-### The failure
+### What it actually was
 
-`RecapCameraContinuityTests.testCameraNeverBreaksSpatialContinuity`, fixture
-`new-zealand`, CI run 31181735522:
+Not the enum migration, not the naming commit, not the stop pins. The bisect in
+the previous version of this section was chasing a regression that was not one:
+**every fixture had this defect from the moment the wide baseline landed**, and
+New Zealand was simply the first whose numbers crossed the floor.
 
-```
-continuity broken at 4.03s: only 39% of the frame's ground survives
-(camera moved 24538 m across a 41430 m window)
-```
+`cappedToRegion` refuses to frame ground the installed tiles cannot draw. When a
+trip nearly fills its region — the real Iceland ring road does, and NZ's bounding
+box is 205 km wide by 74 km tall so the widest *portrait* frame fitting inside it
+is only 41 km — that cap lands on the same span the body camera uses. The "wide"
+establishing beat is then no wider than the body: there is no establishing shot to
+be had. It stayed centred on the trip anyway, so the closing zoom had no zoom left
+in it and was a pure translate from the middle of the trip to its start.
 
-**Nothing about the gate itself has been touched** — no threshold, no assertion,
-no tolerance. Reconfirmed immediately before writing this. CLAUDE.md's rule holds.
+| fixture | pan ÷ span across a snapshot | verdict |
+|---|---:|---|
+| new-zealand | 0.69 | ❌ over the 0.60 floor |
+| nz-real | 0.46 | passed, same defect |
+| iceland (committed) | 0.32 | passed, same defect |
+| iceland (real, 65 stops) | 120 km at a flat 291.5 km span | passed, same defect |
 
-### Why local runs never saw it — fixture shadowing
+**Two things were wrong, one behind the other.**
 
-`RecapTripFixtures.tripFixture(named:)` prefers
-`Tests/Fixtures/trips/local/<name>.json` over the committed
-`Tests/Fixtures/trips/<name>.json`. Deliberate (§0 keeps real dumps gitignored),
-but the consequence is:
+1. A wide beat that cannot contain the trip must frame the journey's *start* — an
+   establishing shot with nothing wider to say should establish where the trip
+   begins. Beats that can contain the trip are untouched, so the ordinary case
+   (region wider than the trip) keeps country-then-region exactly as before.
+2. `bodyFrame` claimed to be "what the follow simulation converges on" and was
+   only where the dolly *starts*. The vehicle waits at the route's origin through
+   the opening — `buildTimeline` gives that stretch an explicit `.travel(0, 0)`,
+   so it is stationary but **not parked** — and the dead-zone spring runs the whole
+   time and settles on the dead-zone boundary around it, 25 km away on NZ. Both
+   the wide beat's anchor and the closing-zoom decision were reading it.
+   `FollowCamera.restingFrame` now states the simulation's fixed point in closed
+   form and `bodyFrame` delegates to it.
 
-| | New Zealand fixture actually used | stops |
-|---|---|---|
-| local | `local/new-zealand.json` — real dump | **20** |
-| CI | committed `new-zealand.json` | **3** |
+`FollowCameraRestingFrameTests` measures prediction against simulation on every
+fixture (0–43 m committed, 669 m worst case on the real Iceland dump = 0.46% of a
+144 km frame) and measures the seam itself. Do not let those drift.
 
-**Different geometry, so a different camera path.** To reproduce CI locally, move
-`Tests/Fixtures/trips/local/` aside and re-run — that is how the table below was
-produced. A local "gates pass" says nothing about CI until this is done.
+### Effect on the real films — checked against the ground rule
 
-Third instance this session of validating under a different configuration than CI
-enforces (`swiftlint` without `--strict`; the macos-15 / Xcode-26.6 gap; now this).
-**Check local-vs-CI parity explicitly; do not assume it.**
+Measured with the installed regions, before vs after:
 
-### Bisect table — committed fixtures, `local/` moved aside
-
-| commit | result |
+| trip | change |
 |---|---|
-| `origin/phase-3-recap` (base) | **passes** |
-| `2b7b657` fix(naming) | **fails** — 3 violations |
-| `69b5ad5` fix(recap) pins | **VOID — does not compile.** References `StopPhotoAllocator` and `tieringEnabled`, neither committed until later. An earlier reading of "0 violations" here was a miscounted build failure, not a pass. |
-| `94a864e` | **fails** — identical numbers |
-| `6ae62a7` (HEAD), `recap_mode: highlight` | **fails** — identical numbers |
-| `6ae62a7` (HEAD), `recap_mode: full` | **fails** — byte-identical to highlight |
+| New Zealand (20 stops) | **none, in any respect** |
+| Iceland (65 stops) | drops a 2.5 s beat that held span flat at 291.5 km while panning 120 km sideways; everything downstream starts 2.43 s earlier; total length unchanged at 90 s |
 
-### What that establishes
+Iceland is a film Chiu has already judged, so this is a visible change to it and
+**he has not yet seen it rendered.** The beat removed contained no zoom. Offer the
+before/after opening stills before treating it as settled.
 
-1. **Unrelated to the enum / `RecapMode` work.** `.highlight` and `.full` fail with
-   byte-identical numbers (4.03/4.07/4.10 s; 24538/25095/25611 m). The default
-   moving off the legacy path is **not** the cause.
-2. **`2b7b657` is the earliest known-bad commit.** The regression is inside this
-   branch's 45 commits, at or before the naming fix.
-3. The obvious suspect — `69b5ad5`, which moves every stop coordinate onto the
-   route via `RecapComposer.snapped` — is **neither confirmed nor ruled out**,
-   because it cannot be built in isolation. Testing it needs a scratch commit
-   supplying the missing files, or applying the pin change on top of `2b7b657`'s
-   parent.
+### The test that was pinning the bug
 
-### Suggested next step
+`testOpeningCollapsesBeatsThatDoNotMoveTheCamera` built its extent from the trip's
+own bounds — but that sample route is a straight north-south line, so the box had
+**zero longitude extent**, `containedSpanM` came out 0, and both wide beats floored
+onto `camera_span_m`: a 1.5 km frame for an 89 km trip, and what "still ran" was a
+45 km translate across thirty frame-widths. It now uses a snug region with actual
+area, which collapses the beats *and* zooms, as the test says it does.
 
-Bisect between `origin/phase-3-recap` and `2b7b657` on committed fixtures. Note
-`2b7b657` is the naming commit and should not touch geometry — so either it does,
-or that gap holds more than one candidate.
+**Worth keeping:** a synthetic extent built from a synthetic route can be
+degenerate in ways real map regions never are. A region has area.
 
-### Known history wart — `850a995` does not compile
+### Still true from the old section
 
-`refactor(recap): clear the remaining 7 swiftlint --strict violations` carries a
-`CameraPathTests.swift` referencing `recapMode` without the config change defining
-it; an uncommitted edit from a parallel session was swept in, and CI never caught
-it because that run died at lint before building. **Harmless at the tip**
-(`6ae62a7` builds, suite green), but `git bisect` across it will hit it.
+- **Fixture shadowing is real.** `RecapTripFixtures.tripFixture` prefers
+  `Tests/Fixtures/trips/local/<name>.json` (real dumps, gitignored per §0) over the
+  committed fixture. Local and CI therefore test different geometry — NZ is 20
+  stops locally, 3 on CI. To reproduce CI, move `local/` **outside the repo**
+  (not to a dotfile inside it — only `Tests/Fixtures/trips/local/` is gitignored)
+  and re-run.
+- **`850a995` does not compile.** A parallel session's push swept in an
+  uncommitted edit and CI died at lint before building. Harmless at the tip;
+  `git bisect` across it will hit it.
 
 ---
 
-## ▶ RESUME HERE — lint split done, ready to commit and push (2026-08-07)
+## ▶ Owner product decisions — 2026-08-08 (Chiu)
+
+Given in chat, recorded here so they are not lost. **Not yet promoted to
+`Docs/decisions.md` or the spec — do that before building on them.**
+
+- **The shipped app renders on Apple Maps. The souvenir map (MapLibre) is Chiu's
+  own MVP path only.** World tile coverage is not a resource Kamome can fund up
+  front, and a release must give every user a complete experience wherever they
+  travelled. Vector-tile regions roll out progressively later.
+- **Multi-region trips: no per-act region switching.** It complicates the code and
+  makes the film visually inconsistent. The app is Apple Maps throughout; Chiu's
+  MVP films stay MapLibre. Revisit after the MVP release lands and there is a
+  reaction to judge.
+- **Routing server: yes, but not now.** P3.5 is not shipping to the App Store;
+  Chiu wants a self-releasable MVP first. When it ships, prefer a hosted API on a
+  free tier. **Note:** routing is orthogonal to the base map — without snapping,
+  legs render as dashed straight lines over Apple's tiles just as over MapLibre's.
+  `MKDirections` is worth evaluating first (on-device, no server, no key); it is
+  routing rather than map-matching, which for ordered EXIF stop pairs may be the
+  better fit anyway. Unverified — check rate limits before committing.
+- **Map labels: later, and Apple Maps supplies them for free.** `MKMapSnapshotter`
+  renders place names, roads and POIs. The missing-`glyphs`-fontstack blocker
+  applies **only** to MapLibre, i.e. only to Chiu's own films.
+- **Third gate trip: after this CI branch closes**, rendered locally.
+- **On-device render time: not a concern.** No uncapped-length film ships to the
+  app; long films are Chiu's local MVP only.
+
+**Standing ground rule (Chiu):** films that are already publishable must not get
+worse as a side effect of a code change. Measure before/after on the real dumps
+and say what moved.
+
+### What this changes about `establishing`
+
+It **promotes** the `LinearTimeline.pacing` coupling from a corner case to the
+main path. `establishing` is the installed vector-tile region's extent, so on an
+Apple-Maps build it is nil for **every** user — and today nil means no prologue
+and a flat 30 s film. The one-line `guard` has to go, and the two meanings have to
+separate: pacing is a story fact (stops, photographs) and must never depend on
+tiles; the span cap is a rendering fact and should apply only when vector tiles
+are the substrate, since Apple's map has no tile edge to fall off. See
+`Docs/handoff-P3.5.md` §"Trips that span two map regions" for the ~8 harnesses
+that use a nil extent to mean "short deterministic film".
+
+---
+
+## ✅ CLOSED — lint split (2026-08-07, landed as `4460d8d` / `850a995` / `6ae62a7`)
 
 **Status: `swiftlint --strict` is clean project-wide (0 violations, 141 files),
 full suite green (249 tests, 0 failures), both `RecapCameraContinuityTests` gates
@@ -182,58 +236,50 @@ shared ground) and the subject-margin gate samples `position(atTime:)` (≤80% o
 the half-frame). Both ran and passed after the full split, not just after the
 `openingPlan` step.
 
-### Not yet done — the actual next action
+### Landed
 
-Everything above is done and verified. **Not yet committed or pushed.** Split
-into two commits, in this order, per Chiu's ask to read the `CameraPath` diff in
-isolation:
+Both commits are in (`4460d8d` CameraPath split, then the other four files), plus
+`6ae62a7`'s `RecapMode` migration. The push gave CI its first verdict on these 90
+commits, and it came back red on the continuity gate — see the closed section at
+the top of this file for what that turned out to be.
 
-1. **CameraPath split** — `Core/ExportEngine/CameraPath.swift`,
-   `CameraPathPrologue.swift`, `CameraPathCore.swift` (new).
-2. **The other four files' lint fixes** — `FollowCamera.swift`,
-   `CameraPathTests.swift` + `CameraPathContinuityTests.swift` (new),
-   `RecapPacingTests.swift` + `RecapPacingOpeningSequenceTests.swift` (new),
-   `RecapDemoFilmTests.swift` + `GPXFilmParser.swift` + `RecapDemoFilmAssets.swift`
-   + `RecapDemoFilmStopPhotos.swift` (all three new).
-
-Neither commit should include the unrelated uncommitted work below (`RecapMode`
-migration, `RecapReviewGeocoder`, etc.) — none of those files were touched by
-this pass. Push after both land; this gives CI its first real verdict on these
-90 commits.
+**The claim this section originally made — "both gates pass" — was true locally
+and false on CI**, because of fixture shadowing. That is the third instance in one
+session of validating under a different configuration than CI enforces
+(`swiftlint` without `--strict`; the macos-15 / Xcode-26.6 gap; this). **Check
+local-vs-CI parity explicitly; do not assume it.**
 
 ---
 
 ## Committed on this branch
 
+- `762b8cb` **fix(recap)** — the opening hands over to where the camera is
+  (continuity gate green; see the closed section at the top).
+- `6ae62a7` **refactor(config)** — one `RecapMode`, replacing three booleans.
+  `recap_mode: "highlight"` replaced `tiering_enabled`, `uncapped_enabled`,
+  `photo_allocation_enabled` and `tier_skip_share` — **those keys no longer
+  exist**; earlier notes in this file that mention them describe history.
+- `4460d8d` / `850a995` **refactor(recap)** — the `swiftlint --strict` split.
+  ⚠️ `850a995` does not compile in isolation.
+- `94a864e` **feat(import)** — `PHAsset.isFavorite` plumbing and the opaque ice
+  layer.
 - `6f44b57` **docs(adr)** — the budget law, written down once (`Docs/decisions.md`).
 - `ea32ce9` **feat(recap)** — kept-stop count derived from the film's duration.
 - `69b5ad5` **fix(recap)** — stop pins sit on the route (two bugs, one symptom).
 - `2b7b657` **fix(naming)** — landmark → town → address, never "Unnamed stop".
 - `229ab39` and earlier — see `git log`.
 
-**Not merged to main:** PR #11 holds until the §6 gate passes (owner call).
+**Working tree is clean as of 2026-08-08 and PR #12's CI is green** (run
+31250437647). `RecapReviewGeocoder` and the quiet-stop pins referenced by earlier
+versions of this section landed with the commits above — verify against
+`git status` rather than trusting this list.
 
-## Uncommitted — as of 2026-08-07
-
-Verify against `git status`; this list goes stale fast.
-
-**The `RecapMode` migration (complete, suite green, lint red):** `RecapMode.swift`,
-`TrackingConfigExportCopies.swift`, `RecapModeTests.swift` (4 tests, passing), and
-the exhaustive switches in `RecapComposer` / `RecapDurationPlan` /
-`StopPhotoAllocator`. `recap_mode: "highlight"` replaced `tiering_enabled`,
-`uncapped_enabled`, `photo_allocation_enabled` and `tier_skip_share` — **those keys
-no longer exist**; earlier notes in this file that mention them describe history.
-
-**Also uncommitted:** `RecapReviewGeocoder` (real pilot names,
-`KAMOME_GEOCODE_STOPS=1`), quiet-stop pins (`LinearTimelineStopScene.quietStop`),
-and in-progress edits to `CameraPath.swift` / `CameraPathPrologue.swift` from the
-lint work above.
-
-**Already committed** (do not redo): `PHAsset.isFavorite` plumbing and the opaque
-ice layer, both in `94a864e`.
+**Not merged to main:** PR #11 (`phase-3-recap` → `main`) holds until the §6 gate
+passes (owner call). PR #12 stacks on it.
 
 `Tests/Fixtures/trips/local/` is gitignored and always dirty by design; that is
-real trip data and must never be added.
+real trip data and must never be added — nor moved to another path inside the
+repo, which is not covered by the ignore rule.
 
 ## "Unnamed stop" — CLOSED 2026-08-04
 
