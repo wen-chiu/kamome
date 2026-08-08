@@ -84,29 +84,24 @@ extension CameraPath {
         return min(spanM, max(containedSpanM(bounds: bounds, config: config), config.cameraSpanM))
     }
 
-    /// Where the body camera settles: the route's own framing at `spanM`, which
-    /// is what the follow simulation converges on once the world clamp has had
-    /// its say. Computed here too so the opening can ask "would my closing zoom
-    /// actually move?" before the track exists.
+    /// Where the body camera is when the opening hands over to it.
+    ///
+    /// **Corrected 2026-08-08.** This used to be the route's own framing — the
+    /// world clamp applied to the first point — and claimed to be "what the follow
+    /// simulation converges on". It is not: the clamp is only the dolly's *starting*
+    /// position, and the spring then runs throughout the opening (the vehicle waits
+    /// at the route's start, so it is stationary, not parked) and walks the camera
+    /// to the dead-zone boundary around it. On New Zealand the two differ by 25 km,
+    /// which is how the opening came to hand over into a hard cut.
+    ///
+    /// The settled frame belongs to the camera that produces it, so it lives in
+    /// `FollowCamera` now and this only names the moment.
     static func bodyFrame(
         route: [Point], spanM: Double, config: TrackingConfig.Export
     ) -> CameraFrame {
-        let bounds = Self.bounds(of: route)
-        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
-        let metresPerDegreeLat = 111_320.0
-        let midLat = (bounds.minLat + bounds.maxLat) / 2
-        let metresPerDegreeLon = 111_320.0 * cos(midLat * .pi / 180)
-        // The same clamp `FollowCamera` applies: start on the route's first point,
-        // held inside the route's own box.
-        let halfLat = spanM * aspect / 2 / metresPerDegreeLat
-        let halfLon = spanM / 2 / metresPerDegreeLon
-        let lat = bounds.minLat + halfLat > bounds.maxLat - halfLat
-            ? midLat
-            : min(max(route[0].lat, bounds.minLat + halfLat), bounds.maxLat - halfLat)
-        let lon = bounds.minLon + halfLon > bounds.maxLon - halfLon
-            ? (bounds.minLon + bounds.maxLon) / 2
-            : min(max(route[0].lon, bounds.minLon + halfLon), bounds.maxLon - halfLon)
-        return CameraFrame(centerLat: lat, centerLon: lon, spanM: spanM, bearing: 0)
+        FollowCamera.restingFrame(
+            subject: route[0], routeBounds: Self.bounds(of: route), spanM: spanM, config: config
+        )
     }
 
     /// Pulls a frame the minimum distance that keeps `subject` inside the inner

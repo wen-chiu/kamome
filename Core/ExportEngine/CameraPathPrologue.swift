@@ -94,10 +94,9 @@ extension CameraPath {
         let regionalAsked = frame(for: tripBounds, config: config, padding: config.wideSpanPadding)
         // Same cap as the body: a trip covering most of its region asks for more
         // frame than there are tiles to fill it with.
-        let regional = CameraFrame(
-            centerLat: regionalAsked.centerLat, centerLon: regionalAsked.centerLon,
+        let regional = wideBeat(
             spanM: cappedToRegion(regionalAsked.spanM, establishing: establishing, config: config),
-            bearing: 0
+            route: route, tripBounds: tripBounds, config: config
         )
 
         let countryBounds: Bounds
@@ -124,11 +123,13 @@ extension CameraPath {
         // offline app can claim to know about the surrounding geography.
         let country = establishing == nil
             ? frame(for: countryBounds, config: config, padding: config.countryViewPadding)
-            : CameraFrame(
-                centerLat: (countryBounds.minLat + countryBounds.maxLat) / 2,
-                centerLon: (countryBounds.minLon + countryBounds.maxLon) / 2,
+            : wideBeat(
                 spanM: max(config.cameraSpanM, containedSpanM(bounds: countryBounds, config: config)),
-                bearing: 0
+                route: route, tripBounds: tripBounds, config: config,
+                containingCentre: (
+                    lat: (countryBounds.minLat + countryBounds.maxLat) / 2,
+                    lon: (countryBounds.minLon + countryBounds.maxLon) / 2
+                )
             )
 
         // A region cut tightly around one trip is not a wider context — framed to
@@ -145,6 +146,51 @@ extension CameraPath {
             // The title always belongs to the first beat, whichever that is.
             : [Beat(frame: regional, holdS: config.openingCountryS)]
         return Prologue(beats: collapse(wanted, config: config), transitionS: config.zoomTransitionS)
+    }
+
+    /// One wide beat, centred where it can honestly claim to be.
+    ///
+    /// **An establishing shot that cannot hold the trip must establish where the
+    /// trip begins** (2026-08-08). A wide beat is centred on the trip so the
+    /// viewer sees the whole journey before it starts — but `cappedToRegion` can
+    /// shrink that beat below the span the trip actually needs, because beyond the
+    /// installed tiles there is nothing to draw. New Zealand is the clean case:
+    /// bounds 205 km wide by 74 km tall, so the widest portrait frame that fits
+    /// *inside* them is 41 km — one fifth of the trip. The beat was still centred
+    /// on the trip's middle, while the body camera starts at the journey's first
+    /// point 110 km away, and the "closing zoom" between them had no zoom left to
+    /// do. It was a pure 2.7-frame-width pan across the country, with the car
+    /// parked and nothing else on screen moving — the frame's entire contents
+    /// replaced twice while the film had not yet begun.
+    ///
+    /// So: a beat wide enough to contain the trip keeps the containing centre and
+    /// behaves exactly as before. A beat that is *not* wide enough has no wider
+    /// context left to offer, and is framed on the body camera's own starting
+    /// position instead — which makes the handoff into the body a zoom, or
+    /// nothing at all, but never a journey across the map.
+    ///
+    /// This is why the fix belongs here and not in the continuity gate: the pan
+    /// was never a threshold that needed relaxing, it was a beat that had lost its
+    /// reason to exist and kept its motion.
+    static func wideBeat(
+        spanM: Double,
+        route: [Point],
+        tripBounds: Bounds,
+        config: TrackingConfig.Export,
+        containingCentre: (lat: Double, lon: Double)? = nil
+    ) -> CameraFrame {
+        guard spanM < fittingSpanM(bounds: tripBounds, config: config) else {
+            let centre = containingCentre ?? (
+                lat: (tripBounds.minLat + tripBounds.maxLat) / 2,
+                lon: (tripBounds.minLon + tripBounds.maxLon) / 2
+            )
+            return CameraFrame(centerLat: centre.lat, centerLon: centre.lon, spanM: spanM, bearing: 0)
+        }
+        // Exactly where the follow camera will have settled by the time the
+        // opening hands over — not the route's own framing, which is only where
+        // the dolly starts before the spring has had the opening to move it.
+        let start = bodyFrame(route: route, spanM: spanM, config: config)
+        return CameraFrame(centerLat: start.centerLat, centerLon: start.centerLon, spanM: spanM, bearing: 0)
     }
 
     /// Drops beats that would not move the camera. When two consecutive framings

@@ -43,7 +43,9 @@ final class RecapPacingTests: XCTestCase {
         RecapDeck(photoHoldS: 2.5, zoomS: 0.5, labelLeadS: 0.6)
     }
 
-    private func trip(photoCounts: [Int]) -> RecapTrip {
+    // Internal for the same reason as `config` above: the opening-sequence tests
+    // live in another file and `private` is file-scoped.
+    func trip(photoCounts: [Int]) -> RecapTrip {
         let route = (0...40).map { RecapCoordinate(lat: -44.0 + Double($0) * 0.02, lon: 170.5) }
         let stops = photoCounts.enumerated().map { index, count in
             RecapTrip.Stop(
@@ -157,15 +159,22 @@ final class RecapPacingTests: XCTestCase {
     /// (The beat this test used to guard, regional→route, is gone entirely: the
     /// route beat was a stored frame held with the vehicle pinned at distance
     /// zero, and deleting it beat collapsing it.)
+    ///
+    /// **The extent was the trip's own bounds until 2026-08-08, and that never
+    /// tested this.** The sample route is a straight north-south line, so its
+    /// bounding box has *zero* longitude extent, `containedSpanM` came out 0, and
+    /// both wide beats floored onto `camera_span_m` — a 1.5 km frame for an 89 km
+    /// trip. What then "still ran" was not a zoom at all but a 45 km translate
+    /// across thirty frame-widths, which is the defect
+    /// `FollowCameraRestingFrameTests` was added for. A region has area; this one
+    /// is a snug box around the trip, which is what a tightly cut dogfood region
+    /// actually looks like, and it collapses the beats *and* zooms.
     func testOpeningCollapsesBeatsThatDoNotMoveTheCamera() throws {
         let export = config()
         let sample = trip(photoCounts: [3, 3])
-        let lats = sample.route.map(\.lat), lons = sample.route.map(\.lon)
         let line = try XCTUnwrap(LinearTimeline(
             trip: sample, config: export,
-            establishing: RecapBounds(
-                minLat: lats.min()!, minLon: lons.min()!, maxLat: lats.max()!, maxLon: lons.max()!
-            )
+            establishing: RecapBounds(minLat: -44.2, minLon: 170.2, maxLat: -43.0, maxLon: 170.8)
         ))
         let configured = export.openingCountryS + export.openingRegionalS + 2 * export.zoomTransitionS
         XCTAssertLessThan(line.openingS, configured - 2, "duplicate beats must be dropped")

@@ -104,6 +104,55 @@ extension RecapPacingTests {
         XCTAssertGreaterThan(abs(moved.lat - start.lat), 1e-4, "the first leg must actually run")
     }
 
+    /// **A region with nothing wider to say opens where the journey begins.**
+    ///
+    /// The counterpart to `testOpeningCollapsesBeatsThatDoNotMoveTheCamera`, and
+    /// the unit-level statement of the bug that turned CI red on 2026-08-07.
+    ///
+    /// `cappedToRegion` refuses to frame ground the installed tiles cannot draw,
+    /// and when a trip nearly fills its region that cap lands on the *same* span
+    /// the body camera uses. The wide beat is then no wider than the body — there
+    /// is no establishing shot to be had. It used to stay centred on the trip
+    /// anyway, so the "closing zoom" that followed had no zoom left in it and was
+    /// purely a translate from the middle of the trip to its start: on the real
+    /// New Zealand fixture, 110 km across a 41 km frame, replacing the screen's
+    /// entire contents twice before the film had begun.
+    ///
+    /// The correct behaviour is to open on the journey's start and hold. This
+    /// asserts the two halves of that: the span never changes (nothing to zoom),
+    /// and the frame never travels (nothing to pan to).
+    func testARegionNoWiderThanTheBodyOpensOnTheJourneyWithoutPanning() throws {
+        let export = config()
+        let sample = trip(photoCounts: [3, 3])
+        // A region cut so tightly around this north-south trip that the widest
+        // frame fitting inside it is narrower than the body camera's own span —
+        // so the cap lands on both and there is genuinely nothing wider to show.
+        // (A slightly looser box leaves a real zoom, which is correct and is what
+        // `testOpeningCollapsesBeatsThatDoNotMoveTheCamera` covers.)
+        let line = try XCTUnwrap(LinearTimeline(
+            trip: sample, config: export,
+            establishing: RecapBounds(minLat: -44.0, minLon: 170.47, maxLat: -43.2, maxLon: 170.53)
+        ))
+
+        let opening = line.cameraFrame(atTime: 0)
+        for time in stride(from: 0.0, through: line.journeyStartS, by: 1.0 / 30) {
+            let frame = line.cameraFrame(atTime: time)
+            XCTAssertEqual(
+                frame.spanM, opening.spanM, accuracy: 1,
+                "there is no wider frame available, so the opening must not pretend to zoom (t=\(time))"
+            )
+            let movedM = Geo.distanceM(
+                latA: opening.centerLat, lonA: opening.centerLon,
+                latB: frame.centerLat, lonB: frame.centerLon
+            )
+            XCTAssertLessThan(
+                movedM, frame.spanM * 0.1,
+                "the opening travelled \(Int(movedM)) m across a \(Int(frame.spanM)) m frame at t=\(time) "
+                    + "— that is the pre-pan, not an establishing shot"
+            )
+        }
+    }
+
     /// The sequence choice is about *presentable content*, not about position:
     /// a photoless origin stop must not trigger the wait.
     func testTheWaitIsChosenByPhotosNotByPosition() throws {

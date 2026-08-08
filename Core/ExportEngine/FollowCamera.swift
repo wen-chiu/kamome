@@ -121,6 +121,69 @@ enum FollowCamera {
         return frames
     }
 
+    /// Where the dolly comes to rest while the subject stands still at `subject`.
+    ///
+    /// **Why this exists** (2026-08-08). Through the opening the vehicle waits at
+    /// the route's first point — `buildTimeline` gives that stretch an explicit
+    /// `.travel(0, 0)` entry — so the spring is live, finds the subject outside the
+    /// dead zone, and walks the camera over to it. It is fully settled long before
+    /// the opening ends (critically damped at `camera_responsiveness`, ~0.4 s), and
+    /// **that settled frame, not the route's own framing, is what the opening hands
+    /// over to.** On New Zealand the two are 25 km apart.
+    ///
+    /// The opening has to know this before the track exists — its last wide beat is
+    /// framed here so the handoff is a zoom in place rather than a jump across the
+    /// map — and the dependency runs the wrong way to simply ask the simulation. So
+    /// this is the simulation's fixed point in closed form: the spring drives the
+    /// dead-zone error to zero, which leaves the subject exactly on the dead-zone
+    /// boundary it approached from, or wherever it already was if it started inside.
+    ///
+    /// The one approximation is the projection's reference latitude — `track` uses
+    /// the mean of the *sampled* subject positions, which is a fact about pacing and
+    /// cannot be known here, so this uses the route bounds' mid-latitude instead.
+    /// The two differ by a few metres in a frame tens of kilometres wide;
+    /// `FollowCameraRestingFrameTests` measures the gap on every fixture so it
+    /// cannot quietly grow.
+    static func restingFrame(
+        subject: CameraPath.Point,
+        routeBounds: CameraPath.Bounds,
+        spanM: Double,
+        config: TrackingConfig.Export
+    ) -> CameraPath.CameraFrame {
+        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        let halfWidthM = spanM / 2 * config.cameraDeadZoneFraction
+        let halfHeightM = spanM * aspect / 2 * config.cameraDeadZoneFraction
+        let referenceLat = (routeBounds.minLat + routeBounds.maxLat) / 2
+        let metresPerDegreeLat = 111_320.0
+        let metresPerDegreeLon = 111_320.0 * cos(referenceLat * .pi / 180)
+
+        let latRange = clampRange(
+            low: routeBounds.minLat + spanM * aspect / 2 / metresPerDegreeLat,
+            high: routeBounds.maxLat - spanM * aspect / 2 / metresPerDegreeLat,
+            fallback: (routeBounds.minLat + routeBounds.maxLat) / 2
+        )
+        let lonRange = clampRange(
+            low: routeBounds.minLon + spanM / 2 / metresPerDegreeLon,
+            high: routeBounds.maxLon - spanM / 2 / metresPerDegreeLon,
+            fallback: (routeBounds.minLon + routeBounds.maxLon) / 2
+        )
+        // Where the camera starts, then where the spring leaves it. `confine` is a
+        // no-op when the subject already sits inside the dead zone, which is the
+        // "whole route already fits the window" case the world clamp produces.
+        return CameraPath.CameraFrame(
+            centerLat: confine(
+                centre: min(max(subject.lat, latRange.low), latRange.high),
+                subject: subject.lat, halfExtentM: halfHeightM, metresPerDegree: metresPerDegreeLat
+            ),
+            centerLon: confine(
+                centre: min(max(subject.lon, lonRange.low), lonRange.high),
+                subject: subject.lon, halfExtentM: halfWidthM, metresPerDegree: metresPerDegreeLon
+            ),
+            spanM: spanM,
+            bearing: 0
+        )
+    }
+
     /// The dolly's carried-over motion: frame N depends on N−1, which is why the
     /// simulation runs once at build time rather than being recomputed live.
     private struct SimState {
