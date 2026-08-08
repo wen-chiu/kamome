@@ -1086,3 +1086,51 @@ no per-trip input.
 share of the trip (needs per-trip tuning, which is what prompted this); and a
 hand-set `stop_presentation_s` constant (a fourth number to keep in sync with the
 three it is computed from).
+
+## 2026-08-08 — MVP substrate is OSRM + MapLibre, behind swappable boundaries
+
+**Context:** The recap pipeline has two substrate dependencies — routing (road
+snapping) and rendering (the base map). Both are implemented and validated
+against real trips. Apple Maps + MKDirections is a plausible future alternative,
+and the question of which ships was reopened while triaging a camera bug.
+
+**Decision (owner, canonical text):**
+
+> "The MVP rendering and routing substrate is OSRM + MapLibre because it is
+> already implemented and validated against real trips. The application must keep
+> routing and rendering behind stable boundaries so future releases may
+> substitute MKDirections + Apple Maps without changing the story model or replay
+> pipeline."
+>
+> "Pixel Art remains a post-MVP visual differentiation path enabled by retaining
+> MapLibre."
+
+**Rationale, recorded alongside — not as separate decisions:**
+
+- MapLibre is retained specifically because it is the only substrate that keeps
+  the Pixel Art / custom-map visual-identity path viable post-MVP. Apple Maps
+  forecloses that option permanently. **A deliberate strategic trade-off, not an
+  oversight.**
+- Apple Maps + MKDirections evaluation happens **after** MVP validation, and will
+  be decided by **rendered A/B comparison, not theoretical reasoning** about
+  story-model independence. Do not assume route geometry, label density, or map
+  visual hierarchy are equivalent across substrates.
+- Map labels on MapLibre remain deferred/icebox, blocked on the glyph/fontstack
+  problem. **That Apple Maps solves this for free is NOT a reason to revisit the
+  substrate decision** — it is out of scope.
+
+**Deferred by decision, not by technical blocker** — do not pick these up
+opportunistically: MKDirections integration; the Apple Maps substrate
+(MKMapSnapshotter/MKDirections or any Apple-Maps-specific rendering path); Pixel
+Art theme implementation (spike branch stays parked); an Apple-Maps label
+workaround as a MapLibre glyph substitute.
+
+**Rejected:** shipping Apple Maps as the app substrate with MapLibre kept only
+for the owner's own films. That was briefly recorded on 2026-08-08 and is
+**superseded by this entry** — it would have foreclosed Pixel Art permanently,
+which is the differentiation path the custom substrate exists to enable.
+
+**Consequence for the code:** `establishing` currently carries two meanings
+through one parameter — story pacing and the tile-coverage span cap. On the
+committed substrate that is a core-path defect, not an Apple-Maps prerequisite.
+See HANDOFF.md.

@@ -14,7 +14,15 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ✅ CLOSED — the camera continuity gate is green again (2026-08-08)
+## ⏳ AWAITING OWNER REVIEW — camera continuity gate green, NOT closed (2026-08-08)
+
+**Per the standing rule, this bug is not closed until Chiu has reviewed the
+rendered before/after.** CI is green and the measurements are below, but a render
+review is a gate, not a formality — do not mark it closed anywhere.
+
+Renders produced 2026-08-08 (`RecapPilotFilmTests`, 12 s of the real 90 s film,
+MapLibre souvenir map + real photographs, local OSRM):
+`before/after · pilot-iceland.mp4` and `before/after · pilot-new-zealand.mp4`.
 
 `762b8cb`. CI run 31181735522 failed `RecapCameraContinuityTests` on the
 `new-zealand` fixture; it now passes on all six committed fixtures **and** on the
@@ -71,9 +79,16 @@ Measured with the installed regions, before vs after:
 | New Zealand (20 stops) | **none, in any respect** |
 | Iceland (65 stops) | drops a 2.5 s beat that held span flat at 291.5 km while panning 120 km sideways; everything downstream starts 2.43 s earlier; total length unchanged at 90 s |
 
-Iceland is a film Chiu has already judged, so this is a visible change to it and
-**he has not yet seen it rendered.** The beat removed contained no zoom. Offer the
-before/after opening stills before treating it as settled.
+Iceland is a film Chiu has already judged, so this is a visible change to it.
+Rendered before/after delivered 2026-08-08; **awaiting his review.**
+
+**Byte comparison cannot answer the NZ question.** A control render — identical
+code, run twice — produced a *larger* file-size spread (7.11 vs 7.43 MB) than
+before-vs-after did (7.11 vs 7.31 MB). The MP4/MapLibre path is **not
+byte-deterministic**, so pixel identity is not available as evidence. The
+"unchanged" claim rests on the timeline and camera-path measurements, which are
+identical across all three runs (opening ends 6.50 s · first stop 6.70 s · first
+photo 7.70 s · car 5.27 s). Say it that way; do not claim pixel identity.
 
 ### The test that was pinning the bug
 
@@ -101,50 +116,64 @@ degenerate in ways real map regions never are. A region has area.
 
 ---
 
-## ▶ Owner product decisions — 2026-08-08 (Chiu)
+## ▶ Substrate decision — OSRM + MapLibre, behind swappable boundaries (2026-08-08)
 
-Given in chat, recorded here so they are not lost. **Not yet promoted to
-`Docs/decisions.md` or the spec — do that before building on them.**
+**Canonical text and full rationale: `Docs/decisions.md` 2026-08-08.** Summary:
 
-- **The shipped app renders on Apple Maps. The souvenir map (MapLibre) is Chiu's
-  own MVP path only.** World tile coverage is not a resource Kamome can fund up
-  front, and a release must give every user a complete experience wherever they
-  travelled. Vector-tile regions roll out progressively later.
-- **Multi-region trips: no per-act region switching.** It complicates the code and
-  makes the film visually inconsistent. The app is Apple Maps throughout; Chiu's
-  MVP films stay MapLibre. Revisit after the MVP release lands and there is a
-  reaction to judge.
-- **Routing server: yes, but not now.** P3.5 is not shipping to the App Store;
-  Chiu wants a self-releasable MVP first. When it ships, prefer a hosted API on a
-  free tier. **Note:** routing is orthogonal to the base map — without snapping,
-  legs render as dashed straight lines over Apple's tiles just as over MapLibre's.
-  `MKDirections` is worth evaluating first (on-device, no server, no key); it is
-  routing rather than map-matching, which for ordered EXIF stop pairs may be the
-  better fit anyway. Unverified — check rate limits before committing.
-- **Map labels: later, and Apple Maps supplies them for free.** `MKMapSnapshotter`
-  renders place names, roads and POIs. The missing-`glyphs`-fontstack blocker
-  applies **only** to MapLibre, i.e. only to Chiu's own films.
-- **Third gate trip: after this CI branch closes**, rendered locally.
-- **On-device render time: not a concern.** No uncapped-length film ships to the
-  app; long films are Chiu's local MVP only.
+> The MVP rendering and routing substrate is OSRM + MapLibre because it is
+> already implemented and validated against real trips. The application must keep
+> routing and rendering behind stable boundaries so future releases may substitute
+> MKDirections + Apple Maps without changing the story model or replay pipeline.
+>
+> Pixel Art remains a post-MVP visual differentiation path enabled by retaining
+> MapLibre.
 
-**Standing ground rule (Chiu):** films that are already publishable must not get
-worse as a side effect of a code change. Measure before/after on the real dumps
-and say what moved.
+**Do not re-open or re-argue this.** MapLibre is retained precisely because it is
+the only substrate that keeps the Pixel Art / custom-map identity path viable —
+a deliberate trade-off. Any Apple Maps evaluation happens after MVP validation
+and is settled by **rendered A/B comparison**, never by reasoning about
+story-model independence.
 
-### What this changes about `establishing`
+**Deferred by decision, not by blocker** — do not pick up opportunistically, even
+if one looks like a quick win while you are in the area:
 
-It **promotes** the `LinearTimeline.pacing` coupling from a corner case to the
-main path. `establishing` is the installed vector-tile region's extent, so on an
-Apple-Maps build it is nil for **every** user — and today nil means no prologue
-and a flat 30 s film. The one-line `guard` has to go, and the two meanings have to
-separate: pacing is a story fact (stops, photographs) and must never depend on
-tiles; the span cap is a rendering fact and should apply only when vector tiles
-are the substrate, since Apple's map has no tile edge to fall off. See
-`Docs/handoff-P3.5.md` §"Trips that span two map regions" for the ~8 harnesses
-that use a nil extent to mean "short deterministic film".
+- MKDirections integration
+- the Apple Maps substrate (MKMapSnapshotter / MKDirections / any Apple-Maps
+  rendering path)
+- Pixel Art theme implementation (spike branch stays parked)
+- an Apple-Maps label workaround as a MapLibre glyph substitute
 
----
+MapLibre place labels stay iceboxed on the glyph/fontstack problem. **That Apple
+Maps supplies labels for free is explicitly out of scope as an argument.**
+
+**Superseded:** an earlier 2026-08-08 note here recorded "the app ships Apple
+Maps, MapLibre is Chiu's own MVP path". That is no longer the decision.
+
+### What this changes about `establishing` — now core-path, not a prerequisite
+
+`establishing` is a single `RecapBounds?` carrying **two unrelated facts**:
+
+| fact | kind | read by |
+|---|---|---|
+| how long the film runs / how stops are weighted | **story** | `LinearTimeline.pacing` |
+| how wide the camera may frame before it runs off the tiles | **render** | `CameraPath.cappedToRegion` |
+
+Pacing must never query tile coverage. The span cap legitimately must. Because
+they share one parameter there is no way to have one without the other, and a
+trip no installed region covers falls back to a flat 30 s film with no prologue.
+
+On the committed substrate this is a **core-path defect**, not an Apple-Maps
+prerequisite: any trip outside the four installed dogfood regions hits it.
+
+## ▶ Pre-Phase-2 blocker — OSRM hosted-endpoint TOS unverified (2026-08-08)
+
+The OSRM **demo/hosted endpoint's terms of service for commercial use have not
+been verified.** Not urgent for the personal-use MVP (the desk harness points at
+a local server), but it is a **blocker on routing-endpoint configuration work
+before Phase 2** — shipping an app that calls a public demo endpoint is a
+licensing question, not an engineering one. Resolve before any release that
+routes on someone else's server. Related, still open: the shared-token auth work
+in `Docs/handoff-P3.5.md`, which must ship server and app halves together.
 
 ## ✅ CLOSED — lint split (2026-08-07, landed as `4460d8d` / `850a995` / `6ae62a7`)
 
@@ -489,24 +518,33 @@ matter only for an App Store release and are deliberately not being solved now
   done with the experimental modes on. iCloud-resident photos, memory and thermals
   at 12k frames are all untested.
 
-## Base map — MapKit is what actually renders today
+## Base map — MapLibre is the substrate; MapKit is the uncovered-trip fallback
 
-`RecapModel.snapshotProvider(for:)` picks the provider, and it is chosen **per
-trip** by whether a `.pmtiles` region covers it (`RecapMapTiles.tilesURL`). No
-region ⇒ `MapKitSnapshotProvider`. MapLibre is fully wired and its framework is
-embedded in the app; the simulator simply has no region installed, so every
-in-app recap there renders on Apple's map.
+**Framing corrected 2026-08-08** (`Docs/decisions.md`). MapLibre is the committed
+MVP substrate. `MapKitSnapshotProvider` is **not** a candidate primary — it is the
+fallback that keeps a trip outside the installed regions from rendering blank
+frames.
 
-Two things to know before promoting MapKit to primary:
+`RecapModel.snapshotProvider(for:)` picks per trip by whether a `.pmtiles` region
+covers it (`RecapMapTiles.tilesURL`). No region ⇒ `MapKitSnapshotProvider`. The
+simulator has no region installed unless `KAMOME_TILES_PATH` is set, so an in-app
+recap there renders on Apple's map — a **test-environment** artifact, not the
+product's substrate. The review harnesses (`RecapReviewScene`) require a region
+and therefore always exercise MapLibre.
 
-1. **Visual parity does not exist.** The souvenir-map look is a Kamome-authored
-   style JSON that only MapLibre consumes; MapKit renders Apple's own tiles —
-   the look rejected in the v1.5 pivot. Overlays, subject, chrome and the camera
-   are renderer-independent and already work over either.
-2. **No region also silently degrades pacing.** `establishing == nil` drops the
-   film to the retired flat `target_duration_s` with no prologue — the documented
-   defect at `LinearTimeline.swift:184`. Any MapKit-primary decision has to fix
-   that first, or MapKit trips get a 30 s film for unrelated reasons.
+Two things that remain true and matter:
+
+1. **Visual parity does not exist, and is not expected to.** The souvenir-map look
+   is a Kamome-authored style JSON only MapLibre consumes; MapKit renders Apple's
+   own tiles — the look rejected in the v1.5 pivot. Overlays, subject, chrome and
+   the camera are renderer-independent and work over either. Any future
+   substrate comparison is settled by **rendered A/B**, per the ADR.
+2. **The fallback silently degrades pacing.** `establishing == nil` drops the film
+   to the retired flat `target_duration_s` with no prologue. On the committed
+   substrate that makes every uncovered trip a 30 s film for reasons that have
+   nothing to do with its content — see the `establishing` split above. This is
+   the core-path defect, and it is what makes the fallback currently dishonest
+   rather than merely plainer.
 
 ## Fixtures and the §6 gate — Stage 0
 
