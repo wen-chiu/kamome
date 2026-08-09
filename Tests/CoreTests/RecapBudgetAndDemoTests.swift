@@ -88,7 +88,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             ),
             config: config
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let exporter = RecapExporter(
             timeline: timeline, compositor: routeCompositor(timeline, config: config),
             provider: FlatSnapshotProvider(), config: config
@@ -163,7 +163,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             ),
             config: config
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let exporter = RecapExporter(
             timeline: timeline, compositor: routeCompositor(timeline, config: config),
             provider: MapKitSnapshotProvider(), config: config

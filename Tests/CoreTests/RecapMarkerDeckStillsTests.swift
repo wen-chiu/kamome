@@ -112,7 +112,7 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             route: route, stops: [stop], title: "小樽", subtitle: "Day 3",
             statsLines: ["120 km · 1 stop"], callToAction: "Get this route", shareURL: "kamome://route/stills"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let outDir = outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
 

@@ -263,12 +263,71 @@ final class RecapPacingTests: XCTestCase {
         }
     }
 
-    /// Without an establishing extent nothing changes: no prologue, the old fixed
-    /// duration. That is what keeps every existing trip and golden frame intact.
-    func testNoEstablishingExtentMeansNoPrologueAndTheOldDuration() throws {
+    /// `.fixed` means no prologue and exactly the length asked for — the
+    /// deterministic harness path, so a golden frame means something.
+    ///
+    /// **Renamed 2026-08-08.** This was `testNoEstablishingExtentMeansNoPrologue…`
+    /// and asserted that a *nil map extent* produced this. It asserted the
+    /// coupling, not the behaviour: pacing read `establishing`, so "no tiles
+    /// installed" and "give me a short fixed film" were the same request. The
+    /// behaviour it guards is still wanted; only the way of asking for it changed.
+    func testFixedPacingMeansNoPrologueAndExactlyTheLengthAsked() throws {
         let export = config()
-        let line = try XCTUnwrap(LinearTimeline(trip: trip(photoCounts: [3, 3]), config: export))
-        XCTAssertEqual(line.openingS, 0)
+        let line = try XCTUnwrap(LinearTimeline(
+            trip: trip(photoCounts: [3, 3]), config: export,
+            pacing: .fixed(totalS: export.targetDurationS)
+        ))
+        XCTAssertEqual(line.openingS, 0, "no prologue, so zoom_transition_s never enters the opening")
         XCTAssertEqual(line.durationS, export.targetDurationS)
+    }
+
+    /// **Pacing is a story fact and must never consult the map** (Chiu 2026-08-08).
+    ///
+    /// The defect this locks out: `LinearTimeline.pacing` used to be gated on
+    /// `establishing != nil`, so a trip that no installed vector-tile region
+    /// covered fell back to a flat `target_duration_s` with no prologue. A six-day
+    /// trip came out 30 seconds long because of which files were on the device.
+    ///
+    /// **What is asserted, and what deliberately is not.** The film's *length* is a
+    /// story fact and must be identical whatever the coverage — that is the whole
+    /// defect. How that time is *distributed* is not map-independent, and should
+    /// not be: a wide beat showing nothing the body shot does not already show is
+    /// collapsed, which is a framing decision the tiles legitimately participate
+    /// in, and a shorter opening hands the body more time to spend. Measured, the
+    /// stop presentation moves 1022 → 1085 frames between the widest and tightest
+    /// coverage while the film stays exactly as long. Asserting that away would be
+    /// asserting that framing ignores the tiles, which is the opposite of what the
+    /// span cap exists for.
+    func testFilmLengthIsIdenticalWhateverTheMapCoverage() throws {
+        let export = config()
+        let sample = trip(photoCounts: [3, 1, 8, 2])
+        let extents: [(String, RecapBounds?)] = [
+            ("no tiles at all (Apple's map)", nil),
+            ("a region far wider than the trip", establishing),
+            ("a region barely containing the trip",
+             RecapBounds(minLat: -44.2, minLon: 170.2, maxLat: -43.0, maxLon: 170.8))
+        ]
+        var reference: Double?
+        for (label, extent) in extents {
+            let line = try XCTUnwrap(LinearTimeline(trip: sample, config: export, establishing: extent))
+            guard let first = reference else { reference = line.durationS; continue }
+            XCTAssertEqual(
+                line.durationS, first, accuracy: 0.001,
+                "film length changed with \(label) — length is content, not coverage"
+            )
+        }
+    }
+
+    /// The structural half of the same rule: the plan that decides length and
+    /// per-stop weight takes **no map input at all**, so it cannot consult tile
+    /// state even by accident. This pins the signature as much as the numbers.
+    func testTheDurationPlanTakesNoMapInput() {
+        let export = config()
+        let counts = [3, 1, 8, 2]
+        let first = RecapDurationPlan.plan(photoCounts: counts, config: export, deck: deck)
+        let second = RecapDurationPlan.plan(photoCounts: counts, config: export, deck: deck)
+        XCTAssertEqual(first.totalS, second.totalS)
+        XCTAssertEqual(first.openingS, second.openingS)
+        XCTAssertEqual(first.stopDwellS, second.stopDwellS)
     }
 }

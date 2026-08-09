@@ -157,8 +157,17 @@ public struct CameraPath {
         let total = totalDurationS ?? config.targetDurationS
         let frames = Int((total * Double(config.fps)).rounded())
 
+        // **The opening is built first, and the body is derived from it** (Chiu
+        // 2026-08-09). `body = established / target_zoom_ratio`, so each trip
+        // divides its own establishing shot and the zoom the viewer sees is the
+        // thing configured. This ordering is only possible because the wide beats
+        // never depended on the body span — `buildWideOpening` took one and never
+        // read it.
+        let builtPrologue = openingS > 0
+            ? Self.buildWideOpening(route: route, establishing: establishing, config: config)
+            : nil
         let span = Self.bodySpan(BodySpanRequest(
-            route: route, anchors: anchors, totalM: totalM,
+            prologue: builtPrologue, route: route, anchors: anchors, totalM: totalM,
             stopHoldsS: stopHoldsS, totalDurationS: total,
             establishing: establishing, config: config
         ))
@@ -170,9 +179,8 @@ public struct CameraPath {
         // pulled out of the initializer so the dependency chain reads as a
         // single plan rather than six lets threaded through it).
         let plan = Self.openingPlan(OpeningRequest(
-            route: route, establishing: establishing, config: config,
-            bodySpanM: span, openingS: openingS, totalDurationS: total,
-            journeyEndsBeforeS: journeyEndsBeforeS
+            prologue: builtPrologue, route: route, establishing: establishing, config: config,
+            bodySpanM: span, totalDurationS: total, journeyEndsBeforeS: journeyEndsBeforeS
         ))
         wideEndS = plan.wideEndS
         let journeyTimeline = Self.buildTimeline(

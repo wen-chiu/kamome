@@ -102,7 +102,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             route: route, stops: [stop], title: "小樽", subtitle: "Day 3",
             statsLines: ["120 km · 1 停留"], callToAction: "Get this route", shareURL: "kamome://route/otaru"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = carStyle()
         let compositor = FrameCompositor(
             timeline: timeline,
@@ -203,7 +203,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             route: route, stops: [], title: "Follow-cam", subtitle: "Stills",
             statsLines: [], callToAction: "", shareURL: "kamome://route/followcam"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         // The pass's own orientation decides the subject: heading-up gets the
         // raster hero car, north-up the vector fallback.
         let compositor = FrameCompositor(
@@ -311,7 +311,7 @@ private extension RecapFollowCamStillsTests {
             route: sweepRoute, stops: [], title: "Heading sweep", subtitle: "",
             statsLines: [], callToAction: "", shareURL: "kamome://route/sweep"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = carStyle()
         let compositor = FrameCompositor(
             timeline: timeline,

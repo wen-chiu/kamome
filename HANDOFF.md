@@ -14,20 +14,67 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ⏳ AWAITING OWNER REVIEW — camera continuity gate green, NOT closed (2026-08-08)
+## ⏳ AWAITING OWNER REVIEW — round 4 renders, nothing closed (2026-08-09)
 
-**Per the standing rule, this bug is not closed until Chiu has reviewed the
-rendered before/after.** CI is green and the measurements are below, but a render
-review is a gate, not a formality — do not mark it closed anywhere.
+**No bug here is closed until Chiu has reviewed the rendered before/after.**
+Round 4 supersedes rounds 1–3.
 
-Renders produced 2026-08-08 (`RecapPilotFilmTests`, 12 s of the real 90 s film,
-MapLibre souvenir map + real photographs, local OSRM):
-`before/after · pilot-iceland.mp4` and `before/after · pilot-new-zealand.mp4`.
+| | established | body | zoom | opening | country beat |
+|---|---|---|---|---|---|
+| **Iceland** | 736.8 km | 294.7 km | **2.50×** | 5.50 s | no |
+| **New Zealand** | 845.3 km | 338.1 km | **2.50×** | 9.00 s | **yes** |
 
-`762b8cb`. CI run 31181735522 failed `RecapCameraContinuityTests` on the
-`new-zealand` fixture; it now passes on all six committed fixtures **and** on the
-real Iceland/New Zealand dumps. `swiftlint --strict` clean, full suite green.
-**Nothing about the gate was touched** — no threshold, no assertion, no tolerance.
+Iceland's numbers are **unchanged from the round-3 render Chiu approved** — that
+was the regression check on this change, and it holds.
+
+### The mechanism, and why the constant it replaced could not work
+
+`body_span_padding = 0.6` was reverse-derived from one trip (736.8 / 2.5 / 491).
+Algebraically it is `wide_span_padding / target_zoom_ratio`, so it only produced
+2.5× for a trip whose opening establishes on its **regional** beat. New Zealand
+establishes on a **country** beat much wider than its trip, so the same constant
+gave 4.14×.
+
+Now `body = established / target_zoom_ratio` (2.5), where `established` is the
+span of the opening's *first* beat — the picture at t=0. Each trip divides its
+own, so the ratio holds whatever the geometry. This was only possible because
+`buildWideOpening` took a `bodySpanM` parameter it never read: removing it lets
+the opening be built **before** the body span rather than after.
+
+### The pan floor is a floor now, and that matters
+
+Deriving the body purely from the ratio broke the continuity gate on **128
+assertions** — Iceland moved 34.5 km per snapshot across a 57.8 km frame, 39% of
+the picture surviving against a 40% floor. A tight frame does not slow the vehicle
+down; it just means more of the screen is replaced each second.
+
+`camera_pan_window_fraction_per_s` is restored to **0.35** (its value before the
+2026-08-02 wide baseline set it to 0.05) and is now a genuine **lower bound**.
+Previously it was computed and discarded — `min(max(raw, cameraSpanM), ceiling)`
+meant the ceiling always won, so it had not decided anything in months. As a floor
+it yields the ratio wherever that is safe and overrides it where it is not: a trip
+whose establishing shot is too tight to divide simply does not zoom, instead of
+strobing. It does **not** bind on either real trip, so both land at exactly 2.50×.
+
+### New Zealand's country beat is real, not a side effect
+
+Asked explicitly, so measured explicitly. `countryAddsContext` is
+
+    contained(region) > fittingSpan(trip) × wide_span_padding × opening_collapse_zoom_ratio
+    845.3 km          > 340.4 × 1.5 × 1.25 = 638.2 km          → true
+
+**The body span is not among its inputs**, under either the old formula or the
+new one. It survives because NZ's installed region is the whole country while the
+trip is the South Island — there genuinely *is* wider context to show. Iceland has
+no country beat only because its region was deliberately cut to 1.5× for headroom.
+
+**So the fix does not shorten NZ's 9.00 s opening, and cannot.** Opening length is
+beats × holds + transitions; it is independent of the body span. If 9.00 s is too
+long, the lever is the region, not the camera: cutting NZ's region to ~1.5× its
+trip collapses the country beat, giving a 5.50 s opening and an established span
+of 510.6 km — **still 2.50×**, because the ratio divides whatever it establishes
+on. That is a product choice between a wider establishing shot and a shorter
+opening, and it has not been made.
 
 ### What it actually was
 
@@ -608,3 +655,71 @@ dumps (Iceland, New Zealand); the third is not collected. Photo sources live at
 - Tiles/terrain: `~/kamome-osrm/tiles`, `~/kamome-osrm/terrain`.
 - `simctl addmedia` fails with LaunchdSimError 133 unless the device is actually
   booted — boot it first, the error does not say so.
+
+## Tile regions need establishing headroom, not just coverage (2026-08-08)
+
+**A region that merely covers a trip renders a flat opening.** Derivation and
+numbers: `Deploy/regions.json` `_establishing_headroom`. The rule:
+
+    containedSpan(region) >= wide_span_padding x fittingSpan(trip)   (1.5x)
+
+`containedSpan` is the widest **portrait** frame fitting inside the region, so for
+a wide region it is bounded by *latitude*: `0.5625 x latExtent`. In latitude the
+rule is **2.67×** the trip's fitting span.
+
+Two things that cost a tile build each:
+
+1. **This was briefly 1.875×.** While the body span also used `wide_span_padding`,
+   the establishing beat and the body were the same expression, so the only zoom
+   available came from a third, wider *country* beat that had to beat the regional
+   beat by `opening_collapse_zoom_ratio`. Iceland was rebuilt to 1637 km of
+   latitude for a shallow 1.25× zoom sitting on the collapse threshold. Splitting
+   `body_span_padding` out removed the need entirely: the zoom now comes from
+   regional → body, the region can be **smaller** and the zoom **deeper** (2.5×).
+   If `body_span_padding` ever returns to ≥ `wide_span_padding`, this goes back to
+   1.875×.
+2. **A margin on the trip's own bbox is the wrong mechanism** and can shrink
+   coverage: 1.4× Iceland's trip bbox is 365 km tall, smaller than the 518 km
+   region it already had. There is also no code that sizes coverage to a trip —
+   regions are hand-authored in `Deploy/regions.json`.
+
+`Tools/tile-headroom.sh` reports this for any `.pmtiles`, and `build-tiles.sh`
+runs it after every build so a region that will render flat is visible at build
+time rather than in a finished film.
+
+### Size cost, and the Phase 2 flag
+
+Iceland **158.7 MB → 159.5 MB (+0.5%)** for 518 km → 1322 km of latitude — cheap
+because the added area is open sea and empty tiles dedupe in PMTiles. (Measured
+with `ls`. An earlier version of this section said +11%; that mixed `du` disk
+blocks with `ls` bytes and was wrong.)
+
+**Flagged for Phase 2, not solved now:** a margin that falls on **land** is
+different in kind, and not only for size. The Geofabrik extract stops at the
+country, so a neighbouring landmass inside the bounds has no OSM data and
+**renders as ocean**. Iceland's margin is open sea so it does not bite here; a
+continental region cannot be widened this way without widening the extract too.
+
+**Local tile state:** `~/kamome-osrm/tiles/iceland-2026-08-08b.pmtiles` is the
+1.5× build the harnesses now pick up. Superseded regions are parked in
+`~/kamome-osrm/tiles-superseded/` (outside the scanned directory, so they cannot
+be selected by accident): the original whole-island build, and the abandoned
+1.875× one.
+
+**Terrain was not rebuilt.** `iceland-terrain.pmtiles` still covers the old island
+bounds, so the establishing shot's outer margin has no hillshade. It is open sea,
+so nothing is visibly missing — but a wider terrain build is the honest follow-up.
+
+## The seam is bounded by the collapse rule, not by taste
+
+`FollowCameraRestingFrameTests.testTheOpeningHandsOverWithoutAJump` asserts the
+one-frame step at the opening→body seam is within
+`export.opening_collapse_drift_fraction` (15%) of the frame. That is not a chosen
+number: when the closing zoom plays it ends exactly on the live track and the seam
+is ~0, and when it is *collapsed*, `isEffectivelyTheSame` is what permitted the
+collapse — so its drift allowance is precisely the largest cut the design allows.
+Margaret River sits at 8.6% of that 15%.
+
+An earlier version asserted a flat "under 5% of the frame", which was fine while
+the seam was always a cut and started failing the moment `body_span_padding` made
+the closing zoom a real 2.5× move.

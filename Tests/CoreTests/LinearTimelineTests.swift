@@ -6,6 +6,17 @@ import XCTest
 /// Shared harness for the linear timeline's suites: a sample multi-stop trip,
 /// the shipped export tunables, and fine samplers over the deck window.
 class LinearTimelineTestCase: XCTestCase {
+    /// A deterministic fixed-length film with no prologue — what these harnesses
+    /// want. Said plainly since 2026-08-08; it used to be requested by passing a
+    /// nil map extent, which meant "no tiles installed" everywhere else.
+    func fixedTimeline(
+        _ trip: RecapTrip, _ config: TrackingConfig.Export
+    ) throws -> LinearTimeline {
+        try XCTUnwrap(LinearTimeline(
+            trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)
+        ))
+    }
+
     func exportConfig(
         targetDurationS: Double = 30,
         deckZoomS: Double = 0.5,
@@ -122,7 +133,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
     func testStopSceneOpensAndClosesTheCardWhileTheMapHoldsStill() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
         // The middle stop has 4 photos. Its hold also carries the park and
         // pull-away beats, so the *card's* own window is what is left:
@@ -151,7 +162,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
     func testStopLabelLeadsBeforeThePhotoDeck() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
         // Three beats now: the label comes up as the car parks, holds alone for
         // deck_label_lead_s, then the deck blooms.
@@ -173,7 +184,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
     func testDeckRevealOpensAcrossTheHoldWithoutMovingTheMap() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         let window = deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first))
 
         let peak = try XCTUnwrap(window.max { $0.reveal < $1.reveal })
@@ -201,7 +212,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
     func testLeadLabelFadesOutAsTheDeckTakesOver() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         let deckStart = try XCTUnwrap(deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first)).first).time
 
         func labelOpacity(atTime time: Double) -> Double? {
@@ -237,7 +248,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
             title: trip.title, subtitle: trip.subtitle, statsLines: trip.statsLines,
             callToAction: trip.callToAction, shareURL: trip.shareURL
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         for time in stride(from: 0.0, through: timeline.durationS, by: 0.25) {
             XCTAssertNil(activePhotoDeck(timeline.overlayContents(atTime: time)), "no photos → no deck at t=\(time)")
         }
@@ -254,7 +265,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
         )
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
         print(String(format: "=== LinearTimeline (3 stops, photos [3,4,2]) — duration %.1fs ===", timeline.durationS))
         print(String(format: "title chrome [0.0, %.1f)   end chrome [%.1f, %.1f)",
