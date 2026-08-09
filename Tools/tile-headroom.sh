@@ -2,12 +2,12 @@
 # Does this region leave the opening anything to zoom out to?
 #
 # Covering the trip is not enough. `CameraPath.cappedToRegion` refuses to frame
-# ground the tiles cannot draw, and that cap lands on the establishing beat and
-# the body span alike — so when it binds, both come out the same number and the
-# film opens on a flat picture with a "zoom" that does not zoom. Iceland shipped
-# that way until 2026-08-08.
+# ground the tiles cannot draw, so a region cut close to the trip caps the
+# establishing beat down to the body's own width and the film opens on a flat
+# picture with a "zoom" that does not zoom. Iceland shipped that way until
+# 2026-08-08.
 #
-# Headroom exists only once the cap stops binding on the *body*:
+# The region has to be able to hold the establishing beat at full width:
 #
 #     containedSpan(region) > fittingSpan(trip) x export.wide_span_padding
 #

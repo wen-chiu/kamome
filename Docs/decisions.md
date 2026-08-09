@@ -1134,3 +1134,44 @@ which is the differentiation path the custom substrate exists to enable.
 through one parameter — story pacing and the tile-coverage span cap. On the
 committed substrate that is a core-path defect, not an Apple-Maps prerequisite.
 See HANDOFF.md.
+
+## 2026-08-09 — The recap camera: a configured zoom, and a wider establishing shot
+
+**Context:** Iceland's recap opened flat — establishing beat and body span were
+the same number, so the "closing zoom" had no zoom in it. Three rounds of renders
+narrowed the cause and the fix.
+
+**Decisions (owner, from rendered output rather than reasoning):**
+
+1. **The opening establishes on the whole trip, then zooms in to the body.**
+   Iceland 736.8 km → 294.7 km. This supersedes the 2026-08-02 "wide baseline",
+   where the body framed the whole trip and the film therefore opened flat.
+2. **The zoom is configured directly** — `target_zoom_ratio` (2.5, acceptable
+   range 2.25–2.75), applied per trip against *its own* established span. It
+   replaced `body_span_padding`, a fraction of the trip's bounding box that had
+   been reverse-derived from Iceland and did not generalise: New Zealand, which
+   establishes on a wider country beat, came out at 4.14× from the same constant.
+3. **Where a region offers genuinely wider context, take it — even at the cost of
+   a longer opening.** New Zealand's country beat survives because its region is
+   the whole country while the trip is the South Island, giving a 9.00 s opening
+   against Iceland's 5.50 s. Cutting the region to collapse that beat was the
+   alternative and was rejected: the establishing shot exists to show where the
+   journey sits, and that is worth the seconds.
+
+**Consequences:**
+
+- Tile regions need **establishing headroom**, not just coverage:
+  `containedSpan(region) >= wide_span_padding × fittingSpan(trip)`. Documented with
+  its derivation in `Deploy/regions.json` `_establishing_headroom`;
+  `Tools/tile-headroom.sh` reports it and `build-tiles.sh` runs it after every
+  build. Iceland's region was rebuilt (158.7 → 159.5 MB, the margin being open sea).
+- `camera_pan_window_fraction_per_s` returns to **0.35** and becomes a genuine
+  floor rather than a soft target the ceiling always overrode. Without it the
+  ratio alone broke camera continuity on 128 assertions.
+- Pacing no longer reads the map: `RecapPacing.contentDerived | .fixed` replaced a
+  nil-`establishing` check that conflated "no tiles installed" with "short
+  deterministic film".
+
+**Rejected:** re-tuning `body_span_padding` per trip. A second hand-picked
+constant would have fitted New Zealand the way the first fitted Iceland, and told
+us nothing about the third trip.

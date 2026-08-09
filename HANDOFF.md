@@ -14,18 +14,30 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ⏳ AWAITING OWNER REVIEW — round 4 renders, nothing closed (2026-08-09)
+## ✅ REVIEWED AND APPROVED — recap camera (2026-08-09)
 
-**No bug here is closed until Chiu has reviewed the rendered before/after.**
-Round 4 supersedes rounds 1–3.
+Chiu reviewed the round-4 renders and approved both. **This closes the camera
+work only** — the §6 Replay MVP gate is untouched and still open (see below).
 
 | | established | body | zoom | opening | country beat |
 |---|---|---|---|---|---|
 | **Iceland** | 736.8 km | 294.7 km | **2.50×** | 5.50 s | no |
 | **New Zealand** | 845.3 km | 338.1 km | **2.50×** | 9.00 s | **yes** |
 
-Iceland's numbers are **unchanged from the round-3 render Chiu approved** — that
-was the regression check on this change, and it holds.
+### Owner decision — the wider establishing shot wins (Chiu 2026-08-09)
+
+New Zealand's opening runs 9.00 s because its country beat survives: its installed
+region is the whole country while the trip is the South Island, so there genuinely
+is wider context to show. The alternative was cutting NZ's region to ~1.5× its
+trip, which collapses that beat and gives a 5.50 s opening at the same 2.50×.
+
+**Chiu chose the wider establishing shot.** A longer opening is the price of
+showing where the journey sits in the country, and that is what the establishing
+shot is for. **No code or region change** — the rendered behaviour is the decision.
+
+The earlier "9.00 s is too long" note is withdrawn: it was raised when the opening
+was long *and* the zoom was wrong (4.14×). With the zoom corrected the length is
+paying for something.
 
 ### The mechanism, and why the constant it replaced could not work
 
