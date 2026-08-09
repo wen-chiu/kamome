@@ -159,9 +159,13 @@ it, all of which is load-bearing:
   route's extent, and **yields to the subject** when the two disagree.
 - **One span per trip**, from `RecapDurationPlan.bodySpanM`. Never adaptive —
   recomputing mid-film is what produced a 97× zoom-out before the end card.
-- **Wide baseline adopted 2026-08-02**: `wide_span_padding` 1.5,
-  `camera_pan_window_fraction_per_s` 0.05, so the ceiling binds and the whole
-  trip is framed (NZ = 425 km). This is what makes a film legible as *a place*.
+- **Wide baseline (2026-08-02) SUPERSEDED 2026-08-08** (Chiu, from renders). It
+  framed the *body* to the whole trip via `wide_span_padding` 1.5 — but the
+  opening's regional beat used the same expression, so establishing and body were
+  the same number and the film opened flat. `body_span_padding` (0.6) now sizes
+  the body separately: the establishing shot frames the whole trip, the body
+  follows the vehicle inside it. Iceland 737 km → 295 km = a 2.5× zoom.
+  `camera_pan_window_fraction_per_s` stays 0.05.
 - **`CameraPathActs` keeps only discontinuity detection** — a ferry is a fact
   about the journey; framing was a decision about the camera, and conflating them
   is what made acts visible to the audience.

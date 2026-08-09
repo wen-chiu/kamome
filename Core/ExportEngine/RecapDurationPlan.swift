@@ -74,8 +74,12 @@ public struct RecapDurationPlan: Equatable {
         routeBounds: CameraPath.Bounds,
         config: TrackingConfig.Export
     ) -> Double {
+        // `body_span_padding`, not `wide_span_padding` (Chiu 2026-08-08). They used
+        // to be the same value, which made the body span and the opening's regional
+        // beat the same number and left the closing zoom nothing to do — see
+        // `TrackingConfig.Export.bodySpanPadding`.
         let ceiling = max(
-            CameraPath.fittingSpanM(bounds: routeBounds, config: config) * config.wideSpanPadding,
+            CameraPath.fittingSpanM(bounds: routeBounds, config: config) * config.bodySpanPadding,
             config.cameraSpanM
         )
         guard travelS > 0, routeDistanceM > 0, config.cameraPanWindowFractionPerS > 0 else { return ceiling }

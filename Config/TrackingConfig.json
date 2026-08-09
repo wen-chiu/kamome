@@ -107,6 +107,7 @@
     "frame_height_px": 1920,
     "camera_span_m": 1500,
     "wide_span_padding": 1.5,
+    "body_span_padding": 0.6,
     "zoom_transition_s": 2.5,
     "act_split_km": 25,
     "follow_heading_up": false,

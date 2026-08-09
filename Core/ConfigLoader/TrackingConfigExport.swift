@@ -21,6 +21,20 @@ public extension TrackingConfig {
         public let cameraSpanM: Double
         /// Trip-bounding-box multiplier for the wide shots; floored at `cameraSpanM`.
         public let wideSpanPadding: Double
+        /// Trip-bounding-box multiplier for the **body** shot — the close camera
+        /// that follows the vehicle.
+        ///
+        /// **Separated from `wideSpanPadding` on 2026-08-08** (Chiu, from renders).
+        /// One expression served both, so the establishing beat and the body span
+        /// were the same number by construction and the opening had nothing to
+        /// zoom into: the only zoom available came from a wider *country* beat,
+        /// which needed a tile region far larger than the trip.
+        ///
+        /// Below 1 the body frames less than the whole trip, which is the point —
+        /// the establishing shot shows where the journey goes, the body follows
+        /// the vehicle through it. This supersedes the 2026-08-02 "wide baseline",
+        /// where the body framed the whole trip and the film opened flat.
+        public let bodySpanPadding: Double
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
         /// Split the film into a new fixed camera frame when consecutive route
@@ -215,7 +229,8 @@ public extension TrackingConfig {
         public init(
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
-            cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
+            cameraSpanM: Double, wideSpanPadding: Double, bodySpanPadding: Double = 0.6,
+            zoomTransitionS: Double,
             actSplitKm: Double, followHeadingUp: Bool,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
@@ -237,6 +252,7 @@ public extension TrackingConfig {
             self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
+            self.bodySpanPadding = bodySpanPadding
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.followHeadingUp = followHeadingUp
             self.cameraPanWindowFractionPerS = cameraPanWindowFractionPerS
@@ -296,6 +312,7 @@ public extension TrackingConfig {
             case frameHeightPx = "frame_height_px"
             case cameraSpanM = "camera_span_m"
             case wideSpanPadding = "wide_span_padding"
+            case bodySpanPadding = "body_span_padding"
             case zoomTransitionS = "zoom_transition_s"
             case actSplitKm = "act_split_km"
             case followHeadingUp = "follow_heading_up"
