@@ -661,9 +661,18 @@ dumps (Iceland, New Zealand); the third is not collected. Photo sources live at
 - **Agent shells here are sandboxed.** `curl` to localhost and `docker ps` fail
   with what look like "server is down" errors even when the server is running.
   Confirm through a test run, not through curl.
-- OSRM on `:5100` serves the merged extract but is **not** in
-  `~/kamome-osrm/docker-compose.yml` (only taiwan:5002 and australia:5001 are), so
-  it is started ad hoc and will not come back on its own.
+- **OSRM on `:5100` is compose-managed and restart-safe** — corrected 2026-08-09.
+  It is the `osrm` service in **`Deploy/docker-compose.yml`** (container
+  `kamome-osrm`, `restart: unless-stopped`, healthcheck green), so it comes back
+  on its own provided Docker Desktop starts at login. Start it with
+  `cd Deploy && docker compose up -d`.
+
+  The stale claim this replaces — "started ad hoc, will not come back" — was
+  reading `~/kamome-osrm/docker-compose.yml`, a **legacy file** carrying only
+  taiwan:5002 and australia:5001. Nothing runs from it; the per-region servers
+  were replaced by the single merged extract when `Deploy/` landed (`0924eca`).
+  It is outside the repo and harmless, but it is what to ignore when checking
+  whether routing is up. `docker ps` is the answer, not that file.
 - Tiles/terrain: `~/kamome-osrm/tiles`, `~/kamome-osrm/terrain`.
 - `simctl addmedia` fails with LaunchdSimError 133 unless the device is actually
   booted — boot it first, the error does not say so.
