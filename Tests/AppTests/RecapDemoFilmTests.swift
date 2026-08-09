@@ -207,11 +207,7 @@ final class RecapDemoFilmTests: XCTestCase {
 
         // TEMPORARY (2026-08-04, duration-ratio experiment): pin the film length
         // for a review render without editing the config between runs.
-        var config = full.export
-        if let forced = ProcessInfo.processInfo.environment["KAMOME_FORCE_DURATION_S"].flatMap(Double.init) {
-            config = config.withTotalDuration(min: forced, max: forced)
-            print("KAMOME_FORCE_DURATION_S \(forced)")
-        }
+        let config = try Self.reviewConfig(full.export)
         let selections = Self.stopPhotoSelections(detail: detail, full: full)
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
@@ -230,6 +226,30 @@ final class RecapDemoFilmTests: XCTestCase {
             + "\(recap.stops.count - waypoints) highlights · weighting "
             + (config.stopWeightingEnabled ? "ON" : "off"))
         return (recap, config)
+    }
+
+    /// The two review-only overrides, applied per run so a setting for one render
+    /// never gets committed in `TrackingConfig.json`.
+    ///
+    /// `KAMOME_RECAP_MODE` picks **Variant A** (`full` — every clustered stop
+    /// presented, no duration cap) against the shipped **Variant B**
+    /// (`highlight`). `KAMOME_FORCE_DURATION_S` pins a length for a length
+    /// experiment; it is marked temporary where it was introduced (2026-08-04).
+    static func reviewConfig(_ base: TrackingConfig.Export) throws -> TrackingConfig.Export {
+        var config = base
+        if let requested = ProcessInfo.processInfo.environment["KAMOME_RECAP_MODE"] {
+            guard let mode = RecapMode(rawValue: requested) else {
+                XCTFail("KAMOME_RECAP_MODE=\(requested) is not a RecapMode")
+                throw CocoaError(.featureUnsupported)
+            }
+            config = config.withRecapMode(mode)
+            print("KAMOME_RECAP_MODE \(requested)")
+        }
+        if let forced = ProcessInfo.processInfo.environment["KAMOME_FORCE_DURATION_S"].flatMap(Double.init) {
+            config = config.withTotalDuration(min: forced, max: forced)
+            print("KAMOME_FORCE_DURATION_S \(forced)")
+        }
+        return config
     }
 
     /// Runs the **shipped** `StopNamer` over the trip's stops and waits for it to

@@ -40,8 +40,8 @@
     {
       "name": "miyakojima",
       "geofabrik": "asia/japan/kyushu",
-      "bbox": "125.10,24.60,125.55,25.00",
-      "note": "Geofabrik files Okinawa under kyushu (294 MB); the Miyako islands are a rounding error of it, so this one is clipped hard. Covers Miyako, Irabu, Shimoji, Kurima and Ikema."
+      "bbox": "125.069,24.430,125.549,25.205",
+      "note": "Geofabrik files Okinawa under kyushu (294 MB); the Miyako islands are a rounding error of it. Widened 2026-08-09 for establishing headroom \u2014 the old 125.10,24.60,125.55,25.00 clip supported trips only 17 km across against this trip's 32.4 km fitting span, so the film would have opened flat exactly as Iceland's did. Now containedSpan 48 km, rendering 47.2 -> 18.9 km = 2.50x. The margin is open sea: 1.2 MB either way. Still covers Miyako, Irabu, Shimoji, Kurima and Ikema."
     }
   ],
   "_establishing_headroom": {

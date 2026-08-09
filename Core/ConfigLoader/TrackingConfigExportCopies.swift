@@ -50,6 +50,45 @@ extension TrackingConfig.Export {
         )
     }
 
+    /// A copy in a different `RecapMode`. The desk MVP renders run **Variant A**
+    /// (`.full` — every clustered stop presented, no duration cap) while the
+    /// shipped default stays **Variant B** (`.highlight`), so the harness needs to
+    /// ask for a mode without the config file being edited between runs and
+    /// accidentally committed. Same shape as `withTotalDuration` above.
+    public func withRecapMode(_ mode: RecapMode) -> TrackingConfig.Export {
+        TrackingConfig.Export(
+            targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
+            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
+            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
+            targetZoomRatio: targetZoomRatio,
+            zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: followHeadingUp,
+            cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
+            cameraDeadZoneFraction: cameraDeadZoneFraction,
+            cameraSafeZoneFraction: cameraSafeZoneFraction,
+            cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+            endRevealPadding: endRevealPadding, endCardStyle: endCardStyle,
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+            deckZoomS: deckZoomS, deckLabelLeadS: deckLabelLeadS, subjectParkS: subjectParkS,
+            openingCountryS: openingCountryS, openingRegionalS: openingRegionalS,
+            countryViewPadding: countryViewPadding, firstStopDwellScale: firstStopDwellScale,
+            openingCollapseZoomRatio: openingCollapseZoomRatio,
+            openingCollapseDriftFraction: openingCollapseDriftFraction,
+            stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
+            totalDurationMinS: totalDurationMinS, totalDurationMaxS: totalDurationMaxS,
+            keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
+            endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
+            stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
+            waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
+            uncappedPhotoHoldS: uncappedPhotoHoldS,
+            allocationZeroShare: allocationZeroShare,
+            allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
+            allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
+            tierTopShare: tierTopShare,
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos, recapMode: mode
+        )
+    }
+
     /// A copy with the duration window overridden. Measurement aid for the
     /// duration-by-stop-count experiment (2026-08-04) — lets a sweep try
     /// several film lengths without rewriting the config file between runs.
