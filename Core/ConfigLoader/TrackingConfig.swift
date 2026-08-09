@@ -74,55 +74,8 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
-    /// Sendable: `OSRMMatchProvider` carries this across its async transport.
-    public struct Matching: Decodable, Equatable, Sendable {
-        /// OSRM host for map matching (§4.4), e.g. "http://127.0.0.1:5000".
-        /// Empty string = matching disabled: segments keep raw geometry and
-        /// readers fall back to the simplified raw polyline. Stays empty
-        /// until the self-hosted server exists (`Docs/osrm-setup.md`).
-        public let baseURL: String
-        /// Max trackpoints per /match request (spec §4.4: ≤100).
-        public let chunkSize: Int
-        /// A segment whose worst per-matching confidence is below this keeps
-        /// its raw polyline (spec §4.4: render "inferred", never invent roads).
-        public let confidenceMin: Double
-        /// Floor for the per-point search radius sent to OSRM; a point's own
-        /// h_acc is used when it is larger.
-        public let radiusM: Double
-        /// Per-request timeout. Matching is best-effort and must never block
-        /// trip completion (§4.4), so this stays short.
-        public let timeoutS: Double
-        /// Douglas-Peucker ε for *matched* geometry in the recap. Tighter
-        /// than simplify.epsilon_m: 15 m would visibly cut snapped corners
-        /// at recap zoom, but raw OSRM output on a long trip would blow the
-        /// §4.5 render budget.
-        public let displayEpsilonM: Double
-
-        enum CodingKeys: String, CodingKey {
-            case baseURL = "base_url"
-            case chunkSize = "chunk_size"
-            case confidenceMin = "confidence_min"
-            case radiusM = "radius_m"
-            case timeoutS = "timeout_s"
-            case displayEpsilonM = "display_epsilon_m"
-        }
-
-        public init(
-            baseURL: String,
-            chunkSize: Int,
-            confidenceMin: Double,
-            radiusM: Double,
-            timeoutS: Double,
-            displayEpsilonM: Double
-        ) {
-            self.baseURL = baseURL
-            self.chunkSize = chunkSize
-            self.confidenceMin = confidenceMin
-            self.radiusM = radiusM
-            self.timeoutS = timeoutS
-            self.displayEpsilonM = displayEpsilonM
-        }
-    }
+    // `Matching` lives in TrackingConfigMatching.swift — the §4.4 block grew
+    // its own tunables and both files stay inside the size budget.
 
     public struct Photos: Decodable, Equatable {
         /// GPS-tagged photos attach to the nearest stop within this radius (§4.3).
@@ -147,6 +100,21 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Recap photo-deck size bounds (basic MVP presentation; §5).
         public let deckMinPhotos: Int
         public let deckMaxPhotos: Int
+        /// Past this gap between a leg's endpoints, its implied pace stops
+        /// meaning anything and the leg is treated as a drive (Chiu 2026-08-02).
+        ///
+        /// Pace is distance over elapsed time, which assumes the elapsed time was
+        /// spent travelling. Across a night it was not: a 60 km drive photographed
+        /// at 10 pm and again at 9 am the next morning implies 1.3 km/h, reads as
+        /// walking pace, and walking legs are deliberately never routed — so the
+        /// leg stayed a straight line through whatever lay between. On the real
+        /// 11-day New Zealand trip that was **7 of 9 legs**, drawn straight across
+        /// Lake Pukaki and the Southern Alps.
+        ///
+        /// The fix is not a higher walking threshold. An overnight gap is not slow
+        /// travel, it is *no signal*, so above this the leg falls back to the same
+        /// road-trip assumption already made for legs with no elapsed time at all.
+        public let paceUnknowableGapS: Double
         /// How many days back the S1 import date-range picker defaults to
         /// (UI default only — the user adjusts it; kept here so it isn't a
         /// magic number, §0 rule 2).
@@ -158,6 +126,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case minPhotosPerStop = "min_photos_per_stop"
             case deckMinPhotos = "deck_min_photos"
             case deckMaxPhotos = "deck_max_photos"
+            case paceUnknowableGapS = "pace_unknowable_gap_s"
             case defaultRangeDays = "default_range_days"
         }
     }
@@ -167,6 +136,11 @@ public struct TrackingConfig: Decodable, Equatable {
         public let minIntervalS: Double
         /// Coordinates round to this grid for cache lookups (~110 m at 0.001°).
         public let cachePrecisionDeg: Double
+
+        public init(minIntervalS: Double, cachePrecisionDeg: Double) {
+            self.minIntervalS = minIntervalS
+            self.cachePrecisionDeg = cachePrecisionDeg
+        }
 
         enum CodingKeys: String, CodingKey {
             case minIntervalS = "min_interval_s"
@@ -239,108 +213,8 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
-    public struct Export: Decodable, Equatable {
-        /// Recap video pipeline tunables (§4.5).
-        public let targetDurationS: Double
-        public let fps: Int
-        public let stopHoldS: Double
-        /// Stop holds shrink proportionally past this share of the video, so
-        /// stop-dense trips keep a nonzero travel budget.
-        public let maxHoldFraction: Double
-        public let gifFps: Int
-        public let gifWidthPx: Int
-        /// Output frame size (§4.5: 1080×1920, 9:16 social default).
-        public let frameWidthPx: Int
-        public let frameHeightPx: Int
-        /// Ground span of the close follow-cam body (§4.5 step 1, prototype §2.3).
-        public let cameraSpanM: Double
-        /// Trip-bounding-box multiplier for the wide shots; floored at `cameraSpanM`.
-        public let wideSpanPadding: Double
-        /// Seconds to ease wide↔close at each card boundary (a quick dolly).
-        public let zoomTransitionS: Double
-        /// Split the film into a new fixed camera frame when consecutive route
-        /// points are more than this far apart — a flight, a ferry, or a drive
-        /// resuming in another region. Everything short of that plays inside one
-        /// held frame (Chiu 2026-07-25: a still map is what makes the distance
-        /// covered legible).
-        public let actSplitKm: Double
-        /// Rotate the map heading-up (needs a `bearing`-honoring provider; §3).
-        public let followHeadingUp: Bool
-        /// Photo-deck pacing (§5): label lead, per-photo dwell, grow/shrink each,
-        /// dolly-in span while a stop's deck is up (deck zoom = camera track).
-        public let deckPhotoHoldS: Double
-        public let deckZoomS: Double
-        public let deckLabelLeadS: Double
-        /// One map snapshot per this many frames; in-between frames cross-fade (§4.5).
-        public let keyframeIntervalFrames: Int
-        /// Trip chrome windows (§4.5 step 4): title over the open, end over the close.
-        public let titleCardS: Double
-        public let endCardS: Double
-        /// H.264 average bitrate; unconstrained output was ~51 MB/30 s (unshareable).
-        public let videoBitrateMbps: Double
-
-        public init(
-            targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
-            gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
-            cameraSpanM: Double, wideSpanPadding: Double, zoomTransitionS: Double,
-            actSplitKm: Double, followHeadingUp: Bool,
-            deckPhotoHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double,
-            keyframeIntervalFrames: Int, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double
-        ) {
-            self.targetDurationS = targetDurationS; self.fps = fps
-            self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
-            self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
-            self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
-            self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
-            self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
-            self.followHeadingUp = followHeadingUp
-            self.deckPhotoHoldS = deckPhotoHoldS; self.deckZoomS = deckZoomS
-            self.deckLabelLeadS = deckLabelLeadS
-            self.keyframeIntervalFrames = keyframeIntervalFrames; self.titleCardS = titleCardS
-            self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
-        }
-
-        /// A copy with `follow_heading_up` forced to `resolved`. The composition
-        /// root resolves the configured request against what the base-map
-        /// renderer can actually honor, so a provider
-        /// that cannot rotate is never handed a bearing it would silently drop.
-        public func withFollowHeadingUp(_ resolved: Bool) -> Export {
-            Export(
-                targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-                maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-                frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
-                cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
-                zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: resolved,
-                deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS,
-                deckLabelLeadS: deckLabelLeadS,
-                keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
-                endCardS: endCardS, videoBitrateMbps: videoBitrateMbps
-            )
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case targetDurationS = "target_duration_s"
-            case fps
-            case stopHoldS = "stop_hold_s"
-            case maxHoldFraction = "max_hold_fraction"
-            case gifFps = "gif_fps"
-            case gifWidthPx = "gif_width_px"
-            case frameWidthPx = "frame_width_px"
-            case frameHeightPx = "frame_height_px"
-            case cameraSpanM = "camera_span_m"
-            case wideSpanPadding = "wide_span_padding"
-            case zoomTransitionS = "zoom_transition_s"
-            case actSplitKm = "act_split_km"
-            case followHeadingUp = "follow_heading_up"
-            case deckPhotoHoldS = "deck_photo_hold_s"
-            case deckZoomS = "deck_zoom_s"
-            case deckLabelLeadS = "deck_label_lead_s"
-            case keyframeIntervalFrames = "keyframe_interval_frames"
-            case titleCardS = "title_card_s"
-            case endCardS = "end_card_s"
-            case videoBitrateMbps = "video_bitrate_mbps"
-        }
-    }
+    // `Export` lives in TrackingConfigExport.swift — the §4.5 block carries the
+    // recap's whole pacing model and both files stay inside the size budget.
 
     public let schemaVersion: Int
     public let filter: Filter

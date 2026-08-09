@@ -38,8 +38,20 @@ final class RecapFollowCamStillsTests: XCTestCase {
             targetDurationS: 12, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.6,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: width, frameHeightPx: height,
             cameraSpanM: 1200, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: headingUp,
-            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6,
-            keyframeIntervalFrames: 15, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
+            deckPhotoHoldS: 0.8, deckPhotoMinHoldS: 0.2, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
+            keyframeIntervalFrames: 15, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 
@@ -75,7 +87,10 @@ final class RecapFollowCamStillsTests: XCTestCase {
     /// dollies in — sampled at the lead, the card's first frame, and full reveal.
     private func renderStopScene(provider: MapLibreSnapshotProvider, to outDir: URL) async throws {
         let config = followCamConfig(headingUp: false)
-        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         let photos = try (0..<4).map { try photoTile(index: $0) }
         let refs = (0..<photos.count).map { PhotoRef.asset("p\($0)") }
         let images = Dictionary(uniqueKeysWithValues: zip((0..<photos.count).map { "p\($0)" }, photos))
@@ -87,7 +102,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             route: route, stops: [stop], title: "小樽", subtitle: "Day 3",
             statsLines: ["120 km · 1 停留"], callToAction: "Get this route", shareURL: "kamome://route/otaru"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = carStyle()
         let compositor = FrameCompositor(
             timeline: timeline,
@@ -188,7 +203,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             route: route, stops: [], title: "Follow-cam", subtitle: "Stills",
             statsLines: [], callToAction: "", shareURL: "kamome://route/followcam"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         // The pass's own orientation decides the subject: heading-up gets the
         // raster hero car, north-up the vector fallback.
         let compositor = FrameCompositor(
@@ -296,7 +311,7 @@ private extension RecapFollowCamStillsTests {
             route: sweepRoute, stops: [], title: "Heading sweep", subtitle: "",
             statsLines: [], callToAction: "", shareURL: "kamome://route/sweep"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = carStyle()
         let compositor = FrameCompositor(
             timeline: timeline,

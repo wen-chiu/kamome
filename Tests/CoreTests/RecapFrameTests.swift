@@ -140,11 +140,19 @@ final class RecapFrameTests: RecapRenderTestCase {
         // Rotation: the first (highlight) photo leads, the second follows. The
         // card tracks the vehicle now, so assert which photo is on screen rather
         // than probing a fixed point.
+        //
+        // The stop's other photos also peek out from behind the hero (2026-07-31
+        // prototype port) — so the test is *which photo is the hero*, not which
+        // photo is the only one drawn: the focused one must dominate the frame,
+        // and the peek behind it must stay a sliver.
         let focus0 = try XCTUnwrap(opaque.first { $0.deck.focusIndex == 0 }).time
         let focus1 = try XCTUnwrap(opaque.first { $0.deck.focusIndex == 1 }).time
         let firstFrame = try await renderFrame(timeline, compositor, at: focus0, config: config)
-        XCTAssertGreaterThan(try colorCount(firstFrame, matching: green), 200, "highlight photo leads the deck")
-        XCTAssertEqual(try colorCount(firstFrame, matching: blue), 0, "only the focused photo shows")
+        let heroArea = try colorCount(firstFrame, matching: green)
+        let peekArea = try colorCount(firstFrame, matching: blue)
+        XCTAssertGreaterThan(heroArea, 200, "highlight photo leads the deck")
+        XCTAssertGreaterThan(peekArea, 0, "the stop's other photos peek out behind the hero")
+        XCTAssertGreaterThan(heroArea, peekArea * 2, "the focused photo is the subject; the peeks are depth")
         let secondFrame = try await renderFrame(timeline, compositor, at: focus1, config: config)
         XCTAssertGreaterThan(try colorCount(secondFrame, matching: blue), 200, "deck rotates to the next photo")
 
@@ -223,7 +231,50 @@ final class RecapFrameTests: RecapRenderTestCase {
         }
 
         XCTAssertEqual(delivered, Array(0..<timeline.frameCount))
-        XCTAssertEqual(provider.requestCount, 5, "keyframe cache should collapse snapshot requests")
+        // The camera holds one fixed frame per act (Chiu 2026-07-25), and this
+        // trip is a single act — so all five keyframes ask for the *same* view
+        // and the value-keyed cache fetches it once (Fable review 2026-07-26).
+        // Keying by keyframe index re-fetched an identical snapshot five times.
+        XCTAssertEqual(provider.requestCount, 1, "one camera value = one snapshot, however many keyframes want it")
+    }
+
+    /// The dedup must not swallow real movement. A route with a 100 km leap is
+    /// now **panned** across rather than cut across (Chiu 2026-08-01: acts no
+    /// longer frame anything), so every keyframe sits at its own camera value and
+    /// each one is fetched — the cache dedups identical views, never distinct
+    /// ones.
+    ///
+    /// This is the cost side of the redesign, recorded deliberately: a camera
+    /// that moves cannot reuse snapshots the way a camera frozen per act could,
+    /// so a moving film fetches more of them.
+    func testMovingCameraFetchesOneSnapshotPerDistinctView() async throws {
+        let config = exportConfig(targetDurationS: 2, fps: 5, keyframeIntervalFrames: 3)
+        // Two clusters ~100 km apart: far beyond act_split_km, and once upon a
+        // time two separate fixed frames with a cut between them.
+        let jumped = [
+            RecapCoordinate(lat: -32.00, lon: 115.75),
+            RecapCoordinate(lat: -32.01, lon: 115.76),
+            RecapCoordinate(lat: -33.00, lon: 115.80),
+            RecapCoordinate(lat: -33.01, lon: 115.81)
+        ]
+        let trip = RecapTrip(
+            route: jumped, stops: [], title: "Jump", subtitle: "",
+            statsLines: [], callToAction: "", shareURL: ""
+        )
+        let timeline = try makeTimeline(trip, config: config)
+        let compositor = makeCompositor(timeline)
+        let provider = CountingProvider()
+        let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
+
+        var cameras: Set<Double> = []
+        for keyframe in 0...((timeline.frameCount - 1) / 3 + 1) {
+            let time = min(Double(keyframe * 3) / 5, timeline.durationS)
+            cameras.insert(timeline.cameraFrame(atTime: time).centerLat)
+        }
+
+        try await loop.renderFrames { _, _ in true }
+        XCTAssertEqual(provider.requestCount, cameras.count,
+                       "one snapshot per distinct camera value")
     }
 
     func testLoopStopsWhenConsumerCancels() async throws {

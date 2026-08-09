@@ -1,6 +1,7 @@
 import CoreGraphics
 import KamomeConfig
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// Layer-3 overlay renderer: deterministic drawing of each `OverlayContent` over
@@ -46,8 +47,92 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
 
     func testRouteRevealStrokesTheTrail() async throws {
         let coords = (0...10).map { RecapCoordinate(lat: -32.0 + Double($0 - 5) * 0.001, lon: 115.75) }
-        let frame = try await render([.routeReveal(coords)], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0))
+        let recorded = RecapRouteLeg(coordinates: coords, mode: .drive, provenance: .recorded)
+        let frame = try await render(
+            [.routeReveal([recorded])], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0)
+        )
         XCTAssertGreaterThan(try colorCount(frame, matching: routeRGB), 0, "the trail must stroke in the route color")
+    }
+
+    // MARK: - Honest provenance in the film itself (PD-1)
+
+    /// A long north-south leg down the frame's center, so a dash pattern shows
+    /// up as gaps along a column of pixels.
+    private func meridianLeg(_ provenance: RouteProvenance) -> RecapRouteLeg {
+        RecapRouteLeg(
+            coordinates: (0...40).map { RecapCoordinate(lat: -32.0 + Double($0 - 20) * 0.0004, lon: 115.75) },
+            mode: .drive,
+            provenance: provenance
+        )
+    }
+
+    /// The load-bearing honesty test: a leg Kamome could not reconstruct must be
+    /// visibly a guess **in the exported film**, because the film is the public
+    /// artifact. Solid vs. dashed is the whole point — a viewer must not read an
+    /// inferred straight line as a road we watched.
+    func testInferredLegIsDashedWhileConfidentLegIsSolid() async throws {
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let solid = try await render([.routeReveal([meridianLeg(.recorded)])], resolverImage: green)
+        let dashed = try await render([.routeReveal([meridianLeg(.inferred)])], resolverImage: green)
+
+        let solidRun = try longestPaintedRun(solid, col: widthPx / 2)
+        let dashedRun = try longestPaintedRun(dashed, col: widthPx / 2)
+        XCTAssertGreaterThan(solidRun, 0, "the confident leg must draw")
+        XCTAssertGreaterThan(dashedRun, 0, "the inferred leg must still draw — it happened, we just don't know how")
+        XCTAssertLessThan(dashedRun, solidRun / 2, "an inferred leg is broken by gaps, not one continuous stroke")
+    }
+
+    /// A reconstructed leg is road, even though nobody watched the traveling —
+    /// it gets the confident stroke, same as recorded.
+    func testReconstructedLegDrawsSolidLikeRecorded() async throws {
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let recorded = try await render([.routeReveal([meridianLeg(.recorded)])], resolverImage: green)
+        let reconstructed = try await render([.routeReveal([meridianLeg(.reconstructed)])], resolverImage: green)
+        XCTAssertEqual(
+            try longestPaintedRun(reconstructed, col: widthPx / 2),
+            try longestPaintedRun(recorded, col: widthPx / 2),
+            "snapped-to-road geometry is a confident claim"
+        )
+    }
+
+    /// Mixed provenance in one reveal: both strokes appear, each in its own key.
+    func testMixedLegsDrawEachInItsOwnTreatment() async throws {
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let confident = RecapRouteLeg(
+            coordinates: (0...20).map { RecapCoordinate(lat: -32.004 + Double($0) * 0.0002, lon: 115.75) },
+            mode: .drive, provenance: .reconstructed
+        )
+        let guessed = RecapRouteLeg(
+            coordinates: (0...20).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.0002, lon: 115.75) },
+            mode: .walk, provenance: .inferred
+        )
+        let frame = try await render([.routeReveal([confident, guessed])], resolverImage: green)
+
+        // The confident half runs unbroken; the inferred half is chopped up.
+        let confidentRun = try longestPaintedRun(frame, col: widthPx / 2, rows: (heightPx / 2)..<heightPx)
+        let guessedRun = try longestPaintedRun(frame, col: widthPx / 2, rows: 0..<(heightPx / 2))
+        XCTAssertGreaterThan(confidentRun, 0)
+        XCTAssertGreaterThan(guessedRun, 0)
+        XCTAssertLessThan(guessedRun, confidentRun, "the two legs must not read the same")
+    }
+
+    /// The longest unbroken run of non-background pixels down one column — how a
+    /// dash pattern is told from a solid stroke without golden bitmaps.
+    private func longestPaintedRun(
+        _ image: CGImage, col: Int, rows: Range<Int>? = nil
+    ) throws -> Int {
+        var longest = 0
+        var run = 0
+        for row in rows ?? 0..<heightPx {
+            let sample = try pixel(image, col: col, row: row)
+            if sample != backgroundRGB {
+                run += 1
+                longest = max(longest, run)
+            } else {
+                run = 0
+            }
+        }
+        return longest
     }
 
     func testPhotoDeckDrawsTheFocusPhotoAndGrowsWithReveal() async throws {
@@ -72,20 +157,28 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
         let openArea = try colorCount(open, matching: greenRGB)
         let openingArea = try colorCount(opening, matching: greenRGB)
         XCTAssertGreaterThan(openArea, Int(Double(openingArea) * 1.3), "the card grows with reveal")
-        XCTAssertLessThan(Double(openArea) / Double(widthPx * heightPx), 0.35, "the map stays visible around the card")
+        // The card was sized up for photo recall (Chiu 2026-07-30); it must still
+        // leave the map and trail visible around its edges.
+        XCTAssertLessThan(Double(openArea) / Double(widthPx * heightPx), 0.5, "the map stays visible around the card")
 
         // At zero opacity the deck is absent.
         let none = try await render([deck(reveal: 1, opacity: 0)], resolverImage: green)
         XCTAssertEqual(try colorCount(none, matching: greenRGB), 0, "no deck at zero opacity")
     }
 
-    /// Beat 1: the pin marks the stop on the map, and the name pill floats clear
-    /// above where the vehicle sits — they must never overlap (Chiu 2026-07-25).
-    func testStopLabelPinsTheStopAndFloatsTheNameClearOfTheVehicle() async throws {
-        // An opaque pill so its fill is an exact color to hunt for.
+    /// Beat 1: the pin marks the stop **on the stop's own point**, and the stop's
+    /// name stands on it (Chiu 2026-07-26). The pin used to be pushed clear of
+    /// the parked car by a pixel-sized clearance, which at a wide framing put it
+    /// kilometres from the place it was labelling; the car now parks and vanishes
+    /// for the stop, so the pin belongs on the spot.
+    ///
+    /// The name is unplated type (the 2026-07-31 prototype port dropped the pill),
+    /// so the probe hunts the glyph fill itself rather than a panel behind it.
+    func testStopLabelPinsTheStopItselfWithTheNameStandingOnIt() async throws {
+        // Distinctive ink so the name's own pixels are findable over the map.
         var style = opaqueCardStyle
-        let pillRGB = RGB(red: 26, green: 31, blue: 41)
-        style.labelPillColor = CGColor(srgbRed: 26 / 255, green: 31 / 255, blue: 41 / 255, alpha: 1)
+        let nameRGB = RGB(red: 255, green: 0, blue: 255)
+        style.labelTextColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
         let label = OverlayContent.stopLabel(
             name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil, opacity: 1
         )
@@ -93,44 +186,124 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
             [label], resolverImage: try makeSolidImage(red: 0, green: 1, blue: 0), style: style
         )
 
-        // The stop projects to the frame center — where the parked car sits.
+        // The stop projects to the frame center.
         let stopRow = heightPx / 2
         let scale = Double(widthPx) / 1080
-        let clearedRows = Int((Double(style.subjectLengthPx) / 2 + Double(style.labelVehicleClearancePx)) * scale)
+        let pinRadiusRows = Int(Double(style.labelPinRadiusPx) * 1.5 * scale)
 
-        // Rows count downward, so each element's bottom edge is its largest row.
+        // Rows count downward, so an element's bottom edge is its largest row.
         let pinRGB = RGB(red: 89, green: 217, blue: 242)  // labelPinColor
-        let pinBottomRow = try XCTUnwrap(
-            lastRow(of: frame, matching: pinRGB), "the pin must draw"
-        )
-        let pillBottomRow = try XCTUnwrap(
-            lastRow(of: frame, matching: pillRGB), "the name pill must draw"
-        )
+        let pinBottomRow = try XCTUnwrap(lastRow(of: frame, matching: pinRGB), "the pin must draw")
+        let nameBottomRow = try XCTUnwrap(lastRow(of: frame, matching: nameRGB), "the stop's name must draw")
 
-        // Both float clear of the car: neither may reach into its footprint.
-        XCTAssertLessThanOrEqual(
-            pinBottomRow, stopRow - clearedRows,
-            "the pin must clear the vehicle's half-length + clearance"
+        // The pin is centred on the stop itself — its bottom edge sits one pin
+        // radius below the stop's row, not a car's length away from it.
+        XCTAssertEqual(
+            pinBottomRow, stopRow + pinRadiusRows, accuracy: 2,
+            "the pin must be drawn on the stop, not offset from it"
         )
-        XCTAssertLessThan(pillBottomRow, pinBottomRow, "the name sits above the pin in the floating group")
+        XCTAssertLessThan(nameBottomRow, pinBottomRow, "the name stands on the pin")
     }
 
-    /// The largest row containing `target` — an element's bottom edge.
-    private func lastRow(of frame: CGImage, matching target: RGB) throws -> Int? {
+    /// The largest row containing `target` — an element's bottom edge. Matched
+    /// with a tolerance because antialiased type never lands on an exact tone.
+    private func lastRow(of frame: CGImage, matching target: RGB, tolerance: Int = 12) throws -> Int? {
         var found: Int?
         for row in 0..<heightPx {
-            for col in 0..<widthPx where try pixel(frame, col: col, row: row) == target {
-                found = row
-                break
+            for col in 0..<widthPx {
+                let sample = try pixel(frame, col: col, row: row)
+                if abs(sample.red - target.red) <= tolerance,
+                   abs(sample.green - target.green) <= tolerance,
+                   abs(sample.blue - target.blue) <= tolerance {
+                    found = row
+                    break
+                }
             }
         }
         return found
     }
 
+    // MARK: - The stop's typography layer (2026-07-31 prototype port)
+
+    private func deckContent(photos: [PhotoRef], focusIndex: Int = 0) -> OverlayContent {
+        .photoDeck(RecapPhotoDeck(
+            photos: photos, focusIndex: focusIndex, reveal: 1, opacity: 1,
+            name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
+        ))
+    }
+
+    /// The dots say "which of this stop's photos you are looking at". A stop with
+    /// one photo has nothing to page through, so it must show none — an indicator
+    /// with a single dot reads as a broken control.
+    func testProgressDotsAppearOnlyWhenAStopHasPhotosToPageThrough() async throws {
+        var style = opaqueCardStyle
+        let dotRGB = RGB(red: 255, green: 0, blue: 255)
+        style.deckDotOnColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        style.deckDotOffColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+        let refs = (0..<4).map { PhotoRef.asset("p\($0)") }
+
+        let many = try await render([deckContent(photos: refs)], resolverImage: green, style: style)
+        XCTAssertGreaterThan(try colorCount(many, matching: dotRGB), 0, "a four-photo stop pages, so it shows dots")
+        let one = try await render([deckContent(photos: [refs[0]])], resolverImage: green, style: style)
+        XCTAssertEqual(try colorCount(one, matching: dotRGB), 0, "a one-photo stop has nothing to page through")
+    }
+
+    /// The HUD is **film chrome, not stop chrome** (Chiu 2026-07-31). The day and
+    /// the running distance answer "where are we in this trip" at any instant, so
+    /// they must draw on their own — on the road, with no stop and no card in the
+    /// frame — and must not be something a photo card brings with it.
+    func testHUDDrawsOnItsOwnAndTheStopOverlaysDoNot() async throws {
+        var style = opaqueCardStyle
+        let pillRGB = RGB(red: 255, green: 0, blue: 255)
+        style.hudPillColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+
+        let travelling = try await render(
+            [.hud(dayLabel: "Day 3", place: nil, travelledM: 114_000)], resolverImage: green, style: style
+        )
+        XCTAssertGreaterThan(
+            try colorCount(travelling, matching: pillRGB), 0, "the HUD draws mid-leg, with no stop on screen"
+        )
+
+        // Neither stop overlay carries it any more — the HUD is the only source.
+        let stopOnly = try await render(
+            [
+                deckContent(photos: [.asset("a"), .asset("b")]),
+                .stopLabel(name: "小樽運河", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75), detail: nil, opacity: 1)
+            ],
+            resolverImage: green, style: style
+        )
+        XCTAssertEqual(try colorCount(stopOnly, matching: pillRGB), 0, "a stop must not draw its own metadata pill")
+    }
+
+    /// The HUD names the place only while the film is parked at one; on the road
+    /// it is the day alone, so the pill is narrower.
+    func testHUDNamesThePlaceOnlyWhileParkedAtIt() async throws {
+        var style = opaqueCardStyle
+        let pillRGB = RGB(red: 255, green: 0, blue: 255)
+        style.hudPillColor = CGColor(srgbRed: 1, green: 0, blue: 1, alpha: 1)
+        let green = try makeSolidImage(red: 0, green: 1, blue: 0)
+
+        let parked = try await render(
+            [.hud(dayLabel: "Day 3", place: "小樽運河", travelledM: 114_000)], resolverImage: green, style: style
+        )
+        let travelling = try await render(
+            [.hud(dayLabel: "Day 3", place: nil, travelledM: 114_000)], resolverImage: green, style: style
+        )
+        XCTAssertGreaterThan(
+            try colorCount(parked, matching: pillRGB), try colorCount(travelling, matching: pillRGB),
+            "the pill grows to carry the stop's name while parked at it"
+        )
+    }
+
     func testOverlayRenderingIsDeterministic() async throws {
         let green = try makeSolidImage(red: 0, green: 1, blue: 0)
         let contents: [OverlayContent] = [
-            .routeReveal([RecapCoordinate(lat: -32.001, lon: 115.75), RecapCoordinate(lat: -32.0, lon: 115.75)]),
+            .routeReveal([RecapRouteLeg(
+                coordinates: [RecapCoordinate(lat: -32.001, lon: 115.75), RecapCoordinate(lat: -32.0, lon: 115.75)],
+                mode: .drive, provenance: .recorded
+            )]),
             .stopLabel(
                 name: "Stop", coordinate: RecapCoordinate(lat: -32.0, lon: 115.75),
                 detail: "步行 21 分鐘", opacity: 0.5
@@ -139,7 +312,8 @@ final class RecapOverlayRendererTests: RecapRenderTestCase {
                 photos: [.asset("a"), .asset("b")], focusIndex: 0,
                 reveal: 0.7, opacity: 0.7, name: "Stop", detail: "步行 21 分鐘",
                 coordinate: RecapCoordinate(lat: -32.0, lon: 115.75)
-            ))
+            )),
+            .hud(dayLabel: "Day 1", place: "Stop", travelledM: 1358_000)
         ]
         let first = try await render(contents, resolverImage: green)
         let second = try await render(contents, resolverImage: green)

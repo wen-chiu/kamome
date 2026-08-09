@@ -47,3 +47,28 @@ the no-music call), cap clip count. Blocked on: §4.5 steps 2–5 landed and the
 <90 s render budget measured — per-frame video decode + composite is the
 single biggest render-cost risk in the whole pipeline. (Decision record:
 `decisions.md` 2026-07-17.)
+
+### Place names as narrative rhythm (2026-08-02, Chiu)
+
+Brief landmark title cards — "Lake Tekapo" — inserted between travel and stop
+beats as a storytelling device. **Distinct from static map labels**: this is
+narration with its own timing, not annotation the map carries continuously, and
+the two answer different questions ("what am I arriving at" vs "where am I
+right now"). Raised while comparing span/label options for the legibility
+problem; parked so the two are not conflated. The static-label counterpart is
+scoped in `handoff-P3.5.md` §"Map reference labels" — wanted, blocked on a
+fontstack, and to be done as a real pass rather than an afterthought.
+
+### iCloud photo download for the recap deck (option B, 2026-08-02, Chiu)
+
+Option C landed: the resolver downloads nothing and the recap screen *names* the
+shortfall (`recap_photos_missing`). B is the real behaviour — fetch the
+originals so the deck is never blank — and it is a feature, not a flag flip:
+`warm` loops every deck photo sequentially, so an unbounded download behind a
+progress bar that reports *render* progress would replace a visible bug with an
+invisible hang. It needs its own phase (progress, cancel, graceful fallback to
+the grey matte).
+
+**Do the copy-catalog pass at the same time** (Chiu): zh-Hant first, as the rest
+of the app's strings are. Flagged then because B is the first thing since the
+import sheet to add real user-facing prose.

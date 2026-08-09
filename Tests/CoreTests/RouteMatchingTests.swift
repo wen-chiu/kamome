@@ -39,7 +39,10 @@ final class RouteMatchingTests: XCTestCase {
         confidenceMin: 0.5,
         radiusM: 25,
         timeoutS: 10,
-        displayEpsilonM: 5
+        displayEpsilonM: 5,
+        routeMaxDetourRatio: 2.5,
+        routeWaypointMinSpacingM: 250,
+        routeWaypointRadiusM: 500
     )
 
     private func trace(count: Int) -> [RouteMatchPoint] {
@@ -122,15 +125,134 @@ final class RouteMatchingTests: XCTestCase {
     }
 
     func testEmptyBaseURLDisablesMatchingWithoutNetwork() async throws {
-        let disabled = TrackingConfig.Matching(
-            baseURL: "", chunkSize: 100, confidenceMin: 0.5, radiusM: 25, timeoutS: 10, displayEpsilonM: 5
-        )
+        let disabled = matchingConfig.withBaseURL("")
         let provider = OSRMMatchProvider(config: disabled) { _ in
             XCTFail("disabled matching must never touch the transport")
             throw URLError(.badURL)
         }
         let outcome = try await provider.match(trace(count: 3))
         XCTAssertNil(outcome)
+    }
+
+    // MARK: - Route reconstruction (sparse EXIF legs, /route with via-waypoints)
+
+    private func routeBody(distanceM: Double, geometry: [GeoPoint]) -> Data {
+        let json: [String: Any] = [
+            "code": "Ok",
+            "routes": [["distance": distanceM, "geometry": EncodedPolyline.encode(geometry)]]
+        ]
+        // swiftlint:disable:next force_try
+        return try! JSONSerialization.data(withJSONObject: json)
+    }
+
+    /// Three photo positions ~1.1 km apart along a meridian.
+    private func waypoints(count: Int) -> [RouteMatchPoint] {
+        (0..<count).map {
+            RouteMatchPoint(ts: 1_752_600_000 + Double($0 * 3_600), lat: -32.0 + Double($0) * 0.01, lon: 115.75)
+        }
+    }
+
+    func testReconstructedRouteCarriesEveryPhotoAsAViaWaypoint() async throws {
+        let road = [GeoPoint(lat: -32.0, lon: 115.75), GeoPoint(lat: -31.98, lon: 115.751)]
+        let seenURL = Locked<URL?>(nil)
+        let provider = OSRMRouteProvider(config: matchingConfig) { request in
+            seenURL.set(request.url)
+            return (self.routeBody(distanceM: 2_500, geometry: road), self.httpOK(request.url))
+        }
+
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertEqual(outcome?.geometry, road)
+
+        let url = try XCTUnwrap(seenURL.get()?.absoluteString)
+        XCTAssertTrue(url.hasPrefix("http://127.0.0.1:5000/route/v1/driving/"), "sparse legs go to /route, not /match")
+        XCTAssertEqual(
+            url.components(separatedBy: "/route/v1/driving/").last?
+                .components(separatedBy: "?").first?
+                .components(separatedBy: ";").count,
+            3,
+            "the intermediate photo rides along as a via-waypoint (PD-3)"
+        )
+        XCTAssertFalse(url.contains("timestamps="), "/route takes no timestamps")
+        // The waypoint radius, not the 25 m GPS floor — photos sit beside roads.
+        XCTAssertTrue(url.contains("radiuses=500;500;500"), "got: \(url)")
+    }
+
+    /// PD-3 outlier protection: `/route` always answers *something* drivable, so
+    /// an implausible detour must be rejected rather than drawn as real road.
+    func testImplausibleDetourIsRejectedSoTheLegStaysRaw() async throws {
+        let road = [GeoPoint(lat: -32.0, lon: 115.75), GeoPoint(lat: -31.98, lon: 115.751)]
+        let provider = OSRMRouteProvider(config: matchingConfig) { request in
+            // ~2.2 km of straight line answered with a 300 km "route".
+            (self.routeBody(distanceM: 300_000, geometry: road), self.httpOK(request.url))
+        }
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertNil(outcome)
+    }
+
+    func testPlausibleDetourWithinRatioIsAccepted() async throws {
+        let road = [GeoPoint(lat: -32.0, lon: 115.75), GeoPoint(lat: -31.98, lon: 115.751)]
+        let straightM = OSRMRouteProvider.straightLineM(waypoints(count: 3))
+        let provider = OSRMRouteProvider(config: matchingConfig) { request in
+            // Just inside route_max_detour_ratio — roads are never straight.
+            (self.routeBody(distanceM: straightM * 2.4, geometry: road), self.httpOK(request.url))
+        }
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertNotNil(outcome)
+    }
+
+    func testNoRouteResponseIsCleanFallbackNotError() async throws {
+        let provider = OSRMRouteProvider(config: matchingConfig) { request in
+            let body = try JSONSerialization.data(withJSONObject: ["code": "NoRoute"])
+            let http = HTTPURLResponse(
+                url: request.url!, statusCode: 400, httpVersion: nil, headerFields: nil
+            )!
+            return (body, http)
+        }
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertNil(outcome, "an unroutable leg keeps raw geometry (PD-2)")
+    }
+
+    func testEmptyBaseURLDisablesReconstructionWithoutNetwork() async throws {
+        let provider = OSRMRouteProvider(config: matchingConfig.withBaseURL("")) { _ in
+            XCTFail("disabled reconstruction must never touch the transport")
+            throw URLError(.badURL)
+        }
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertNil(outcome)
+    }
+
+    // MARK: - Waypoint hygiene
+
+    func testClusteredWaypointsAreThinnedButEndpointsSurvive() {
+        // Five points, the middle three within ~11 m of each other (EXIF noise
+        // at one place) — they must not pin the route to a parking bay.
+        let noisy = [
+            RouteMatchPoint(ts: 0, lat: -32.00, lon: 115.75),
+            RouteMatchPoint(ts: 1, lat: -31.98, lon: 115.75),
+            RouteMatchPoint(ts: 2, lat: -31.9801, lon: 115.75),
+            RouteMatchPoint(ts: 3, lat: -31.9802, lon: 115.75),
+            RouteMatchPoint(ts: 4, lat: -31.96, lon: 115.75)
+        ]
+        let thinned = OSRMRouteProvider.thinned(noisy, minSpacingM: 250, limit: 100)
+        XCTAssertEqual(thinned.count, 3, "the noise collapses to one via")
+        XCTAssertEqual(thinned.first?.lat, -32.00, "the leg's start anchor is never dropped")
+        XCTAssertEqual(thinned.last?.lat, -31.96, "nor its end anchor")
+    }
+
+    func testWaypointsAreCappedAtTheRequestLimitKeepingBothEnds() {
+        let many = (0..<400).map {
+            RouteMatchPoint(ts: Double($0), lat: -32.0 + Double($0) * 0.01, lon: 115.75)
+        }
+        let thinned = OSRMRouteProvider.thinned(many, minSpacingM: 250, limit: 100)
+        XCTAssertEqual(thinned.count, 100, "OSRM's per-request location cap")
+        XCTAssertEqual(thinned.first?.lat, many.first?.lat)
+        XCTAssertEqual(thinned.last?.lat, many.last?.lat)
+    }
+
+    func testTwoWaypointLegIsSentUnthinned() {
+        let pair = waypoints(count: 2)
+        XCTAssertEqual(OSRMRouteProvider.thinned(pair, minSpacingM: 100_000, limit: 100).count, 2,
+                       "a leg is its two stop anchors at minimum — never thinned below that")
     }
 }
 

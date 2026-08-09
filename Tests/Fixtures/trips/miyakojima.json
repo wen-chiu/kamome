@@ -1,0 +1,19 @@
+{
+  "_comment": "Miyakojima: Hirara → Irabu bridge → Yonaha Maehama → Higashi-Hennazaki cape, Routes 78/83/235.",
+  "title": "宮古島",
+  "photos": [
+    { "id": "hirara-1", "t": 0,    "lat": 24.80580, "lon": 125.28110 },
+    { "id": "hirara-2", "t": 600,  "lat": 24.80710, "lon": 125.27860 },
+    { "id": "hirara-3", "t": 1500, "lat": 24.80420, "lon": 125.28330 },
+    { "id": "irabu-1", "t": 5400,  "lat": 24.81800, "lon": 125.24700 },
+    { "id": "irabu-2", "t": 6300,  "lat": 24.82640, "lon": 125.22910 },
+    { "id": "irabu-3", "t": 7200,  "lat": 24.83180, "lon": 125.21470 },
+    { "id": "maehama-1", "t": 16200, "lat": 24.72560, "lon": 125.26470 },
+    { "id": "maehama-2", "t": 17100, "lat": 24.72380, "lon": 125.26310 },
+    { "id": "maehama-3", "t": 18000, "lat": 24.72710, "lon": 125.26620 },
+    { "id": "henna-1", "t": 25200, "lat": 24.72170, "lon": 125.46440 },
+    { "id": "henna-2", "t": 26100, "lat": 24.72040, "lon": 125.46710 },
+    { "id": "ikema-1", "t": 34200, "lat": 24.92000, "lon": 125.24200 },
+    { "id": "ikema-2", "t": 35100, "lat": 24.92180, "lon": 125.24460 }
+  ]
+}

@@ -8,11 +8,14 @@ import XCTest
 /// engine-produced trip.
 final class CameraPathTests: XCTestCase {
     /// 1 km straight line, 11 evenly spaced vertices along a meridian.
-    private let straightRoute: [CameraPath.Point] = (0...10).map {
+    ///
+    /// Internal, not private: shared with the dead-zone/continuity tests in
+    /// `CameraPathContinuityTests.swift`.
+    let straightRoute: [CameraPath.Point] = (0...10).map {
         CameraPath.Point(lat: -32.0 + Double($0) * 0.0009, lon: 115.75)
     }
 
-    private func exportConfig(
+    func exportConfig(
         targetDurationS: Double = 30,
         fps: Int = 30,
         stopHoldS: Double = 1.5,
@@ -33,19 +36,31 @@ final class CameraPathTests: XCTestCase {
             zoomTransitionS: 0.8,
             actSplitKm: 25,
             followHeadingUp: followHeadingUp,
-            deckPhotoHoldS: 0.8,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
+            deckPhotoHoldS: 0.8, deckPhotoMinHoldS: 0.2,
             deckZoomS: 0.5,
-            deckLabelLeadS: 0.6,
+            deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: 15,
             titleCardS: 2.5,
             endCardS: 3,
-            videoBitrateMbps: 5
+            videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 
     /// A route large enough that the whole-trip fitting span exceeds the close
     /// follow span, so the wide↔close difference is observable.
-    private let longRoute: [CameraPath.Point] = (0...10).map {
+    let longRoute: [CameraPath.Point] = (0...10).map {
         CameraPath.Point(lat: -32.0 + Double($0) * 0.1, lon: 115.75)
     }
 
@@ -172,124 +187,4 @@ final class CameraPathTests: XCTestCase {
         XCTAssertEqual(Double(holdFrames.count), 450, accuracy: Double(stops.count))
     }
 
-    // MARK: - Fixed-frame framing (Chiu 2026-07-25)
-
-    /// The camera holds **one** frame for a continuous trip: no establishing
-    /// zoom, no follow-cam, no stop dolly. A still map is what makes the distance
-    /// covered legible, and it keeps GPS wobble at its true scale.
-    func testContinuousTripHoldsASingleFixedFrame() throws {
-        let config = exportConfig()
-        let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [longRoute[5]], config: config))
-
-        let samples = stride(from: 0.0, through: config.targetDurationS, by: 0.25)
-            .map { path.cameraFrame(atTime: $0) }
-        let first = try XCTUnwrap(samples.first)
-        for frame in samples {
-            XCTAssertEqual(frame.spanM, first.spanM, accuracy: 1e-6, "the span must never change")
-            XCTAssertEqual(frame.centerLat, first.centerLat, accuracy: 1e-9, "the centre must never move")
-            XCTAssertEqual(frame.centerLon, first.centerLon, accuracy: 1e-9, "the centre must never move")
-        }
-        // And that one frame holds the whole route. `spanM` is the *horizontal*
-        // span; this route runs north-south, so compare against what the portrait
-        // frame covers vertically.
-        let extentM = Geo.distanceM(
-            latA: longRoute.first!.lat, lonA: longRoute.first!.lon,
-            latB: longRoute.last!.lat, lonB: longRoute.last!.lon
-        )
-        let verticalCoverM = first.spanM * Double(config.frameHeightPx) / Double(config.frameWidthPx)
-        XCTAssertGreaterThan(verticalCoverM, extentM, "the held frame must contain the whole route")
-    }
-
-    /// A genuine jump — a flight, a ferry, a drive resuming in another region —
-    /// is the one thing that re-frames the camera, and it eases rather than cuts.
-    func testLargeJumpSplitsIntoTwoFramesAndEasesBetweenThem() throws {
-        let config = exportConfig()
-        // Two clusters ~200 km apart: far beyond act_split_km.
-        let near = (0...10).map { CameraPath.Point(lat: -32.0 + Double($0) * 0.001, lon: 115.75) }
-        let far = (0...10).map { CameraPath.Point(lat: -30.2 + Double($0) * 0.001, lon: 115.75) }
-        let path = try XCTUnwrap(CameraPath(route: near + far, stops: [], config: config))
-
-        let opening = path.cameraFrame(atTime: 0.5)
-        let closing = path.cameraFrame(atTime: config.targetDurationS - 0.5)
-        XCTAssertGreaterThan(
-            abs(opening.centerLat - closing.centerLat), 1.0, "each act frames its own cluster"
-        )
-        // Neither act is framed to the whole ~200 km — that is what splitting buys.
-        XCTAssertLessThan(opening.spanM, 100_000, "the first act frames only its own cluster")
-
-        // The seam eases: some sample sits strictly between the two centres.
-        let centres = stride(from: 0.0, through: config.targetDurationS, by: 0.1)
-            .map { path.cameraFrame(atTime: $0).centerLat }
-        let low = min(opening.centerLat, closing.centerLat), high = max(opening.centerLat, closing.centerLat)
-        XCTAssertTrue(
-            centres.contains { $0 > low + 0.05 && $0 < high - 0.05 },
-            "the camera must ease across the jump, not cut"
-        )
-    }
-
-    func testTinyTripNeverZoomsInPastTheSpanFloor() throws {
-        // straightRoute is ~1 km — its fitting span is under camera_span_m, so
-        // the floor holds and a short trip is not framed absurdly tight.
-        let config = exportConfig()
-        let path = try XCTUnwrap(CameraPath(route: straightRoute, stops: [], config: config))
-        XCTAssertEqual(path.cameraFrame(atTime: 0).spanM, config.cameraSpanM, accuracy: 1e-6)
-        XCTAssertEqual(path.cameraFrame(atTime: 15).spanM, config.cameraSpanM, accuracy: 1e-6)
-    }
-
-    func testZoomOnlyTightensFromWideIntoBody() throws {
-        let config = exportConfig()
-        let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [], config: config))
-        var previous = Double.greatestFiniteMagnitude
-        for time in stride(from: 0.0, through: config.titleCardS + config.zoomTransitionS + 1, by: 0.1) {
-            let span = path.cameraFrame(atTime: time).spanM
-            XCTAssertLessThanOrEqual(span, previous + 1e-6, "span should only tighten into the body at t=\(time)")
-            previous = span
-        }
-    }
-
-    func testHeadingFollowsRouteDirection() throws {
-        let north = try XCTUnwrap(CameraPath(route: straightRoute, stops: [], config: exportConfig()))
-        XCTAssertEqual(north.position(atTime: 15).heading, 0, accuracy: 1, "north-bound → heading 0°")
-
-        let eastRoute = (0...10).map { CameraPath.Point(lat: -32.0, lon: 115.75 + Double($0) * 0.0009) }
-        let east = try XCTUnwrap(CameraPath(route: eastRoute, stops: [], config: exportConfig()))
-        XCTAssertEqual(east.position(atTime: 15).heading, 90, accuracy: 1, "east-bound → heading 90°")
-    }
-
-    func testBearingStaysZeroUnlessHeadingUpEnabled() throws {
-        let eastRoute = (0...10).map { CameraPath.Point(lat: -32.0, lon: 115.75 + Double($0) * 0.0009) }
-        // Default: north-up map, the marker rotates — bearing stays 0.
-        let northUp = try XCTUnwrap(CameraPath(route: eastRoute, stops: [], config: exportConfig()))
-        XCTAssertEqual(northUp.cameraFrame(atTime: 15).bearing, 0, accuracy: 1e-9)
-        // follow_heading_up on: the body rotates to the travel heading.
-        let rotated = try XCTUnwrap(
-            CameraPath(route: eastRoute, stops: [], config: exportConfig(followHeadingUp: true))
-        )
-        XCTAssertEqual(rotated.cameraFrame(atTime: 15).bearing, 90, accuracy: 1, "heading-up rotates the map east→up")
-    }
-
-    func testDegenerateRoutesProduceNoPath() {
-        XCTAssertNil(CameraPath(route: [], stops: [], config: exportConfig()))
-        XCTAssertNil(CameraPath(route: [straightRoute[0]], stops: [], config: exportConfig()))
-        // Two identical points: zero-length route.
-        XCTAssertNil(CameraPath(route: [straightRoute[0], straightRoute[0]], stops: [], config: exportConfig()))
-    }
-
-    func testPerthReplayTripProducesFullCoveragePath() throws {
-        let engine = try GPXReplay.run(fixture: "perth_margaret_river_day1.gpx")
-        let route = engine.segments.flatMap(\.points).map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
-        let stops = engine.stops.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
-        let config = try GPXReplay.loadConfig().export
-        let path = try XCTUnwrap(CameraPath(route: route, stops: stops, config: config))
-
-        XCTAssertEqual(path.frameCount, Int(config.targetDurationS) * config.fps)
-        let first = path.position(atTime: 0)
-        XCTAssertEqual(first.lat, route.first!.lat, accuracy: 1e-9)
-        let last = path.position(atTime: config.targetDurationS)
-        XCTAssertEqual(last.lat, route.last!.lat, accuracy: 1e-9)
-
-        // Every stop gets its hold moment.
-        let heldStops = Set((0..<path.frameCount).compactMap { path.position(atFrame: $0).holdingStopIndex })
-        XCTAssertEqual(heldStops.count, stops.count)
-    }
 }

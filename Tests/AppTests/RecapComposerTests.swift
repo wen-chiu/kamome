@@ -21,12 +21,19 @@ final class RecapComposerTests: XCTestCase {
         )
     }
 
-    private func segment(points: [(Double, Double)]) -> (segment: SegmentRecord, points: [TrackpointRecord]) {
+    private func segment(
+        id: String = "seg-1",
+        mode: String = "drive",
+        source: String? = nil,
+        matchedPolyline: String? = nil,
+        points: [(Double, Double)]
+    ) -> (segment: SegmentRecord, points: [TrackpointRecord]) {
         let record = SegmentRecord(
-            id: "seg-1", tripId: "trip-1", mode: "drive", startedAt: tripStart, endedAt: tripStart + 3600
+            id: id, tripId: "trip-1", mode: mode, startedAt: tripStart, endedAt: tripStart + 3600,
+            matchedPolyline: matchedPolyline, source: source
         )
         let trackpoints = points.enumerated().map { index, point in
-            TrackpointRecord(segmentId: "seg-1", ts: tripStart + Double(index), lat: point.0, lon: point.1)
+            TrackpointRecord(segmentId: id, ts: tripStart + Double(index), lat: point.0, lon: point.1)
         }
         return (record, trackpoints)
     }
@@ -54,13 +61,13 @@ final class RecapComposerTests: XCTestCase {
     func testContentMapsRouteStopsAndCards() throws {
         let stops = [stop(), stop(id: "stop-2", name: nil, arrivedOffset: 90_000)]
         // Middle point well off the endpoints' chord so ε=15 m keeps it.
-        let route = RecapComposer.route(
+        let legs = RecapComposer.legs(
             from: [segment(points: [(-32.0, 115.75), (-32.1, 115.90), (-32.2, 115.77)])],
             epsilonM: 15, matchedEpsilonM: 5
         )
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: trip(daysLong: 2),
-            route: route,
+            legs: legs,
             stops: stops,
             stats: TripStats.from(jsonString: trip().statsJson),
             photosByStop: [:]
@@ -84,11 +91,82 @@ final class RecapComposerTests: XCTestCase {
     func testDegenerateRouteYieldsNoTrip() {
         XCTAssertNil(RecapComposer.trip(
             trip: trip(),
-            route: RecapComposer.route(from: [segment(points: [(-32.0, 115.75)])], epsilonM: 15, matchedEpsilonM: 5),
+            legs: RecapComposer.legs(from: [segment(points: [(-32.0, 115.75)])], epsilonM: 15, matchedEpsilonM: 5),
             stops: [],
             stats: nil,
             photosByStop: [:]
         ))
+    }
+
+    // MARK: - Provenance (PD-1) — what the film is allowed to claim
+
+    /// The asymmetry is the point: raw geometry on a *recorded* segment is an
+    /// honest GPS trace that simply never went through matching, while raw
+    /// geometry on an *imported* one is a straight line between two photos
+    /// nobody watched being traveled. Only the second gets dashed.
+    func testProvenanceDistinguishesRecordedReconstructedAndInferred() {
+        let recordedRaw = segment(source: "gps_hifi", points: [(-32.0, 115.75), (-32.1, 115.76)])
+        XCTAssertEqual(RecapComposer.provenance(for: recordedRaw.segment), .recorded)
+
+        // NULL source is a schema-v1 row — reads as recorded, same as always.
+        let legacy = segment(source: nil, points: [(-32.0, 115.75), (-32.1, 115.76)])
+        XCTAssertEqual(RecapComposer.provenance(for: legacy.segment), .recorded)
+
+        let importedRaw = segment(source: "exif", points: [(-32.0, 115.75), (-32.1, 115.76)])
+        XCTAssertEqual(RecapComposer.provenance(for: importedRaw.segment), .inferred)
+        XCTAssertTrue(RecapComposer.provenance(for: importedRaw.segment).isInferred)
+
+        // Snapped geometry is a confident claim whichever way the trip arrived.
+        let snapped = EncodedPolyline.encode([GeoPoint(lat: -32.0, lon: 115.75), GeoPoint(lat: -32.1, lon: 115.76)])
+        let importedSnapped = segment(source: "exif", matchedPolyline: snapped, points: [(-32.0, 115.75), (-32.1, 115.76)])
+        XCTAssertEqual(RecapComposer.provenance(for: importedSnapped.segment), .reconstructed)
+        let recordedSnapped = segment(source: "gps_hifi", matchedPolyline: snapped, points: [(-32.0, 115.75), (-32.1, 115.76)])
+        XCTAssertEqual(RecapComposer.provenance(for: recordedSnapped.segment), .reconstructed)
+    }
+
+    /// One leg per stored segment, each keeping its own mode and provenance —
+    /// a mixed trip must not collapse to a single claim.
+    func testLegsCarryPerSegmentModeAndProvenance() {
+        let snapped = EncodedPolyline.encode([GeoPoint(lat: -32.0, lon: 115.75), GeoPoint(lat: -32.1, lon: 115.76)])
+        let legs = RecapComposer.legs(
+            from: [
+                segment(id: "a", mode: "drive", source: "exif", matchedPolyline: snapped,
+                        points: [(-32.0, 115.75), (-32.1, 115.76)]),
+                segment(id: "b", mode: "walk", source: "exif",
+                        points: [(-32.1, 115.76), (-32.11, 115.77)])
+            ],
+            epsilonM: 15, matchedEpsilonM: 5
+        )
+        XCTAssertEqual(legs.map(\.provenance), [.reconstructed, .inferred])
+        XCTAssertEqual(legs.map(\.mode), [.drive, .walk])
+    }
+
+    /// PD-4: the MVP film's end card carries no QR, so the composer emits no
+    /// payload for one. `kamome://route/<id>` resolves to nothing.
+    func testTripCarriesNoShareURLForTheMVPFilm() throws {
+        let recap = try XCTUnwrap(RecapComposer.trip(
+            trip: trip(),
+            legs: RecapComposer.legs(
+                from: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])], epsilonM: 15, matchedEpsilonM: 5
+            ),
+            stops: [], stats: nil, photosByStop: [:]
+        ))
+        XCTAssertNil(recap.shareURL)
+        XCTAssertFalse(recap.callToAction.isEmpty, "the CTA stays — only the unresolved code goes")
+    }
+
+    /// The opening title's date range is the trip's **real** span, straight from
+    /// `trip.startedAt`/`endedAt` — which for an import are the first and last
+    /// photo's EXIF times. A one-day fixture reads as one date because the trip
+    /// is one day, not because anything is hardcoded to look that way.
+    func testTitleSubtitleShowsTheTripsRealDateRange() {
+        let oneDay = RecapComposer.titleSubtitle(trip: trip(daysLong: 0), stats: nil)
+        let nineDays = RecapComposer.titleSubtitle(trip: trip(daysLong: 9), stats: nil)
+        XCTAssertNotEqual(oneDay, nineDays, "a nine-day trip must not print like a one-day one")
+        // A multi-day trip prints a range; a same-day trip collapses to one date.
+        XCTAssertTrue(nineDays.contains("–") || nineDays.contains("-") || nineDays.contains("—"),
+                      "expected a range, got: \(nineDays)")
+        XCTAssertFalse(oneDay.contains("–"), "expected a single date, got: \(oneDay)")
     }
 
     func testDayLabelsUseS3DayMath() {
@@ -113,7 +191,7 @@ final class RecapComposerTests: XCTestCase {
     func testStopPhotosComeFromProvidedRefs() throws {
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: trip(),
-            route: RecapComposer.route(
+            legs: RecapComposer.legs(
                 from: [segment(points: [(-32.0, 115.75), (-32.1, 115.76)])], epsilonM: 15, matchedEpsilonM: 5
             ),
             stops: [stop()],

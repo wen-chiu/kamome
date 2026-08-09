@@ -62,14 +62,7 @@ final class OSRMRecordedFixtureTests: XCTestCase {
         let config = try GPXReplay.loadConfig().matching
         // The transport is stubbed, so the URL is never contacted; a non-empty
         // base is still required for the provider to run at all.
-        let testConfig = TrackingConfig.Matching(
-            baseURL: "http://recorded.invalid",
-            chunkSize: config.chunkSize,
-            confidenceMin: config.confidenceMin,
-            radiusM: config.radiusM,
-            timeoutS: config.timeoutS,
-            displayEpsilonM: config.displayEpsilonM
-        )
+        let testConfig = config.withBaseURL("http://recorded.invalid")
         let (name, trace) = try Self.recordedSegment(config: testConfig)
         let fixtureURL = Self.fixtureURL(name: name)
         guard let data = try? Data(contentsOf: fixtureURL) else {
@@ -126,14 +119,7 @@ final class OSRMRecordedFixtureTests: XCTestCase {
         )
         let loaded = try GPXReplay.loadConfig().matching
         let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5001"
-        let config = TrackingConfig.Matching(
-            baseURL: baseURL,
-            chunkSize: loaded.chunkSize,
-            confidenceMin: loaded.confidenceMin,
-            radiusM: loaded.radiusM,
-            timeoutS: loaded.timeoutS,
-            displayEpsilonM: loaded.displayEpsilonM
-        )
+        let config = loaded.withBaseURL(baseURL)
         let (name, trace) = try Self.recordedSegment(config: config)
         print("KAMOME_OSRM_CAPTURE segment \(name): \(trace.count) trace points → \(baseURL)")
 

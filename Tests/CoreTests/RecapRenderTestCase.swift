@@ -1,6 +1,7 @@
 import CoreGraphics
 import KamomeConfig
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// Shared harness for the §4.5 golden-frame gates, on the render-layers pipeline
@@ -94,9 +95,21 @@ class RecapRenderTestCase: XCTestCase {
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: widthPx, frameHeightPx: heightPx,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: followHeadingUp,
-            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6,
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
+            deckPhotoHoldS: 0.8, deckPhotoMinHoldS: 0.2, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
             keyframeIntervalFrames: keyframeIntervalFrames,
-            titleCardS: 1, endCardS: 1, videoBitrateMbps: 5
+            titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 
@@ -115,16 +128,20 @@ class RecapRenderTestCase: XCTestCase {
     /// photos, else the uniform `stop_hold_s` (matches RecapComposer).
     func makeTrip(
         route: [RecapCoordinate]? = nil,
+        legs: [RecapTrip.Leg]? = nil,
         stops: [StopSpec] = [],
         title: String = "Trip",
         subtitle: String = "Subtitle",
         statsLines: [String] = ["1 km · 1 stop"],
-        callToAction: String = "Get this route",
-        shareURL: String = "kamome://route/test",
+        callToAction: String = "Record your own journey",
+        shareURL: String? = nil,
         config: TrackingConfig.Export
     ) -> RecapTrip {
-        let coords = route ?? self.route
-        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let coords = legs.map { $0.flatMap(\.coordinates) } ?? route ?? self.route
+        let deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         let tripStops = stops.map { spec in
             RecapTrip.Stop(
                 coordinate: coords[spec.routeIndex], name: spec.name, dayLabel: "Day 1",
@@ -133,13 +150,14 @@ class RecapRenderTestCase: XCTestCase {
             )
         }
         return RecapTrip(
-            route: coords, stops: tripStops, title: title, subtitle: subtitle,
+            legs: legs ?? [RecapTrip.Leg(coordinates: coords, mode: .drive, provenance: .recorded)],
+            stops: tripStops, title: title, subtitle: subtitle,
             statsLines: statsLines, callToAction: callToAction, shareURL: shareURL
         )
     }
 
     func makeTimeline(_ trip: RecapTrip, config: TrackingConfig.Export) throws -> LinearTimeline {
-        try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
     }
 
     /// A compositor over the subject + overlay renderers, on the shipped north-up

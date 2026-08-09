@@ -10,12 +10,19 @@ public struct ImportPhoto: Equatable, Sendable {
     public let timestamp: Double
     public let lat: Double
     public let lon: Double
+    /// `PHAsset.isFavorite` — an explicit judgement by the person who was there,
+    /// and the strongest signal this app has about which stops mattered
+    /// (`StopPhotoAllocator`). Only a real photo library has it: fixtures dumped
+    /// from exported files carry place and time only, so a desk render sees
+    /// `false` everywhere.
+    public let isFavorite: Bool
 
-    public init(assetId: String, timestamp: Double, lat: Double, lon: Double) {
+    public init(assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false) {
         self.assetId = assetId
         self.timestamp = timestamp
         self.lat = lat
         self.lon = lon
+        self.isFavorite = isFavorite
     }
 }
 
@@ -77,12 +84,61 @@ public struct ImportedRoutePoint: Equatable, Sendable {
     public let timestamp: Double
     public let lat: Double
     public let lon: Double
+    /// `PHAsset.isFavorite` — an explicit judgement by the person who was there,
+    /// and the strongest signal this app has about which stops mattered
+    /// (`StopPhotoAllocator`). Only a real photo library has it: fixtures dumped
+    /// from exported files carry place and time only, so a desk render sees
+    /// `false` everywhere.
+    public let isFavorite: Bool
 
-    public init(assetId: String, timestamp: Double, lat: Double, lon: Double) {
+    public init(assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false) {
         self.assetId = assetId
         self.timestamp = timestamp
         self.lat = lat
         self.lon = lon
+        self.isFavorite = isFavorite
+    }
+}
+
+/// One inter-stop travel leg — the unit the route reconstructor works on, and
+/// the unit the film draws (typed-leg pass, Fable review 2026-07-26).
+///
+/// **Why legs and not one segment per trip.** A trip is not one uniform journey:
+/// a 300 km motorway leg and a 400 m walk between two cafés need different
+/// treatment, and one of them may reconstruct confidently while the other does
+/// not. A per-trip segment forces a single verdict on all of it — either the
+/// whole route claims to be road-matched or none of it does. Per-leg segments
+/// let each stretch carry its own provenance, which is what makes the honest
+/// dashed/solid distinction in the published film possible (PD-1).
+///
+/// Endpoints are the neighbouring **stop centroids** (with `departedAt` /
+/// `arrivedAt` as their timestamps), not the stops' outermost photos: with
+/// `import.stop_radius_m` at kilometre scale, cutting at the photos would leave
+/// a visible gap at every stop, and the centroid is exactly where the film draws
+/// the pin. Consecutive legs therefore share an endpoint and the concatenated
+/// route stays continuous.
+public struct ImportedLeg: Equatable, Sendable {
+    /// Endpoints plus every route-attached photo in between, in time order.
+    /// The interior points are the OSRM via-waypoint candidates (PD-3): the
+    /// road the photos actually evidence, not the great circle between stops.
+    public let points: [ImportedRoutePoint]
+    /// Great-circle length along `points` — the pre-snap estimate.
+    public let distanceM: Double
+    /// `distanceM` over the leg's elapsed time, km/h — nil when no time
+    /// elapsed, so the pace is unknowable rather than zero. The classifier
+    /// input: a walking-pace leg must not be pushed through a driving profile
+    /// (PD-8), which would invent roads for a stroll along a beach. The
+    /// threshold lives in `TrackingConfig`, so this carries the measurement,
+    /// never the verdict.
+    public let impliedSpeedKmh: Double?
+
+    public var startedAt: Double { points.first?.timestamp ?? 0 }
+    public var endedAt: Double { points.last?.timestamp ?? 0 }
+
+    public init(points: [ImportedRoutePoint], distanceM: Double, impliedSpeedKmh: Double?) {
+        self.points = points
+        self.distanceM = distanceM
+        self.impliedSpeedKmh = impliedSpeedKmh
     }
 }
 
@@ -91,8 +147,12 @@ public struct ImportedRoutePoint: Equatable, Sendable {
 /// the existing Trip Detail / RecapComposer / ExportEngine unchanged.
 public struct ImportedTripPlan: Equatable, Sendable {
     public let stops: [ImportedStop]
-    /// All photos in time order (pre-OSRM), one drive segment's trackpoints.
+    /// All photos in time order (pre-OSRM). The raw trajectory; `legs` is what
+    /// actually gets persisted as segments.
     public let routePoints: [ImportedRoutePoint]
+    /// The trip cut into inter-stop travel legs, in time order. One persisted
+    /// segment each.
+    public let legs: [ImportedLeg]
     /// Photos whose cluster fell below `minPhotosPerStop` — route-attached
     /// (`stop_id = NULL`), still real photos.
     public let routeAttachedAssetIds: [String]
@@ -102,10 +162,11 @@ public struct ImportedTripPlan: Equatable, Sendable {
     public let approxDistanceM: Double
 
     public init(stops: [ImportedStop], routePoints: [ImportedRoutePoint],
-                routeAttachedAssetIds: [String], startedAt: Double,
-                endedAt: Double, approxDistanceM: Double) {
+                legs: [ImportedLeg], routeAttachedAssetIds: [String],
+                startedAt: Double, endedAt: Double, approxDistanceM: Double) {
         self.stops = stops
         self.routePoints = routePoints
+        self.legs = legs
         self.routeAttachedAssetIds = routeAttachedAssetIds
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -113,12 +174,12 @@ public struct ImportedTripPlan: Equatable, Sendable {
     }
 
     /// The phantom-trip guard for import: a recap needs ≥ 2 route points
-    /// (RecapComposer returns nil otherwise). An empty/one-photo import is not
-    /// a trip.
-    public var isRenderable: Bool { routePoints.count >= 2 }
+    /// (RecapComposer returns nil otherwise), which is also what it takes to
+    /// build one leg. An empty/one-photo import is not a trip.
+    public var isRenderable: Bool { routePoints.count >= 2 && !legs.isEmpty }
 
     public static let empty = ImportedTripPlan(
-        stops: [], routePoints: [], routeAttachedAssetIds: [],
+        stops: [], routePoints: [], legs: [], routeAttachedAssetIds: [],
         startedAt: 0, endedAt: 0, approxDistanceM: 0
     )
 }

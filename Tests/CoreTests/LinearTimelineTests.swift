@@ -1,32 +1,60 @@
 import KamomeConfig
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
-/// The linear timeline's stop choreography. Since 2026-07-25 the camera holds a
-/// **fixed** frame — a stop is told by the label and the photo card, never by
-/// flying the map — so these assert the card's own reveal envelope *and* that
-/// the map stays put underneath it.
-final class LinearTimelineTests: XCTestCase {
-    private func exportConfig(
+/// Shared harness for the linear timeline's suites: a sample multi-stop trip,
+/// the shipped export tunables, and fine samplers over the deck window.
+class LinearTimelineTestCase: XCTestCase {
+    /// A deterministic fixed-length film with no prologue — what these harnesses
+    /// want. Said plainly since 2026-08-08; it used to be requested by passing a
+    /// nil map extent, which meant "no tiles installed" everywhere else.
+    func fixedTimeline(
+        _ trip: RecapTrip, _ config: TrackingConfig.Export
+    ) throws -> LinearTimeline {
+        try XCTUnwrap(LinearTimeline(
+            trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)
+        ))
+    }
+
+    func exportConfig(
         targetDurationS: Double = 30,
         deckZoomS: Double = 0.5,
         deckPhotoHoldS: Double = 0.8,
+        deckPhotoMinHoldS: Double = 0.2,
         cameraSpanM: Double = 1500
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
-            deckPhotoHoldS: deckPhotoHoldS, deckZoomS: deckZoomS, deckLabelLeadS: 0.6,
-            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+            deckZoomS: deckZoomS, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
+            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
+            // Stop weighting off: these gates measure the unweighted pacing.
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 
     /// A wandering route with `photoCounts.count` stops spaced along it; each
     /// stop's dwell is photo-count-driven (`RecapDeck.dwellS`).
-    private func sampleTrip(photoCounts: [Int], config: TrackingConfig.Export) -> RecapTrip {
+    func sampleTrip(photoCounts: [Int], config: TrackingConfig.Export) -> RecapTrip {
         let route = (0...40).map { RecapCoordinate(lat: -32.0 + Double($0) * 0.01, lon: 115.75) }
-        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         let stops = photoCounts.enumerated().map { index, count -> RecapTrip.Stop in
             RecapTrip.Stop(
                 coordinate: route[(index + 1) * 9],
@@ -41,21 +69,21 @@ final class LinearTimelineTests: XCTestCase {
         )
     }
 
-    private func activePhotoDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
+    func activePhotoDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
         for content in contents {
             if case let .photoDeck(deck) = content { return deck }
         }
         return nil
     }
 
-    private func hasStopLabel(_ contents: [OverlayContent], name: String) -> Bool {
+    func hasStopLabel(_ contents: [OverlayContent], name: String) -> Bool {
         contents.contains {
             if case let .stopLabel(labelName, _, _, _) = $0 { return labelName == name }
             return false
         }
     }
 
-    private func firstTime(
+    func firstTime(
         _ timeline: LinearTimeline, dt: Double = 1.0 / 30, where predicate: ([OverlayContent]) -> Bool
     ) -> Double? {
         var time = 0.0
@@ -66,7 +94,7 @@ final class LinearTimelineTests: XCTestCase {
         return nil
     }
 
-    private struct DeckSample {
+    struct DeckSample {
         let time: Double
         let reveal: Double
         let opacity: Double
@@ -74,14 +102,18 @@ final class LinearTimelineTests: XCTestCase {
         let focus: Int
     }
 
-    /// Fine-samples the deck window for the stop whose photos start with `firstRef`.
-    private func deckWindow(
+    /// Fine-samples the deck window for the stop whose photos start with
+    /// `firstRef` — only where the card is actually **drawn**. The timeline keeps
+    /// emitting the content at zero opacity through the stop's departure beat,
+    /// and a card nobody can see is not part of the deck's window.
+    func deckWindow(
         _ timeline: LinearTimeline, firstRef: PhotoRef, dt: Double = 1.0 / 30
     ) -> [DeckSample] {
         var samples: [DeckSample] = []
         var time = 0.0
         while time <= timeline.durationS {
-            if let deck = activePhotoDeck(timeline.overlayContents(atTime: time)), deck.photos.first == firstRef {
+            if let deck = activePhotoDeck(timeline.overlayContents(atTime: time)),
+               deck.photos.first == firstRef, deck.opacity > 0.001 {
                 samples.append(DeckSample(
                     time: time, reveal: deck.reveal, opacity: deck.opacity,
                     spanM: timeline.cameraFrame(atTime: time).spanM, focus: deck.focusIndex
@@ -91,17 +123,25 @@ final class LinearTimelineTests: XCTestCase {
         }
         return samples
     }
+}
 
+/// The photo deck's own reveal envelope, and the map holding still under it.
+/// Since 2026-07-25 the camera holds a **fixed** frame — a stop is told by the
+/// label and the card, never by flying the map — so these assert the card's
+/// envelope *and* that the map stays put underneath it.
+final class LinearTimelineTests: LinearTimelineTestCase {
     func testStopSceneOpensAndClosesTheCardWhileTheMapHoldsStill() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
-        // The middle stop has 4 photos → dwell = 2·0.5 + 4·0.8 = 4.2 s.
+        // The middle stop has 4 photos. Its hold also carries the park and
+        // pull-away beats, so the *card's* own window is what is left:
+        // 2·deckZoomS + 4·deckPhotoHoldS = 4.2 s.
         let window = deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first))
         XCTAssertFalse(window.isEmpty, "the deck must be present through the stop")
         let start = try XCTUnwrap(window.first), end = try XCTUnwrap(window.last)
-        XCTAssertEqual(end.time - start.time, 4.2, accuracy: 0.1, "dwell = 2·deckZoomS + n·deckPhotoHoldS")
+        XCTAssertEqual(end.time - start.time, 4.2, accuracy: 0.1, "2·deckZoomS + n·deckPhotoHoldS")
 
         // Edges: card barely present. Middle: card solid.
         XCTAssertLessThan(start.opacity, 0.2)
@@ -122,15 +162,19 @@ final class LinearTimelineTests: XCTestCase {
     func testStopLabelLeadsBeforeThePhotoDeck() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
-        // Two beats: the stop label lands first, the deck blooms deck_label_lead_s later.
+        // Three beats now: the label comes up as the car parks, holds alone for
+        // deck_label_lead_s, then the deck blooms.
         let labelStart = try XCTUnwrap(firstTime(timeline) { self.hasStopLabel($0, name: "Stop 2") })
         let deckStart = try XCTUnwrap(deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first)).first).time
-        XCTAssertEqual(deckStart - labelStart, config.deckLabelLeadS, accuracy: 0.05, "label leads the deck by the lead time")
+        XCTAssertEqual(
+            deckStart - labelStart, config.subjectParkS + config.deckLabelLeadS, accuracy: 0.1,
+            "the deck opens a lead time after the car has finished parking"
+        )
 
         // Mid-lead: the label is up but the photos have not arrived yet.
-        let midLead = labelStart + config.deckLabelLeadS / 2
+        let midLead = labelStart + config.subjectParkS + config.deckLabelLeadS / 2
         XCTAssertTrue(hasStopLabel(timeline.overlayContents(atTime: midLead), name: "Stop 2"))
         XCTAssertNil(activePhotoDeck(timeline.overlayContents(atTime: midLead)), "no deck during the label lead")
     }
@@ -140,16 +184,20 @@ final class LinearTimelineTests: XCTestCase {
     func testDeckRevealOpensAcrossTheHoldWithoutMovingTheMap() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         let window = deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first))
 
-        let opened = try XCTUnwrap(window.last { $0.opacity > 0.99 })
-        XCTAssertGreaterThan(opened.reveal, 0.9, "the card reaches full size before the scene closes")
+        let peak = try XCTUnwrap(window.max { $0.reveal < $1.reveal })
+        XCTAssertGreaterThan(peak.reveal, 0.9, "the card reaches full size before the scene closes")
 
-        // The reveal only ever grows through the opening, then eases back down.
-        let opening = window.filter { $0.time <= opened.time }
+        // The reveal only ever grows up to its peak, then eases back down.
+        let opening = window.filter { $0.time <= peak.time }
         for (before, after) in zip(opening, opening.dropFirst()) {
             XCTAssertGreaterThanOrEqual(after.reveal, before.reveal - 1e-9, "the reveal must not stutter")
+        }
+        let closing = window.filter { $0.time >= peak.time }
+        for (before, after) in zip(closing, closing.dropFirst()) {
+            XCTAssertLessThanOrEqual(after.reveal, before.reveal + 1e-9, "the reveal must ease back down")
         }
         XCTAssertLessThan(try XCTUnwrap(window.last).reveal, 0.5, "the card scales back down as the scene closes")
 
@@ -164,7 +212,7 @@ final class LinearTimelineTests: XCTestCase {
     func testLeadLabelFadesOutAsTheDeckTakesOver() throws {
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         let deckStart = try XCTUnwrap(deckWindow(timeline, firstRef: try XCTUnwrap(trip.stops[1].photos.first)).first).time
 
         func labelOpacity(atTime time: Double) -> Double? {
@@ -174,11 +222,17 @@ final class LinearTimelineTests: XCTestCase {
             return nil
         }
 
+        // The hand-off is deliberately shorter than the card's grow (2026-08-02):
+        // at a wide span the pin and the card sit far apart, and a slow crossfade
+        // reads as the place being named twice rather than as one hand-off.
+        let handoff = RecapDeck().labelHandoffS
+        XCTAssertLessThan(handoff, config.deckZoomS, "the name must clear faster than the card opens")
+
         XCTAssertEqual(labelOpacity(atTime: deckStart - 0.2) ?? 0, 1, accuracy: 0.01, "solid through the lead beat")
-        let midFade = labelOpacity(atTime: deckStart + config.deckZoomS / 2) ?? 0
+        let midFade = labelOpacity(atTime: deckStart + handoff / 2) ?? 0
         XCTAssertGreaterThan(midFade, 0.05)
         XCTAssertLessThan(midFade, 0.95, "mid cross-fade with the card")
-        XCTAssertNil(labelOpacity(atTime: deckStart + config.deckZoomS + 0.1), "gone once the card owns the name")
+        XCTAssertNil(labelOpacity(atTime: deckStart + handoff + 0.05), "gone once the card owns the name")
     }
 
     func testPhotolessStopGetsNoDeckAndNoDolly() throws {
@@ -194,7 +248,7 @@ final class LinearTimelineTests: XCTestCase {
             title: trip.title, subtitle: trip.subtitle, statsLines: trip.statsLines,
             callToAction: trip.callToAction, shareURL: trip.shareURL
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
         for time in stride(from: 0.0, through: timeline.durationS, by: 0.25) {
             XCTAssertNil(activePhotoDeck(timeline.overlayContents(atTime: time)), "no photos → no deck at t=\(time)")
         }
@@ -211,7 +265,7 @@ final class LinearTimelineTests: XCTestCase {
         )
         let config = exportConfig()
         let trip = sampleTrip(photoCounts: [3, 4, 2], config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try fixedTimeline(trip, config)
 
         print(String(format: "=== LinearTimeline (3 stops, photos [3,4,2]) — duration %.1fs ===", timeline.durationS))
         print(String(format: "title chrome [0.0, %.1f)   end chrome [%.1f, %.1f)",
@@ -242,6 +296,8 @@ final class LinearTimelineTests: XCTestCase {
                     return String(format: "deck(f%d,r%.2f,o%.2f)", deck.focusIndex, deck.reveal, deck.opacity)
                 case .titleChrome: return "title"
                 case .endChrome: return "end"
+                case let .hud(day, place, travelledM):
+                    return String(format: "hud(%@/%@,%.0fm)", day, place ?? "-", travelledM)
                 }
             }
             // reveal (card size) and span (map dolly) are separate curves — this
@@ -251,5 +307,66 @@ final class LinearTimelineTests: XCTestCase {
                          deck?.reveal ?? 0, deck.map { "\($0.focusIndex)" } ?? "-", kinds.joined(separator: ", ")))
             time += 0.1
         }
+    }
+}
+
+/// **No photograph is ever shown for less than a second** (Chiu 2026-08-03).
+///
+/// `deck_photo_hold_s` is what a photo asks for, but `RecapDurationPlan` scales
+/// every stop down to fit the film's ceiling, so a photo-dense stop could page
+/// its deck faster than the eye resolves — a flicker, not a picture. Given the
+/// choice, the stop shows fewer photographs rather than faster ones.
+///
+/// Measured off the timeline the renderer actually consumes, not off the helper
+/// that decides it: the rule is about what reaches the screen.
+final class DeckPhotoFloorTests: LinearTimelineTestCase {
+    /// Longest run each distinct photo stays on screen, per stop.
+    private func photoDurations(_ line: LinearTimeline, fps: Int) -> [Double] {
+        let step = 1.0 / Double(fps)
+        var runs: [Double] = []
+        var currentKey: String?
+        var runLength = 0.0
+        for frame in 0...Int(line.durationS * Double(fps)) {
+            let time = Double(frame) * step
+            var key: String?
+            for content in line.overlayContents(atTime: time) {
+                if case let .photoDeck(deck) = content, deck.opacity > 0.5, !deck.photos.isEmpty {
+                    key = "\(deck.name)#\(deck.focusIndex)"
+                }
+            }
+            if key == currentKey {
+                runLength += step
+            } else {
+                if currentKey != nil { runs.append(runLength) }
+                currentKey = key
+                runLength = step
+            }
+        }
+        if currentKey != nil { runs.append(runLength) }
+        return runs
+    }
+
+    func testEveryPhotoStaysOnScreenForAtLeastTheFloor() throws {
+        let export = exportConfig(deckPhotoMinHoldS: 1.0)
+        // Eight photos on every stop — the most the importer selects — so the
+        // duration plan has to scale the dwells down to fit the film. That
+        // squeeze is what produced sub-second slots. (Four stops is the sample
+        // route's limit.)
+        let trip = sampleTrip(photoCounts: [8, 8, 8, 8], config: export)
+        let lats = trip.route.map { $0.lat }, lons = trip.route.map { $0.lon }
+        let line = try XCTUnwrap(LinearTimeline(
+            trip: trip, config: export,
+            establishing: RecapBounds(
+                minLat: lats.min()!, minLon: lons.min()!, maxLat: lats.max()!, maxLon: lons.max()!
+            )
+        ))
+
+        let durations = photoDurations(line, fps: export.fps)
+        let shortest = durations.min() ?? 0
+        XCTAssertFalse(durations.isEmpty, "the fixture must actually show photos")
+        XCTAssertGreaterThanOrEqual(
+            shortest, export.deckPhotoMinHoldS - 2.0 / Double(export.fps),
+            "a photo was on screen for \(shortest)s — the floor is \(export.deckPhotoMinHoldS)s"
+        )
     }
 }

@@ -951,3 +951,227 @@ still the shipping base map, so merging now would land a half-finished redesign 
 which can't rotate); a generic multi-camera abstraction (boundary discipline — extend
 `CameraFrame`/`RecapSnapshotProviding` additively when a consumer needs it); guessing a
 new close-span value in code (it's a device-tuned feel, left at the prior default).
+
+## 2026-07-31 — Stop presentation ported from the prototype's CSS, and the stop group flips as one cluster
+
+**Context:** The stop scene was the last part of the recap still reading as UI
+rather than as a film: a photo card that looked like a thumbnail, the place name
+on a rounded plate, and no metadata over the picture. The target was never a
+screenshot to eyeball — the 2026-07-20 validation prototype
+(`Docs/prototype/recap_engine.html`) is a working implementation with exact
+values, and the 2026-07-30 screenshots beside it are its output, not its spec.
+
+**Decision — the prototype's CSS is the source of truth for the stop's look.**
+Every token in `RecapStyle`'s deck/label block now cites the declaration it came
+from (`.card { border-radius: 14px; border: 3px solid #fff; box-shadow: 0 20px
+44px -16px rgba(0,0,0,.85) }`, `.clabel`, `.dots`, `.hud .badge`), converted at
+the prototype's ~413 px stage → 1080 reference ratio (×2.62). Three layers, drawn
+back to front and enforced by draw order: **map** (pin, trail — never covered by
+a scrim), **photo** (two static peek cards behind a portrait hero), **typography**
+(metadata pill on the photo; name + accent strap + progress dots under it).
+
+- **No pill behind the stop's name.** The prototype sets it as free type with
+  `text-shadow: 0 2px 12px rgba(0,0,0,.6)`. A rounded plate reads as chrome at any
+  size; the shadow is what makes big type sit *in* the film. Both beats of the
+  stop draw the same identity block, so beat 1 → beat 2 still cross-fades in place.
+- **Day + place + distance moved onto the photo** as `.hud`'s pill + right-aligned
+  km readout; the strap under the name carries day + the stop's secondary detail.
+  The figure appears once, not in two places.
+- **The stop group is one cluster and mirrors as one** (`RecapStopLayout`). It used
+  to flip only the *card* below the pin when a stop sat high in frame, stranding
+  that card's own caption at the other end of the composition — visible immediately
+  in the first render of this pass. The name is the photograph's caption, so the
+  cluster now hangs pin → name → card above the pin, or pin → card → name below it.
+  The pin still sits exactly on the stop; only which side the cluster hangs on
+  changes. New regression test: photo and caption are always one gap apart, swept
+  over every anchor in frame.
+- **The frame-edge clamp is given the cluster's width**, hero plus peek overhang, so
+  a stop near the border keeps both peeks instead of losing one off-screen.
+
+**Alternative rejected:** the prototype's **fanned card stack** — still deferred
+(handoff §"Photo deck → fan/stack carousel"). It changes what `RecapPhotoDeck` has
+to express (per-card transforms driven by a moving front index, not one focused
+photo) and needs its own scoping pass, not a styling round. Also rejected: clamping
+the whole cluster into frame *without* mirroring, which would drift the pin off the
+stop it marks — the one thing the 2026-07-26 layout rule exists to prevent.
+
+**Not 1:1 with CSS:** `backdrop-filter: blur(8px)` on the metadata pill has no
+CoreGraphics equivalent that does not mean reading the frame buffer back per frame,
+so the pill is a flat fill with its alpha raised .55 → .72 to buy back the contrast
+the blur was providing.
+
+**Unchanged, checked:** film pacing (iceland: total 90.00 s, opening ends 5.90 s,
+first stop 5.93 s, car 11.37 s, longest still 2.97 s), the camera, the route glow,
+the 380 px car sprite and the modern-minimal map style.
+
+## 2026-07-31 — Day and distance become persistent HUD, not stop chrome
+
+**Context:** The day and the running distance were drawn by the photo card, so
+they appeared for a few seconds at each stop and vanished on the road in between.
+Two problems, one visible and one conceptual: pause the film mid-leg and it told
+you nothing about where you were in the trip, and a distance rendered *by a stop*
+reads as a property of that stop rather than of the journey.
+
+**Decision:** a new `OverlayContent.hud(dayLabel:place:travelledM:)`, emitted by
+`LinearTimeline` on **every frame of the body** and drawn in the frame's top
+corners (the prototype's `.hud`) — day (plus the place, while parked at one) on
+the left, running total on the right. `RecapPhotoDeck` and `.stopLabel` lost
+`dayLabel`/`travelledM` outright rather than keeping them unused; the strap under
+a stop's name is now its `detail` alone, and absent when it has none.
+
+- **The day on a leg is the day of the stop just left**, held until the next is
+  reached. A leg belongs to no stop and must inherit from one; inheriting
+  backwards is the honest direction, because you drive on the day you set out and
+  the counter should turn over on arrival, not somewhere out on the road.
+- **Suppressed under the title and end cards.** They are full-bleed and own their
+  seconds; chrome across a centred title stack is clutter, and the readout there
+  is "0 km". This follows the prototype, which also drops the HUD for both cards.
+
+**Rejected:** keeping a copy on the card as well (the prototype does exactly that
+— its badge and its strap both read "Day 10 · Fjaðrárgljúfur"). Saying it twice in
+one frame and then taking one copy away is worse than saying it once, everywhere.
+Also rejected: deriving the day from elapsed film time, which would drift against
+the trip's real dates.
+
+---
+
+## 2026-08-06 · Stop presentation is budget-constrained — derive the count, never assume one
+
+**Status:** accepted. Implemented as `StopPhotoAllocator.keptStopCount` /
+`presentationCostS`; supersedes the hand-tuned `tier_skip_share`.
+
+**Context.** The same law has now been re-derived three times, from three
+different directions, each time as if it were new:
+
+1. *The 90 s vs 180 s duration study* (2026-08-04). Doubling the film did not
+   double the photographs. Iceland's 65 stops showed **one photograph each at
+   30, 60, 90, 180 and 195 s** — every length tried.
+2. *The "10 stops per 30 s" ratio test* (2026-08-05). The proposed ratio was
+   ~3× too aggressive; the data supported roughly 10 s of *film* per presented
+   stop, and above ~20 presented stops no watchable length worked at all.
+3. *The Variant B skip share* (2026-08-06). A fixed share needed hand-tuning per
+   trip — 0.82 for Iceland's 65 stops, 0.5 for New Zealand's 20 — because a share
+   scales with the trip while the budget does not.
+
+**Decision.** How many stops a film may present is **derived from its duration**,
+never configured as a count and never as a share of the trip:
+
+```
+keptStops = (duration − opening − endCard) × maxHoldFraction ÷ presentationCost
+presentationCost = labelLead + 2·deckZoom + 2·subjectPark + standardPhotos × photoMinHold
+```
+
+Both terms are computed from existing tunables, so no second constant can drift
+away from them. At the shipped values a stop costs **5.4 s of dwell**, and a 120 s
+film keeps **11 stops** — for Iceland (65 stops) and New Zealand (20) alike, with
+no per-trip input.
+
+**Consequences.**
+
+- *A trip's size stops mattering.* A 20-stop and a 65-stop trip both fill a 120 s
+  film to the same density. Trip size decides what is left out, not the pacing.
+- *Dwell seconds and film seconds are different denominators, and confusing them
+  costs a factor of two.* Dwell is only `max_hold_fraction` of the body, so 5.4 s
+  of dwell ≈ 9–10 s of film. The first implementation divided the dwell budget by
+  the film-seconds figure and returned 6 stops where the measurements said 12.
+  Any future work on this must say which one it means.
+- *Ranking is deterministic* — score descending, original trip order for ties — so
+  re-exporting a trip keeps the same stops. A film that reshuffled between renders
+  could be re-rolled but not evaluated.
+- *The failure mode is silent.* Overrun does not error; it scales every dwell down
+  until `deck_photo_min_hold_s` truncates the decks, and the film simply shows one
+  photograph per stop. `RecapDeckBudgetTests` exists to make that audible.
+
+**Rejected:** a fixed stop count (breaks the moment duration changes); a fixed
+share of the trip (needs per-trip tuning, which is what prompted this); and a
+hand-set `stop_presentation_s` constant (a fourth number to keep in sync with the
+three it is computed from).
+
+## 2026-08-08 — MVP substrate is OSRM + MapLibre, behind swappable boundaries
+
+**Context:** The recap pipeline has two substrate dependencies — routing (road
+snapping) and rendering (the base map). Both are implemented and validated
+against real trips. Apple Maps + MKDirections is a plausible future alternative,
+and the question of which ships was reopened while triaging a camera bug.
+
+**Decision (owner, canonical text):**
+
+> "The MVP rendering and routing substrate is OSRM + MapLibre because it is
+> already implemented and validated against real trips. The application must keep
+> routing and rendering behind stable boundaries so future releases may
+> substitute MKDirections + Apple Maps without changing the story model or replay
+> pipeline."
+>
+> "Pixel Art remains a post-MVP visual differentiation path enabled by retaining
+> MapLibre."
+
+**Rationale, recorded alongside — not as separate decisions:**
+
+- MapLibre is retained specifically because it is the only substrate that keeps
+  the Pixel Art / custom-map visual-identity path viable post-MVP. Apple Maps
+  forecloses that option permanently. **A deliberate strategic trade-off, not an
+  oversight.**
+- Apple Maps + MKDirections evaluation happens **after** MVP validation, and will
+  be decided by **rendered A/B comparison, not theoretical reasoning** about
+  story-model independence. Do not assume route geometry, label density, or map
+  visual hierarchy are equivalent across substrates.
+- Map labels on MapLibre remain deferred/icebox, blocked on the glyph/fontstack
+  problem. **That Apple Maps solves this for free is NOT a reason to revisit the
+  substrate decision** — it is out of scope.
+
+**Deferred by decision, not by technical blocker** — do not pick these up
+opportunistically: MKDirections integration; the Apple Maps substrate
+(MKMapSnapshotter/MKDirections or any Apple-Maps-specific rendering path); Pixel
+Art theme implementation (spike branch stays parked); an Apple-Maps label
+workaround as a MapLibre glyph substitute.
+
+**Rejected:** shipping Apple Maps as the app substrate with MapLibre kept only
+for the owner's own films. That was briefly recorded on 2026-08-08 and is
+**superseded by this entry** — it would have foreclosed Pixel Art permanently,
+which is the differentiation path the custom substrate exists to enable.
+
+**Consequence for the code:** `establishing` currently carries two meanings
+through one parameter — story pacing and the tile-coverage span cap. On the
+committed substrate that is a core-path defect, not an Apple-Maps prerequisite.
+See HANDOFF.md.
+
+## 2026-08-09 — The recap camera: a configured zoom, and a wider establishing shot
+
+**Context:** Iceland's recap opened flat — establishing beat and body span were
+the same number, so the "closing zoom" had no zoom in it. Three rounds of renders
+narrowed the cause and the fix.
+
+**Decisions (owner, from rendered output rather than reasoning):**
+
+1. **The opening establishes on the whole trip, then zooms in to the body.**
+   Iceland 736.8 km → 294.7 km. This supersedes the 2026-08-02 "wide baseline",
+   where the body framed the whole trip and the film therefore opened flat.
+2. **The zoom is configured directly** — `target_zoom_ratio` (2.5, acceptable
+   range 2.25–2.75), applied per trip against *its own* established span. It
+   replaced `body_span_padding`, a fraction of the trip's bounding box that had
+   been reverse-derived from Iceland and did not generalise: New Zealand, which
+   establishes on a wider country beat, came out at 4.14× from the same constant.
+3. **Where a region offers genuinely wider context, take it — even at the cost of
+   a longer opening.** New Zealand's country beat survives because its region is
+   the whole country while the trip is the South Island, giving a 9.00 s opening
+   against Iceland's 5.50 s. Cutting the region to collapse that beat was the
+   alternative and was rejected: the establishing shot exists to show where the
+   journey sits, and that is worth the seconds.
+
+**Consequences:**
+
+- Tile regions need **establishing headroom**, not just coverage:
+  `containedSpan(region) >= wide_span_padding × fittingSpan(trip)`. Documented with
+  its derivation in `Deploy/regions.json` `_establishing_headroom`;
+  `Tools/tile-headroom.sh` reports it and `build-tiles.sh` runs it after every
+  build. Iceland's region was rebuilt (158.7 → 159.5 MB, the margin being open sea).
+- `camera_pan_window_fraction_per_s` returns to **0.35** and becomes a genuine
+  floor rather than a soft target the ceiling always overrode. Without it the
+  ratio alone broke camera continuity on 128 assertions.
+- Pacing no longer reads the map: `RecapPacing.contentDerived | .fixed` replaced a
+  nil-`establishing` check that conflated "no tiles installed" with "short
+  deterministic film".
+
+**Rejected:** re-tuning `body_span_padding` per trip. A second hand-picked
+constant would have fitted New Zealand the way the first fitted Iceland, and told
+us nothing about the third trip.

@@ -68,8 +68,20 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             targetDurationS: 12, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.8,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
-            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6,
-            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
+            deckPhotoHoldS: 0.8, deckPhotoMinHoldS: 0.2, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
+            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 
@@ -85,7 +97,10 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             "Manual review harness — set KAMOME_MARKER_STILLS=1 to render marker + deck stills."
         )
         let config = stillsConfig()
-        let deck = RecapDeck(photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS)
+        let deck = RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
         let photos = try (0..<4).map { try photoTile(index: $0) }
         let refs = (0..<photos.count).map { PhotoRef.asset("p\($0)") }
         let images = Dictionary(uniqueKeysWithValues: zip((0..<photos.count).map { "p\($0)" }, photos))
@@ -97,7 +112,7 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             route: route, stops: [stop], title: "小樽", subtitle: "Day 3",
             statsLines: ["120 km · 1 stop"], callToAction: "Get this route", shareURL: "kamome://route/stills"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let outDir = outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
 

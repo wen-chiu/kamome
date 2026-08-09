@@ -328,6 +328,11 @@ stop the camera eases to the place and a **photo deck** blooms — a 3-card fan
 
 ## 6. Three-trip dogfood + Replay MVP release gate (needs Chiu + iPhone + real photos)
 
+**Running the gate: `Docs/gate-P3.5-checklist.md`** — the owner runbook, in the
+order to do it in (desk-first: real fixtures → per-trip pacing/still/pilot → the
+one iPhone sitting → sign-off). The items below are the gate itself and stay
+authoritative; the checklist sequences them and carries the pre-flight traps.
+
 This replaces the old "combined device day." The Replay MVP does **not** need a
 drive — it needs **three of Chiu's real past trips of different character**, each
 run fully in-app: **photos import → matching → recap → MP4 → share.**
@@ -356,6 +361,222 @@ Demo artifacts in `Docs/demos/phase3_5/`. This gate = Replay MVP release candida
 **Merge point (owner call 2026-07-20):** hold the merge to `main` until §6
 passes. §1–§5 land the machinery; §6 validates it on three real trips; the whole
 Replay MVP lands on `main` as one PR (or a tight stack).
+
+### Local routing + map regions for this gate (Chiu 2026-07-29)
+
+The gate runs against a **local** OSRM on home Wi-Fi, not a VPS. Everything is
+declared in `Deploy/` — `regions.json` is the single source for both halves of
+the stack, and the same `docker-compose.yml` runs locally and on a VPS later
+(`--profile public` adds Caddy). Setup: `Docs/dogfood-infrastructure.md`.
+
+Four regions, chosen because Chiu has real photos from each: **Iceland, New
+Zealand, Finland, Miyakojima**. Routing merges them into one dataset (the app has
+one `matching.base_url`); tiles stay one `.pmtiles` per region, side-loaded over
+Finder.
+
+### VPS migration — deferred security work ⚠️
+
+Tracked here so it is not silently skipped when the migration happens (Chiu
+2026-07-29 — explicitly deferred, explicitly not dropped).
+
+- [ ] **Shared-token auth on OSRM, server *and* app in the same change.**
+      `Deploy/Caddyfile` carries the server half commented out. The app half does
+      **not exist**: `OSRMMatchProvider.swift` and `OSRMRouteProvider.swift` both
+      build a bare `URLRequest` with no headers. Enabling the Caddy block alone
+      makes every route and match request 403, and because both providers treat a
+      failure as "keep raw geometry" (PD-2), **every leg would silently render
+      dashed** — indistinguishable from a routing failure, with nothing in the UI
+      saying why. Ship both halves together or neither.
+- [ ] Token in `Deploy/.env` (git-ignored), never in `TrackingConfig.json` —
+      that file is bundled into the app and readable from any IPA.
+- [ ] Re-check the endpoint allow-list in `Deploy/Caddyfile` still matches what
+      the providers call (`/route`, `/match`, `/nearest`).
+
+Not blocking the §6 gate: on home Wi-Fi the service is not reachable from the
+internet, so there is nothing to authenticate against.
+
+### Trips that span two map regions — OPEN, first hit 2026-08-01 🔴
+
+Found on the first real-device import: a six-day Miyakojima trip whose **day 1
+starts at a Taiwan airport**. Diagnosed, deliberately not fixed (owner call —
+see how single-region trips behave first).
+
+**One cause, three symptoms.** `RecapMapTiles.tilesURL` requires *containment*,
+not overlap, so a trip that leaves its region matches nothing:
+
+```
+trip bbox        W 121.230  S 24.790  E 125.470  N 25.100
+miyakojima       W 125.100  S 24.600  E 125.550  N 25.000   → does not contain
+```
+
+`RecapMapRegionResolver.resolve` therefore returns nil, and `RecapModel` turns
+that one nil into three separate degradations at once:
+
+1. **Apple's map** instead of the souvenir map (`snapshotProvider(for:)`).
+2. **No prologue** — `establishing` is nil, so `LinearTimeline.pacing` returns no
+   duration plan and `openingS` is 0. This is the "opening zoom broke" symptom.
+3. **30 s flat** — with no plan the film falls back to the retired
+   `export.target_duration_s`. A six-day trip came out at 30 seconds.
+
+Symptoms 2 and 3 are **not really about tiles at all** — they are a coupling bug.
+Pacing is a story fact (how many stops, how many photos); which tiles are
+installed is a rendering fact. The `guard establishing != nil` in
+`LinearTimeline.pacing` is the whole of it, and removing it is one line — plus
+re-basing the test harnesses that pass a nil extent to mean "short deterministic
+film" (~8 suites assume no prologue and a 30 s duration; the clean migration is to
+express that in their `TrackingConfig.Export` — `opening_*_s: 0` and
+`total_duration_min/max_s == target_duration_s` — rather than through a nil
+extent). Attempted and reverted 2026-08-01: correct, but its only beneficiary
+today is the multi-region case, so it ships with this.
+
+Symptom 1 is the real multi-region question, and it has several possible shapes —
+none chosen: merge the covering regions into one PMTiles; render per-act with a
+different region each; accept Apple's map for the crossing act only; or build a
+region per trip. **Decide after seeing single-region trips (Iceland/NZ/Finland)
+render end to end.**
+
+Now loud, at least: `RecapModel` logs `no installed map region covers this trip`
+with the three consequences named, and every film logs its duration, prologue,
+stop count and dashed-leg count (`KamomeLog.recap`).
+
+Related, also deferred: the airport-departure animation (a flight leg is a genuine
+discontinuity — `act_split_km` already cuts a new act there, but nothing tells the
+story of the hop).
+
+### Map reference labels — scoped, wanted, not urgent 📌
+
+**Status: a real implementation pass, deliberately deferred** (Chiu 2026-08-02).
+Not a maybe — revisit it properly rather than bolting labels on later.
+
+**The problem it solves.** At body zoom the souvenir map is landform and water
+with no names, so a viewer cannot anchor "where am I". Chiu, on the 11-day NZ
+film: *once zoomed in I lose all sense of geographic orientation.* A travel
+memory film has to let someone recognise where they were, not just watch a line
+move. The **wide baseline** (2026-08-02: `wide_span_padding` 1.5,
+`camera_pan_window_fraction_per_s` 0.05, so the span ceiling binds and the whole
+trip is framed) solves most of it by showing a recognisable country silhouette.
+Labels are what is left: *which* lake, *which* pass.
+
+**PD-6 is reopened by this.** The label-less map was a deliberate decision
+(2026-07-19, subtractive style = souvenir map). Anything built here must not
+drift back toward the Apple-tiles look that decision rejected — the bar is
+place and water names at low density, never POIs.
+
+**⚠️ The blocker, found 2026-08-02.** `Config/RecapThemes/modern-minimal.json`
+has **no `glyphs` URL**, and there are no glyph PBFs on any dev machine.
+MapLibre Native cannot render Latin labels without a fontstack; its local-font
+path (`MLNIdeographicFontFamilyName`) covers CJK ideographs only. So this is
+**not** a style-JSON-only change, contrary to a first estimate — a symbol layer
+added today renders nothing. Two unblock paths, neither yet taken because both
+pull third-party code:
+
+1. **Prebuilt pack** — `openmaptiles/fonts` (Noto Sans). Fastest; adds a binary
+   font asset to ship or side-load, and a licence to check.
+2. **Generate SDF PBFs** from a system TTF with `fontnik` (Node is present on
+   the dev Mac). No third-party binaries, but it is a native npm build and adds
+   a generation step to the tile pipeline (`Deploy/bin/`).
+
+**Data is not a blocker.** The regions are standard Planetiler builds and
+already carry `place`, `water_name` and `mountain_peak`; the current style
+simply omits those layers. No re-tiling needed.
+
+**Scope when it is picked up.**
+- Style: `glyphs` URL + symbol layers for `place` (city/town/village) and
+  `water_name` only. Low density, tuned per zoom.
+- **The real work is collision with Kamome's own overlays.** MapLibre places
+  labels knowing nothing about the photo deck, the stop cluster or the vehicle,
+  so a town name can land under a card or across the trail. Either feed
+  exclusion zones into the style per frame (MapLibre cannot do this cleanly from
+  a static style) or draw labels in `RecapOverlayRenderer` — the second is a
+  subsystem: sourcing, placement, priority, collision.
+- Validate the same way the camera was: render NZ and one island trip, judge
+  side by side, and consider a gate on labels never overlapping the deck rect.
+
+**Related but separate:** landmark title cards as narrative rhythm
+(`icebox.md`, 2026-08-02). That is narration with its own timing; this is
+annotation the map carries continuously. Do not conflate them.
+
+### Vatnajökull grey cross — diagnosed, mitigation NOT applied 📌
+
+**A tile seam, not the DEM and not the source data** (2026-08-03). A pale cross
+lies across Vatnajökull in every Iceland render, at every display zoom.
+
+Ruled out by experiment:
+- **Not terrain.** Rendered with the DEM disabled — the cross is still there.
+- **Not overlapping ice/glacier classes.** The style filter matches both; filtered
+  to `glacier` alone every Icelandic icecap disappears, so Planetiler emits them
+  all as `class: ice` and there is no cross-class double-draw.
+
+Confirmed by measurement. Rendering Vatnajökull at a fixed 100 km span and
+shifting the centre, the cross tracks the ground exactly (74 px predicted,
+75 px observed). Converting the intersection to tile coordinates:
+
+```
+observed cross   lat 64.1754  lon -16.8693
+zoom 6           tile-x 29.0010   tile-y 16.9970   ← within 0.1% / 0.3% of a corner
+```
+
+It sits on a **z6 tile corner**. A z6 corner is also a corner at every higher
+zoom, which is why power-of-two zoom comparisons could not tell it apart from
+ground-fixed data — that test is confounded and the centre-shift plus this
+arithmetic is what settles it.
+
+**Mechanism.** The ice polygon extends into the tile buffer, both neighbouring
+tiles draw the overlap, and at `fill-opacity: 0.26` the doubled region
+composites to ~45% — a pale band along the seam. Vatnajökull is the only feature
+large enough to straddle a z6 corner, hence exactly one cross rather than a grid.
+The same latent flaw sits on every translucent fill (`landcover-scrub` 0.45,
+`landcover-wood` 0.55, `park` 0.35); their polygons are too small and fragmented
+to show it.
+
+**Two fixes, and the cheap one has a cost:**
+1. *Style, one line:* make the ice fill opaque and bake the blend into the colour
+   (≈ `#4E5C64`). An opaque fill cannot double-blend. **But `hillshade` is layer
+   1 and `ice` is layer 5, so an opaque glacier loses its terrain texture and
+   goes flat.** That is a look tradeoff — **Chiu wants to see it before deciding,
+   so it is deliberately not applied.**
+2. *Tile build, correct:* reduce or clip the landcover polygon buffer in
+   Planetiler so neighbouring tiles do not overlap, keeping translucency. Costs a
+   rebuild of all four regions.
+
+### Photo deck → fan/stack carousel (future, scoped separately) 📌
+
+Explicitly **not** in the 2026-07-30 cinematic pass (Chiu). The deck today is a
+single card that cross-fades between photos; the prototype opens a **fanned
+stack**: the stop arrives, the stack fans out, the front card advances roughly
+every second through 3-8 photos, with a dot-progress indicator, the photo as the
+visual focus (larger than now — the map may shrink or recede behind it).
+
+This is a visual redesign, not a sizing tweak — it changes what `RecapPhotoDeck`
+has to express (a stack with per-card transforms, not one focused index), so it
+needs its own scoping pass rather than being folded into a styling round. The
+2026-07-30 pass raised the card to 0.42→0.58 frame width and gave it a settle
+overshoot; that is the interim, not the destination.
+
+### Stop presentation — CSS port landed 2026-07-31 ✅
+
+The 2026-07-31 pass ported the stop's *look* from the prototype's actual CSS
+(`Docs/prototype/recap_engine.html`) rather than from its screenshots — every
+token in `RecapStyle`'s deck/label block now cites its source declaration.
+Details + rationale: `decisions.md` 2026-07-31. Landed:
+
+- Portrait 3:4 hero card, 14 px radius, 3 px white keyline, the prototype's heavy
+  drop shadow; two **static** peek cards (`translateX(±52px) rotate(±8deg)
+  scale(.9)`) behind it.
+- `.hud` metadata pill on the photo (day + place, distance opposite it), and the
+  `.clabel` identity block under it: **no plate**, big name over an uppercase
+  letter-spaced accent strap, progress dots under that.
+- `RecapStopLayout` now mirrors the **whole cluster** rather than flipping the card
+  alone — the caption follows its photograph. Swept regression test.
+- Pacing unchanged (iceland report identical); camera, route glow, sprite scale and
+  map style untouched.
+- New review harness `KamomeTests/RecapStopStillTests` — renders **one stop** of a
+  real imported trip over live tiles, with real photographs from
+  `KAMOME_STOP_PHOTOS`. Use it instead of an MP4 render for still-frame questions.
+
+Still open here: the fan/stack carousel above; "Unnamed stop" geocoding in the
+demo fixtures; the pin can touch the card's top edge when a stop sits high in
+frame (the deferred overlap item).
 
 ## Not in the Replay MVP (do not build here)
 

@@ -1,0 +1,18 @@
+{
+  "_comment": "The original corridor fixture — inside Tests/Fixtures/tiles/perth-2026-07-19.pmtiles, so it renders with only what is committed to git. Two drives and one coastal walk, which is what exercises solid-vs-dashed provenance in one frame.",
+  "title": "Margaret River",
+  "photos": [
+    { "id": "mr1", "t": 0,     "lat": -33.95500, "lon": 115.07500 },
+    { "id": "mr2", "t": 300,   "lat": -33.95560, "lon": 115.07620 },
+    { "id": "mr3", "t": 700,   "lat": -33.95480, "lon": 115.07450 },
+    { "id": "via1", "t": 2400, "lat": -33.90500, "lon": 115.09000 },
+    { "id": "cw1", "t": 4200,  "lat": -33.85600, "lon": 115.10400 },
+    { "id": "cw2", "t": 4500,  "lat": -33.85650, "lon": 115.10350 },
+    { "id": "cw3", "t": 5100,  "lat": -33.85580, "lon": 115.10480 },
+    { "id": "pv1", "t": 9000,  "lat": -33.97600, "lon": 114.99500 },
+    { "id": "pv2", "t": 9400,  "lat": -33.97650, "lon": 114.99440 },
+    { "id": "pv3", "t": 9900,  "lat": -33.97570, "lon": 114.99580 },
+    { "id": "ct1", "t": 14400, "lat": -33.93000, "lon": 114.98500 },
+    { "id": "ct2", "t": 14700, "lat": -33.92950, "lon": 114.98560 }
+  ]
+}

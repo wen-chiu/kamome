@@ -13,6 +13,13 @@
       "url": "pmtiles://__KAMOME_TILES__",
       "attribution": "© OpenMapTiles © OpenStreetMap contributors",
       "maxzoom": 14
+    },
+    "kamome-terrain": {
+      "type": "raster-dem",
+      "url": "pmtiles://__KAMOME_TERRAIN__",
+      "encoding": "terrarium",
+      "tileSize": 256,
+      "maxzoom": 10
     }
   },
   "layers": [
@@ -21,6 +28,56 @@
       "type": "background",
       "paint": {
         "background-color": "#1e2b33"
+      }
+    },
+    {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "kamome-terrain",
+      "paint": {
+        "hillshade-exaggeration": 0.85,
+        "hillshade-shadow-color": "#03070d",
+        "hillshade-highlight-color": "#4f7f95",
+        "hillshade-accent-color": "#0a1420",
+        "hillshade-illumination-direction": 315,
+        "hillshade-illumination-anchor": "map"
+      }
+    },
+    {
+      "id": "landcover-scrub",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "landcover",
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Polygon"
+        ],
+        [
+          "in",
+          "class",
+          "scrub",
+          "grass",
+          "wetland",
+          "sand"
+        ]
+      ],
+      "paint": {
+        "fill-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          "wetland",
+          "#12303a",
+          "sand",
+          "#26313a",
+          "#132b32"
+        ],
+        "fill-opacity": 0.45
       }
     },
     {
@@ -49,6 +106,21 @@
       }
     },
     {
+      "id": "park",
+      "type": "fill",
+      "source": "kamome",
+      "source-layer": "park",
+      "filter": [
+        "==",
+        "$type",
+        "Polygon"
+      ],
+      "paint": {
+        "fill-color": "#102a2a",
+        "fill-opacity": 0.35
+      }
+    },
+    {
       "id": "ice",
       "type": "fill",
       "source": "kamome",
@@ -68,8 +140,10 @@
         ]
       ],
       "paint": {
-        "fill-color": "#d6e8ee",
-        "fill-opacity": 0.26
+        "fill-color": "#4e5c64"
+      },
+      "metadata": {
+        "kamome-note": "Opaque on purpose (2026-08-06). At fill-opacity 0.26 the Vatnajokull polygon ran into the tile buffer, both neighbouring z6 tiles drew the overlap, and the doubled region composited to ~45% - the pale cross. An opaque fill cannot double-blend. Cost: the glacier loses hillshade texture, because hillshade is layer 1 and this is layer 5. The correct fix is clipping the landcover buffer in Planetiler and rebuilding all four regions, which keeps translucency. See Docs/handoff-P3.5.md."
       }
     },
     {
@@ -91,86 +165,29 @@
         ]
       ],
       "paint": {
-        "fill-color": "#0c151d"
+        "fill-color": "#060d15"
       }
     },
     {
-      "id": "coastline-glow",
+      "id": "inland-water-edge",
       "type": "line",
       "source": "kamome",
       "source-layer": "water",
       "filter": [
-        "==",
-        "$type",
-        "Polygon"
-      ],
-      "layout": {
-        "line-cap": "round",
-        "line-join": "round"
-      },
-      "paint": {
-        "line-color": "#7ccdc0",
-        "line-opacity": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          4,
-          0.42,
-          12,
-          0.32
+        "all",
+        [
+          "==",
+          "$type",
+          "Polygon"
         ],
-        "line-blur": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          4,
-          5,
-          8,
-          10,
-          12,
-          9
-        ],
-        "line-width": [
-          "interpolate",
-          [
-            "linear"
-          ],
-          [
-            "zoom"
-          ],
-          4,
-          7,
-          8,
-          12,
-          12,
-          10
+        [
+          "!=",
+          "class",
+          "ocean"
         ]
-      }
-    },
-    {
-      "id": "coastline-edge",
-      "type": "line",
-      "source": "kamome",
-      "source-layer": "water",
-      "filter": [
-        "==",
-        "$type",
-        "Polygon"
       ],
-      "layout": {
-        "line-cap": "round",
-        "line-join": "round"
-      },
       "paint": {
-        "line-color": "#a6ddce",
+        "line-color": "#4d7f86",
         "line-opacity": [
           "interpolate",
           [
@@ -180,9 +197,9 @@
             "zoom"
           ],
           4,
-          0.85,
+          0.34,
           12,
-          0.7
+          0.42
         ],
         "line-width": [
           "interpolate",
@@ -193,11 +210,9 @@
             "zoom"
           ],
           4,
-          1.6,
-          8,
-          2.4,
+          0.6,
           12,
-          1.6
+          1.1
         ]
       }
     },
@@ -213,8 +228,20 @@
         "LineString"
       ],
       "paint": {
-        "line-color": "#6fb7ad",
-        "line-opacity": 0.4,
+        "line-color": "#3f6b72",
+        "line-opacity": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          0.2,
+          12,
+          0.3
+        ],
         "line-width": [
           "interpolate",
           [
@@ -283,6 +310,44 @@
           14,
           2.0
         ]
+      }
+    },
+    {
+      "id": "mountain-peak",
+      "type": "circle",
+      "source": "kamome",
+      "source-layer": "mountain_peak",
+      "minzoom": 6,
+      "filter": [
+        "all",
+        [
+          "==",
+          "$type",
+          "Point"
+        ],
+        [
+          ">=",
+          "ele",
+          600
+        ]
+      ],
+      "paint": {
+        "circle-radius": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          6,
+          1.1,
+          10,
+          2.4
+        ],
+        "circle-color": "#9fd8e8",
+        "circle-opacity": 0.5,
+        "circle-blur": 0.4
       }
     }
   ]

@@ -65,6 +65,28 @@ targets:
         NSMotionUsageDescription: Motion data tells driving from walking so Kamome can save battery while recording.
         NSPhotoLibraryUsageDescription: Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded.
         UIBackgroundModes: [location]
+        # Map-region side-load for the Replay MVP dogfood gate (PD-7,
+        # Docs/dogfood-infrastructure.md): a `.pmtiles` region is dragged into
+        # the app's Documents folder over Finder, so the three gate trips can be
+        # given tiles without a rebuild and without bloating the binary. Tile
+        # provisioning proper is a backend problem (spec P7); this is the
+        # deliberately boring stand-in until it exists.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        # Reaching the dogfood OSRM, which runs on the developer's Mac over home
+        # Wi-Fi (`Docs/dogfood-infrastructure.md`). Two separate iOS gates stand
+        # between a device build and `http://192.168.x.x:5100`, and both fail
+        # quietly — the request just errors, and PD-2 then renders every leg
+        # dashed with nothing saying why.
+        #
+        # `NSAllowsLocalNetworking` is the *narrow* ATS exemption: it permits
+        # cleartext only to private-range IPs, `.local`, and unqualified
+        # hostnames. Public HTTP stays blocked, which is why this is not
+        # `NSAllowsArbitraryLoads`. Production routing is HTTPS behind Caddy
+        # (spec P7), and this key costs nothing then.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Kamome reconstructs your route using a routing service you run on your own computer. It is only contacted while you import or export a trip, and only on your local network.
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).

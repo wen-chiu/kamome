@@ -18,8 +18,20 @@ final class RecapEncoderTests: XCTestCase {
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25, followHeadingUp: false,
-            deckPhotoHoldS: 0.8, deckZoomS: 0.5, deckLabelLeadS: 0.6,
-            keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4, videoBitrateMbps: 5
+            cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
+            cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
+            deckPhotoHoldS: 0.8, deckPhotoMinHoldS: 0.2, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
+            openingCountryS: 1.0, openingRegionalS: 1.0, countryViewPadding: 2.2, firstStopDwellScale: 0.55,
+            openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
+            stopDwellMinS: 6, stopDwellMaxS: 25,
+            totalDurationMinS: 60, totalDurationMaxS: 90,
+            keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4, videoBitrateMbps: 5,
+            stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
+            uncappedPhotoHoldS: 1.0,
+            allocationZeroShare: 0.4, allocationOneShare: 0.3,
+            allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
+            tierTopShare: 0.15,
+            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
         )
     }
 
@@ -31,7 +43,7 @@ final class RecapEncoderTests: XCTestCase {
             route: route, stops: [stop], title: "Trip", subtitle: "Sub",
             statsLines: [], callToAction: "", shareURL: "kamome://route/test"
         )
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = RecapStyle()
         let compositor = FrameCompositor(
             timeline: timeline,

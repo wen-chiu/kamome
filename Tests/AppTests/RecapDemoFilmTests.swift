@@ -4,6 +4,9 @@ import CoreText
 @testable import Kamome
 import KamomeConfig
 import KamomeExportEngine
+import KamomeImportKit
+import KamomePersistence
+import KamomeRouteMatching
 import KamomeTrackingEngine
 import KamomeTripComposer
 import UniformTypeIdentifiers
@@ -41,8 +44,22 @@ final class RecapDemoFilmTests: XCTestCase {
             "Manual demo render — set KAMOME_DEMO_FILM=1."
         )
         let config = try AppConfig.loadOrDie().export
-        let trip = try demoTrip(config: config)
-        let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config))
+        try await renderFilm(trip: try demoTrip(config: config), config: config, named: "kamome-demo-film")
+    }
+
+    /// Renders `trip` the way the shipped app would and prints where it landed.
+    private func renderFilm(trip: RecapTrip, config: TrackingConfig.Export, named: String) async throws {
+        let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
+        let region = RecapMapRegionResolver.resolve(covering: bounds)
+        let establishing = region.map {
+            RecapBounds(
+                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
+                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
+            )
+        }
+        let timeline = try XCTUnwrap(
+            LinearTimeline(trip: trip, config: config, establishing: establishing)
+        )
         let style = RecapStyle.modernMinimal
 
         // Stand-in photos: the simulator has no real library, and the deck beats
@@ -52,7 +69,7 @@ final class RecapDemoFilmTests: XCTestCase {
             if case let .asset(id) = ref { images[id] = try photoTile(index: index) }
         }
 
-        let provider = try snapshotProvider()
+        let provider = try snapshotProvider(region: region)
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style),
@@ -66,7 +83,7 @@ final class RecapDemoFilmTests: XCTestCase {
 
         let outDir = outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let videoURL = outDir.appendingPathComponent("kamome-demo-film.mp4")
+        let videoURL = outDir.appendingPathComponent("\(named).mp4")
         try? FileManager.default.removeItem(at: videoURL)
 
         let started = Date.now
@@ -80,8 +97,162 @@ final class RecapDemoFilmTests: XCTestCase {
             (try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int) ?? 0
         ) / 1e6
         print(String(
-            format: "KAMOME_DEMO_FILM %@  %d stops · %d frames · %.1fs video · %.1f MB · rendered in %.0fs",
-            videoURL.path, trip.stops.count, timeline.frameCount, duration, sizeMB, seconds
+            format: "KAMOME_DEMO_FILM %@  %d stops · %d legs · %d frames · %.1fs video · %.1f MB · rendered in %.0fs",
+            videoURL.path, trip.stops.count, trip.legs.count, timeline.frameCount, duration, sizeMB, seconds
+        ))
+        reportPacing(timeline, trip: trip)
+    }
+
+    /// Measures what the film actually does — dwell per stop read off the
+    /// timeline rather than assumed — so a before/after comparison reports
+    /// observed pacing instead of intended pacing.
+    private func reportPacing(_ timeline: LinearTimeline, trip: RecapTrip) {
+        let dwells = trip.stops.map { stop -> Double in
+            var first: Double?, last: Double?
+            var time = 0.0
+            while time <= timeline.durationS {
+                if let deck = activeDeck(timeline.overlayContents(atTime: time)),
+                   deck.photos.first == stop.photos.first, deck.opacity > 0.001 {
+                    if first == nil { first = time }
+                    last = time
+                }
+                time += 1.0 / 30
+            }
+            guard let first, let last else { return 0 }
+            return last - first
+        }
+        let mean = dwells.isEmpty ? 0 : dwells.reduce(0, +) / Double(dwells.count)
+        print(String(
+            format: "KAMOME_DEMO_PACING opening %.1fs · dwell mean %.1fs · range %.1f-%.1fs · per-stop %@",
+            timeline.openingS, mean, dwells.min() ?? 0, dwells.max() ?? 0,
+            dwells.map { String(format: "%.1f", $0) }.joined(separator: "/")
+        ))
+    }
+
+    private func activeDeck(_ contents: [OverlayContent]) -> RecapPhotoDeck? {
+        for content in contents {
+            if case let .photoDeck(deck) = content { return deck }
+        }
+        return nil
+    }
+
+    // MARK: - Imported film (photos → legs → OSRM → recap)
+
+    /// The **whole Replay MVP loop** in one artifact: geotagged photos →
+    /// `ImportService` (per-leg segments) → OSRM `/route` reconstruction with the
+    /// intermediate photos as via-waypoints → `RecapComposer` typed legs → film.
+    ///
+    /// This is where the honesty shows: the drives reconstruct against the road
+    /// network and draw solid, while the coastal walk — never routed, because a
+    /// car profile would snap it to the nearest street (PD-8) — draws dashed.
+    /// Both are in the same frame, which is the point of PD-1.
+    ///
+    /// The trip is read from `Tests/Fixtures/trips/<name>.json` — one file per
+    /// dogfood region, so a render is a fixture swap rather than a code change,
+    /// and a real photo library can be dumped straight into that shape
+    /// (`Tools/exif-to-fixture.sh`).
+    ///
+    /// Needs a live OSRM covering the region and tiles for it:
+    ///
+    ///   KAMOME_DEMO_FILM_IMPORT=iceland \
+    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
+    ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
+    ///   KAMOME_RENDER_OUT=/path/to/out
+    func testRenderImportedFilm() async throws {
+        let requested = ProcessInfo.processInfo.environment["KAMOME_DEMO_FILM_IMPORT"] ?? ""
+        try XCTSkipUnless(
+            !requested.isEmpty,
+            "Manual demo render — set KAMOME_DEMO_FILM_IMPORT to a fixture name (e.g. iceland)."
+        )
+        let fixture = requested == "1" ? "margaret-river" : requested
+        let (recap, config) = try await Self.importedRecap(named: fixture)
+        try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
+    }
+
+    /// `baseURL` nil takes the ambient OSRM (review renders want real roads);
+    /// passing `""` forces every leg to stay raw, which is what the offline
+    /// continuity gate needs — and what the shipped app does today, since
+    /// `matching.base_url` ships empty.
+    static func importedRecap(
+        named fixture: String,
+        baseURL requestedBaseURL: String? = nil
+    ) async throws -> (RecapTrip, TrackingConfig.Export) {
+        let full = try AppConfig.loadOrDie()
+        let baseURL = requestedBaseURL
+            ?? ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"]
+            ?? "http://127.0.0.1:5100"
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let service = ImportService(
+            repository: repository, config: full,
+            matcher: RouteMatchService(
+                repository: repository, config: full,
+                reconstructor: OSRMRouteProvider(config: full.matching.withBaseURL(baseURL))
+            )
+        )
+
+        let trip = try Self.tripFixture(named: fixture)
+        let tripId = try await service.importTrip(title: trip.title, photos: trip.photos)
+        // Real stop names, opt-in and cached (`RecapReviewGeocoder`). Without this
+        // the harness composes straight out of the importer, which cannot name a
+        // stop, and every card in the pilot reads "Unnamed stop" — a difference
+        // from the shipped app that has twice been mistaken for a regression.
+        if RecapReviewGeocoder.isEnabled {
+            try await Self.nameStops(tripId: tripId, fixture: fixture, repository: repository, config: full)
+        }
+        let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        let legs = RecapComposer.legs(
+            from: detail.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
+        )
+        print("KAMOME_DEMO_FILM_IMPORT legs: " + legs.map { "\($0.mode.rawValue)/\($0.provenance)" }.joined(separator: ", "))
+
+        // TEMPORARY (2026-08-04, duration-ratio experiment): pin the film length
+        // for a review render without editing the config between runs.
+        var config = full.export
+        if let forced = ProcessInfo.processInfo.environment["KAMOME_FORCE_DURATION_S"].flatMap(Double.init) {
+            config = config.withTotalDuration(min: forced, max: forced)
+            print("KAMOME_FORCE_DURATION_S \(forced)")
+        }
+        let selections = Self.stopPhotoSelections(detail: detail, full: full)
+        let recap = try XCTUnwrap(RecapComposer.trip(
+            trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
+            photosByStop: selections.photosByStop,
+            deck: RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        ),
+            stopHoldS: config.stopHoldS,
+            rawPhotoCounts: selections.rawPhotoCounts,
+            favoriteCounts: selections.favoriteCounts,
+            weighting: config
+        ))
+        let waypoints = recap.stops.filter(\.photos.isEmpty).count
+        print("KAMOME_STOP_WEIGHTS \(recap.stops.count) stops · \(waypoints) waypoints · "
+            + "\(recap.stops.count - waypoints) highlights · weighting "
+            + (config.stopWeightingEnabled ? "ON" : "off"))
+        return (recap, config)
+    }
+
+    /// Runs the **shipped** `StopNamer` over the trip's stops and waits for it to
+    /// finish, so what the pilot renders is what the app would have written.
+    private static func nameStops(
+        tripId: String, fixture: String, repository: TripRepository, config: TrackingConfig
+    ) async throws {
+        let stops = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
+        let geocoder = RecapReviewGeocoder(fixture: fixture)
+        let namer = StopNamer(config: config.geocode, repository: repository, geocoder: geocoder)
+        let started = Date.now
+        await withCheckedContinuation { continuation in
+            var resumed = false
+            namer.nameUnnamedStops(stops) { progress in
+                guard progress.isFinished, !resumed else { return }
+                resumed = true
+                continuation.resume()
+            }
+        }
+        print(String(
+            format: "KAMOME_GEOCODE_STOPS %d/%d named · %d cached, %d looked up · %.0fs",
+            namer.progress.named, namer.progress.total, geocoder.hits, geocoder.misses,
+            Date.now.timeIntervalSince(started)
         ))
     }
 
@@ -108,11 +279,17 @@ final class RecapDemoFilmTests: XCTestCase {
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
         )
 
-        let route = engine.segments
-            .flatMap(\.points)
-            .map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }
-        let simplified = Simplifier.douglasPeucker(route, epsilonM: full.simplify.epsilonM)
-            .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
+        // One leg per engine segment, as the app now composes (typed-leg pass
+        // 2026-07-26). This trip is real recorded GPS end to end, so every leg
+        // is `.recorded` and draws solid — the dashed treatment is exercised by
+        // the imported film below, where it belongs.
+        let legs = engine.segments.compactMap { segment -> RecapTrip.Leg? in
+            let points = segment.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }
+            let simplified = Simplifier.douglasPeucker(points, epsilonM: full.simplify.epsilonM)
+                .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
+            guard simplified.count >= 2 else { return nil }
+            return RecapTrip.Leg(coordinates: simplified, mode: segment.mode, provenance: .recorded)
+        }
 
         let tripStops = stops.enumerated().map { index, stop -> RecapTrip.Stop in
             let photos = (0..<3).map { PhotoRef.asset("stop\(index)-photo\($0)") }
@@ -124,23 +301,25 @@ final class RecapDemoFilmTests: XCTestCase {
             )
         }
         return RecapTrip(
-            route: simplified, stops: tripStops,
+            legs: legs, stops: tripStops,
             title: "Perth → Margaret River", subtitle: "Day 1 · 291 km",
             statsLines: ["291 km · \(tripStops.count) 停留", "5.8 小時"],
-            callToAction: "Get this route", shareURL: "kamome://route/demo"
+            callToAction: "Record your own journey"
         )
     }
 
     // MARK: - Providers and assets
 
-    private func snapshotProvider() throws -> MapRenderer {
+    private func snapshotProvider(region: RecapMapRegion?) throws -> MapRenderer {
         #if canImport(MapLibre)
-        guard let tiles = RecapMapTiles.availableTilesURL() else {
-            XCTFail("no tiles — set TEST_RUNNER_KAMOME_TILES_PATH to a corridor .pmtiles")
+        guard let region else {
+            XCTFail("no region covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
             return MapKitSnapshotProvider()
         }
+        print("KAMOME_DEMO_FILM region bounds \(region.bounds), terrain: \(region.terrainURL != nil)")
         let styleURL = try RecapMapStyle.resolvedStyleURL(
-            styleResource: RecapMapTiles.styleResource, tilesURL: tiles
+            styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL,
+            terrainURL: region.terrainURL
         )
         return MapLibreSnapshotProvider(styleURL: styleURL)
         #else
@@ -155,91 +334,4 @@ final class RecapDemoFilmTests: XCTestCase {
         return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-demo-film", isDirectory: true)
     }
 
-    /// A stand-in photo: a diagonal gradient with a big index, so each deck slot
-    /// is visibly a different picture.
-    private func photoTile(index: Int) throws -> CGImage {
-        let side = 900
-        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
-        let context = try XCTUnwrap(CGContext(
-            data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
-            space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-        ))
-        let palettes: [(CGColor, CGColor)] = [
-            (CGColor(srgbRed: 0.20, green: 0.45, blue: 0.70, alpha: 1),
-             CGColor(srgbRed: 0.10, green: 0.22, blue: 0.35, alpha: 1)),
-            (CGColor(srgbRed: 0.75, green: 0.45, blue: 0.30, alpha: 1),
-             CGColor(srgbRed: 0.38, green: 0.22, blue: 0.15, alpha: 1)),
-            (CGColor(srgbRed: 0.35, green: 0.60, blue: 0.40, alpha: 1),
-             CGColor(srgbRed: 0.18, green: 0.30, blue: 0.20, alpha: 1))
-        ]
-        let (top, bottom) = palettes[index % palettes.count]
-        let gradient = try XCTUnwrap(CGGradient(
-            colorsSpace: space, colors: [top, bottom] as CFArray, locations: [0, 1]
-        ))
-        context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: side, y: side), options: [])
-        let font = CTFontCreateWithName("HelveticaNeue-Bold" as CFString, 300, nil)
-        let attrs = [
-            kCTFontAttributeName: font,
-            kCTForegroundColorAttributeName: CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.85)
-        ] as CFDictionary
-        let line = CTLineCreateWithAttributedString(
-            CFAttributedStringCreate(kCFAllocatorDefault, "\(index + 1)" as CFString, attrs)!
-        )
-        let bounds = CTLineGetImageBounds(line, context)
-        context.textPosition = CGPoint(x: (CGFloat(side) - bounds.width) / 2, y: (CGFloat(side) - bounds.height) / 2)
-        CTLineDraw(line, context)
-        return try XCTUnwrap(context.makeImage())
-    }
-}
-
-/// Minimal GPX 1.1 `<trkpt>` reader — a hosted app test cannot import the
-/// CoreTests harness parser.
-private final class GPXFilmParser: NSObject, XMLParserDelegate {
-    private var points: [LocationSample] = []
-    private var currentLat: Double?
-    private var currentLon: Double?
-    private var currentTime: Double?
-    private var textBuffer = ""
-    private let iso = ISO8601DateFormatter()
-
-    func parse(contentsOf url: URL) throws -> [LocationSample] {
-        let parser = XMLParser(data: try Data(contentsOf: url))
-        parser.delegate = self
-        guard parser.parse() else {
-            throw parser.parserError ?? NSError(domain: "GPXFilmParser", code: 1)
-        }
-        return points
-    }
-
-    func parser(
-        _ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?,
-        qualifiedName: String?, attributes: [String: String] = [:]
-    ) {
-        textBuffer = ""
-        if elementName == "trkpt" {
-            currentLat = attributes["lat"].flatMap(Double.init)
-            currentLon = attributes["lon"].flatMap(Double.init)
-            currentTime = nil
-        }
-    }
-
-    func parser(_ parser: XMLParser, foundCharacters string: String) {
-        textBuffer += string
-    }
-
-    func parser(
-        _ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?
-    ) {
-        switch elementName {
-        case "time":
-            currentTime = iso.date(from: textBuffer.trimmingCharacters(in: .whitespacesAndNewlines))?
-                .timeIntervalSince1970
-        case "trkpt":
-            if let lat = currentLat, let lon = currentLon, let ts = currentTime {
-                points.append(LocationSample(ts: ts, lat: lat, lon: lon, hAccM: 10))
-            }
-        default:
-            break
-        }
-    }
 }

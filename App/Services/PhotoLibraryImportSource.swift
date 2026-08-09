@@ -43,7 +43,8 @@ final class PhotoLibraryImportSource: ImportPhotoProviding {
                 assetId: asset.localIdentifier,
                 timestamp: date.timeIntervalSince1970,
                 lat: location.coordinate.latitude,
-                lon: location.coordinate.longitude
+                lon: location.coordinate.longitude,
+                isFavorite: asset.isFavorite
             ))
         }
         return photos

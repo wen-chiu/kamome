@@ -23,6 +23,7 @@ struct TripDetailView: View {
             if model.dayCount > 1 { dayChips }
             if let stats = model.stats { statsStrip(stats) }
             if model.isReconstructed { provenanceNote }
+            if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             timeline
         }
@@ -37,7 +38,10 @@ struct TripDetailView: View {
                 } label: {
                     Label("recap_export", systemImage: "film")
                 }
-                .disabled(model.detail?.trip.endedAt == nil)
+                // Naming is throttled and asynchronous; a film exported before it
+                // finishes says "Unnamed stop" for every stop still in the queue
+                // (Chiu 2026-08-04). The banner above says why the button is off.
+                .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
             }
         }
         .sheet(item: $editingStop) { stop in
@@ -143,6 +147,26 @@ struct TripDetailView: View {
             Text("provenance_note")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
+    }
+
+    /// Stop naming is throttled (§4.2), so on an imported trip it runs for tens
+    /// of seconds after this screen opens. Without this row the wait is invisible
+    /// and the disabled film button looks broken rather than deliberate.
+    private var namingBanner: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text(String.localizedStringWithFormat(
+                String(localized: "naming_stops_progress"),
+                model.naming.completed, model.naming.total
+            ))
+            .font(.caption)
+            .foregroundStyle(.secondary)
             Spacer(minLength: 0)
         }
         .padding(.horizontal)
