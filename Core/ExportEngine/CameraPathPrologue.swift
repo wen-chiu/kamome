@@ -82,13 +82,14 @@ extension CameraPath {
     /// beat straight into the live follow camera while the journey is already
     /// running, so the opening resolves *onto* motion instead of into a freeze.
     ///
-    /// `bodySpanM` is passed only so a wide beat that already frames the body
-    /// tightly can collapse against it; the body's own framing stays live.
+    /// **Takes no body span** (2026-08-09). It used to accept one "so a wide beat
+    /// that already frames the body tightly can collapse against it", but the
+    /// parameter was never read. Removing it is what lets the opening be built
+    /// *before* the body span, which is now derived from what this establishes.
     static func buildWideOpening(
         route: [Point],
         establishing: RecapBounds?,
-        config: TrackingConfig.Export,
-        bodySpanM: Double
+        config: TrackingConfig.Export
     ) -> Prologue {
         let tripBounds = bounds(of: route)
         let regionalAsked = frame(for: tripBounds, config: config, padding: config.wideSpanPadding)
@@ -239,11 +240,12 @@ extension CameraPath {
     /// What `openingPlan` needs from the initializer — grouped so the call
     /// reads as one value instead of seven positional arguments.
     struct OpeningRequest {
+        /// Built before this call, because the body span is derived from it.
+        let prologue: Prologue?
         let route: [Point]
         let establishing: RecapBounds?
         let config: TrackingConfig.Export
         let bodySpanM: Double
-        let openingS: Double
         let totalDurationS: Double
         let journeyEndsBeforeS: Double
     }
@@ -268,14 +270,9 @@ extension CameraPath {
     /// chain reads as one place rather than six `let`s threaded through the
     /// initializer.
     static func openingPlan(_ request: OpeningRequest) -> OpeningPlan {
-        let route = request.route, establishing = request.establishing, config = request.config
+        let route = request.route, config = request.config
         let bodySpanM = request.bodySpanM, total = request.totalDurationS
-        // The wide beats only. The old third beat — a *stored* frame of the
-        // first act — is gone: the opening now zooms into the live follow
-        // camera, so the two can never disagree at the seam.
-        let builtPrologue = request.openingS > 0
-            ? buildWideOpening(route: route, establishing: establishing, config: config, bodySpanM: bodySpanM)
-            : nil
+        let builtPrologue = request.prologue
         let wideEnd = max(min(builtPrologue?.totalS ?? 0, total), 0)
         // **The closing zoom is skipped when it would not go anywhere** (Chiu
         // 2026-08-02). Once the body span is wide enough to bind on the route's

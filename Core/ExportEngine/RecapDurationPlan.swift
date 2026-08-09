@@ -59,32 +59,46 @@ public struct RecapDurationPlan: Equatable {
     /// zoom-out three seconds before the end card. Different trips get different
     /// spans; one trip gets one span.
     ///
-    /// The clamps are guardrails, not the mechanism — on every committed fixture
-    /// the formula itself binds:
-    /// - floored at `camera_span_m`, so a trip round one block does not zoom to
-    ///   the width of a street;
-    /// - ceilinged at the whole route's own framing, so the camera never frames
-    ///   ground the trip never visits. When that ceiling binds the whole route is
-    ///   already on screen, so the subject barely reaches the dead-zone edge and
-    ///   the body camera is **all but static** — the 2026-07-25 "held still"
-    ///   behaviour, reached by this rule rather than special-cased.
+    /// **Derived from what the opening establishes** (Chiu 2026-08-09): the body
+    /// is simply the established span divided by `target_zoom_ratio`, so the zoom
+    /// the viewer sees is the thing being configured rather than a consequence of
+    /// trip geometry. `establishedSpanM` is the span of the opening's *first*
+    /// beat — the picture at t=0 — which is the country beat when a region has
+    /// wider context to offer and the regional beat otherwise.
+    ///
+    /// Floored at `camera_span_m` so a trip round one block does not zoom to the
+    /// width of a street, and never wider than what it establishes.
+    ///
+    /// **`camera_pan_window_fraction_per_s` is now a floor, not a target.** It
+    /// bounds how much of the window the ground may cross per second; below that
+    /// width the journey outruns the frame whatever the ratio asks for. Restored
+    /// to 0.35 — the value it held before the 2026-08-02 wide baseline dropped it
+    /// to 0.05, where the ceiling always won and it stopped deciding anything.
     static func bodySpanM(
+        establishedSpanM: Double,
         routeDistanceM: Double,
         travelS: Double,
-        routeBounds: CameraPath.Bounds,
         config: TrackingConfig.Export
     ) -> Double {
-        // `body_span_padding`, not `wide_span_padding` (Chiu 2026-08-08). They used
-        // to be the same value, which made the body span and the opening's regional
-        // beat the same number and left the closing zoom nothing to do — see
-        // `TrackingConfig.Export.bodySpanPadding`.
-        let ceiling = max(
-            CameraPath.fittingSpanM(bounds: routeBounds, config: config) * config.bodySpanPadding,
-            config.cameraSpanM
-        )
-        guard travelS > 0, routeDistanceM > 0, config.cameraPanWindowFractionPerS > 0 else { return ceiling }
-        let raw = routeDistanceM / (travelS * config.cameraPanWindowFractionPerS)
-        return min(max(raw, config.cameraSpanM), ceiling)
+        let asked = establishedSpanM / max(config.targetZoomRatio, 1)
+        // **The pan floor, and why it is a floor now** (2026-08-09). The camera
+        // crosses the route at a speed the *journey* sets, not the frame: a tight
+        // frame does not slow the vehicle down, it just means more of the screen
+        // is replaced each second. Below this width the ground outruns the window —
+        // measured at 34.5 km per snapshot across a 57.8 km frame, which is 39%
+        // of the picture surviving against a 40% floor.
+        //
+        // This used to be computed and then thrown away: the old code took
+        // `min(max(raw, cameraSpanM), ceiling)`, so the ceiling always won and the
+        // budget never bound anything. Making it a genuine lower bound is what
+        // lets `target_zoom_ratio` be honoured wherever it is safe and quietly
+        // yielded where it is not — a trip whose establishing shot is too tight to
+        // divide simply does not zoom, rather than strobing.
+        let panFloor = travelS > 0 && config.cameraPanWindowFractionPerS > 0
+            ? routeDistanceM / (travelS * config.cameraPanWindowFractionPerS)
+            : 0
+        let floor = max(panFloor, config.cameraSpanM)
+        return min(max(asked, floor), establishedSpanM)
     }
 
     /// **Uncapped mode** (EXPERIMENTAL, Chiu 2026-08-05): the film has no target

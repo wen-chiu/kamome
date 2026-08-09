@@ -167,9 +167,11 @@ extension CameraPath {
         return clamped * clamped * (3 - 2 * clamped)
     }
 
-    /// What `bodySpan` needs — grouped so the call reads as one value instead
-    /// of seven positional arguments.
+    /// The body span, and everything needed to derive it: the opening the film
+    /// establishes on, and the travel budget the pan floor is measured against.
+    /// Grouped so `CameraPath.init` reads as one step rather than four.
     struct BodySpanRequest {
+        let prologue: Prologue?
         let route: [Point]
         let anchors: [(stopIndex: Int, distanceM: Double)]
         let totalM: Double
@@ -179,32 +181,33 @@ extension CameraPath {
         let config: TrackingConfig.Export
     }
 
-    /// The trip's one body span, capped to whatever region tiles are installed.
-    ///
-    /// Needs a provisional timeline first: the prologue's real length is only
-    /// known once its beats are built (near-duplicate beats collapse), so a
-    /// trip whose region and route frame the same picture opens in far less
-    /// than the configured sum, and the body span has to be sized against that
-    /// *realistic* travel budget rather than the nominal one.
     static func bodySpan(_ request: BodySpanRequest) -> Double {
+        let route = request.route, config = request.config, totalM = request.totalM
+        // A provisional timeline just for the travel budget: the real one cannot
+        // exist yet, because it starts where the opening ends.
         let provisional = buildTimeline(
-            anchors: request.anchors, totalM: request.totalM, config: request.config,
+            anchors: request.anchors, totalM: totalM, config: config,
             stopHoldsS: request.stopHoldsS, startS: 0, targetS: request.totalDurationS
         )
-        // Capped to what the installed region can actually draw. A trip that
-        // covers most of its region — the real Iceland ring road does — asks for
-        // a padded frame wider than the tiles, and beyond them there is no water
-        // layer, only the style's background, so the data boundary appears as a
-        // grey band across the film. The country beat learned this on 2026-08-02;
-        // the body span and the closing reveal had not (real-data Stage 0).
-        return cappedToRegion(
-            RecapDurationPlan.bodySpanM(
-                routeDistanceM: request.totalM,
-                travelS: travelSeconds(in: provisional),
-                routeBounds: bounds(of: request.route),
-                config: request.config
+        return RecapDurationPlan.bodySpanM(
+            establishedSpanM: establishedSpanM(
+                prologue: request.prologue, route: route,
+                establishing: request.establishing, config: config
             ),
-            establishing: request.establishing, config: request.config
+            routeDistanceM: totalM, travelS: travelSeconds(in: provisional), config: config
+        )
+    }
+
+    /// The span the opening establishes: the first beat the viewer sees at t=0,
+    /// which is what the body span divides. Falls back to the regional framing for
+    /// a film with no prologue at all, so `.fixed` pacing still gets a sane body.
+    static func establishedSpanM(
+        prologue: Prologue?, route: [Point], establishing: RecapBounds?, config: TrackingConfig.Export
+    ) -> Double {
+        if let first = prologue?.beats.first { return first.frame.spanM }
+        return cappedToRegion(
+            frame(for: bounds(of: route), config: config, padding: config.wideSpanPadding).spanM,
+            establishing: establishing, config: config
         )
     }
 

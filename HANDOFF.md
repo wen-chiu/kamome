@@ -14,40 +14,67 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ⏳ AWAITING OWNER REVIEW — round 3 renders, nothing closed (2026-08-08)
+## ⏳ AWAITING OWNER REVIEW — round 4 renders, nothing closed (2026-08-09)
 
 **No bug here is closed until Chiu has reviewed the rendered before/after.**
-Round 3 supersedes rounds 1 and 2; review round 3 only.
+Round 4 supersedes rounds 1–3.
 
-| round | Iceland opening | car | first photo | establishing → body |
-|---|---|---|---|---|
-| before any fix | 5.50 s | 4.27 s | 8.90 s | 291.5 → 291.5 km (**no zoom**; 120 km sideways slide) |
-| 1 (PR #12) | 3.00 s | 1.77 s | 6.50 s | 291.5 → 291.5 km (slide removed, still flat) |
-| 2 | 6.50 s | 5.27 s | 9.90 s | 921.1 → 736.8 km = 1.25× |
-| **3 (current)** | **5.50 s** | **4.27 s** | **8.90 s** | **736.8 → 294.7 km = 2.50×** |
+| | established | body | zoom | opening | country beat |
+|---|---|---|---|---|---|
+| **Iceland** | 736.8 km | 294.7 km | **2.50×** | 5.50 s | no |
+| **New Zealand** | 845.3 km | 338.1 km | **2.50×** | 9.00 s | **yes** |
 
-Round 3 is Chiu's ask after seeing round 2: **open at the whole-trip framing
-(737 km) and zoom in to the close body shot**, rather than opening wider still and
-zooming only slightly. It needed `body_span_padding` split out of
-`wide_span_padding` — see CLAUDE.md, the wide baseline is superseded.
+Iceland's numbers are **unchanged from the round-3 render Chiu approved** — that
+was the regression check on this change, and it holds.
 
-**New Zealand changed in round 3**, having been identical through rounds 1–2:
+### The mechanism, and why the constant it replaced could not work
 
-| | round 2 | round 3 |
-|---|---|---|
-| opening | 6.50 s | **9.00 s** |
-| car | 5.27 s | **7.77 s** |
-| first photo | 7.70 s | **10.20 s** |
-| establishing → body | 845.3 → 510.6 km (1.66×) | **845.3 → 204.2 km (4.14×)** |
+`body_span_padding = 0.6` was reverse-derived from one trip (736.8 / 2.5 / 491).
+Algebraically it is `wide_span_padding / target_zoom_ratio`, so it only produced
+2.5× for a trip whose opening establishes on its **regional** beat. New Zealand
+establishes on a **country** beat much wider than its trip, so the same constant
+gave 4.14×.
 
-`body_span_padding` is global, so NZ's body tightened too and its country beat now
-survives, giving a three-stage opening (country → regional → body) and a 4.14×
-zoom. **Nobody asked for this and it has not been judged** — it is a consequence,
-not a decision. If NZ's opening is now too long or its body too tight, the lever
-is `body_span_padding`, or making it per-trip.
+Now `body = established / target_zoom_ratio` (2.5), where `established` is the
+span of the opening's *first* beat — the picture at t=0. Each trip divides its
+own, so the ratio holds whatever the geometry. This was only possible because
+`buildWideOpening` took a `bodySpanM` parameter it never read: removing it lets
+the opening be built **before** the body span rather than after.
 
-**Car timing follows the opening** and was not touched: 1.77 s (round 1) → 5.27 s
-(round 2) → 4.27 s (round 3), always `openingS − zoom_transition_s`.
+### The pan floor is a floor now, and that matters
+
+Deriving the body purely from the ratio broke the continuity gate on **128
+assertions** — Iceland moved 34.5 km per snapshot across a 57.8 km frame, 39% of
+the picture surviving against a 40% floor. A tight frame does not slow the vehicle
+down; it just means more of the screen is replaced each second.
+
+`camera_pan_window_fraction_per_s` is restored to **0.35** (its value before the
+2026-08-02 wide baseline set it to 0.05) and is now a genuine **lower bound**.
+Previously it was computed and discarded — `min(max(raw, cameraSpanM), ceiling)`
+meant the ceiling always won, so it had not decided anything in months. As a floor
+it yields the ratio wherever that is safe and overrides it where it is not: a trip
+whose establishing shot is too tight to divide simply does not zoom, instead of
+strobing. It does **not** bind on either real trip, so both land at exactly 2.50×.
+
+### New Zealand's country beat is real, not a side effect
+
+Asked explicitly, so measured explicitly. `countryAddsContext` is
+
+    contained(region) > fittingSpan(trip) × wide_span_padding × opening_collapse_zoom_ratio
+    845.3 km          > 340.4 × 1.5 × 1.25 = 638.2 km          → true
+
+**The body span is not among its inputs**, under either the old formula or the
+new one. It survives because NZ's installed region is the whole country while the
+trip is the South Island — there genuinely *is* wider context to show. Iceland has
+no country beat only because its region was deliberately cut to 1.5× for headroom.
+
+**So the fix does not shorten NZ's 9.00 s opening, and cannot.** Opening length is
+beats × holds + transitions; it is independent of the body span. If 9.00 s is too
+long, the lever is the region, not the camera: cutting NZ's region to ~1.5× its
+trip collapses the country beat, giving a 5.50 s opening and an established span
+of 510.6 km — **still 2.50×**, because the ratio divides whatever it establishes
+on. That is a product choice between a wider establishing shot and a shorter
+opening, and it has not been made.
 
 ### What it actually was
 
