@@ -244,6 +244,20 @@ final class RecapDemoFilmTests: XCTestCase {
             }
             config = config.withRecapMode(mode)
             print("KAMOME_RECAP_MODE \(requested)")
+            // Variant A means "see the whole trip", and a stop with a beat but no
+            // photograph is still empty to the viewer — so the allocator's zero
+            // share, which is right for a highlight reel, is wrong here. Scoped to
+            // the mode so Variant B's shipped 0.4 is untouched.
+            //
+            // Explicitly overridable so the *before* of this change stays
+            // measurable: comparing Variant A against Variant B would have
+            // compared two things at once.
+            if case .full = mode {
+                let share = ProcessInfo.processInfo.environment["KAMOME_ALLOCATION_ZERO_SHARE"]
+                    .flatMap(Double.init) ?? 0
+                config = config.withAllocationZeroShare(share)
+                print("KAMOME_ALLOCATION_ZERO_SHARE \(share) (Variant A)")
+            }
         }
         if let forced = ProcessInfo.processInfo.environment["KAMOME_FORCE_DURATION_S"].flatMap(Double.init) {
             config = config.withTotalDuration(min: forced, max: forced)

@@ -50,6 +50,52 @@ extension TrackingConfig.Export {
         )
     }
 
+    /// A copy with the allocator's zero share overridden.
+    ///
+    /// **Variant A only.** `allocation_zero_share` (0.4 shipped) gives the bottom
+    /// 40% of stops no photograph at all — right for Variant B, where the film is
+    /// a highlight reel and a quiet stop earning only a pin is the point. It
+    /// contradicts Variant A, whose whole claim is "see the whole trip": a stop
+    /// with a beat and no photograph is still empty to the viewer, so keeping the
+    /// stop while dropping its photographs keeps the timeline and loses the memory.
+    ///
+    /// Kept out of `RecapMode` itself because Variant A is a desk-review mode, not
+    /// something the app ships. If it ever does ship, this belongs *in* the mode
+    /// rather than in a harness override.
+    public func withAllocationZeroShare(_ share: Double) -> TrackingConfig.Export {
+        TrackingConfig.Export(
+            targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
+            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
+            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
+            targetZoomRatio: targetZoomRatio,
+            zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: followHeadingUp,
+            cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
+            cameraDeadZoneFraction: cameraDeadZoneFraction,
+            cameraSafeZoneFraction: cameraSafeZoneFraction,
+            cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+            endRevealPadding: endRevealPadding, endCardStyle: endCardStyle,
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+            deckZoomS: deckZoomS, deckLabelLeadS: deckLabelLeadS, subjectParkS: subjectParkS,
+            openingCountryS: openingCountryS, openingRegionalS: openingRegionalS,
+            countryViewPadding: countryViewPadding, firstStopDwellScale: firstStopDwellScale,
+            openingCollapseZoomRatio: openingCollapseZoomRatio,
+            openingCollapseDriftFraction: openingCollapseDriftFraction,
+            stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
+            totalDurationMinS: totalDurationMinS, totalDurationMaxS: totalDurationMaxS,
+            keyframeIntervalFrames: keyframeIntervalFrames, titleCardS: titleCardS,
+            endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
+            stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
+            waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
+            uncappedPhotoHoldS: uncappedPhotoHoldS,
+            allocationZeroShare: share,
+            allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
+            allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
+            tierTopShare: tierTopShare,
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos, recapMode: recapMode
+        )
+    }
+
     /// A copy in a different `RecapMode`. The desk MVP renders run **Variant A**
     /// (`.full` — every clustered stop presented, no duration cap) while the
     /// shipped default stays **Variant B** (`.highlight`), so the harness needs to
