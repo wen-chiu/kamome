@@ -14,6 +14,81 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
+## ▶ RESUME HERE — MVP desk renders, 1 of 3 done (2026-08-09)
+
+Branch `phase-3-recap`, all committed and pushed, suite green (197), `swiftlint
+--strict` clean. PR #11 (`phase-3-recap` → `main`) stays draft and **held** until
+the §6 gate; #12 and #13 are merged into this branch.
+
+### The task in flight
+
+Render the three MVP films at the desk in **Variant A**, cheapest first. One done:
+
+| | Miyakojima | New Zealand | Iceland |
+|---|---:|---:|---:|
+| status | **✅ rendered, awaiting review** | ⬜ not started | ⬜ not started |
+| photos in dump | 53 (of 406 files) | 160 | 2300 |
+| presented stops | 10 | 20 | 65 |
+| photos shown | 23 | 22 *(pre-fix)* | 67 *(pre-fix)* |
+| film length | 103.7 s | 136.7 s *(pre-fix)* | 403.7 s *(pre-fix)* |
+| established → body | 47.2 → 18.9 km, 2.50× | 845.3 → 338.1, 2.50× | 736.8 → 294.7, 2.50× |
+| render cost | 3110 frames / 156 s | ~4100 frames | **~12,100 frames, 10–20 min** |
+
+NZ and Iceland numbers above are from **before** the allocation-zero fix, so their
+photo counts and lengths will grow — expect roughly the +90% photos / +34% length
+Miyakojima saw. Re-measure, do not quote these.
+
+**The render command** (Miyakojima shown; swap fixture, photo folder, and note
+that `KAMOME_PILOT_SECONDS=9999` means "the whole film", not a pilot):
+
+```
+TEST_RUNNER_KAMOME_PILOT_FILM=miyakojima \
+TEST_RUNNER_KAMOME_PILOT_SECONDS=9999 \
+TEST_RUNNER_KAMOME_RECAP_MODE=full \
+TEST_RUNNER_KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
+TEST_RUNNER_KAMOME_TILES_PATH=$HOME/kamome-osrm/tiles \
+TEST_RUNNER_KAMOME_TERRAIN_PATH=$HOME/kamome-osrm/terrain \
+TEST_RUNNER_KAMOME_STOP_PHOTOS=$HOME/Desktop/Miyakojima \
+TEST_RUNNER_KAMOME_RENDER_OUT=$HOME/kamome-renders \
+xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:KamomeTests/RecapPilotFilmTests
+```
+
+⚠️ **Write renders to `$HOME/kamome-renders`, not `/tmp`.** The Miyakojima film was
+written to `/tmp` and swept before it could be re-reviewed; it costs 156 s to
+regenerate, and Iceland would cost far more.
+
+### Variant A vs Variant B
+
+- **Variant A** = `KAMOME_RECAP_MODE=full`: every clustered stop presented, no
+  duration cap, and `allocation_zero_share` forced to 0 so no stop shows a pin
+  with no photograph. Desk MVP renders only.
+- **Variant B** = shipped default (`recap_mode: highlight`), **unchanged and not
+  in scope to tune**. Both overrides are harness-only; `TrackingConfig.json` is
+  never edited between runs.
+
+### Owner decisions carried in
+
+- **Miyakojima EXIF: do not investigate.** 53 of 406 files carry GPS+timestamp;
+  the rest were stripped at export. Chiu is checking the export source himself.
+  Render from the 53 and re-run later if originals turn up.
+- **Region headroom: do not fix this round.** After all three renders, *propose*
+  (do not implement) making the headroom check automatic at trip-dump /
+  region-install time. It has now caught 2 of 3 trips manually (Iceland,
+  Miyakojima), which is the argument. The raw material exists:
+  `Tools/tile-headroom.sh` computes the verdict and `exif-to-fixture.sh` already
+  prints the trip bbox — they just need to meet.
+- **iCloud grey-card resolver: untouched**, deferred to device testing.
+
+### Local state that is not in git
+
+- `~/kamome-osrm/tiles/` — `iceland-2026-08-08b`, `miyakojima-2026-08-09`,
+  `new-zealand-2026-07-29`, `finland-2026-07-29`. Superseded regions parked in
+  `~/kamome-osrm/tiles-superseded/` (outside the scanned directory).
+- `Tests/Fixtures/trips/local/` — Iceland, New Zealand, **Miyakojima** dumps.
+  Gitignored per §0; never commit them.
+- OSRM `:5100` is `docker compose up -d` from `Deploy/`, healthy, restart-safe.
+
 ## ✅ REVIEWED AND APPROVED — recap camera (2026-08-09)
 
 Chiu reviewed the round-4 renders and approved both. **This closes the camera
