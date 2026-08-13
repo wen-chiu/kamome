@@ -46,24 +46,23 @@ Films are in `~/kamome-renders/`. **That directory is §6a release output, not
 scratch** — the first Miyakojima render was written to `/tmp` and swept before it
 could be reviewed.
 
-**Owner review so far (Chiu 2026-08-13), partial:**
+**Owner review — all three judged (Chiu 2026-08-13). See "§6a film review" below
+for the verdicts and what they do and do not tick.** The one §6a item still open
+is **≥ 1 published publicly**.
 
-- **Iceland — a film he wants to keep.** *"這是我自己會想留著看的影片, 確實勾起我一點
-  回憶."* Ten minutes is longer than he would choose, and the reason is specific:
-  **the photographs hold his attention; the travel between them does not.** See
-  the pending experiment below.
-- **Miyakojima, New Zealand — no verdict yet.**
-- **Nothing in §6a is ticked.** One positive verdict of three is not the gate.
+**Spans, measured** (env-gated `RecapTimelineReportTests`, same Variant A config
+and installed region the films used):
 
-**Still owed to the review:** Iceland's 11 dashed drive legs need their failure
-mode named (`NoSegment` vs the detour gate — they fail for different reasons and
-only one is a tuning question) and roughly where they sit, place names only. That
-is the input to §6a's "no mountain-crossing straight line" item.
+| | established | body | ratio |
+|---|---:|---:|---:|
+| Iceland | 736.8 km | 294.7 km | **2.50×** |
+| New Zealand | 845.3 km | 338.1 km | **2.50×** |
+| Miyakojima | 47.2 km | 18.9 km | **2.50×** |
 
-**The established → body → ratio figures** in earlier versions of this table were
-carried from `Deploy/regions.json` notes — design intent, not measurement. Prints
-were authorized 2026-08-13 into the env-gated `RecapTimelineReportTests`; quote
-those once they land, and label anything still carried as derived.
+These match the `Deploy/regions.json` derived figures to the decimal, so the
+derived numbers were right and the camera is doing exactly what is configured.
+**That question is closed** — do not re-derive it, and do not treat the spans as
+a diagnosis for anything.
 
 **The render command** (Miyakojima shown; swap fixture, photo folder, and note
 that `KAMOME_PILOT_SECONDS=9999` means "the whole film", not a pilot):
@@ -117,6 +116,102 @@ regenerate, and Iceland would cost far more.
   Gitignored per §0; never commit them.
 - OSRM `:5100` is `docker compose up -d` from `Deploy/`, healthy, restart-safe.
 
+## ✅ §6a film review — all three judged (Chiu 2026-08-13)
+
+**Place names are deliberately absent from this section.** The routing report this
+was written from named the stops; per §0 and the same rule that gitignores
+`*-names.json`, a place name is a record of where Chiu was and does not enter the
+repository. Legs are identified by ordinal and by geometry, which is everything a
+later reader needs. **Do not "helpfully" restore the names.**
+
+### The verdicts
+
+- **Iceland — a film he wants to keep.** *"這是我自己會想留著看的影片, 確實勾起我一點
+  回憶."*
+- **Miyakojima, New Zealand — 很好.**
+- **Iceland's opening reads fine** (0–10 s), which settles the question below.
+- **The one dashed leg that mattered — accepted.** See "Leg 12" below.
+
+**What this ticks in §6a:** three trips reconstructed from EXIF; films Chiu wants
+to keep; no external editing; the final "worth publishing" judgment. **What it
+does not tick: ≥ 1 published publicly.** Nothing has been published yet, and that
+is now the only §6a item outstanding.
+
+### The car's late entry on Iceland was never an anomaly — CLOSED
+
+Iceland is the only one of the three where the vehicle appears *after* the opening
+ends and after the first stop's card and first photograph (9.33 s, against an
+opening ending at 5.50 s). New Zealand and Miyakojima put the car on screen during
+the opening (6.67 s of 9.00 s; 3.17 s of 5.50 s).
+
+**That is the documented second sequence, not a defect.**
+`LinearTimeline.subjectArrivalStartS` specifies two orderings chosen by what the
+trip opens on (Chiu 2026-07-31), and Iceland is simply the first real trip whose
+journey *starts at* a photo-bearing stop:
+
+    opening → [first stop's pin/title/photos] → car appears → first leg
+    opening → car appears → first leg
+
+The rationale in that comment still holds — a car that appears only to park a
+moment later at the origin reads as a false start, and no dwell tuning fixes a
+sequencing choice. **Chiu watched it and confirmed it reads correctly.** The
+2026-07-31 decision is now validated on a real render rather than only specified.
+
+### Dashed legs — the honest ones, and the one that was a judgment call
+
+Iceland: **10 dashed drive legs of 58 routable** (64 legs = 58 drive + 6 walk; all
+6 walks dash by design). Corrected from an earlier count of 11 taken off the
+render log.
+
+| cause | count | verdict |
+|---|---:|---|
+| `NoSegment` | 9 | **Correct behaviour, no action.** These cluster on glacier tongues and national-park interiors — photo positions with no drivable segment near them. OSRM answered correctly; drawing them dashed is the honest-provenance rule working, not a defect. |
+| detour-gate rejection | 1 | **Leg 12 — accepted by Chiu.** |
+
+**Leg 12, and why it was the only real question.** 17.5 km of straight line
+standing in for 61.6 km of routed road (3.5×, over the 2.5× threshold) on a
+stretch where the road rounds a bay — so the straight line crosses **water**.
+§6a's item reads "no obvious sea-crossing straight line", and this is one.
+
+**Chiu accepted it (2026-08-13):** the film is honest about not knowing, and one
+such leg does not cost the film. ⚠️ **This is a judgment on one instance, not a
+new rule.** The §6a item's wording still says what it says; a future trip with a
+longer or more prominent water crossing is not covered by this precedent and gets
+its own call. Do not cite this as "water crossings are fine".
+
+**The mechanism worth remembering.** The detour gate rejected that route as
+implausible — but in fjord and peninsula terrain a 3.5× road *is* the real
+geography, not a bad EXIF fix. And the fallback for "this route looks implausible"
+is a straight line, which here is **more** implausible than the route it rejected.
+The safety mechanism's failure mode is worse than what it prevents. Nothing is
+being changed about it now; this is recorded so the next person meeting a dashed
+leg over water knows it may be the gate and not the data.
+
+### New Zealand's single dashed leg — deferred, but it found a real gap
+
+Leg 14, within a town: **0.4 km routed vs 0.1 km straight (4.6×)**, detour gate.
+**Chiu: 沒關係, 我根本沒發現** — revisit if a similar issue surfaces later.
+
+Worth keeping anyway, because it is the cheapest finding here: **the detour gate is
+a pure ratio with no absolute floor**, so 300 m of difference on a 100 m leg trips
+the same threshold that protects against a 300 km fabrication. An absolute floor
+would remove this class outright at no risk — and would **not** help Leg 12, whose
+44 km absolute difference is real. Two separate problems; only this one is cheap.
+
+Miyakojima: **zero dashed drive legs** (9 of 9 reconstructed); its one dashed leg
+is a walk.
+
+**Attribution method, since it is not obvious it is sound:** `matchTrip` awaits
+legs sequentially, so the k-th `[routing] route:` line is the k-th routable leg.
+Cross-checked three ways — 58 route lines for 58 routable legs, 10 failures for
+exactly 10 dashed drive legs, and every failure landing on the ordinal of a leg
+the timeline independently reports as dashed. Same alignment held on NZ.
+
+**Also reconfirmed:** the `RouteMatchService.swift:39` base-URL log lie reproduced
+exactly — `matchTrip … against "(none — matching disabled)"` in the same run where
+48 legs routed fine. Second confirmed sighting; still unfixed, still the line you
+would otherwise trust.
+
 ## ⏳ Pending experiment — travel pacing in Variant A (2026-08-13) — NOTHING DECIDED
 
 **Status: an experiment with a hypothesis, not a decision.** No config key is
@@ -124,6 +219,12 @@ changing, no code is changing, and `travel_max_s` below is a *candidate name for
 thing that does not exist*. Do not implement it, do not cite it as settled, and do
 not let it leak into `TrackingConfig.json`. It earns a decision only if a render
 Chiu watches says it should.
+
+**Priority note (2026-08-13, after the review above).** All three films were
+accepted as they are, so this is **polish, not a blocker** — §6a does not wait on
+it. It does interact with the one open §6a item: if Iceland is the film that gets
+published, Chiu may want the faster-travel cut first. **That ordering is his call
+and has not been made.**
 
 **What Chiu observed** (2026-08-13, from the three Variant A films):
 photographs hold his attention; **travel between stops does not, once the film is
