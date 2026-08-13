@@ -1,6 +1,6 @@
 @testable import Kamome
 import KamomeConfig
-import KamomeExportEngine
+@testable import KamomeExportEngine
 import XCTest
 
 /// Where the film's beats land, measured rather than watched.
@@ -55,6 +55,46 @@ final class RecapTimelineReportTests: XCTestCase {
           first photo    \(fmt(report.firstDeckAt))
           longest still  \(fmt(report.longestStill.length)) starting \(fmt(report.longestStill.start))
         """)
+
+        // The camera's two spans and the zoom between them, which nothing else
+        // prints — the figures in HANDOFF.md were derived when a region was
+        // sized, never measured off a film. `established` is the picture at
+        // t=0, which is exactly what `RecapDurationPlan` divides by
+        // `target_zoom_ratio` to get the body.
+        //
+        // Kilometres only. A span is a scale; a bbox or a centre would be a
+        // record of where someone was, and this prints to a console (CLAUDE.md
+        // §0).
+        let establishedSpanM = line.cameraFrame(atTime: 0).spanM
+        print(String(
+            format: "  established    %6.1f km\n  body           %6.1f km\n  zoom ratio     %6.2fx",
+            establishedSpanM / 1000, line.path.bodySpanM / 1000, establishedSpanM / line.path.bodySpanM
+        ))
+
+        // Which legs draw dashed, and roughly where. The provider logs a reason
+        // per leg (`NoSegment`, detour gate, thinning) but no identity, and
+        // `RouteMatchService.matchTrip` awaits them in order — so this list, in
+        // the same order, is what makes a reason attributable to a place.
+        // Named by nearest stop; still no coordinates.
+        for (index, leg) in recap.legs.enumerated() where leg.provenance.isInferred {
+            guard let start = leg.coordinates.first, let end = leg.coordinates.last else { continue }
+            print("  dashed leg \(index) \(leg.mode.rawValue): "
+                + "\(Self.nearestStopName(to: start, in: recap)) → \(Self.nearestStopName(to: end, in: recap))")
+        }
+    }
+
+    /// Names a point by the stop it sits closest to. Equirectangular on purpose:
+    /// this only has to pick the right stop out of a handful, not measure.
+    private static func nearestStopName(to point: RecapCoordinate, in trip: RecapTrip) -> String {
+        trip.stops.min {
+            Self.squaredDegrees(point, $0.coordinate) < Self.squaredDegrees(point, $1.coordinate)
+        }?.name ?? "unnamed stop"
+    }
+
+    private static func squaredDegrees(_ lhs: RecapCoordinate, _ rhs: RecapCoordinate) -> Double {
+        let deltaLat = lhs.lat - rhs.lat
+        let deltaLon = (lhs.lon - rhs.lon) * cos(lhs.lat * .pi / 180)
+        return deltaLat * deltaLat + deltaLon * deltaLon
     }
 
     private static func scan(_ line: LinearTimeline, fps: Int) -> Report {
