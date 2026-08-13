@@ -1175,3 +1175,75 @@ narrowed the cause and the fix.
 **Rejected:** re-tuning `body_span_padding` per trip. A second hand-picked
 constant would have fitted New Zealand the way the first fitted Iceland, and told
 us nothing about the third trip.
+
+## 2026-08-13 — The Replay MVP gate splits: §6a the film (desk, Variant A), §6b the product (phone, Variant B)
+
+**Context.** `RecapMode` gave the recap two shapes — `.highlight` (a
+budget-derived number of stops, bounded length) and `.full` (every stop, no
+duration ceiling). Chiu decided on 2026-08-11 that **Variant A (`.full`) is the
+MVP release** — the films he publishes himself — while **Variant B (`.highlight`)
+is what the app ships**. `.full` is reachable only through the render harness
+(`KAMOME_RECAP_MODE`); no app code writes `recapMode`.
+
+That made the single §6 gate incoherent. Its clause *"all three complete entirely
+in-app — no repo-external tools"* was written before the two variants existed, and
+taken literally it judges Chiu's own desk renders — the release artifact — as gate
+violations. Meanwhile the clause it was protecting (can the product do this by
+itself?) is a real question that nothing else asked.
+
+The three desk renders settled the practical half. All three completed in Variant
+A with every stop showing photographs and every stop named:
+
+| | Miyakojima | New Zealand | Iceland |
+|---|---:|---:|---:|
+| presented stops | 10 | 20 | 65 |
+| photographs shown | 23 | 45 | 144 |
+| film length | 103.7 s | 193.7 s | **598.7 s** |
+| frames / render time | 3,110 / 149 s | 5,810 / 600 s | 17,960 / 1,782 s |
+
+Iceland is a ten-minute film taking half an hour to render on a Mac. On-device
+render time has never been measured, and `HANDOFF.md` has carried uncapped-mode
+device rendering as the single biggest viability risk since 2026-08-05. Variant B
+on the same trip is bounded by `total_duration_max_s`.
+
+**Decisions (owner):**
+
+1. **§6 splits into two gates over two variants.** §6a runs at the desk in
+   Variant A and asks *is this worth publishing*; §6b runs on a real iPhone in
+   Variant B and asks *does the app do this by itself*. Item-by-item split in
+   `Docs/handoff-P3.5.md` §6.
+2. **Neither gate is downgraded below three trips**, and neither substitutes for
+   the other. The pre-split rule that "three trips is hard, never one" now binds
+   twice.
+3. **Variant A is not required to run on device, and Variant B is not required to
+   be the published film.** Each gate tests the variant that variant is for.
+
+**Consequences:**
+
+- **Uncapped rendering leaves the app's critical path.** Whether a 65-stop,
+  18,000-frame film can be exported on a phone is no longer an MVP question. It
+  becomes a Phase 2 question if Variant A is ever shipped in-app.
+- **Variant A is validated only at the desk** — there is no second gate behind it,
+  so `~/kamome-renders` is release output rather than scratch.
+- **§6b inherits the device items** that were always device-shaped: limited photo
+  library, S5 UX, export stability and memory, per-trip export time. It also
+  inherits a named crash to watch for — the intermittent
+  `KamomeCore_KamomeExportEngine` bundle fatal error, which reaches a `fatalError`
+  through `Bundle.module` in `RecapCarSprite.swift` on the shipped export path and
+  therefore cannot degrade gracefully.
+- **The merge to `main` now hangs off §6b**, not §6a — it is the app that merges.
+  §6a comes first in time because it decides whether the device sitting is worth
+  spending.
+- The same three trips now exist as two edits each, which is a free A/B on which
+  edit people actually want to share. That is a product experiment the split
+  enables; **it is not a gate item.**
+
+**Rejected: keeping one gate and reading "entirely in-app" loosely.** The clause
+would then mean whatever the reader needed it to mean, which is how a hard gate
+becomes a soft one. Splitting keeps both halves literal.
+
+**What this does NOT decide.** Whether Variant A ever becomes reachable inside the
+app; how travel is paced within a Variant A film (an open experiment — see
+`HANDOFF.md`, "Pending experiment — travel pacing"); and whether Iceland stays a
+Variant A trip. None of those are settled, and none should be read out of this
+entry.

@@ -328,39 +328,81 @@ stop the camera eases to the place and a **photo deck** blooms — a 3-card fan
 
 ## 6. Three-trip dogfood + Replay MVP release gate (needs Chiu + iPhone + real photos)
 
+**Split into §6a and §6b on 2026-08-13** (Chiu; ADR in `Docs/decisions.md`). The
+single gate below conflated two different questions — *is the film worth
+publishing* and *does the product work end to end* — and its "entirely in-app"
+clause would have judged Chiu's own desk renders as gate violations. They are now
+separate gates over **different variants**, because that is what actually ships:
+
+| | §6a — the film | §6b — the product |
+|---|---|---|
+| where | the desk (Mac, render harness) | a real iPhone |
+| variant | **A** (`recap_mode: full`, harness-only) | **B** (`highlight`, the shipped default) |
+| question | is this worth publishing? | does the app do this by itself? |
+| trips | three, hard | three, hard |
+
+Neither is downgraded to fewer than three trips, and neither substitutes for the
+other. **Chiu signs off on both.** Demo artifacts in `Docs/demos/phase3_5/`.
+
 **Running the gate: `Docs/gate-P3.5-checklist.md`** — the owner runbook, in the
-order to do it in (desk-first: real fixtures → per-trip pacing/still/pilot → the
-one iPhone sitting → sign-off). The items below are the gate itself and stay
-authoritative; the checklist sequences them and carries the pre-flight traps.
+order to do it in. Its stages map onto the split: **Stage 0 + Stage 1 → §6a**,
+**Stage 2 → §6b**, Stage 3 spans both. The items below are the gate itself and
+stay authoritative; the checklist sequences them and carries the pre-flight traps.
+*(The checklist's own prose still describes the pre-split gate — a doc pass owed,
+not a contradiction in the items.)*
 
 This replaces the old "combined device day." The Replay MVP does **not** need a
-drive — it needs **three of Chiu's real past trips of different character**, each
-run fully in-app: **photos import → matching → recap → MP4 → share.**
+drive — it needs **three of Chiu's real past trips of different character**.
 
-**Replay MVP hard gate (spec §7 / §10 — a product release gate):**
-- [ ] Three real trips of different character all **import successfully from photos**.
-- [ ] All three complete **entirely in-app**: import → route reconstruction →
-      recap → MP4 → share — **no DB edits, no repo-external tools** (no CapCut,
-      no prototype-script data-patching) to fix results.
+### §6a — the film gate (desk, Variant A)
+
+- [ ] Three real trips of different character all **reconstruct from photo EXIF**
+      (`Tools/exif-to-fixture.sh` → the render harness).
 - [ ] Routes are honest: **no obvious sea-crossing / mountain-crossing straight
       line, no gross wrong-road**; low confidence shown as inferred (§4.4).
+      Judged once here — route reconstruction is the same pipeline in both gates.
 - [ ] All three films are ones **Chiu genuinely wants to keep and share**.
 - [ ] **≥ 1 published publicly** without external-editing rescue.
-- [ ] **Limited Photo Library path passes on a real device.**
-- [ ] All three export **stably on a real iPhone** — no crash, no unacceptable
-      memory pressure.
-- [ ] **Per-trip export time recorded** (S5 readout) and judged *product-acceptable*
-      — the retired single < 90 s number is not the criterion.
+- [ ] **No external editing of the film itself** — no CapCut, no DB edits, no
+      prototype-script data-patching. The render harness is the sanctioned path
+      here; hand-repairing its output is not.
 - [ ] Final judgment: **"a travel-path animation worth publishing," not "the map
       looks prettier than Apple Maps."** (MapLibre-vs-Apple side-by-side is a
       design review only — §3.)
 
-"Three trips" is **hard** — never downgraded to one video. **Chiu signs off.**
-Demo artifacts in `Docs/demos/phase3_5/`. This gate = Replay MVP release candidate.
+**The desk renders are the deliverable.** With this split, Variant A is validated
+nowhere else — there is no second gate behind it. `~/kamome-renders` is release
+output, not scratch. (Learned the hard way: the first Miyakojima film was written
+to `/tmp` and swept before it could be reviewed.)
 
-**Merge point (owner call 2026-07-20):** hold the merge to `main` until §6
-passes. §1–§5 land the machinery; §6 validates it on three real trips; the whole
-Replay MVP lands on `main` as one PR (or a tight stack).
+### §6b — the product gate (real iPhone, Variant B)
+
+- [ ] Three real trips **import successfully from the real photo library**.
+- [ ] All three complete **entirely in-app**: import → route reconstruction →
+      recap → MP4 → share — **no DB edits, no repo-external tools** to fix results.
+- [ ] **Limited Photo Library path passes on a real device.**
+- [ ] All three export **stably on a real iPhone** — no crash, no unacceptable
+      memory pressure. **Watch specifically for the intermittent
+      `KamomeCore_KamomeExportEngine` bundle fatal error** — see `HANDOFF.md`;
+      `Bundle.module` in `RecapCarSprite.swift` is on this path and traps rather
+      than degrading.
+- [ ] **Per-trip export time recorded** (S5 readout) and judged *product-acceptable*
+      — the retired single < 90 s number is not the criterion.
+- [ ] **S5 UX pass** — `Docs/device-test-P3.md` item G.
+
+### What the split buys, beyond honesty
+
+The same three trips now exist as **two edits each**, which is a free A/B on the
+question the MVP is actually asking: *which one do people want to share?* That is
+a product experiment enabled by the split, **not a gate item** — nothing here
+passes or fails on it.
+
+**Merge point:** hold the merge to `main` until **§6b** passes — it is the app
+that merges, and §6b is the app's gate. §6a gates whether the device sitting is
+worth spending at all, so it comes first in time. *(This resolves an ambiguity the
+split created; the pre-split rule said "until §6 passes." Flagged for Chiu.)*
+§1–§5 land the machinery; the whole Replay MVP lands on `main` as one PR (or a
+tight stack).
 
 ### Local routing + map regions for this gate (Chiu 2026-07-29)
 

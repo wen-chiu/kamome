@@ -14,29 +14,56 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
-## ▶ RESUME HERE — MVP desk renders, 1 of 3 done (2026-08-09)
+## ▶ RESUME HERE — MVP desk renders, 3 of 3 rendered, review in progress (2026-08-13)
 
-Branch `phase-3-recap`, all committed and pushed, suite green (197), `swiftlint
---strict` clean. PR #11 (`phase-3-recap` → `main`) stays draft and **held** until
-the §6 gate; #12 and #13 are merged into this branch.
+Branch `phase-3-recap`, suite green (197), `swiftlint --strict` clean. PR #11
+(`phase-3-recap` → `main`) stays draft and **held** — now until **§6b**, per the
+gate split below; #12 and #13 are merged into this branch.
+
+**The §6 gate split into §6a / §6b on 2026-08-13** (Chiu). §6a is the film gate:
+desk, **Variant A**, three trips, "is this worth publishing". §6b is the product
+gate: real iPhone, **Variant B**, three trips, "does the app do this by itself".
+Items in `Docs/handoff-P3.5.md` §6; ADR in `Docs/decisions.md` 2026-08-13. Neither
+is downgraded below three trips.
 
 ### The task in flight
 
-Render the three MVP films at the desk in **Variant A**, cheapest first. One done:
+All three MVP films are rendered in **Variant A**, with real stop names:
 
 | | Miyakojima | New Zealand | Iceland |
 |---|---:|---:|---:|
-| status | **✅ rendered, awaiting review** | ⬜ not started | ⬜ not started |
+| status | ✅ rendered | ✅ rendered | ✅ rendered |
 | photos in dump | 53 (of 406 files) | 160 | 2300 |
 | presented stops | 10 | 20 | 65 |
-| photos shown | 23 | 22 *(pre-fix)* | 67 *(pre-fix)* |
-| film length | 103.7 s | 136.7 s *(pre-fix)* | 403.7 s *(pre-fix)* |
-| established → body | 47.2 → 18.9 km, 2.50× | 845.3 → 338.1, 2.50× | 736.8 → 294.7, 2.50× |
-| render cost | 3110 frames / 156 s | ~4100 frames | **~12,100 frames, 10–20 min** |
+| photographs shown | 23 | 45 | 144 |
+| stops with no photo | 0 | 0 | 0 |
+| stops unnamed | 0 | 0 | 0 |
+| film length | 103.7 s | 193.7 s | **598.7 s** |
+| render cost | 3,110 frames / 149 s | 5,810 / 600 s | 17,960 / 1,782 s |
+| dashed drive legs | 0 | 1 of 17 | **11 of 59** |
 
-NZ and Iceland numbers above are from **before** the allocation-zero fix, so their
-photo counts and lengths will grow — expect roughly the +90% photos / +34% length
-Miyakojima saw. Re-measure, do not quote these.
+Films are in `~/kamome-renders/`. **That directory is §6a release output, not
+scratch** — the first Miyakojima render was written to `/tmp` and swept before it
+could be reviewed.
+
+**Owner review so far (Chiu 2026-08-13), partial:**
+
+- **Iceland — a film he wants to keep.** *"這是我自己會想留著看的影片, 確實勾起我一點
+  回憶."* Ten minutes is longer than he would choose, and the reason is specific:
+  **the photographs hold his attention; the travel between them does not.** See
+  the pending experiment below.
+- **Miyakojima, New Zealand — no verdict yet.**
+- **Nothing in §6a is ticked.** One positive verdict of three is not the gate.
+
+**Still owed to the review:** Iceland's 11 dashed drive legs need their failure
+mode named (`NoSegment` vs the detour gate — they fail for different reasons and
+only one is a tuning question) and roughly where they sit, place names only. That
+is the input to §6a's "no mountain-crossing straight line" item.
+
+**The established → body → ratio figures** in earlier versions of this table were
+carried from `Deploy/regions.json` notes — design intent, not measurement. Prints
+were authorized 2026-08-13 into the env-gated `RecapTimelineReportTests`; quote
+those once they land, and label anything still carried as derived.
 
 **The render command** (Miyakojima shown; swap fixture, photo folder, and note
 that `KAMOME_PILOT_SECONDS=9999` means "the whole film", not a pilot):
@@ -89,6 +116,107 @@ regenerate, and Iceland would cost far more.
 - `Tests/Fixtures/trips/local/` — Iceland, New Zealand, **Miyakojima** dumps.
   Gitignored per §0; never commit them.
 - OSRM `:5100` is `docker compose up -d` from `Deploy/`, healthy, restart-safe.
+
+## ⏳ Pending experiment — travel pacing in Variant A (2026-08-13) — NOTHING DECIDED
+
+**Status: an experiment with a hypothesis, not a decision.** No config key is
+changing, no code is changing, and `travel_max_s` below is a *candidate name for a
+thing that does not exist*. Do not implement it, do not cite it as settled, and do
+not let it leak into `TrackingConfig.json`. It earns a decision only if a render
+Chiu watches says it should.
+
+**What Chiu observed** (2026-08-13, from the three Variant A films):
+photographs hold his attention; **travel between stops does not, once the film is
+long.** Miyakojima (1.7 min) and New Zealand (3.2 min) held; Iceland (10.0 min)
+lost him during the driving. He asked whether the vehicle can move faster on
+Iceland specifically.
+
+**What the arithmetic says.** In `.full`, `RecapDurationPlan.uncapped` sizes the
+body as `parked / max_hold_fraction`, so stop dwells take that share and **travel
+gets whatever is left**. `max_hold_fraction` is 0.6 today, and being a ratio it is
+scale-free:
+
+| | photo time | travel time | travel share |
+|---|---:|---:|---:|
+| Miyakojima | 47.0 s | 44.7 s | 48.7% |
+| New Zealand | 93.0 s | 88.7 s | 48.8% |
+| Iceland | 300.0 s | **286.7 s** | 48.9% |
+
+⚠️ **These are computed from the config, not printed by a harness.** The model
+reproduces the rendered lengths (NZ 193.7 s exactly; Iceland 595.2 vs 598.7;
+Miyakojima 99.2 vs 103.7, the deltas being the opening estimate), which is why it
+is trusted this far — but it is derived, and the span/ratio prints landing in
+`RecapTimelineReportTests` are the measurement that should replace it.
+
+**The reading.** All three sit at the same share, so what broke was not a
+proportion — it was **4 minutes 47 seconds of travel as an absolute quantity.**
+88.7 s held; 286.7 s did not. That points at an absolute ceiling on travel time
+rather than a per-trip constant, which matters because a per-trip constant is
+exactly what the 2026-08-09 camera ADR rejected and for the same reason:
+`body_span_padding` was reverse-derived from Iceland and told us nothing about the
+next trip.
+
+**The experiment, in order — measure the preference first, encode it second.**
+
+1. A harness-only override for `max_hold_fraction` (same shape as
+   `withAllocationZeroShare`), so `TrackingConfig.json` is untouched and the
+   change reverts by deleting an env var.
+2. **One Iceland render at 0.75.** Predicted: film 9.9 → 8.0 min, travel 4.8 →
+   2.8 min, **photo time unchanged at 300 s**. Iceland costs ~30 min a render, so
+   this is a single point, not a sweep.
+3. Chiu watches it. If the pacing is right, the travel seconds it landed on
+   (~169 s) become the evidence for a real tunable. If it is still slow, 0.85
+   (travel 1.9 min) is the next point — watching for whether it starts to feel
+   rushed.
+4. Only then: a config key, its typed mirror, and `ConfigLoaderTests` assertions,
+   per the standing no-magic-numbers rule.
+
+**Does the vehicle actually move faster, or does the camera just pull back?**
+It should genuinely move faster — **INFERRED from the code, not yet seen.** Since
+2026-08-09 the body span comes from `target_zoom_ratio` (2.5) against the
+established span; `camera_pan_window_fraction_per_s` (0.35) is only a **floor**,
+and `HANDOFF` records that it does not bind on the real trips. So shortening
+travel does not widen the span — the same ground stays in frame and the subject
+crosses it in fewer seconds. The floor is the built-in safety: push travel short
+enough and it takes over and widens the span instead of letting continuity break.
+Rough arithmetic says Iceland has a lot of headroom before that happens, but that
+is arithmetic, and the render is what settles it.
+
+**Not decided by any of the above:** whether Iceland stays a Variant A trip at
+all. Switching it to Variant B is a live alternative Chiu named, and the §6a/§6b
+split means both films of the same trip exist anyway.
+
+## 🔴 Open — intermittent `KamomeCore_KamomeExportEngine` bundle crash (2026-08-13)
+
+**Not diagnosed, deliberately not chased, and explicitly not a flake.** Logged
+here because it is a §6b gate risk and the evidence would otherwise live only in a
+chat transcript.
+
+**Symptom.** `Fatal error: unable to find bundle named
+KamomeCore_KamomeExportEngine`, thrown during map-renderer creation — after the
+region resolves, before any frame is drawn.
+
+**Evidence in hand.** Hit on 2 of 3 New Zealand render attempts; never on
+Miyakojima; never on the Iceland run. Cleared on retry, and again under
+`-retry-tests-on-failure`. The resource bundle **is** present in the built
+`Kamome.app`, so this is a runtime lookup failure, not a packaging fault. Timing-
+or state-dependent, not deterministic.
+
+**Why it matters more than a harness annoyance.** `Bundle.module` is used at
+`Core/ExportEngine/RecapCarSprite.swift:75` to load the vehicle sprite, and
+`RecapSubjectRenderer.swift:39` draws that sprite **on the shipped export path**.
+SwiftPM's generated `Bundle.module` accessor calls `fatalError` when it cannot
+locate the bundle, so the defensive `guard … else { return nil }` immediately
+below it — and the `if let` at the call site — **can never run.** That is an
+unguarded crash on the path §6b requires to be crash-free on a real device.
+
+**Whether it reproduces on device is UNKNOWN.** The desk is the only place it has
+been seen. §6b carries a "watch for this crash" item; the device sitting is what
+answers it.
+
+**Not fixed this round** (owner call): it is app code, and the renders came first.
+The eventual fix is small and defensive — a non-trapping bundle lookup — but it is
+a change to shipped behaviour and needs its own pass.
 
 ## ✅ REVIEWED AND APPROVED — recap camera (2026-08-09)
 
