@@ -212,6 +212,89 @@ exactly — `matchTrip … against "(none — matching disabled)"` in the same r
 48 legs routed fine. Second confirmed sighting; still unfixed, still the line you
 would otherwise trust.
 
+## ⏳ Pending decision — film duration must scale with trip size (2026-08-14)
+
+**The direction IS decided (Chiu 2026-08-14). The rule is NOT.** Do not implement
+the shape below as though it were settled, and do not promote it to
+`Docs/decisions.md` until it has been validated on renders — including on trips it
+was not fitted to. Written here rather than as an ADR for exactly that reason.
+
+### What was decided
+
+> Film length must be **flexible, derived from how long the user's journey
+> actually was**, so that different trips produce different films.
+> — Chiu 2026-08-14
+
+His targets, stated as durations:
+
+| trip | trip stops | target length |
+|---|---:|---:|
+| Miyakojima | 10 | 90 s |
+| New Zealand | 20 | **150 s** |
+| Iceland | 65 | **210 s** |
+
+### What the Variant B renders exposed
+
+Every trip presents **exactly 8 stops and exactly 24 photographs**, whether it has
+10 stops or 65 — Iceland's shipped edit is 12% of its stops and 24 of the 144
+photographs its Variant A film shows. Measured 2026-08-13, all three trips.
+
+**This is not a defect and not drift.** `StopPhotoAllocator.keptStopCount` is
+`(duration − opening − end card) × max_hold_fraction ÷ presentation cost`, which
+lands on 8 at the shipped `total_duration_max_s` of 90 s and on 11 at the 120 s the
+2026-08-06 ADR quotes. The formula is fine. **Trip size simply never enters it**,
+because duration is clamped to the same 60–90 s window for every trip.
+
+### The shape recommended (NOT approved, NOT implemented)
+
+**Invert the model.** Today duration is clamped and the stop count falls out of it;
+instead let the trip earn a stop count and let duration fall out of *that*:
+
+    duration = opening + end card + (earned stops × presentation cost) ÷ max_hold_fraction
+
+Trip size then enters the model in exactly one named place. A second benefit:
+`max_hold_fraction` stops deciding how many stops the shipped edit presents and
+goes back to being purely a pacing knob — removing the double duty found on
+2026-08-13.
+
+Converting Chiu's three targets back through the existing arithmetic shows the
+real intuition is about **places, not seconds**: 8 of 10 stops (80%), 15 of 20
+(75%), 22 of 65 (34%). Growth must therefore be **sub-linear** — a 65-stop trip
+does not earn 6.5× the film of a 10-stop one.
+
+Candidate rule, statable in one sentence: **each doubling of a trip's stop count
+earns ~7 more presented stops, floored at 8 and capped at 22.** That reproduces all
+three targets exactly (10 → 8 → 90 s; 20 → 15 → 150 s; 65 → capped 22 → 210 s).
+
+### ⚠️ The warning that matters more than the rule
+
+**Those three parameters were reverse-derived from three trips, which is exactly
+how `body_span_padding` and `tier_skip_share` were derived — and both failed.**
+`body_span_padding` was fitted to Iceland and gave New Zealand 4.14×;
+`tier_skip_share` needed 0.82 for Iceland and 0.5 for New Zealand and was deleted
+for it.
+
+The one property that makes this shape better is that it is **bounded at both ends
+and sub-linear by construction**, so its failure modes are known rather than
+discovered: it cannot explode on a huge trip or collapse on a tiny one. A bare
+constant has no such property.
+
+**Therefore the acceptance condition, decided in advance so it is not
+re-litigated:** the rule must report what it produces for trips it was **not**
+fitted to — Finland (3 stops), Margaret River (4), and the committed synthetic
+fixtures — before any of it ships. Fitting three points and shipping is the failure
+mode; validating on a fourth is the step this repo has twice skipped.
+
+### Open sub-questions, none decided
+
+- Is **stop count** the right measure of "how long the journey was", or should it
+  be days, distance, or photograph count? Chiu's phrasing was "旅程多長". Stop
+  count is what the arithmetic above uses because it is what the cost model already
+  prices; that is a convenience, not an argument.
+- Do `total_duration_min_s` / `total_duration_max_s` survive as absolute bounds
+  behind the earned-stops rule, or are the stop floor and cap now the only bounds?
+- Does the same scaling apply to Variant A, which has no ceiling at all today?
+
 ## ⏳ Pending experiment — travel pacing in Variant A (2026-08-13) — NOTHING DECIDED
 
 **Status: an experiment with a hypothesis, not a decision.** No config key is
@@ -220,9 +303,18 @@ thing that does not exist*. Do not implement it, do not cite it as settled, and 
 not let it leak into `TrackingConfig.json`. It earns a decision only if a render
 Chiu watches says it should.
 
-**Priority note (2026-08-13, after the review above).** All three films were
-accepted as they are, so this is **polish, not a blocker** — §6a does not wait on
-it. It does interact with the one open §6a item: if Iceland is the film that gets
+**Status (2026-08-14).** Still wanted, and Chiu has now named *when*: **the longer
+the trip, the faster the vehicle should move in Variant A.** It is not a blocker —
+all three films were accepted as they are — but it is no longer optional polish
+either.
+
+**Sequence it after the duration inversion above.** In `.full` this knob was always
+safe (there is no duration cap for it to divide, so it moves only pacing — the
+double duty found on 2026-08-13 is a `.highlight` problem). But the inversion
+removes that double duty entirely, after which `max_hold_fraction` means one thing
+in both modes and the experiment reads cleanly instead of needing a caveat.
+
+It still interacts with the open §6a item: if Iceland is the film that gets
 published, Chiu may want the faster-travel cut first. **That ordering is his call
 and has not been made.**
 
