@@ -225,13 +225,26 @@ was not fitted to. Written here rather than as an ADR for exactly that reason.
 > actually was**, so that different trips produce different films.
 > — Chiu 2026-08-14
 
-His targets, stated as durations:
+His targets, stated as durations — and **which of them have been watched**, which
+is the whole point of rendering them before writing a rule:
 
-| trip | trip stops | target length |
-|---|---:|---:|
-| Miyakojima | 10 | 90 s |
-| New Zealand | 20 | **150 s** |
-| Iceland | 65 | **210 s** |
+| trip | trip stops | target | presented stops | status |
+|---|---:|---:|---:|---|
+| Miyakojima | 10 | 90 s | 8 | ✅ *"90 秒只適合宮古島"* — confirmed by statement |
+| New Zealand | 20 | **150 s** | 15 of 20 | ⬜ **rendered, not yet judged** |
+| Iceland | 65 | **210 s** | **21** of 65 | ✅ *"三分半鐘的那個版本是個不錯的折衷"* (2026-08-14) |
+
+Films are in `~/kamome-renders/duration-targets/`; the Variant A and 90 s Variant B
+sets are intact beside them.
+
+**Iceland's anchor is 21 stops, not the 22 the arithmetic predicts.**
+`keptStopCount` floors a division and 210 s lands at `21.999999999999996` in
+IEEE754. So the film Chiu approved presents 21 stops, and a rule built to produce
+22 would not be the film he watched. **Anchor on 21.**
+
+That off-by-one is also a **third argument for the inversion below**: computing
+duration *from* a stop count has no division to floor, so this entire class of
+boundary artifact disappears rather than needing a guard.
 
 ### What the Variant B renders exposed
 
@@ -287,10 +300,22 @@ mode; validating on a fourth is the step this repo has twice skipped.
 
 ### Open sub-questions, none decided
 
+- **Does a longer film mean more places, or also more photographs per place?**
+  Measured 2026-08-14 and currently the former only: NZ at 150 s shows 43
+  photographs across 15 stops (2.9 each) and Iceland at 210 s shows 63 across 21
+  (3.0 each) — both pinned at `allocation_max_photos` (3). So duration buys stops
+  and never buys depth. **This is a second, independent dimension**, and the rule
+  should not be built assuming one answer. Iceland at 210 s still shows 63 of the
+  144 photographs its Variant A film carries, out of 2300 in the dump.
 - Is **stop count** the right measure of "how long the journey was", or should it
   be days, distance, or photograph count? Chiu's phrasing was "旅程多長". Stop
   count is what the arithmetic above uses because it is what the cost model already
   prices; that is a convenience, not an argument.
+- **Iceland's longer run-in.** At 210 s the first stop arrives at 11.53 s against
+  5.53 s in the 90 s cut — the opening still ends at 5.50 s, so there is ~6 s of
+  travel before the first place. NZ barely moved (9.33 s vs 9.43 s). Chiu approved
+  the 210 s film as a whole; whether that run-in specifically reads as breathing
+  room or dead air was not called out either way.
 - Do `total_duration_min_s` / `total_duration_max_s` survive as absolute bounds
   behind the earned-stops rule, or are the stop floor and cap now the only bounds?
 - Does the same scaling apply to Variant A, which has no ceiling at all today?
