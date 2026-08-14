@@ -59,6 +59,66 @@ problem; parked so the two are not conflated. The static-label counterpart is
 scoped in `handoff-P3.5.md` §"Map reference labels" — wanted, blocked on a
 fontstack, and to be done as a real pass rather than an afterthought.
 
+### Drive-by photos for thin stops (2026-08-14, Chiu)
+
+A stop carrying only one photograph does not make the car park. The journey keeps
+moving and the photograph runs along the top or bottom of the frame while travel
+continues. Chiu's framing: *"會不會讓畫面更流暢"*.
+
+**Cheaper than it sounds, because the architecture was built for it.** The
+2026-07-17 decision record already names this: overlay moments are *timeline
+events* built alongside `CameraPath`, explicitly so that rendering is **not**
+hardwired to `holdingStopIndex`, and "route-attached photo fly-bys" are named
+there as the second kind. `CLAUDE.md` carries it as a P3 stretch deferred until
+the render budget was proven. So this is building the second event kind the
+timeline was designed to carry, not re-architecting anything.
+
+**It is also a real answer to the depth-versus-breadth question** (`HANDOFF.md`,
+duration scaling). A one-photograph stop currently costs the full presentation
+overhead — the label lead, both deck zoom ramps, park in and out — about 3.4 s of
+dwell to show one picture. A drive-by costs approximately **zero dwell**, because
+it plays during travel that was already being paid for. That frees budget for the
+stops that deserve dwelling, instead of forcing a choice between more places and
+more photographs per place.
+
+**Interaction to respect when this is thawed:** it changes what *counts* as a
+presented stop, which is the input to the duration rule — not the rule's shape, so
+the two are compatible. Build the rule first; do not let the rule assume every
+presented stop costs a park.
+
+### Photo eligibility filters — documents, and a share-safe cut (2026-08-14, Chiu)
+
+Two requests, one subsystem. Today **nothing filters photographs at all** — no
+`mediaSubtypes` check and no Vision anywhere in the tree — so a photograph of a
+menu or a signboard competes with a landscape on equal terms.
+
+1. **Exclude documents.** Chiu, from watching the three films: photographs of
+   landmark plaques and restaurant menus surface in the decks.
+2. **A share-safe cut** — scenery only, no faces and no documents, so a film can
+   be published without exposing anyone who would rather not appear.
+
+**Feasibility splits unevenly, and the split is the useful part:**
+
+| predicate | mechanism | cost |
+|---|---|---|
+| screenshots | `PHAsset.mediaSubtypes.contains(.photoScreenshot)` | **nearly free** — one predicate at import |
+| documents/menus photographed with the camera | Vision `VNRecognizeTextRequest` + a text-density heuristic | real work; these are ordinary photographs, not screenshots |
+| faces | Vision `VNDetectFaceRectanglesRequest` | comparable to the above, same insertion point |
+
+All three are **on-device** and involve no network, so this strengthens rather
+than strains the §0 posture.
+
+**Architecturally it is one clean stage**: a photo-eligibility predicate between
+import and `StopPhotoAllocator`, with each rule independently toggleable. It does
+not touch the timeline, the camera, or any renderer.
+
+**The rabbit hole to price before starting** is not the API, it is (a) running
+Vision across a real library — Iceland's dump is 2300 photographs, so this must be
+bounded, cached and off the render path — and (b) threshold tuning, because a
+false positive silently eats a good photograph and nobody will know why. The
+screenshot half has neither problem and could be pulled forward on its own if a
+cheap win is wanted.
+
 ### iCloud photo download for the recap deck (option B, 2026-08-02, Chiu)
 
 Option C landed: the resolver downloads nothing and the recap screen *names* the
