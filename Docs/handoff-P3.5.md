@@ -437,7 +437,24 @@ Tracked here so it is not silently skipped when the migration happens (Chiu
 Not blocking the §6 gate: on home Wi-Fi the service is not reachable from the
 internet, so there is nothing to authenticate against.
 
-### Trips that span two map regions — OPEN, first hit 2026-08-01 🔴
+### Trips that span two map regions — SUPERSEDED by `Docs/cross-region-journeys.md` (2026-08-14) 📄
+
+**Read that document, not this section.** The 2026-08-01 deferral said "decide
+after seeing single-region trips render end to end"; they have, §6a closed, and the
+**first real device import hit this immediately**. Chiu's requirements — chosen
+photographs, a plane that flies faster than the car drives, a ship detected at a
+port, and the seagull for a crossing whose mode is unknown — are captured there
+along with the design space and the prior failure it must not recreate.
+
+**The one thing to carry into §6b from it:** the desk fixtures were built from
+hand-curated folders while the app imports a date range from the whole library, so
+**every overseas trip pulls its travel days in on device and did not at the desk.**
+This is not a Miyakojima quirk.
+
+The original diagnosis is kept below because it is still accurate about the
+mechanism.
+
+
 
 Found on the first real-device import: a six-day Miyakojima trip whose **day 1
 starts at a Taiwan airport**. Diagnosed, deliberately not fixed (owner call —
