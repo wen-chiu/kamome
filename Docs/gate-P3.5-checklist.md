@@ -246,14 +246,59 @@ retry cleared it. **On the phone there is no retry flag** — if it fires during
 sitting, record what preceded it rather than burning the sitting on a re-run.
 Logged in `HANDOFF.md`; undiagnosed.
 
-Pre-flight, or the first three items will fail confusingly:
+### Dev work that stands in front of the sitting
 
-- [ ] `matching.base_url` = the **Mac's LAN address** (not `127.0.0.1`), phone and
-      Mac on the same Wi-Fi, OSRM reachable from the phone's browser.
-- [ ] Side-load the three regions' `.pmtiles` over Finder (Files → Kamome),
-      **and each region's `<name>-terrain.pmtiles` beside it** — the DEM carries
-      the hillshade. Both may sit loose at the top level; the lookup tells them
-      apart by the `-terrain` suffix (fixed 2026-07-31, was `terrain/`-only).
+- [x] **The duration rule** (`b3093ad`). Confirmed by render, not only by tests:
+      Iceland came out at **211.5 s · 21 of 65 stops · 6,345 frames · 63
+      photographs**, matching every prediction, with no overrides in the log.
+- [ ] **Album-based import.** The app imports a **date range from the whole photo
+      library**; the desk fixtures were built from folders curated by hand. Every
+      overseas trip therefore pulls its travel days in on device and did not at the
+      desk — the first device import opened in the departure country and fell back
+      to Apple's map. Narrowing the date range was rejected (it guts a short trip),
+      so the sitting waits on this. Scope: `Docs/cross-region-journeys.md`
+      § "Choosing the photographs".
+
+**Cross-region framing — plane, ship, seagull — is explicitly NOT in front of this
+sitting.** It is large, §6b does not depend on it, and the sitting's findings are
+design inputs to it. Requirements are held in `Docs/cross-region-journeys.md`.
+
+### Pre-flight, in this order
+
+**Order matters: prove the app installs before spending an hour on data.**
+
+- [ ] **Install and launch a bare build on the phone first.** Signing goes in
+      `project.yml` under the app target's `settings: base:`
+      (`DEVELOPMENT_TEAM`, `CODE_SIGN_STYLE: Automatic`) — **never picked by hand
+      in Xcode**, which `xcodegen generate` wipes. No app has ever been built for
+      a device from this branch; find that out before downloading photographs.
+- [ ] **`matching.base_url` = the Mac's LAN address** (not `127.0.0.1`), then
+      rebuild. There is **no runtime override in the app** — `AppConfig.loadOrDie`
+      reads the bundled JSON only. ⚠️ **Never commit this**, and note it is a
+      different rule from the signing above, which *is* meant to be committed.
+- [ ] **An album per trip in Photos**, once album import lands. The three §6b
+      trips need to exist as albums on the phone, not only as folders on the Mac.
+- [ ] **Originals downloaded.** Check Settings → Photos first: if "Optimise iPhone
+      Storage" is off, there is nothing to do. If it is on, download each trip's
+      photographs to originals — the resolver refuses network access, so an
+      iCloud-resident photograph blooms a grey card (defect #2 above). **This is
+      the only failure with no on-the-day remedy**, and Iceland is thousands of
+      photographs.
+- [ ] **Side-load tiles.** Regions live in `~/kamome-osrm/tiles/`, DEMs in a
+      **separate** `~/kamome-osrm/terrain/` — the two are not in one folder.
+      Drag both into Finder → iPhone → Files → Kamome, **loose at the top level**;
+      the lookup finds them there and tells them apart by the `-terrain` suffix
+      (PD-7, 2026-07-31 — a file dragged in lands loose, and making a subfolder
+      first is a step nobody guesses). Start with the smallest region alone
+      (single-digit MB) and only push the rest once one trip has run end to end;
+      the three together are close to a gigabyte.
+- [ ] **Prove OSRM from the phone's Safari** before importing anything:
+      `http://<address>:5100/route/v1/driving/…?overview=false` must return
+      `"code":"Ok"`. **Do not skip this.** `importTrip` treats routing failure as
+      "keep raw geometry" (PD-2), so a wrong address, the wrong Wi-Fi or the macOS
+      firewall gives you a complete, plausible film with every leg dashed — not an
+      error. ATS and the local-network prompt are already handled in the
+      Info.plist; allow the prompt when it appears or every leg dashes.
 
 Then, per trip:
 
@@ -271,9 +316,47 @@ Then, per trip:
 Once, not per trip:
 
 - [ ] **Limited Photo Library path** (Selected Photos) — device-test-P3 item H,
-      never exercised on hardware.
+      never exercised on hardware. Album enumeration behaves differently under
+      `.limited`, so once album import lands these two meet here for the first
+      time.
 - [ ] **S5 UX pass** — device-test-P3 item G, the full list.
 - [ ] Memory pressure / no crash across all three exports.
+
+### What to record, and why each one
+
+| record | why |
+|---|---|
+| **export time per trip** (S5 readout) | a gate item, and the only viability risk never measured. Iceland is **6,345 frames — 2.35× the 90 s cut** — so this is the figure to judge against |
+| **every crash, and what preceded it** | the bundle fatal error above; there is no retry flag on the phone |
+| **whether any stop shows 5 photographs** | `tier_top_photos` (5) needs a stop in the top `tier_top_share` **with a favourite**. Fixtures carry no favourites, so this path has **never executed** — the first real library import is its first run |
+| **presented stops and film length per trip** | against the references below |
+| memory, thermals | 6,345 frames has never run on a phone |
+
+### Expect different, and know which differences are faults
+
+**The device films will not match the desk films, and that is not a fault.** The
+desk fixtures came from hand-curated folders; the phone imports an album or a date
+range out of the real library. Different photo sets cluster into different stops,
+so stop counts and lengths will differ.
+
+References, for sanity rather than equality:
+
+| trip | presented stops | length | rendered? |
+|---|---:|---:|---|
+| Iceland | 21 of 65 | 211.5 s | **yes**, shipped default |
+| New Zealand | 15 of 20 | 154.5 s | predicted only |
+| Miyakojima | 8 of 10 | 88.0 s | predicted only |
+
+The differences that **are** faults:
+
+- **Every leg dashed** ⇒ routing never answered. See the Safari check above.
+- **Apple's map instead of the souvenir map** ⇒ no installed region *contains* the
+  trip. Either the tiles are not side-loaded, or the trip escapes its region —
+  which on device usually means travel-day photographs came in
+  (`Docs/cross-region-journeys.md`).
+- **A flat map with no hillshade** ⇒ the `-terrain` file was not side-loaded.
+- **Blank grey photo cards** ⇒ iCloud-resident originals (defect #2). The recap
+  screen names the shortfall; believe it.
 
 ## Stage 3 — sign-off (spans both gates)
 
