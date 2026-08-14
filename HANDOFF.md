@@ -116,6 +116,33 @@ regenerate, and Iceland would cost far more.
   Gitignored per §0; never commit them.
 - OSRM `:5100` is `docker compose up -d` from `Deploy/`, healthy, restart-safe.
 
+## ✅ §6a — CLOSED by owner (Chiu 2026-08-14)
+
+All six items satisfied. **The remaining work on the Replay MVP is §6b**, the real
+iPhone gate, plus the duration rule that has to land in front of it.
+
+**The published film, recorded precisely because the wording matters:**
+
+- **Iceland, Variant B, 210 s** — the duration-target render of 2026-08-14.
+- **Shared privately to friends**, not posted publicly. The gate item reads "≥ 1
+  published publicly"; Chiu judged the private share sufficient and closed the item
+  on 2026-08-14. The intent — an unedited film in front of a real audience —
+  is met; the literal wording is not. **Recorded as what happened rather than as
+  what the item says, so a later reader does not go looking for a public post.**
+- No external editing, which is the half of that item that was never in doubt.
+
+### ⚠️ The app cannot reproduce the film that was published
+
+Its 210 s came from `KAMOME_FORCE_DURATION_S`, a harness override pinning both
+duration bounds by hand. **No rule in the product derives it**, and the shipped
+`.highlight` path would render that same trip at 90 s and 8 stops.
+
+So the duration rule (see "Pending decision" below) is not polish after the fact —
+**it is what turns the published artifact into something the product actually
+makes.** That is also why it sits in front of the §6b sitting rather than after it:
+export time and memory are frame-count-bound, and 90 s → 210 s is 2,700 → 6,300
+frames.
+
 ## ✅ §6a film review — all three judged (Chiu 2026-08-13)
 
 **Place names are deliberately absent from this section.** The routing report this
