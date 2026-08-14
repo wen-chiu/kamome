@@ -150,6 +150,10 @@
     "tier_top_share": 0.15,
     "tier_standard_photos": 3,
     "tier_top_photos": 5,
+    "earned_stops_floor": 8,
+    "earned_stops_cap": 21,
+    "earned_stops_per_doubling": 7.0,
+    "earned_stops_reference_trip_stops": 10,
     "recap_mode": "highlight"
   }
 }

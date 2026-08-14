@@ -222,6 +222,41 @@ public extension TrackingConfig {
         public let tierStandardPhotos: Int
         public let tierTopPhotos: Int
 
+        // MARK: - Earned stops — how much film a trip's size buys (Chiu 2026-08-14)
+
+        /// **The one place trip size enters the model.** A trip earns a presented
+        /// stop count from how many stops it has; the film's duration then falls
+        /// out of that count. Before this, duration was clamped to a fixed window
+        /// and the stop count fell out of *it*, so every trip — 10 stops or 65 —
+        /// presented the same 8.
+        ///
+        /// Growth is deliberately **sub-linear and bounded at both ends**: a
+        /// 65-stop trip does not earn 6.5× the film of a 10-stop one. Converting
+        /// the three approved films back through the arithmetic gives 80%, 75% and
+        /// 34% of each trip's stops, which is a curve, not a share.
+        ///
+        ///     earned = floor + perDoubling × log2(tripStops ÷ referenceTripStops)
+        ///
+        /// clamped to `[floor, cap]`. ⚠️ These four numbers were reverse-derived
+        /// from the same three trips they reproduce, which is exactly how
+        /// `body_span_padding` and `tier_skip_share` were derived — and both
+        /// failed. What makes this shape survivable is that it cannot explode on a
+        /// huge trip or collapse on a tiny one; see the generalization report in
+        /// `RecapDurationRuleReportTests` for what it does to trips it was never
+        /// fitted to.
+        public let earnedStopsFloor: Int
+        /// The ceiling, and the binding constraint for any trip past ~36 stops.
+        /// **21, not 22** — Iceland's approved film presents 21 stops, because the
+        /// old `keptStopCount` floored a division that evaluates to
+        /// `21.999999999999996`. A rule producing 22 would not be the film Chiu
+        /// watched and published.
+        public let earnedStopsCap: Int
+        /// How many additional stops each doubling of trip size earns.
+        public let earnedStopsPerDoubling: Double
+        /// The trip size at which a trip earns exactly `earned_stops_floor` —
+        /// the curve's anchor, not a minimum trip size.
+        public let earnedStopsReferenceTripStops: Int
+
         /// **Which film this trip becomes** — one value, replacing the three
         /// booleans that used to encode it. See `RecapMode`.
         public let recapMode: RecapMode
@@ -245,7 +280,10 @@ public extension TrackingConfig {
             allocationZeroShare: Double, allocationOneShare: Double,
             allocationTwoShare: Double, allocationMaxPhotos: Int, favoriteWeight: Double,
             tierTopShare: Double,
-            tierStandardPhotos: Int, tierTopPhotos: Int, recapMode: RecapMode
+            tierStandardPhotos: Int, tierTopPhotos: Int,
+            earnedStopsFloor: Int, earnedStopsCap: Int,
+            earnedStopsPerDoubling: Double, earnedStopsReferenceTripStops: Int,
+            recapMode: RecapMode
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
             self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
@@ -291,6 +329,10 @@ public extension TrackingConfig {
             self.tierTopShare = tierTopShare
             self.tierStandardPhotos = tierStandardPhotos
             self.tierTopPhotos = tierTopPhotos
+            self.earnedStopsFloor = earnedStopsFloor
+            self.earnedStopsCap = earnedStopsCap
+            self.earnedStopsPerDoubling = earnedStopsPerDoubling
+            self.earnedStopsReferenceTripStops = earnedStopsReferenceTripStops
             self.recapMode = recapMode
         }
 
@@ -348,6 +390,10 @@ public extension TrackingConfig {
             case tierTopShare = "tier_top_share"
             case tierStandardPhotos = "tier_standard_photos"
             case tierTopPhotos = "tier_top_photos"
+            case earnedStopsFloor = "earned_stops_floor"
+            case earnedStopsCap = "earned_stops_cap"
+            case earnedStopsPerDoubling = "earned_stops_per_doubling"
+            case earnedStopsReferenceTripStops = "earned_stops_reference_trip_stops"
             case recapMode = "recap_mode"
         }
     }

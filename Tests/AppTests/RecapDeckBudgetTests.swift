@@ -107,17 +107,41 @@ final class RecapDeckBudgetTests: XCTestCase {
         ))
     }
 
-    /// A small trip is fine, and this is exactly why the committed fixtures never
-    /// caught the defect — it pins the boundary so the guard below cannot be
-    /// dismissed as a bad measurement.
+    /// A small trip's decks, **re-baselined 2026-08-14 when duration began scaling
+    /// with stop count** (Chiu). This asserted `>= 3` photographs on every stop of a
+    /// four-stop trip, which held while every film was clamped to
+    /// `total_duration_max_s` — a four-stop trip got the same 90 s as a sixty-stop
+    /// one. It now earns 50 s, floored to `total_duration_min_s` (60 s), and the
+    /// global scale plus `first_stop_dwell_scale` (0.55) puts the first stop under
+    /// the deck floor at **[2, 6, 6, 6]**.
+    ///
+    /// **This is the third of the three resolutions the guard below already named**
+    /// — "a longer cut, a lower photo floor, or duration that scales with stop
+    /// count" — and Chiu chose it. The expectation changed because the product rule
+    /// changed, not to make a red test green.
+    ///
+    /// **Why accept a shallower first deck sight-unseen** (Chiu 2026-08-14, recorded
+    /// so it is not re-litigated): *no small-trip film has ever been rendered.*
+    /// Margaret River and Finland are not gate trips and nobody has watched one.
+    /// Deciding a film's photo depth blind from arithmetic is exactly what the
+    /// render-before-you-rule step existed to prevent, so the depth question waits
+    /// for a rendered small-trip cut rather than being settled by a threshold now.
+    ///
+    /// Separately iceboxed, not discarded: `first_stop_dwell_scale` is
+    /// scale-invariant in intent but scale-dependent in effect, which is why the
+    /// first stop is the one that falls through the floor here.
     func testASmallTripShowsWholeDecks() async throws {
         let config = AppConfig.loadOrDie()
         let recap = try await trip(stops: 4, photosPerStop: 8, config: config)
         let shown = photosShownPerStop(try timeline(recap, config: config.export), trip: recap)
         XCTAssertEqual(shown.count, 4)
+        XCTAssertEqual(
+            shown, [2, 6, 6, 6],
+            "a four-stop trip is a 60 s film: the first stop shows 2 and the rest show whole decks"
+        )
         XCTAssertTrue(
-            shown.allSatisfy { $0 >= 3 },
-            "a four-stop trip has room for real decks; got \(shown)"
+            shown.dropFirst().allSatisfy { $0 >= 3 },
+            "only the first stop pays the dwell scale; the rest must still show real decks; got \(shown)"
         )
     }
 

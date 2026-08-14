@@ -201,11 +201,21 @@ public struct RecapDurationPlan: Equatable {
             )
         }
 
-        // Holds are capped as a fraction of the body, so travel always gets the
-        // rest; inverting that gives the body this dwell needs.
-        let neededBody = askedTotal / max(config.maxHoldFraction, 0.01)
-        let total = min(max(opening + neededBody + config.endCardS,
-                            config.totalDurationMinS), config.totalDurationMaxS)
+        // **Duration is bought by the stops that survived selection**
+        // (Chiu 2026-08-14), not clamped into a fixed window. `StopPhotoAllocator`
+        // already decided how many stops this trip earned, and each one is priced
+        // at the same presentation cost that decision used — so the film is exactly
+        // as long as its content, and a 65-stop trip stops producing the same 90 s
+        // as a 10-stop one.
+        //
+        // `total_duration_max_s` deliberately does **not** apply here any more: it
+        // was the ceiling that made trip size invisible, and the earned-stop cap is
+        // the bound now. The floor stays — a very small trip still gets a
+        // watchable minimum, and the camera needs travel time to cross the ground
+        // between stops (see `uncapped` above, same reason).
+        let presented = photoCounts.filter { $0 > 0 }.count
+        let earnedTotal = StopPhotoAllocator.earnedDurationS(presentedStops: presented, config: config)
+        let total = max(earnedTotal, config.totalDurationMinS)
 
         // What dwell actually fits, once the prologue and end card are paid for.
         let availableBody = max(total - opening - config.endCardS, 0)

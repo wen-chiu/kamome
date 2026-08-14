@@ -221,9 +221,11 @@ enum RecapComposer {
         case .highlight:
             // A skipped stop leaves the film entirely — no pin, no name, no pause,
             // no park beat.
-            let tiers = StopPhotoAllocator.triage(
-                signals, config: weighting, durationS: weighting.totalDurationMaxS
-            )
+            // The trip earns its stop count from its own size (Chiu 2026-08-14).
+            // This used to pass `totalDurationMaxS`, which is why every trip
+            // presented the same 8 stops whether it had 10 or 65: the duration
+            // ceiling was the same for all of them.
+            let tiers = StopPhotoAllocator.triage(signals, config: weighting)
             let kept = zip(stops, tiers).compactMap { stop, tier -> StopRecord? in
                 guard let tier else { return nil }
                 allocation[stop.id] = tier

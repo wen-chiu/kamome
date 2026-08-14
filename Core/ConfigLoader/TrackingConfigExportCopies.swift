@@ -46,7 +46,11 @@ extension TrackingConfig.Export {
             allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
             allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
             tierTopShare: tierTopShare,
-            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos, recapMode: recapMode
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos,
+            earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
+            earnedStopsPerDoubling: earnedStopsPerDoubling,
+            earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            recapMode: recapMode
         )
     }
 
@@ -92,7 +96,11 @@ extension TrackingConfig.Export {
             allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
             allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
             tierTopShare: tierTopShare,
-            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos, recapMode: recapMode
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos,
+            earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
+            earnedStopsPerDoubling: earnedStopsPerDoubling,
+            earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            recapMode: recapMode
         )
     }
 
@@ -131,7 +139,11 @@ extension TrackingConfig.Export {
             allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
             allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
             tierTopShare: tierTopShare,
-            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos, recapMode: mode
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos,
+            earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
+            earnedStopsPerDoubling: earnedStopsPerDoubling,
+            earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            recapMode: mode
         )
     }
 
@@ -168,7 +180,11 @@ extension TrackingConfig.Export {
             allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
             allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
             tierTopShare: tierTopShare,
-            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos, recapMode: recapMode
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos,
+            earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
+            earnedStopsPerDoubling: earnedStopsPerDoubling,
+            earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            recapMode: recapMode
         )
     }
 

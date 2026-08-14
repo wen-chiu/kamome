@@ -35,7 +35,10 @@ final class RecapPacingTests: XCTestCase {
             allocationZeroShare: 0.4, allocationOneShare: 0.3,
             allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
             tierTopShare: 0.15,
-            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
+            tierStandardPhotos: 3, tierTopPhotos: 5,
+            earnedStopsFloor: 8, earnedStopsCap: 21,
+            earnedStopsPerDoubling: 7, earnedStopsReferenceTripStops: 10,
+            recapMode: .highlight
         )
     }
 
@@ -67,30 +70,56 @@ final class RecapPacingTests: XCTestCase {
 
     // MARK: - Target duration
 
-    /// The whole point of the change: a fixed 30 s gave a six-stop trip 2.5 s per
-    /// stop. Duration now follows content, inside the window.
-    func testDurationFollowsContentAndStaysInsideTheTargetWindow() {
+    /// **Rewritten 2026-08-14 for the duration inversion** (Chiu). These two tests
+    /// asserted the model that was just replaced — that duration is clamped into
+    /// `[total_duration_min_s, total_duration_max_s]` and that a photo-heavy trip
+    /// pins exactly to the ceiling. The ceiling is what made trip size invisible
+    /// (every trip presented 8 stops because every film was 90 s), so an
+    /// assertion that it still binds would now be asserting the defect.
+    ///
+    /// What replaces it is the property the inversion is *for*: duration is a
+    /// function of how many stops the film presents, and nothing else.
+    func testDurationIsBoughtByThePresentedStopsAndNotClamped() {
         let export = config()
-        for counts in [[3], [3, 3], [3, 4, 2], [3, 3, 3, 3], [3, 3, 3, 3, 3, 3], Array(repeating: 8, count: 8)] {
-            let plan = RecapDurationPlan.plan(photoCounts: counts, config: export, deck: deck)
-            XCTAssertGreaterThanOrEqual(plan.totalS, export.totalDurationMinS, "\(counts.count) stops")
-            XCTAssertLessThanOrEqual(plan.totalS, export.totalDurationMaxS, "\(counts.count) stops")
+        for count in [1, 2, 4, 8, 15, 21] {
+            let plan = RecapDurationPlan.plan(
+                photoCounts: Array(repeating: 3, count: count), config: export, deck: deck
+            )
+            let expected = max(
+                StopPhotoAllocator.earnedDurationS(presentedStops: count, config: export),
+                export.totalDurationMinS
+            )
+            XCTAssertEqual(plan.totalS, expected, accuracy: 0.01, "\(count) stops")
         }
     }
 
-    /// More content buys a longer film, up to the ceiling.
-    func testMoreStopsBuyALongerFilmUntilTheCeiling() {
+    /// More presented stops always buy a longer film — with **no ceiling** to stop
+    /// at. Photo count per stop does not change the length: the cost model prices
+    /// a stop, and what its photographs buy is dwell *within* that stop.
+    func testMoreStopsBuyALongerFilmWithNoCeiling() {
         let export = config()
-        let two = RecapDurationPlan.plan(photoCounts: [3, 3], config: export, deck: deck)
-        let four = RecapDurationPlan.plan(photoCounts: [3, 3, 3, 3], config: export, deck: deck)
-        XCTAssertGreaterThan(four.totalS, two.totalS)
-        XCTAssertLessThan(four.totalS, export.totalDurationMaxS, "four 3-photo stops do not need the cap")
-
-        // A genuinely photo-heavy trip does reach it, and stops there.
-        let heavy = RecapDurationPlan.plan(
-            photoCounts: Array(repeating: 8, count: 6), config: export, deck: deck
+        // Counts chosen above the duration floor: below it every film is
+        // `total_duration_min_s` and the comparison would say nothing. The floor
+        // itself is covered by `testRouteOnlyTripGetsTheFloorAndNoDwell`.
+        let twelve = RecapDurationPlan.plan(
+            photoCounts: Array(repeating: 3, count: 12), config: export, deck: deck
         )
-        XCTAssertEqual(heavy.totalS, export.totalDurationMaxS, accuracy: 0.01)
+        let sixteen = RecapDurationPlan.plan(
+            photoCounts: Array(repeating: 3, count: 16), config: export, deck: deck
+        )
+        let many = RecapDurationPlan.plan(
+            photoCounts: Array(repeating: 3, count: 21), config: export, deck: deck
+        )
+        XCTAssertGreaterThan(sixteen.totalS, twelve.totalS)
+        XCTAssertGreaterThan(many.totalS, sixteen.totalS)
+        XCTAssertGreaterThan(many.totalS, export.totalDurationMaxS,
+                             "the old ceiling must no longer bind — it is what hid trip size")
+
+        // A photo-heavy trip is not a longer film, it is a denser one.
+        let heavy = RecapDurationPlan.plan(
+            photoCounts: Array(repeating: 8, count: 16), config: export, deck: deck
+        )
+        XCTAssertEqual(heavy.totalS, sixteen.totalS, accuracy: 0.01)
     }
 
     /// A route-only trip is not padded out with stops it does not have.

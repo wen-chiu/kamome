@@ -94,6 +94,13 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.titleCardS, 3.0)
         XCTAssertEqual(config.export.endCardS, 3.0)
         XCTAssertEqual(config.export.videoBitrateMbps, 5)
+        // Earned stops — the one place trip size enters the duration model
+        // (Chiu 2026-08-14). The cap is 21 and not 22 on purpose: it is the stop
+        // count of the Iceland film that was watched and approved.
+        XCTAssertEqual(config.export.earnedStopsFloor, 8)
+        XCTAssertEqual(config.export.earnedStopsCap, 21)
+        XCTAssertEqual(config.export.earnedStopsPerDoubling, 7)
+        XCTAssertEqual(config.export.earnedStopsReferenceTripStops, 10)
     }
 
     func testMissingKeyFailsLoudlyNamingTheKey() throws {

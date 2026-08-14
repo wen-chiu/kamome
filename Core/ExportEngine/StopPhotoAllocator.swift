@@ -96,26 +96,55 @@ public enum StopPhotoAllocator {
     /// out loud. Consequence worth knowing before reading any desk render: fixtures
     /// carry no favourites, so **the top tier is empty in every pilot** and only a
     /// real photo library can fill it.
-    /// **How many stops the film can present, derived from its own length**
-    /// (ADR 2026-08-06 — `Docs/decisions.md`).
+    /// **How many stops a trip earns**, from how big the journey was
+    /// (Chiu 2026-08-14 — inverts the 2026-08-06 ADR).
     ///
-    /// A stop needs roughly `stop_presentation_s` of film to show its photographs
-    /// properly, and only `max_hold_fraction` of the body is ever spent on stops.
-    /// So the number of stops a film can carry is not a taste question and not a
-    /// share — it falls out of the duration:
+    /// This replaced `keptStopCount(config:durationS:)`, which derived the count
+    /// from the film's duration. That direction was self-defeating in Variant B:
+    /// duration was clamped to the same 60–90 s window for every trip, so trip size
+    /// never entered the model and a 10-stop day and a 65-stop fortnight both
+    /// presented exactly 8 stops. Reversing it puts trip size in one named place
+    /// and lets duration fall out (`RecapDurationPlan.plan`).
     ///
-    ///     kept = (duration − opening − end card) × maxHoldFraction ÷ stopPresentationS
+    ///     earned = floor + perDoubling × log2(tripStops ÷ referenceTripStops)
     ///
-    /// This replaced a fixed `tier_skip_share`, which had to be hand-tuned per trip
-    /// — 0.82 for Iceland's 65 stops and 0.5 for New Zealand's 20 — because a share
-    /// scales with the trip while the budget does not.
-    public static func keptStopCount(config: TrackingConfig.Export, durationS: Double) -> Int {
+    /// clamped to `[floor, cap]`. Sub-linear by construction: each *doubling* of
+    /// the trip earns a fixed increment, so a 65-stop trip earns more film than a
+    /// 10-stop one without earning 6.5× of it.
+    ///
+    /// **Two properties worth stating, because they are what make a reverse-derived
+    /// rule survivable.** It cannot explode on a huge trip (the cap binds past ~36
+    /// stops) and cannot collapse on a tiny one (the floor binds below the
+    /// reference, and `triage` then takes the minimum against the stops that
+    /// actually exist). And there is **no division to floor**, which is what
+    /// produced Iceland's `21.999999999999996` off-by-one under the old direction.
+    ///
+    /// ⚠️ **The slope rests on one observation.** Of the three approved films,
+    /// Miyakojima (10 → 8) coincides with the floor and Iceland (65 → 21) is decided
+    /// by the cap, so **New Zealand at 20 → 15 is the only trip actually sitting on
+    /// the curve.** `earned_stops_per_doubling` is therefore fitted to a single
+    /// point, and the only range where it decides anything is roughly **10–36
+    /// stops** — below that the floor answers, above it the cap does. The next real
+    /// trip that lands in that range is the slope's first genuine validation; until
+    /// then, treat a change to it as changing New Zealand's film and nothing else.
+    public static func earnedStopCount(tripStopCount: Int, config: TrackingConfig.Export) -> Int {
+        guard tripStopCount > 0 else { return 0 }
+        let reference = Swift.max(config.earnedStopsReferenceTripStops, 1)
+        let doublings = log2(Double(tripStopCount) / Double(reference))
+        let earned = Double(config.earnedStopsFloor) + config.earnedStopsPerDoubling * doublings
+        let bounded = Swift.min(Swift.max(earned.rounded(), Double(config.earnedStopsFloor)),
+                                Double(config.earnedStopsCap))
+        return Int(bounded)
+    }
+
+    /// The film length a presented-stop count buys — the inverse direction of the
+    /// same cost model, and the only place a Variant B duration is decided.
+    ///
+    ///     duration = opening + end card + (stops × presentationCost) ÷ maxHoldFraction
+    public static func earnedDurationS(presentedStops: Int, config: TrackingConfig.Export) -> Double {
         let opening = config.openingCountryS + config.openingRegionalS + 2 * config.zoomTransitionS
-        let body = Swift.max(durationS - opening - config.endCardS, 0)
-        let dwellBudget = body * config.maxHoldFraction
-        let cost = presentationCostS(config: config)
-        guard cost > 0 else { return 0 }
-        return Swift.max(Int(dwellBudget / cost), 1)
+        let dwell = Double(presentedStops) * presentationCostS(config: config)
+        return opening + config.endCardS + dwell / Swift.max(config.maxHoldFraction, 0.01)
     }
 
     /// What one presented stop costs in **dwell** seconds.
@@ -133,13 +162,41 @@ public enum StopPhotoAllocator {
     /// the earlier duration studies. Same law, different denominator; dividing the
     /// dwell budget by the film-seconds number is what made the first attempt
     /// return half as many stops as the measurements said (2026-08-06).
+    /// **Prices the expected mix, not the worst case** (Chiu asked for a deliberate
+    /// choice, 2026-08-14). `triage` gives the top `tier_top_share` of stops
+    /// `tier_top_photos` rather than `tier_standard_photos`, so charging every stop
+    /// the standard rate under-budgets any trip whose library has favourites — by
+    /// roughly 10 s on a 210 s film. Fixtures carry no favourites, so the top tier
+    /// is empty in every desk render and this could not show up here.
+    ///
+    /// Worst-case pricing (every stop at the top rate) was rejected because
+    /// `tier_top_share` makes it unreachable by construction: it would inflate
+    /// every film for a case that cannot occur. The expected mix is derived from
+    /// the same two tunables that create the tiers, so it adds no constant of its
+    /// own and cannot drift away from them.
+    ///
+    /// **Why this is the safe direction to be wrong in.** `tier_top_share` is a
+    /// *ceiling*, not a quota, and the top tier additionally requires the stop to
+    /// have a favourite — so the true mean photo count is **at or below** the 3.3
+    /// this prices, never above it. Pricing at 3.3 therefore systematically
+    /// over-charges: a film buys slightly more dwell than its stops end up
+    /// spending, and lands a little short of its budget rather than over it. Under
+    /// -charging would push the deck past what the film can hold, which is the
+    /// truncation this whole policy exists to prevent.
     public static func presentationCostS(config: TrackingConfig.Export) -> Double {
         let overhead = config.deckLabelLeadS + 2 * config.deckZoomS + 2 * config.subjectParkS
-        return overhead + Double(config.tierStandardPhotos) * config.deckPhotoMinHoldS
+        let topShare = clampedShare(config.tierTopShare)
+        let photos = (1 - topShare) * Double(config.tierStandardPhotos)
+            + topShare * Double(config.tierTopPhotos)
+        return overhead + photos * config.deckPhotoMinHoldS
     }
 
+    /// **No `durationS` parameter any more.** It used to take the film's length and
+    /// derive the stop count from it; the trip now earns the count and the length
+    /// follows, so passing a duration here would reintroduce the circularity the
+    /// inversion removed.
     public static func triage(
-        _ signals: [Signal], config: TrackingConfig.Export, durationS: Double
+        _ signals: [Signal], config: TrackingConfig.Export
     ) -> [Int?] {
         guard !signals.isEmpty else { return [] }
         // **Deterministic ranking.** Score descending, then original trip order for
@@ -150,7 +207,7 @@ public enum StopPhotoAllocator {
             .map { (index: $0.offset, score: score($0.element, config: config)) }
             .sorted { $0.score != $1.score ? $0.score > $1.score : $0.index < $1.index }
 
-        let keep = Swift.min(keptStopCount(config: config, durationS: durationS), signals.count)
+        let keep = Swift.min(earnedStopCount(tripStopCount: signals.count, config: config), signals.count)
         let topCut = 1.0 - clampedShare(config.tierTopShare)
         let count = Double(signals.count)
 

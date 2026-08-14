@@ -81,7 +81,10 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             allocationZeroShare: 0.4, allocationOneShare: 0.3,
             allocationTwoShare: 0.2, allocationMaxPhotos: 3, favoriteWeight: 3.0,
             tierTopShare: 0.15,
-            tierStandardPhotos: 3, tierTopPhotos: 5, recapMode: .highlight
+            tierStandardPhotos: 3, tierTopPhotos: 5,
+            earnedStopsFloor: 8, earnedStopsCap: 21,
+            earnedStopsPerDoubling: 7, earnedStopsReferenceTripStops: 10,
+            recapMode: .highlight
         )
     }
 
