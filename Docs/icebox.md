@@ -86,6 +86,32 @@ presented stop, which is the input to the duration rule — not the rule's shape
 the two are compatible. Build the rule first; do not let the rule assume every
 presented stop costs a park.
 
+### `first_stop_dwell_scale` is scale-dependent in effect (2026-08-14)
+
+The first stop of a film gets `first_stop_dwell_scale` (0.55) of the dwell a later
+stop earns, because the prologue has just ended and no travel has been shown yet —
+a full-weight first stop makes the film feel stuck right as it starts. That
+rationale is about **pacing at the top of a film and is scale-invariant in
+intent.**
+
+**Its effect is not.** On a long film 55% of a generous dwell still clears
+`deck_photo_min_hold_s`; on a short one it falls under. Surfaced when duration
+started scaling with trip size (2026-08-14): a 4-stop trip earns a 60 s film and
+its decks come out **[2, 6, 6, 6]** — the first stop alone drops below the floor.
+
+**Chiu accepted that outcome rather than fixing it**, on the grounds that no
+small-trip film has ever been rendered and deciding a film's depth blind from
+arithmetic is the thing that whole process exists to avoid.
+`RecapDeckBudgetTests.testASmallTripShowsWholeDecks` was updated to the new
+expectation deliberately.
+
+**When it is thawed:** the fix is a floor on the *first stop's* dwell rather than a
+flat fraction, or a scale that relaxes as the film shortens — a different knob from
+duration, and one that should be judged on a rendered small-trip film rather than
+on the arithmetic that surfaced it. Rejected at the time: raising
+`total_duration_min_s` to ~71 s, which would have flattened the bottom of the
+duration range and partly undone the scaling it was meant to protect.
+
 ### Photo eligibility filters — documents, and a share-safe cut (2026-08-14, Chiu)
 
 Two requests, one subsystem. Today **nothing filters photographs at all** — no
