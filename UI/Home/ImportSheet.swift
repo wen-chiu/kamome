@@ -24,42 +24,19 @@ struct ImportSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    dateRow(.start, label: "import_from", date: model.startDate)
-                    if editing == .start {
-                        DatePicker(
-                            "import_from",
-                            selection: $model.startDate,
-                            in: ...model.endDate,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .labelsHidden()
-                        .onChange(of: model.startDate) { _, newStart in
-                            linkEndToStart(newStart)
-                            withAnimation { editing = nil }
-                        }
-                    }
-                    dateRow(.end, label: "import_to", date: model.endDate)
-                    if editing == .end {
-                        DatePicker(
-                            "import_to",
-                            selection: $model.endDate,
-                            in: model.startDate...,
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
-                        .labelsHidden()
-                        .onChange(of: model.endDate) { _, _ in
-                            withAnimation { editing = nil }
-                        }
-                    }
-                } header: {
-                    Text("import_range_header")
-                } footer: {
-                    Text("import_range_footer")
+                Picker("import_source", selection: $model.source) {
+                    Text("import_source_range").tag(ImportFlowModel.Source.dateRange)
+                    Text("import_source_album").tag(ImportFlowModel.Source.album)
                 }
+                .pickerStyle(.segmented)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
                 .disabled(model.isImporting)
+
+                switch model.source {
+                case .dateRange: dateRangeSection
+                case .album: albumSection
+                }
 
                 // Only visible once access is Limited (post first request) —
                 // camera shots stay invisible until added via the system picker.
@@ -72,7 +49,10 @@ struct ImportSheet: View {
                         }
                         .disabled(model.isImporting)
                     } footer: {
-                        Text("limited_photos_notice")
+                        // Under Limited access album membership is mostly
+                        // invisible, so a short or empty list is PhotoKit working
+                        // as designed. Saying so beats an unexplained empty list.
+                        Text(model.source == .album ? "limited_photos_albums_notice" : "limited_photos_notice")
                     }
                 }
 
@@ -104,8 +84,120 @@ struct ImportSheet: View {
             .onChange(of: model.completedTripId) { _, tripId in
                 if let tripId { onImported(tripId) }
             }
+            .task(id: model.source) {
+                guard model.source == .album, model.albums.isEmpty else { return }
+                await model.loadAlbums()
+            }
         }
         .interactiveDismissDisabled(model.isImporting)
+    }
+
+    /// The date-range path — unchanged, and still the default.
+    @ViewBuilder
+    private var dateRangeSection: some View {
+        Section {
+            dateRow(.start, label: "import_from", date: model.startDate)
+                    if editing == .start {
+                        DatePicker(
+                            "import_from",
+                            selection: $model.startDate,
+                            in: ...model.endDate,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .onChange(of: model.startDate) { _, newStart in
+                            linkEndToStart(newStart)
+                            withAnimation { editing = nil }
+                        }
+                    }
+                    dateRow(.end, label: "import_to", date: model.endDate)
+                    if editing == .end {
+                        DatePicker(
+                            "import_to",
+                            selection: $model.endDate,
+                            in: model.startDate...,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .onChange(of: model.endDate) { _, _ in
+                            withAnimation { editing = nil }
+                        }
+                    }
+        } header: {
+            Text("import_range_header")
+        } footer: {
+            Text("import_range_footer")
+        }
+        .disabled(model.isImporting)
+    }
+
+    /// The album path. Each row carries the album's **date span**, because an
+    /// album is not necessarily one trip: `ImportService` builds a single trip
+    /// from whatever it is given, so an album holding two holidays becomes one
+    /// trip with an absurd leg between them. Showing the span is what stops that
+    /// happening silently (Chiu 2026-08-15).
+    @ViewBuilder
+    private var albumSection: some View {
+        Section {
+            if model.isLoadingAlbums {
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("import_albums_loading")
+                }
+            } else if model.albums.isEmpty {
+                Text("import_albums_empty")
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(model.albums) { album in
+                    Button {
+                        model.selectedAlbumId = album.id
+                    } label: {
+                        albumRow(album)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        } header: {
+            Text("import_albums_header")
+        } footer: {
+            Text("import_albums_footer")
+        }
+        .disabled(model.isImporting)
+    }
+
+    private func albumRow(_ album: PhotoAlbum) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(album.title)
+                    .foregroundStyle(.primary)
+                Text(spanText(album))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if model.selectedAlbumId == album.id {
+                Image(systemName: "checkmark")
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+    }
+
+    /// "12 Jul – 19 Jul 2026 · 160 photos" — the span first, because that is the
+    /// number that tells the user whether this album is one journey.
+    private func spanText(_ album: PhotoAlbum) -> String {
+        let count = String.localizedStringWithFormat(
+            String(localized: "import_album_photo_count"), album.photoCount
+        )
+        guard let earliest = album.earliest, let latest = album.latest else { return count }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        let from = formatter.string(from: earliest)
+        let to = formatter.string(from: latest)
+        let span = from == to ? from : "\(from) – \(to)"
+        return "\(span) · \(count)"
     }
 
     /// A tappable summary row: label + the currently-selected date. Tapping
@@ -148,6 +240,7 @@ struct ImportSheet: View {
         .buttonStyle(.borderedProminent)
         .listRowInsets(EdgeInsets())
         .listRowBackground(Color.clear)
+        .disabled(!model.canImport)
     }
 
     private func errorText(_ failure: ImportFlowModel.Failure) -> LocalizedStringKey {

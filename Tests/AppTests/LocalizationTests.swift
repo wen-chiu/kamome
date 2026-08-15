@@ -50,6 +50,25 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("import_error_no_photos", locale: "en").contains("geotagged"))
     }
 
+    /// Album import (2026-08-15). The footer carries a product warning, not
+    /// decoration: an album is not necessarily one trip, and if it holds two
+    /// journeys the film draws a straight line between them. The copy has to say
+    /// so in both languages before the user imports.
+    func testAlbumImportStringsResolve() throws {
+        XCTAssertEqual(try localizedValue("import_source_album", locale: "zh-Hant"), "相簿")
+        XCTAssertEqual(try localizedValue("import_source_album", locale: "en"), "Album")
+
+        let footerEN = try localizedValue("import_albums_footer", locale: "en")
+        XCTAssertTrue(footerEN.contains("one trip"), footerEN)
+        XCTAssertTrue(footerEN.contains("straight line"), footerEN)
+        XCTAssertTrue(try localizedValue("import_albums_footer", locale: "zh-Hant").contains("直線"))
+
+        // Limited access must be explained rather than left as an empty list.
+        let limitedEN = try localizedValue("limited_photos_albums_notice", locale: "en")
+        XCTAssertTrue(limitedEN.contains("hidden"), limitedEN)
+        XCTAssertFalse(try localizedValue("limited_photos_albums_notice", locale: "zh-Hant").isEmpty)
+    }
+
     /// Honest provenance (§3/§6): imported trips read as reconstructed, and the
     /// copy must never claim the trip is recorded or "verified".
     func testProvenanceStringsResolve() throws {

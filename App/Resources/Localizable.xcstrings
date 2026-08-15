@@ -122,6 +122,91 @@
         }
       }
     },
+    "import_album_photo_count": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 張相片"
+          }
+        }
+      }
+    },
+    "import_albums_empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No albums with photos were found."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到含有相片的相簿。"
+          }
+        }
+      }
+    },
+    "import_albums_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The whole album becomes one trip. Check the dates: an album holding two separate journeys will be rebuilt as one, with a straight line between them."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整本相簿會變成一趟旅程。請確認日期：若相簿裡是兩段不同的旅行，會被重建成同一趟，中間以直線相連。"
+          }
+        }
+      }
+    },
+    "import_albums_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose an album"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇相簿"
+          }
+        }
+      }
+    },
+    "import_albums_loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading albums…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在載入相簿…"
+          }
+        }
+      }
+    },
     "import_close": {
       "extractionState": "manual",
       "localizations": {
@@ -258,6 +343,57 @@
         }
       }
     },
+    "import_source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos to use"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用哪些相片"
+          }
+        }
+      }
+    },
+    "import_source_album": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相簿"
+          }
+        }
+      }
+    },
+    "import_source_range": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date range"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期範圍"
+          }
+        }
+      }
+    },
     "import_start": {
       "extractionState": "manual",
       "localizations": {
@@ -305,6 +441,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "結束日期"
+          }
+        }
+      }
+    },
+    "limited_photos_albums_notice": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome only has access to the photos you selected, so most albums are hidden. Select more photos to see them, or import by date range instead."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩只能存取你選取的相片，因此大部分相簿不會出現。可以選取更多相片，或改用日期範圍匯入。"
           }
         }
       }
