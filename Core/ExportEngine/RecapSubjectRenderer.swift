@@ -35,8 +35,15 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
 
     /// Builds the renderer from the style tokens: the eight-way car sprite when
     /// the set loads, otherwise the vector marker.
-    public static func make(style: RecapStyle) -> VehicleSubjectRenderer {
-        if let set = RecapCarSprite.set {
+    ///
+    /// `spriteSet` defaults to the bundled car, evaluated per call site so every
+    /// caller reads exactly as before. It is a parameter only so a test can hand
+    /// in nil and prove the fallback engages — the real nil comes from a
+    /// resource bundle that could not be found, which no test can arrange.
+    public static func make(
+        style: RecapStyle, spriteSet: [SpriteDirection: CGImage]? = RecapCarSprite.set
+    ) -> VehicleSubjectRenderer {
+        if let set = spriteSet {
             return VehicleSubjectRenderer(visual: .rasterSprite(set), lengthPx: style.carSpriteLengthPx)
         }
         return VehicleSubjectRenderer(
