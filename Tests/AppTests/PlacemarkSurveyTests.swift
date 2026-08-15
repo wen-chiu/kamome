@@ -19,9 +19,9 @@ import XCTest
 ///     TEST_RUNNER_KAMOME_PLACEMARK_SURVEY=iceland …
 final class PlacemarkSurveyTests: XCTestCase {
     func testSurveyPlacemarkFields() async throws {
-        let fixture = ProcessInfo.processInfo.environment["KAMOME_PLACEMARK_SURVEY"] ?? ""
+        let fixture = HarnessEnv.value("KAMOME_PLACEMARK_SURVEY") ?? ""
         try XCTSkipUnless(!fixture.isEmpty, "Manual survey — set KAMOME_PLACEMARK_SURVEY.")
-        let limit = ProcessInfo.processInfo.environment["KAMOME_PLACEMARK_LIMIT"]
+        let limit = HarnessEnv.value("KAMOME_PLACEMARK_LIMIT")
             .flatMap(Int.init) ?? 12
 
         let config = AppConfig.loadOrDie()

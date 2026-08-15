@@ -61,7 +61,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
     #if canImport(MapLibre)
     func testRenderFollowCamStills() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_FOLLOWCAM_STILLS"] == "1",
+            HarnessEnv.value("KAMOME_FOLLOWCAM_STILLS") == "1",
             "Manual review harness — set KAMOME_FOLLOWCAM_STILLS=1 to render follow-cam stills."
         )
         let tiles = fixtureTilesURL()
@@ -258,7 +258,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
     }
 
     private func outputDirectory() -> URL {
-        if let override = ProcessInfo.processInfo.environment["KAMOME_RENDER_OUT"] {
+        if let override = HarnessEnv.value("KAMOME_RENDER_OUT") {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
         return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-followcam-stills", isDirectory: true)

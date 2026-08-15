@@ -121,3 +121,61 @@ schemes:
       targets:
         - KamomeTests
         - package: KamomeCore/KamomeCoreTests
+      # **Why the harness variables are declared here, and in this exact shape**
+      # (2026-08-15). `TEST_RUNNER_<VAR>=…` on the xcodebuild command line was
+      # reaching nothing: every env-gated desk harness skipped silently, which is
+      # the worst way for a measurement tool to fail — it reports success and
+      # measures nothing. Three findings, each verified by changing only itself:
+      #
+      #   1. With no `environmentVariables` at all, XcodeGen emits the test action
+      #      with `shouldUseLaunchSchemeArgsEnv = "YES"`; the test action then takes
+      #      the *Launch* action's environment. Declaring anything flips it to "NO".
+      #   2. That alone is not enough. On Xcode 26.6 xcodebuild's `TEST_RUNNER_`
+      #      injection does not reach the test process at all, with the flag either
+      #      way. Declaring the variables empty-and-disabled — the obvious fix —
+      #      changes nothing, because there was never an injection to un-shadow.
+      #   3. What xcodebuild *does* do with `TEST_RUNNER_FOO=bar` is define it as a
+      #      **build setting**. Scheme environment values expand build settings, so
+      #      `$(TEST_RUNNER_FOO)` bridges the two.
+      #
+      # Hence the shape below. The documented command line is unchanged — every
+      # `TEST_RUNNER_…` in the harness doc comments still works — and it survives
+      # `xcodegen generate`, which the hand-patched scheme did not.
+      #
+      # An unset variable arrives as a defined **empty string**, not as nothing;
+      # `HarnessEnv.value` collapses that back to nil, and harnesses must read
+      # through it rather than `ProcessInfo` directly. A new harness variable needs
+      # a line here or it will never be settable.
+      environmentVariables:
+        - { variable: KAMOME_ALLOCATION_ZERO_SHARE, value: "$(TEST_RUNNER_KAMOME_ALLOCATION_ZERO_SHARE)", isEnabled: true }
+        - { variable: KAMOME_BUDGET_DURATIONS, value: "$(TEST_RUNNER_KAMOME_BUDGET_DURATIONS)", isEnabled: true }
+        - { variable: KAMOME_BUDGET_FIXTURE, value: "$(TEST_RUNNER_KAMOME_BUDGET_FIXTURE)", isEnabled: true }
+        - { variable: KAMOME_DEMO_FILM, value: "$(TEST_RUNNER_KAMOME_DEMO_FILM)", isEnabled: true }
+        - { variable: KAMOME_DEMO_OUT, value: "$(TEST_RUNNER_KAMOME_DEMO_OUT)", isEnabled: true }
+        - { variable: KAMOME_DEMO_RENDER, value: "$(TEST_RUNNER_KAMOME_DEMO_RENDER)", isEnabled: true }
+        - { variable: KAMOME_DURATION_RULE_REPORT, value: "$(TEST_RUNNER_KAMOME_DURATION_RULE_REPORT)", isEnabled: true }
+        - { variable: KAMOME_E, value: "$(TEST_RUNNER_KAMOME_E)", isEnabled: true }
+        - { variable: KAMOME_FOLLOWCAM_STILLS, value: "$(TEST_RUNNER_KAMOME_FOLLOWCAM_STILLS)", isEnabled: true }
+        - { variable: KAMOME_FORCE_DURATION_S, value: "$(TEST_RUNNER_KAMOME_FORCE_DURATION_S)", isEnabled: true }
+        - { variable: KAMOME_KEYFRAME_INTERVAL, value: "$(TEST_RUNNER_KAMOME_KEYFRAME_INTERVAL)", isEnabled: true }
+        - { variable: KAMOME_LIVE_GEOCODE, value: "$(TEST_RUNNER_KAMOME_LIVE_GEOCODE)", isEnabled: true }
+        - { variable: KAMOME_MARKER_STILLS, value: "$(TEST_RUNNER_KAMOME_MARKER_STILLS)", isEnabled: true }
+        - { variable: KAMOME_MATCHING_E, value: "$(TEST_RUNNER_KAMOME_MATCHING_E)", isEnabled: true }
+        - { variable: KAMOME_OSRM_BASE_URL, value: "$(TEST_RUNNER_KAMOME_OSRM_BASE_URL)", isEnabled: true }
+        - { variable: KAMOME_OSRM_CAPTURE, value: "$(TEST_RUNNER_KAMOME_OSRM_CAPTURE)", isEnabled: true }
+        - { variable: KAMOME_PILOT_FILM, value: "$(TEST_RUNNER_KAMOME_PILOT_FILM)", isEnabled: true }
+        - { variable: KAMOME_PILOT_SECONDS, value: "$(TEST_RUNNER_KAMOME_PILOT_SECONDS)", isEnabled: true }
+        - { variable: KAMOME_PLACEMARK_LIMIT, value: "$(TEST_RUNNER_KAMOME_PLACEMARK_LIMIT)", isEnabled: true }
+        - { variable: KAMOME_PLACEMARK_SURVEY, value: "$(TEST_RUNNER_KAMOME_PLACEMARK_SURVEY)", isEnabled: true }
+        - { variable: KAMOME_RECAP_MODE, value: "$(TEST_RUNNER_KAMOME_RECAP_MODE)", isEnabled: true }
+        - { variable: KAMOME_RENDER_BENCH, value: "$(TEST_RUNNER_KAMOME_RENDER_BENCH)", isEnabled: true }
+        - { variable: KAMOME_RENDER_OUT, value: "$(TEST_RUNNER_KAMOME_RENDER_OUT)", isEnabled: true }
+        - { variable: KAMOME_RENDER_STILLS, value: "$(TEST_RUNNER_KAMOME_RENDER_STILLS)", isEnabled: true }
+        - { variable: KAMOME_SNAPSHOT_AUDIT, value: "$(TEST_RUNNER_KAMOME_SNAPSHOT_AUDIT)", isEnabled: true }
+        - { variable: KAMOME_STOP_PHOTOS, value: "$(TEST_RUNNER_KAMOME_STOP_PHOTOS)", isEnabled: true }
+        - { variable: KAMOME_STOP_STILL, value: "$(TEST_RUNNER_KAMOME_STOP_STILL)", isEnabled: true }
+        - { variable: KAMOME_TERRAIN_PATH, value: "$(TEST_RUNNER_KAMOME_TERRAIN_PATH)", isEnabled: true }
+        - { variable: KAMOME_TILES_PATH, value: "$(TEST_RUNNER_KAMOME_TILES_PATH)", isEnabled: true }
+        - { variable: KAMOME_TIMELINE_DUMP, value: "$(TEST_RUNNER_KAMOME_TIMELINE_DUMP)", isEnabled: true }
+        - { variable: KAMOME_TIMELINE_REPORT, value: "$(TEST_RUNNER_KAMOME_TIMELINE_REPORT)", isEnabled: true }
+        - { variable: KAMOME_TITLE_STILL, value: "$(TEST_RUNNER_KAMOME_TITLE_STILL)", isEnabled: true }

@@ -45,7 +45,7 @@ final class ModernMinimalRenderTests: XCTestCase {
     #if canImport(MapLibre)
     func testRenderStillsForReview() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_RENDER_STILLS"] == "1",
+            HarnessEnv.value("KAMOME_RENDER_STILLS") == "1",
             "Manual review harness — set KAMOME_RENDER_STILLS=1 to render Modern Minimal stills."
         )
 
@@ -53,7 +53,7 @@ final class ModernMinimalRenderTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: tiles.path), "fixture tiles missing at \(tiles.path)")
 
         let outDir: URL
-        if let override = ProcessInfo.processInfo.environment["KAMOME_RENDER_OUT"] {
+        if let override = HarnessEnv.value("KAMOME_RENDER_OUT") {
             outDir = URL(fileURLWithPath: override, isDirectory: true)
         } else {
             outDir = FileManager.default.temporaryDirectory

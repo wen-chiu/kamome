@@ -96,7 +96,7 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
 
     func testRenderMarkerAndDeckStills() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_MARKER_STILLS"] == "1",
+            HarnessEnv.value("KAMOME_MARKER_STILLS") == "1",
             "Manual review harness — set KAMOME_MARKER_STILLS=1 to render marker + deck stills."
         )
         let config = stillsConfig()
@@ -168,7 +168,7 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
     // MARK: - Helpers
 
     private func outputDirectory() -> URL {
-        if let override = ProcessInfo.processInfo.environment["KAMOME_RENDER_OUT"] {
+        if let override = HarnessEnv.value("KAMOME_RENDER_OUT") {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
         return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-marker-deck-stills", isDirectory: true)

@@ -186,14 +186,14 @@ final class RecapDeckBudgetTests: XCTestCase {
     ///
     ///     TEST_RUNNER_KAMOME_BUDGET_FIXTURE=iceland …
     func testReportRealFixtureBudgetSweep() async throws {
-        let fixture = ProcessInfo.processInfo.environment["KAMOME_BUDGET_FIXTURE"] ?? ""
+        let fixture = HarnessEnv.value("KAMOME_BUDGET_FIXTURE") ?? ""
         try XCTSkipUnless(!fixture.isEmpty, "Manual measurement — set KAMOME_BUDGET_FIXTURE.")
         let (recap, base) = try await RecapDemoFilmTests.importedRecap(named: fixture)
         let waypoints = recap.stops.filter(\.photos.isEmpty).count
         print("KAMOME_SWEEP \(fixture): \(recap.stops.count) stops (\(waypoints) waypoints, "
             + "\(recap.stops.count - waypoints) highlights)")
 
-        let durations = (ProcessInfo.processInfo.environment["KAMOME_BUDGET_DURATIONS"] ?? "30,60,90,180")
+        let durations = (HarnessEnv.value("KAMOME_BUDGET_DURATIONS") ?? "30,60,90,180")
             .split(separator: ",").compactMap { Double($0) }
         for duration in durations {
             let config = base.withTotalDuration(min: duration, max: duration)
