@@ -29,6 +29,7 @@
     "confidence_min": 0.5,
     "radius_m": 25,
     "timeout_s": 10,
+    "trip_budget_s": 60,
     "display_epsilon_m": 5,
     "route_max_detour_ratio": 2.5,
     "route_waypoint_min_spacing_m": 250,

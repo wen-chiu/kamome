@@ -35,6 +35,20 @@ jobs:
           fi
           echo "MapLibre confinement OK"
 
+      - name: Shipped routing endpoint is distributable
+        # The committed matching.base_url must be "" or https. A LAN address is
+        # correct on the developer's desk and unreachable on anyone else's
+        # network, where it costs one matching.timeout_s per leg (P0 2026-08-15).
+        # This catches the commit; AppConfig.loadOrDie catches the archive. Both
+        # are needed — a working-tree edit never reaches CI at all.
+        run: |
+          url=$(/usr/bin/python3 -c \
+            'import json; print(json.load(open("Config/TrackingConfig.json"))["matching"]["base_url"])')
+          case "$url" in
+            "" | https://*) echo "matching.base_url OK: \"$url\"" ;;
+            *) echo "matching.base_url must be \"\" or https, got \"$url\"" >&2; exit 1 ;;
+          esac
+
       - name: Pick an available iPhone simulator
         # Runner images vary in which device sets they ship — never hardcode
         # a model name.

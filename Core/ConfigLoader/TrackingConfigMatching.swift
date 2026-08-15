@@ -23,6 +23,20 @@ public extension TrackingConfig {
         /// Per-request timeout. Matching is best-effort and must never block
         /// trip completion (§4.4), so this stays short.
         public let timeoutS: Double
+        /// How long **one trip's** whole routing run may take before the
+        /// remaining legs are left raw (2026-08-15).
+        ///
+        /// `timeout_s` bounds a request; nothing bounded the trip. A 40-stop
+        /// import is 39 legs, and against an endpoint that does not answer that
+        /// is 39 × `timeout_s` back to back — 6½ minutes of an app that looks
+        /// dead, which is what the first outside install experienced. A per-trip
+        /// ceiling turns an unbounded stall into a bounded degradation: the legs
+        /// that were routed keep their roads, the rest draw dashed exactly as an
+        /// unroutable leg already does (PD-2), and the user is told which.
+        ///
+        /// Sized as "long enough that a healthy provider finishes a large trip,
+        /// short enough that a broken one is a pause and not an outage".
+        public let tripBudgetS: Double
         /// Douglas-Peucker ε for *matched* geometry in the recap. Tighter
         /// than simplify.epsilon_m: 15 m would visibly cut snapped corners
         /// at recap zoom, but raw OSRM output on a long trip would blow the
@@ -57,6 +71,7 @@ public extension TrackingConfig {
             case confidenceMin = "confidence_min"
             case radiusM = "radius_m"
             case timeoutS = "timeout_s"
+            case tripBudgetS = "trip_budget_s"
             case displayEpsilonM = "display_epsilon_m"
             case routeMaxDetourRatio = "route_max_detour_ratio"
             case routeWaypointMinSpacingM = "route_waypoint_min_spacing_m"
@@ -69,6 +84,7 @@ public extension TrackingConfig {
             confidenceMin: Double,
             radiusM: Double,
             timeoutS: Double,
+            tripBudgetS: Double,
             displayEpsilonM: Double,
             routeMaxDetourRatio: Double,
             routeWaypointMinSpacingM: Double,
@@ -79,10 +95,29 @@ public extension TrackingConfig {
             self.confidenceMin = confidenceMin
             self.radiusM = radiusM
             self.timeoutS = timeoutS
+            self.tripBudgetS = tripBudgetS
             self.displayEpsilonM = displayEpsilonM
             self.routeMaxDetourRatio = routeMaxDetourRatio
             self.routeWaypointMinSpacingM = routeWaypointMinSpacingM
             self.routeWaypointRadiusM = routeWaypointRadiusM
+        }
+
+        /// Whether this endpoint may ship in a build that leaves this Mac.
+        ///
+        /// Empty (matching disabled) or `https` — nothing else. A cleartext LAN
+        /// host is the shape of a dogfood build pointed at a routing server on
+        /// the developer's own Wi-Fi: correct on his desk, unresolvable on every
+        /// other network. The failure that produces is not a film without roads,
+        /// it is a stall — `matchTrip` awaits legs one after another at
+        /// `timeout_s` each, so the more photographs a trip has the longer the
+        /// app appears dead (the 2026-08-15 P0, first outside install).
+        ///
+        /// Read only by the release guard in `AppConfig.loadOrDie`; a debug run
+        /// against `http://192.168.x.x` is the whole point of device testing and
+        /// stays legal.
+        public var isDistributableEndpoint: Bool {
+            guard !baseURL.isEmpty else { return true }
+            return URL(string: baseURL)?.scheme?.lowercased() == "https"
         }
 
         /// The shipped tunables pointed at a different server — a stub
@@ -96,6 +131,7 @@ public extension TrackingConfig {
                 confidenceMin: confidenceMin,
                 radiusM: radiusM,
                 timeoutS: timeoutS,
+                tripBudgetS: tripBudgetS,
                 displayEpsilonM: displayEpsilonM,
                 routeMaxDetourRatio: routeMaxDetourRatio,
                 routeWaypointMinSpacingM: routeWaypointMinSpacingM,
