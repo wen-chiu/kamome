@@ -51,11 +51,23 @@ final class RecapModel {
     /// bug rather than as photos that are not on this device.
     private(set) var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
 
+    /// What road reconstruction managed for this trip, surfaced for the same
+    /// reason `photoShortfall` is (2026-08-15): a film whose legs draw dashed
+    /// looks like a rendering bug, and the four reasons it can happen — no road
+    /// route exists, the provider could not be reached, it refused for load, or
+    /// the budget ran out — need four different responses from the user. Only
+    /// one of them means "this is simply what the journey looks like".
+    private(set) var routing: RouteMatchReport?
+
     private let tripId: String
     private let config: TrackingConfig
     private let repository: TripRepository
     private var cancelFlag = CancelFlag()
     private var exportTask: Task<Void, Never>?
+    /// Holds the screen awake and a background-task assertion for the duration
+    /// of a render (2026-08-15): a locked screen or a brief app switch used to
+    /// kill an export outright, and a film takes minutes.
+    private let lifecycle = ExportLifecycleGuard()
 
     init(tripId: String, config: TrackingConfig, repository: TripRepository) {
         self.tripId = tripId
@@ -71,8 +83,16 @@ final class RecapModel {
         guard !isRendering else { return }
         cancelFlag = CancelFlag()
         phase = .rendering(progress: 0)
+        // Taken before the render starts and released on every exit below —
+        // finished, cancelled, failed. On expiry the export cancels itself at a
+        // frame boundary rather than being suspended mid-write.
+        lifecycle.begin { [weak self] in
+            KamomeLog.recap.error("export: the background assertion expired — cancelling at the next frame")
+            self?.cancelFlag.set()
+        }
         exportTask = Task { [weak self] in
             await self?.runExport()
+            self?.lifecycle.end()
         }
     }
 
@@ -83,10 +103,21 @@ final class RecapModel {
     // MARK: - Pipeline
 
     private func runExport() async {
-        // Best-effort §4.4 matching before composing: idempotent, bounded by
-        // matching.timeout_s per request, an instant no-op while base_url is
-        // empty. The replay should follow roads whenever a server is around.
-        await RouteMatchService(repository: repository, config: config).matchTrip(tripId: tripId)
+        // Best-effort §4.4 matching before composing: an instant no-op while
+        // base_url is empty, and now bounded by `matching.trip_budget_s` for the
+        // whole trip rather than only per request. The replay should follow
+        // roads whenever a server is around.
+        //
+        // Through the coordinator, so a film started seconds after an import
+        // **joins** that import's run instead of starting a second one over the
+        // same legs (2026-08-15). Concurrent runs were verified not to corrupt
+        // anything — `DatabaseQueue` serialises, and the write is one column
+        // that does not read itself — but two runs mean two budgets and two
+        // verdicts for one trip, and the screen can only show one.
+        routing = await RouteMatchCoordinator.shared.result(
+            tripId: tripId,
+            service: RouteMatchService(repository: repository, matching: config.matching)
+        )
         guard let detail = try? repository.detail(tripId: tripId) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return

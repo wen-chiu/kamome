@@ -904,6 +904,142 @@
         }
       }
     },
+    "recap_routing_budget": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Road matching stopped early"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "道路比對提前結束"
+          }
+        }
+      }
+    },
+    "recap_routing_budget_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d of %2$d legs weren’t reached within the time Kamome allows for matching, and draw dashed. Export again to carry on from here — the legs already matched are kept."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段（共 %2$d 段）未在 Kamome 的比對時限內處理完成，會以虛線呈現。重新輸出即可從這裡接續——已比對完成的路段會保留。"
+          }
+        }
+      }
+    },
+    "recap_routing_no_road": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some stretches have no road route"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分路段沒有道路路線"
+          }
+        }
+      }
+    },
+    "recap_routing_no_road_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d of %2$d legs draw dashed because no road connects those places — a ferry, a flight, or a gap the photos don’t explain. This is your journey drawn honestly."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段（共 %2$d 段）以虛線呈現，因為這些地點之間沒有道路相連——可能是渡輪、航班，或照片無法說明的空白。這是誠實描繪的旅程。"
+          }
+        }
+      }
+    },
+    "recap_routing_rate_limited": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The routing service is busy"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路線服務忙碌中"
+          }
+        }
+      }
+    },
+    "recap_routing_rate_limited_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d of %2$d legs were turned away because the service was handling too many requests at once. Those stretches draw dashed."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段（共 %2$d 段）因為服務同時處理的請求過多而被拒絕，這些路段會以虛線呈現。"
+          }
+        }
+      }
+    },
+    "recap_routing_unreachable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t reach the routing service"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法連線到路線服務"
+          }
+        }
+      }
+    },
+    "recap_routing_unreachable_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d of %2$d legs kept their straight lines because the routing service didn’t answer. Those stretches draw dashed. The journey itself is unaffected."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段（共 %2$d 段）因為路線服務沒有回應而維持直線，這些路段會以虛線呈現。旅程本身不受影響。"
+          }
+        }
+      }
+    },
     "recap_share": {
       "extractionState": "manual",
       "localizations": {
