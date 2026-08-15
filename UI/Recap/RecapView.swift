@@ -106,12 +106,22 @@ struct RecapView: View {
     @ViewBuilder
     private var routingSection: some View {
         if let routing = model.routing, routing.isWorthReporting {
+            // How many legs draw dashed — the one number the copy uses. It sits
+            // in the *headline* ("有 X 段還沒畫"), and only the rate-limit body
+            // repeats it, so both strings are formatted with it and the three
+            // bodies that do not mention it simply ignore the argument.
             let dashed = routing.attempted - routing.reconstructed
             Section {
-                Label(routingHeadline(routing), systemImage: routingSymbol(routing))
-                    .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
+                Label {
+                    Text(String.localizedStringWithFormat(
+                        String(localized: routingHeadlineKey(routing)), dashed
+                    ))
+                } icon: {
+                    Image(systemName: routingSymbol(routing))
+                }
+                .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
                 Text(String.localizedStringWithFormat(
-                    String(localized: routingDetailKey(routing)), dashed, routing.attempted
+                    String(localized: routingDetailKey(routing)), dashed
                 ))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -119,7 +129,7 @@ struct RecapView: View {
         }
     }
 
-    private func routingHeadline(_ report: RouteMatchReport) -> LocalizedStringKey {
+    private func routingHeadlineKey(_ report: RouteMatchReport) -> String.LocalizationValue {
         switch report.headline {
         case .providerUnreachable: return "recap_routing_unreachable"
         case .rateLimited: return "recap_routing_rate_limited"
