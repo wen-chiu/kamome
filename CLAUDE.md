@@ -228,11 +228,14 @@ Kyushu.
 
 | trip | frames | snapshots | export | per snapshot |
 |---|---:|---:|---:|---:|
-| Miyakojima | 4,065 | 271 *(derived)* | 270 s | ≈1.0 s *(derived)* |
-| New Zealand | 4,635 | 309 *(derived)* | 600+ s | ≈1.9 s *(derived)* |
+| Miyakojima | 4,065 | ~~271~~ **wrong** | 270 s | ~~≈1.0 s~~ **wrong** |
+| New Zealand | 4,635 | ~~309~~ **wrong** | 600+ s | ~~≈1.9 s~~ **wrong** |
 
-⚠️ **The snapshot counts were never measured** (2026-08-15). They are
-`frames ÷ keyframe_interval_frames`, which assumes one snapshot every interval
+⚠️ **These two columns are not merely estimates — the method is wrong, and the
+measured numbers are in the Phase 4 section above.** Do not average the two sets
+and do not quote these. Only `frames` and `export` are real.
+
+The counts were computed as `frames ÷ keyframe_interval_frames`, which assumes one snapshot every interval
 for the whole film. `RecapRenderLoop` snapshots the **opening every frame**
 (`movingUntilFrame = openingS × fps`), so the real count is higher and the real
 per-snapshot cost lower — in the same proportion for both rows, so the
