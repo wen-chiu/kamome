@@ -9,6 +9,7 @@ struct HomeView: View {
     @Environment(TrackingSession.self) private var session
     @State private var vehicle: VehicleType = .car
     @State private var path: [String] = []
+    @State private var showingImport = false
     #if DEBUG
     @State private var debugShareFile: DebugShareFile?
     #endif
@@ -22,13 +23,22 @@ struct HomeView: View {
                     tripList
                 }
                 Spacer()
-                vehiclePicker
-                startButton
+                importButton
+                liveCaptureSection
             }
             .padding()
             .navigationTitle(Text("home_title"))
             .fullScreenCover(isPresented: .constant(session.isRecording)) {
                 RecordingView()
+            }
+            .sheet(isPresented: $showingImport) {
+                // On success: dismiss the sheet, refresh the list so the new
+                // trip appears, and push straight to S3 (Trip Detail).
+                ImportSheet(session: session) { tripId in
+                    showingImport = false
+                    session.refreshTrips()
+                    path = [tripId]
+                }
             }
             #if DEBUG
             .toolbar {
@@ -47,27 +57,36 @@ struct HomeView: View {
                let first = session.trips.first {
                 path = [first.id]
             }
+            // Replay MVP §1 artifact: present the import sheet for its shot.
+            if ProcessInfo.processInfo.arguments.contains("-demo-open-import") {
+                showingImport = true
+            }
             #endif
         }
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "bird")
+        VStack(spacing: 12) {
+            Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 56))
                 .foregroundStyle(.tint)
             Text("empty_state_pitch")
                 .font(.headline)
                 .multilineTextAlignment(.center)
+            Text("empty_state_import_hint")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 80)
+        .padding(.horizontal)
     }
 
     private var tripList: some View {
         List(session.trips) { trip in
             NavigationLink(value: trip.id) {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(trip.title)
                         .font(.headline)
                     HStack {
@@ -78,12 +97,51 @@ struct HomeView: View {
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    // Honest provenance (§3): a trip rebuilt from photo EXIF is
+                    // never presented as recorded/verified.
+                    if trip.tripSource.isReconstructed {
+                        provenanceBadge
+                    }
                 }
             }
         }
         .listStyle(.plain)
         .navigationDestination(for: String.self) { tripId in
             TripDetailView(tripId: tripId, session: session)
+        }
+    }
+
+    private var provenanceBadge: some View {
+        Label("provenance_badge", systemImage: "photo.on.rectangle")
+            .font(.caption2.bold())
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.secondary.opacity(0.2)))
+            .foregroundStyle(.secondary)
+    }
+
+    // MP4-from-photos is the hero action (§5 S1); live capture is secondary and
+    // graduates to Capture Beta (Phase 5).
+    private var importButton: some View {
+        Button {
+            showingImport = true
+        } label: {
+            Label("import_from_photos", systemImage: "photo.stack")
+                .font(.title2.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.borderedProminent)
+    }
+
+    private var liveCaptureSection: some View {
+        VStack(spacing: 8) {
+            Text("live_capture_header")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            vehiclePicker
+            startButton
         }
     }
 
@@ -101,11 +159,11 @@ struct HomeView: View {
             session.start(vehicle: vehicle)
         } label: {
             Text("start_journey")
-                .font(.title2.bold())
+                .font(.headline)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, 8)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.bordered)
     }
 
     #if DEBUG

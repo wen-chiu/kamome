@@ -16,6 +16,9 @@ let package = Package(
         .library(name: "KamomeConfig", targets: ["KamomeConfig"]),
         .library(name: "KamomeTrackingEngine", targets: ["KamomeTrackingEngine"]),
         .library(name: "KamomeTripComposer", targets: ["KamomeTripComposer"]),
+        .library(name: "KamomeExportEngine", targets: ["KamomeExportEngine"]),
+        .library(name: "KamomeRouteMatching", targets: ["KamomeRouteMatching"]),
+        .library(name: "KamomeImportKit", targets: ["KamomeImportKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "6.29.0"),
@@ -40,9 +43,40 @@ let package = Package(
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/TripComposer"
         ),
+        // Ships the hero car sprite (Resources/car-sprite.png). Code-drawn
+        // vehicles hit a quality ceiling (Chiu 2026-07-25), so the car is a
+        // raster asset loaded through `Bundle.module`; the remaining vector
+        // markers stay code-drawn. Still SDK-free and deterministic.
+        .target(
+            name: "KamomeExportEngine",
+            dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
+            path: "Core/ExportEngine",
+            resources: [.process("Resources")]
+        ),
+        .target(
+            name: "KamomeRouteMatching",
+            // KamomeTrackingEngine for `Geo` only — the same reuse
+            // KamomeExportEngine makes, rather than a third haversine.
+            dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
+            path: "Core/RouteMatching"
+        ),
+        // Pure photo-EXIF import clustering (spec §4.7). No PhotoKit/GRDB — the
+        // adapters live in the app; this stays deterministically testable.
+        .target(
+            name: "KamomeImportKit",
+            path: "Core/ImportKit"
+        ),
         .testTarget(
             name: "KamomeCoreTests",
-            dependencies: ["KamomePersistence", "KamomeConfig", "KamomeTrackingEngine", "KamomeTripComposer"],
+            dependencies: [
+                "KamomePersistence",
+                "KamomeConfig",
+                "KamomeTrackingEngine",
+                "KamomeTripComposer",
+                "KamomeExportEngine",
+                "KamomeRouteMatching",
+                "KamomeImportKit",
+            ],
             path: "Tests/CoreTests"
         ),
         // Local-only mirror of the Phase 0 gates for machines without Xcode

@@ -13,9 +13,12 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     public var status: String
     public var originPlanId: String?
     public var statsJson: String?
+    /// Honest provenance (schema v2, §3). Raw `TripSource`; legacy rows read
+    /// `recorded`. Use `tripSource` for the typed value.
+    public var source: String
 
     enum CodingKeys: String, CodingKey {
-        case id, title, status
+        case id, title, status, source
         case startedAt = "started_at"
         case endedAt = "ended_at"
         case originPlanId = "origin_plan_id"
@@ -29,7 +32,8 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         endedAt: Double? = nil,
         status: String,
         originPlanId: String? = nil,
-        statsJson: String? = nil
+        statsJson: String? = nil,
+        source: String = TripSource.recorded.rawValue
     ) {
         self.id = id
         self.title = title
@@ -38,7 +42,11 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.status = status
         self.originPlanId = originPlanId
         self.statsJson = statsJson
+        self.source = source
     }
+
+    /// Typed provenance; NULL/unknown reads as `.recorded`.
+    public var tripSource: TripSource { TripSource(storage: source) }
 }
 
 public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
@@ -50,9 +58,12 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
     public var startedAt: Double
     public var endedAt: Double?
     public var matchedPolyline: String?
+    /// How this segment's geometry was obtained (schema v2, §3). Nullable;
+    /// NULL reads as `gpsHifi`. Use `segmentSource` for the typed value.
+    public var source: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, mode
+        case id, mode, source
         case tripId = "trip_id"
         case startedAt = "started_at"
         case endedAt = "ended_at"
@@ -65,7 +76,8 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
         mode: String,
         startedAt: Double,
         endedAt: Double? = nil,
-        matchedPolyline: String? = nil
+        matchedPolyline: String? = nil,
+        source: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -73,7 +85,11 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.matchedPolyline = matchedPolyline
+        self.source = source
     }
+
+    /// Typed source; NULL/unknown reads as `.gpsHifi`.
+    public var segmentSource: SegmentSource { SegmentSource(storage: source) }
 }
 
 public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
@@ -135,6 +151,9 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
     public var lat: Double?
     public var lon: Double?
     public var isHighlight: Int
+    /// Manual display order within a stop (schema v2 — the deferred S4 reorder).
+    /// Nullable; NULL means "order by `takenAt`", the prior behavior.
+    public var orderIdx: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lon
@@ -143,6 +162,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         case phAssetId = "ph_asset_id"
         case takenAt = "taken_at"
         case isHighlight = "is_highlight"
+        case orderIdx = "order_idx"
     }
 
     public init(
@@ -153,7 +173,8 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         takenAt: Double? = nil,
         lat: Double? = nil,
         lon: Double? = nil,
-        isHighlight: Int = 0
+        isHighlight: Int = 0,
+        orderIdx: Int? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -163,6 +184,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         self.lat = lat
         self.lon = lon
         self.isHighlight = isHighlight
+        self.orderIdx = orderIdx
     }
 }
 

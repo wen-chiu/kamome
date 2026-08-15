@@ -26,12 +26,14 @@ public final class TrackingEngine {
         public let lon: Double
         public let arrivedAt: Double
         public internal(set) var departedAt: Double?
+        public let kind: StopKind
 
-        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?) {
+        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?, kind: StopKind = .dwell) {
             self.lat = lat
             self.lon = lon
             self.arrivedAt = arrivedAt
             self.departedAt = departedAt
+            self.kind = kind
         }
     }
 

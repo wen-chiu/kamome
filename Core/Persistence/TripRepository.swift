@@ -11,12 +11,16 @@ public struct TripRepository {
         public let startedAt: Double
         public let endedAt: Double?
         public let points: [NewTrackpoint]
+        /// `SegmentSource` raw value (schema v2, §3). nil = default (gps_hifi);
+        /// the photo-EXIF importer sets `exif`.
+        public let source: String?
 
-        public init(mode: String, startedAt: Double, endedAt: Double?, points: [NewTrackpoint]) {
+        public init(mode: String, startedAt: Double, endedAt: Double?, points: [NewTrackpoint], source: String? = nil) {
             self.mode = mode
             self.startedAt = startedAt
             self.endedAt = endedAt
             self.points = points
+            self.source = source
         }
     }
 
@@ -53,16 +57,19 @@ public struct TripRepository {
         public let lon: Double
         public let arrivedAt: Double
         public let departedAt: Double?
+        /// `StopKind` raw value (ADR 2026-07-18 stop-kind).
+        public let kind: String
 
-        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?) {
+        public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double?, kind: String = "dwell") {
             self.lat = lat
             self.lon = lon
             self.arrivedAt = arrivedAt
             self.departedAt = departedAt
+            self.kind = kind
         }
     }
 
-    private let database: AppDatabase
+    let database: AppDatabase
 
     public init(database: AppDatabase) {
         self.database = database
@@ -119,7 +126,7 @@ public struct TripRepository {
                     lon: stop.lon,
                     arrivedAt: stop.arrivedAt,
                     departedAt: stop.departedAt,
-                    kind: "auto"
+                    kind: stop.kind
                 ).insert(db)
             }
         }
@@ -155,6 +162,18 @@ public struct TripRepository {
                 .filter(sql: "trip_id = ?", arguments: [tripId])
                 .fetchAll(db)
             return TripDetail(trip: trip, segments: withPoints, stops: stops, photos: photos)
+        }
+    }
+
+    /// Stores the §4.4 map-matched geometry for one segment (nil clears it —
+    /// e.g. after a re-match invalidation). Matching is post-completion and
+    /// best-effort, so this is the only column it ever touches.
+    public func setMatchedPolyline(segmentId: String, encodedPolyline: String?) throws {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE segment SET matched_polyline = ? WHERE id = ?",
+                arguments: [encodedPolyline, segmentId]
+            )
         }
     }
 

@@ -1,0 +1,40 @@
+{
+  "_comment": "Reconstruction of the real 11-day South Island trip from the 2026-08-01 device film (kamome-recap-NZ-disaster.MP4). Stop places and day/km read off the film's HUD: Christchurch → Tekapo → Aoraki → Wanaka → Arrowtown → Cromwell → Waitaki → Waimate → Christchurch. Used to reproduce the multi-day pacing failure at the desk.",
+  "title": "New Zealand — South Island, 11 days",
+  "photos": [
+    { "id": "chc-1",  "t": 0,      "lat": -43.53210, "lon": 172.63620 },
+    { "id": "chc-2",  "t": 1800,   "lat": -43.53080, "lon": 172.62800 },
+    { "id": "chc-3",  "t": 3600,   "lat": -43.53390, "lon": 172.64110 },
+
+    { "id": "tek-1",  "t": 32400,  "lat": -44.00490, "lon": 170.47900 },
+    { "id": "tek-2",  "t": 34200,  "lat": -44.00280, "lon": 170.48350 },
+    { "id": "tek-3",  "t": 36000,  "lat": -44.00610, "lon": 170.47610 },
+
+    { "id": "cook-1", "t": 118800, "lat": -43.73400, "lon": 170.09800 },
+    { "id": "cook-2", "t": 120600, "lat": -43.73180, "lon": 170.10230 },
+    { "id": "cook-3", "t": 122400, "lat": -43.71180, "lon": 170.09190 },
+
+    { "id": "twz-1",  "t": 291600, "lat": -44.25640, "lon": 170.09800 },
+    { "id": "twz-2",  "t": 293400, "lat": -44.26010, "lon": 170.10420 },
+
+    { "id": "wan-1",  "t": 378000, "lat": -44.68830, "lon": 169.13390 },
+    { "id": "wan-2",  "t": 379800, "lat": -44.69510, "lon": 169.14200 },
+    { "id": "wan-3",  "t": 381600, "lat": -44.70120, "lon": 169.12630 },
+
+    { "id": "arw-1",  "t": 464400, "lat": -44.86390, "lon": 168.87500 },
+    { "id": "arw-2",  "t": 466200, "lat": -44.85720, "lon": 168.88240 },
+
+    { "id": "crm-1",  "t": 550800, "lat": -44.98510, "lon": 169.18720 },
+    { "id": "crm-2",  "t": 552600, "lat": -44.97840, "lon": 169.19410 },
+    { "id": "crm-3",  "t": 554400, "lat": -44.99230, "lon": 169.18010 },
+
+    { "id": "wtk-1",  "t": 637200, "lat": -44.72900, "lon": 170.47600 },
+    { "id": "wtk-2",  "t": 639000, "lat": -44.73510, "lon": 170.48920 },
+
+    { "id": "wmt-1",  "t": 810000, "lat": -44.73180, "lon": 171.04760 },
+    { "id": "wmt-2",  "t": 811800, "lat": -44.72460, "lon": 171.05390 },
+
+    { "id": "chc-4",  "t": 896400, "lat": -43.53210, "lon": 172.63620 },
+    { "id": "chc-5",  "t": 898200, "lat": -43.52890, "lon": 172.62310 }
+  ]
+}

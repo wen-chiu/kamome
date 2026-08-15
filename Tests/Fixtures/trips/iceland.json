@@ -1,0 +1,22 @@
+{
+  "_comment": "Golden Circle + south coast, Route 1/35/36. Real place coordinates; timestamps are a plausible single day. Replace with a dump of your own photos via Tools/exif-to-fixture.sh.",
+  "title": "Iceland — Golden Circle",
+  "photos": [
+    { "id": "rey-1", "t": 0,     "lat": 64.14660, "lon": -21.94260 },
+    { "id": "rey-2", "t": 420,   "lat": 64.14830, "lon": -21.93910 },
+    { "id": "rey-3", "t": 900,   "lat": 64.14520, "lon": -21.94640 },
+    { "id": "road-1", "t": 3600, "lat": 64.19410, "lon": -21.53200 },
+    { "id": "thing-1", "t": 5400, "lat": 64.25590, "lon": -21.13000 },
+    { "id": "thing-2", "t": 6000, "lat": 64.25720, "lon": -21.12180 },
+    { "id": "thing-3", "t": 6900, "lat": 64.26150, "lon": -21.11400 },
+    { "id": "geysir-1", "t": 11400, "lat": 64.31040, "lon": -20.30240 },
+    { "id": "geysir-2", "t": 12000, "lat": 64.31180, "lon": -20.29970 },
+    { "id": "geysir-3", "t": 12900, "lat": 64.31090, "lon": -20.30410 },
+    { "id": "gull-1", "t": 15600, "lat": 64.32710, "lon": -20.11990 },
+    { "id": "gull-2", "t": 16500, "lat": 64.32620, "lon": -20.12630 },
+    { "id": "sel-1", "t": 27000, "lat": 63.61560, "lon": -19.98850 },
+    { "id": "sel-2", "t": 27900, "lat": 63.61620, "lon": -19.98700 },
+    { "id": "vik-1", "t": 34200, "lat": 63.41940, "lon": -19.00600 },
+    { "id": "vik-2", "t": 35100, "lat": 63.41790, "lon": -19.01180 }
+  ]
+}

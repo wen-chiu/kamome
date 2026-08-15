@@ -7,10 +7,8 @@ public struct TrackingConfig: Decodable, Equatable {
     public struct Filter: Decodable, Equatable {
         /// Samples with horizontal accuracy worse than this are discarded.
         public let maxHAccM: Double
-        /// Samples worse than this still draw the route but are excluded as
-        /// speed evidence: the 2026-07-18 drive had a glitch cluster at
-        /// h_acc 43–49 m (under the keep threshold) that CoreLocation tagged
-        /// with 137 m/s speeds, putting 495 km/h in the trip stats.
+        /// Samples worse than this draw the route but are excluded as speed
+        /// evidence (2026-07-18: an h_acc 43–49 m glitch tagged 137 m/s → 495 km/h).
         public let speedMaxHAccM: Double
 
         enum CodingKeys: String, CodingKey {
@@ -48,16 +46,12 @@ public struct TrackingConfig: Decodable, Equatable {
         public let radiusM: Double
         /// CLMonitor region radius while paused at a stop (§2.3).
         public let regionRadiusM: Double
-        /// Trip-end stop derivation (ADR 2026-07-18): a sample-silence gap at
-        /// least this long with displacement ≤ radius_m is a stop the live
-        /// detector could never see — iOS stops delivering fixes when the
-        /// phone is stationary under a distance filter.
+        /// Trip-end stop derivation (ADR 2026-07-18): a sample-silence gap this
+        /// long with displacement ≤ radius_m is a stop the live detector can't see.
         public let gapMinS: Double
-        /// A walk segment bracketed by vehicle segments counts as a stop
-        /// ("park and walk around") when it lasts at least visit_min_s and
-        /// ends within visit_return_radius_m of where it began — loop
-        /// closure, not wander extent: trailhead loops range far and still
-        /// end back at the car.
+        /// A walk segment bracketed by vehicle segments is a stop ("park and walk
+        /// around") when it lasts ≥ visit_min_s and ends within
+        /// visit_return_radius_m of where it began — loop closure, not wander extent.
         public let visitMinS: Double
         public let visitReturnRadiusM: Double
 
@@ -80,6 +74,9 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    // `Matching` lives in TrackingConfigMatching.swift — the §4.4 block grew
+    // its own tunables and both files stay inside the size budget.
+
     public struct Photos: Decodable, Equatable {
         /// GPS-tagged photos attach to the nearest stop within this radius (§4.3).
         public let matchRadiusM: Double
@@ -89,11 +86,61 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    public struct Import: Decodable, Equatable {
+        /// Photo-EXIF clustering tunables (§4.7). Defaults mirror the validated
+        /// prototype (`Docs/prototype/recap_data_pipeline.py`); tune against the
+        /// three real dogfood trips (the Replay MVP gate).
+        /// A photo joins a cluster while within this distance of its centroid.
+        public let stopRadiusM: Double
+        /// A larger time gap between consecutive photos opens a new cluster
+        /// (a revisit) even inside the radius.
+        public let stopSplitGapS: Double
+        /// A cluster becomes a stop only with at least this many photos.
+        public let minPhotosPerStop: Int
+        /// Recap photo-deck size bounds (basic MVP presentation; §5).
+        public let deckMinPhotos: Int
+        public let deckMaxPhotos: Int
+        /// Past this gap between a leg's endpoints, its implied pace stops
+        /// meaning anything and the leg is treated as a drive (Chiu 2026-08-02).
+        ///
+        /// Pace is distance over elapsed time, which assumes the elapsed time was
+        /// spent travelling. Across a night it was not: a 60 km drive photographed
+        /// at 10 pm and again at 9 am the next morning implies 1.3 km/h, reads as
+        /// walking pace, and walking legs are deliberately never routed — so the
+        /// leg stayed a straight line through whatever lay between. On the real
+        /// 11-day New Zealand trip that was **7 of 9 legs**, drawn straight across
+        /// Lake Pukaki and the Southern Alps.
+        ///
+        /// The fix is not a higher walking threshold. An overnight gap is not slow
+        /// travel, it is *no signal*, so above this the leg falls back to the same
+        /// road-trip assumption already made for legs with no elapsed time at all.
+        public let paceUnknowableGapS: Double
+        /// How many days back the S1 import date-range picker defaults to
+        /// (UI default only — the user adjusts it; kept here so it isn't a
+        /// magic number, §0 rule 2).
+        public let defaultRangeDays: Int
+
+        enum CodingKeys: String, CodingKey {
+            case stopRadiusM = "stop_radius_m"
+            case stopSplitGapS = "stop_split_gap_s"
+            case minPhotosPerStop = "min_photos_per_stop"
+            case deckMinPhotos = "deck_min_photos"
+            case deckMaxPhotos = "deck_max_photos"
+            case paceUnknowableGapS = "pace_unknowable_gap_s"
+            case defaultRangeDays = "default_range_days"
+        }
+    }
+
     public struct Geocode: Decodable, Equatable {
         /// CLGeocoder is throttled and cached (§4.2).
         public let minIntervalS: Double
         /// Coordinates round to this grid for cache lookups (~110 m at 0.001°).
         public let cachePrecisionDeg: Double
+
+        public init(minIntervalS: Double, cachePrecisionDeg: Double) {
+            self.minIntervalS = minIntervalS
+            self.cachePrecisionDeg = cachePrecisionDeg
+        }
 
         enum CodingKeys: String, CodingKey {
             case minIntervalS = "min_interval_s"
@@ -154,31 +201,29 @@ public struct TrackingConfig: Decodable, Equatable {
         /// Adaptive sampling table (§2.3).
         public let walk: SamplingPolicy
         public let vehicles: Vehicles
-    }
-
-    public struct Export: Decodable, Equatable {
-        /// Recap video pipeline tunables (§4.5).
-        public let targetDurationS: Double
-        public let fps: Int
-        public let stopHoldS: Double
-        public let gifFps: Int
-        public let gifWidthPx: Int
+        /// Watchdog for silent background-session death (2026-07-19 drive: iOS
+        /// suspended the app ~10 s after a region-exit wake, losing 32 min). A
+        /// delivery gap this long while tracking presumes the standard location
+        /// session dead and restarts it on the next significant-change fix.
+        public let recoveryGapS: Double
 
         enum CodingKeys: String, CodingKey {
-            case targetDurationS = "target_duration_s"
-            case fps
-            case stopHoldS = "stop_hold_s"
-            case gifFps = "gif_fps"
-            case gifWidthPx = "gif_width_px"
+            case walk, vehicles
+            case recoveryGapS = "recovery_gap_s"
         }
     }
+
+    // `Export` lives in TrackingConfigExport.swift — the §4.5 block carries the
+    // recap's whole pacing model and both files stay inside the size budget.
 
     public let schemaVersion: Int
     public let filter: Filter
     public let segmentation: Segmentation
     public let dwell: Dwell
     public let simplify: Simplify
+    public let matching: Matching
     public let photos: Photos
+    public let photoImport: Import
     public let geocode: Geocode
     public let trip: Trip
     public let sampling: Sampling
@@ -186,7 +231,8 @@ public struct TrackingConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, photos, geocode, trip, sampling, export
+        case filter, segmentation, dwell, simplify, matching, photos, geocode, trip, sampling, export
+        case photoImport = "import"
     }
 }
 

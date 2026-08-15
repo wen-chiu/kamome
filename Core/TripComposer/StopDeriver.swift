@@ -60,9 +60,12 @@ public enum StopDeriver {
                 if let previous,
                    point.ts - previous.ts >= config.gapMinS,
                    Geo.distanceM(latA: previous.lat, lonA: previous.lon, latB: point.lat, lonB: point.lon) <= config.radiusM {
+                    // Silence is how we found it, not what happened — the
+                    // phone sat somewhere, so the kind is a plain dwell.
                     stops.append(TrackingEngine.Stop(
                         lat: previous.lat, lon: previous.lon,
-                        arrivedAt: previous.ts, departedAt: point.ts
+                        arrivedAt: previous.ts, departedAt: point.ts,
+                        kind: .dwell
                     ))
                 }
                 previous = point
@@ -89,7 +92,8 @@ public enum StopDeriver {
             // Pin the stop where the walk began — that's where the car is.
             stops.append(TrackingEngine.Stop(
                 lat: first.lat, lon: first.lon,
-                arrivedAt: segment.startedAt, departedAt: endedAt
+                arrivedAt: segment.startedAt, departedAt: endedAt,
+                kind: .walkVisit
             ))
         }
         return stops

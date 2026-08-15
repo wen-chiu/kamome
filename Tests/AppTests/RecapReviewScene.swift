@@ -1,0 +1,188 @@
+import CoreGraphics
+import ImageIO
+@testable import Kamome
+import KamomeConfig
+import KamomeExportEngine
+import UniformTypeIdentifiers
+
+/// Everything a **manual review render** needs, built once: a real imported trip
+/// (photos → legs → OSRM reconstruction), its timeline, the live MapLibre
+/// souvenir map, and a photo resolver over real photographs.
+///
+/// Shared by the two review harnesses so they differ only in what they *do* with
+/// the scene — `RecapStopStillTests` writes one frame, `RecapPilotFilmTests`
+/// encodes the opening minute. Neither is a CI test; both are env-gated.
+///
+/// Real photographs matter: a synthetic gradient tile cannot tell you whether a
+/// white keyline and a drop shadow read as a photo card, or whether a deck's
+/// cross-fade reads as one place. Point `KAMOME_STOP_PHOTOS` at a folder of
+/// images and they are dealt across the trip's photo slots in filename order.
+struct RecapReviewScene {
+    enum SetupError: Error, CustomStringConvertible {
+        case noRegion
+
+        var description: String {
+            "no installed map region covers the trip — set TEST_RUNNER_KAMOME_TILES_PATH"
+        }
+    }
+
+    let trip: RecapTrip
+    let config: TrackingConfig.Export
+    let timeline: LinearTimeline
+    let compositor: FrameCompositor
+    let provider: MapRenderer
+
+    static func make(fixture: String) async throws -> RecapReviewScene {
+        let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture)
+        adoptTilesPathForTerrain()
+        guard let bounds = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }),
+              let region = RecapMapRegionResolver.resolve(covering: bounds) else { throw SetupError.noRegion }
+        print("KAMOME_REVIEW region \(region.tilesURL.lastPathComponent) · terrain "
+            + (region.terrainURL?.lastPathComponent ?? "NONE — the map will be flat"))
+        let establishing = RecapBounds(
+            minLat: region.bounds.minLat, minLon: region.bounds.minLon,
+            maxLat: region.bounds.maxLat, maxLon: region.bounds.maxLon
+        )
+        guard let timeline = LinearTimeline(trip: trip, config: config, establishing: establishing) else {
+            throw SetupError.noRegion
+        }
+
+        let style = RecapStyle.modernMinimal.withEndCard(config.endCardStyle)
+        return RecapReviewScene(
+            trip: trip, config: config, timeline: timeline,
+            compositor: FrameCompositor(
+                timeline: timeline,
+                subject: VehicleSubjectRenderer.make(style: style),
+                overlay: RecapOverlayRenderer(style: style, resolver: try Self.resolver(for: trip)),
+                style: style,
+                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+            ),
+            provider: try Self.provider(region: region)
+        )
+    }
+
+    /// Terrain lives behind its **own** environment variable, and every review
+    /// render made before 2026-07-31 silently had no hillshade because only the
+    /// tiles path was ever set. A missing DEM does not fail — it just renders a
+    /// flat map, which reads as a styling regression rather than as a forgotten
+    /// variable, so it can go unnoticed for weeks.
+    ///
+    /// A reviewer who supplied tiles wants terrain: point it at the same data root
+    /// (`…/kamome-osrm/tiles` → `…/kamome-osrm`, whose `terrain/` folder the
+    /// lookup now also scans). Explicit settings are never overridden, and the
+    /// resolved DEM is printed either way, so a flat render says so out loud.
+    private static func adoptTilesPathForTerrain() {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["KAMOME_TERRAIN_PATH"]?.isEmpty ?? true,
+              let tiles = environment["KAMOME_TILES_PATH"], !tiles.isEmpty else { return }
+        let root = URL(fileURLWithPath: tiles).deletingLastPathComponent()
+        setenv("KAMOME_TERRAIN_PATH", root.path, 1)
+    }
+
+    /// One composited frame at `time`, over a fresh snapshot at the timeline's own
+    /// camera — the same path the exporter takes, minus the keyframe cache.
+    func frame(at time: Double) async throws -> CGImage {
+        let camera = timeline.cameraFrame(atTime: time)
+        let background = try await provider.snapshot(
+            camera, map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+        )
+        return try compositor.render(atTime: time, background: RecapBackground(current: background))
+    }
+
+    // MARK: - Construction
+
+    private static func provider(region: RecapMapRegion) throws -> MapRenderer {
+        #if canImport(MapLibre)
+        return MapLibreSnapshotProvider(styleURL: try RecapMapStyle.resolvedStyleURL(
+            styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL, terrainURL: region.terrainURL
+        ))
+        #else
+        return MapKitSnapshotProvider()
+        #endif
+    }
+
+    private struct FolderResolver: RecapPhotoResolving {
+        let images: [String: CGImage]
+        func image(for ref: PhotoRef, targetPx: Int) -> CGImage? {
+            if case let .asset(id) = ref { return images[id] }
+            return nil
+        }
+    }
+
+    /// **Matched by filename first** (2026-08-02). `exif-to-fixture.sh` writes each
+    /// photo's own basename as its id, so a fixture dumped from a real folder can
+    /// show each stop the photographs actually taken there — which is the whole
+    /// point of a Stage 1 "is this worth publishing?" judgement. Dealing images
+    /// round-robin puts a mountain on a harbour and tells you nothing.
+    ///
+    /// Falls back to dealing in filename order for hand-written fixtures, whose
+    /// ids are labels like `tek-1` rather than files, and to a generated tile when
+    /// there are no real photos at all.
+    private static func resolver(for trip: RecapTrip) throws -> RecapPhotoResolving {
+        let files = photoFiles()
+        if files.isEmpty { print("KAMOME_REVIEW no real photos — set KAMOME_STOP_PHOTOS for a truthful render") }
+        let byName = Dictionary(files.map { ($0.lastPathComponent, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var images: [String: CGImage] = [:]
+        var matched = 0
+        for (index, ref) in trip.stops.flatMap(\.photos).enumerated() {
+            guard case let .asset(id) = ref else { continue }
+            if let exact = byName[id], let image = load(exact) {
+                images[id] = image
+                matched += 1
+                continue
+            }
+            let dealt = files.isEmpty ? nil : load(files[index % files.count])
+            images[id] = try dealt ?? photoTile(index: index)
+        }
+        if !files.isEmpty {
+            print("KAMOME_REVIEW deck photos: \(matched)/\(images.count) matched by filename"
+                + (matched == images.count ? "" : " — the rest dealt in order"))
+        }
+        return FolderResolver(images: images)
+    }
+
+    private static func photoFiles() -> [URL] {
+        guard let path = ProcessInfo.processInfo.environment["KAMOME_STOP_PHOTOS"] else { return [] }
+        let contents = try? FileManager.default.contentsOfDirectory(
+            at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil
+        )
+        return (contents ?? [])
+            .filter { ["jpg", "jpeg", "png", "heic"].contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+    }
+
+    private static func load(_ url: URL) -> CGImage? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    }
+
+    /// The fallback "photo": a flat gradient, so a render made without real images
+    /// is obviously a layout check and not a look check.
+    private static func photoTile(index: Int) throws -> CGImage {
+        let side = 900
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(
+                  data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
+                  space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else { throw SetupError.noRegion }
+        let hue = CGFloat(index % 5) / 5
+        if let gradient = CGGradient(colorsSpace: space, colors: [
+            CGColor(srgbRed: 0.25 + hue * 0.5, green: 0.45, blue: 0.7 - hue * 0.4, alpha: 1),
+            CGColor(srgbRed: 0.12 + hue * 0.25, green: 0.22, blue: 0.35 - hue * 0.2, alpha: 1)
+        ] as CFArray, locations: [0, 1]) {
+            context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: side, y: side), options: [])
+        }
+        guard let image = context.makeImage() else { throw SetupError.noRegion }
+        return image
+    }
+
+    // MARK: - Output
+
+    static func outputDirectory() -> URL {
+        if let override = ProcessInfo.processInfo.environment["KAMOME_RENDER_OUT"] {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
+        return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-review", isDirectory: true)
+    }
+}

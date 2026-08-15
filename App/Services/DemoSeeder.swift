@@ -31,7 +31,15 @@ enum DemoSeeder {
     ]
 
     static func seedIfRequested(repository: TripRepository) {
-        guard ProcessInfo.processInfo.arguments.contains("-demo-seed") else { return }
+        if ProcessInfo.processInfo.arguments.contains("-demo-seed") {
+            seedRecorded(repository: repository)
+        }
+        if ProcessInfo.processInfo.arguments.contains("-demo-seed-import") {
+            seedImported(repository: repository)
+        }
+    }
+
+    private static func seedRecorded(repository: TripRepository) {
         guard (try? repository.allTrips().isEmpty) == true else { return }
 
         // Final stop's window straddles "now": library photos land there.
@@ -80,6 +88,61 @@ enum DemoSeeder {
         ) else { return }
 
         decorate(tripId: tripId, driveS: end - start - dwellTotalS, repository: repository)
+    }
+
+    /// Seeds a deterministic **imported_photos** trip (`-demo-seed-import`) so
+    /// the honest-provenance UI — the S1 "相片重建" badge and the S3 provenance
+    /// note (§3) — renders in the real app without a PhotoKit grant (which
+    /// simctl cannot pre-answer on iOS 26). Mirrors the shape `ImportService`
+    /// writes: one `exif` drive segment carrying the coarse route, stops with
+    /// photos attached by construction. Photo refs dangle (asset ids resolve to
+    /// nothing) — thumbnails take the graceful-placeholder path; badges/labels
+    /// are the point.
+    private static func seedImported(repository: TripRepository) {
+        guard (try? repository.allTrips().isEmpty) == true else { return }
+
+        let end = Date.now.addingTimeInterval(15 * 60).timeIntervalSince1970
+        let start = end - 6.5 * 3600
+        let stepS = (end - start) / Double(route.count - 1)
+
+        let points = route.enumerated().map { offset, coord in
+            TripRepository.NewTrackpoint(ts: start + Double(offset) * stepS, lat: coord.lat, lon: coord.lon)
+        }
+        let segment = TripRepository.NewSegment(
+            mode: "drive", startedAt: start, endedAt: end,
+            points: points, source: SegmentSource.exif.rawValue
+        )
+
+        let stopsWithPhotos = stopInfo.enumerated().map { stopOffset, info -> TripRepository.NewStopWithPhotos in
+            let arrive = start + Double(info.index) * stepS
+            return TripRepository.NewStopWithPhotos(
+                stop: TripRepository.NewStop(
+                    lat: route[info.index].lat, lon: route[info.index].lon,
+                    arrivedAt: arrive, departedAt: arrive + info.dwellMin * 60
+                ),
+                photos: (0..<2).map { TripRepository.NewPhoto(assetId: "demo-import-\(stopOffset)-\($0)") }
+            )
+        }
+
+        guard let tripId = try? repository.saveImportedTrip(
+            TripRepository.ImportedTrip(
+                title: "South West WA (from photos)",
+                startedAt: start, endedAt: end,
+                source: TripSource.importedPhotos.rawValue,
+                segments: [segment], stopsWithPhotos: stopsWithPhotos,
+                routeAttachedPhotos: []
+            )
+        ) else { return }
+
+        if let detail = try? repository.detail(tripId: tripId), detail.stops.count == stopInfo.count {
+            for (record, info) in zip(detail.stops, stopInfo) {
+                try? repository.setStopName(stopId: record.id, name: info.name)
+            }
+        }
+        let stats = TripStats(distanceM: 271_000, driveS: end - start, walkS: 0, stopCount: stopInfo.count, topSpeedKmh: 96)
+        if let json = stats.jsonString() {
+            try? repository.updateTripStats(tripId: tripId, statsJson: json)
+        }
     }
 
     /// Stop names, photo refs, and stats — everything S3 shows beyond geometry.

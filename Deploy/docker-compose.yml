@@ -1,0 +1,84 @@
+# Kamome self-hosted routing. The same file runs on a laptop and on a VPS —
+# that is the point (Chiu 2026-07-29: local now, Hetzner later, minimal change).
+#
+#   Local (home Wi-Fi, no TLS, no public exposure):
+#     cd Deploy && docker compose up -d
+#
+#   VPS (adds the TLS reverse proxy):
+#     cd Deploy && docker compose --profile public up -d
+#
+# The difference between the two is which port OSRM is published on and whether
+# Caddy runs. Nothing about the dataset or the app changes.
+services:
+  osrm:
+    image: osrm/osrm-backend
+    container_name: kamome-osrm
+    restart: unless-stopped
+    # Bound to the host interface so a phone on the same Wi-Fi can reach it, and
+    # deliberately NOT to 0.0.0.0 on a public box — there the `public` profile's
+    # Caddy is the only thing that should be listening outward.
+    ports:
+      - "${OSRM_BIND:-0.0.0.0}:${OSRM_PORT:-5100}:5000"
+    volumes:
+      - "${KAMOME_DATA_DIR:-${HOME}/kamome-osrm}:/data"
+    command: >
+      osrm-routed --algorithm mld
+      --max-matching-size ${OSRM_MAX_MATCHING_SIZE:-1000}
+      --max-viaroute-size ${OSRM_MAX_VIAROUTE_SIZE:-500}
+      /data/kamome-merged.osrm
+    healthcheck:
+      # Reykjavík: inside the merged extract, so a healthy container also proves
+      # the dataset actually loaded rather than just that the process is up.
+      #
+      # Probed with bash's /dev/tcp rather than curl or wget: the
+      # osrm/osrm-backend image ships **neither** (nor nc, nor python), so the
+      # obvious healthcheck can never run and the container sits permanently
+      # "unhealthy" while serving traffic perfectly. A check that always fails is
+      # worse than none — it trains you to ignore the signal, and on a host with
+      # restart-on-unhealthy it can cause a restart loop under a working service.
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/5000 &&
+          printf 'GET /nearest/v1/driving/-21.94,64.15 HTTP/1.0\r\n\r\n' >&3 &&
+          grep -q '"code":"Ok"' <&3
+      interval: 30s
+      # 10s, not 5: OSRM holds the connection open after answering, so the probe
+      # blocks until its keep-alive window closes — measured at ~5.1s, which sat
+      # exactly on a 5s timeout and reported a working service as unhealthy.
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Only starts with `--profile public`. Checked in now so the TLS story is
+  # settled before the migration rather than improvised during it (Chiu
+  # 2026-07-29); it does nothing on a local run.
+  caddy:
+    image: caddy:2-alpine
+    container_name: kamome-caddy
+    restart: unless-stopped
+    profiles: ["public"]
+    depends_on: [osrm]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Caddy gets a certificate for this name automatically; it must already
+      # resolve to the box's public IP. Set it in Deploy/.env before using the
+      # public profile — Caddy refuses to start on an empty site address, which
+      # is the failure you want rather than a certificate for nothing.
+      #
+      # Deliberately NOT `${OSRM_DOMAIN:?...}`: Compose interpolates the whole
+      # file before it applies profiles, so a required-variable check here fails
+      # `docker compose up` locally even though this service never starts.
+      OSRM_DOMAIN: "${OSRM_DOMAIN:-}"
+    volumes:
+      - "./Caddyfile:/etc/caddy/Caddyfile:ro"
+      - "caddy-data:/data"
+      - "caddy-config:/config"
+
+volumes:
+  caddy-data:
+  caddy-config:

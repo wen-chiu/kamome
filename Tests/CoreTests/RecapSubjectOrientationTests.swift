@@ -1,0 +1,107 @@
+import CoreGraphics
+import KamomeConfig
+import KamomeExportEngine
+import XCTest
+
+/// The subject-orientation contract after the north-up reversal (Chiu
+/// 2026-07-25): the **map never turns** — a rotating map hides the route's real
+/// shape and the distance covered, which is what a travel recap exists to show —
+/// so the *vehicle* carries the heading. The car is an 8-direction sprite set and
+/// the renderer picks the nearest bucket; nothing is rotated at runtime.
+final class RecapSubjectOrientationTests: RecapRenderTestCase {
+    // MARK: - Bucket selection
+
+    func testBearingsSnapToTheNearestOfEightDirections() {
+        let cases: [(bearing: Double, expected: SpriteDirection)] = [
+            (0, .north), (22, .north), (23, .northEast), (45, .northEast), (67, .northEast), (68, .east),
+            (90, .east), (135, .southEast), (180, .south), (225, .southWest), (270, .west), (315, .northWest),
+            // The nw bucket runs to 337.5°, so 337 is still nw and 338 is north.
+            (337, .northWest), (338, .north), (350, .north), (359.9, .north)
+        ]
+        for (bearing, expected) in cases {
+            XCTAssertEqual(
+                SpriteDirection.nearest(toBearing: bearing), expected,
+                "\(bearing)° should select \(expected.rawValue)"
+            )
+        }
+    }
+
+    func testBucketSelectionWrapsAroundTheCompass() {
+        // Negative and over-360 bearings normalize rather than crash or clamp.
+        XCTAssertEqual(SpriteDirection.nearest(toBearing: -45), .northWest)
+        XCTAssertEqual(SpriteDirection.nearest(toBearing: -90), .west)
+        XCTAssertEqual(SpriteDirection.nearest(toBearing: 405), .northEast)
+        XCTAssertEqual(SpriteDirection.nearest(toBearing: 720), .north)
+    }
+
+    func testEveryDirectionDeclaresItsOwnBearingAndShipsAnImage() throws {
+        let set = try XCTUnwrap(RecapCarSprite.set, "all eight car sprites must be bundled")
+        XCTAssertEqual(set.count, 8)
+        for direction in SpriteDirection.allCases {
+            XCTAssertNotNil(set[direction], "missing sprite for \(direction.rawValue)")
+            XCTAssertEqual(SpriteDirection.nearest(toBearing: direction.degrees), direction)
+        }
+        // A shared canvas size keeps the car from pulsing as it turns.
+        let sizes = Set(SpriteDirection.allCases.map { "\(set[$0]!.width)x\(set[$0]!.height)" })
+        XCTAssertEqual(sizes.count, 1, "all eight drawings must share one canvas size")
+    }
+
+    // MARK: - Rendering
+
+    /// The heading is expressed by *which* drawing is chosen: headings in
+    /// different buckets must render differently, and headings inside one bucket
+    /// must render identically — no interpolation, no continuous rotation.
+    func testHeadingSelectsTheDrawingWithoutRotatingIt() throws {
+        func draw(heading: Double) throws -> Data {
+            let context = try XCTUnwrap(CGContext(
+                data: nil, width: widthPx, height: heightPx, bitsPerComponent: 8, bytesPerRow: 0,
+                space: try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB)),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ))
+            let surface = RenderSurface(
+                context: context, widthPx: widthPx, heightPx: heightPx, scale: CGFloat(widthPx) / 1080
+            ) { _, _ in CGPoint(x: self.widthPx / 2, y: self.heightPx / 2) }
+            VehicleSubjectRenderer.make(style: RecapStyle()).render(
+                SubjectState(lat: -32, lon: 115.75, heading: heading),
+                camera: CameraFrame(centerLat: -32, centerLon: 115.75, spanM: 1500, bearing: 0),
+                into: surface
+            )
+            return try XCTUnwrap(pixels(try XCTUnwrap(context.makeImage())).data as Data?)
+        }
+
+        // Same bucket → the very same drawing, pixel for pixel.
+        XCTAssertEqual(try draw(heading: 0), try draw(heading: 20), "20° is still the north drawing")
+        XCTAssertEqual(try draw(heading: 90), try draw(heading: 100), "100° is still the east drawing")
+        // Different buckets → different drawings.
+        let byBucket = try SpriteDirection.allCases.map { try draw(heading: $0.degrees) }
+        XCTAssertEqual(Set(byBucket).count, 8, "each of the eight headings must render its own drawing")
+    }
+
+    /// North-up means screen-up is always north, whatever way the trip runs — so
+    /// the traveled trail lies in the route's true compass direction rather than
+    /// always falling below the car. This is the invariant that replaced
+    /// heading-up's "trail is always below".
+    func testNorthUpKeepsTheMapFixedSoTheTrailFollowsTheCompass() async throws {
+        let config = exportConfig()
+        XCTAssertFalse(config.followHeadingUp, "the shipped config keeps the map north-up")
+        let centerX = widthPx / 2, centerY = heightPx / 2
+        let clear = vehicleHalfPx + 20
+
+        // Northbound: travelled ground lies to the south — below on screen.
+        let north = try makeTimeline(makeTrip(config: config), config: config)
+        let northFrame = try await renderFrame(
+            north, makeCompositor(north), at: config.targetDurationS / 2, config: config
+        )
+        try assertPixel(northFrame, col: centerX, row: centerY + clear, is: routeRGB, "north: trail lies south")
+        try assertPixel(northFrame, col: centerX, row: centerY - clear, is: backgroundRGB, "north: nothing north yet")
+
+        // Eastbound: travelled ground lies to the west — to the *left*, not below.
+        let eastRoute = (0...10).map { RecapCoordinate(lat: -32.0, lon: 115.75 + Double($0) * 0.0009) }
+        let east = try makeTimeline(makeTrip(route: eastRoute, config: config), config: config)
+        let eastFrame = try await renderFrame(
+            east, makeCompositor(east), at: config.targetDurationS / 2, config: config
+        )
+        try assertPixel(eastFrame, col: centerX - clear, row: centerY, is: routeRGB, "east: trail lies west")
+        try assertPixel(eastFrame, col: centerX + clear, row: centerY, is: backgroundRGB, "east: nothing east yet")
+    }
+}

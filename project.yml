@@ -11,6 +11,13 @@ options:
 packages:
   KamomeCore:
     path: .
+  # Recap base-map substrate (spec §4.5 step 2; ADR 2026-07-19). MapLibre is
+  # confined to App/Services/MapLibreSnapshotProvider.swift — the only file that
+  # imports it (CI grep gate). Pinned exactly: golden-frame CI must be
+  # reproducible, and a floating map SDK is not.
+  MapLibre:
+    url: https://github.com/maplibre/maplibre-gl-native-distribution
+    exactVersion: 6.27.0
 
 targets:
   Kamome:
@@ -21,6 +28,13 @@ targets:
       - UI
       - path: Config/TrackingConfig.json
         buildPhase: resources
+      # Recap theme style JSON (§4.5 step 2 substrate). functional-base is the
+      # §2 substrate; modern-minimal is the §3 DRAFT (not signed off — MapKit
+      # stays the shipping base map until Chiu's design review clears it).
+      - path: Config/RecapThemes/functional-base.json
+        buildPhase: resources
+      - path: Config/RecapThemes/modern-minimal.json
+        buildPhase: resources
     dependencies:
       - package: KamomeCore
         product: KamomePersistence
@@ -30,6 +44,14 @@ targets:
         product: KamomeTrackingEngine
       - package: KamomeCore
         product: KamomeTripComposer
+      - package: KamomeCore
+        product: KamomeExportEngine
+      - package: KamomeCore
+        product: KamomeRouteMatching
+      - package: KamomeCore
+        product: KamomeImportKit
+      - package: MapLibre
+        product: MapLibre
     info:
       path: App/Info.plist
       properties:
@@ -43,9 +65,33 @@ targets:
         NSMotionUsageDescription: Motion data tells driving from walking so Kamome can save battery while recording.
         NSPhotoLibraryUsageDescription: Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded.
         UIBackgroundModes: [location]
+        # Map-region side-load for the Replay MVP dogfood gate (PD-7,
+        # Docs/dogfood-infrastructure.md): a `.pmtiles` region is dragged into
+        # the app's Documents folder over Finder, so the three gate trips can be
+        # given tiles without a rebuild and without bloating the binary. Tile
+        # provisioning proper is a backend problem (spec P7); this is the
+        # deliberately boring stand-in until it exists.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        # Reaching the dogfood OSRM, which runs on the developer's Mac over home
+        # Wi-Fi (`Docs/dogfood-infrastructure.md`). Two separate iOS gates stand
+        # between a device build and `http://192.168.x.x:5100`, and both fail
+        # quietly — the request just errors, and PD-2 then renders every leg
+        # dashed with nothing saying why.
+        #
+        # `NSAllowsLocalNetworking` is the *narrow* ATS exemption: it permits
+        # cleartext only to private-range IPs, `.local`, and unqualified
+        # hostnames. Public HTTP stays blocked, which is why this is not
+        # `NSAllowsArbitraryLoads`. Production routing is HTTPS behind Caddy
+        # (spec P7), and this key costs nothing then.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Kamome reconstructs your route using a routing service you run on your own computer. It is only contacted while you import or export a trip, and only on your local network.
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).
+        DEVELOPMENT_TEAM: B9U326WRA4
+        CODE_SIGN_STYLE: Automatic
         PRODUCT_BUNDLE_IDENTIFIER: com.chiu.kamome.dev
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1

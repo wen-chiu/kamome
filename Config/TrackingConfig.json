@@ -23,8 +23,28 @@
   "simplify": {
     "epsilon_m": 15
   },
+  "matching": {
+    "base_url": "",
+    "chunk_size": 100,
+    "confidence_min": 0.5,
+    "radius_m": 25,
+    "timeout_s": 10,
+    "display_epsilon_m": 5,
+    "route_max_detour_ratio": 2.5,
+    "route_waypoint_min_spacing_m": 250,
+    "route_waypoint_radius_m": 500
+  },
   "photos": {
     "match_radius_m": 300
+  },
+  "import": {
+    "stop_radius_m": 4000,
+    "stop_split_gap_s": 10800,
+    "min_photos_per_stop": 2,
+    "deck_min_photos": 3,
+    "deck_max_photos": 8,
+    "pace_unknowable_gap_s": 14400,
+    "default_range_days": 7
   },
   "geocode": {
     "min_interval_s": 2,
@@ -35,22 +55,44 @@
     "min_distance_m": 100
   },
   "sampling": {
-    "walk": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 },
+    "recovery_gap_s": 60,
+    "walk": {
+      "desired_accuracy": "nearest_ten_meters",
+      "distance_filter_m": 10
+    },
     "vehicles": {
       "car": {
         "fast_min_kmh": 20,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 50 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 50
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 20
+        }
       },
       "scooter": {
         "fast_min_kmh": 15,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 30 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 15 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 30
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 15
+        }
       },
       "bicycle": {
         "fast_min_kmh": 12,
-        "fast": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 20 },
-        "slow": { "desired_accuracy": "nearest_ten_meters", "distance_filter_m": 10 }
+        "fast": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 20
+        },
+        "slow": {
+          "desired_accuracy": "nearest_ten_meters",
+          "distance_filter_m": 10
+        }
       }
     }
   },
@@ -58,7 +100,60 @@
     "target_duration_s": 30,
     "fps": 30,
     "stop_hold_s": 1.5,
+    "max_hold_fraction": 0.6,
     "gif_fps": 12,
-    "gif_width_px": 480
+    "gif_width_px": 480,
+    "frame_width_px": 1080,
+    "frame_height_px": 1920,
+    "camera_span_m": 1500,
+    "wide_span_padding": 1.5,
+    "target_zoom_ratio": 2.5,
+    "zoom_transition_s": 2.5,
+    "act_split_km": 25,
+    "follow_heading_up": false,
+    "camera_pan_window_fraction_per_s": 0.35,
+    "camera_dead_zone_fraction": 0.4,
+    "camera_safe_zone_fraction": 0.8,
+    "camera_responsiveness": 12.0,
+    "end_reveal_s": 2.5,
+    "end_reveal_padding": 1.9,
+    "end_card_style": "full",
+    "deck_photo_hold_s": 2.5,
+    "deck_photo_min_hold_s": 1.0,
+    "deck_zoom_s": 0.5,
+    "deck_label_lead_s": 0.6,
+    "subject_park_s": 0.4,
+    "opening_country_s": 3.0,
+    "opening_regional_s": 1.0,
+    "country_view_padding": 2.2,
+    "opening_collapse_zoom_ratio": 1.25,
+    "opening_collapse_drift_fraction": 0.15,
+    "first_stop_dwell_scale": 0.55,
+    "stop_dwell_min_s": 6,
+    "stop_dwell_max_s": 25,
+    "total_duration_min_s": 60,
+    "total_duration_max_s": 90,
+    "keyframe_interval_frames": 15,
+    "title_card_s": 3.0,
+    "end_card_s": 3.0,
+    "video_bitrate_mbps": 5,
+    "stop_weighting_enabled": false,
+    "waypoint_max_photos": 2,
+    "waypoint_max_dwell_s": 900,
+    "waypoint_hold_s": 0.8,
+    "uncapped_photo_hold_s": 1.0,
+    "allocation_zero_share": 0.4,
+    "allocation_one_share": 0.3,
+    "allocation_two_share": 0.2,
+    "allocation_max_photos": 3,
+    "favorite_weight": 3.0,
+    "tier_top_share": 0.15,
+    "tier_standard_photos": 3,
+    "tier_top_photos": 5,
+    "earned_stops_floor": 8,
+    "earned_stops_cap": 21,
+    "earned_stops_per_doubling": 7.0,
+    "earned_stops_reference_trip_stops": 10,
+    "recap_mode": "highlight"
   }
 }

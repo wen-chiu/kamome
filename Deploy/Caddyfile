@@ -1,0 +1,48 @@
+# TLS reverse proxy in front of OSRM. Inactive locally — it only runs under
+# `docker compose --profile public up`. Checked in now so the migration is a
+# config change rather than a design session (Chiu 2026-07-29).
+#
+# Why this exists at all: OSRM has no authentication, no rate limiting and no
+# request budget. Published directly it is someone else's free routing service,
+# and iOS App Transport Security blocks plain HTTP from the app anyway, so a
+# public deployment needs TLS regardless.
+
+{$OSRM_DOMAIN} {
+	# Let's Encrypt certificate is issued and renewed automatically.
+	encode gzip
+
+	# Only the two endpoints the app actually calls. OSRM also exposes /table,
+	# /trip and /tile, which are far more expensive per request and which Kamome
+	# never uses — an open /table is the cheapest way to get a box melted.
+	@kamome path /route/v1/* /match/v1/* /nearest/v1/*
+	handle @kamome {
+		reverse_proxy osrm:5000
+	}
+
+	handle {
+		respond "not found" 404
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLANNED, NOT YET ACTIVE — shared-token auth.
+#
+# Tracked in Docs/handoff-P3.5.md ("VPS migration — deferred security work").
+# The app does NOT send this header today: OSRMMatchProvider.swift and
+# OSRMRouteProvider.swift both build a bare URLRequest. Enabling the block below
+# without changing those two files will break every route and match request,
+# and every leg will silently render dashed/inferred — which looks exactly like
+# a routing failure rather than an auth failure.
+#
+# Turn both on in the same change:
+#
+#	@unauthorized not header X-Kamome-Token "{$KAMOME_OSRM_TOKEN}"
+#	respond @unauthorized 403
+#
+# Until then, keep the hostname unpublished and rely on it being unguessable.
+# ─────────────────────────────────────────────────────────────────────────────
