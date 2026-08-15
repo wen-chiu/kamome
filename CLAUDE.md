@@ -124,26 +124,69 @@ spec header v1.6 ("stories you can relive and share"). Forward directions
 recorded: photo-EXIF import first (prototype IS that importer, §4.7), video
 "beads" (auto-trim 2–3 s, muted), beat-synced royalty-free music.
 
-## Current phase: 3.5 = **Replay MVP** (spec §7) — current item: **§6 three-trip gate; camera/legibility work CLOSED 2026-08-02**
+## Current phase: **4 — films worth keeping.** Phase 3.5 CLOSED 2026-08-15
 
-**Read `Docs/handoff-P3.5.md` before doing anything** — the Replay MVP work
-order. §1 Photo EXIF Import ✅, §2 MapLibre substrate ✅, §3 base-map substrate ✅,
-§4/§5 camera + stop presentation ✅ (2026-08-02). **§6 is the remaining item**, and
-`Docs/gate-P3.5-checklist.md` is the runbook.
+**Phase 3.5 (Replay MVP) is closed.** §1–§5 all landed; **§6a passed** (three real
+trips, three films Chiu wants to keep, one published, community feedback good);
+**§6b did NOT pass** and its six unmet items moved to Phase 2 (App Store release).
+Closing ADR: `Docs/decisions.md` 2026-08-15. Do not reopen 3.5 to finish §6b —
+those items have a new home.
 
-### ⚠️ Two blockers stand in front of §6 (diagnosed 2026-08-01, NOT fixed)
+### 🔴 P0, above everything — the app died on someone else's device (2026-08-15)
 
-Both are invisible on the committed fixtures and only appear on real data, so the
-desk stages pass with them present. **Fix before spending an iPhone sitting** —
-details and suggested shapes in the checklist's "Blocking dev work" section.
+The first person other than Chiu to install Kamome could not use it: with a large
+photo library the app dies outright, and date selection misbehaves. **This is the
+first outside signal the product has ever received and it takes priority over all
+planned work.** Leading hypothesis is a build shipped with a LAN `matching.base_url`
+that does not resolve on their network — `matchTrip` awaits legs sequentially, so
+more photos means more stops, more legs, and more back-to-back timeouts. Not
+confirmed. Diagnose before fixing; the fixes differ completely.
 
-1. **Multi-day trips type every inter-day leg `.walk`** — `ImportService.mode`
-   divides distance by wall-clock gap, so an overnight gap implies walking pace;
-   walks are never routed, so the leg stays a dashed straight line. 7 of 9 legs
-   on the real NZ trip. Fails the gate's "no mountain-crossing straight line".
-2. **iCloud-optimised photos resolve to empty grey cards** —
-   `PhotoLibraryPhotoResolver` sets `isNetworkAccessAllowed = false`. EXIF import
-   still works (metadata needs no download), so this survives every desk stage.
+⚠️ That device belongs to someone else. Read only what identifies the failure;
+**never copy their photographs, place names, coordinates or identifiers into this
+repo** — §0's reasoning applies at least as strongly to a third party.
+
+### Phase 4 scope (Chiu 2026-08-15)
+
+Chosen over productisation deliberately: *"方便的產品都沒有這是足夠好的作品更吸引
+人"* — a good enough artefact matters more than a convenient product, so the films
+come first and export convenience is discussed after.
+
+1. **Measure, then survive** — one device export on MapLibre with tiles actually
+   installed (never once measured), then background/no-sleep execution so an
+   export cannot be killed by locking the phone.
+2. **Vehicle sprites** — community-requested, and the prerequisite for the
+   cross-region plane/ship/seagull.
+3. **Map labels** — **still iceboxed**, unlocked only if the measurement in (1)
+   says so. Tangled with tile provisioning, see below.
+4. **Cross-region journeys** — `Docs/cross-region-journeys.md`.
+
+### What the export numbers actually said (2026-08-15, device)
+
+| trip | frames | snapshots | export | per snapshot |
+|---|---:|---:|---:|---:|
+| Miyakojima | 4,065 | 271 | 270 s | ≈1.0 s |
+| New Zealand | 4,635 | 309 | 600+ s | ≈1.9 s |
+
+**Export time ≈ snapshot count × snapshot cost; nothing else is the bottleneck.**
+Both films ran on Apple Maps, so every snapshot was an `MKMapSnapshotter` **network
+fetch**. MapLibre reads local `.pmtiles` from disk, and **has never been measured on
+device** — the souvenir map may be substantially faster, not merely different.
+
+That reopens tile provisioning as a *performance* question, not only a visual one.
+The honest comparison is **one large reusable download** versus **small fetches on
+every export**, not download versus none. A user who makes one film may be better
+off on Apple's map. Regions are 3 MB (Miyakojima) to 640 MB (New Zealand).
+
+**The export also fails if the app is backgrounded or the screen sleeps.**
+
+### Two 2026-08-01 blockers — both closed
+
+1. Multi-day inter-day legs typed `.walk` — **fixed** 2026-08-02 by
+   `import.pace_unknowable_gap_s`.
+2. iCloud-optimised photos resolving to empty cards — **mitigated** (option C): the
+   resolver still downloads nothing, but the recap screen names the shortfall.
+   Option B (actually fetching originals) stays iceboxed.
 
 ### Camera architecture (rebuilt 2026-08-01 → 2026-08-02, Chiu)
 

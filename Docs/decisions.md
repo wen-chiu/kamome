@@ -1247,3 +1247,64 @@ app; how travel is paced within a Variant A film (an open experiment — see
 `HANDOFF.md`, "Pending experiment — travel pacing"); and whether Iceland stays a
 Variant A trip. None of those are settled, and none should be read out of this
 entry.
+
+## 2026-08-15 — Phase 3.5 closes: §6a passed, §6b did not, and the phase map catches up
+
+**Context.** Phase 3.5 (Replay MVP) ran from 2026-07-20. §1–§5 landed the
+machinery — photo-EXIF import, the MapLibre substrate, the Modern Minimal theme,
+the camera and stop presentation, the photo deck. §6 split into §6a (desk, Variant
+A, "is the film worth publishing") and §6b (device, Variant B, "does the app do
+this by itself") on 2026-08-13.
+
+**Decisions (owner, 2026-08-15):**
+
+1. **Phase 3.5 closes with §6a passed and §6b explicitly NOT passed.** Chiu's
+   framing: the phase's question has an answer — a journey can be reconstructed
+   from photographs into a film worth sharing, and a community liked it — while
+   the six unmet items are release conditions rather than direction-validation
+   conditions, and there is no plan to ship to the App Store yet.
+2. **§6b's unmet items move to Phase 2 (App Store release)**, which already
+   existed as the home for exactly this class of work. They are carried, not
+   waived: only two of three trips ran on device; Limited Photo Library, the S5
+   UX pass, per-trip export time, memory behaviour and crash-free export across
+   three trips were never done. **And the souvenir map has never rendered on a
+   phone** — both device films fell back to Apple Maps.
+3. **The phase map is not rewritten; it is corrected.** Phase 3.5 quietly
+   delivered the front of P4 Story Director — `StopPhotoAllocator`'s scoring and
+   selection, `earnedStopCount`, and duration that follows content are precisely
+   the "deterministic scoring/selection over trip data" P4 was defined as. P4's
+   own precondition — "only after the MVP proves films get shared" — was met when
+   Chiu published and the feedback came back good.
+4. **Phase 4 is scoped around the artefact, not the product.** Chiu chose this
+   explicitly over productisation: *"方便的產品都沒有這是足夠好的作品更吸引人."*
+   Measurement and export survivability, vehicle sprites, map labels (still
+   locked), cross-region journeys. Story Director's remaining content — hero
+   photographs, chapters, music, video beads — stays deferred.
+
+**Consequences:**
+
+- **PR #11 merges on this decision**, not on §6b. The branch had run for over a
+  hundred commits and a clean base for Phase 4 was the stated motivation.
+- **Export performance is now a first-class problem with numbers behind it.**
+  Export time is snapshot-bound (≈1.0–1.9 s per snapshot, one snapshot per
+  `keyframe_interval_frames`), both measured films ran on Apple Maps, and an
+  export dies if the app is backgrounded. The duration rule of 2026-08-13 made
+  this materially worse — Iceland went from 2,700 frames to 6,345 — which was a
+  cost visible only as arithmetic when it was approved.
+- **Tile provisioning is reopened as a performance question**, not only a visual
+  one, and stays undecided pending a device measurement of MapLibre.
+- **MapLibre labels stay iceboxed** (owner, explicitly), to be reconsidered only
+  after that measurement, because the same measurement decides both whether tiles
+  are worth their download and whether per-frame overlay labels are affordable.
+
+**What this does NOT decide.** Whether the app ships Apple Maps or the souvenir
+map; whether tiles are distributed from a server; whether labels are ever built;
+and whether Variant A becomes reachable in the app. Chiu's remark that Apple Maps
+is acceptable *because it shows place names* is recorded as evidence for that
+future discussion — the substrate ADR of 2026-08-08 is untouched and was not
+reopened.
+
+**Worth stating plainly, because a later reader will otherwise assume otherwise:**
+the films published to Chiu's community were rendered on **Apple Maps**, not on the
+souvenir map the v1.5 pivot was about. Nothing published so far demonstrates the
+MapLibre substrate.
