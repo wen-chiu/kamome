@@ -48,6 +48,7 @@ final class ImportFlowModel {
     private(set) var completedTripId: String?
 
     private let config: TrackingConfig
+    private let repository: TripRepository
     private let provider: ImportPhotoProviding
     private let service: ImportService
     private let photoService: PhotoLibraryService
@@ -59,6 +60,7 @@ final class ImportFlowModel {
         now: Date = .now
     ) {
         self.config = config
+        self.repository = repository
         provider = source
         service = ImportService(repository: repository, config: config)
         photoService = PhotoLibraryService(config: config, repository: repository)
@@ -135,6 +137,16 @@ final class ImportFlowModel {
         let photos = await provider.photos(matching: query)
         do {
             let tripId = try await service.importTrip(title: tripTitle, photos: photos)
+            // Road reconstruction starts here and is **not** waited on
+            // (2026-08-15). The trip is saved, viewable and exportable; roads
+            // arrive when they arrive, and a leg that never gets one draws
+            // dashed (PD-2). Waiting for it is what froze the first outside
+            // install — one network round trip per leg, behind a sheet whose
+            // Close button was disabled.
+            RouteMatchCoordinator.shared.start(
+                tripId: tripId,
+                service: RouteMatchService(repository: repository, matching: config.matching)
+            )
             completedTripId = tripId
         } catch {
             // The only thrown error is `notEnoughGeotaggedPhotos`; an empty

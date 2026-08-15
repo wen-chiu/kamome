@@ -64,14 +64,27 @@ public struct OSRMMatchProvider: RouteMatchProviding {
         var request = URLRequest(url: url)
         request.timeoutInterval = config.timeoutS
 
-        let (data, response) = try await transport(request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await transport(request)
+        } catch {
+            // Not a verdict about the trace — nobody answered. Named so the
+            // caller can say "try again" rather than "no road here".
+            throw RouteProviderFailure.unreachable(error.localizedDescription)
+        }
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
             // OSRM answers 400 with code "NoMatch"/"NoSegment" for unmatchable
             // traces — that is a clean "keep raw geometry", not an error.
             if let body = try? JSONDecoder().decode(Response.self, from: data), body.code != "Ok" {
                 return nil
             }
-            throw URLError(.badServerResponse)
+            if http.statusCode == 429 {
+                throw RouteProviderFailure.rateLimited(
+                    retryAfterS: http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init)
+                )
+            }
+            throw RouteProviderFailure.refused(status: http.statusCode)
         }
 
         let body = try JSONDecoder().decode(Response.self, from: data)

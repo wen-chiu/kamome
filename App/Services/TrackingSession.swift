@@ -106,10 +106,11 @@ final class TrackingSession {
                 try? repository.updateTripStats(tripId: tripId, statsJson: json)
             }
             // §4.4 matching, fire-and-forget: trip completion never waits on
-            // it, and the recap path retries any segment left unmatched.
-            let matcher = RouteMatchService(repository: repository, config: config)
-            Task.detached(priority: .utility) {
-                await matcher.matchTrip(tripId: tripId)
+            // it, and the recap path joins any run still going rather than
+            // starting a second one over the same legs.
+            let matcher = RouteMatchService(repository: repository, matching: config.matching)
+            Task { @MainActor in
+                RouteMatchCoordinator.shared.start(tripId: tripId, service: matcher)
             }
         }
 
