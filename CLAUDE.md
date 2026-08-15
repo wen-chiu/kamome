@@ -152,14 +152,36 @@ Chosen over productisation deliberately: *"方便的產品都沒有這是足夠�
 人"* — a good enough artefact matters more than a convenient product, so the films
 come first and export convenience is discussed after.
 
-1. **Measure, then survive** — one device export on MapLibre with tiles actually
-   installed (never once measured), then background/no-sleep execution so an
-   export cannot be killed by locking the phone.
-2. **Vehicle sprites** — community-requested, and the prerequisite for the
-   cross-region plane/ship/seagull.
-3. **Map labels** — **still iceboxed**, unlocked only if the measurement in (1)
-   says so. Tangled with tile provisioning, see below.
-4. **Cross-region journeys** — `Docs/cross-region-journeys.md`.
+Reordered 2026-08-15 around the first outside feedback: **nobody mentioned the
+map; the most common request was to change the vehicle.**
+
+1. **Vehicle sprites** — the top community request, and the prerequisite for the
+   cross-region plane/ship/seagull. The 8-direction technique and its art
+   constraints are in `Docs/handoff-recap-visuals.md` §3; swapping a set is
+   already a pure asset swap.
+2. **Cross-region flight display** — `Docs/cross-region-journeys.md`. Every
+   overseas trip hits this on device, because the app imports a date range from
+   the whole library while the desk fixtures were hand-curated folders.
+3. **Export that survives** — import and export must be **interruptible,
+   observable and budgeted**. One design problem, not five fixes: the import
+   cancel path, progress reporting, a trip-level routing budget, the unbounded
+   date range, and the month-reset at `ImportSheet.swift:133`. The cheapest single
+   lever is `keyframe_interval_frames` (15 today = a snapshot every half second);
+   30 halves every export, and costs a 1 s cross-fade instead of 0.5 s.
+
+**Map work is NOT in Phase 4.** Tiles, labels and the tile server all left the
+roadmap with the 2026-08-15 substrate ADR. What Chiu wants from "big cute place
+names" is a **Kamome-drawn overlay**, not a base-map feature — it is iceboxed as
+"Place names as narrative rhythm", it is substrate-independent, and the app
+already geocodes every stop so it has the names in hand.
+
+**Routing endpoint is an open product decision** — OSRM stays, but moves off
+Chiu's LAN to an API. §0 governs the choice: routing sends **real trip
+coordinates off the device**, so who receives them is a product decision, not an
+implementation detail. Note the scaling trap found 2026-08-15: a self-hosted OSRM
+only routes the regions it preloaded, and `Deploy/regions.json` carries four —
+a friend's Tokyo trip had no routable legs at all, because the Japan extract is
+Kyushu.
 
 ### What the export numbers actually said (2026-08-15, device)
 
