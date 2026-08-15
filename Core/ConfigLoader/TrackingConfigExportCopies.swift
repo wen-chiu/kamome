@@ -188,4 +188,50 @@ extension TrackingConfig.Export {
         )
     }
 
+    /// A copy with a different keyframe interval. Measurement aid only
+    /// (2026-08-15): export time is snapshot-bound, and this is the one number
+    /// that changes the snapshot count without changing the film's content, so
+    /// an audit can price a film at several intervals in one run instead of
+    /// editing `TrackingConfig.json` between renders.
+    ///
+    /// Not a product switch. What a coarser interval buys in seconds it spends
+    /// on cross-fade quality, which is Chiu's call, made against renders.
+    public func withKeyframeIntervalFrames(_ frames: Int) -> TrackingConfig.Export {
+        TrackingConfig.Export(
+            targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
+            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
+            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
+            targetZoomRatio: targetZoomRatio,
+            zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm, followHeadingUp: followHeadingUp,
+            cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
+            cameraDeadZoneFraction: cameraDeadZoneFraction,
+            cameraSafeZoneFraction: cameraSafeZoneFraction,
+            cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+            endRevealPadding: endRevealPadding, endCardStyle: endCardStyle,
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+            deckZoomS: deckZoomS, deckLabelLeadS: deckLabelLeadS, subjectParkS: subjectParkS,
+            openingCountryS: openingCountryS, openingRegionalS: openingRegionalS,
+            countryViewPadding: countryViewPadding, firstStopDwellScale: firstStopDwellScale,
+            openingCollapseZoomRatio: openingCollapseZoomRatio,
+            openingCollapseDriftFraction: openingCollapseDriftFraction,
+            stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
+            totalDurationMinS: totalDurationMinS, totalDurationMaxS: totalDurationMaxS,
+            keyframeIntervalFrames: frames, titleCardS: titleCardS,
+            endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
+            stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
+            waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
+            uncappedPhotoHoldS: uncappedPhotoHoldS,
+            allocationZeroShare: allocationZeroShare,
+            allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
+            allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
+            tierTopShare: tierTopShare,
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos,
+            earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
+            earnedStopsPerDoubling: earnedStopsPerDoubling,
+            earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            recapMode: recapMode
+        )
+    }
+
 }

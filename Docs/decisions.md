@@ -1381,3 +1381,91 @@ Chiu's condition for reopening, in his words: *"之後有新的需求或是我�
 **Unchanged:** the v1.5 rejection of the GPS-visualiser framing, the story/render
 separation, and every renderer-independent part of the pipeline — camera,
 overlays, subject, chrome — which work over either substrate and always did.
+
+## 2026-08-15 — Routing is bounded, cancellable, and says which of four things went wrong
+
+**The trigger was the P0**, not a design review. The first person outside this
+project to install Kamome could not use it: with a large photo library the app
+went unresponsive. The mechanism, traced through the code rather than guessed:
+`ImportService.importTrip` awaited `matchTrip` **after** the trip was already
+saved; `matchTrip` walked the legs sequentially at `matching.timeout_s` each,
+with failures swallowed by `try?`; and `ImportSheet` disabled its Close button
+and `interactiveDismissDisabled` for the whole thing. More photographs meant more
+stops, more legs, and more back-to-back timeouts behind a UI with nothing to
+press. A build carrying a LAN `base_url` makes every one of those legs time out.
+
+**Decisions:**
+
+1. **Import returns when the trip is saved.** Routing is a separate concern with
+   a separate lifetime — the trip is complete, viewable and exportable without
+   it, and an unrouted leg draws dashed rather than claiming a road (PD-2).
+   The import sheet's exit is enabled again, always.
+2. **Two bounds, borrowed from the render** — `RecapExporter`'s `shouldContinue`
+   + progress pair, which already solved this exact problem for export.
+   `matchTrip` checks cancellation before every leg, and
+   **`matching.trip_budget_s` (60 s)** bounds the whole trip. `timeout_s` bounded
+   a request; nothing bounded the trip. Past the budget the remaining legs stay
+   raw and are reported as *skipped* — never as "no road here".
+3. **`RouteMatchCoordinator` owns one run per trip.** A second caller joins the
+   run in flight instead of starting another.
+4. **A failure taxonomy at the boundary**, built now rather than after the
+   provider migration, because it is what makes that migration safe.
+   `RouteProviderFailure` (unreachable / rateLimited / refused) is thrown by the
+   providers; a nil outcome keeps its old meaning — the provider answered, and
+   the answer was "no road route". `RouteMatchReport` aggregates them and S5
+   shows the user which, beside the existing photo-shortfall row.
+
+**On concurrency, checked rather than assumed** (this was the review's gate on
+landing any of it). Detaching matching means a user who imports and immediately
+taps the film button runs `matchTrip` twice over one trip. That is **not a data
+race**: `AppDatabase` is a GRDB `DatabaseQueue`, which serialises every read and
+write; `setMatchedPolyline` is a one-row, one-column UPDATE that does not read
+the row first; and `matchTrip` never writes nil, so no run can un-match what
+another matched. Two runs can only do the same work twice and agree.
+
+It is still prevented, for reasons that are about the product rather than the
+database: a *per-run* budget is not the per-trip budget `trip_budget_s` promises,
+and two runs produce two verdicts for one trip when the screen can show one.
+Hence single-flight ownership, **not a lock** — nothing here needed one.
+
+**Consequences:** `ImportService` no longer takes a matcher, and the two desk
+harnesses that relied on `importTrip` routing now ask for it explicitly — a
+dependency they always had and never stated. `RouteMatchService` takes the
+`matching` block instead of the whole config, because that is all it reads.
+
+**Not decided here:** which hosted provider. §0 still governs that — routing
+sends real trip coordinates off the device (PO.md, Routing).
+
+## 2026-08-15 — Export variation enters as a seed, never as randomness
+
+**Written before the feature, deliberately.** "Different photos each export" is
+wanted and deferred; this records the one constraint it must be built under, so
+the obvious implementation — a `random()` inside the selector — is not the one
+that gets written.
+
+**Decision.** Variation enters the pipeline **only** as an explicit seed:
+
+- **Chosen at the composition boundary** (`RecapModel`), which is where a film
+  becomes a specific film. Never generated inside `ExportEngine`.
+- **Persisted with the export.** A seed that is not stored is not a seed, it is
+  a coin toss with extra steps.
+- **Re-rendering an export reproduces it**, byte for byte. "Shuffle" is the
+  gesture that mints a *new* seed; export alone never does.
+
+**Why.** The golden-frame gates and the two continuity gates
+(`RecapCameraContinuityTests`) are the reason the recap pipeline can be changed
+at all — they compare renders. Anything non-deterministic inside `ExportEngine`
+makes a failing gate unreproducible and therefore useless, and this is already
+recorded once: video clips in recap were iceboxed in 2026-07-17 on exactly this
+ground ("deterministic excerpts only — random breaks golden-frame CI").
+
+It also matters to the user, not only to CI. A film worth keeping is one you can
+get back. If re-exporting silently produced a different edit, the good version
+would be gone the moment anyone tried to render it at a higher bitrate.
+
+**Rejected:** randomness inside the selector (unreproducible gates, and a film
+the user cannot recover); a seed derived from the trip id alone (stable, but then
+"shuffle" has nothing to change); a seed derived from the clock at export time
+(reproducible only by accident, and never after the fact).
+
+**Deferred:** the feature itself. This is the constraint, not a plan.
