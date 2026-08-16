@@ -112,6 +112,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.totalDurationMinS, 60)
         XCTAssertEqual(config.export.totalDurationMaxS, 90)
         XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
+        // The moving subject's canvas size (Phase 4). Was a hard-coded 300 in
+        // RecapStyle — 28% of frame width, which users said was too big.
+        XCTAssertEqual(config.export.subjectLengthPx, 250)
         XCTAssertEqual(config.export.titleCardS, 3.0)
         XCTAssertEqual(config.export.endCardS, 3.0)
         XCTAssertEqual(config.export.videoBitrateMbps, 5)

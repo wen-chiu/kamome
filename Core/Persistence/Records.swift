@@ -16,9 +16,12 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// Honest provenance (schema v2, §3). Raw `TripSource`; legacy rows read
     /// `recorded`. Use `tripSource` for the typed value.
     public var source: String
+    /// Which recap subject this trip draws (schema v3). Nullable: NULL means
+    /// the user never chose, and readers fall back to the catalogue default.
+    public var vehicle: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, status, source
+        case id, title, status, source, vehicle
         case startedAt = "started_at"
         case endedAt = "ended_at"
         case originPlanId = "origin_plan_id"
@@ -33,7 +36,8 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         status: String,
         originPlanId: String? = nil,
         statsJson: String? = nil,
-        source: String = TripSource.recorded.rawValue
+        source: String = TripSource.recorded.rawValue,
+        vehicle: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -43,7 +47,12 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.originPlanId = originPlanId
         self.statsJson = statsJson
         self.source = source
+        self.vehicle = vehicle
     }
+
+    /// The subject to draw, with the catalogue's default standing in for a trip
+    /// that predates the choice or whose subject was removed.
+    public var vehicleId: String { vehicle ?? "car-red" }
 
     /// Typed provenance; NULL/unknown reads as `.recorded`.
     public var tripSource: TripSource { TripSource(storage: source) }

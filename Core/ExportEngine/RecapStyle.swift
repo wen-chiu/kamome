@@ -121,11 +121,10 @@ public struct RecapStyle {
 
     // The moving subject (§4.5 step 1): the bundled 8-direction car sprite over a
     // north-up map, the vehicle turning rather than the world (Chiu 2026-07-25).
-    /// The sprite **canvas** side on screen at the 1080 reference. Scaling by the
-    /// shared canvas rather than by each drawing's content is what keeps the car
-    /// from pulsing as it turns; the car itself fills 52–74% of it, so the drawn
-    /// vehicle runs roughly 200–280 px.
-    public var carSpriteLengthPx: CGFloat = 300
+    // The subject's on-screen size is no longer a style token: it moved to
+    // `export.subject_length_px` so it can be tuned without a rebuild, and
+    // `vehicles.json` may override it per subject. `RecapStyle` keeps only what
+    // the *marker* fallback needs, which no manifest describes.
     /// Drawn only when the sprite set fails to load. Vector, so it rotates
     /// freely. The gull is the brand mascot and reads as a light glyph over the
     /// dark souvenir map — deliberately not the car's red, so the two are never
@@ -137,10 +136,13 @@ public struct RecapStyle {
     public var markerAccentColor = CGColor(srgbRed: 0.98, green: 0.98, blue: 0.99, alpha: 0.92)
     public var markerOutlineColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
 
-    /// How much room the subject occupies, whichever visual is drawn — the
-    /// larger of the two, so callers can reason about the vehicle's footprint
-    /// without knowing which visual rendered.
-    public var subjectLengthPx: CGFloat { max(carSpriteLengthPx, fallbackMarkerLengthPx) }
+    /// How much room the subject may occupy, whichever visual is drawn.
+    /// Callers pass the configured length; this answers with the larger of that
+    /// and the marker, so a pixel probe can clear the subject without knowing
+    /// which visual rendered.
+    public func subjectLengthPx(configured: CGFloat) -> CGFloat {
+        max(configured, fallbackMarkerLengthPx)
+    }
 
     // Photo deck (§5; zoom-in reveal, Chiu 2026-07-25): the card opens from
     // `min` to `max` frame width as the shot pushes in, so the map and trail

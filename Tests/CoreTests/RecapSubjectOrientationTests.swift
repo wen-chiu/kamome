@@ -35,7 +35,9 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
     }
 
     func testEveryDirectionDeclaresItsOwnBearingAndShipsAnImage() throws {
-        let set = try XCTUnwrap(RecapCarSprite.set, "all eight car sprites must be bundled")
+        guard case let .directional(set)? = VehicleCatalog.artwork(id: VehicleCatalog.defaultSubjectId) else {
+            return XCTFail("all eight car drawings must be bundled")
+        }
         XCTAssertEqual(set.count, 8)
         for direction in SpriteDirection.allCases {
             XCTAssertNotNil(set[direction], "missing sprite for \(direction.rawValue)")
@@ -57,9 +59,11 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
     /// A film with a seagull instead of a car is a degraded film. A trap is a
     /// crash mid-export, after minutes of rendering.
     func testAMissingSpriteBundleFallsBackToTheMarkerRatherThanTrapping() {
-        XCTAssertNil(RecapCarSprite.decodeAll(in: nil), "no bundle must decode to no set")
-
-        let renderer = VehicleSubjectRenderer.make(style: RecapStyle(), spriteSet: nil)
+        // `resolved: nil` is what an unfindable resource bundle produces — the
+        // case the generated `Bundle.module` accessor used to turn into a trap.
+        let renderer = VehicleSubjectRenderer.make(
+            style: RecapStyle(), subjectId: "car-red", lengthPx: 250, resolve: { _ in nil }
+        )
         guard case let .marker(marker, _) = renderer.visual else {
             return XCTFail("a nil sprite set must select the vector marker, got \(renderer.visual)")
         }
@@ -70,10 +74,13 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
     /// The other half of the same contract: the resolver really does find the
     /// shipped bundle, so the fallback stays a fallback.
     func testTheShippedSpriteBundleResolves() throws {
-        let set = try XCTUnwrap(
-            RecapCarSprite.decodeAll(in: RecapCarSprite.resourceBundle),
-            "the resource bundle lookup no longer finds the car sprites"
+        XCTAssertNotNil(
+            VehicleResourceBundle.resolved,
+            "the resource bundle lookup no longer finds the vehicle manifest"
         )
+        guard case let .directional(set)? = VehicleCatalog.artwork(id: VehicleCatalog.defaultSubjectId) else {
+            return XCTFail("the shipped car must load")
+        }
         XCTAssertEqual(set.count, SpriteDirection.allCases.count)
     }
 
@@ -92,7 +99,7 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
             let surface = RenderSurface(
                 context: context, widthPx: widthPx, heightPx: heightPx, scale: CGFloat(widthPx) / 1080
             ) { _, _ in CGPoint(x: self.widthPx / 2, y: self.heightPx / 2) }
-            VehicleSubjectRenderer.make(style: RecapStyle()).render(
+            VehicleSubjectRenderer.make(style: RecapStyle(), lengthPx: 300).render(
                 SubjectState(lat: -32, lon: 115.75, heading: heading),
                 camera: CameraFrame(centerLat: -32, centerLon: 115.75, spanM: 1500, bearing: 0),
                 into: surface

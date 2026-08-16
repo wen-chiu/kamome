@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "subjects": [
+    {
+      "id": "car-red",
+      "kind": "directional",
+      "type": "car",
+      "selectable": true,
+      "names": {
+        "en": "Red car",
+        "zh-Hant": "紅色汽車"
+      }
+    },
+    {
+      "id": "seagull",
+      "kind": "omni",
+      "type": "mark",
+      "selectable": true,
+      "length_px": 170,
+      "names": {
+        "en": "Seagull",
+        "zh-Hant": "海鷗"
+      }
+    }
+  ]
+}
