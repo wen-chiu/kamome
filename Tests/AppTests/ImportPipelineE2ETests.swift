@@ -133,13 +133,13 @@ final class ImportPipelineE2ETests: XCTestCase {
                 confidence: 1
             )
         )
-        let service = ImportService(
-            repository: repository,
-            config: config,
-            matcher: RouteMatchService(
-                repository: repository, config: config,
-                provider: matcher, reconstructor: reconstructor
-            )
+        let service = ImportService(repository: repository, config: config)
+        // Routing is its own step since 2026-08-15 — `importTrip` returns as
+        // soon as the trip is saved. A test that wants a routed trip now says
+        // so, which is the dependency it always had and never stated.
+        let routing = RouteMatchService(
+            repository: repository, matching: config.matching,
+            provider: matcher, reconstructor: reconstructor
         )
 
         let tripId = try await service.importTrip(
@@ -151,6 +151,7 @@ final class ImportPipelineE2ETests: XCTestCase {
                 photo("b2", 7_320, 63.405, -19.040)
             ]
         )
+        await routing.matchTrip(tripId: tripId)
 
         let matchCalls = await matcher.calls
         let routeCalls = await reconstructor.calls

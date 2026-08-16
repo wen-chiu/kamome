@@ -33,7 +33,8 @@ struct RecapReviewScene {
     let provider: MapRenderer
 
     static func make(fixture: String) async throws -> RecapReviewScene {
-        let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture)
+        let (trip, imported) = try await RecapDemoFilmTests.importedRecap(named: fixture)
+        let config = keyframeIntervalOverride(imported)
         adoptTilesPathForTerrain()
         guard let bounds = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }),
               let region = RecapMapRegionResolver.resolve(covering: bounds) else { throw SetupError.noRegion }
@@ -59,6 +60,19 @@ struct RecapReviewScene {
             ),
             provider: try Self.provider(region: region)
         )
+    }
+
+    /// `KAMOME_KEYFRAME_INTERVAL` renders the same film at a different snapshot
+    /// rate (2026-08-15). Export time is snapshot-bound, so this is the single
+    /// biggest lever on it — and what a coarser interval spends is cross-fade
+    /// smoothness, which can only be judged by watching two renders of one trip.
+    /// Review-only, applied per run, so an experiment never lands in
+    /// `TrackingConfig.json`.
+    private static func keyframeIntervalOverride(_ config: TrackingConfig.Export) -> TrackingConfig.Export {
+        guard let interval = HarnessEnv.value("KAMOME_KEYFRAME_INTERVAL").flatMap(Int.init)
+        else { return config }
+        print("KAMOME_KEYFRAME_INTERVAL \(interval) (was \(config.keyframeIntervalFrames))")
+        return config.withKeyframeIntervalFrames(interval)
     }
 
     /// Terrain lives behind its **own** environment variable, and every review
@@ -143,7 +157,7 @@ struct RecapReviewScene {
     }
 
     private static func photoFiles() -> [URL] {
-        guard let path = ProcessInfo.processInfo.environment["KAMOME_STOP_PHOTOS"] else { return [] }
+        guard let path = HarnessEnv.value("KAMOME_STOP_PHOTOS") else { return [] }
         let contents = try? FileManager.default.contentsOfDirectory(
             at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil
         )
@@ -180,7 +194,7 @@ struct RecapReviewScene {
     // MARK: - Output
 
     static func outputDirectory() -> URL {
-        if let override = ProcessInfo.processInfo.environment["KAMOME_RENDER_OUT"] {
+        if let override = HarnessEnv.value("KAMOME_RENDER_OUT") {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
         return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-review", isDirectory: true)

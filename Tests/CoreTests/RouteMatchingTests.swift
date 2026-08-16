@@ -39,6 +39,7 @@ final class RouteMatchingTests: XCTestCase {
         confidenceMin: 0.5,
         radiusM: 25,
         timeoutS: 10,
+        tripBudgetS: 60,
         displayEpsilonM: 5,
         routeMaxDetourRatio: 2.5,
         routeWaypointMinSpacingM: 250,

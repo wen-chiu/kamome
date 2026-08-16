@@ -12,6 +12,24 @@ final class ConfigLoaderTests: XCTestCase {
             .appendingPathComponent("Config/TrackingConfig.json")
     }
 
+    /// The predicate behind the release guard in `AppConfig.loadOrDie`
+    /// (2026-08-15). It reads the shipped block only to inherit every *other*
+    /// tunable, then overrides the one value under test — so a working tree
+    /// pointed at a dogfood server still runs this test green, which is the
+    /// behaviour the guard is designed around.
+    func testOnlyEmptyOrHTTPSEndpointsMayShip() throws {
+        let shipped = try TrackingConfigLoader.load(contentsOf: configURL).matching
+
+        XCTAssertTrue(shipped.withBaseURL("").isDistributableEndpoint, "matching disabled must ship")
+        XCTAssertTrue(shipped.withBaseURL("https://routing.example.com").isDistributableEndpoint)
+        XCTAssertTrue(shipped.withBaseURL("HTTPS://routing.example.com").isDistributableEndpoint, "scheme is case-insensitive")
+
+        XCTAssertFalse(shipped.withBaseURL("http://192.168.50.179:5100").isDistributableEndpoint, "the P0 shape")
+        XCTAssertFalse(shipped.withBaseURL("http://127.0.0.1:5100").isDistributableEndpoint)
+        XCTAssertFalse(shipped.withBaseURL("http://routing.example.com").isDistributableEndpoint)
+        XCTAssertFalse(shipped.withBaseURL("192.168.50.179:5100").isDistributableEndpoint, "no scheme at all")
+    }
+
     func testLoadsShippedConfigWithSpecDefaults() throws {
         let config = try TrackingConfigLoader.load(contentsOf: configURL)
 
@@ -39,6 +57,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.confidenceMin, 0.5)
         XCTAssertEqual(config.matching.radiusM, 25)
         XCTAssertEqual(config.matching.timeoutS, 10)
+        // Per-trip routing ceiling (2026-08-15): `timeout_s` bounds a request,
+        // this bounds the walk of legs behind it.
+        XCTAssertEqual(config.matching.tripBudgetS, 60)
         XCTAssertEqual(config.matching.displayEpsilonM, 5)
         // Route reconstruction for sparse EXIF legs (typed-leg pass 2026-07-26).
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)

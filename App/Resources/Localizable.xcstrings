@@ -904,6 +904,142 @@
         }
       }
     },
+    "recap_routing_budget": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d legs aren't finished"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段還沒畫完"
+          }
+        }
+      }
+    },
+    "recap_routing_budget_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The trip ran past our time limit. What's already matched is saved — export again and it picks up from there."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程太長，超出時間上限。畫好的路線已存，再輸出一次就會接著畫。"
+          }
+        }
+      }
+    },
+    "recap_routing_no_road": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d legs have no road"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段本來就沒有路"
+          }
+        }
+      }
+    },
+    "recap_routing_no_road_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There is no road joining these places. We record journeys honestly: no road, no solid line."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些地方之間沒有道路相連 —— 我們誠實記錄旅程路線，沒有路就不會是實線。"
+          }
+        }
+      }
+    },
+    "recap_routing_rate_limited": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d legs aren't drawn"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段還沒畫"
+          }
+        }
+      }
+    },
+    "recap_routing_rate_limited_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The routing service is busy, so those %1$d stretches stay dashed."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路線服務忙線中，這 %1$d 段會是虛線。"
+          }
+        }
+      }
+    },
+    "recap_routing_unreachable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d legs aren't real routes"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段不是真實路線"
+          }
+        }
+      }
+    },
+    "recap_routing_unreachable_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is wrong with the trip — we just can't reach the routing service right now, so those stretches are drawn dashed."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程沒有問題，只是我們目前連不上路線服務，所以先畫成虛線。"
+          }
+        }
+      }
+    },
     "recap_share": {
       "extractionState": "manual",
       "localizations": {

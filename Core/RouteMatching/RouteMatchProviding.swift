@@ -36,6 +36,32 @@ public struct RouteMatchOutcome: Equatable, Sendable {
     }
 }
 
+/// Why a provider could not answer — thrown, never returned, because none of
+/// these is a verdict about the geography (2026-08-15).
+///
+/// **The distinction that matters, and why it is being drawn now.** A leg with
+/// no road geometry draws dashed, and until now every reason produced that same
+/// dashed leg with nothing to tell them apart: a ferry crossing that genuinely
+/// has no road route looked exactly like a server on the wrong Wi-Fi. That was
+/// survivable against a routing box on the developer's LAN, which either
+/// answered or did not. A hosted provider adds cold starts, quotas and outages —
+/// failures that are *temporary*, and where the honest thing to tell the user is
+/// "try again", not "there is no road here".
+///
+/// So: a nil `RouteMatchOutcome` means the provider answered and the answer was
+/// "no plausible route" — permanent, correct, dashed forever. One of these means
+/// nobody answered — retryable, and never the geography's fault.
+public enum RouteProviderFailure: Error, Equatable, Sendable {
+    /// Nothing answered: DNS, ATS, a LAN address on someone else's network, a
+    /// dropped connection, a timeout, a cold start that outran `timeout_s`.
+    case unreachable(String)
+    /// Refused for load — HTTP 429, or a quota response. `retryAfterS` is the
+    /// server's own advice when it gave any.
+    case rateLimited(retryAfterS: Double?)
+    /// Answered, with a status that is neither success nor an OSRM verdict.
+    case refused(status: Int)
+}
+
 /// Boundary for map matching (§4.4) — the same one-file-per-backend
 /// discipline as `MapRenderer` (§0 boundary rule): OSRM types
 /// stay inside `OSRMMatchProvider.swift`, and future backends (e.g. a foot

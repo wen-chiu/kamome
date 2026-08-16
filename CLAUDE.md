@@ -146,27 +146,102 @@ confirmed. Diagnose before fixing; the fixes differ completely.
 **never copy their photographs, place names, coordinates or identifiers into this
 repo** — §0's reasoning applies at least as strongly to a third party.
 
+**The mechanism is now structurally closed, whatever the trigger was**
+(2026-08-15, `decisions.md`). Still diagnose — a LAN URL and a slow provider need
+different follow-ups — but the app can no longer be held by either:
+- `AppConfig.loadOrDie` **refuses a release build** whose `matching.base_url` is
+  not empty or `https`, and CI refuses the committed one. A debug run against
+  `http://192.168.x.x` is untouched, which is what device testing needs.
+- Import returns when the trip is saved; routing runs detached, is cancellable
+  per leg, and is bounded by `matching.trip_budget_s` (60 s) for the whole trip.
+  The import sheet's Close button is always enabled.
+- A dashed film now says **which** of four things happened — no road route, the
+  provider unreachable, rate-limited, or the budget ran out. Only the first is
+  the journey being drawn honestly; the other three are worth retrying.
+
+Date selection misbehaving is **not** addressed — the month-reset in
+`ImportSheet.linkEndToStart` and the unbounded range are still open, under
+Phase 4 item 3.
+
 ### Phase 4 scope (Chiu 2026-08-15)
 
 Chosen over productisation deliberately: *"方便的產品都沒有這是足夠好的作品更吸引
 人"* — a good enough artefact matters more than a convenient product, so the films
 come first and export convenience is discussed after.
 
-1. **Measure, then survive** — one device export on MapLibre with tiles actually
-   installed (never once measured), then background/no-sleep execution so an
-   export cannot be killed by locking the phone.
-2. **Vehicle sprites** — community-requested, and the prerequisite for the
-   cross-region plane/ship/seagull.
-3. **Map labels** — **still iceboxed**, unlocked only if the measurement in (1)
-   says so. Tangled with tile provisioning, see below.
-4. **Cross-region journeys** — `Docs/cross-region-journeys.md`.
+Reordered 2026-08-15 around the first outside feedback: **nobody mentioned the
+map; the most common request was to change the vehicle.**
+
+1. **Vehicle sprites** — the top community request, and the prerequisite for the
+   cross-region plane/ship/seagull. The 8-direction technique and its art
+   constraints are in `Docs/handoff-recap-visuals.md` §3; swapping a set is
+   already a pure asset swap.
+2. **Cross-region flight display** — `Docs/cross-region-journeys.md`. Every
+   overseas trip hits this on device, because the app imports a date range from
+   the whole library while the desk fixtures were hand-curated folders.
+3. **Export that survives** — import and export must be **interruptible,
+   observable and budgeted**. One design problem, not five fixes: the import
+   cancel path, progress reporting, a trip-level routing budget, the unbounded
+   date range, and the month-reset at `ImportSheet.swift:133`. The cheapest single
+   lever is `keyframe_interval_frames` (15 today = a snapshot every half second);
+   30 halves every export, and costs a 1 s cross-fade instead of 0.5 s.
+
+   ⚠️ **Measured 2026-08-15, and the lever is the wrong one.**
+   `RecapSnapshotBudgetTests` on the real Miyakojima dump (offline, all legs
+   inferred): an 88 s / 2,640-frame film costs **191 snapshots — 151 of them in
+   the 9 s opening**. The opening is 10% of the film and **79% of the snapshot
+   budget**, because `RecapRenderLoop` snapshots it *every frame*
+   (`movingUntilFrame = openingS × fps`) while the body gets one per interval.
+   `keyframe_interval_frames` 15 → 30 therefore takes 191 → 176, **−8%**, not
+   half: it halves a body that is only 21% of the cost. Running the opening at
+   the coarse interval instead would be ~58 snapshots, ≈3.3× cheaper — *derived
+   from the measured split, not itself measured*, because measuring it needs a
+   code change and that is Chiu's call against renders. The loop's stated reason
+   for the fine opening ("the coarse interval is sized for a **static** camera")
+   went stale with the FollowCamera rebuild: the body camera moves every keyframe
+   now too. Cross-fade quality is what the coarse interval spends.
+
+   🔒 **Both numbers are frozen — this is a recorded fact, not a pending change**
+   (Chiu 2026-08-15). Neither `keyframe_interval_frames` nor the opening's
+   every-frame interval is to be touched, and the three-way render comparison is
+   not owed. They are held for a design conversation about **how the camera
+   crosses large spatial gaps**: the opening's panorama-to-detail move and the
+   cross-region flight (item 2) are the same problem, and will be designed
+   together rather than tuned separately. The measurement above exists so that
+   conversation starts from a number instead of an intuition.
+
+**Map work is NOT in Phase 4.** Tiles, labels and the tile server all left the
+roadmap with the 2026-08-15 substrate ADR. What Chiu wants from "big cute place
+names" is a **Kamome-drawn overlay**, not a base-map feature — it is iceboxed as
+"Place names as narrative rhythm", it is substrate-independent, and the app
+already geocodes every stop so it has the names in hand.
+
+**Routing endpoint is an open product decision** — OSRM stays, but moves off
+Chiu's LAN to an API. §0 governs the choice: routing sends **real trip
+coordinates off the device**, so who receives them is a product decision, not an
+implementation detail. Note the scaling trap found 2026-08-15: a self-hosted OSRM
+only routes the regions it preloaded, and `Deploy/regions.json` carries four —
+a friend's Tokyo trip had no routable legs at all, because the Japan extract is
+Kyushu.
 
 ### What the export numbers actually said (2026-08-15, device)
 
 | trip | frames | snapshots | export | per snapshot |
 |---|---:|---:|---:|---:|
-| Miyakojima | 4,065 | 271 | 270 s | ≈1.0 s |
-| New Zealand | 4,635 | 309 | 600+ s | ≈1.9 s |
+| Miyakojima | 4,065 | ~~271~~ **wrong** | 270 s | ~~≈1.0 s~~ **wrong** |
+| New Zealand | 4,635 | ~~309~~ **wrong** | 600+ s | ~~≈1.9 s~~ **wrong** |
+
+⚠️ **These two columns are not merely estimates — the method is wrong, and the
+measured numbers are in the Phase 4 section above.** Do not average the two sets
+and do not quote these. Only `frames` and `export` are real.
+
+The counts were computed as `frames ÷ keyframe_interval_frames`, which assumes one snapshot every interval
+for the whole film. `RecapRenderLoop` snapshots the **opening every frame**
+(`movingUntilFrame = openingS × fps`), so the real count is higher and the real
+per-snapshot cost lower — in the same proportion for both rows, so the
+substrate comparison's ordering survives and the absolute figures do not.
+`Tests/AppTests/RecapSnapshotBudgetTests.swift` counts them through the shipped
+loop; replace this table with measured numbers when a device run is next made.
 
 **Export time ≈ snapshot count × snapshot cost; nothing else is the bottleneck.**
 Both films ran on Apple Maps, so every snapshot was an `MKMapSnapshotter` **network
@@ -179,6 +254,10 @@ every export**, not download versus none. A user who makes one film may be bette
 off on Apple's map. Regions are 3 MB (Miyakojima) to 640 MB (New Zealand).
 
 **The export also fails if the app is backgrounded or the screen sleeps.**
+*(Addressed 2026-08-15: `ExportLifecycleGuard` holds the idle timer and a
+background-task assertion for the render's duration, and cancels cleanly at a
+frame boundary if iOS reclaims the assertion. This is not resumable export —
+`AVAssetWriter` cannot resume across process death, and that remains a project.)*
 
 ### Two 2026-08-01 blockers — both closed
 
@@ -314,6 +393,36 @@ item.)* The 2026-07-16 smoke drive surfaced:
   validation items tracked in `Docs/device-test-P3.md` (A–E). POI naming
   (MKLocalSearch → geocode fallback) = next standalone PR after the first
   end-to-end replay; do not block compositor on it.
+
+### Desk harnesses: how `TEST_RUNNER_` works now (fixed 2026-08-15)
+
+The documented invocation works and survives `xcodegen generate`:
+
+```bash
+xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  -only-testing:KamomeTests/RecapTimelineReportTests TEST_RUNNER_KAMOME_TIMELINE_REPORT=miyakojima
+```
+
+It had been silently broken on Xcode 26.6 — every env-gated harness skipped while
+the run reported success. Three findings, each isolated by changing only itself,
+and the fix follows from the third:
+
+1. With no `environmentVariables`, XcodeGen emits the test action with
+   `shouldUseLaunchSchemeArgsEnv = "YES"`, so it takes the **Launch** action's
+   environment. Declaring anything flips it to `"NO"`.
+2. **That alone fixes nothing.** On this toolchain xcodebuild's `TEST_RUNNER_`
+   injection never reaches the test process, with the flag either way — so
+   declaring the variables empty-and-disabled changes nothing, because there was
+   no injection to un-shadow. (This is the step that produced a false positive
+   once: a run that "passed" was reading a value left in a stale scheme.)
+3. What xcodebuild *does* do with `TEST_RUNNER_FOO=bar` is define it as a **build
+   setting**, and scheme environment values expand build settings.
+
+So `project.yml` declares each harness variable as `$(TEST_RUNNER_<VAR>)`. One
+consequence to know: an unset variable now arrives as a defined **empty string**,
+not as nothing — harnesses must read it through `HarnessEnv.value`, which
+collapses empty back to nil. Adding a harness variable means adding a line to
+`project.yml`, or it can never be set.
 
 ## Verification commands (run from repo root)
 

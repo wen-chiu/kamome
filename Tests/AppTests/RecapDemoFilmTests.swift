@@ -40,7 +40,7 @@ final class RecapDemoFilmTests: XCTestCase {
 
     func testRenderDemoFilm() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_DEMO_FILM"] == "1",
+            HarnessEnv.value("KAMOME_DEMO_FILM") == "1",
             "Manual demo render — set KAMOME_DEMO_FILM=1."
         )
         let config = try AppConfig.loadOrDie().export
@@ -159,7 +159,7 @@ final class RecapDemoFilmTests: XCTestCase {
     ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
     ///   KAMOME_RENDER_OUT=/path/to/out
     func testRenderImportedFilm() async throws {
-        let requested = ProcessInfo.processInfo.environment["KAMOME_DEMO_FILM_IMPORT"] ?? ""
+        let requested = HarnessEnv.value("KAMOME_DEMO_FILM_IMPORT") ?? ""
         try XCTSkipUnless(
             !requested.isEmpty,
             "Manual demo render — set KAMOME_DEMO_FILM_IMPORT to a fixture name (e.g. iceland)."
@@ -179,19 +179,22 @@ final class RecapDemoFilmTests: XCTestCase {
     ) async throws -> (RecapTrip, TrackingConfig.Export) {
         let full = try AppConfig.loadOrDie()
         let baseURL = requestedBaseURL
-            ?? ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"]
+            ?? HarnessEnv.value("KAMOME_OSRM_BASE_URL")
             ?? "http://127.0.0.1:5100"
         let repository = TripRepository(database: try AppDatabase.inMemory())
-        let service = ImportService(
-            repository: repository, config: full,
-            matcher: RouteMatchService(
-                repository: repository, config: full,
-                reconstructor: OSRMRouteProvider(config: full.matching.withBaseURL(baseURL))
-            )
+        let service = ImportService(repository: repository, config: full)
+        // Routing became its own step on 2026-08-15 (`importTrip` returns as
+        // soon as the trip is saved, so the import sheet stops blocking). A desk
+        // render still wants roads, so it asks for them — and waits, which the
+        // app deliberately does not.
+        let routing = RouteMatchService(
+            repository: repository, matching: full.matching,
+            reconstructor: OSRMRouteProvider(config: full.matching.withBaseURL(baseURL))
         )
 
         let trip = try Self.tripFixture(named: fixture)
         let tripId = try await service.importTrip(title: trip.title, photos: trip.photos)
+        await routing.matchTrip(tripId: tripId)
         // Real stop names, opt-in and cached (`RecapReviewGeocoder`). Without this
         // the harness composes straight out of the importer, which cannot name a
         // stop, and every card in the pilot reads "Unnamed stop" — a difference
@@ -237,7 +240,7 @@ final class RecapDemoFilmTests: XCTestCase {
     /// experiment; it is marked temporary where it was introduced (2026-08-04).
     static func reviewConfig(_ base: TrackingConfig.Export) throws -> TrackingConfig.Export {
         var config = base
-        if let requested = ProcessInfo.processInfo.environment["KAMOME_RECAP_MODE"] {
+        if let requested = HarnessEnv.value("KAMOME_RECAP_MODE") {
             guard let mode = RecapMode(rawValue: requested) else {
                 XCTFail("KAMOME_RECAP_MODE=\(requested) is not a RecapMode")
                 throw CocoaError(.featureUnsupported)
@@ -253,13 +256,13 @@ final class RecapDemoFilmTests: XCTestCase {
             // measurable: comparing Variant A against Variant B would have
             // compared two things at once.
             if case .full = mode {
-                let share = ProcessInfo.processInfo.environment["KAMOME_ALLOCATION_ZERO_SHARE"]
+                let share = HarnessEnv.value("KAMOME_ALLOCATION_ZERO_SHARE")
                     .flatMap(Double.init) ?? 0
                 config = config.withAllocationZeroShare(share)
                 print("KAMOME_ALLOCATION_ZERO_SHARE \(share) (Variant A)")
             }
         }
-        if let forced = ProcessInfo.processInfo.environment["KAMOME_FORCE_DURATION_S"].flatMap(Double.init) {
+        if let forced = HarnessEnv.value("KAMOME_FORCE_DURATION_S").flatMap(Double.init) {
             config = config.withTotalDuration(min: forced, max: forced)
             print("KAMOME_FORCE_DURATION_S \(forced)")
         }
@@ -362,7 +365,7 @@ final class RecapDemoFilmTests: XCTestCase {
     }
 
     private func outputDirectory() -> URL {
-        if let override = ProcessInfo.processInfo.environment["KAMOME_RENDER_OUT"] {
+        if let override = HarnessEnv.value("KAMOME_RENDER_OUT") {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
         return FileManager.default.temporaryDirectory.appendingPathComponent("kamome-demo-film", isDirectory: true)

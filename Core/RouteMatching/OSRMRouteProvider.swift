@@ -62,7 +62,7 @@ public struct OSRMRouteProvider: RouteReconstructing {
                 route: TRANSPORT FAILED against \(config.baseURL, privacy: .public) — \
                 \(error.localizedDescription, privacy: .public)
                 """)
-            throw error
+            throw RouteProviderFailure.unreachable(error.localizedDescription)
         }
         guard let http = response as? HTTPURLResponse, http.statusCode != 200 else { return data }
         if let body = try? JSONDecoder().decode(Response.self, from: data), body.code != "Ok" {
@@ -71,8 +71,18 @@ public struct OSRMRouteProvider: RouteReconstructing {
             )
             return nil
         }
+        // 429 is told apart from every other refusal because it is the one that
+        // says "later" rather than "no" — a hosted provider will produce it and
+        // a LAN OSRM never did (2026-08-15).
+        if http.statusCode == 429 {
+            let retryAfter = (http.value(forHTTPHeaderField: "Retry-After")).flatMap(Double.init)
+            KamomeLog.routing.error(
+                "route: RATE LIMITED by \(config.baseURL, privacy: .public), retry after \(retryAfter ?? -1)s"
+            )
+            throw RouteProviderFailure.rateLimited(retryAfterS: retryAfter)
+        }
         KamomeLog.routing.error("route: HTTP \(http.statusCode) from \(config.baseURL, privacy: .public)")
-        throw URLError(.badServerResponse)
+        throw RouteProviderFailure.refused(status: http.statusCode)
     }
 
     /// Every `return nil` here is a leg that will draw dashed, and every one of

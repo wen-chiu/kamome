@@ -1308,3 +1308,164 @@ reopened.
 the films published to Chiu's community were rendered on **Apple Maps**, not on the
 souvenir map the v1.5 pivot was about. Nothing published so far demonstrates the
 MapLibre substrate.
+
+## 2026-08-15 — MapLibre is parked, Apple Maps is what ships, and routing moves behind an API
+
+**Amends the 2026-08-08 substrate ADR.** Reopened and closed by Chiu on the same
+day, on measured evidence and the first outside user feedback the product has had.
+The 2026-08-08 entry stands as the record of why MapLibre was chosen; this is why
+it is being parked rather than pursued.
+
+**The evidence.** Export time is snapshot-bound, and four device runs put a number
+on each substrate:
+
+| trip shape | substrate | s per snapshot |
+|---|---|---:|
+| city (Tokyo) | Apple | **0.72** |
+| small island (Miyakojima) | Apple | 1.00 |
+| long road trip (New Zealand) | Apple | **1.55** |
+| long road trip (New Zealand) | MapLibre | **0.84** |
+
+Apple's cost tracks how much unseen ground a film covers — a city trip revisits
+the same tiles, a road trip fetches new ones every snapshot. MapLibre reads local
+`.pmtiles`, so it should be flat; it has **one** sample. On the road-trip shape
+Kamome is named for, MapLibre was roughly twice as fast; on a city trip Apple beat
+it outright.
+
+**Neither substrate solves the export problem**, which is the finding that
+mattered. At 0.72–1.55 s a snapshot, every film costs minutes either way. The
+lever is snapshot count (`keyframe_interval_frames`, 15 today = one snapshot per
+half-second), not where the tiles come from.
+
+**The user evidence.** Chiu published films and gathered community feedback.
+**Nobody raised the map style. The most common request was to change the vehicle.**
+His own reading, recorded because it is the honest one: *"可能也做得不好"* — the
+souvenir map may simply not be good enough yet to be noticed.
+
+**Decisions (Chiu 2026-08-15):**
+
+1. **MapLibre is parked, not removed.** The code, the themes, the tile pipeline
+   and `Deploy/regions.json` all stay. In practice the app renders Apple Maps,
+   because `RecapModel.snapshotProvider(for:)` already falls back whenever no
+   `.pmtiles` region covers the trip, and no region will be installed.
+2. **Tile provisioning and map labels leave the roadmap.** Labels stay iceboxed
+   with no unlock condition pending; the 640 MB-per-region download problem and
+   the whole P7 tile-server question are moot while nothing needs tiles.
+3. **Routing stays OSRM, and moves behind an API** rather than a machine on
+   Chiu's LAN. ⚠️ *Which* API is not decided — see below.
+4. **Phase 4 reorders around what people asked for:** vehicle sprites →
+   cross-region flight display → export reliability. Map work is not in it.
+
+**Consequences:**
+
+- **Structurally free, which is the point of the boundary.** `establishing == nil`
+  is a supported path: `cappedToRegion` returns the asked-for span uncapped, the
+  country beat drops out, and the opening frames from the trip's own bounds. The
+  souvenir map's absence breaks nothing — `RecapSnapshotProviding` and the
+  one-file confinement of each renderer are what made parking it a decision rather
+  than a project.
+- **Dormant, not wrong:** `Docs/vector-tile-pipeline.md`, `Tools/tile-headroom.sh`,
+  the region headroom rule and the Planetiler builds. They stay accurate for
+  whenever this reopens.
+- **Pixel Art loses its near-term justification.** MapLibre was retained
+  *specifically* to keep that identity path viable; parking one parks the other.
+
+**Recorded honestly, because it is the weakness of this decision:** the souvenir
+map was judged **without place names and without Pixel Art** — the two things that
+would have made it distinctive, neither of which was ever built. This parks an
+unfinished path on the evidence that its unfinished state did not impress anyone.
+That is a legitimate call and it is not the same as concluding the path failed.
+Chiu's condition for reopening, in his words: *"之後有新的需求或是我很想不同地圖再
+展開."*
+
+**Unchanged:** the v1.5 rejection of the GPS-visualiser framing, the story/render
+separation, and every renderer-independent part of the pipeline — camera,
+overlays, subject, chrome — which work over either substrate and always did.
+
+## 2026-08-15 — Routing is bounded, cancellable, and says which of four things went wrong
+
+**The trigger was the P0**, not a design review. The first person outside this
+project to install Kamome could not use it: with a large photo library the app
+went unresponsive. The mechanism, traced through the code rather than guessed:
+`ImportService.importTrip` awaited `matchTrip` **after** the trip was already
+saved; `matchTrip` walked the legs sequentially at `matching.timeout_s` each,
+with failures swallowed by `try?`; and `ImportSheet` disabled its Close button
+and `interactiveDismissDisabled` for the whole thing. More photographs meant more
+stops, more legs, and more back-to-back timeouts behind a UI with nothing to
+press. A build carrying a LAN `base_url` makes every one of those legs time out.
+
+**Decisions:**
+
+1. **Import returns when the trip is saved.** Routing is a separate concern with
+   a separate lifetime — the trip is complete, viewable and exportable without
+   it, and an unrouted leg draws dashed rather than claiming a road (PD-2).
+   The import sheet's exit is enabled again, always.
+2. **Two bounds, borrowed from the render** — `RecapExporter`'s `shouldContinue`
+   + progress pair, which already solved this exact problem for export.
+   `matchTrip` checks cancellation before every leg, and
+   **`matching.trip_budget_s` (60 s)** bounds the whole trip. `timeout_s` bounded
+   a request; nothing bounded the trip. Past the budget the remaining legs stay
+   raw and are reported as *skipped* — never as "no road here".
+3. **`RouteMatchCoordinator` owns one run per trip.** A second caller joins the
+   run in flight instead of starting another.
+4. **A failure taxonomy at the boundary**, built now rather than after the
+   provider migration, because it is what makes that migration safe.
+   `RouteProviderFailure` (unreachable / rateLimited / refused) is thrown by the
+   providers; a nil outcome keeps its old meaning — the provider answered, and
+   the answer was "no road route". `RouteMatchReport` aggregates them and S5
+   shows the user which, beside the existing photo-shortfall row.
+
+**On concurrency, checked rather than assumed** (this was the review's gate on
+landing any of it). Detaching matching means a user who imports and immediately
+taps the film button runs `matchTrip` twice over one trip. That is **not a data
+race**: `AppDatabase` is a GRDB `DatabaseQueue`, which serialises every read and
+write; `setMatchedPolyline` is a one-row, one-column UPDATE that does not read
+the row first; and `matchTrip` never writes nil, so no run can un-match what
+another matched. Two runs can only do the same work twice and agree.
+
+It is still prevented, for reasons that are about the product rather than the
+database: a *per-run* budget is not the per-trip budget `trip_budget_s` promises,
+and two runs produce two verdicts for one trip when the screen can show one.
+Hence single-flight ownership, **not a lock** — nothing here needed one.
+
+**Consequences:** `ImportService` no longer takes a matcher, and the two desk
+harnesses that relied on `importTrip` routing now ask for it explicitly — a
+dependency they always had and never stated. `RouteMatchService` takes the
+`matching` block instead of the whole config, because that is all it reads.
+
+**Not decided here:** which hosted provider. §0 still governs that — routing
+sends real trip coordinates off the device (PO.md, Routing).
+
+## 2026-08-15 — Export variation enters as a seed, never as randomness
+
+**Written before the feature, deliberately.** "Different photos each export" is
+wanted and deferred; this records the one constraint it must be built under, so
+the obvious implementation — a `random()` inside the selector — is not the one
+that gets written.
+
+**Decision.** Variation enters the pipeline **only** as an explicit seed:
+
+- **Chosen at the composition boundary** (`RecapModel`), which is where a film
+  becomes a specific film. Never generated inside `ExportEngine`.
+- **Persisted with the export.** A seed that is not stored is not a seed, it is
+  a coin toss with extra steps.
+- **Re-rendering an export reproduces it**, byte for byte. "Shuffle" is the
+  gesture that mints a *new* seed; export alone never does.
+
+**Why.** The golden-frame gates and the two continuity gates
+(`RecapCameraContinuityTests`) are the reason the recap pipeline can be changed
+at all — they compare renders. Anything non-deterministic inside `ExportEngine`
+makes a failing gate unreproducible and therefore useless, and this is already
+recorded once: video clips in recap were iceboxed in 2026-07-17 on exactly this
+ground ("deterministic excerpts only — random breaks golden-frame CI").
+
+It also matters to the user, not only to CI. A film worth keeping is one you can
+get back. If re-exporting silently produced a different edit, the good version
+would be gone the moment anyone tried to render it at a higher bitrate.
+
+**Rejected:** randomness inside the selector (unreproducible gates, and a film
+the user cannot recover); a seed derived from the trip id alone (stable, but then
+"shuffle" has nothing to change); a seed derived from the clock at export time
+(reproducible only by accident, and never after the fact).
+
+**Deferred:** the feature itself. This is the constraint, not a plan.

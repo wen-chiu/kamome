@@ -14,12 +14,10 @@ import KamomeTrackingEngine
 struct ImportService {
     private let repository: TripRepository
     private let config: TrackingConfig
-    private let matcher: RouteMatchService
 
-    init(repository: TripRepository, config: TrackingConfig, matcher: RouteMatchService? = nil) {
+    init(repository: TripRepository, config: TrackingConfig) {
         self.repository = repository
         self.config = config
-        self.matcher = matcher ?? RouteMatchService(repository: repository, config: config)
     }
 
     enum ImportError: Error, Equatable {
@@ -29,7 +27,20 @@ struct ImportService {
     }
 
     /// Clusters `photos`, persists them as an imported trip with honest
-    /// provenance, snaps the route best-effort, and returns the trip id.
+    /// provenance, and returns the trip id.
+    ///
+    /// **It does not route** (2026-08-15). It used to await `matchTrip` here,
+    /// after the trip was already saved — so the sheet that had disabled its own
+    /// Close button went on holding the user through one network round trip per
+    /// leg. On a large import that is minutes of an app that looks dead, and it
+    /// is what the first person outside this project experienced.
+    ///
+    /// Routing is a separate concern with a separate lifetime: the trip is
+    /// complete, viewable and exportable without it, and a leg that never got a
+    /// road draws dashed rather than claiming one (PD-2). `RouteMatchCoordinator`
+    /// owns the run; harnesses that need a routed trip await
+    /// `RouteMatchService.matchTrip` themselves, which makes a dependency that
+    /// used to be accidental into one the caller states.
     @discardableResult
     func importTrip(title: String, photos: [ImportPhoto]) async throws -> String {
         let clustering = ImportClusteringConfig(
@@ -88,12 +99,6 @@ struct ImportService {
             )
         )
 
-        // §4.4: reconstruct each drivable leg's road geometry, best-effort and
-        // idempotent. The shipped `matching.base_url` is "" (disabled) so this
-        // is a no-op until an OSRM server exists — the trip is already saved and
-        // viewable, and unreconstructed legs render dashed rather than claiming
-        // a road they never proved (PD-2).
-        await matcher.matchTrip(tripId: tripId)
         return tripId
     }
 

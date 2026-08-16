@@ -114,11 +114,11 @@ final class OSRMRecordedFixtureTests: XCTestCase {
 
     func testCaptureRecordedFixture() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_OSRM_CAPTURE"] == "1",
+            HarnessEnv.value("KAMOME_OSRM_CAPTURE") == "1",
             "manual capture — set TEST_RUNNER_KAMOME_OSRM_CAPTURE=1 with a live OSRM server"
         )
         let loaded = try GPXReplay.loadConfig().matching
-        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? "http://127.0.0.1:5001"
+        let baseURL = HarnessEnv.value("KAMOME_OSRM_BASE_URL") ?? "http://127.0.0.1:5001"
         let config = loaded.withBaseURL(baseURL)
         let (name, trace) = try Self.recordedSegment(config: config)
         print("KAMOME_OSRM_CAPTURE segment \(name): \(trace.count) trace points → \(baseURL)")

@@ -51,31 +51,62 @@ Prioritize product value over technical sophistication.
 
 ## Locked Product Decisions
 
-### MVP Rendering & Routing
+### Rendering substrate — **amended 2026-08-15, read this before citing anything below**
 
-> **The MVP rendering and routing substrate is OSRM + MapLibre because it is already implemented and validated against real trips. The application must keep routing and rendering behind stable boundaries so future releases may substitute MKDirections + Apple Maps without changing the story model or replay pipeline.**
+> **MapLibre is parked. The app renders Apple Maps in practice**, because no vector
+> tiles are installed and `RecapModel.snapshotProvider(for:)` falls back whenever
+> no region covers the trip. Nothing was deleted: the MapLibre provider, the
+> themes, the tile pipeline and `Deploy/regions.json` all stay, dormant and
+> accurate.
 
-Do not reopen this decision.
+Canonical text: `Docs/decisions.md` **2026-08-15**, which amends the 2026-08-08
+substrate ADR. Chiu reopened and closed it himself in a day, on four device export
+measurements and the first outside feedback the product ever had — nobody
+mentioned the map; the most common request was to change the vehicle.
+
+**Reopening condition, in his words:** *"之後有新的需求或是我很想不同地圖再展開."*
+Until then, tiles, the tile server and map labels are **off the roadmap**, not
+merely deferred.
+
+⚠️ **A superseded lock is a governance hazard, not clutter.** Until 2026-08-15
+this file locked "the MVP rendering and routing substrate is OSRM + MapLibre — do
+not reopen", which would have had a PO session defending a dead decision against
+the current ADR. If you find yourself enforcing a lock that an ADR has amended,
+the ADR wins and the lock is the bug.
+
+### Routing
+
+> **OSRM stays as the routing engine, and moves off the developer's LAN to a
+> hosted service. The provider is not selected and may not be OSRM-compatible.**
+
+Do not select one, and do not build a provider registry, factory, or second
+adapter in advance. The boundary already passes the real test — OSRM's wire format
+lives only in the two provider files and downstream consumes a domain-level
+`RouteMatchOutcome` — so a differently-shaped provider is one new file.
+
+**§0 governs this choice**: routing sends real trip coordinates off the device, so
+who receives them is a product decision for Chiu, not an implementation detail.
+
+One thing to lift **when the migration happens and not before**: the detour-ratio
+plausibility gate currently lives inside `OSRMRouteProvider`, but it is Kamome's
+honest-provenance policy rather than an OSRM fact, and a new provider file would
+silently drop it.
 
 ### Pixel Art
 
-> **Pixel Art remains a post-MVP visual differentiation path enabled by retaining MapLibre.**
+> Parked with MapLibre — it was the identity path MapLibre was retained for, so
+> parking one parks the other.
 
 Do not implement it now.
 
-### Apple Maps / MKDirections
-
-Deferred by product decision, not technical blocker.
-
-Do not implement or opportunistically prototype them.
-
-Future evaluation must be based on actual rendered A/B comparison, not theoretical assumptions.
-
 ### MapLibre Labels
 
-MapLibre labels / glyph / fontstack work remains deferred / icebox.
+Still iceboxed, and now with no unlock condition pending: the souvenir map left
+the roadmap, and what Chiu wants from "big cute place names" is a **Kamome-drawn
+overlay** — substrate-independent, no glyph/fontstack blocker, and the app already
+geocodes every stop. Iceboxed as "Place names as narrative rhythm".
 
-Do not solve this opportunistically.
+Do not solve either opportunistically.
 
 ### Reopening a Locked Decision
 

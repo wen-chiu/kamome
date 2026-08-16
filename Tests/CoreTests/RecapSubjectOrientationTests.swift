@@ -46,6 +46,37 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
         XCTAssertEqual(sizes.count, 1, "all eight drawings must share one canvas size")
     }
 
+    // MARK: - Missing resources
+
+    /// The fallback that used to be unreachable (2026-08-15). `Bundle.module`'s
+    /// generated accessor calls `fatalError` when the bundle cannot be found, so
+    /// `decodeAll`'s `return nil` and the marker renderer behind it could never
+    /// run for the one failure they exist to handle — and it is the only
+    /// `fatalError` on the shipped export path.
+    ///
+    /// A film with a seagull instead of a car is a degraded film. A trap is a
+    /// crash mid-export, after minutes of rendering.
+    func testAMissingSpriteBundleFallsBackToTheMarkerRatherThanTrapping() {
+        XCTAssertNil(RecapCarSprite.decodeAll(in: nil), "no bundle must decode to no set")
+
+        let renderer = VehicleSubjectRenderer.make(style: RecapStyle(), spriteSet: nil)
+        guard case let .marker(marker, _) = renderer.visual else {
+            return XCTFail("a nil sprite set must select the vector marker, got \(renderer.visual)")
+        }
+        XCTAssertEqual(marker, RecapStyle().fallbackMarker)
+        XCTAssertEqual(renderer.lengthPx, RecapStyle().fallbackMarkerLengthPx)
+    }
+
+    /// The other half of the same contract: the resolver really does find the
+    /// shipped bundle, so the fallback stays a fallback.
+    func testTheShippedSpriteBundleResolves() throws {
+        let set = try XCTUnwrap(
+            RecapCarSprite.decodeAll(in: RecapCarSprite.resourceBundle),
+            "the resource bundle lookup no longer finds the car sprites"
+        )
+        XCTAssertEqual(set.count, SpriteDirection.allCases.count)
+    }
+
     // MARK: - Rendering
 
     /// The heading is expressed by *which* drawing is chosen: headings in

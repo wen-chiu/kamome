@@ -77,8 +77,12 @@ struct ImportSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // **Always enabled** (2026-08-15). It used to be disabled
+                    // for the whole import, which included the routing wait —
+                    // so on a large trip the only control on screen was dead for
+                    // minutes and the app read as crashed. Clustering itself is
+                    // quick; routing no longer happens here at all.
                     Button("import_close") { dismiss() }
-                        .disabled(model.isImporting)
                 }
             }
             .onChange(of: model.completedTripId) { _, tripId in
@@ -89,7 +93,9 @@ struct ImportSheet: View {
                 await model.loadAlbums()
             }
         }
-        .interactiveDismissDisabled(model.isImporting)
+        // Nothing here is unsafe to dismiss: an import that is still clustering
+        // either finishes and lands a trip on S1 or fails, and either way the
+        // user is not trapped watching it.
     }
 
     /// The date-range path — unchanged, and still the default.

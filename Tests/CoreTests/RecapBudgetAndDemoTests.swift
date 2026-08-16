@@ -75,7 +75,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
 
     func testRenderBudgetFullResolutionFlatProvider() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_RENDER_BENCH"] == "1",
+            HarnessEnv.value("KAMOME_RENDER_BENCH") == "1",
             "manual benchmark — set TEST_RUNNER_KAMOME_RENDER_BENCH=1"
         )
         let config = try fullResolutionConfig()
@@ -113,7 +113,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
 
     func testMapKitSnapshotLatency() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_RENDER_BENCH"] == "1",
+            HarnessEnv.value("KAMOME_RENDER_BENCH") == "1",
             "manual benchmark — set TEST_RUNNER_KAMOME_RENDER_BENCH=1"
         )
         let config = try fullResolutionConfig()
@@ -146,7 +146,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
     /// Maps tiles at full resolution. Copy the printed files to Docs/demos.
     func testRenderDemoArtifact() async throws {
         try XCTSkipUnless(
-            ProcessInfo.processInfo.environment["KAMOME_DEMO_RENDER"] == "1",
+            HarnessEnv.value("KAMOME_DEMO_RENDER") == "1",
             "manual demo render — set TEST_RUNNER_KAMOME_DEMO_RENDER=1"
         )
         let config = try fullResolutionConfig()
@@ -170,7 +170,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         )
         // Test clones are destroyed after the run, so honor a host output
         // path (simulator doesn't enforce the file sandbox).
-        let outBase = ProcessInfo.processInfo.environment["KAMOME_DEMO_OUT"]
+        let outBase = HarnessEnv.value("KAMOME_DEMO_OUT")
             .map { URL(fileURLWithPath: $0, isDirectory: true) }
             ?? FileManager.default.temporaryDirectory
         let stampDir = outBase.appendingPathComponent("kamome-demo", isDirectory: true)
