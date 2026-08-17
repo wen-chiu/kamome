@@ -24,11 +24,16 @@ backwards on an eastbound leg.
 
 ```
 Vehicles/
-  car-red/     n.png ne.png e.png se.png s.png sw.png w.png nw.png
-  car-blue/    n.png … nw.png
-  seagull/     omni.png
+  car-red/     n.png ne.png e.png se.png s.png sw.png w.png nw.png  logo.png
+  car-blue/    n.png … nw.png  logo.png
+  seagull/     omni.png  logo.png
   vehicles.json
 ```
+
+`logo.png` is the **picker thumbnail** — one representative image per subject, for
+the UI that lets someone choose. It is not part of the eight and is never drawn
+into a film, so it does not share the set's canvas and carries no direction. Every
+selectable subject should have one.
 
 **One folder is one selectable subject.** Its folder name is its id. There is no
 nesting and no second level — grouping ("these are all cars") is a presentation
@@ -60,11 +65,27 @@ share one canvas size: scale by content and the subject *pulses* as it turns,
 because the drawing's own bounding box changes with the angle. A test enforces
 the shared canvas size; do not work around it.
 
-Known and accepted: because content is centred only to ±35 px, the subject can
-sit up to ~26 px off the true position on the `sw`/`nw` drawings at the 1080
-reference. Invisible in practice. Revisit only if it shows in rendered video, and
-by correcting the content centre at load — **never** by switching to content
-scaling.
+### Centring is a tool's job, not a prompt's
+
+**Run `./Tools/center-sprites.py <folder>` on every new set. Do not hand-place
+anything, and do not trust an image generator to centre.**
+
+The renderer puts the **canvas** centre at the vehicle's position, so a drawing
+whose content sits off-centre draws the vehicle away from where it actually is —
+and because each drawing is off by a different amount, the subject *jumps
+sideways relative to the route as it turns*. That is the defect the tool exists to
+make impossible.
+
+It translates content to the canvas centre and sizes one square canvas per set so
+the widest drawing fills 74% — car-red's proportion, which keeps every subject's
+apparent size comparable at the same `subject_length_px`. **It never rescales
+content**, so the honest size variation between a profile and a rear view
+survives. Run `--check` first; the write is in place.
+
+Measured when the tool landed (2026-08-16): generated sets were off by up to
+58 px, 13.7% of canvas, with content running off the edge on 10 drawings across
+three sets. Every set is now within half a pixel — including `car-red`, whose
+±35 px offset had been carried as "known and accepted" and is simply gone.
 
 ## Omni marks — the single drawing
 
