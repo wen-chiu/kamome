@@ -79,21 +79,25 @@ public enum VehicleCatalog {
     /// Every declared subject, manifest order.
     public static var subjects: [VehicleSubject] { store.subjects }
 
-    /// Those a user may choose **and** that have a picker thumbnail.
+    /// Those a user may choose. **`selectable` is the only gate**, deliberately.
     ///
-    /// Two separate gates, because they say different things. `selectable: false`
-    /// is a product statement — the app picks a plane from the journey, and a
-    /// user choosing "plane" for a road trip is not a feature. A missing
-    /// `logo.png` is a statement about the art: the set works in a film, it just
-    /// has nothing to show in a list yet. Dropping such a subject beats showing
-    /// a blank row, and adding the file makes it appear with no code change.
-    public static var pickableSubjects: [VehicleSubject] {
-        store.subjects.filter { $0.selectable && thumbnail(id: $0.id) != nil }
+    /// A missing `logo.png` used to remove a subject from this list, which made
+    /// art a second, implicit source of truth about whether a feature works. It
+    /// produced exactly the failure that pattern always produces: with car-red's
+    /// thumbnail absent, a user who switched to a scooter could not switch back,
+    /// and nothing on screen said why. Eligibility is a product decision, so it
+    /// has one home — the flag — and missing art degrades how a row *looks*,
+    /// never whether it is there.
+    public static var selectableSubjects: [VehicleSubject] {
+        store.subjects.filter(\.selectable)
     }
 
-    /// The picker thumbnail: one representative image per subject, never drawn
-    /// into a film. Deliberately separate from `artwork` — it is not part of the
-    /// set's canvas, carries no direction, and must never reach the renderer.
+    /// The picker thumbnail, when one has been drawn. Callers must treat nil as
+    /// "show something else", never as "hide the subject".
+    ///
+    /// Never drawn into a film and deliberately separate from `artwork` — it is
+    /// not part of the set's canvas, carries no direction, and must not reach
+    /// the renderer.
     public static func thumbnail(id: String) -> CGImage? {
         store.thumbnail(id: id)
     }

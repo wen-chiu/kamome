@@ -30,15 +30,15 @@ final class TripDetailModel {
     /// predates the choice, and reads as the catalogue default.
     var vehicleId: String { detail?.trip.vehicleId ?? VehicleCatalog.defaultSubjectId }
 
-    /// What the picker may offer: selectable subjects that have a thumbnail,
-    /// plus this trip's own subject even if it has neither — a row must always be
-    /// able to show what is currently set.
+    /// What the picker offers: every selectable subject, plus this trip's own
+    /// even when it is not selectable — a picker must always be able to show
+    /// what is currently set, including a subject the app chose itself.
     var pickableSubjects: [VehicleSubject] {
-        let pickable = VehicleCatalog.pickableSubjects
-        guard !pickable.contains(where: { $0.id == vehicleId }),
+        let selectable = VehicleCatalog.selectableSubjects
+        guard !selectable.contains(where: { $0.id == vehicleId }),
               let current = VehicleCatalog.subject(id: vehicleId)
-        else { return pickable }
-        return [current] + pickable
+        else { return selectable }
+        return [current] + selectable
     }
 
     /// Writes the choice to the trip and remembers it for the next one. A column

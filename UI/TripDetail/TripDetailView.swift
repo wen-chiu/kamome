@@ -294,6 +294,10 @@ struct TripDetailView: View {
 
     private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
         let language = Locale.current.language.languageCode?.identifier ?? "en"
+        // A subject with no thumbnail yet shows its name alone. Deliberately not
+        // a grey box or a "missing image" glyph: those read as broken, and this
+        // is not broken — the set works in a film and simply has no picture yet.
+        // A chip that is only a name is an ordinary chip.
         return HStack(spacing: 6) {
             if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
                 Image(decorative: thumbnail, scale: 1)

@@ -57,6 +57,10 @@ let package = Package(
             name: "KamomeExportEngine",
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/ExportEngine",
+            // No `exclude:` for `.DS_Store` — it was tried and does not work.
+            // `.copy` is verbatim, and excluded paths inside a copied directory
+            // still reach the bundle (measured 2026-08-17). The strip happens
+            // after the build instead; see `postBuildScripts` in `project.yml`.
             resources: [.copy("Resources/Vehicles")]
         ),
         .target(

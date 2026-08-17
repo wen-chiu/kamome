@@ -142,26 +142,39 @@ final class VehicleCatalogTests: XCTestCase {
         XCTAssertFalse(plane.selectable, "the plane is chosen from the journey, never by the user")
         XCTAssertNotNil(VehicleCatalog.artwork(id: "plane"), "it must still load as artwork")
         XCTAssertFalse(
-            VehicleCatalog.pickableSubjects.contains { $0.id == "plane" },
+            VehicleCatalog.selectableSubjects.contains { $0.id == "plane" },
             "the plane must not reach the picker"
         )
     }
 
-    /// A subject with no `logo.png` is not an error — it works in a film and
-    /// simply has nothing to show in a list yet. Adding the file makes it
-    /// appear, with no code change.
-    func testASubjectWithoutAThumbnailIsNotPickableButStillRenders() {
-        for id in VehicleCatalog.subjects.map(\.id) where VehicleCatalog.thumbnail(id: id) == nil {
-            XCTAssertNotNil(VehicleCatalog.artwork(id: id), "\(id) must still render without a thumbnail")
-            XCTAssertFalse(
-                VehicleCatalog.pickableSubjects.contains { $0.id == id },
-                "\(id) has no thumbnail, so it cannot be offered in the picker yet"
+    /// **Missing art must never remove function** (Chiu 2026-08-17).
+    ///
+    /// A missing `logo.png` was briefly a second, implicit gate on eligibility,
+    /// and it produced the failure that pattern always produces: with car-red's
+    /// thumbnail absent the car left the picker, so a user who switched to a
+    /// scooter could not switch back. Eligibility has exactly one source of
+    /// truth — the `selectable` flag — and art arriving later changes only how a
+    /// row looks.
+    func testASubjectWithoutAThumbnailIsStillSelectable() throws {
+        let unthumbnailed = VehicleCatalog.subjects.filter { VehicleCatalog.thumbnail(id: $0.id) == nil }
+        XCTAssertFalse(
+            unthumbnailed.isEmpty,
+            "this test is vacuous once every subject has a logo.png — keep it, the rule outlives the art"
+        )
+        for subject in unthumbnailed where subject.selectable {
+            XCTAssertTrue(
+                VehicleCatalog.selectableSubjects.contains { $0.id == subject.id },
+                "\(subject.id) has no thumbnail, but only `selectable` may decide eligibility"
             )
+            XCTAssertNotNil(VehicleCatalog.artwork(id: subject.id), "\(subject.id) must still render")
         }
-        for subject in VehicleCatalog.pickableSubjects {
-            XCTAssertNotNil(VehicleCatalog.thumbnail(id: subject.id))
-            XCTAssertTrue(subject.selectable)
-        }
+
+        // The default must always be choosable, or a user can leave it and never
+        // return — which is exactly what the second gate caused.
+        XCTAssertTrue(
+            VehicleCatalog.selectableSubjects.contains { $0.id == VehicleCatalog.defaultSubjectId },
+            "the default subject must always be reachable in the picker"
+        )
     }
 
     /// The thumbnail is never part of the drawn set: it does not share the

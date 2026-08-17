@@ -87,6 +87,24 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         NSLocalNetworkUsageDescription: Kamome reconstructs your route using a routing service you run on your own computer. It is only contacted while you import or export a trip, and only on your local network.
+    # **Finder junk cannot reach a shipped build** (2026-08-17).
+    #
+    # `.copy` preserves the vehicle folder structure, which is load-bearing — and
+    # copies it verbatim, `.DS_Store` included. Five of them reached a clean
+    # bundle. They are gitignored, so CI can never see one, and any Finder visit
+    # re-creates them: "remember to delete before archiving" is a step that gets
+    # forgotten exactly once, on the archive that ships.
+    #
+    # `exclude:` in Package.swift does not fix it — measured: excluded paths
+    # inside a copied directory still land in the bundle. So the strip runs over
+    # the built product, after the resources are in place, on every build
+    # including archive. Nothing to remember, and no dependence on the state of
+    # the source tree at the moment someone hits Archive.
+    postBuildScripts:
+      - name: Strip Finder junk from bundled resources
+        basedOnDependencyAnalysis: false
+        script: |
+          find "$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME" -name '.DS_Store' -delete
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).
