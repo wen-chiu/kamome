@@ -1469,3 +1469,49 @@ the user cannot recover); a seed derived from the trip id alone (stable, but the
 (reproducible only by accident, and never after the fact).
 
 **Deferred:** the feature itself. This is the constraint, not a plan.
+
+## 2026-08-16 — Routing moves to a commercial API's free tier, and real coordinates leave the device
+
+**Decision (Chiu).** Routing moves off the developer's LAN to a **third-party
+hosted routing API, on a free tier**. The specific provider is **not yet chosen**.
+
+**Why not self-hosting**, which is cheaper in money. A self-hosted OSRM only
+routes the regions it preloaded, and that failed in practice on 2026-08-15: a
+friend's Tokyo trip had **no routable legs at all**, because `Deploy/regions.json`
+carries Kyushu for Miyakojima and Tokyo is not in it. Loading the planet is a
+machine costing hundreds a month, so the €5–10 VPS buys coverage of four countries
+and dashes everything else — and "every leg a straight line" is what §6a's honesty
+item exists to prevent. The saving is paid for in the product's core promise.
+
+**Volume makes a free tier genuinely sufficient**, which is the fact that decides
+this: one film is one request per drive leg — 9 on Miyakojima, 17 on New Zealand,
+58 on Iceland — and a person makes a handful of films. Any free tier absorbs that.
+
+**§0 — this is the cost, and it is accepted deliberately.** Routing sends **real
+trip coordinates off the device to a third party**. Until now they went only to a
+machine in Chiu's flat. §0 says a feature that needs real coordinates to leave the
+device is a product decision for him, not an implementation detail; **this is that
+decision, made.** It does not weaken §0's other guarantees — nothing is logged,
+synced, or sent to analytics, and the trip itself still lives only on the device —
+but a third party now sees where a leg started and ended.
+
+**Consequences:**
+
+- **The provider choice is still open**, and it is not only a price comparison:
+  current terms for commercial use, attribution requirements, caching rules, and
+  whether the response shape is OSRM-compatible all have to be read rather than
+  assumed. The boundary survives either way — OSRM's wire format lives only in the
+  two provider files and downstream consumes a domain-level `RouteMatchOutcome` —
+  so a differently-shaped provider is one new file.
+- **The detour-ratio plausibility gate must be lifted out of `OSRMRouteProvider`
+  in the migration PR**, and not before. It is Kamome's honest-provenance policy
+  rather than an OSRM fact, and a new provider file would silently drop it.
+- **`matching.trip_budget_s` (60 s) was chosen, not measured**, against a healthy
+  server at roughly one second per leg on the largest trip. A free tier's rate
+  limits may bind well inside it; re-measure once a provider exists.
+- **A disclosure surface does not exist.** Every import will silently contact a
+  third party. Whether that needs saying to the user, and where, is an open
+  product question — the failure taxonomy shipped 2026-08-15 tells them when
+  routing *fails*, not that it happens at all.
+- Self-hosted OSRM stays viable behind the same boundary if this is ever reversed;
+  `Deploy/` and `regions.json` remain accurate and are not deleted.
