@@ -68,9 +68,60 @@ final class RecapStopStillTests: XCTestCase {
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let url = outDir.appendingPathComponent("stop-\(fixture).png")
+        let url = outDir.appendingPathComponent("stop-\(fixture)-\(RecapReviewScene.variantSuffix).png")
         try write(image, to: url)
         print("KAMOME_STOP_STILL \(url.path) — \(stop.name) · \(stop.photos.count) photos · t=\(peak)s")
+    }
+
+    /// A **travelling** frame, for judging the subject itself.
+    ///
+    /// `testRenderStopStill` cannot answer that question: it renders the deck at
+    /// its peak, and the subject is deliberately *parked away* during a stop
+    /// scene so the pin can sit exactly where the journey paused (Chiu
+    /// 2026-07-26). Every subject and every size therefore produced a
+    /// byte-identical still — the frame simply has no vehicle in it.
+    ///
+    /// So this picks the moment the subject is fully present and the trail has
+    /// something to show, which is what "is the car too big, and can you still
+    /// read its heading?" needs.
+    func testRenderSubjectStill() async throws {
+        let fixture = HarnessEnv.value("KAMOME_SUBJECT_STILL") ?? ""
+        try XCTSkipUnless(
+            !fixture.isEmpty,
+            "Manual review harness — set KAMOME_SUBJECT_STILL to a fixture name (e.g. miyakojima)."
+        )
+        let scene = try await RecapReviewScene.make(fixture: fixture)
+        let time = try XCTUnwrap(travellingTime(scene.timeline), "the film never shows a moving subject")
+        let image = try await scene.frame(at: time)
+
+        let outDir = RecapReviewScene.outputDirectory()
+        try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
+        let url = outDir.appendingPathComponent("subject-\(fixture)-\(RecapReviewScene.variantSuffix).png")
+        try write(image, to: url)
+
+        let state = scene.timeline.subjectState(atTime: time)
+        print(String(
+            format: "KAMOME_SUBJECT_STILL %@ — t=%.1fs · heading %.0f° (%@ drawing) · emphasis %.2f",
+            url.path, time, state.heading,
+            SpriteDirection.nearest(toBearing: state.heading).rawValue, state.emphasis
+        ))
+    }
+
+    /// The latest instant at which the subject is fully drawn — late enough that
+    /// a trail exists behind it, and deterministic so a sweep compares like with
+    /// like across sizes and subjects.
+    private func travellingTime(_ timeline: LinearTimeline, dt: Double = 1.0 / 30) -> Double? {
+        var visible: [Double] = []
+        var time = timeline.openingS
+        while time <= timeline.durationS {
+            let state = timeline.subjectState(atTime: time)
+            if state.isVisible, state.emphasis > 0.99 { visible.append(time) }
+            time += dt
+        }
+        guard !visible.isEmpty else { return nil }
+        // Two thirds of the way through the moving frames: past the first leg,
+        // before the closing reveal.
+        return visible[Int(Double(visible.count - 1) * 0.66)]
     }
 
     /// The instant this stop's deck is most open — the frame that shows the

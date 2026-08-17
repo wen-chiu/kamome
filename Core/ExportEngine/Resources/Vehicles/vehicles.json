@@ -12,11 +12,40 @@
       }
     },
     {
+      "id": "scooter",
+      "kind": "directional",
+      "type": "scooter",
+      "selectable": true,
+      "names": {
+        "en": "Scooter",
+        "zh-Hant": "機車"
+      }
+    },
+    {
+      "id": "camper",
+      "kind": "directional",
+      "type": "camper",
+      "selectable": true,
+      "names": {
+        "en": "Camper van",
+        "zh-Hant": "露營車"
+      }
+    },
+    {
+      "id": "plane",
+      "kind": "directional",
+      "type": "plane",
+      "selectable": false,
+      "names": {
+        "en": "Plane",
+        "zh-Hant": "飛機"
+      }
+    },
+    {
       "id": "seagull",
       "kind": "omni",
       "type": "mark",
       "selectable": true,
-      "length_px": 170,
       "names": {
         "en": "Seagull",
         "zh-Hant": "海鷗"

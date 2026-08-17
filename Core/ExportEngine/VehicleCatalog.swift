@@ -79,8 +79,24 @@ public enum VehicleCatalog {
     /// Every declared subject, manifest order.
     public static var subjects: [VehicleSubject] { store.subjects }
 
-    /// Only those a user may choose.
-    public static var selectableSubjects: [VehicleSubject] { store.subjects.filter(\.selectable) }
+    /// Those a user may choose **and** that have a picker thumbnail.
+    ///
+    /// Two separate gates, because they say different things. `selectable: false`
+    /// is a product statement — the app picks a plane from the journey, and a
+    /// user choosing "plane" for a road trip is not a feature. A missing
+    /// `logo.png` is a statement about the art: the set works in a film, it just
+    /// has nothing to show in a list yet. Dropping such a subject beats showing
+    /// a blank row, and adding the file makes it appear with no code change.
+    public static var pickableSubjects: [VehicleSubject] {
+        store.subjects.filter { $0.selectable && thumbnail(id: $0.id) != nil }
+    }
+
+    /// The picker thumbnail: one representative image per subject, never drawn
+    /// into a film. Deliberately separate from `artwork` — it is not part of the
+    /// set's canvas, carries no direction, and must never reach the renderer.
+    public static func thumbnail(id: String) -> CGImage? {
+        store.thumbnail(id: id)
+    }
 
     public static func subject(id: String) -> VehicleSubject? {
         store.subjects.first { $0.id == id }
@@ -110,6 +126,7 @@ public enum VehicleCatalog {
         private var manifestLoaded = false
         private var cachedSubjects: [VehicleSubject] = []
         private var artworkCache: [String: SubjectArtwork?] = [:]
+        private var thumbnailCache: [String: CGImage?] = [:]
 
         var subjects: [VehicleSubject] {
             lock.withLock {
@@ -127,6 +144,17 @@ public enum VehicleCatalog {
                 if let cached = artworkCache[id] { return cached }
                 let decoded = Self.decode(id: id, kind: cachedSubjects.first { $0.id == id }?.kind)
                 artworkCache[id] = decoded
+                return decoded
+            }
+        }
+
+        func thumbnail(id: String) -> CGImage? {
+            _ = subjects
+            return lock.withLock {
+                if let cached = thumbnailCache[id] { return cached }
+                let decoded = VehicleResourceBundle.resolved
+                    .flatMap { Self.image(named: "logo", in: "Vehicles/\(id)", bundle: $0) }
+                thumbnailCache[id] = decoded
                 return decoded
             }
         }

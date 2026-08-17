@@ -1,3 +1,4 @@
+import KamomeExportEngine
 import KamomePersistence
 import KamomeTripComposer
 import MapKit
@@ -25,6 +26,7 @@ struct TripDetailView: View {
             if model.isReconstructed { provenanceNote }
             if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
+            vehicleRow
             timeline
         }
         .navigationTitle(model.detail?.trip.title ?? "")
@@ -261,4 +263,54 @@ struct TripDetailView: View {
             ? StrokeStyle(lineWidth: 3, dash: [4, 6])
             : StrokeStyle(lineWidth: 4)
     }
+
+    /// Which subject the film draws — a trip property, so it lives here beside
+    /// the title and the stops rather than inside the export sheet. Changing it
+    /// is a column write, so it never costs a re-import, and S5 reads it at
+    /// render time.
+    ///
+    /// The plane is deliberately absent: the app picks it from the journey for a
+    /// crossing, and choosing one for a road trip is not a feature.
+    @ViewBuilder
+    private var vehicleRow: some View {
+        let subjects = model.pickableSubjects
+        if subjects.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(subjects, id: \.id) { subject in
+                        Button {
+                            model.chooseVehicle(subject.id)
+                        } label: {
+                            vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+            }
+        }
+    }
+
+    private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        return HStack(spacing: 6) {
+            if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
+                Image(decorative: thumbnail, scale: 1)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 26, height: 26)
+            }
+            Text(subject.displayName(language: language))
+                .font(.subheadline)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
+        .overlay(
+            Capsule().stroke(isSelected ? Color.accentColor : .clear, lineWidth: 1.5)
+        )
+        .clipShape(Capsule())
+    }
+
 }

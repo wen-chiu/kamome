@@ -53,13 +53,37 @@ struct RecapReviewScene {
             trip: trip, config: config, timeline: timeline,
             compositor: FrameCompositor(
                 timeline: timeline,
-                subject: VehicleSubjectRenderer.make(style: style, config: config),
+                subject: Self.subjectRenderer(style: style, config: config),
                 overlay: RecapOverlayRenderer(style: style, resolver: try Self.resolver(for: trip)),
                 style: style,
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
             ),
             provider: try Self.provider(region: region)
         )
+    }
+
+    /// The subject under review. **Two review-only overrides**, because the
+    /// judgement Chiu is making is "is this the right size?" and "how does each
+    /// set look?" — one variable at a time, same trip, same frame.
+    ///
+    /// `KAMOME_SUBJECT_LENGTH_PX` overrides `export.subject_length_px`, and
+    /// `KAMOME_SUBJECT` picks the folder. Neither touches the config file, so a
+    /// setting for one still can never be committed.
+    private static func subjectRenderer(
+        style: RecapStyle, config: TrackingConfig.Export
+    ) -> VehicleSubjectRenderer {
+        let lengthPx = HarnessEnv.value("KAMOME_SUBJECT_LENGTH_PX")
+            .flatMap(Double.init).map { CGFloat($0) } ?? CGFloat(config.subjectLengthPx)
+        let subjectId = HarnessEnv.value("KAMOME_SUBJECT")
+        print("KAMOME_REVIEW subject \(subjectId ?? VehicleCatalog.defaultSubjectId) at \(Int(lengthPx))px")
+        return VehicleSubjectRenderer.make(style: style, subjectId: subjectId, lengthPx: lengthPx)
+    }
+
+    /// Names a still by what varies in it, so a sweep does not overwrite itself.
+    static var variantSuffix: String {
+        let subject = HarnessEnv.value("KAMOME_SUBJECT") ?? VehicleCatalog.defaultSubjectId
+        let length = HarnessEnv.value("KAMOME_SUBJECT_LENGTH_PX") ?? "default"
+        return "\(subject)-\(length)px"
     }
 
     /// `KAMOME_KEYFRAME_INTERVAL` renders the same film at a different snapshot

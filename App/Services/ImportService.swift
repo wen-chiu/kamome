@@ -99,6 +99,10 @@ struct ImportService {
             )
         )
 
+        // The subject is recorded at creation, never at render: the row then
+        // states what the film draws, so changing the default later cannot
+        // restyle a trip someone already made.
+        try? repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
         return tripId
     }
 
