@@ -54,9 +54,10 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
     /// a vector glyph. `VehicleCatalog.resolve` walks the first two; the marker
     /// is what is left when the resource bundle itself cannot be found.
     ///
-    /// Size resolves in the order it is configured: the subject's own
-    /// `length_px` override when the manifest declares one, otherwise the
-    /// supplied `lengthPx`.
+    /// Size resolves in the order it is configured: the configured `lengthPx`,
+    /// scaled by the subject's own `length_fraction` when the manifest declares
+    /// one. Only a mark declares one — the centring tool already equalises
+    /// apparent size between vehicles.
     ///
     /// `resolve` is injectable so a test can drive the marker fallback, which
     /// otherwise only fires when the app's own resource bundle cannot be found —
@@ -77,7 +78,7 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
                 lengthPx: style.fallbackMarkerLengthPx
             )
         }
-        let size = found.subject.lengthPx.map { CGFloat($0) } ?? lengthPx
+        let size = found.subject.lengthFraction.map { CGFloat($0) * lengthPx } ?? lengthPx
         switch found.artwork {
         case let .directional(set):
             return VehicleSubjectRenderer(visual: .rasterSprite(set), lengthPx: size)

@@ -24,15 +24,23 @@ public struct VehicleSubject: Decodable, Equatable, Sendable {
     /// regrouped for the picker without moving a file.
     public let type: String
     public let selectable: Bool
-    /// Overrides `export.subject_length_px` for this subject alone. A mark and a
-    /// car cannot share one size.
-    public let lengthPx: Double?
+    /// This subject's size as a **fraction of `export.subject_length_px`**, when
+    /// it should not simply be the subject size. Absent means "take the
+    /// configured size", which is what every vehicle does.
+    ///
+    /// A fraction rather than an absolute because the thing being expressed is
+    /// relational: a mark is a pin, and it is *half a vehicle*, not 112 px. An
+    /// absolute would encode a consequence of that intent at one particular
+    /// subject size and then silently stop meaning it — `subject_length_px` moved
+    /// three times in a week — with nothing failing and the mark quietly drifting
+    /// out of proportion.
+    public let lengthFraction: Double?
     /// Display name per language code.
     public let names: [String: String]
 
     enum CodingKeys: String, CodingKey {
         case id, kind, type, selectable, names
-        case lengthPx = "length_px"
+        case lengthFraction = "length_fraction"
     }
 
     /// The name to show, preferring the caller's language and falling back to

@@ -59,20 +59,20 @@ final class VehicleCatalogTests: XCTestCase {
 
     // MARK: - Size
 
-    /// Size is a real tunable, and every shipped subject takes it.
+    /// **A vehicle takes the configured size — that is the centring tool's
+    /// guarantee, and it is still worth guarding.**
     ///
-    /// **No subject overrides it today, and that is the tool's doing.**
     /// `center-sprites.py` sizes each set's canvas so its widest drawing fills
-    /// the same proportion car-red does, which is what makes one
-    /// `subject_length_px` produce comparable apparent sizes across a car, a
-    /// scooter and a gull. The override existed to paper over exactly the
-    /// difference the tool now removes, so declaring one would fight it.
-    func testEveryShippedSubjectTakesTheConfiguredSize() {
-        let configured: CGFloat = 250
-        for subject in VehicleCatalog.subjects {
+    /// the same proportion car-red does, precisely so one `subject_length_px`
+    /// makes a car, a scooter and a camper look the same size. They are all the
+    /// subject, so they should. A vehicle declaring an override would be fighting
+    /// the tool, and this fails if one ever does.
+    func testEveryDirectionalSubjectTakesTheConfiguredSize() {
+        let configured: CGFloat = 225
+        for subject in VehicleCatalog.subjects where subject.kind == .directional {
             XCTAssertNil(
-                subject.lengthPx,
-                "\(subject.id) declares a size override — the centring tool should make that unnecessary"
+                subject.lengthFraction,
+                "\(subject.id) is a vehicle declaring a size override — the centring tool makes that unnecessary"
             )
             let renderer = VehicleSubjectRenderer.make(
                 style: RecapStyle(), subjectId: subject.id, lengthPx: configured
@@ -81,12 +81,40 @@ final class VehicleCatalogTests: XCTestCase {
         }
     }
 
+    /// **A mark is not the subject, so it does not take the subject's size.**
+    ///
+    /// The tool's equalisation answers "do these vehicles look the same size?",
+    /// which is the right question for vehicles and the wrong one for a pin
+    /// saying "you are here". Its correct size is a separate judgement, and the
+    /// override is the mechanism for exactly that.
+    ///
+    /// The seagull's value is asserted rather than merely allowed, so changing it
+    /// is a deliberate edit to this test and not a silent drift in a JSON file.
+    /// It is a *fraction* so it keeps meaning "half a vehicle" when
+    /// `subject_length_px` is tuned again — it moved three times in one week.
+    func testAnOmniMarkMayDeclareItsOwnProportion() throws {
+        let seagull = try XCTUnwrap(VehicleCatalog.subject(id: "seagull"))
+        XCTAssertEqual(seagull.kind, .omni)
+        XCTAssertEqual(seagull.lengthFraction, 0.5, "the mark is half a vehicle — Chiu's call, 2026-08-17")
+
+        // At the shipped 225 that is 112.5 px, and it tracks any later change.
+        for configured in [CGFloat(225), 200, 300] {
+            let renderer = VehicleSubjectRenderer.make(
+                style: RecapStyle(), subjectId: "seagull", lengthPx: configured
+            )
+            XCTAssertEqual(
+                renderer.lengthPx, configured * 0.5, accuracy: 0.001,
+                "the mark must stay half the subject size at \(configured)"
+            )
+        }
+    }
+
     /// The override mechanism still exists for the set that eventually needs it,
     /// so this drives it with a manifest entry rather than the shipped one.
     func testADeclaredSizeOverrideWinsOverConfig() throws {
         let declared = try JSONDecoder().decode(VehicleSubject.self, from: Data("""
         {"id": "oversized", "kind": "omni", "type": "mark",
-         "selectable": true, "length_px": 90, "names": {"en": "Oversized"}}
+         "selectable": true, "length_fraction": 0.36, "names": {"en": "Oversized"}}
         """.utf8))
         let artwork = try XCTUnwrap(VehicleCatalog.artwork(id: "seagull"))
 
@@ -94,7 +122,7 @@ final class VehicleCatalogTests: XCTestCase {
             style: RecapStyle(), subjectId: "oversized", lengthPx: 250,
             resolve: { _ in (subject: declared, artwork: artwork) }
         )
-        XCTAssertEqual(renderer.lengthPx, 90, "a declared override must win over the configured size")
+        XCTAssertEqual(renderer.lengthPx, 90, "a declared fraction must scale the configured size")
     }
 
     // MARK: - Omni
@@ -152,29 +180,32 @@ final class VehicleCatalogTests: XCTestCase {
     /// A missing `logo.png` was briefly a second, implicit gate on eligibility,
     /// and it produced the failure that pattern always produces: with car-red's
     /// thumbnail absent the car left the picker, so a user who switched to a
-    /// scooter could not switch back. Eligibility has exactly one source of
-    /// truth — the `selectable` flag — and art arriving later changes only how a
-    /// row looks.
-    func testASubjectWithoutAThumbnailIsStillSelectable() throws {
-        let unthumbnailed = VehicleCatalog.subjects.filter { VehicleCatalog.thumbnail(id: $0.id) == nil }
-        XCTAssertFalse(
-            unthumbnailed.isEmpty,
-            "this test is vacuous once every subject has a logo.png — keep it, the rule outlives the art"
+    /// scooter could not switch back, and nothing on screen said why.
+    ///
+    /// **Stated so it cannot go vacuous.** The first version asserted the rule
+    /// against a subject that happened to have no thumbnail, and guarded itself
+    /// with "this is vacuous once every subject has a logo.png". That guard fired
+    /// the day the last two logos landed — correctly, but it means shipped art
+    /// can no longer exercise the path. So the rule is now asserted directly:
+    /// eligibility is the flag, and nothing else may narrow it.
+    func testEligibilityIsTheFlagAloneAndArtCannotNarrowIt() {
+        XCTAssertEqual(
+            VehicleCatalog.selectableSubjects.map(\.id),
+            VehicleCatalog.subjects.filter(\.selectable).map(\.id),
+            "something other than `selectable` is deciding who reaches the picker"
         )
-        for subject in unthumbnailed where subject.selectable {
-            XCTAssertTrue(
-                VehicleCatalog.selectableSubjects.contains { $0.id == subject.id },
-                "\(subject.id) has no thumbnail, but only `selectable` may decide eligibility"
-            )
-            XCTAssertNotNil(VehicleCatalog.artwork(id: subject.id), "\(subject.id) must still render")
-        }
 
-        // The default must always be choosable, or a user can leave it and never
-        // return — which is exactly what the second gate caused.
+        // The specific trap that second gate sprang: leave the default and you
+        // could never come back to it.
         XCTAssertTrue(
             VehicleCatalog.selectableSubjects.contains { $0.id == VehicleCatalog.defaultSubjectId },
             "the default subject must always be reachable in the picker"
         )
+
+        // And eligibility must never outrun what can actually be drawn.
+        for subject in VehicleCatalog.selectableSubjects {
+            XCTAssertNotNil(VehicleCatalog.artwork(id: subject.id), "\(subject.id) is offered but cannot render")
+        }
     }
 
     /// The thumbnail is never part of the drawn set: it does not share the
@@ -209,4 +240,5 @@ final class VehicleCatalogTests: XCTestCase {
             XCTAssertEqual(canvas.width, canvas.height, "\(subject.id)'s canvas must be square")
         }
     }
+
 }
