@@ -14,6 +14,33 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
+## 🐛 Known and not fixed — the import date range clips at timezone edges (2026-08-18)
+
+**Symptom you will meet:** a photograph taken early on the first morning of a
+trip, or late on the last night, is missing from an imported trip — and the date
+range plainly covers that day.
+
+**Cause.** A photo's `creationDate` is an absolute instant. `ImportFlowModel.dayBounds()`
+turns the picked days into instants with `Calendar.current`, which is the
+*device's* zone at the moment of import. Import an Iceland trip while sitting in
+Taiwan and the day boundary moves by eight hours, so "1 August" means 1 August in
+Taipei — clipping the Icelandic small hours at each edge of the range.
+
+**Why it is not fixed here.** Doing it properly needs each photograph's own
+timezone, which PhotoKit does not hand over with `creationDate`; it would mean
+reading EXIF `OffsetTimeOriginal` per asset, or inferring the zone from the
+photo's coordinates. Both are real work, and the clipping is small — hours at two
+edges of a multi-day range.
+
+**What to do if it bites.** Widen the picked range by a day at each end; the
+clustering drops the extra photos anyway if they are not part of the journey.
+Written down so the next person meeting a missing first-morning photo does not go
+hunting for a clustering bug that is not there.
+
+**Deliberately correct, do not "fix":** `dayBounds` widening the end to that
+day's last second (there is no "lost the last day" bug), and the `min`/`max` swap
+that makes an inverted range harmless.
+
 ## ▶ RESUME HERE — MVP desk renders, 3 of 3 rendered, review in progress (2026-08-13)
 
 Branch `phase-3-recap`, suite green (197), `swiftlint --strict` clean. PR #11

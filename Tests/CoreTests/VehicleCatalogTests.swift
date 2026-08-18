@@ -90,21 +90,24 @@ final class VehicleCatalogTests: XCTestCase {
     ///
     /// The seagull's value is asserted rather than merely allowed, so changing it
     /// is a deliberate edit to this test and not a silent drift in a JSON file.
-    /// It is a *fraction* so it keeps meaning "half a vehicle" when
-    /// `subject_length_px` is tuned again — it moved three times in one week.
+    /// It moved 0.5 → 0.7 on 2026-08-18, and this is the whole argument for a
+    /// fraction earning its keep: the proportion changed and nothing else had to.
     func testAnOmniMarkMayDeclareItsOwnProportion() throws {
         let seagull = try XCTUnwrap(VehicleCatalog.subject(id: "seagull"))
         XCTAssertEqual(seagull.kind, .omni)
-        XCTAssertEqual(seagull.lengthFraction, 0.5, "the mark is half a vehicle — Chiu's call, 2026-08-17")
+        XCTAssertEqual(
+            seagull.lengthFraction, 0.7,
+            "the mark is 0.7 of a vehicle — Chiu's call 2026-08-18, after 0.5 read too small"
+        )
 
-        // At the shipped 225 that is 112.5 px, and it tracks any later change.
+        // At the shipped 225 that is 157.5 px, and it tracks any later change.
         for configured in [CGFloat(225), 200, 300] {
             let renderer = VehicleSubjectRenderer.make(
                 style: RecapStyle(), subjectId: "seagull", lengthPx: configured
             )
             XCTAssertEqual(
-                renderer.lengthPx, configured * 0.5, accuracy: 0.001,
-                "the mark must stay half the subject size at \(configured)"
+                renderer.lengthPx, configured * 0.7, accuracy: 0.001,
+                "the mark must stay 0.7 of the subject size at \(configured)"
             )
         }
     }

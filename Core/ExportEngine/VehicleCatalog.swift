@@ -29,11 +29,11 @@ public struct VehicleSubject: Decodable, Equatable, Sendable {
     /// configured size", which is what every vehicle does.
     ///
     /// A fraction rather than an absolute because the thing being expressed is
-    /// relational: a mark is a pin, and it is *half a vehicle*, not 112 px. An
-    /// absolute would encode a consequence of that intent at one particular
-    /// subject size and then silently stop meaning it — `subject_length_px` moved
-    /// three times in a week — with nothing failing and the mark quietly drifting
-    /// out of proportion.
+    /// relational: a mark is a pin sized *against* the vehicle, not at some fixed
+    /// pixel count. An absolute would encode a consequence of that intent at one
+    /// particular subject size and then silently stop meaning it —
+    /// `subject_length_px` moved three times in a week — with nothing failing and
+    /// the mark quietly drifting out of proportion.
     public let lengthFraction: Double?
     /// Display name per language code.
     public let names: [String: String]

@@ -115,10 +115,23 @@ public struct TrackingConfig: Decodable, Equatable {
         /// travel, it is *no signal*, so above this the leg falls back to the same
         /// road-trip assumption already made for legs with no elapsed time at all.
         public let paceUnknowableGapS: Double
-        /// How many days back the S1 import date-range picker defaults to
-        /// (UI default only — the user adjusts it; kept here so it isn't a
-        /// magic number, §0 rule 2).
+        /// How many calendar days the S1 import date-range picker covers by
+        /// default, **inclusive of both ends**: 7 means a seven-day range, so
+        /// the picker seeds at `now − 6 days`.
+        ///
+        /// It used to seed at `now − 7 days`, which spans eight calendar days
+        /// once `dayBounds` widens to whole days — the key promised one thing
+        /// and the UI did another. A config key is a contract, so the behaviour
+        /// was moved to the name rather than the name to the behaviour.
         public let defaultRangeDays: Int
+        /// The widest range the picker will hold, in calendar days, inclusive.
+        ///
+        /// Nothing bounded it before, and months were selectable: photos
+        /// multiply into stops, stops into legs, and a year-long "trip" is not a
+        /// trip. Enforced as a **sliding window** rather than a refusal — pick an
+        /// end far from the start and the *other* end follows, so the input is
+        /// never rejected and the user can always see what they asked for.
+        public let maxRangeDays: Int
 
         enum CodingKeys: String, CodingKey {
             case stopRadiusM = "stop_radius_m"
@@ -128,6 +141,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case deckMaxPhotos = "deck_max_photos"
             case paceUnknowableGapS = "pace_unknowable_gap_s"
             case defaultRangeDays = "default_range_days"
+            case maxRangeDays = "max_range_days"
         }
     }
 

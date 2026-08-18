@@ -81,7 +81,10 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.deckMinPhotos, 3)
         XCTAssertEqual(config.photoImport.deckMaxPhotos, 8)
         XCTAssertEqual(config.photoImport.paceUnknowableGapS, 14_400)
+        // Inclusive of both ends: 7 means a seven-day range, seeded at now − 6.
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
+        // The widest range the picker will hold, as a sliding window (Chiu's 21).
+        XCTAssertEqual(config.photoImport.maxRangeDays, 21)
     }
 
     /// The §4.5 recap-export block: frame, pacing, prologue, duration window.
