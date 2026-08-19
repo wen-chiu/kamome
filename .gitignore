@@ -26,6 +26,12 @@ Tests/Fixtures/trips/local/
 !.env.example
 !**/.env.example
 
+# Build-time secrets. The routing API key reaches the app through an xcconfig
+# that is generated locally from ~/.kamome/routing.env — it must never be
+# committed, and Secrets.xcconfig.example is the template that documents it.
+Config/Secrets.xcconfig
+!Config/Secrets.xcconfig.example
+
 # Built routing + tile artifacts are gigabytes and live outside the repo
 # ($KAMOME_DATA_DIR, default ~/kamome-osrm) — this only catches strays.
 *.osm.pbf
