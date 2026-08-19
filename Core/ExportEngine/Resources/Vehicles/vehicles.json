@@ -12,6 +12,26 @@
       }
     },
     {
+      "id": "car-white",
+      "kind": "directional",
+      "type": "car",
+      "selectable": true,
+      "names": {
+        "en": "White car",
+        "zh-Hant": "白色汽車"
+      }
+    },
+    {
+      "id": "car-toy",
+      "kind": "directional",
+      "type": "car",
+      "selectable": true,
+      "names": {
+        "en": "Toy car",
+        "zh-Hant": "玩具車"
+      }
+    },
+    {
       "id": "scooter",
       "kind": "directional",
       "type": "scooter",
@@ -32,6 +52,16 @@
       }
     },
     {
+      "id": "drone",
+      "kind": "directional",
+      "type": "drone",
+      "selectable": true,
+      "names": {
+        "en": "Drone",
+        "zh-Hant": "空拍機"
+      }
+    },
+    {
       "id": "plane",
       "kind": "directional",
       "type": "plane",
@@ -39,6 +69,26 @@
       "names": {
         "en": "Plane",
         "zh-Hant": "飛機"
+      }
+    },
+    {
+      "id": "plane-3d",
+      "kind": "directional",
+      "type": "plane",
+      "selectable": false,
+      "names": {
+        "en": "Plane (3D)",
+        "zh-Hant": "飛機（3D）"
+      }
+    },
+    {
+      "id": "boat",
+      "kind": "directional",
+      "type": "boat",
+      "selectable": false,
+      "names": {
+        "en": "Boat",
+        "zh-Hant": "船"
       }
     },
     {

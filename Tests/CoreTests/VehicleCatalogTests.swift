@@ -165,16 +165,35 @@ final class VehicleCatalogTests: XCTestCase {
 
     // MARK: - The picker's two gates
 
-    /// **The plane must never be user-choosable.** The app picks it from the
-    /// journey for a crossing; a user choosing "plane" for a road trip is not a
-    /// feature, and the same will apply to a ship.
-    func testThePlaneShipsAsArtButNeverAsAChoice() throws {
-        let plane = try XCTUnwrap(VehicleCatalog.subject(id: "plane"))
-        XCTAssertFalse(plane.selectable, "the plane is chosen from the journey, never by the user")
-        XCTAssertNotNil(VehicleCatalog.artwork(id: "plane"), "it must still load as artwork")
-        XCTAssertFalse(
-            VehicleCatalog.selectableSubjects.contains { $0.id == "plane" },
-            "the plane must not reach the picker"
+    /// **The crossing set ships as art and is never user-choosable.**
+    ///
+    /// The app derives a crossing from the journey; a user picking "boat" for a
+    /// road trip is not a feature. They ship now so the crossing work later is an
+    /// asset lookup rather than an art dependency — which is exactly why they
+    /// must load as artwork while staying out of the picker.
+    func testTheCrossingSetShipsAsArtButNeverAsAChoice() throws {
+        let crossing = VehicleCatalog.subjects.filter { !$0.selectable }.map(\.id)
+        XCTAssertEqual(
+            Set(crossing), ["plane", "plane-3d", "boat"],
+            "the crossing set is a product judgement — changing it is a deliberate edit here"
+        )
+        for id in crossing {
+            XCTAssertNotNil(VehicleCatalog.artwork(id: id), "\(id) must still load as artwork")
+            XCTAssertFalse(
+                VehicleCatalog.selectableSubjects.contains { $0.id == id },
+                "\(id) must not reach the picker"
+            )
+        }
+    }
+
+    /// **Who chooses, pinned.** A person picks how their trip looks; the app
+    /// picks a crossing. Asserting the selectable set means flipping any
+    /// `selectable` flag is a deliberate edit to this test rather than a silent
+    /// change in a JSON file.
+    func testTheSubjectsAUserMayChooseAreExactlyThese() {
+        XCTAssertEqual(
+            Set(VehicleCatalog.selectableSubjects.map(\.id)),
+            ["car-red", "car-white", "car-toy", "scooter", "camper", "drone", "seagull"]
         )
     }
 
