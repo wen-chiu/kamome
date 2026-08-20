@@ -216,13 +216,24 @@ names" is a **Kamome-drawn overlay**, not a base-map feature — it is iceboxed 
 "Place names as narrative rhythm", it is substrate-independent, and the app
 already geocodes every stop so it has the names in hand.
 
-**Routing endpoint is an open product decision** — OSRM stays, but moves off
-Chiu's LAN to an API. §0 governs the choice: routing sends **real trip
-coordinates off the device**, so who receives them is a product decision, not an
-implementation detail. Note the scaling trap found 2026-08-15: a self-hosted OSRM
-only routes the regions it preloaded, and `Deploy/regions.json` carries four —
-a friend's Tokyo trip had no routable legs at all, because the Japan extract is
-Kyushu.
+**Routing is Geoapify — CLOSED 2026-08-20**, on Chiu's own survey against a live
+free-plan key (`Docs/decisions.md` 2026-08-20; `Docs/routing-provider-selection.md`
+is now the record of what was asked, not an open question). §0's cost was accepted
+on 2026-08-16 and stands: real trip coordinates leave the device to a third party.
+The scaling trap that forced it, 2026-08-15: a self-hosted OSRM only routes the
+regions it preloaded, and `Deploy/regions.json` carries four — a friend's Tokyo trip
+had no routable legs at all, because the Japan extract is Kyushu.
+
+⚠️ **The migration PR carries two policies out of `OSRMRouteProvider`, not one.**
+The detour-ratio gate is on record; **`matching.route_waypoint_radius_m` (500 m,
+sent as OSRM's `radiuses=`) is not, and it is the one that matters more.** It is
+what makes a photo taken 1 km from a road draw **dashed**. Chiu's survey measured
+Geoapify without it: that photo returns 200 and a **20.33 km route for an 11.29 km
+leg (ratio 2.247)** — which **passes** the 2.5 detour gate, is stored, and draws as
+solid road the traveller never took. Do not fix that by tightening the ratio: a
+fjord drive is legitimately 2–4×, so the ratio cannot tell a wrong road from an
+indirect one. Whether Geoapify accepts a snap radius at all is **untested**, and if
+it does not, the choice between dashed and fabricated comes back to Chiu.
 
 ### What the export numbers actually said (2026-08-15, device)
 

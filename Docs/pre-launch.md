@@ -61,6 +61,9 @@ iOS app ──(no key)──▶ Cloudflare Worker ──(+ key)──▶ Geoapif
 
 ## 🔴 Attribution has to be visible in the app
 
+*(Geoapify was confirmed as the provider on 2026-08-20 — `Docs/decisions.md`. This
+section was written ahead of that and is now backed rather than provisional.)*
+
 Geoapify attribution is **mandatory on the free plan**, and OpenStreetMap
 attribution is always required. Chiu's decision (2026-08-17) is that the app's
 interface is where it goes, not the rendered video — nothing in the terms
@@ -71,6 +74,57 @@ displaying place data as data.
 rhythm" feature draws place names into the film. If those names come from
 Geoapify rather than `CLGeocoder`, the condition to keep attribution *with the
 returned data* starts to bite.
+
+## ⚪ Two Geoapify terms questions — risk accepted, do NOT block on them
+
+Read on 2026-08-20 (`Docs/decisions.md` 2026-08-20 (b)). Neither blocks Phase 4.
+
+**Chiu decided 2026-08-20 (c): proceed without asking.** Both are ambiguous edges
+with no realistic legal exposure, and the remedy in either case is to upgrade the
+plan or stop. Kept on this page as *known accepted risk*, not as a blocker.
+
+- **Permanent storage of routing results** — the Terms are **silent**, which favours
+  us: no clause to breach. The fallback if it ever changes is already built — route
+  at export time instead of reading `matched_polyline`; offline re-export degrades,
+  nothing breaks.
+- **"Limited commercial use" is undefined**, and a publicly distributed app is the
+  case the terms never address. Volume is not the issue (3,000 credits/day against
+  ~58 requests per Iceland film).
+
+The mitigation is the **dated record** in `Docs/decisions.md` 2026-08-20 (b) — the
+URLs and what each document said on the day.
+
+Attribution, now confirmed: OSM attribution **always**, Geoapify attribution
+**mandatory on Free**, format `Powered by Geoapify` with a link. **Where** it appears
+is unspecified, which leaves the 2026-08-17 in-app decision intact.
+
+## 🟠 The privacy policy has to exist, and has to be true
+
+Chiu's §0 line (2026-08-20): recorded trips are the user's own; **photo-imported
+trips send their coordinates to the routing provider, walks included**, and that gets
+declared honestly rather than hidden.
+
+What a truthful notice has to say, from Geoapify's own Privacy Policy: they retain
+**request body, headers, IP address and timestamp**, for **no longer than 24 hours**
+for *successful* requests — failures are not covered by that sentence — and
+`/v1/routing` is **GET-only**, so the coordinates sit in the URL.
+
+**Both open questions were closed on 2026-08-20 (c).** Recorded traces **are** sent —
+without them there is no route data — and the answer is honest declaration. And the
+notice must describe the **two different payloads**, because they are not the same:
+
+| | photo-imported leg | recorded leg |
+|---|---|---|
+| what is sent | the leg's waypoints — stop centroids **plus photo positions**, thinned to ≥250 m, ≤100 per leg | **the full recorded trace**, in chunks of ≤100 points |
+| shape | GET — **in the URL** | POST — in the body (after migration) |
+
+⚠️ **"Start and end coordinates" is not a truthful description of either.** A notice
+that understates what is sent is worse than no notice.
+
+⚠️ **The album path ships with the notice, or the notice does not mention it.**
+Selecting an album (`Docs/cross-region-journeys.md` requirement 1, the cheap half) is
+now the control the privacy story rests on — a notice may not promise a control the
+app does not offer.
 
 ## 🟠 The six items §6b did not pass
 

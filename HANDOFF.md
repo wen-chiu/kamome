@@ -14,6 +14,151 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
+## Findings — PO/Architecture session (2026-08-20)
+
+**Context.** Chiu ran the Geoapify survey on 2026-08-19 and selected the provider.
+ADR: `Docs/decisions.md` 2026-08-20. These are the items the survey did not close,
+or closed differently from how it reported them. Ordered by what can go wrong
+silently.
+
+---
+
+### 1. 🔴 The migration PR carries **two** policies out of `OSRMRouteProvider`, not one
+
+**Decision.** `matching.route_waypoint_radius_m` (500 m) is Kamome honesty policy,
+exactly like the detour-ratio gate, and it must be carried across deliberately.
+
+**Why.** `OSRMRouteProvider.requestURL` sends `radiuses=` per waypoint — "photos sit
+beside roads, not on them". Under OSRM, a waypoint further than 500 m from a road
+returns `NoSegment`, so the leg draws **dashed**. Geoapify's `/v1/routing` has a
+different URL shape and **no snap-radius parameter was tested.** Chiu's own survey
+measured what happens without one: a waypoint 1 km off-road returned **200, 20.33 km
+for an 11.29 km leg, ratio 2.247**.
+
+**Evidence.** `matching.route_max_detour_ratio` is **2.5**; 9.05 km straight × 2.5 =
+22.62 km allowed vs 20.33 km returned → **the wrong-road route passes the gate**, is
+stored by `setMatchedPolyline`, and draws as solid road. The 2 km case (2.007) passes
+too. Verified by arithmetic over the survey's own table and `Config/TrackingConfig.json`.
+
+**Risk.** Do **not** respond by tightening the ratio. Legitimate routes measured
+1.15–1.49 and wrong-road routes 2.0–2.25, which looks separable — but a fjord or
+peninsula drive is legitimately 2–4×, and Iceland is made of them. The ratio cannot
+distinguish a wrong road from an indirect one; the snap radius can, because it acts
+before a route exists.
+
+**Next.** First establish whether Geoapify `/v1/routing` accepts a per-waypoint snap
+radius (one parameter on the existing survey script). **If it does not, stop and
+bring it to Chiu** — "a photo 1 km from a road draws dashed" vs "draws a road the
+traveller did not take" is a product decision, not an implementation detail.
+
+---
+
+### 2. 🟠 Do not delete `RouteProviderFailure.rateLimited`
+
+Geoapify produces no 429, no `Retry-After`, and no rate-limit headers at 28.7 req/s;
+overload arrives as TCP reset. The case becomes unreachable code on this provider.
+**Keep it, and keep both strings.** The pre-launch Cloudflare Worker (`Docs/pre-launch.md`)
+is the natural place to throttle and *can* emit a real 429 — the distinction is
+recoverable in a component already planned. Arch.md §7.2/§7.3: a case you merely
+believe is dead is one you have not tested.
+
+---
+
+### 3. ✅ DECIDED 2026-08-20 — the retry sentence stays; the copy work is smaller than it looked
+
+Chiu asked for "再匯出一次會有幫助" to be dropped. That sentence lives on
+**`recap_routing_budget_detail`** only:
+
+> The trip ran past our time limit. What's already matched is saved — export again
+> and it picks up from there.
+
+That is Kamome's own budget, and the promise is **verified true in code**:
+`RouteMatchService.shouldReconstruct` requires `segment.matchedPolyline == nil`, so a
+second run skips every leg already matched and genuinely resumes. "Kamome only
+promises what Kamome controls" — this is the one promise that survives.
+
+The pair the survey actually undermined is `unreachable` / `rate_limited`, and
+**neither contains that sentence.** `recap_routing_unreachable_detail` ("we just
+can't reach the routing service right now") already describes a TCP reset fairly.
+So the copy work is smaller than it looks: nothing has to be rewritten, and
+`.rateLimited` simply stops being reachable (item 2).
+
+**Chiu confirmed this reading on 2026-08-20.** So: **no string is edited.**
+`recap_routing_budget_detail` keeps its retry promise, `recap_routing_unreachable_detail`
+stands as written, and `.rateLimited` simply becomes unreachable on this provider
+(item 2 — keep the case).
+
+---
+
+### 4. 🟡 `matching.trip_budget_s` — measure it, do not pick a number
+
+Survey latency: 0.48–2.53 s a leg cold, 440–840 ms back-to-back with connection
+reuse (which `URLSession.shared` gives us). Iceland is 58 legs → somewhere between
+**≈35 s and ≈88 s, derived arithmetic not a measurement**, against a 60 s budget.
+
+`matchTrip` already logs `STOPPED after N legs — trip_budget_s exhausted`. **The
+first real Iceland import against Geoapify is the measurement.** Read the line, then
+set the number, and say in the commit which run it came from.
+
+---
+
+### 5. 🟡 Untested and cheap: the waypoint cap on a GET-only endpoint
+
+`POST /v1/routing` returns 404 — the endpoint is **GET-only**. `matching.chunk_size`
+is 100 waypoints, which becomes ~2 KB of query string, and Geoapify's own per-request
+waypoint cap for `/routing` was never probed. Same script, one more row.
+
+---
+
+### 6. ℹ️ The 1500 m map-matching ceiling is a **Capture Beta** item, not a today item
+
+The survey concluded that sparse photo points defeat the matcher. They do not reach
+it: EXIF legs go through `RouteReconstructing.route` (`/v1/routing`); only `.gpsHifi`
+/ `.gpsPassive` reach `/v1/mapmatching` (`RouteMatchService.route`). Where it will
+bite is Capture Beta, and specifically the known region-resume hole (2026-07-19:
+32 min / 13 km lost), which returns **200 with points silently unmatched**. Same for
+`matching.timeout_s` (10 s) against a measured 9.6 s for 1000 points.
+
+---
+
+### 0. ✅ Reviewed — the key plumbing already in the working tree
+
+`Config/Base.xcconfig` + `Secrets.xcconfig.example` → `Info.plist` → `AppConfig`,
+with `apiKey` deliberately outside `Matching.CodingKeys` and a test proving the
+committed file cannot supply one. A keyless build degrades into routing-off, which
+is an existing designed state with copy already written, and the release guard is
+unchanged. **No architecture objection** — the boundary held and `OSRMRouteProvider`
+was correctly left alone.
+
+Two notes rather than objections: `matching.apiKey` is carried but not yet used by
+any request, so the next commit is exactly the one items 1–3 below constrain; and
+`"replace-me"` is a magic string, justified in its doc comment but still a string.
+
+---
+
+### 0b. 🔴 §0 — do not log the request URL when the new provider misbehaves
+
+`/v1/routing` is **GET-only**, so the request URL will contain **both the API key and
+real trip coordinates** in its query string. The natural move when a new provider
+returns something surprising is to log the URL. §0 forbids it — `KamomeLog` may name
+*which* stop failed, never its coordinates — and it would put the key in the device
+log beside them.
+
+The existing logs are already correct and should be the pattern: `OSRMRouteProvider`
+logs `config.baseURL` (host only), never the built URL. **Keep it that way in the
+new provider file**, and if a full URL is ever needed to debug, redact both before it
+reaches `KamomeLog`.
+
+---
+
+### 7. ℹ️ 45 shipped vehicle sprites are modified in the working tree and uncommitted
+
+Same dimensions and bit depth, ~3× smaller files, **different decoded pixels**
+(`sips`→TIFF md5 on `boat/n.png`). Consistent with an in-place `Tools/center-sprites.py`
+run that was never committed. So "vehicle sprites done" currently describes art that
+is not in git. `./Tools/center-sprites.py --check` on both versions says which set is
+the centred one.
+
 ## 🐛 Known and not fixed — the import date range clips at timezone edges (2026-08-18)
 
 **Symptom you will meet:** a photograph taken early on the first morning of a

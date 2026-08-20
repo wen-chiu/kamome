@@ -1,5 +1,15 @@
 # Choosing the routing provider — what to compare
 
+> ## ✅ CLOSED 2026-08-20 — the provider is **Geoapify**
+>
+> Chiu ran the survey on 2026-08-19 and decided. The ADR carries the measured
+> results, the two questions the survey did **not** close, and the second policy
+> the migration has to carry: `Docs/decisions.md` **2026-08-20**.
+>
+> Everything below is kept as the record of *what was asked* — it is the reason the
+> survey measured what it did. **It is not an open question.** Do not re-run this
+> checklist against another provider unless Chiu reopens the choice.
+
 **The decision to use a hosted third-party API on a free tier is made**
 (`Docs/decisions.md` 2026-08-16, including its §0 consequence: real trip
 coordinates now leave the device to a third party). **Which provider is not.**
