@@ -235,7 +235,7 @@ public struct TrackingConfig: Decodable, Equatable {
     public let segmentation: Segmentation
     public let dwell: Dwell
     public let simplify: Simplify
-    public let matching: Matching
+    public private(set) var matching: Matching
     public let photos: Photos
     public let photoImport: Import
     public let geocode: Geocode
@@ -247,6 +247,16 @@ public struct TrackingConfig: Decodable, Equatable {
         case schemaVersion = "schema_version"
         case filter, segmentation, dwell, simplify, matching, photos, geocode, trip, sampling, export
         case photoImport = "import"
+    }
+
+    /// The loaded config with a different `matching` block — the only value the
+    /// app supplies at runtime rather than reading from the file, because the
+    /// routing key must not be committed and a missing key means routing off.
+    /// Everything else still comes from `TrackingConfig.json` (§0 rule 2).
+    public func withMatching(_ matching: Matching) -> TrackingConfig {
+        var copy = self
+        copy.matching = matching
+        return copy
     }
 }
 

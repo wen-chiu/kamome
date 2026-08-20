@@ -1,0 +1,91 @@
+@testable import Kamome
+import KamomeConfig
+import XCTest
+
+/// **How the routing key reaches the app, and what happens when it does not.**
+///
+/// The key must not enter git, so it arrives through a gitignored
+/// `Config/Secrets.xcconfig` → `Config/Base.xcconfig` → `Info.plist` →
+/// `Bundle.main`. These cover the decision that path feeds, which is the half
+/// that can be tested without a bundle.
+///
+/// The case that matters most is the one that will break for the next person and
+/// not for whoever added this: **a checkout with no secrets file at all.**
+final class RoutingKeyTests: XCTestCase {
+    private func shipped() throws -> TrackingConfig {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Config/TrackingConfig.json")
+        return try TrackingConfigLoader.load(contentsOf: url)
+    }
+
+    /// A build with no key routes nothing — and does not crash doing it.
+    func testNoKeyDisablesRoutingRatherThanFailing() throws {
+        let config = try shipped().withMatching(
+            try shipped().matching.withBaseURL("https://routing.example.com")
+        )
+        let resolved = AppConfig.applyingRoutingKey(config, key: nil)
+
+        XCTAssertEqual(resolved.matching.baseURL, "", "no key must mean routing disabled")
+        XCTAssertEqual(resolved.matching.apiKey, "")
+        // Every other tunable still comes from the file.
+        XCTAssertEqual(resolved.matching.timeoutS, config.matching.timeoutS)
+        XCTAssertEqual(resolved.export, config.export)
+    }
+
+    /// The shipped config already ships routing disabled, so a keyless build is
+    /// unchanged rather than "disabled twice".
+    func testNoKeyLeavesAnAlreadyDisabledConfigAlone() throws {
+        let config = try shipped()
+        XCTAssertEqual(config.matching.baseURL, "", "precondition: the committed config ships routing off")
+        XCTAssertEqual(AppConfig.applyingRoutingKey(config, key: nil), config)
+    }
+
+    /// A key present is carried on `matching`, never read from the config file.
+    func testAKeyIsCarriedOnMatchingAndNotFromTheFile() throws {
+        let config = try shipped()
+        let resolved = AppConfig.applyingRoutingKey(config, key: "abc123")
+
+        XCTAssertEqual(resolved.matching.apiKey, "abc123")
+        XCTAssertEqual(resolved.matching.baseURL, config.matching.baseURL, "a key does not enable an endpoint")
+    }
+
+    /// `TrackingConfig.json` is committed and bundled, so the key must not be
+    /// decodable from it even if someone adds the field by hand.
+    func testTheConfigFileCannotSupplyAKey() throws {
+        let json = """
+        {"base_url":"https://routing.example.com","chunk_size":100,"confidence_min":0.5,
+         "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
+         "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
+         "route_waypoint_radius_m":500,"api_key":"leaked-into-git"}
+        """
+        let matching = try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
+        XCTAssertEqual(matching.apiKey, "", "a key in the committed file must be ignored, not honoured")
+    }
+
+    /// The three ways a build legitimately has no key. The `$(…)` case is the
+    /// no-`Secrets.xcconfig` build whose plist kept its placeholder.
+    func testUnsetAndPlaceholderValuesCountAsNoKey() {
+        XCTAssertNil(AppConfig.usableRoutingKey(""))
+        XCTAssertNil(AppConfig.usableRoutingKey("   "))
+        XCTAssertNil(AppConfig.usableRoutingKey("$(KAMOME_ROUTING_API_KEY)"))
+        XCTAssertNil(AppConfig.usableRoutingKey("replace-me-with-the-routing-provider-key"))
+        XCTAssertEqual(AppConfig.usableRoutingKey("  abc123  "), "abc123")
+    }
+
+    /// The release guard is untouched by any of this: a provider host and a
+    /// future Worker URL both satisfy it, and a LAN address still does not.
+    func testTheReleaseGuardStillRefusesACleartextLANEndpoint() throws {
+        let matching = try shipped().matching
+        XCTAssertTrue(matching.withBaseURL("").isDistributableEndpoint)
+        XCTAssertTrue(matching.withBaseURL("https://api.geoapify.com").isDistributableEndpoint)
+        XCTAssertTrue(matching.withBaseURL("https://kamome.example.workers.dev").isDistributableEndpoint)
+        XCTAssertFalse(matching.withBaseURL("http://192.168.50.179:5100").isDistributableEndpoint)
+        // A key does not launder an endpoint the guard refuses.
+        XCTAssertFalse(
+            matching.withBaseURL("http://192.168.50.179:5100").withAPIKey("abc").isDistributableEndpoint
+        )
+    }
+}

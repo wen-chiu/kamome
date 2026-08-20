@@ -45,6 +45,20 @@ iOS app ──(no key)──▶ Cloudflare Worker ──(+ key)──▶ Geoapif
 - Optional afterwards: **Apple App Attest**, so the Worker only serves requests
   from a genuine install.
 
+**Two reasons were added to this on 2026-08-20**, from the provider survey
+(`Docs/decisions.md` 2026-08-20):
+
+1. **`/v1/routing` is GET-only** — `POST` returns 404 — so real trip coordinates
+   travel **in the URL query string, beside the key**, and a URL is the most-logged
+   part of an HTTP request. Cloudflare fronts Geoapify (the survey saw `cf-ray`), and
+   edge logs record URLs by default. The Worker is the only hop whose shape Kamome
+   controls, which makes its **no-log requirement load-bearing rather than tidy.**
+2. **Geoapify emits no 429 and no `Retry-After`** at 28.7 req/s — overload arrives as
+   a TCP reset, so "the service is busy" and "we can't reach the service" are one
+   event on the wire. A Worker *can* return a real 429, which is why
+   `RouteProviderFailure.rateLimited` stays in the code rather than being deleted as
+   dead.
+
 ## 🔴 Attribution has to be visible in the app
 
 Geoapify attribution is **mandatory on the free plan**, and OpenStreetMap
