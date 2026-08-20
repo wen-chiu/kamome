@@ -92,6 +92,26 @@
       }
     },
     {
+      "id": "reindeer-cute",
+      "kind": "directional",
+      "type": "reindeer",
+      "selectable": true,
+      "names": {
+        "en": "Reindeer (cute)",
+        "zh-Hant": "馴鹿（可愛）"
+      }
+    },
+    {
+      "id": "reindeer-deer",
+      "kind": "directional",
+      "type": "reindeer",
+      "selectable": true,
+      "names": {
+        "en": "Reindeer",
+        "zh-Hant": "馴鹿"
+      }
+    },
+    {
       "id": "seagull",
       "kind": "omni",
       "type": "mark",
