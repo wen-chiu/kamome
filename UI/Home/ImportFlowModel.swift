@@ -49,6 +49,9 @@ final class ImportFlowModel {
 
     private let config: TrackingConfig
     private let repository: TripRepository
+    /// Captured at init rather than read per access: the sheet is short-lived,
+    /// and a fixed "today" keeps the range rules deterministic in tests.
+    private let now: Date
     private let provider: ImportPhotoProviding
     private let service: ImportService
     private let photoService: PhotoLibraryService
@@ -61,14 +64,18 @@ final class ImportFlowModel {
     ) {
         self.config = config
         self.repository = repository
+        self.now = now
         provider = source
         service = ImportService(repository: repository, config: config)
         photoService = PhotoLibraryService(config: config, repository: repository)
 
         let calendar = Calendar.current
         endDate = now
+        // `n − 1`, because the range includes both ends: `dayBounds` widens to
+        // whole calendar days, so `now − 7` would span eight of them while the
+        // key says seven.
         startDate = calendar.date(
-            byAdding: .day, value: -config.photoImport.defaultRangeDays, to: now
+            byAdding: .day, value: -(config.photoImport.defaultRangeDays - 1), to: now
         ) ?? now
     }
 
@@ -167,6 +174,55 @@ final class ImportFlowModel {
             // the album list is stale for the same reason the error is.
             Task { await self?.loadAlbums() }
         }
+    }
+
+    // MARK: - The date range
+
+    /// The latest day either end may name. A range that ends tomorrow is a range
+    /// no photograph can be in, and with the sliding window it would drag the
+    /// start into the future too.
+    var latestSelectableDate: Date { now }
+
+    /// How many calendar days the current range covers, counting both ends.
+    var selectedDayCount: Int {
+        Self.dayCount(from: startDate, to: endDate)
+    }
+
+    /// The user moved the **start**. Keep the end sensible, then hold the window.
+    ///
+    /// The end is pulled up only when it now sits *before* the start — that half
+    /// was always right. What used to sit beside it, `!sameMonth`, had no reason
+    /// to exist: set an end, then pick a start in an earlier month, and the end
+    /// silently snapped onto the start, collapsing the range to one day.
+    func startDateChanged() {
+        startDate = min(startDate, latestSelectableDate)
+        if endDate < startDate { endDate = startDate }
+        if selectedDayCount > maxRangeDays {
+            // Move the end, not the start: the start is what the user just said.
+            endDate = min(Self.day(startDate, plus: maxRangeDays - 1), latestSelectableDate)
+        }
+    }
+
+    /// The user moved the **end**. The start follows if the window would break.
+    func endDateChanged() {
+        endDate = min(endDate, latestSelectableDate)
+        if endDate < startDate { startDate = endDate }
+        if selectedDayCount > maxRangeDays {
+            startDate = Self.day(endDate, plus: -(maxRangeDays - 1))
+        }
+    }
+
+    var maxRangeDays: Int { config.photoImport.maxRangeDays }
+
+    private static func dayCount(from start: Date, to end: Date) -> Int {
+        let calendar = Calendar.current
+        let from = calendar.startOfDay(for: min(start, end))
+        let to = calendar.startOfDay(for: max(start, end))
+        return (calendar.dateComponents([.day], from: from, to: to).day ?? 0) + 1
+    }
+
+    private static func day(_ date: Date, plus days: Int) -> Date {
+        Calendar.current.date(byAdding: .day, value: days, to: date) ?? date
     }
 
     /// Full-day bounds around the picked calendar days: a photo taken any time

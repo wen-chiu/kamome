@@ -14,6 +14,238 @@ state* on top of them — what is done, what is open, and why.
 
 ---
 
+## Findings — PO/Architecture session (2026-08-20)
+
+**Context.** Chiu ran the Geoapify survey on 2026-08-19 and selected the provider.
+ADR: `Docs/decisions.md` 2026-08-20. These are the items the survey did not close,
+or closed differently from how it reported them. Ordered by what can go wrong
+silently.
+
+---
+
+### 1. 🔴 The migration PR carries **two** policies out of `OSRMRouteProvider`, not one
+
+**Decision.** `matching.route_waypoint_radius_m` (500 m) is Kamome honesty policy,
+exactly like the detour-ratio gate, and it must be carried across deliberately.
+
+**Why.** `OSRMRouteProvider.requestURL` sends `radiuses=` per waypoint — "photos sit
+beside roads, not on them". Under OSRM, a waypoint further than 500 m from a road
+returns `NoSegment`, so the leg draws **dashed**. Geoapify's `/v1/routing` has a
+different URL shape and **no snap-radius parameter was tested.** Chiu's own survey
+measured what happens without one: a waypoint 1 km off-road returned **200, 20.33 km
+for an 11.29 km leg, ratio 2.247**.
+
+**Evidence.** `matching.route_max_detour_ratio` is **2.5**; 9.05 km straight × 2.5 =
+22.62 km allowed vs 20.33 km returned → **the wrong-road route passes the gate**, is
+stored by `setMatchedPolyline`, and draws as solid road. The 2 km case (2.007) passes
+too. Verified by arithmetic over the survey's own table and `Config/TrackingConfig.json`.
+
+**Risk.** Do **not** respond by tightening the ratio. Legitimate routes measured
+1.15–1.49 and wrong-road routes 2.0–2.25, which looks separable — but a fjord or
+peninsula drive is legitimately 2–4×, and Iceland is made of them. The ratio cannot
+distinguish a wrong road from an indirect one; the snap radius can, because it acts
+before a route exists.
+
+**Next.** First establish whether Geoapify `/v1/routing` accepts a per-waypoint snap
+radius (one parameter on the existing survey script). **If it does not, stop and
+bring it to Chiu** — "a photo 1 km from a road draws dashed" vs "draws a road the
+traveller did not take" is a product decision, not an implementation detail.
+
+---
+
+### 2. 🟠 Do not delete `RouteProviderFailure.rateLimited`
+
+Geoapify produces no 429, no `Retry-After`, and no rate-limit headers at 28.7 req/s;
+overload arrives as TCP reset. The case becomes unreachable code on this provider.
+**Keep it, and keep both strings.** The pre-launch Cloudflare Worker (`Docs/pre-launch.md`)
+is the natural place to throttle and *can* emit a real 429 — the distinction is
+recoverable in a component already planned. Arch.md §7.2/§7.3: a case you merely
+believe is dead is one you have not tested.
+
+---
+
+### 3. ✅ DECIDED 2026-08-20 — the retry sentence stays; the copy work is smaller than it looked
+
+Chiu asked for "再匯出一次會有幫助" to be dropped. That sentence lives on
+**`recap_routing_budget_detail`** only:
+
+> The trip ran past our time limit. What's already matched is saved — export again
+> and it picks up from there.
+
+That is Kamome's own budget, and the promise is **verified true in code**:
+`RouteMatchService.shouldReconstruct` requires `segment.matchedPolyline == nil`, so a
+second run skips every leg already matched and genuinely resumes. "Kamome only
+promises what Kamome controls" — this is the one promise that survives.
+
+The pair the survey actually undermined is `unreachable` / `rate_limited`, and
+**neither contains that sentence.** `recap_routing_unreachable_detail` ("we just
+can't reach the routing service right now") already describes a TCP reset fairly.
+So the copy work is smaller than it looks: nothing has to be rewritten, and
+`.rateLimited` simply stops being reachable (item 2).
+
+**Chiu confirmed this reading on 2026-08-20.** So: **no string is edited.**
+`recap_routing_budget_detail` keeps its retry promise, `recap_routing_unreachable_detail`
+stands as written, and `.rateLimited` simply becomes unreachable on this provider
+(item 2 — keep the case).
+
+---
+
+### 3b. ✅ DECIDED 2026-08-20 — walks route on a walking profile and draw solid
+
+**His question**, recorded as asked: OSRM and Geoapify only carry car roads, so a
+hiking trail or footpath has no route; since Kamome must support every travel mode
+including walking and public transit, a walk off the road network should **draw a
+road that was not walked, rather than a dashed line**.
+
+**Two facts change the question before it is answered.**
+
+1. **A recorded walk already draws solid.** `RecapComposer.provenance(for:)` dashes
+   raw geometry only on `.exif` / `.timeline` segments. A `.gpsHifi` / `.gpsPassive`
+   walk is `.recorded` → **solid**, drawn on the trace the phone actually saw, which
+   is more accurate than any road-snapped version. The dashed-walk problem exists
+   **only for photo-imported trips**, where the input really is 2–5 photo positions.
+2. **"Only car roads" is Kamome's decision, not the provider's limit.**
+   `RouteMatchService.shouldReconstruct` returns false for `.walk`, `.cycle`,
+   `.transit`, `.unknown` — PD-8, and its comment says why: *snapping a stroll to
+   the nearest street invents a journey.* **That reasoning was written against a
+   car-profile server.** OSM carries `highway=path` / `footway` / `steps`, and a
+   hosted provider exposes profiles the self-hosted four-region car graph never had.
+
+**Chiu decided (2026-08-20): the recommendation below, as written.** Spec amended to
+**v1.8**, new §4.4.1 — journeys are multi-modal by design, car ships first. Do not fabricate.
+Get the same outcome honestly by **routing walks on a walking profile** — a real
+footpath drawn solid is both what Chiu wants and what PD-1/PD-2 allow. Then the
+residual dashed cases (a beach, a glacier, a field, indoors) are rare rather than
+pervasive.
+
+**Test before deciding — one row on the existing survey script:** does Geoapify
+`/v1/routing` accept `mode=walk` / `mode=hike`, and does it return trail geometry
+for a known trail?
+
+**Transit is a different problem and must not ride along.** A Shinkansen leg routed
+on any road profile draws the **expressway** — a different line in a different place,
+claimed as real. Chiu's own cross-region decision already contains the honest answer:
+known endpoints, unknown path, its own sprite and its own beat
+(`Docs/cross-region-journeys.md`, requirement 4).
+
+**⚠️ §0 consequence, and it is Chiu's call.** Walk legs are currently **never sent
+anywhere** — `shouldReconstruct` refuses them, so they have never left the device.
+Routing them would send a person's city wandering to a third party, which is more
+intimate than the drive legs the 2026-08-16 ADR accepted.
+
+---
+
+### 3c. 🟠 The album path is promoted — it is now the privacy notice's control (2026-08-20)
+
+Selecting an **album** at import (`Docs/cross-region-journeys.md` requirement 1, the
+cheap half — "a list and a fetch") is no longer just a cross-region convenience. Chiu's
+privacy decision states the notice will say a **date range** decides what is sent
+*and* that the user can control which places are given **by choosing an album**.
+
+**A notice may not promise a control the app does not offer.** So the album path ships
+with the notice, or the notice does not mention it. Free-form photo selection remains
+a later design pass — do not bundle them.
+
+ADR: `Docs/decisions.md` 2026-08-20 (c).
+
+---
+
+### 4. 🟡 `matching.trip_budget_s` — measure it, do not pick a number
+
+Survey latency: 0.48–2.53 s a leg cold, 440–840 ms back-to-back with connection
+reuse (which `URLSession.shared` gives us). Iceland is 58 legs → somewhere between
+**≈35 s and ≈88 s, derived arithmetic not a measurement**, against a 60 s budget.
+
+`matchTrip` already logs `STOPPED after N legs — trip_budget_s exhausted`. **The
+first real Iceland import against Geoapify is the measurement.** Read the line, then
+set the number, and say in the commit which run it came from.
+
+---
+
+### 5. 🟡 Untested and cheap: the waypoint cap on a GET-only endpoint
+
+`POST /v1/routing` returns 404 — the endpoint is **GET-only**. `matching.chunk_size`
+is 100 waypoints, which becomes ~2 KB of query string, and Geoapify's own per-request
+waypoint cap for `/routing` was never probed. Same script, one more row.
+
+---
+
+### 6. ℹ️ The 1500 m map-matching ceiling is a **Capture Beta** item, not a today item
+
+The survey concluded that sparse photo points defeat the matcher. They do not reach
+it: EXIF legs go through `RouteReconstructing.route` (`/v1/routing`); only `.gpsHifi`
+/ `.gpsPassive` reach `/v1/mapmatching` (`RouteMatchService.route`). Where it will
+bite is Capture Beta, and specifically the known region-resume hole (2026-07-19:
+32 min / 13 km lost), which returns **200 with points silently unmatched**. Same for
+`matching.timeout_s` (10 s) against a measured 9.6 s for 1000 points.
+
+---
+
+### 0. ✅ Reviewed — the key plumbing already in the working tree
+
+`Config/Base.xcconfig` + `Secrets.xcconfig.example` → `Info.plist` → `AppConfig`,
+with `apiKey` deliberately outside `Matching.CodingKeys` and a test proving the
+committed file cannot supply one. A keyless build degrades into routing-off, which
+is an existing designed state with copy already written, and the release guard is
+unchanged. **No architecture objection** — the boundary held and `OSRMRouteProvider`
+was correctly left alone.
+
+Two notes rather than objections: `matching.apiKey` is carried but not yet used by
+any request, so the next commit is exactly the one items 1–3 below constrain; and
+`"replace-me"` is a magic string, justified in its doc comment but still a string.
+
+---
+
+### 0b. 🔴 §0 — do not log the request URL when the new provider misbehaves
+
+`/v1/routing` is **GET-only**, so the request URL will contain **both the API key and
+real trip coordinates** in its query string. The natural move when a new provider
+returns something surprising is to log the URL. §0 forbids it — `KamomeLog` may name
+*which* stop failed, never its coordinates — and it would put the key in the device
+log beside them.
+
+The existing logs are already correct and should be the pattern: `OSRMRouteProvider`
+logs `config.baseURL` (host only), never the built URL. **Keep it that way in the
+new provider file**, and if a full URL is ever needed to debug, redact both before it
+reaches `KamomeLog`.
+
+---
+
+### 7. ℹ️ 45 shipped vehicle sprites are modified in the working tree and uncommitted
+
+Same dimensions and bit depth, ~3× smaller files, **different decoded pixels**
+(`sips`→TIFF md5 on `boat/n.png`). Consistent with an in-place `Tools/center-sprites.py`
+run that was never committed. So "vehicle sprites done" currently describes art that
+is not in git. `./Tools/center-sprites.py --check` on both versions says which set is
+the centred one.
+
+## 🐛 Known and not fixed — the import date range clips at timezone edges (2026-08-18)
+
+**Symptom you will meet:** a photograph taken early on the first morning of a
+trip, or late on the last night, is missing from an imported trip — and the date
+range plainly covers that day.
+
+**Cause.** A photo's `creationDate` is an absolute instant. `ImportFlowModel.dayBounds()`
+turns the picked days into instants with `Calendar.current`, which is the
+*device's* zone at the moment of import. Import an Iceland trip while sitting in
+Taiwan and the day boundary moves by eight hours, so "1 August" means 1 August in
+Taipei — clipping the Icelandic small hours at each edge of the range.
+
+**Why it is not fixed here.** Doing it properly needs each photograph's own
+timezone, which PhotoKit does not hand over with `creationDate`; it would mean
+reading EXIF `OffsetTimeOriginal` per asset, or inferring the zone from the
+photo's coordinates. Both are real work, and the clipping is small — hours at two
+edges of a multi-day range.
+
+**What to do if it bites.** Widen the picked range by a day at each end; the
+clustering drops the extra photos anyway if they are not part of the journey.
+Written down so the next person meeting a missing first-morning photo does not go
+hunting for a clustering bug that is not there.
+
+**Deliberately correct, do not "fix":** `dayBounds` widening the end to that
+day's last second (there is no "lost the last day" bug), and the `min`/`max` swap
+that makes an inverted range harmless.
+
 ## ▶ RESUME HERE — MVP desk renders, 3 of 3 rendered, review in progress (2026-08-13)
 
 Branch `phase-3-recap`, suite green (197), `swiftlint --strict` clean. PR #11

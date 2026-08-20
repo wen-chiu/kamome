@@ -51,21 +51,35 @@ class RecapRenderTestCase: XCTestCase {
     let backgroundRGB = RGB(red: 237, green: 237, blue: 232)
     let cardRGB = RGB(red: 255, green: 255, blue: 255)
 
-    /// Half the drawn vehicle length in this frame's pixels — probes that want
+    /// Half the drawn subject's length in this frame's pixels — probes that want
     /// bare map (or trail) must clear it.
     var vehicleHalfPx: Int {
-        Int(RecapStyle().subjectLengthPx * CGFloat(widthPx) / 1080 / 2)
+        Int(RecapStyle().subjectLengthPx(configured: 300) * CGFloat(widthPx) / 1080 / 2)
     }
 
-    /// Is this pixel the car's paintwork? The sprite is illustrated artwork, so
-    /// tests assert the *hue* (red-dominant) over a region rather than any exact
-    /// tone — the sprite's own center is windshield glass, and pinning exact
-    /// pixels would make every art change a false failure.
+    /// Is this pixel part of the drawn subject?
+    ///
+    /// **It asserts that a sprite was drawn where the subject is — not that the
+    /// subject is red.** It used to test red-dominance, which was right while the
+    /// car was the only artwork: the sprite is illustrated, so probing a hue over
+    /// a region beat pinning exact pixels, which had made every art tweak a false
+    /// failure. But the colour was never the property under test, and hard-coding
+    /// it would fail every subject that is not the red car — a seagull, a blue
+    /// car, a plane — for being the wrong colour rather than for being absent.
+    ///
+    /// So the question is now "is this pixel neither the flat background nor the
+    /// route stroke?", which is what "something was drawn here" actually means on
+    /// the deterministic provider. Any subject satisfies it; an absent one cannot.
     func isVehiclePaint(_ sample: RGB) -> Bool {
-        sample.red > 90 && sample.red > sample.green + 45 && sample.red > sample.blue + 45
+        func matches(_ other: RGB, tolerance: Int = 12) -> Bool {
+            abs(sample.red - other.red) <= tolerance
+                && abs(sample.green - other.green) <= tolerance
+                && abs(sample.blue - other.blue) <= tolerance
+        }
+        return !matches(backgroundRGB) && !matches(routeRGB)
     }
 
-    /// How many of the car's painted pixels appear within `radius` of a point.
+    /// How many of the subject's own pixels appear within `radius` of a point.
     func vehiclePaintCount(_ image: CGImage, aroundCol col: Int, row: Int, radius: Int) throws -> Int {
         var count = 0
         for probeRow in max(row - radius, 0)..<min(row + radius, image.height) {
@@ -82,7 +96,7 @@ class RecapRenderTestCase: XCTestCase {
         file: StaticString = #filePath, line: UInt = #line
     ) throws {
         let count = try vehiclePaintCount(image, aroundCol: col, row: row, radius: radius ?? vehicleHalfPx)
-        XCTAssertGreaterThan(count, 20, "\(label): no vehicle paint near (\(col),\(row))", file: file, line: line)
+        XCTAssertGreaterThan(count, 20, "\(label): nothing drawn near (\(col),\(row))", file: file, line: line)
     }
 
     func exportConfig(
@@ -102,7 +116,7 @@ class RecapRenderTestCase: XCTestCase {
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
-            keyframeIntervalFrames: keyframeIntervalFrames,
+            keyframeIntervalFrames: keyframeIntervalFrames, subjectLengthPx: 300,
             titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
             uncappedPhotoHoldS: 1.0,
@@ -174,7 +188,7 @@ class RecapRenderTestCase: XCTestCase {
         let style = style ?? opaqueCardStyle
         return FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, lengthPx: 300),
             overlay: RecapOverlayRenderer(style: style, resolver: resolver ?? StubResolver { _ in nil }),
             widthPx: widthPx, heightPx: heightPx
         )

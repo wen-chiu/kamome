@@ -43,15 +43,25 @@ let package = Package(
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/TripComposer"
         ),
-        // Ships the hero car sprite (Resources/car-sprite.png). Code-drawn
-        // vehicles hit a quality ceiling (Chiu 2026-07-25), so the car is a
-        // raster asset loaded through `Bundle.module`; the remaining vector
-        // markers stay code-drawn. Still SDK-free and deterministic.
+        // Ships the vehicle artwork (`Resources/Vehicles`), specified by the
+        // README beside it. Code-drawn vehicles hit a quality ceiling (Chiu
+        // 2026-07-25), so subjects are raster assets; the vector markers remain
+        // as the last-resort fallback. Still SDK-free and deterministic.
+        //
+        // **`.copy`, not `.process`.** Processing *flattens* the tree, so
+        // `car-red/n.png` and any future `car-blue/n.png` would collide on one
+        // `n.png` — with the winner decided by the build system rather than by
+        // the manifest. One folder is one subject, so the folder structure is
+        // load-bearing and has to reach the bundle intact.
         .target(
             name: "KamomeExportEngine",
             dependencies: ["KamomeConfig", "KamomeTrackingEngine"],
             path: "Core/ExportEngine",
-            resources: [.process("Resources")]
+            // No `exclude:` for `.DS_Store` — it was tried and does not work.
+            // `.copy` is verbatim, and excluded paths inside a copied directory
+            // still reach the bundle (measured 2026-08-17). The strip happens
+            // after the build instead; see `postBuildScripts` in `project.yml`.
+            resources: [.copy("Resources/Vehicles")]
         ),
         .target(
             name: "KamomeRouteMatching",

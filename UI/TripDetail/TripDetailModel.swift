@@ -1,5 +1,6 @@
 import Foundation
 import KamomeConfig
+import KamomeExportEngine
 import KamomePersistence
 import KamomeTripComposer
 import Observation
@@ -23,6 +24,29 @@ final class TripDetailModel {
         self.repository = repository
         photoService = PhotoLibraryService(config: config, repository: repository)
         namer = StopNamer(config: config.geocode, repository: repository)
+    }
+
+    /// Which subject this trip's film draws. NULL in the database means the trip
+    /// predates the choice, and reads as the catalogue default.
+    var vehicleId: String { detail?.trip.vehicleId ?? VehicleCatalog.defaultSubjectId }
+
+    /// What the picker offers: every selectable subject, plus this trip's own
+    /// even when it is not selectable — a picker must always be able to show
+    /// what is currently set, including a subject the app chose itself.
+    var pickableSubjects: [VehicleSubject] {
+        let selectable = VehicleCatalog.selectableSubjects
+        guard !selectable.contains(where: { $0.id == vehicleId }),
+              let current = VehicleCatalog.subject(id: vehicleId)
+        else { return selectable }
+        return [current] + selectable
+    }
+
+    /// Writes the choice to the trip and remembers it for the next one. A column
+    /// write, so changing subject never costs a re-import.
+    func chooseVehicle(_ vehicleId: String) {
+        try? repository.setTripVehicle(tripId: tripId, vehicleId: vehicleId)
+        LastVehicleChoice.remember(vehicleId)
+        reload()
     }
 
     func load() {

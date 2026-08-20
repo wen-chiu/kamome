@@ -45,7 +45,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
-            keyframeIntervalFrames: 15, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
+            keyframeIntervalFrames: 15, subjectLengthPx: 300, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
             uncappedPhotoHoldS: 1.0,
             allocationZeroShare: 0.4, allocationOneShare: 0.3,
@@ -109,7 +109,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
         let style = carStyle()
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: MapResolver(images: images)),
             widthPx: width, heightPx: height
         )
@@ -211,7 +211,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
         // raster hero car, north-up the vector fallback.
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: FollowCamNoPhotoResolver()),
             widthPx: width, heightPx: height
         )
@@ -318,7 +318,7 @@ private extension RecapFollowCamStillsTests {
         let style = carStyle()
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: FollowCamNoPhotoResolver()),
             widthPx: width, heightPx: height
         )

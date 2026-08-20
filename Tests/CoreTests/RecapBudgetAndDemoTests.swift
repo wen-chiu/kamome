@@ -67,7 +67,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         let style = RecapStyle()
         return FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: BenchNoPhotoResolver()),
             widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
         )

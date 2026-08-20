@@ -45,7 +45,7 @@ final class CameraPathTests: XCTestCase {
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
-            keyframeIntervalFrames: 15,
+            keyframeIntervalFrames: 15, subjectLengthPx: 300,
             titleCardS: 2.5,
             endCardS: 3,
             videoBitrateMbps: 5,

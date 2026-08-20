@@ -81,7 +81,10 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.deckMinPhotos, 3)
         XCTAssertEqual(config.photoImport.deckMaxPhotos, 8)
         XCTAssertEqual(config.photoImport.paceUnknowableGapS, 14_400)
+        // Inclusive of both ends: 7 means a seven-day range, seeded at now − 6.
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
+        // The widest range the picker will hold, as a sliding window (Chiu's 21).
+        XCTAssertEqual(config.photoImport.maxRangeDays, 21)
     }
 
     /// The §4.5 recap-export block: frame, pacing, prologue, duration window.
@@ -112,6 +115,11 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.totalDurationMinS, 60)
         XCTAssertEqual(config.export.totalDurationMaxS, 90)
         XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
+        // The moving subject's canvas size (Phase 4). Was a hard-coded 300 in
+        // RecapStyle — 28% of frame width, which users said was too big. 225 is
+        // Chiu's call from the 200/220/250 stills, judged on the head-on drawing
+        // where heading is hardest to read.
+        XCTAssertEqual(config.export.subjectLengthPx, 225)
         XCTAssertEqual(config.export.titleCardS, 3.0)
         XCTAssertEqual(config.export.endCardS, 3.0)
         XCTAssertEqual(config.export.videoBitrateMbps, 5)

@@ -128,6 +128,18 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE photo_ref ADD COLUMN order_idx INTEGER")
         }
 
+        // Schema v3 — which subject the recap draws (Phase 4, vehicle sprites).
+        // Nullable on purpose, exactly as `segment.source` and `stop.kind` are:
+        // every existing trip predates the choice, and a reader treats NULL as
+        // the default car rather than as an error. Forward-only.
+        migrator.registerMigration("v3") { db in
+            // A `VehicleCatalog` subject id — the artwork folder's name. Kept as
+            // free text rather than a constrained set: the manifest is the
+            // authority on which ids exist, and it ships with the app rather
+            // than with the database.
+            try db.execute(sql: "ALTER TABLE trip ADD COLUMN vehicle TEXT")
+        }
+
         return migrator
     }
 }

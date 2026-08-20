@@ -13,7 +13,7 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
         let timeline = try makeTimeline(makeTrip(config: config), config: config)
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: StubResolver { _ in nil }),
             style: style,
             widthPx: widthPx, heightPx: heightPx

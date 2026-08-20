@@ -55,7 +55,52 @@ enum AppConfig {
                 """)
         }
         #endif
-        return config
+        return applyingRoutingKey(config, key: routingAPIKeyFromBundle())
+    }
+
+    /// The key as the bundle carries it, or nil when this build has none.
+    ///
+    /// Delivered by `Config/Secrets.xcconfig` (gitignored) through
+    /// `Config/Base.xcconfig` into an `Info.plist` entry, so the key reaches the
+    /// app without ever being a source file. `Base.xcconfig` defines the setting
+    /// as empty by default, which is why a checkout with no secrets file still
+    /// builds and simply arrives here with nothing.
+    static func routingAPIKeyFromBundle() -> String? {
+        let raw = Bundle.main.object(forInfoDictionaryKey: "KamomeRoutingAPIKey") as? String
+        return raw.flatMap(usableRoutingKey)
+    }
+
+    /// Three ways a build legitimately has no key, all of them normal:
+    /// the setting was empty (no `Secrets.xcconfig`), the template was copied but
+    /// never edited, or the setting was never defined at all and the plist kept
+    /// its literal `$(…)` placeholder.
+    static func usableRoutingKey(_ raw: String) -> String? {
+        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty,
+              !key.hasPrefix("replace-me"),
+              !key.contains("$(") else { return nil }
+        return key
+    }
+
+    /// **A missing key disables routing; it never crashes.**
+    ///
+    /// Routing off is an existing, designed state — `matching.base_url` empty,
+    /// legs keep raw geometry and draw dashed (PD-2), with user-facing copy
+    /// already written for it. So a build with no key degrades into that state
+    /// rather than inventing a new failure, and a fresh checkout or CI run is
+    /// unaffected.
+    ///
+    /// Pure and separate from the bundle read so the decision itself is testable
+    /// without an `Info.plist`.
+    static func applyingRoutingKey(_ config: TrackingConfig, key: String?) -> TrackingConfig {
+        guard let key else {
+            guard !config.matching.baseURL.isEmpty else { return config }
+            KamomeLog.routing.notice(
+                "routing disabled — this build carries no API key, so every leg stays raw (PD-2)"
+            )
+            return config.withMatching(config.matching.withBaseURL(""))
+        }
+        return config.withMatching(config.matching.withAPIKey(key))
     }
 
     static func openDatabaseOrDie() -> AppDatabase {

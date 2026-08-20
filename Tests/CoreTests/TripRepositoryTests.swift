@@ -205,4 +205,31 @@ final class TripRepositoryTests: XCTestCase {
         XCTAssertEqual(try copy.allTrips().count, 1)
         XCTAssertEqual(try copy.allTrips().first?.title, "Snapshot fixture")
     }
+
+    /// Schema v3: which subject the recap draws lives on the trip, nullable, so
+    /// every trip predating the choice reads as the default car rather than as
+    /// an error — the same shape `segment.source` and `stop.kind` already use.
+    func testTripVehicleRoundTripsAndDefaultsWhenUnset() throws {
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let tripId = try repository.saveCompletedTrip(
+            title: "Vehicle", startedAt: 1_752_600_000, endedAt: 1_752_603_600,
+            segments: [], stops: []
+        )
+
+        // A trip that never chose: the column is NULL and the reader says car.
+        let fresh = try XCTUnwrap(try repository.detail(tripId: tripId)).trip
+        XCTAssertNil(fresh.vehicle, "an unchosen subject must stay NULL, not be backfilled")
+        XCTAssertEqual(fresh.vehicleId, "car-red")
+
+        try repository.setTripVehicle(tripId: tripId, vehicleId: "seagull")
+        let chosen = try XCTUnwrap(try repository.detail(tripId: tripId)).trip
+        XCTAssertEqual(chosen.vehicle, "seagull")
+        XCTAssertEqual(chosen.vehicleId, "seagull")
+
+        // Clearing is a real operation, not a write of the default string.
+        try repository.setTripVehicle(tripId: tripId, vehicleId: nil)
+        let cleared = try XCTUnwrap(try repository.detail(tripId: tripId)).trip
+        XCTAssertNil(cleared.vehicle)
+        XCTAssertEqual(cleared.vehicleId, "car-red")
+    }
 }

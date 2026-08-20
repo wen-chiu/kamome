@@ -15,8 +15,22 @@ Docs/tests/
 # what leaks is a person's movements, not a build artifact.
 Tests/Fixtures/trips/local/
 
-# Local deployment secrets/overrides (Deploy/.env.example is the checked-in template)
-Deploy/.env
+# Secrets and local overrides, anywhere in the tree. Broadened 2026-08-16: the
+# rule was `Deploy/.env` only, so a `.env` at the repo root was tracked-able —
+# and a routing provider's API key is the next thing that will live in one.
+# `*.example` templates stay committed; they are what the rule documents.
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Build-time secrets. The routing API key reaches the app through an xcconfig
+# that is generated locally from ~/.kamome/routing.env — it must never be
+# committed, and Secrets.xcconfig.example is the template that documents it.
+Config/Secrets.xcconfig
+!Config/Secrets.xcconfig.example
 
 # Built routing + tile artifacts are gigabytes and live outside the repo
 # ($KAMOME_DATA_DIR, default ~/kamome-osrm) — this only catches strays.

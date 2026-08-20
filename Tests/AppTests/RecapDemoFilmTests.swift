@@ -72,7 +72,7 @@ final class RecapDemoFilmTests: XCTestCase {
         let provider = try snapshotProvider(region: region)
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: DeckResolver(images: images)),
             style: style,
             widthPx: config.frameWidthPx, heightPx: config.frameHeightPx

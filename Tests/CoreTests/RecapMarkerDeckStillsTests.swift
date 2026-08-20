@@ -44,7 +44,7 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             style.fallbackMarker = marker
             return FrameCompositor(
                 timeline: timeline,
-                subject: VehicleSubjectRenderer.make(style: style),
+                subject: VehicleSubjectRenderer.make(style: style, config: config),
                 overlay: RecapOverlayRenderer(style: style, resolver: resolver),
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
             )
@@ -75,7 +75,7 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
-            keyframeIntervalFrames: 15, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
+            keyframeIntervalFrames: 15, subjectLengthPx: 300, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
             uncappedPhotoHoldS: 1.0,
             allocationZeroShare: 0.4, allocationOneShare: 0.3,

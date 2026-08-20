@@ -94,6 +94,14 @@ You do not get to self-certify. Never claim "fixed" / "working" / "done" / "test
 
 **7.1 Tests are not yours to weaken.** Don't modify, delete, skip, or loosen an assertion just to make a test pass. If you think the test itself is wrong: say so explicitly, explain why, and stop for confirmation before touching it. A test that passes because it was weakened is not evidence the implementation was fixed.
 
+**7.2 Removing a test needs proof, not judgement.** The only justification for deleting one is that it **cannot fail** — demonstrated by disabling the mechanism it guards and watching it pass anyway, not inferred from reading it. Both cases occurred on 2026-08-16: a bundle-hygiene test passed with its build step switched off and was rightly deleted; two catalogue tests were swallowed by an over-wide edit and were restored verbatim from `HEAD`. A test you merely believe is redundant is a test you have not tested.
+
+**7.3 A test that can no longer be *exercised* is restated, not deleted.** When shipped data makes a case unreachable — art landing so that "no thumbnail, still selectable" has no subject left to exercise — rewrite the assertion so it holds the **rule** structurally. Deleting it discards the rule along with the case.
+
+**7.4 Report the test count, and flag any change in it.** A suite that loses tests does not go red. On 2026-08-16 an accidental deletion was caught only because the count fell from 13 to 11; both suites were green with the tests missing, and every other signal said the change was fine.
+
+**7.5 The bar moves only when the rule moves.** A test may change because a specification or requirement changed — and then the change is deliberate, and the reason goes in the commit message. "It passes now" is never that reason.
+
 ---
 
 ## 8. Three Levels of Verification

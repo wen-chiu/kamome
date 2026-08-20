@@ -65,6 +65,19 @@ public extension TrackingConfig {
         /// to the wrong road inflates the route and gets rejected.
         public let routeWaypointRadiusM: Double
 
+        /// The routing provider's API key — **deliberately not a JSON key.**
+        ///
+        /// `TrackingConfig.json` is committed and bundled, so a secret in it is a
+        /// secret in git; `Docs/handoff-P3.5.md` has forbidden that since the VPS
+        /// token was first discussed. This value is absent from `CodingKeys` and
+        /// defaults to empty, so the file cannot carry it even by accident: it is
+        /// supplied at load time from the app bundle (`AppConfig`), which reads it
+        /// from an `Info.plist` entry fed by a gitignored `.xcconfig`.
+        ///
+        /// Empty is a normal state, not a failure — a checkout with no
+        /// `Secrets.xcconfig` runs with routing disabled.
+        public private(set) var apiKey: String = ""
+
         enum CodingKeys: String, CodingKey {
             case baseURL = "base_url"
             case chunkSize = "chunk_size"
@@ -118,6 +131,16 @@ public extension TrackingConfig {
         public var isDistributableEndpoint: Bool {
             guard !baseURL.isEmpty else { return true }
             return URL(string: baseURL)?.scheme?.lowercased() == "https"
+        }
+
+        /// The shipped tunables carrying a key the config file never held.
+        /// Mirrors `withBaseURL`: `TrackingConfig.json` stays the single source
+        /// for every value that is safe to commit, and the one that is not
+        /// arrives here.
+        public func withAPIKey(_ key: String) -> Matching {
+            var copy = self
+            copy.apiKey = key
+            return copy
         }
 
         /// The shipped tunables pointed at a different server — a stub

@@ -25,7 +25,7 @@ final class RecapEncoderTests: XCTestCase {
             openingCollapseZoomRatio: 1.25, openingCollapseDriftFraction: 0.15,
             stopDwellMinS: 6, stopDwellMaxS: 25,
             totalDurationMinS: 60, totalDurationMaxS: 90,
-            keyframeIntervalFrames: 5, titleCardS: 0.4, endCardS: 0.4, videoBitrateMbps: 5,
+            keyframeIntervalFrames: 5, subjectLengthPx: 300, titleCardS: 0.4, endCardS: 0.4, videoBitrateMbps: 5,
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
             uncappedPhotoHoldS: 1.0,
             allocationZeroShare: 0.4, allocationOneShare: 0.3,
@@ -50,7 +50,7 @@ final class RecapEncoderTests: XCTestCase {
         let style = RecapStyle()
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: NoPhotoResolver()),
             widthPx: config.frameWidthPx,
             heightPx: config.frameHeightPx

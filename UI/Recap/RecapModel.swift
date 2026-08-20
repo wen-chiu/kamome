@@ -204,7 +204,9 @@ final class RecapModel {
         await warmDeckPhotos(trip: trip, style: style, resolver: resolver)
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style),
+            subject: VehicleSubjectRenderer.make(
+                style: style, config: exportConfig, subjectId: detail.trip.vehicle
+            ),
             overlay: RecapOverlayRenderer(style: style, resolver: resolver),
             style: style,
             widthPx: config.export.frameWidthPx,

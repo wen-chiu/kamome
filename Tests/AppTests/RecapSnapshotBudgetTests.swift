@@ -141,7 +141,7 @@ final class RecapSnapshotBudgetTests: XCTestCase {
             timeline: timeline,
             compositor: FrameCompositor(
                 timeline: timeline,
-                subject: VehicleSubjectRenderer.make(style: style),
+                subject: VehicleSubjectRenderer.make(style: style, config: config),
                 overlay: RecapOverlayRenderer(style: style, resolver: NoPhotoResolver()),
                 style: style,
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx

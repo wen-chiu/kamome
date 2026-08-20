@@ -1469,3 +1469,327 @@ the user cannot recover); a seed derived from the trip id alone (stable, but the
 (reproducible only by accident, and never after the fact).
 
 **Deferred:** the feature itself. This is the constraint, not a plan.
+
+## 2026-08-16 — Routing moves to a commercial API's free tier, and real coordinates leave the device
+
+**Decision (Chiu).** Routing moves off the developer's LAN to a **third-party
+hosted routing API, on a free tier**. The specific provider is **not yet chosen**.
+
+**Why not self-hosting**, which is cheaper in money. A self-hosted OSRM only
+routes the regions it preloaded, and that failed in practice on 2026-08-15: a
+friend's Tokyo trip had **no routable legs at all**, because `Deploy/regions.json`
+carries Kyushu for Miyakojima and Tokyo is not in it. Loading the planet is a
+machine costing hundreds a month, so the €5–10 VPS buys coverage of four countries
+and dashes everything else — and "every leg a straight line" is what §6a's honesty
+item exists to prevent. The saving is paid for in the product's core promise.
+
+**Volume makes a free tier genuinely sufficient**, which is the fact that decides
+this: one film is one request per drive leg — 9 on Miyakojima, 17 on New Zealand,
+58 on Iceland — and a person makes a handful of films. Any free tier absorbs that.
+
+**§0 — this is the cost, and it is accepted deliberately.** Routing sends **real
+trip coordinates off the device to a third party**. Until now they went only to a
+machine in Chiu's flat. §0 says a feature that needs real coordinates to leave the
+device is a product decision for him, not an implementation detail; **this is that
+decision, made.** It does not weaken §0's other guarantees — nothing is logged,
+synced, or sent to analytics, and the trip itself still lives only on the device —
+but a third party now sees where a leg started and ended.
+
+**Consequences:**
+
+- **The provider choice is still open**, and it is not only a price comparison:
+  current terms for commercial use, attribution requirements, caching rules, and
+  whether the response shape is OSRM-compatible all have to be read rather than
+  assumed. The boundary survives either way — OSRM's wire format lives only in the
+  two provider files and downstream consumes a domain-level `RouteMatchOutcome` —
+  so a differently-shaped provider is one new file.
+- **The detour-ratio plausibility gate must be lifted out of `OSRMRouteProvider`
+  in the migration PR**, and not before. It is Kamome's honest-provenance policy
+  rather than an OSRM fact, and a new provider file would silently drop it.
+- **`matching.trip_budget_s` (60 s) was chosen, not measured**, against a healthy
+  server at roughly one second per leg on the largest trip. A free tier's rate
+  limits may bind well inside it; re-measure once a provider exists.
+- **A disclosure surface does not exist.** Every import will silently contact a
+  third party. Whether that needs saying to the user, and where, is an open
+  product question — the failure taxonomy shipped 2026-08-15 tells them when
+  routing *fails*, not that it happens at all.
+- Self-hosted OSRM stays viable behind the same boundary if this is ever reversed;
+  `Deploy/` and `regions.json` remain accurate and are not deleted.
+
+## 2026-08-20 — Geoapify is the provider, and **two** policies must survive the migration
+
+**Decision (Chiu).** Routing is **Geoapify**, closing the 2026-08-16 "hosted free
+tier, provider not chosen" ADR and `Docs/routing-provider-selection.md`. Decided on
+a survey run against a live free-plan key on 2026-08-19 (Iceland Ring Road /
+Golden Circle geometry, derived publicly — **no Kamome fixture, nothing from
+`Tests/Fixtures/trips/local/`**, §0 respected).
+
+**What the survey settled, measured:**
+
+| checklist item | result |
+|---|---|
+| route quality, 5 Iceland pairs | 200 on all; detour ratio **1.15–1.49**; 193 pts over 11 km — dense enough to draw as road |
+| a photo 300 m off-road | snaps, **exactly** — P5 returned an identical distance and identical 363-point geometry |
+| map-matching capacity | 1000 points enforced cleanly, 100% matched, single sub-trace; 1500 rejected explicitly |
+| rate limit | **28.7 req/s sustained, zero 429s, no rate-limit headers on any response** |
+| failure classes | `400 No suitable edges` / `400 No path could be found` / `401` / malformed — all distinguishable |
+
+**Decision (Chiu): the one deficiency is accepted.** There is no 429 and no
+`Retry-After`; overload arrives as TCP reset, indistinguishable from unreachable.
+His reasoning, recorded because it is the product judgement and not a technical
+one: Kamome starts as a free product, and this much fault tolerance is acceptable
+rather than worth choosing a worse router over.
+
+---
+
+### 🔴 The consequence that is not in the survey: **two** policies live in `OSRMRouteProvider`, and only one was on record
+
+The 2026-08-16 ADR names the detour-ratio gate as the thing a new provider file
+would silently drop. **There is a second, and it is the one the survey's own
+numbers make dangerous.**
+
+`OSRMRouteProvider.requestURL` sends **`radiuses=` per waypoint**, floored at
+`matching.route_waypoint_radius_m` (**500 m**), with the reason written beside it:
+*photos sit beside roads, not on them.* Under OSRM a waypoint further than that
+from a road returns `NoSegment` → nil → **the leg draws dashed**. That is PD-2
+behaving correctly: refuse rather than invent.
+
+Geoapify's `/v1/routing` takes a different URL shape entirely
+(`?waypoints=lat,lon|lat,lon&mode=drive`), and **whether it accepts any snap-radius
+parameter was not tested.** If the new provider file simply does not send one, the
+survey says what happens — and it is a regression from honest to fabricated:
+
+| photo position | today (OSRM, `radiuses=500`) | Geoapify with no radius (measured) |
+|---|---|---|
+| 300 m off-road | routes, correct road | routes, **identical** geometry — good |
+| 500 m off-road | dashed (`NoSegment`) | `400 No path could be found` — dashed |
+| **1000 m off-road** | **dashed** | **200 · 20.33 km for an 11.29 km leg · ratio 2.247** |
+| **2000 m off-road** | **dashed** | **200 · 18.49 km · ratio 2.007** |
+
+`matching.route_max_detour_ratio` is **2.5**. Both wrong-road routes **pass the
+gate** (9.05 km straight × 2.5 = 22.6 km allowed, 20.33 km returned), are stored
+by `setMatchedPolyline`, and are drawn as **solid road the traveller never took**.
+PD-3 exists to stop exactly this and its threshold sits just above it.
+
+**Do not fix this by tightening the ratio.** The survey's legitimate routes measure
+1.15–1.49 and its wrong-road routes 2.0–2.25, which looks like a clean gap — but a
+fjord or peninsula drive is *legitimately* 2–4× its straight line, and Iceland is
+made of them. The ratio cannot tell a wrong road from an indirect one. **The snap
+radius can**, because it acts before a route exists.
+
+**So the migration PR carries three things, not one:**
+
+1. Lift the detour-ratio gate out of `OSRMRouteProvider` (already on record).
+2. **Carry `route_waypoint_radius_m` across, or establish that it cannot be.**
+   If Geoapify has no radius parameter, that is a product decision — a photo 1 km
+   from a road either draws dashed or draws a road it did not take — and it comes
+   back to Chiu rather than being settled by whichever is easier to write.
+3. Keep `RouteProviderFailure.rateLimited` and its two strings. On Geoapify the
+   case is unreachable code, but the **pre-launch Cloudflare Worker can emit a real
+   429 with `Retry-After`** — it is the natural place to throttle — so the
+   distinction is recoverable in a component already planned. Deleting the case now
+   means rebuilding it then (Arch.md §7.2/§7.3 discipline).
+
+### Corrections to what the survey concluded
+
+- **The 1500 m map-matching ceiling does not bind photo import.** EXIF legs go
+  through `RouteReconstructing.route` (`/v1/routing`); only `.gpsHifi` /
+  `.gpsPassive` reach `/v1/mapmatching` (`RouteMatchService.route`). Sparse photo
+  points never touch that limit. Where it *will* bite is **Capture Beta**, and
+  specifically the known region-resume hole (2026-07-19: 32 min / 13 km lost) — a
+  gap that size returns **200 with points silently unmatched**. Recorded against
+  Capture Beta, not against today.
+- **`matching.timeout_s` (10 s) vs a measured 9.6 s for a 1000-point match** — the
+  same Capture Beta concern, 0.4 s of headroom. Not today's problem.
+
+### Open, and deliberately not guessed
+
+- **`matching.trip_budget_s` (60 s).** Task 1 measured 0.48–2.53 s a leg (cold),
+  Task 2 measured 440–840 ms back-to-back (keep-alive, which `URLSession.shared`
+  gives us). Iceland is 58 legs, so the sequential trip lands somewhere between
+  **≈35 s and ≈88 s — derived arithmetic, not a measurement** — and 60 s sits
+  inside that band. **Do not pick a new number.** The first real import against
+  Geoapify *is* the measurement: `matchTrip` already logs `STOPPED after N legs —
+  trip_budget_s exhausted`. Read that line, then set it.
+- **`chunk_size` (100 waypoints) against a GET-only endpoint.** `POST /v1/routing`
+  returns 404 — the endpoint is GET-only — so 100 waypoints become ~2 KB of query
+  string, and Geoapify's own waypoint cap for `/routing` was never probed. Cheap to
+  test on the same script; untested is not the same as fine.
+
+### §0 — GET-only changes the shape of the exposure, not the decision
+
+The 2026-08-16 ADR accepted that a third party sees where a leg started and ended.
+GET-only means **the coordinates travel in the URL query string, beside the API
+key** — and a URL is the most-logged part of an HTTP request. The survey saw
+`cf-ray` headers, so Cloudflare fronts Geoapify and edge logs record URLs by
+default.
+
+This does **not** reopen the decision, which is Chiu's and stands. It does two
+things: it raises the value of the pre-launch Cloudflare Worker from "the key must
+leave the binary" to "the only hop Kamome controls the shape of", and it makes the
+Worker's **no-log requirement** load-bearing rather than tidy.
+
+### What this does NOT decide
+
+Whether the user is told that importing contacts a third party (still open, still
+§0, still Chiu's). Whether the Worker lands before or after Phase 4. Whether
+Geoapify's place-name quality reopens "place names as narrative rhythm" — the
+survey's Task 4 is **strong evidence** (`type=amenity` returned Skógafoss, Gullfoss,
+Strokkur, Hallgrímskirkja, Seljalandsfoss, Diamond Beach on 8 of 9 coordinates,
+against `type=street`'s Suðurlandsvegur) but that feature is iceboxed and stays
+iceboxed until Chiu names it.
+
+## 2026-08-20 (b) — Geoapify's terms, read; and what Kamome now commits to on privacy
+
+**Written after the empirical survey**, which measured behaviour and never touched
+terms. `Docs/routing-provider-selection.md` named two questions that could
+disqualify outright; the survey answered one (map-matching exists, 1000 points,
+enforced cleanly). This is the other one, read from the documents.
+
+### What the terms actually say
+
+| question | answer | source |
+|---|---|---|
+| may returned routes be **stored permanently**? | **The T&C does not address it at all** — no clause permitting it, none forbidding it. Geoapify's own FAQ says results may be cached and reused, but the wording found is **Places-API specific**. | Terms & Conditions; Places-API comparison page |
+| free tier, commercial use | Commercial use of Free is allowed in development and, **"with some limitations"**, in production. The limitations are **not defined**; the terms say to contact them. Pricing calls it "Limited Commercial Use". | T&C *Plans and usage limits*; Pricing |
+| a **publicly distributed mobile app** on Free | **Not addressed anywhere.** | — |
+| free-tier limits | **3,000 credits/day, up to 5 requests/second.** Note *credits*, not requests — whether a routing call costs one credit is unverified. | Pricing |
+| attribution | OSM attribution **always**; Geoapify attribution **mandatory on Free**; format `Powered by Geoapify` with a link. **Where it must appear is not specified**, which leaves Chiu's 2026-08-17 in-app decision intact. | T&C *Attribution*; Pricing |
+| what they log | **Request body, headers, IP address and timestamp**, used for access control / usage counting and for detecting issues and optimising the APIs. | Privacy Policy *Services and API Requests* |
+| retention | **No longer than 24 hours** — stated for *successful* requests. | Privacy Policy *Data Retention Period* |
+
+### Verdict: **not disqualifying, and the provider decision stands.** Two things to close.
+
+1. 🟠 **Get the storage answer in writing, for routing specifically.** The practical
+   risk is low — the data is OSM-derived and Geoapify markets storage as its
+   advantage over Google — but `matched_polyline` is kept forever and re-exported
+   offline months later, which *is* the product. Silence in a contract is not
+   permission. **One email, before submission, not before Phase 4.**
+2. 🟠 **"Limited commercial use" has to be defined before the App Store**, because a
+   publicly distributed app is exactly the unaddressed case. Volume is not the
+   problem — 3,000 credits/day against 58 requests per Iceland film is ~50 films a
+   day. This is a submission blocker, not a Phase 4 one (`Docs/pre-launch.md`).
+
+### ⚠️ The retention clause has an edge that matters to Kamome specifically
+
+24 hours is a **good** answer, and better than §0 feared. But the sentence covers
+**successful** requests, and Kamome's interesting cases are the failures — an
+unroutable leg, a rate-limited burst, a request that times out. Nothing states how
+long a *failed* request is held, and a failed request still carried the coordinates.
+
+Combined with **GET-only** (2026-08-20 ADR), the honest §0 statement is: *for up to
+24 hours, a third party holds the start and end coordinates of each routed leg,
+in a URL, tied to the device's IP address and a timestamp.*
+
+---
+
+## Chiu's decisions, 2026-08-20
+
+1. **Journeys are multi-modal by design; car ships first.** The spec was wrong to
+   read as car-only. → spec **v1.8**, new §4.4.1.
+2. **Walks route on a walking profile and draw solid.** Real footpaths, not
+   fabricated roads, and not pervasive dashing.
+3. **The §0 line moves — and it moves by source, not by mode.**
+   - **Recorded trips are the user's own and stay that way.**
+   - **Photo-imported trips need a path computed, so their coordinates go to the
+     provider — and a walk is treated exactly like a drive.** Chiu's reasoning,
+     recorded because it is the product judgement: the user is choosing which
+     photographs make the trip, and a city stroll reconstructed from photos is not
+     a confidential matter. **This must still be declared honestly** in a privacy
+     policy, and the PO session is asked to keep watch on it.
+4. **A crossing always shows a path.** Sea → ship. Land → whatever mode can be
+   determined. Undetermined → **the seagull**. The seagull carries the same claim as
+   a dashed line — *this path is estimated* — while being a better experience than
+   nothing: the traveller still sees a plausible route.
+
+### 🔴 Item 3 needs one clarification before anything is built
+
+**"Recorded trips stay on the device" is not true of the code today.**
+`RouteMatchService.route` sends `.gpsHifi` / `.gpsPassive` traces to
+`matcher.match(trace)` — the **dense recorded trace**, which is far more revealing
+than a handful of photo positions, and is the main input for Capture Beta.
+
+Two readings of the decision, and they need different work:
+- *"We do not **log** it"* — already true; §0's other guarantees hold, but the
+  provider still sees recorded traces.
+- *"We do not **send** it"* — a real change: recorded legs would stop being
+  map-matched, and Capture Beta loses road-snapping entirely.
+
+**Not resolved here.** Flagged for Chiu.
+
+### 🔴 The justification for item 3 describes a product that does not exist yet
+
+The reasoning is *"they can choose the photographs"*. **Today they cannot.** Import
+takes a **date range over the whole library**; choosing an album or selecting
+photographs is `Docs/cross-region-journeys.md` requirement 1, **unbuilt**.
+
+So either the album/selection path lands before walk routing does, or the
+disclosure says plainly that a date range decides what is sent. **A privacy notice
+resting on a control the user does not have is the failure mode §0 exists to
+prevent.** Flagged for Chiu; not a blocker on car routing, which is unaffected.
+
+## 2026-08-20 (c) — The terms risk is accepted; traces are sent; the notice must say what is actually sent
+
+**Chiu, closing the three questions left open by 2026-08-20 (b).**
+
+### 1. The two terms questions: accepted, do not ask
+
+**Decision:** do not write to Geoapify. Proceed, and if either becomes a problem,
+upgrade the plan or stop. **Concurred, and the reasoning holds for both** — but for
+different reasons worth keeping apart:
+
+- **"Limited commercial use"** — the worst case is being told to pay, at a volume
+  where paying is trivial. Nobody is harmed, and it reverses in an afternoon.
+- **Permanent storage of routing results** — the T&C's **silence is in Kamome's
+  favour**: there is no clause to breach. The data is OSM-derived, and Geoapify
+  markets storage as its advantage over Google.
+
+**What bounds the risk, and why "forgiveness" is defensible here rather than
+generally:** if storage were ever disallowed, the fallback is **known and already
+built** — route at export time instead of reading `matched_polyline`, using the
+coordinator and budget that already exist. Offline re-export degrades; nothing
+breaks. A risk with a working fallback is a risk worth taking.
+
+**The record is the mitigation.** 2026-08-20 (b) carries the URLs, the date, and
+what each document said. If terms change later, "on 2026-08-20 the terms were silent
+and the vendor's own FAQ said results may be cached" is the whole defence, and it
+costs nothing to have written it down.
+
+### 2. Recorded GPS traces are sent — this is decided
+
+**Decision (Chiu):** they must be. Without sending the trace there is no route data,
+and Capture Beta's road snapping depends on it. §0's answer is **honest declaration,
+not withholding.**
+
+### 3. ⚠️ The approved wording understates what is sent — corrected here
+
+The sentence Chiu approved — *"the start and end coordinates of each leg, in a URL,
+tied to IP and timestamp"* — is accurate for **neither** path once checked against
+the code. There are two paths and they differ in both content and shape:
+
+| | photo-imported leg | recorded leg |
+|---|---|---|
+| endpoint | `/v1/routing` | `/v1/mapmatching` |
+| method | **GET — coordinates in the URL** | **POST — coordinates in the body** |
+| what is sent | the leg's waypoints: stop centroids **plus photo positions**, thinned to ≥ `route_waypoint_min_spacing_m` (250 m), capped at `chunk_size` (100) | **the full recorded trace**, in chunks of up to 100 points |
+
+Verified in `OSRMRouteProvider.requestURL` and `OSRMMatchProvider` (today both GET;
+Geoapify's mapmatching is POST, so recorded traces move out of the URL on migration).
+
+**So the notice must say two things, not one:** that an imported trip sends the
+photo positions a leg is built from, and that a recorded trip sends **the recorded
+path itself**. Retention is Geoapify's stated ≤24 h for successful requests, with
+IP and timestamp. Saying "start and end coordinates" while sending a full trace
+would make the honest declaration a false one — which is worse than not declaring.
+
+### 4. The album path is now load-bearing for the privacy story
+
+**Decision (Chiu):** the notice states plainly that a **date range** decides what is
+sent, *and* that the user can control which places are given by choosing an album.
+
+**Consequence, recorded because it changes a priority:** album selection
+(`Docs/cross-region-journeys.md` requirement 1, the cheap half — "a list and a
+fetch") stops being a cross-region convenience and becomes **the control the privacy
+notice describes.** A notice may not promise a control the app does not offer, so
+**the album path ships with the notice, or the notice does not mention it.**
+Free-form photo selection stays a later design pass.

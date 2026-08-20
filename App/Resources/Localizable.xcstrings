@@ -298,13 +298,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome reads geotagged photos from this range and rebuilds them into a trip. Photos are never copied or uploaded."
+            "value": "Kamome reads geotagged photos from this range and rebuilds them into a trip. Up to %1$d days — pick a date outside that and the other end moves to keep the window. Photos are never copied or uploaded."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩會讀取這段期間有定位的相片，重建成一趟旅程。相片不會被複製或上傳。"
+            "value": "卡摸咩會讀取這段期間有定位的相片，重建成一趟旅程。最多 %1$d 天——選了超出範圍的日期，另一端會跟著移動以維持這個區間。相片不會被複製或上傳。"
           }
         }
       }

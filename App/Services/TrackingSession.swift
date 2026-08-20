@@ -105,6 +105,8 @@ final class TrackingSession {
             if let json = stats.jsonString() {
                 try? repository.updateTripStats(tripId: tripId, statsJson: json)
             }
+            // Recorded at creation for the same reason the importer does it.
+            try? repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
             // §4.4 matching, fire-and-forget: trip completion never waits on
             // it, and the recap path joins any run still going rather than
             // starting a second one over the same legs.

@@ -107,13 +107,17 @@ struct ImportSheet: View {
                         DatePicker(
                             "import_from",
                             selection: $model.startDate,
-                            in: ...model.endDate,
+                            // Bounded only by today. It used to stop at the end
+                            // date, which made the range un-slidable: picking a
+                            // start further back is a normal thing to want, and
+                            // the *end* is what should move for it.
+                            in: ...model.latestSelectableDate,
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
                         .labelsHidden()
-                        .onChange(of: model.startDate) { _, newStart in
-                            linkEndToStart(newStart)
+                        .onChange(of: model.startDate) { _, _ in
+                            model.startDateChanged()
                             withAnimation { editing = nil }
                         }
                     }
@@ -122,19 +126,25 @@ struct ImportSheet: View {
                         DatePicker(
                             "import_to",
                             selection: $model.endDate,
-                            in: model.startDate...,
+                            // A range ending tomorrow holds no photograph, and
+                            // with the sliding window it would drag the start
+                            // into the future too.
+                            in: model.startDate...model.latestSelectableDate,
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
                         .labelsHidden()
                         .onChange(of: model.endDate) { _, _ in
+                            model.endDateChanged()
                             withAnimation { editing = nil }
                         }
                     }
         } header: {
             Text("import_range_header")
         } footer: {
-            Text("import_range_footer")
+            Text(String.localizedStringWithFormat(
+                String(localized: "import_range_footer"), model.maxRangeDays
+            ))
         }
         .disabled(model.isImporting)
     }
@@ -222,18 +232,6 @@ struct ImportSheet: View {
             }
         }
         .buttonStyle(.plain)
-    }
-
-    /// After the start date is picked, keep the end date sensible: if it now
-    /// sits in a different month (or before the start), snap it onto the start
-    /// so the "To" calendar opens on the trip's month instead of today's. An
-    /// end already in the same month and after the start is left untouched.
-    private func linkEndToStart(_ newStart: Date) {
-        let calendar = Calendar.current
-        let sameMonth = calendar.isDate(model.endDate, equalTo: newStart, toGranularity: .month)
-        if model.endDate < newStart || !sameMonth {
-            model.endDate = newStart
-        }
     }
 
     private var importButton: some View {

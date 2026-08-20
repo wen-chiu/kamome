@@ -1,0 +1,18 @@
+// Build settings the app target always has, whether or not this machine has a
+// routing key. Referenced from `project.yml`, so it survives
+// `xcodegen generate` — a setting typed into Xcode's UI does not.
+
+// **The default is "no key", and that is a working build.** A fresh checkout and
+// CI have no `Secrets.xcconfig`, and they must still compile, launch and run
+// their tests. No key simply means routing is disabled: legs keep their raw
+// geometry and draw dashed (PD-2), which is an existing designed state with
+// user-facing copy already written for it — not an error path.
+KAMOME_ROUTING_API_KEY =
+
+// The optional include. `#include?` — note the `?` — is not an error when the
+// file is absent, which is exactly the fresh-checkout case above. When the file
+// does exist it is read after the default, so it wins.
+//
+// `Config/Secrets.xcconfig` is gitignored and generated locally from
+// `~/.kamome/routing.env`; `Config/Secrets.xcconfig.example` is the template.
+#include? "Secrets.xcconfig"
