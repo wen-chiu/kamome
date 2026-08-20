@@ -75,6 +75,68 @@ final class RoutingKeyTests: XCTestCase {
         XCTAssertEqual(AppConfig.usableRoutingKey("  abc123  "), "abc123")
     }
 
+    /// **The secrets file must never be tracked.** A gitignore rule is
+    /// convention; this test is enforcement. It reads the git index directly
+    /// — `Process` is not available on iOS, but the index is a binary file
+    /// we can scan for the path string.
+    func testTheSecretsFileIsNotTracked() throws {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // AppTests/
+            .deletingLastPathComponent()  // Tests/
+            .deletingLastPathComponent()  // repo root
+
+        let indexURL = repoRoot.appendingPathComponent(".git/index")
+        // In CI or worktrees .git may be a file pointing elsewhere; if the
+        // index is not readable, the CI step catches it instead — skip
+        // rather than false-pass.
+        guard let indexData = try? Data(contentsOf: indexURL) else {
+            throw XCTSkip("git index not readable — the CI step covers this check")
+        }
+
+        // The git index stores each tracked path as a NUL-terminated string.
+        // Scanning for the path bytes is sound because a false positive would
+        // require another tracked path containing this one as a substring,
+        // which cannot happen (it would be a directory conflict).
+        let needle = Data("Config/Secrets.xcconfig".utf8)
+        let nul = UInt8(0)
+        var searchStart = indexData.startIndex
+        while let range = indexData.range(of: needle, in: searchStart..<indexData.endIndex) {
+            // Check it is NUL-terminated (a real index entry) and not a
+            // prefix of "Config/Secrets.xcconfig.example"
+            let afterNeedle = range.upperBound
+            if afterNeedle < indexData.endIndex && indexData[afterNeedle] == nul {
+                XCTFail("Config/Secrets.xcconfig is tracked by git — it must be in .gitignore")
+                return
+            }
+            searchStart = range.upperBound
+        }
+        // Not found in the index — correct.
+    }
+
+    /// The committed example file must not contain a usable key. If someone
+    /// pastes a real key into the example and commits it, this fails.
+    func testTheExampleFileContainsNoUsableKey() throws {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let example = repoRoot.appendingPathComponent("Config/Secrets.xcconfig.example")
+        let content = try String(contentsOf: example, encoding: .utf8)
+
+        // Extract any value assigned to KAMOME_ROUTING_API_KEY
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard trimmed.hasPrefix("KAMOME_ROUTING_API_KEY"),
+                  let eqIdx = trimmed.firstIndex(of: "=") else { continue }
+            let value = String(trimmed[trimmed.index(after: eqIdx)...])
+                .trimmingCharacters(in: .whitespaces)
+            XCTAssertNil(
+                AppConfig.usableRoutingKey(value),
+                "Secrets.xcconfig.example contains a usable key — it must hold only the placeholder"
+            )
+        }
+    }
+
     /// The release guard is untouched by any of this: a provider host and a
     /// future Worker URL both satisfy it, and a LAN address still does not.
     func testTheReleaseGuardStillRefusesACleartextLANEndpoint() throws {
