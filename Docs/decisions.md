@@ -1683,6 +1683,51 @@ in a URL, tied to the device's IP address and a timestamp.*
 
 ---
 
+## Chiu's decisions, 2026-08-20
+
+1. **Journeys are multi-modal by design; car ships first.** The spec was wrong to
+   read as car-only. → spec **v1.8**, new §4.4.1.
+2. **Walks route on a walking profile and draw solid.** Real footpaths, not
+   fabricated roads, and not pervasive dashing.
+3. **The §0 line moves — and it moves by source, not by mode.**
+   - **Recorded trips are the user's own and stay that way.**
+   - **Photo-imported trips need a path computed, so their coordinates go to the
+     provider — and a walk is treated exactly like a drive.** Chiu's reasoning,
+     recorded because it is the product judgement: the user is choosing which
+     photographs make the trip, and a city stroll reconstructed from photos is not
+     a confidential matter. **This must still be declared honestly** in a privacy
+     policy, and the PO session is asked to keep watch on it.
+4. **A crossing always shows a path.** Sea → ship. Land → whatever mode can be
+   determined. Undetermined → **the seagull**. The seagull carries the same claim as
+   a dashed line — *this path is estimated* — while being a better experience than
+   nothing: the traveller still sees a plausible route.
+
+### 🔴 Item 3 needs one clarification before anything is built
+
+**"Recorded trips stay on the device" is not true of the code today.**
+`RouteMatchService.route` sends `.gpsHifi` / `.gpsPassive` traces to
+`matcher.match(trace)` — the **dense recorded trace**, which is far more revealing
+than a handful of photo positions, and is the main input for Capture Beta.
+
+Two readings of the decision, and they need different work:
+- *"We do not **log** it"* — already true; §0's other guarantees hold, but the
+  provider still sees recorded traces.
+- *"We do not **send** it"* — a real change: recorded legs would stop being
+  map-matched, and Capture Beta loses road-snapping entirely.
+
+**Not resolved here.** Flagged for Chiu.
+
+### 🔴 The justification for item 3 describes a product that does not exist yet
+
+The reasoning is *"they can choose the photographs"*. **Today they cannot.** Import
+takes a **date range over the whole library**; choosing an album or selecting
+photographs is `Docs/cross-region-journeys.md` requirement 1, **unbuilt**.
+
+So either the album/selection path lands before walk routing does, or the
+disclosure says plainly that a date range decides what is sent. **A privacy notice
+resting on a control the user does not have is the failure mode §0 exists to
+prevent.** Flagged for Chiu; not a blocker on car routing, which is unaffected.
+
 ## 2026-08-20 (c) — The terms risk is accepted; traces are sent; the notice must say what is actually sent
 
 **Chiu, closing the three questions left open by 2026-08-20 (b).**

@@ -90,6 +90,66 @@ stands as written, and `.rateLimited` simply becomes unreachable on this provide
 
 ---
 
+### 3b. ✅ DECIDED 2026-08-20 — walks route on a walking profile and draw solid
+
+**His question**, recorded as asked: OSRM and Geoapify only carry car roads, so a
+hiking trail or footpath has no route; since Kamome must support every travel mode
+including walking and public transit, a walk off the road network should **draw a
+road that was not walked, rather than a dashed line**.
+
+**Two facts change the question before it is answered.**
+
+1. **A recorded walk already draws solid.** `RecapComposer.provenance(for:)` dashes
+   raw geometry only on `.exif` / `.timeline` segments. A `.gpsHifi` / `.gpsPassive`
+   walk is `.recorded` → **solid**, drawn on the trace the phone actually saw, which
+   is more accurate than any road-snapped version. The dashed-walk problem exists
+   **only for photo-imported trips**, where the input really is 2–5 photo positions.
+2. **"Only car roads" is Kamome's decision, not the provider's limit.**
+   `RouteMatchService.shouldReconstruct` returns false for `.walk`, `.cycle`,
+   `.transit`, `.unknown` — PD-8, and its comment says why: *snapping a stroll to
+   the nearest street invents a journey.* **That reasoning was written against a
+   car-profile server.** OSM carries `highway=path` / `footway` / `steps`, and a
+   hosted provider exposes profiles the self-hosted four-region car graph never had.
+
+**Chiu decided (2026-08-20): the recommendation below, as written.** Spec amended to
+**v1.8**, new §4.4.1 — journeys are multi-modal by design, car ships first. Do not fabricate.
+Get the same outcome honestly by **routing walks on a walking profile** — a real
+footpath drawn solid is both what Chiu wants and what PD-1/PD-2 allow. Then the
+residual dashed cases (a beach, a glacier, a field, indoors) are rare rather than
+pervasive.
+
+**Test before deciding — one row on the existing survey script:** does Geoapify
+`/v1/routing` accept `mode=walk` / `mode=hike`, and does it return trail geometry
+for a known trail?
+
+**Transit is a different problem and must not ride along.** A Shinkansen leg routed
+on any road profile draws the **expressway** — a different line in a different place,
+claimed as real. Chiu's own cross-region decision already contains the honest answer:
+known endpoints, unknown path, its own sprite and its own beat
+(`Docs/cross-region-journeys.md`, requirement 4).
+
+**⚠️ §0 consequence, and it is Chiu's call.** Walk legs are currently **never sent
+anywhere** — `shouldReconstruct` refuses them, so they have never left the device.
+Routing them would send a person's city wandering to a third party, which is more
+intimate than the drive legs the 2026-08-16 ADR accepted.
+
+---
+
+### 3c. 🟠 The album path is promoted — it is now the privacy notice's control (2026-08-20)
+
+Selecting an **album** at import (`Docs/cross-region-journeys.md` requirement 1, the
+cheap half — "a list and a fetch") is no longer just a cross-region convenience. Chiu's
+privacy decision states the notice will say a **date range** decides what is sent
+*and* that the user can control which places are given **by choosing an album**.
+
+**A notice may not promise a control the app does not offer.** So the album path ships
+with the notice, or the notice does not mention it. Free-form photo selection remains
+a later design pass — do not bundle them.
+
+ADR: `Docs/decisions.md` 2026-08-20 (c).
+
+---
+
 ### 4. 🟡 `matching.trip_budget_s` — measure it, do not pick a number
 
 Survey latency: 0.48–2.53 s a leg cold, 440–840 ms back-to-back with connection
