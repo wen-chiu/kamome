@@ -351,13 +351,25 @@ final class RecapDemoFilmTests: XCTestCase {
 
     // MARK: - Providers and assets
 
-    private func snapshotProvider(region: RecapMapRegion?) throws -> MapRenderer {
+    /// The base map this render will use — **and falling back is not a failure**.
+    ///
+    /// This used to `XCTFail` when no `.pmtiles` region covered the trip, which
+    /// made every successful run of the harness report a failure: since the
+    /// 2026-08-08 substrate ADR Apple Maps *is* the shipping substrate and
+    /// MapLibre is parked, so no region is the normal state, not a missing
+    /// setting. Per Arch.md §7.3 the assertion is restated rather than deleted —
+    /// the rule it now holds is `testAFilmRendersOnWhicheverSubstrateIsAvailable`
+    /// below: a film always gets a substrate, and which one is *reported*, never
+    /// judged.
+    func snapshotProvider(region: RecapMapRegion?) throws -> MapRenderer {
         #if canImport(MapLibre)
         guard let region else {
-            XCTFail("no region covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
+            print("KAMOME_DEMO_FILM substrate Apple Maps — no installed region covers the trip"
+                + " (set TEST_RUNNER_KAMOME_TILES_PATH to render the MapLibre souvenir map instead)")
             return MapKitSnapshotProvider()
         }
-        print("KAMOME_DEMO_FILM region bounds \(region.bounds), terrain: \(region.terrainURL != nil)")
+        print("KAMOME_DEMO_FILM substrate MapLibre · region bounds \(region.bounds), "
+            + "terrain: \(region.terrainURL != nil)")
         let styleURL = try RecapMapStyle.resolvedStyleURL(
             styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL,
             terrainURL: region.terrainURL
@@ -366,6 +378,33 @@ final class RecapDemoFilmTests: XCTestCase {
         #else
         return MapKitSnapshotProvider()
         #endif
+    }
+
+    /// **A film renders on whichever substrate is available, and falling back is
+    /// not a failure** (2026-08-08 substrate ADR, restated here 2026-08-22).
+    ///
+    /// The rule this replaces was an `XCTFail` on the no-region path. It could
+    /// once be read as "you forgot the tiles path"; since the ADR it fires on
+    /// every successful render, because Apple Maps is what ships and no region
+    /// is installed. Arch.md §7.3: the case stopped being exercisable as a
+    /// failure, so the assertion is restated to hold the rule instead of
+    /// deleted with it.
+    ///
+    /// Not env-gated, unlike every render in this file — it takes no snapshot,
+    /// no tiles and no network, and the regression it guards is silent.
+    func testAFilmRendersOnWhicheverSubstrateIsAvailable() throws {
+        // No installed region — today's normal state, and the shipping one.
+        let fallback = try snapshotProvider(region: nil)
+        XCTAssertTrue(
+            fallback is MapKitSnapshotProvider,
+            "with no MapLibre region a film must still render, on Apple Maps — the shipping substrate"
+        )
+        // Whatever the substrate, the camera contract it advertises is the one
+        // the follow-cam resolver reads. Apple Maps cannot rotate and says so.
+        XCTAssertFalse(
+            fallback.capabilities.supportsBearing,
+            "MapKit must keep declaring bearing unsupported rather than silently ignoring one"
+        )
     }
 
     private func outputDirectory() -> URL {
