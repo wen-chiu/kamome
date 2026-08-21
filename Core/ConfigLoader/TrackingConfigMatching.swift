@@ -7,11 +7,17 @@ import Foundation
 public extension TrackingConfig {
     /// Sendable: the OSRM providers carry this across their async transport.
     struct Matching: Decodable, Equatable, Sendable {
-        /// OSRM host for map matching (§4.4), e.g. "http://127.0.0.1:5000".
-        /// Empty string = matching disabled: segments keep raw geometry and
-        /// readers fall back to the simplified raw polyline. Stays empty
-        /// until the self-hosted server exists (`Docs/osrm-setup.md`).
-        public let baseURL: String
+        /// Routing endpoint (§4.4), e.g. "https://api.geoapify.com" — or, from
+        /// the pre-launch Cloudflare Worker onwards, the Worker that holds the
+        /// key (`Docs/pre-launch.md`). Empty string = routing disabled:
+        /// segments keep raw geometry and readers fall back to the simplified
+        /// raw polyline. **Ships empty**, so a fresh checkout and CI contact
+        /// nothing; a build that routes sets it locally.
+        ///
+        /// `private(set) var` only so `withBaseURL` can copy-and-replace
+        /// without going through the memberwise initialiser, which is what
+        /// silently dropped `apiKey` until 2026-08-20.
+        public private(set) var baseURL: String
         /// Max trackpoints per /match request (spec §4.4: ≤100).
         public let chunkSize: Int
         /// A segment whose worst per-matching confidence is below this keeps
@@ -54,15 +60,21 @@ public extension TrackingConfig {
         /// via-waypoint pair metres apart pins the route to whichever side of
         /// the road the noise landed on, sometimes forcing a U-turn.
         public let routeWaypointMinSpacingM: Double
-        /// How far from a photo the reconstructor may look for a road.
+        /// How far from a photo a reconstructor may look for a road.
         ///
-        /// Deliberately **much larger than `radius_m`**, which is a GPS-accuracy
-        /// floor for a dense recorded trace. A photo is almost never taken on the
-        /// road: it is taken at a lookout, a car park, a beach, a restaurant —
-        /// routinely hundreds of metres off. At 25 m every EXIF leg comes back
-        /// `NoSegment` and nothing ever reconstructs. Being generous here is safe
-        /// because `route_max_detour_ratio` is the real guard: a waypoint snapped
-        /// to the wrong road inflates the route and gets rejected.
+        /// ⚠️ **Nothing reads this today** (2026-08-20). It was OSRM's
+        /// `radiuses=` parameter, and Geoapify's `/v1/routing` has no equivalent
+        /// — measured behaviourally, since unknown parameters are silently
+        /// ignored rather than refused. It is kept rather than deleted for two
+        /// reasons: the class it genuinely guarded (a waypoint with no road
+        /// anywhere near it — a beach, a lagoon, open sea) is now refused by the
+        /// provider itself with `400 No suitable edges near location`, so no
+        /// behaviour was lost; and `/v1/mapmatching` *does* report a per-point
+        /// `match_distance`, which is where this value plausibly finds its next
+        /// reader when Capture Beta opens.
+        ///
+        /// It was never the wrong-road guard the migration briefing believed it
+        /// to be — `Docs/decisions.md` 2026-08-20 (d) has the measurements.
         public let routeWaypointRadiusM: Double
 
         /// The routing provider's API key — **deliberately not a JSON key.**
@@ -147,19 +159,18 @@ public extension TrackingConfig {
         /// transport's placeholder host in tests, or a dogfood instance. Keeps
         /// `TrackingConfig.json` the single source for every other value
         /// (§0 rule 2) instead of re-listing them at each call site.
+        ///
+        /// **Including the key** (fixed 2026-08-20). This rebuilt the struct
+        /// through the memberwise initialiser, where `apiKey` is not a
+        /// parameter, so it silently reset to empty. Nothing noticed while no
+        /// request carried a key; the moment one did, every desk render harness
+        /// — all of which reach the provider through `withBaseURL` — would have
+        /// sent keyless requests and got 401 back as "the provider is
+        /// unreachable".
         public func withBaseURL(_ baseURL: String) -> Matching {
-            Matching(
-                baseURL: baseURL,
-                chunkSize: chunkSize,
-                confidenceMin: confidenceMin,
-                radiusM: radiusM,
-                timeoutS: timeoutS,
-                tripBudgetS: tripBudgetS,
-                displayEpsilonM: displayEpsilonM,
-                routeMaxDetourRatio: routeMaxDetourRatio,
-                routeWaypointMinSpacingM: routeWaypointMinSpacingM,
-                routeWaypointRadiusM: routeWaypointRadiusM
-            )
+            var copy = self
+            copy.baseURL = baseURL
+            return copy
         }
     }
 }

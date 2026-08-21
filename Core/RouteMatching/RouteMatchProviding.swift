@@ -63,9 +63,9 @@ public enum RouteProviderFailure: Error, Equatable, Sendable {
 }
 
 /// Boundary for map matching (§4.4) — the same one-file-per-backend
-/// discipline as `MapRenderer` (§0 boundary rule): OSRM types
-/// stay inside `OSRMMatchProvider.swift`, and future backends (e.g. a foot
-/// profile for walk segments) conform here without touching callers.
+/// discipline as `MapRenderer` (§0 boundary rule): a backend's wire format
+/// stays inside its own file, and future backends (e.g. a foot profile for walk
+/// segments) conform here without touching callers.
 ///
 /// Returns nil when no confident match exists (server disabled, trace too
 /// short, confidence below the floor) — the caller keeps raw geometry.
@@ -73,4 +73,24 @@ public enum RouteProviderFailure: Error, Equatable, Sendable {
 /// way (fall back, never block — §4.4) but may log errors.
 public protocol RouteMatchProviding: Sendable {
     func match(_ points: [RouteMatchPoint]) async throws -> RouteMatchOutcome?
+}
+
+/// Boundary for route *reconstruction* — the sibling of `RouteMatchProviding`
+/// for traces too sparse to map-match (typed-leg pass 2026-07-26).
+///
+/// **Why a second boundary rather than a second implementation of the first.**
+/// The two answer different questions. Map matching asks "which road were these
+/// dense GPS fixes on?" and needs the trace to be a near-continuous sample of
+/// the drive. A photo-EXIF leg is nothing like that: three or four positions
+/// hours apart, which a Hidden-Markov matcher will either reject outright or
+/// match to an arbitrary road. The question there is "what is the plausible
+/// driving route *through* these places?" — a routing query with the photos as
+/// via-waypoints (PD-3). Same return type, because the caller does the same
+/// thing with both: store the geometry, or keep the raw leg and render it
+/// inferred (PD-2).
+///
+/// Returns nil when no plausible route exists (routing disabled, too few
+/// waypoints, sanity gate rejected the answer) — never a guess.
+public protocol RouteReconstructing: Sendable {
+    func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome?
 }

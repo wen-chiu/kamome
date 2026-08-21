@@ -53,7 +53,7 @@ final class ImportPipelineE2ETests: XCTestCase {
             matchedEpsilonM: config.matching.displayEpsilonM
         )
         XCTAssertGreaterThanOrEqual(legs.flatMap(\.coordinates).count, 2)
-        // No OSRM server in CI (`matching.base_url` ships ""), so the leg could
+        // No routing endpoint in CI (`matching.base_url` ships ""), so the leg could
         // not be reconstructed — it must say so rather than pass as road (PD-2).
         XCTAssertEqual(legs.map(\.provenance), [.inferred])
         let recap = RecapComposer.trip(

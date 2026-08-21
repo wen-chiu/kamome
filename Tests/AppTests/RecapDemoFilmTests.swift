@@ -136,10 +136,10 @@ final class RecapDemoFilmTests: XCTestCase {
         return nil
     }
 
-    // MARK: - Imported film (photos → legs → OSRM → recap)
+    // MARK: - Imported film (photos → legs → routing → recap)
 
     /// The **whole Replay MVP loop** in one artifact: geotagged photos →
-    /// `ImportService` (per-leg segments) → OSRM `/route` reconstruction with the
+    /// `ImportService` (per-leg segments) → Geoapify `/v1/routing` reconstruction with the
     /// intermediate photos as via-waypoints → `RecapComposer` typed legs → film.
     ///
     /// This is where the honesty shows: the drives reconstruct against the road
@@ -152,10 +152,9 @@ final class RecapDemoFilmTests: XCTestCase {
     /// and a real photo library can be dumped straight into that shape
     /// (`Tools/exif-to-fixture.sh`).
     ///
-    /// Needs a live OSRM covering the region and tiles for it:
+    /// Needs a routing key in `Config/Secrets.xcconfig` and tiles for the region:
     ///
     ///   KAMOME_DEMO_FILM_IMPORT=iceland \
-    ///   KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
     ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
     ///   KAMOME_RENDER_OUT=/path/to/out
     func testRenderImportedFilm() async throws {
@@ -169,18 +168,23 @@ final class RecapDemoFilmTests: XCTestCase {
         try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
     }
 
-    /// `baseURL` nil takes the ambient OSRM (review renders want real roads);
-    /// passing `""` forces every leg to stay raw, which is what the offline
-    /// continuity gate needs — and what the shipped app does today, since
-    /// `matching.base_url` ships empty.
+    /// `baseURL` nil takes the ambient routing endpoint (review renders want
+    /// real roads); passing `""` forces every leg to stay raw, which is what the
+    /// offline continuity gate needs — and what the shipped app does today,
+    /// since `matching.base_url` ships empty.
+    ///
+    /// The default is the live provider (2026-08-20): a render with a key in
+    /// `Config/Secrets.xcconfig` routes against Geoapify, and one without it
+    /// gets 401s reported as an unreachable provider. Every caller that reaches
+    /// this default is env-gated and never runs in CI.
     static func importedRecap(
         named fixture: String,
         baseURL requestedBaseURL: String? = nil
     ) async throws -> (RecapTrip, TrackingConfig.Export) {
         let full = try AppConfig.loadOrDie()
         let baseURL = requestedBaseURL
-            ?? HarnessEnv.value("KAMOME_OSRM_BASE_URL")
-            ?? "http://127.0.0.1:5100"
+            ?? HarnessEnv.value("KAMOME_ROUTING_BASE_URL")
+            ?? "https://api.geoapify.com"
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let service = ImportService(repository: repository, config: full)
         // Routing became its own step on 2026-08-15 (`importTrip` returns as
@@ -189,7 +193,7 @@ final class RecapDemoFilmTests: XCTestCase {
         // app deliberately does not.
         let routing = RouteMatchService(
             repository: repository, matching: full.matching,
-            reconstructor: OSRMRouteProvider(config: full.matching.withBaseURL(baseURL))
+            reconstructor: GeoapifyRouteProvider(config: full.matching.withBaseURL(baseURL))
         )
 
         let trip = try Self.tripFixture(named: fixture)

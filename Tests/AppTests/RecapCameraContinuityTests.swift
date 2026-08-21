@@ -21,7 +21,7 @@ import XCTest
 /// frame's ground is still on screen.** It is deliberately not a golden-frame
 /// test — pixels can be perfect in every individual frame of an unwatchable film.
 ///
-/// Runs entirely offline (no tiles, no OSRM, no rendering) so it can gate every
+/// Runs entirely offline (no tiles, no routing, no rendering) so it can gate every
 /// CI run: fixture JSON → clusterer → raw legs → timeline → scan. `base_url` is
 /// forced empty, which leaves every leg unrouted — a straight line between photo
 /// positions. That is the **worst case** for the camera and the exact shape the

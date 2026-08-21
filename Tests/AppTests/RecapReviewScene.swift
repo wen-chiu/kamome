@@ -6,7 +6,7 @@ import KamomeExportEngine
 import UniformTypeIdentifiers
 
 /// Everything a **manual review render** needs, built once: a real imported trip
-/// (photos → legs → OSRM reconstruction), its timeline, the live MapLibre
+/// (photos → legs → road reconstruction), its timeline, the live MapLibre
 /// souvenir map, and a photo resolver over real photographs.
 ///
 /// Shared by the two review harnesses so they differ only in what they *do* with

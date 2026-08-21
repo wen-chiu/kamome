@@ -9,6 +9,20 @@ import KamomeConfig
 /// `Docs/osrm-setup.md`. With `matching.base_url` empty this provider is a
 /// no-network no-op returning nil, so simulator runs and CI never need a
 /// server.
+///
+/// ⚠️ **Nothing in the app constructs this today** (2026-08-20). Routing moved
+/// to Geoapify, whose map-matching endpoint is a different shape entirely
+/// (`POST /v1/mapmatching`), and `RouteMatchService` therefore runs with **no
+/// matcher at all**: a recorded trace sent to `/match/v1/driving/…` at
+/// `api.geoapify.com` would put the whole dense path in the query string of a
+/// request that can only 404. Recorded legs keep the trace the phone saw and
+/// draw solid, which is the honest picture anyway (`Docs/decisions.md`
+/// 2026-08-20 (d)).
+///
+/// It is kept, with its recorded-response gate, because Capture Beta is where
+/// map matching earns its place and the choice of backend is open there — a
+/// self-hosted OSRM behind this file is still viable, and so is a Geoapify
+/// sibling to `GeoapifyRouteProvider`.
 public struct OSRMMatchProvider: RouteMatchProviding {
     /// Injectable so tests replay recorded OSRM responses (P4 gate: matching
     /// asserted in CI without a live server).

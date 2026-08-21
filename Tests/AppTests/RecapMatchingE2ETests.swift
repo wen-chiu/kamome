@@ -8,12 +8,21 @@ import XCTest
 
 /// Manual §4.4 end-to-end validation (handoff P3.5 §1): replays the perth GPX
 /// fixture through the real engine, saves it as a completed trip, and runs the
-/// real S5 export pipeline — `RecapModel` → `RouteMatchService` → OSRM →
+/// real S5 export pipeline — `RecapModel` → `RouteMatchService` →
 /// `RecapComposer` snapped-geometry preference → `RecapExporter`. Skipped
-/// unless its env var is set: it needs wall time, Apple Maps tiles, and — for
-/// the matched case — a live OSRM server at `matching.base_url`
-/// (`Docs/osrm-setup.md`; the bundled default `""` exports raw geometry, which
-/// is the "before" half of the §1 comparison).
+/// unless its env var is set: it needs wall time and Apple Maps tiles.
+///
+/// ⚠️ **The "matched" half of the original comparison is currently
+/// unreachable** (2026-08-20). These segments are recorded GPS — `source` NULL,
+/// which reads as `.gpsHifi` — and recorded legs are no longer sent anywhere:
+/// map matching speaks OSRM's `/match`, the endpoint is Geoapify, and
+/// `RouteMatchService` runs with no matcher at all (`Docs/decisions.md`
+/// 2026-08-20 (d)). So this exports raw recorded geometry whatever
+/// `matching.base_url` says — which is exactly what the shipped app does with a
+/// recorded trip, and it draws **solid** as `.recorded`. What it no longer
+/// proves is the snapped-vs-raw difference; that returns with Capture Beta's
+/// matcher, or with a photo-imported fixture, which routes through
+/// `GeoapifyRouteProvider` instead.
 ///
 ///   TEST_RUNNER_KAMOME_MATCHING_E2E=1  → run
 ///   TEST_RUNNER_KAMOME_E2E_OUT=/tmp    → copy the exported MP4 to the host

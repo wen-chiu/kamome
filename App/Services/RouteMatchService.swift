@@ -88,7 +88,17 @@ struct RouteMatchReport: Equatable {
 /// before every leg, and a trip-level budget from config.
 struct RouteMatchService {
     private let repository: TripRepository
-    private let matcher: RouteMatchProviding
+    /// **Nil on the shipped path, deliberately** (2026-08-20 (d)). Map matching
+    /// speaks OSRM's `/match`, and the endpoint is Geoapify now: a recorded
+    /// trace sent there would put the full dense path in the query string of a
+    /// request that can only 404 — a §0 exposure in exchange for nothing. So no
+    /// matcher is constructed, `shouldReconstruct` stops offering recorded legs,
+    /// and they keep the trace the phone actually saw, which
+    /// `RecapComposer.provenance(for:)` already draws **solid** as `.recorded`.
+    /// What is lost is snapping polish on a 50 m-sampled drive, and that is a
+    /// Capture Beta concern. Injectable so Capture Beta — or a test — can supply
+    /// one without this becoming a provider registry.
+    private let matcher: RouteMatchProviding?
     private let reconstructor: RouteReconstructing
     private let config: TrackingConfig.Matching
     /// Logged, not used: the providers own the requests. What it answers is
@@ -107,8 +117,8 @@ struct RouteMatchService {
     ) {
         self.repository = repository
         config = matching
-        matcher = provider ?? OSRMMatchProvider(config: matching)
-        self.reconstructor = reconstructor ?? OSRMRouteProvider(config: matching)
+        matcher = provider
+        self.reconstructor = reconstructor ?? GeoapifyRouteProvider(config: matching)
         // **An injected provider need not be talking to the configured host**
         // (twice-confirmed, 2026-08-15). The desk harnesses inject a provider
         // built on `withBaseURL(…)`, and this line then named the config's URL —
@@ -116,7 +126,7 @@ struct RouteMatchService {
         // when diagnosing routing, including the P0, so it must never name a
         // server the run did not use.
         let configured = matching.baseURL
-        if provider == nil, reconstructor == nil {
+        if reconstructor == nil {
             endpoint = configured.isEmpty ? "(none — matching disabled)" : configured
         } else {
             endpoint = "(injected provider — the configured \"\(configured)\" is not necessarily what it asks)"
@@ -199,8 +209,20 @@ struct RouteMatchService {
         do {
             let outcome: RouteMatchOutcome?
             switch source {
-            case .exif, .timeline: outcome = try await reconstructor.route(trace)
-            case .gpsHifi, .gpsPassive: outcome = try await matcher.match(trace)
+            case .exif, .timeline:
+                outcome = try await reconstructor.route(trace)
+            case .gpsHifi, .gpsPassive:
+                guard let matcher else {
+                    // Unreachable — `shouldReconstruct` filters recorded legs out
+                    // when there is no matcher. Named rather than counted as "no
+                    // road here", which would be a claim about the geography.
+                    KamomeLog.routing.error(
+                        "matchTrip: a recorded leg reached routing with no matcher configured — left raw"
+                    )
+                    report.skipped += 1
+                    return
+                }
+                outcome = try await matcher.match(trace)
             }
             guard let outcome else {
                 report.noPlausibleRoute += 1
@@ -224,13 +246,22 @@ struct RouteMatchService {
 
     private func shouldReconstruct(_ segment: SegmentRecord, points: [TrackpointRecord]) -> Bool {
         guard segment.matchedPolyline == nil, points.count >= 2 else { return false }
-        // The self-hosted server runs the car profile: drive and scooter follow
-        // the drivable network. Walks stay raw — feet ignore roads, and snapping
-        // a stroll to the nearest street invents a journey (PD-8). Cycle,
-        // transit and unknown stay raw for the same reason.
+        // Requests go out on the drive profile: drive and scooter follow the
+        // drivable network. Walks stay raw here — snapping a stroll to the
+        // nearest street invents a journey (PD-8). Cycle, transit and unknown
+        // stay raw for the same reason. Spec v1.8 §4.4.1 gives walks their own
+        // profile later; that is a new request shape, not a loosening of this.
         switch TransportMode(rawValue: segment.mode) {
-        case .drive, .scooter: return true
+        case .drive, .scooter: break
         default: return false
+        }
+        // A recorded trace needs a map matcher, and there is none on this
+        // endpoint (see `matcher`). Offering the leg anyway would report it as a
+        // routing failure; it is not one — the leg already draws solid on the
+        // trace the phone recorded.
+        switch segment.segmentSource {
+        case .exif, .timeline: return true
+        case .gpsHifi, .gpsPassive: return matcher != nil
         }
     }
 }

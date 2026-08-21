@@ -18,7 +18,6 @@ import XCTest
 ///
 ///   TEST_RUNNER_KAMOME_PILOT_FILM=iceland \
 ///   TEST_RUNNER_KAMOME_PILOT_SECONDS=32 \
-///   TEST_RUNNER_KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
 ///   TEST_RUNNER_KAMOME_TILES_PATH=$HOME/kamome-osrm/tiles \
 ///   TEST_RUNNER_KAMOME_TERRAIN_PATH=$HOME/kamome-osrm/terrain \
 ///   TEST_RUNNER_KAMOME_STOP_PHOTOS=/path/to/jpegs \

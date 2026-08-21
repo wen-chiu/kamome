@@ -22,7 +22,7 @@ import XCTest
 ///     -only-testing:KamomeTests/RecapSnapshotBudgetTests
 ///
 /// Offline by default (`base_url` empty ⇒ every leg inferred, worst case for
-/// geometry). Set `TEST_RUNNER_KAMOME_OSRM_BASE_URL` to price a routed film.
+/// geometry). Set `TEST_RUNNER_KAMOME_ROUTING_BASE_URL` to price a routed film.
 final class RecapSnapshotBudgetTests: XCTestCase {
     /// Counts provider hits. Every hit is one `MKMapSnapshotter` fetch on the
     /// shipped Apple-Maps path, so this number times the per-snapshot cost is
@@ -130,7 +130,7 @@ final class RecapSnapshotBudgetTests: XCTestCase {
     /// (decisions.md 2026-08-15) — no tiles are installed, so every device
     /// export frames from the trip's own bounds and renders on Apple's map.
     private func scene(fixture: String) async throws -> Scene {
-        let baseURL = ProcessInfo.processInfo.environment["KAMOME_OSRM_BASE_URL"] ?? ""
+        let baseURL = ProcessInfo.processInfo.environment["KAMOME_ROUTING_BASE_URL"] ?? ""
         let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture, baseURL: baseURL)
         let timeline = try XCTUnwrap(
             LinearTimeline(trip: trip, config: config, establishing: nil),
