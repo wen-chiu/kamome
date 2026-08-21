@@ -1,6 +1,10 @@
 # Vector-tile pipeline — recap base maps (Phase 3.5 = Replay MVP)
 
-**Status:** authoritative implementer guide for the MapLibre substrate
+**Status: PARKED 2026-08-15** (`Docs/decisions.md` 2026-08-15 — MapLibre is
+parked, Apple Maps is what ships). Dormant, not wrong: the content below stays
+accurate and this guide is authoritative again only if the substrate reopens
+(Chiu's condition is recorded in the ADR).
+Original status: authoritative implementer guide for the MapLibre substrate
 (spec v1.7 §4.5 / §7 Phase 3.5 = Replay MVP; ADR `Docs/decisions.md`
 2026-07-19). This is Replay MVP work order §2 (`Docs/handoff-P3.5.md`).
 Written to be executable by a fresh implementer with no other context.

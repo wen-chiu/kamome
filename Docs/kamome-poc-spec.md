@@ -9,6 +9,7 @@ Founder motivation (Chiu, keep verbatim): *built first for myself — I love tra
 **Brand element:** the animated "you are here" head marker in the recap video is a small seagull, not a dot. This is the mascot and the app icon.
 **Platform:** iOS 17+, Swift 5.10+, SwiftUI. Base localization zh-Hant, second locale en. All user-facing strings in String Catalogs from Phase 0 — never hardcoded.
 **Audience for this doc:** Claude (Claude Code) as the implementing engineer. Chiu as product owner / reviewer.
+**Role of this document (clarified 2026-08-21):** product reference and evolution record — what Kamome *is* and how it was defined. It is **not a status report**: the current phase and project state live in `Docs/current-state.md`, and wherever status text here disagrees with a later ADR in `Docs/decisions.md`, **the ADR wins**. *(Changelog note, no version bump: the §7 phase-table status cells were corrected 2026-08-21 to the 2026-08-15 closing ADR — bookkeeping only, no product content change.)*
 **Doc version:** 1.8 (2026-08-20) — **journeys are multi-modal by design** (owner
 decision, `Docs/decisions.md` 2026-08-20). Kamome must eventually reconstruct a
 journey whatever the transport mode — drive, walk, cycle, transit. **Car ships
@@ -390,8 +391,8 @@ Design language: map is the hero on every screen; one accent color; dark-mode-fi
 | 1 | Tracking Engine | ✅ done (device gate → Capture Beta) | high-fidelity capture |
 | 2 | Stops, Photos, Trip Detail | ✅ done | S3/S4, photo matching |
 | 3 | Recap Export Pipeline | ✅ engineering done (device items redistributed) | frame pipeline, MP4/GIF, S5 |
-| **3.5** | **Replay MVP** (recap from photos) | **← current, RELEASE TARGET** | import → souvenir map → follow-cam → MP4 share; 3-trip dogfood gate |
-| 4 | Story Director | after MVP proves sharing | **deterministic (no-LLM)** moment-selection, narrative, hero, chapters, pacing, music |
+| **3.5** | **Replay MVP** (recap from photos) | ✅ closed 2026-08-15 — §6a passed; §6b items → Phase 2 (`Docs/pre-launch.md`) | import → souvenir map → follow-cam → MP4 share; 3-trip dogfood gate |
+| 4 | Story Director | **← current** — re-scoped 2026-08-15 around the artefact (sprites, cross-region, export); remaining Story Director content deferred within it | **deterministic (no-LLM)** moment-selection, narrative, hero, chapters, pacing, music |
 | 5 | Capture Beta | after MVP (hardware-gated) | passive capture, battery, "arm once" — inherits the moved tracking device gates |
 | 6 | Plans & Get this route | further deferred | fork mechanism |
 | 7 | Backend & Community | post-POC | Supabase, web pages |

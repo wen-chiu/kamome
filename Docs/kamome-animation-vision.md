@@ -1,5 +1,12 @@
 # Kamome Animation Vision
 
+> **Vision document, partially parked (2026-08-15).** The storytelling-engine
+> identity (spec §0 rule 6) remains binding product direction. The
+> **souvenir-map / MapLibre substrate** ambitions below are **parked with
+> MapLibre** (`Docs/decisions.md` 2026-08-15 — Apple Maps is what ships);
+> reopening is Chiu's call, recorded in that ADR. Read the ambitions through
+> that lens.
+
 **Status:** Product direction from Chiu, 2026-07-19, after reviewing the P3
 demo artifact (`Docs/demos/phase3/kamome-p3-recap.mp4`), approved with
 refinements the same day. Integrated into spec v1.5 (§0 rule 6, §4.5

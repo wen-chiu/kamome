@@ -1,5 +1,9 @@
 # OSRM map-matching server — setup & validation
 
+> **Historical / fallback infrastructure.** Routing is **Geoapify** since
+> 2026-08-20 (`Docs/decisions.md`); this desk-era self-hosted OSRM is kept as
+> the fallback the 2026-08-16 ADR preserves, not the shipped path.
+
 Self-hosted OSRM backing §4.4 map matching, pulled forward into Phase 3.5
 (decisions.md 2026-07-19): the recap replay must follow real roads, never
 straight lines between GPS points. The same Geofabrik extracts later feed the

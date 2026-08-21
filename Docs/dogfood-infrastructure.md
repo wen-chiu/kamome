@@ -1,5 +1,10 @@
 # Dogfood infrastructure — routing + map regions for the Replay MVP gate
 
+> **Historical / fallback infrastructure.** The Replay MVP gate closed
+> 2026-08-15; routing is **Geoapify** since 2026-08-20 and MapLibre tiles are
+> parked (`Docs/decisions.md`). Kept for the self-hosted fallback
+> (`decisions.md` 2026-08-16) and for desk-render history.
+
 What the §6 gate needs that the app cannot provide by itself: an OSRM the phone
 can reach, and map tiles for wherever the real trips actually went.
 

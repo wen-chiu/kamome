@@ -8,6 +8,113 @@ Nothing here blocks Phase 4. Everything here blocks a submission.
 
 ---
 
+## The order to ship in (Chiu 2026-08-20)
+
+Chiu's own sequencing, checked against the blockers below and corrected where it was
+short. **Everything in 1–4 is his; 5–7 are what the list was missing** — each is
+mandatory for a submission, and each is small.
+
+| # | work | why here |
+|---|---|---|
+| **1** | ✅ **DONE 2026-08-21 — Routing: Geoapify integration, then a real film** | Migrated (PR #16), and the Iceland film was rendered and **judged correct by Chiu** — `Docs/decisions.md` 2026-08-21. One thing still unobserved: the keyed path through the app's own config (no run log), folded into the next render. |
+| **1b** | **Cloudflare Worker, key out of the binary** — written (`556f828`) and exercised for real against Geoapify in Node; **not deployed**. | Separate commit, same phase. Builds already reach other people's phones — the key is in those IPAs **today**. `wrangler deploy` and the base-URL flip need Chiu's Cloudflare account; he is doing it after the visual session. |
+| **2** | **Cross-region: the flight/crossing beat** | `Docs/cross-region-journeys.md`. Every overseas trip hits it on device. |
+| **3** | **Export survives: background, performance** | `ExportLifecycleGuard` is written and **never verified on a device**. |
+| **4** | *(optional)* **Lower-quality export option** | A real feature with real design questions. Genuinely optional. |
+| **5** | **Export time estimate** ⬆️ | **Promoted out of 4.** Not optional: a six-minute export with no estimate reads as broken. The loop already knows the frame count and the measured per-snapshot cost. |
+| **6** | **Attribution in the app** | **Mandatory on the Geoapify free plan.** One line in an About screen. Was missing from the list. |
+| **7** | **Privacy notice + Apple's App Privacy labels** | Routing sends coordinates to a third party, so Apple's privacy questionnaire must declare it. The notice is decided (2026-08-20 c) but **does not exist**, and the album path ships with it. Was missing from the list. |
+
+**~~Also unresolved~~ RESOLVED (2026-08-21, VERIFIED):** the sprite working tree
+was committed as `4ed8774` / `6cc6543` (re-centred sets, the 46 modified files) and
+`c0d4583` (the two reindeer sets, with manifest entries — "choosable subjects");
+`git status` is clean of PNGs. What remains from that closeout brief is the **key
+verification**, whose outcome is not recorded (`Docs/eng-session-closeout.md`).
+
+**Of the §6b six, two actually bite:** Limited Photo Library on hardware, and a
+crash-free export across three trips. The souvenir-map item is moot while MapLibre is
+parked.
+
+---
+
+## 🔴 The key has three exits, and only one of them is guarded
+
+**Chiu's requirement (2026-08-20): there must be a complete, checkable process so the
+key cannot leak at submission.** This section is that process. It is written as
+checks, not as intentions.
+
+### The three exits
+
+| # | exit | today | closed by |
+|---|---|---|---|
+| 1 | **git** | ✅ **guarded** — CI step + `RoutingKeyTests`, both positive-controlled 2026-08-20 | done |
+| 2 | **the build log** | ❌ **open** — `xcodebuild` echoes every build setting in clear text, and the key *is* a build setting | the Worker (nothing to echo) |
+| 3 | **the IPA** | ❌ **open, and not "obfuscated"** — see below | the Worker |
+
+### ⚠️ Exit 3, measured rather than assumed (2026-08-20)
+
+**VERIFIED on this machine.** Two built bundles in `DerivedData` carry a **plaintext
+32-hex key** in `Kamome.app/Info.plist`, read out with stock `PlistBuddy`:
+
+```
+PLAINTEXT 32-hex key found in: …/Build/Products/Debug-iphonesimulator/Kamome.app/Info.plist
+```
+
+**`Info.plist` is a separate file in the bundle, not compiled into the executable.**
+App Store binary encryption (FairPlay) covers the executable, **not** resources. So
+extraction from a shipped or TestFlight build is:
+
+```
+unzip the .ipa  →  plutil -p Payload/Kamome.app/Info.plist
+```
+
+Three commands, stock tools, no disassembly. **There is no "securely packaged" state
+today** — do not describe it as one.
+
+**Do not add obfuscation.** XOR-ing or splitting the string moves plaintext to
+slightly-less-plaintext, buys nothing measurable, and creates exactly the false
+confidence this note exists to remove. The Worker is already written (`556f828`); use
+it rather than decorating the problem.
+
+### The TestFlight position, recorded as an accepted risk
+
+**Chiu, 2026-08-20:** TestFlight builds go to people he knows, on a free tier, so a
+readable key is acceptable there. **That decision is sound** — worst case is quota use
+he would notice, remedied by rotating. It is recorded as *accepted*, not as *safe*.
+
+### ⚠️ The Worker moves the secret. It does not close the abuse surface.
+
+The step everyone forgets: once the key is off the device, **the app ships the Worker
+URL instead** — and that URL is in the same readable `Info.plist`. It is not a secret,
+but it is an **open routing proxy on Kamome's quota**. Anyone who unzips the IPA gets
+free routing.
+
+So "key removed" is not "problem solved". **App Attest** (already noted below as
+optional) is what actually closes it, or failing that a per-IP rate limit on the
+Worker. Decide which before submission — not after a quota bill.
+
+### The submission checklist — mechanical, run on the artifact
+
+Not a promise; a set of commands whose output is the evidence.
+
+1. **The archive carries no key.** Unzip the `.ipa`/`.xcarchive` and grep every file
+   for a key-shaped string. Zero hits is the pass condition — check the *artifact*,
+   never the source.
+2. **`Info.plist` carries the Worker URL and no key field**, or a key field that is
+   empty.
+3. **The Worker's secret is a `wrangler secret`**, never a committed file, and the
+   deploy is verified to answer with the app sending none.
+4. **The Worker is explicitly no-log** — no request bodies, no coordinates, no
+   retention. A proxy that logs makes §0 worse while appearing to make it better.
+5. **Abuse control is decided** — App Attest, or a rate limit, or an explicit written
+   acceptance that the endpoint is open.
+6. **Build logs.** Once the key is not a build setting, exit 2 closes by construction.
+   Until then, no build log leaves the machine unscrubbed.
+7. **Rotate once at submission**, after the artifact check passes, so that whatever
+   any development log ever held is dead.
+
+---
+
 ## 🔴 The routing API key must not be in the binary
 
 **This is the one that is newly true**, because routing moved to a hosted
