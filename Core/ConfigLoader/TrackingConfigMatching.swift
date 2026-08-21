@@ -77,6 +77,21 @@ public extension TrackingConfig {
         /// to be — `Docs/decisions.md` 2026-08-20 (d) has the measurements.
         public let routeWaypointRadiusM: Double
 
+        /// Whether this endpoint needs the app to supply a key.
+        ///
+        /// **True for Geoapify, false for the Cloudflare Worker** — which is the
+        /// whole point: the Worker holds the key, the app carries none
+        /// (`Docs/pre-launch.md`, `Deploy/worker/README.md`), and without this
+        /// flag a keyless production build would disable its own routing.
+        ///
+        /// It is a config value rather than a guess at the URL's shape, and the
+        /// rule it guards is not merely cosmetic: a keyless build pointed at
+        /// Geoapify would put real trip coordinates in the query string of every
+        /// request, 58 of them on an Iceland import, all of which can only come
+        /// back 401. §0 — exposure for nothing. So that build routes nothing at
+        /// all and says why.
+        public let apiKeyRequired: Bool
+
         /// The routing provider's API key — **deliberately not a JSON key.**
         ///
         /// `TrackingConfig.json` is committed and bundled, so a secret in it is a
@@ -101,6 +116,7 @@ public extension TrackingConfig {
             case routeMaxDetourRatio = "route_max_detour_ratio"
             case routeWaypointMinSpacingM = "route_waypoint_min_spacing_m"
             case routeWaypointRadiusM = "route_waypoint_radius_m"
+            case apiKeyRequired = "api_key_required"
         }
 
         public init(
@@ -113,7 +129,8 @@ public extension TrackingConfig {
             displayEpsilonM: Double,
             routeMaxDetourRatio: Double,
             routeWaypointMinSpacingM: Double,
-            routeWaypointRadiusM: Double
+            routeWaypointRadiusM: Double,
+            apiKeyRequired: Bool = true
         ) {
             self.baseURL = baseURL
             self.chunkSize = chunkSize
@@ -125,6 +142,7 @@ public extension TrackingConfig {
             self.routeMaxDetourRatio = routeMaxDetourRatio
             self.routeWaypointMinSpacingM = routeWaypointMinSpacingM
             self.routeWaypointRadiusM = routeWaypointRadiusM
+            self.apiKeyRequired = apiKeyRequired
         }
 
         /// Whether this endpoint may ship in a build that leaves this Mac.

@@ -33,7 +33,8 @@
     "display_epsilon_m": 5,
     "route_max_detour_ratio": 2.5,
     "route_waypoint_min_spacing_m": 250,
-    "route_waypoint_radius_m": 500
+    "route_waypoint_radius_m": 500,
+    "api_key_required": true
   },
   "photos": {
     "match_radius_m": 300
