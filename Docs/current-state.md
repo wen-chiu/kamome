@@ -114,9 +114,10 @@ P7 backend deferred.
   ADR 2026-08-15), but whether the diagnosis on that device was ever completed
   is **not recorded**; date-selection misbehaviour lives on under Phase 4
   item 3.
-- Sprite working tree holds uncommitted art (46 modified + 18 untracked PNGs,
-  no second copy) — destructive git commands forbidden until resolved
-  (`Docs/eng-session-closeout.md`, `Docs/pre-launch.md`).
+- ~~Sprite working tree holds uncommitted art~~ **RESOLVED** — committed as
+  `4ed8774` / `6cc6543` (re-centred sets) and `c0d4583` (reindeer sets);
+  VERIFIED 2026-08-21, `git status` clean of PNGs. The closeout session's
+  *other* tasks (key verification) remain not recorded — see Active work.
 - Two sessions sharing one checkout contaminate each other's test/lint counts;
   worktrees fix it but silently skip half the secrets guard (`HANDOFF.md` 3e).
 

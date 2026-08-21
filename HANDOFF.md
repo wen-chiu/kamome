@@ -504,7 +504,12 @@ reaches `KamomeLog`.
 
 ---
 
-### 7. ⚠️ CORRECTED 2026-08-20 — the sprite tree holds three different things, not one
+### 7. ✅ RESOLVED 2026-08-21 (was: ⚠️ CORRECTED 2026-08-20 — the sprite tree holds three different things, not one)
+
+**Resolution (VERIFIED 2026-08-21):** the three things landed as separate commits —
+`6cc6543` (the 46 re-centred files) and `c0d4583` (the reindeer sets as choosable
+subjects, per decision 3d, with manifest entries). `git status` is clean of PNGs.
+The correction below stands as the record of why one commit would have been wrong.
 
 **A merge session reported these as landed in `4ed8774`. They were not** — that commit
 carried an *earlier* pass. Verified on `main` at `7b563d7`, the working tree still holds:

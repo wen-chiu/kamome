@@ -25,10 +25,11 @@ mandatory for a submission, and each is small.
 | **6** | **Attribution in the app** | **Mandatory on the Geoapify free plan.** One line in an About screen. Was missing from the list. |
 | **7** | **Privacy notice + Apple's App Privacy labels** | Routing sends coordinates to a third party, so Apple's privacy questionnaire must declare it. The notice is decided (2026-08-20 c) but **does not exist**, and the album path ships with it. Was missing from the list. |
 
-**Also unresolved:** the sprite working tree holds **46 modified files, one of them
-`car-red/logo.png` (the reference proportion and the default subject), plus two
-entirely new sets with no manifest entry** — `HANDOFF.md` item 7. Not one commit, and
-not purely an asset change. Resolve before building on them.
+**~~Also unresolved~~ RESOLVED (2026-08-21, VERIFIED):** the sprite working tree
+was committed as `4ed8774` / `6cc6543` (re-centred sets, the 46 modified files) and
+`c0d4583` (the two reindeer sets, with manifest entries — "choosable subjects");
+`git status` is clean of PNGs. What remains from that closeout brief is the **key
+verification**, whose outcome is not recorded (`Docs/eng-session-closeout.md`).
 
 **Of the §6b six, two actually bite:** Limited Photo Library on hardware, and a
 crash-free export across three trips. The souvenir-map item is moot while MapLibre is
