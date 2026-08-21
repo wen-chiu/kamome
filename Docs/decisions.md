@@ -1895,3 +1895,43 @@ wrong.
 
 **Nothing to build now.** The MVP path is photo import. Revisit when Capture Beta
 opens.
+
+---
+
+## 2026-08-21 — The Iceland film passed: the Geoapify migration is accepted
+
+**Closes item 4 of 2026-08-20 (d)**, which named the film as the test and reserved
+the verdict for Chiu.
+
+**Decision (Chiu, 2026-08-21, owner report).** The routes are correct. None of the
+49 solid legs is a wrong road. The Geoapify migration is accepted on that evidence
+and PR #16 has no product blocker left.
+
+**What was judged.** `~/Kamome-films/2026-08-21-iceland-geoapify.mp4` — Iceland,
+the real 2,300-photo dump, 21 stops, 64 legs, 211.5 s, rendered 2026-08-21 through
+a locally-run Cloudflare Worker to Geoapify. Kept outside the repository
+deliberately: it is a render of a real trip (§0).
+
+    matchTrip: 58/64 legs routable, budget 60s
+    matchTrip: 49/58 legs reconstructed; 8 have no road route, 1 unreachable,
+               0 rate-limited, 0 never asked
+
+The nine that did not draw as road are each a mechanism working, not a failure:
+five `No suitable edges` (the class the absent snap radius would have guarded,
+refused natively by the provider — (d) again), two `No path could be found`, one
+detour-gate rejection at 3.5× (61.6 km routed against 17.5 km straight — PD-3
+firing on real data), and one timeout, correctly reported as retryable rather than
+as geography.
+
+**Classification.** VERIFIED as a product judgement by the owner from rendered
+output — which is the only thing that could have settled it. It is **not** a
+measurement that no wrong road can ever appear: it is one trip, judged by looking.
+A wrong road found later is new evidence against which a guard gets designed, not
+a reversal of this entry.
+
+**Still open, and not closed by this** — the keyed path has never been observed
+working through the app's own configuration. This film was rendered through a
+locally-run Worker because the key then in `Config/Secrets.xcconfig` returned 401.
+Chiu fixed the key on 2026-08-21 and reports it fine, but **no run log exists**;
+`Docs/eng-session-P4-visual.md` item 3 folds that confirmation into its next
+render rather than spending a session on it.

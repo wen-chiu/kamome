@@ -16,8 +16,8 @@ mandatory for a submission, and each is small.
 
 | # | work | why here |
 |---|---|---|
-| **1** | **Routing: Geoapify integration, then a real film** | Everything downstream is judged on a film, and no film today runs on real road data. |
-| **1b** | **Cloudflare Worker, key out of the binary** | Separate commit, same phase. Builds already reach other people's phones — the key is in those IPAs **today**. |
+| **1** | ✅ **DONE 2026-08-21 — Routing: Geoapify integration, then a real film** | Migrated (PR #16), and the Iceland film was rendered and **judged correct by Chiu** — `Docs/decisions.md` 2026-08-21. One thing still unobserved: the keyed path through the app's own config (no run log), folded into the next render. |
+| **1b** | **Cloudflare Worker, key out of the binary** — written (`556f828`) and exercised for real against Geoapify in Node; **not deployed**. | Separate commit, same phase. Builds already reach other people's phones — the key is in those IPAs **today**. `wrangler deploy` and the base-URL flip need Chiu's Cloudflare account; he is doing it after the visual session. |
 | **2** | **Cross-region: the flight/crossing beat** | `Docs/cross-region-journeys.md`. Every overseas trip hits it on device. |
 | **3** | **Export survives: background, performance** | `ExportLifecycleGuard` is written and **never verified on a device**. |
 | **4** | *(optional)* **Lower-quality export option** | A real feature with real design questions. Genuinely optional. |

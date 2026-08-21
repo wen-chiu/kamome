@@ -1,10 +1,13 @@
-# Engineering session — confirm the API, then look at the film
+# Engineering session — three visual checks, on the merged routing
 
-**Status: key OK per owner; visual checks still not recorded (2026-08-21).**
-Chiu confirms the routing key is fine (owner report, informal — no run log
-exists). Task 0 can be treated as closed. The three visual checks (shadow /
-map / car-toy) have no recorded outcome — confirm with Chiu whether they ran
-before re-running them.
+**Status: NOT YET RUN (2026-08-21).** Established from source rather than asked:
+`MapKitSnapshotProvider` still sets only `displayScale: 1` and no
+`userInterfaceStyle`, and `RecapDemoFilmTests.swift:357` still carries the stale
+`XCTFail`, so none of items 1–3 or the assertion fix has landed. **Task 0 (confirm
+the key) is closed** — key fine per Chiu, 2026-08-21, owner report; no run log
+exists, which is why item 3 now carries the confirmation instead of it being a
+gate of its own. **Precondition: PR #16 is merged**; this session branches off
+`main`.
 
 **Paste the block below as the first message of a fresh Claude Code session.**
 
@@ -12,25 +15,28 @@ before re-running them.
 
 ```
 You are the engineering session for Kamome, operating under `Arch.md`. Read it
-first, then `CLAUDE.md`, then `Docs/decisions.md` entries **2026-08-20 (a)–(d)**
-and `HANDOFF.md`'s "Findings — PO/Architecture session (2026-08-20)".
+first, then `Docs/current-state.md` (the snapshot — run its staleness check),
+`CLAUDE.md`, then `Docs/decisions.md` entries **2026-08-20 (a)–(d)** and both
+"Findings — PO/Architecture session" sections in `HANDOFF.md`.
 
-The routing migration is done and on `feature/geoapify-routing` (`e366df2`,
-`556f828`, `1cedbd2`, plus Chiu's `2d221e0`). This session does not redo it. It
-confirms the API works, then makes three cheap visual changes Chiu will judge by
-looking.
+The routing migration landed on `main` in **PR #16** (`e366df2`, `556f828`,
+`1cedbd2`, `2d221e0`). **Branch off `main`.** If `main` does not contain
+`e366df2`, PR #16 has not merged yet — stop and tell Chiu rather than working
+from the feature branch.
 
-## 0 — Before anything else: confirm routing actually works
+This session does not redo the migration. It makes three cheap visual changes
+Chiu will judge by looking.
 
-Chiu rotated the key. The previous session was blocked by a key returning 401 and
-had to render through a locally-run Worker.
+## The reference film
 
-**First task, and everything else waits on it:** confirm a keyed build routes for
-real. One routed leg returning 200 through the app's own configuration is enough.
-Report the `matchTrip` log line.
+`~/Kamome-films/2026-08-21-iceland-geoapify.mp4` — Iceland, 21 stops, 211.5 s,
+rendered on Geoapify on 2026-08-21. It lives outside the repository deliberately
+(§0: it is a render of a real trip). **Chiu has judged its routes: the 49 solid
+legs are correct** (owner report, 2026-08-21), which closes ADR 2026-08-20 (d)
+item 4. Do not re-open it, do not re-litigate the detour gate, and do not treat a
+dashed leg as a defect.
 
-If it still 401s, **stop and say so** — do not work around it with a local Worker
-this time. A workaround is what hid this for a day.
+That film is also where the halo in item 1 is visible.
 
 ## 1 — The route line has a shadow around it. Find out why.
 
@@ -70,10 +76,21 @@ Expect a second-order effect and report it rather than hiding it: at a higher
 display scale MapKit may also choose a different label *density* and POI detail, not
 merely a larger size.
 
-## 3 — Render with `car-toy`, not the seagull
+## 3 — Render with `car-toy`, and catch the routing line while you do
 
 Chiu wants the next test film to use `car-toy` as the subject. No code change —
 it is a subject choice.
+
+**This render carries what used to be task 0.** The keyed path has never been
+observed working through the app's own configuration: the only real film so far
+was rendered through a locally-run Worker, because the key then in
+`Config/Secrets.xcconfig` returned 401. Chiu has since fixed the key and reports
+it fine, but **no run log exists**. So report this render's `matchTrip` lines —
+`N/M legs routable` and `N reconstructed` — and that UNKNOWN closes without a
+separate errand.
+
+If it 401s, **stop and say so.** Do not work around it with a locally-run Worker:
+a workaround is what hid this for a day.
 
 Separately, one thing he should know rather than have you act on: the seagull's
 film sprite is `seagull/omni.png`; `logo.png` in the same folder is only the S3
@@ -86,11 +103,13 @@ picker thumbnail. Its size is `length_fraction` in `vehicles.json`, currently `0
 - **Film duration.** 211.5 s against `total_duration_max_s: 90` is real and known;
   it is parked with export performance, deliberately.
 - **`export.keyframe_interval_frames` and the opening's per-frame snapshotting.**
-  Frozen pending a camera-transition design conversation. Do not touch, do not
-  optimise around, do not benchmark against.
-- **Deploying the Worker.** Needs Chiu's Cloudflare account.
-- **Judging whether any of the 49 solid legs is a wrong road.** That is Chiu's call
-  from the film (ADR 2026-08-20 (d) item 4).
+  Frozen pending the camera-arc Pass 1 render (`Docs/camera-arcs.md`,
+  `Docs/eng-session-camera-arc.md`). Do not touch, do not optimise around, do not
+  benchmark against.
+- **The camera arc itself.** A separate session with its own brief. Nothing here
+  should make it harder.
+- **Deploying the Worker.** Needs Chiu's Cloudflare account; he is doing it after
+  this session.
 
 ## One thing you may fix, as its own commit
 
@@ -106,13 +125,17 @@ substrate is available, and that falling back is not a failure.
 `Arch.md` §12 before any code: Problem → Boundary → Options → Decision →
 Verification plan.
 
-Report per §8 levels, and per §7.4 report the test count. **Before quoting a count,
-run `git status --short`** — if another session's uncommitted work is in the tree,
-measure in a `git worktree --detach` or say you could not exclude it. This exact
-contamination happened on 2026-08-20 (`HANDOFF.md` 3e).
+Report per §8 levels, and per §7.4 report the test count. The tree was clean on
+2026-08-21; still run `git status --short` before quoting a count, and if another
+session's uncommitted work is in it, measure in a `git worktree --detach` or say
+you could not exclude it (`HANDOFF.md` 3e).
 
 Any guard or assertion you add or change needs a **positive control**: show it going
 red when it should, not only green when it should.
+
+Findings go into `HANDOFF.md` under a dated entry. Since the 2026-08-21
+reorganisation that file carries live findings only — a finding that exists solely
+in your session has not been delivered.
 
 `Arch.md` §14 at the end: "Ready for review", never "done".
 ```

@@ -7,7 +7,8 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-08-21 against decisions.md 2026-08-20 (d).
+Last synced: 2026-08-21 against decisions.md 2026-08-21 (the Iceland film
+passed; the Geoapify migration is accepted).
 
 This file MUST be updated when any of the following occur:
 - a new entry is appended to Docs/decisions.md
@@ -52,7 +53,7 @@ P7 backend deferred.
   is parked, not removed (ADR 2026-08-15); the provider fallback fires because
   no `.pmtiles` region is installed.
 - **Routing:** `RouteProvider`-shaped boundary; provider is **Geoapify** (ADR
-  2026-08-20 (a)), migrated on this branch (`e366df2`), API key behind a
+  2026-08-20 (a)), migrated in PR #16 (`e366df2`), API key behind a
   Cloudflare Worker (`556f828`). Detour-ratio gate (2.5) carried out of the
   provider file; no snap radius exists or is needed (ADR 2026-08-20 (d)).
   Routing is bounded (`matching.trip_budget_s` 120, measured — `1cedbd2`),
@@ -74,8 +75,11 @@ P7 backend deferred.
   (`Docs/pre-launch.md` item 7). Anything further is Chiu's decision.
 - **MapLibre parked, Apple Maps ships** (ADR 2026-08-15). Pixel Art and map
   labels parked with it. Reopening condition is Chiu's, verbatim in the ADR.
-- **Routing is Geoapify** (ADR 2026-08-20 (a)–(d)); detour gate stays 2.5; the
-  Iceland film is the acceptance test.
+- **Routing is Geoapify** (ADR 2026-08-20 (a)–(d)); detour gate stays 2.5. The
+  Iceland film was the acceptance test and **it passed** — Chiu judged the 49
+  solid legs correct (owner report, 2026-08-21), closing ADR 2026-08-20 (d)
+  item 4. The film is `~/Kamome-films/2026-08-21-iceland-geoapify.mp4`, outside
+  the repository deliberately (§0).
 - **Snapshot numbers frozen** — `keyframe_interval_frames` (15) and the
   opening's every-frame interval are held for the camera-arc design; nothing
   changes until Chiu judges the Pass 1 render (`CLAUDE.md`-recorded freeze,
@@ -96,10 +100,18 @@ P7 backend deferred.
 - **Camera-arc Pass 1** — design recommended 2026-08-21 (`Docs/camera-arcs.md`);
   brief ready (`Docs/eng-session-camera-arc.md`), **not yet run**; nothing built;
   Chiu judges the render before anything else moves.
-- **Routing live confirmation + three visual checks**
-  (`Docs/eng-session-P4-visual.md`) — **key OK per owner** (Chiu 2026-08-21,
-  informal report, no run log); the three visual checks (shadow / map /
-  car-toy) still have **no recorded outcome**.
+- **Three visual checks** (`Docs/eng-session-P4-visual.md`) — **NOT YET RUN**,
+  VERIFIED from source 2026-08-21: `MapKitSnapshotProvider` still sets only
+  `displayScale: 1` with no `userInterfaceStyle`, and
+  `RecapDemoFilmTests.swift:357` still carries the stale `XCTFail`. Task 0
+  (confirm the key) is closed on owner report; **no run log of the keyed path
+  exists**, so the brief folds that confirmation into the car-toy render.
+  Precondition: PR #16 merged; branch off `main`.
+- **Pull requests opened 2026-08-21** — **#16** routing (4 commits, CI green,
+  film judged, no product blocker left) and **#17** documentation governance
+  (3 commits), both against `main`. Read their live state with `gh pr list`
+  rather than from this line. `backup/docs-2026-08-21` at `0f06d57` is #17's
+  pre-rebase recovery point and is deletable once it lands.
 - **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — **executed
   in substance**: sprite tree committed (`6cc6543`, `c0d4583`, VERIFIED); key
   fine per owner report (2026-08-21, informal).
