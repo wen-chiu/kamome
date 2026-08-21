@@ -1,5 +1,10 @@
 # Handoff — Recap render-layers refactor (2026-07-24)
 
+> **Historical.** The refactor landed (Layers 1–3, branch merged with PR #11 on
+> 2026-08-15); the narrow-waist architecture it built is summarised in
+> `Docs/current-state.md` §Current architecture. The "not merged" line below is
+> of its era. Nothing here is a work instruction.
+
 The recap OUTPUT / video-format redesign (CLAUDE.md "recap OUTPUT / video-format
 redesign") became a **render-pipeline re-architecture** on Chiu's direction
 (2026-07-24). Target: a TravelBoast/Relive-class animated map video — cute anime

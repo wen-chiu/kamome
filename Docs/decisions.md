@@ -1793,3 +1793,105 @@ fetch") stops being a cross-region convenience and becomes **the control the pri
 notice describes.** A notice may not promise a control the app does not offer, so
 **the album path ships with the notice, or the notice does not mention it.**
 Free-form photo selection stays a later design pass.
+
+## 2026-08-20 (d) — The snap radius was the wrong mechanism, and it was never guarding what I said
+
+**This corrects the 2026-08-20 ADR, `HANDOFF.md` item 1 and `CLAUDE.md`, all
+written by the PO session.** The engineering session measured the mechanism those
+documents assumed and found it does not hold. The measurement wins.
+
+### What was claimed
+
+> The snap radius can tell a wrong road from an indirect one, because it acts
+> before a route exists. Under OSRM a photo 1 km from a road returns `NoSegment`
+> and draws **dashed**; Geoapify without a radius returns a 20.33 km route for an
+> 11.29 km leg, which passes the 2.5 detour gate and draws as solid road.
+
+### What was measured (Geoapify, live key, public landmark coordinates only, §0 respected)
+
+`/v1/routing` **accepts no snap-radius parameter** — established behaviourally, not
+from a status code: a nonsense parameter returns byte-identical output, so unknown
+parameters are silently ignored. The response also never reports where a waypoint
+snapped; `properties.waypoints[].location` echoes the input verbatim in all 24
+probes. Per-point `match_distance` exists only on `/v1/mapmatching`, which sparse
+photo legs cannot use.
+
+Then the endpoint was offset 1 km and 2 km at every 30° bearing, measuring the
+distance from the requested waypoint to the road that came back:
+
+| case | routed | ratio | waypoint → returned road |
+|---|---:|---:|---:|
+| 1000 m @ 150° | 19.96 km | 2.14 | **123 m** |
+| 1000 m @ 180° | 20.45 km | 2.31 | **132 m** |
+| 2000 m @ 90° | 21.08 km | 1.92 | **125 m** |
+| 2000 m @ 150° | 18.87 km | 1.93 | **44 m** |
+| benign 2000 m @ 0° | 12.16 km | 1.27 | 477 m |
+| benign 1000 m @ 270° | 9.55 km | 1.19 | 465 m |
+
+**Snap distance and route wrongness are anti-correlated.** The wrong routes snap to
+roads **44–132 m** away; the benign ones snap **465–477 m** away. A 500 m radius
+admits every dangerous case. A radius tight enough to reject them would reject the
+good routes first. The 20 km detour is not "snapped to a distant road" — it is
+"snapped to a **near** road on the far side of the Hvítá canyon".
+
+### The correction, and it goes further than the engineering session claimed
+
+**`radiuses=500` was not protecting Kamome from this band on OSRM either.** OSRM
+snaps to the nearest road within the radius; a wrong road 123 m away is well inside
+500 m, so OSRM would have taken it too and drawn the same wrong solid line. The
+claimed regression from *honest dashed* to *fabricated solid* **did not exist**.
+
+What the radius **did** guard is a different and real class: a waypoint with **no
+road anywhere near it** — a lagoon surface, a beach, a glacier, open sea. The
+survey's own Jökulsárlón point (≈3.5 km from any road) is exactly that.
+
+**And Geoapify guards that class natively**, without any parameter: it returns
+`400 No suitable edges near location`, which the provider already maps to a
+keep-raw verdict and a dashed leg.
+
+**So nothing is lost in the migration.** The parameter's absence costs Kamome
+nothing it actually had.
+
+### Decision: the detour gate stays at 2.5, nothing new is built in this PR
+
+1. **This is not a regression the migration created**, so the migration is not the
+   place to solve it. It is a pre-existing limitation that has now been measured
+   for the first time.
+2. **The detour gate keeps the job it was built for** — PD-3 outlier protection,
+   the 300 km route from one bad EXIF fix. It was never a wrong-road detector and
+   is not being asked to become one.
+3. **Do not tighten the ratio.** Unchanged reasoning, now with numbers on both
+   sides: benign offsets measured 1.19–1.27 and wrong ones 1.92–2.31 **on one leg
+   in one landscape**, while a fjord or peninsula drive is legitimately 2–4×. One
+   leg is not a distribution.
+4. **The Iceland film is the test.** 58 legs of real photo positions, judged by
+   looking — against a synthetic 24-bearing probe of deliberately displaced points.
+   If wrong roads appear in it, a guard gets designed against that evidence.
+
+**Partially self-dissolving, worth knowing:** many photos taken ≥1 km from the
+driven road were taken **on foot**. Once walks route on a walking profile
+(spec v1.8 §4.4.1), those legs route on the footpath actually taken instead of
+being forced onto the car network.
+
+### Two items closed for free by the same probe
+
+- **`chunk_size: 100` is safe** — 100 waypoints is 2,485 chars of GET query and
+  returns 200; 150 works too. (`HANDOFF.md` item 5.)
+- **`/v1/mapmatching` POST works**, returning `match_type` and `match_distance`
+  per point. (`HANDOFF.md` item 6's endpoint.)
+
+### Addendum (Chiu, 2026-08-20) — recorded trips: the lean, parked
+
+Deferred to **Capture Beta**, not decided now. **Chiu's current thinking, recorded
+so it is not re-derived:** a journey the user actually walked or drove and recorded
+**does not need to leave the device at all.** The trace is already the route data and
+already draws solid; only snapping polish is lost.
+
+This does not reverse 2026-08-20 (c) — photo-imported trips still send coordinates,
+walks included. It narrows the *recorded* half, and it is cheaper to act on than it
+looked when (c) was written, because that decision rested on the premise that
+withholding the trace would leave no route data. For recorded trips that premise was
+wrong.
+
+**Nothing to build now.** The MVP path is photo import. Revisit when Capture Beta
+opens.

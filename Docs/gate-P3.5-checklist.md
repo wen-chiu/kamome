@@ -22,16 +22,19 @@ no stop shows a pin without a photograph. Both overrides are harness environment
 variables; `Config/TrackingConfig.json` is **never** edited between runs. Stage 2
 passes no variant flag at all, which is what makes it the shipped default.
 
-## Status — §6a is judged (2026-08-13)
+## Status — the phase is CLOSED (2026-08-15); this file is now the runbook for a future device sitting
 
-Stage 0 and Stage 1 are **done for all three gate trips** (Miyakojima, New
-Zealand, Iceland). Chiu watched all three Variant A films and judged them: Iceland
-one he wants to keep, the other two 很好, Iceland's opening correct, and the one
-detour-gate dashed leg accepted **for that instance**. The films are in
-`~/kamome-renders/` — **release output, not scratch.**
-
-**The only §6a item still open is "≥ 1 published publicly"** (Stage 3), which is
-Chiu's action. **§6b has not started.**
+- **§6a — CLOSED by owner, 2026-08-14.** All three Variant A films judged
+  (Iceland one he wants to keep, the other two 很好); the publish item was
+  closed on a **private share to friends**, recorded as a deviation from the
+  literal "≥ 1 published publicly" wording (`Docs/_archive/handoff-2026-08.md`,
+  "§6a — CLOSED by owner").
+- **§6b — explicitly NOT passed.** Phase 3.5 closed on 2026-08-15 with §6b's
+  six unmet items moved to Phase 2 (App Store release) — they are listed in
+  `Docs/pre-launch.md`, which is now their home. ADR: `Docs/decisions.md`
+  2026-08-15. **Do not reopen 3.5 to finish §6b.**
+- The Stage 2 procedure below stays as the runbook for whenever the Phase-2
+  device sitting happens.
 
 The ordering principle, which the split preserves: **every judgment you can make
 at the desk, make at the desk.** A film that isn't worth publishing is a design

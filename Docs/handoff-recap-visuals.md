@@ -1,5 +1,12 @@
 # Handoff — Recap Layer 3 + visual redesign (2026-07-25)
 
+> **Historical phase record.** PR #11 **merged to `main` 2026-08-15**
+> (`Docs/decisions.md` 2026-08-15) — the "not merged / holds until §6" line
+> below is of its era. One section stays load-bearing: **§3 vehicle-sprite
+> constraints**, cited by `Core/ExportEngine/Resources/Vehicles/README.md` and
+> `HANDOFF.md` (Phase 4 sprite work). Everything else is history; current state
+> is `Docs/current-state.md`.
+
 Branch `phase-3-recap`, commits `ce28db6` (Layer 3 + redesign), `2917008` (final
 car art) and `f294883` (static camera + MapLibre switch + theme atmosphere).
 131 tests green, `swiftlint --strict` clean. **Not merged — PR #11 holds until

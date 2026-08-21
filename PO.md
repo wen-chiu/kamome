@@ -39,6 +39,10 @@ This inconsistency has started slowing development.
 
 Your immediate job is **not to build more features**. Help untangle the project and establish one coherent path forward.
 
+Detailed product state lives in `Docs/current-state.md` (check its staleness
+line against the newest ADR in `Docs/decisions.md` before trusting it). This
+charter carries governance and the locked-decision register, not status.
+
 ---
 
 ## Product North Star
@@ -74,23 +78,30 @@ not reopen", which would have had a PO session defending a dead decision against
 the current ADR. If you find yourself enforcing a lock that an ADR has amended,
 the ADR wins and the lock is the bug.
 
-### Routing
+### Routing — **amended 2026-08-21 to the 2026-08-20 ADRs, read this before citing anything below**
 
-> **OSRM stays as the routing engine, and moves off the developer's LAN to a
-> hosted service. The provider is not selected and may not be OSRM-compatible.**
+> **Routing is Geoapify.** Selected by Chiu on his own live-key survey
+> (`Docs/decisions.md` 2026-08-20 (a); terms read in (b); privacy posture in
+> (c); snap-radius correction in (d)). The migration is committed on
+> `feature/geoapify-routing` (`e366df2`), with the API key moved behind a
+> Cloudflare Worker (`556f828`).
 
-Do not select one, and do not build a provider registry, factory, or second
-adapter in advance. The boundary already passes the real test — OSRM's wire format
-lives only in the two provider files and downstream consumes a domain-level
-`RouteMatchOutcome` — so a differently-shaped provider is one new file.
+The lock this section held until 2026-08-21 — *"OSRM stays… the provider is not
+selected"* — was superseded by ADR 2026-08-20 and is exactly the hazard the
+Rendering section above warns about: the ADR wins, and the stale lock was the
+bug.
 
-**§0 governs this choice**: routing sends real trip coordinates off the device, so
-who receives them is a product decision for Chiu, not an implementation detail.
-
-One thing to lift **when the migration happens and not before**: the detour-ratio
-plausibility gate currently lives inside `OSRMRouteProvider`, but it is Kamome's
-honest-provenance policy rather than an OSRM fact, and a new provider file would
-silently drop it.
+- The detour-ratio plausibility gate (2.5) was lifted out of the provider file
+  with the migration, as the 2026-08-16 ADR required. **No snap radius exists
+  or is needed** — measured, ADR 2026-08-20 (d); the class `radiuses=500`
+  actually guarded returns `400 No suitable edges` from Geoapify natively. The
+  Iceland film is the acceptance test.
+- Do not build a provider registry, factory, or second adapter. Self-hosted
+  OSRM stays viable behind the unchanged boundary if this decision is ever
+  reversed (`Deploy/` and `regions.json` are kept, not deleted).
+- **§0 governs this choice and was amended for it**: real trip coordinates go
+  to Geoapify (ADRs 2026-08-16, 2026-08-20 (b)/(c)); honest disclosure is the
+  decided posture, and the privacy notice is `Docs/pre-launch.md` item 7.
 
 ### Pixel Art
 
@@ -152,7 +163,8 @@ Routing should remain behind a stable `RouteProvider`-shaped boundary.
 
 Current implementation:
 
-> OSRM
+> Geoapify (ADR 2026-08-20; API key via a Cloudflare Worker before submission).
+> Self-hosted OSRM is the kept fallback, dormant in `Deploy/`.
 
 Future possible implementation:
 
@@ -160,7 +172,7 @@ Future possible implementation:
 
 Future passive GPS / continuous trace may require a true map-matching implementation.
 
-Audit for OSRM-specific assumptions leaking into Story Director, Timeline, Replay, Camera, domain models, or UI.
+Audit for provider-specific (Geoapify or OSRM) assumptions leaking into Story Director, Timeline, Replay, Camera, domain models, or UI.
 
 Do not refactor without evidence and approval.
 
@@ -257,6 +269,27 @@ Classify findings as:
 Never mark something VERIFIED on reasoning alone when it describes rendered, real-trip, or performance behavior — that requires evidence per **Session Access & Scope**. Use INFERRED or UNKNOWN instead, and say which.
 
 Never convert a technical observation into a product decision without approval.
+
+### Classifications go **into the documents**, not only into chat (Chiu 2026-08-20)
+
+A claim written into `decisions.md`, `CLAUDE.md`, `HANDOFF.md` or a spec must be as
+close to objectively correct as the evidence available **at the time of writing**
+allows. Assuming and inferring are permitted; **writing an assumption as though it
+were established is not.** Mark it, or leave it out.
+
+This rule exists because it was broken. On 2026-08-20 this session wrote into three
+documents that a snap radius "can tell a wrong road from an indirect one, because it
+acts before a route exists". That was reasoning, never measured. Measurement showed
+the opposite — wrong-road routes snap 44–132 m away, benign ones 465–477 m — and
+`radiuses=500` had never guarded that band on OSRM either, so the regression
+described did not exist (`Docs/decisions.md` 2026-08-20 (d)).
+
+- Use **VERIFIED / INFERRED / UNKNOWN** inside the document, beside the claim.
+- ⚠️ **A comparison table is where an inference launders into a fact.** The error
+  above happened because measured numbers and an unmeasured claim sat in one table at
+  the same visual weight. Mark the column, or split the table.
+- Where a claim is unmeasured, **name the cheapest thing that would settle it**, in
+  the document, beside the claim.
 
 ---
 

@@ -1,5 +1,12 @@
 # Handoff — Phase 3.5 = **Replay MVP** work order (rewritten 2026-07-20)
 
+> **Historical work order — Phase 3.5 CLOSED 2026-08-15** (`Docs/decisions.md`
+> 2026-08-15: §6a passed, §6b's unmet items moved to Phase 2,
+> `Docs/pre-launch.md`). Do not execute anything below. Kept because the **§6
+> gate item definitions stay authoritative** (cited by
+> `Docs/gate-P3.5-checklist.md`) and several docs cite sections here by name.
+> Its spec references are v1.7-era; current state is `Docs/current-state.md`.
+
 Written for the next Claude session picking up `phase-3-recap`. Everything here
 assumes you have read `CLAUDE.md` and `Docs/kamome-poc-spec.md` (v1.7) first.
 
