@@ -59,10 +59,50 @@ final class RoutingKeyTests: XCTestCase {
         {"base_url":"https://routing.example.com","chunk_size":100,"confidence_min":0.5,
          "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
          "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
-         "route_waypoint_radius_m":500,"api_key":"leaked-into-git"}
+         "route_waypoint_radius_m":500,"api_key_required":true,"api_key":"leaked-into-git"}
         """
         let matching = try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
         XCTAssertEqual(matching.apiKey, "", "a key in the committed file must be ignored, not honoured")
+    }
+
+    /// **The Cloudflare Worker's shape** (`Docs/pre-launch.md`): the key lives in
+    /// the Worker, the app carries none, and routing must stay **on**. Without
+    /// `api_key_required` this is the configuration Kamome ships in — and the
+    /// unconditional "no key ⇒ routing off" rule would have silently disabled
+    /// routing in it.
+    func testAnEndpointThatHoldsItsOwnKeyRoutesWithoutOne() throws {
+        let worker = try workerMatching()
+        XCTAssertFalse(worker.apiKeyRequired, "precondition")
+
+        let resolved = AppConfig.applyingRoutingKey(try shipped().withMatching(worker), key: nil)
+
+        XCTAssertEqual(resolved.matching.baseURL, "https://kamome-routing.example.workers.dev",
+                       "the Worker endpoint survives a keyless build")
+        XCTAssertEqual(resolved.matching.apiKey, "", "and the app still carries no key")
+    }
+
+    /// The same config with the flag left true — a build pointed straight at the
+    /// provider — still routes nothing rather than sending coordinates that can
+    /// only come back 401 (§0: exposure for nothing).
+    func testAnEndpointThatNeedsAKeyStillRoutesNothingWithoutOne() throws {
+        let direct = try shipped().matching.withBaseURL("https://api.geoapify.com")
+        XCTAssertTrue(direct.apiKeyRequired, "precondition: the shipped config expects to supply a key")
+
+        let resolved = AppConfig.applyingRoutingKey(try shipped().withMatching(direct), key: nil)
+
+        XCTAssertEqual(resolved.matching.baseURL, "")
+    }
+
+    /// The Worker-shaped block, decoded the way the app would read it, so the
+    /// test exercises the config file rather than a hand-built struct.
+    private func workerMatching() throws -> TrackingConfig.Matching {
+        let json = """
+        {"base_url":"https://kamome-routing.example.workers.dev","chunk_size":100,"confidence_min":0.5,
+         "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
+         "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
+         "route_waypoint_radius_m":500,"api_key_required":false}
+        """
+        return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }
 
     /// The three ways a build legitimately has no key. The `$(…)` case is the
@@ -85,12 +125,13 @@ final class RoutingKeyTests: XCTestCase {
             .deletingLastPathComponent()  // Tests/
             .deletingLastPathComponent()  // repo root
 
-        let indexURL = repoRoot.appendingPathComponent(".git/index")
-        // In CI or worktrees .git may be a file pointing elsewhere; if the
-        // index is not readable, the CI step catches it instead — skip
-        // rather than false-pass.
-        guard let indexData = try? Data(contentsOf: indexURL) else {
-            throw XCTSkip("git index not readable — the CI step covers this check")
+        // In a worktree — now the recommended setup for parallel sessions —
+        // .git is a file whose `gitdir:` line points at the real git dir, and
+        // the index lives there, not under repoRoot/.git. Resolve both shapes
+        // so the guard runs in a worktree instead of silently skipping.
+        let indexURL = Self.gitIndexURL(repoRoot: repoRoot)
+        guard let indexURL, let indexData = try? Data(contentsOf: indexURL) else {
+            throw XCTSkip("git index not readable (no .git?) — the CI step covers this check")
         }
 
         // The git index stores each tracked path as a NUL-terminated string.
@@ -111,6 +152,32 @@ final class RoutingKeyTests: XCTestCase {
             searchStart = range.upperBound
         }
         // Not found in the index — correct.
+    }
+
+    /// The git index for this checkout, whether `.git` is a directory (a normal
+    /// clone → `.git/index`) or a file (a worktree → a `gitdir:` pointer whose
+    /// target holds the index). Returns nil only when there is no `.git` at all,
+    /// e.g. a source export — the one case the test legitimately skips.
+    private static func gitIndexURL(repoRoot: URL) -> URL? {
+        let dotGit = repoRoot.appendingPathComponent(".git")
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: dotGit.path, isDirectory: &isDirectory) else {
+            return nil
+        }
+        if isDirectory.boolValue {
+            return dotGit.appendingPathComponent("index")
+        }
+        // A worktree's `.git` is `gitdir: <path>` on one line. The path may be
+        // absolute (what `git worktree add` writes) or relative to repoRoot.
+        guard let pointer = try? String(contentsOf: dotGit, encoding: .utf8) else { return nil }
+        let prefix = "gitdir:"
+        guard let line = pointer.split(whereSeparator: \.isNewline)
+            .first(where: { $0.hasPrefix(prefix) }) else { return nil }
+        let target = line.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+        let gitDir = target.hasPrefix("/")
+            ? URL(fileURLWithPath: target)
+            : repoRoot.appendingPathComponent(target).standardizedFileURL
+        return gitDir.appendingPathComponent("index")
     }
 
     /// The committed example file must not contain a usable key. If someone

@@ -30,6 +30,23 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertFalse(shipped.withBaseURL("192.168.50.179:5100").isDistributableEndpoint, "no scheme at all")
     }
 
+    /// **The key survives a re-pointed endpoint** (regression, 2026-08-20).
+    /// `withBaseURL` rebuilt the struct through the memberwise initialiser,
+    /// where `apiKey` is not a parameter, so it silently reset to empty. Every
+    /// desk render harness reaches its provider through this call, so the whole
+    /// class of "routed film" would have gone out keyless and come back 401.
+    func testRePointingAnEndpointKeepsTheAPIKey() throws {
+        let shipped = try TrackingConfigLoader.load(contentsOf: configURL).matching
+
+        let keyed = shipped.withAPIKey("abc123")
+        XCTAssertEqual(keyed.withBaseURL("https://routing.example.com").apiKey, "abc123")
+        XCTAssertEqual(keyed.withBaseURL("https://routing.example.com").baseURL, "https://routing.example.com")
+        // And the reverse order, which was always safe, stays safe.
+        XCTAssertEqual(shipped.withBaseURL("https://routing.example.com").withAPIKey("abc123").apiKey, "abc123")
+        // Every other tunable still comes from the file.
+        XCTAssertEqual(keyed.withBaseURL("https://routing.example.com").timeoutS, shipped.timeoutS)
+    }
+
     func testLoadsShippedConfigWithSpecDefaults() throws {
         let config = try TrackingConfigLoader.load(contentsOf: configURL)
 
@@ -59,7 +76,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.timeoutS, 10)
         // Per-trip routing ceiling (2026-08-15): `timeout_s` bounds a request,
         // this bounds the walk of legs behind it.
-        XCTAssertEqual(config.matching.tripBudgetS, 60)
+        XCTAssertEqual(config.matching.tripBudgetS, 120)
         XCTAssertEqual(config.matching.displayEpsilonM, 5)
         // Route reconstruction for sparse EXIF legs (typed-leg pass 2026-07-26).
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)

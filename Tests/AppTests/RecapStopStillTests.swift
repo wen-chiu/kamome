@@ -11,13 +11,12 @@ import XCTest
 /// A stop's presentation is a still-frame question (does the photo dominate? does
 /// the map still read around it? is the type a headline or an annotation?), and
 /// answering it with a 90-second MP4 render costs minutes and settles nothing.
-/// This takes the same pipeline the exporter uses — imported trip → OSRM
+/// This takes the same pipeline the exporter uses — imported trip → road
 /// reconstruction → `LinearTimeline` → `FrameCompositor` over the real MapLibre
 /// souvenir map (`RecapReviewScene`) — and writes the single frame where the
 /// stop's photo deck is most open.
 ///
 ///   TEST_RUNNER_KAMOME_STOP_STILL=iceland \
-///   TEST_RUNNER_KAMOME_OSRM_BASE_URL=http://127.0.0.1:5100 \
 ///   TEST_RUNNER_KAMOME_TILES_PATH=$HOME/kamome-osrm/tiles \
 ///   TEST_RUNNER_KAMOME_TERRAIN_PATH=$HOME/kamome-osrm/terrain \
 ///   TEST_RUNNER_KAMOME_STOP_PHOTOS=/path/to/jpegs \

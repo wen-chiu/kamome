@@ -82,7 +82,8 @@ enum AppConfig {
         return key
     }
 
-    /// **A missing key disables routing; it never crashes.**
+    /// **A missing key disables routing when the endpoint needs one; it never
+    /// crashes.**
     ///
     /// Routing off is an existing, designed state — `matching.base_url` empty,
     /// legs keep raw geometry and draw dashed (PD-2), with user-facing copy
@@ -90,11 +91,19 @@ enum AppConfig {
     /// rather than inventing a new failure, and a fresh checkout or CI run is
     /// unaffected.
     ///
+    /// **`api_key_required` is what keeps that rule true once the Cloudflare
+    /// Worker exists** (2026-08-20). The Worker holds the key and the app is
+    /// *supposed* to carry none, so an unconditional "no key ⇒ routing off"
+    /// would switch routing off in exactly the configuration Kamome ships.
+    /// Deleting the rule instead would be worse: a build pointed straight at
+    /// Geoapify with no key would put real coordinates in the query string of
+    /// every request only to be refused — §0 exposure buying nothing.
+    ///
     /// Pure and separate from the bundle read so the decision itself is testable
     /// without an `Info.plist`.
     static func applyingRoutingKey(_ config: TrackingConfig, key: String?) -> TrackingConfig {
         guard let key else {
-            guard !config.matching.baseURL.isEmpty else { return config }
+            guard config.matching.apiKeyRequired, !config.matching.baseURL.isEmpty else { return config }
             KamomeLog.routing.notice(
                 "routing disabled — this build carries no API key, so every leg stays raw (PD-2)"
             )

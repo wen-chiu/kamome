@@ -1,0 +1,15 @@
+name = "kamome-routing"
+main = "src/index.js"
+compatibility_date = "2026-08-20"
+
+# 🔴 **Load-bearing, not tidiness** (`Docs/pre-launch.md`). Workers Logs record
+# request URLs, and `/v1/routing` is GET-only — so every logged line would carry
+# a trip's coordinates *and*, before this Worker existed, the API key. §0 says a
+# proxy that logs makes the privacy story worse while appearing to make it
+# better. Off here, in the deployed config, rather than in someone's memory.
+[observability]
+enabled = false
+
+# The key is a secret, never a var:
+#   wrangler secret put GEOAPIFY_API_KEY
+# `vars` would put it in this file, which is committed.
