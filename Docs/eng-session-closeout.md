@@ -1,9 +1,11 @@
 # Engineering session — close out sprites and the API key
 
-**Status: PARTIALLY EXECUTED, outcome not fully recorded (as of 2026-08-21).**
-Commit `c0d4583` (reindeer subjects) shows task 1 landed at least in part; no
-document records the rest. Confirm the working-tree state with Chiu before
-running or re-running — the destructive-command warning below still applies.
+**Status: EXECUTED in substance (2026-08-21).** The sprite tree is resolved —
+committed as `6cc6543` (46 re-centred files) and `c0d4583` (reindeer sets with
+manifest entries); `git status` clean of PNGs, VERIFIED. The key: Chiu confirms
+it is fine (owner report, informal — no verification log exists). The
+destructive-command warning below is moot now that the tree is clean; kept as
+the record of why it existed.
 
 **Paste the block below as the first message of a fresh Claude Code session.**
 Two closing tasks, deliberately in one session because both are about *what is

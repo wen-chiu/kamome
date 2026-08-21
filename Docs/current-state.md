@@ -97,10 +97,12 @@ P7 backend deferred.
   brief ready (`Docs/eng-session-camera-arc.md`), **not yet run**; nothing built;
   Chiu judges the render before anything else moves.
 - **Routing live confirmation + three visual checks**
-  (`Docs/eng-session-P4-visual.md`) — run outcome **not recorded** as of
-  2026-08-21; whether a keyed build routes 200 end-to-end is UNKNOWN.
-- **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — partially
-  executed (`c0d4583` reindeer subjects); full outcome **not recorded**.
+  (`Docs/eng-session-P4-visual.md`) — **key OK per owner** (Chiu 2026-08-21,
+  informal report, no run log); the three visual checks (shadow / map /
+  car-toy) still have **no recorded outcome**.
+- **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — **executed
+  in substance**: sprite tree committed (`6cc6543`, `c0d4583`, VERIFIED); key
+  fine per owner report (2026-08-21, informal).
 - **Pre-launch list** (`Docs/pre-launch.md`) stands as the submission gate.
 
 ## Blockers / risks
@@ -109,10 +111,12 @@ P7 backend deferred.
   export path — undiagnosed, a §6b-class device risk (`HANDOFF.md`).
 - 🐛 Import date range clips at timezone edges — known, deliberately not fixed;
   workaround documented (`HANDOFF.md`).
-- The 2026-08-15 P0 (app died on someone else's device): the mechanism is
-  **structurally closed** (release-build URL guard, bounded detached routing —
-  ADR 2026-08-15), but whether the diagnosis on that device was ever completed
-  is **not recorded**; date-selection misbehaviour lives on under Phase 4
+- The 2026-08-15 P0 (app died on someone else's device): **CLOSED by owner
+  report** (Chiu 2026-08-21) — issues found on the other device were
+  subsequently fixed and the app runs on others' devices; the mechanism was
+  already structurally closed (release-build URL guard, bounded detached
+  routing — ADR 2026-08-15). Diagnosis-level detail was never written down and
+  is not reconstructed. Date-selection misbehaviour lives on under Phase 4
   item 3.
 - ~~Sprite working tree holds uncommitted art~~ **RESOLVED** — committed as
   `4ed8774` / `6cc6543` (re-centred sets) and `c0d4583` (reindeer sets);

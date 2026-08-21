@@ -1,8 +1,10 @@
 # Engineering session — confirm the API, then look at the film
 
-**Status: run outcome NOT RECORDED (as of 2026-08-21).** No document records
-whether this session ran or how task 0 (keyed 200 confirmation) came out —
-confirm with Chiu before running or re-running it.
+**Status: key OK per owner; visual checks still not recorded (2026-08-21).**
+Chiu confirms the routing key is fine (owner report, informal — no run log
+exists). Task 0 can be treated as closed. The three visual checks (shadow /
+map / car-toy) have no recorded outcome — confirm with Chiu whether they ran
+before re-running them.
 
 **Paste the block below as the first message of a fresh Claude Code session.**
 
