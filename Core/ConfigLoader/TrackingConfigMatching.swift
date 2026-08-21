@@ -42,6 +42,21 @@ public extension TrackingConfig {
         ///
         /// Sized as "long enough that a healthy provider finishes a large trip,
         /// short enough that a broken one is a pause and not an outage".
+        ///
+        /// **60 s was chosen against a healthy LAN server and never measured;
+        /// 120 s is measured** (2026-08-21, Iceland, 58 legs, through the
+        /// pre-launch Worker to Geoapify — the shape production will have).
+        /// That run took **58.1 s, one second a leg, finishing with 1.9 s to
+        /// spare** — and it only just finished because a *single* leg timed out
+        /// and spent `timeout_s` (10 s) doing it, 17% of the whole budget. Two
+        /// such legs and the largest real trip starts skipping, telling the user
+        /// its time ran out when the provider was fine.
+        ///
+        /// So the margin is sized in timeouts rather than percentages: 120 s
+        /// absorbs roughly six of them on the biggest trip anyone has imported.
+        /// The other direction costs little now — routing was detached and made
+        /// cancellable on 2026-08-15, so a doomed run is background work behind
+        /// a UI that never blocks, not the frozen import sheet of the P0.
         public let tripBudgetS: Double
         /// Douglas-Peucker ε for *matched* geometry in the recap. Tighter
         /// than simplify.epsilon_m: 15 m would visibly cut snapped corners

@@ -76,7 +76,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.timeoutS, 10)
         // Per-trip routing ceiling (2026-08-15): `timeout_s` bounds a request,
         // this bounds the walk of legs behind it.
-        XCTAssertEqual(config.matching.tripBudgetS, 60)
+        XCTAssertEqual(config.matching.tripBudgetS, 120)
         XCTAssertEqual(config.matching.displayEpsilonM, 5)
         // Route reconstruction for sparse EXIF legs (typed-leg pass 2026-07-26).
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)
