@@ -46,15 +46,40 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
         XCTAssertGreaterThan(corner, 0, "the vignette must not crush the corner to black")
     }
 
+    /// **The shipped preset draws no glow** (Chiu 2026-08-22).
+    ///
+    /// The rule moved rather than the code breaking: the glow was tuned for the
+    /// dark souvenir map, and over the light Apple Maps base that has shipped
+    /// since the 2026-08-15 substrate ADR the same translucent mid-blue
+    /// composites *darker* than the terrain — a shadow ringing the trail, at
+    /// 3.12x the core's width in the 2026-08-21 Iceland film.
+    ///
+    /// Pinned on the preset rather than left to `testRouteGlowWidensTheTrail`,
+    /// because that test now supplies its own glow: with nothing asserting the
+    /// preset, re-enabling it would be silent.
+    func testModernMinimalDrawsNoGlowUnderTheTrail() {
+        XCTAssertEqual(
+            RecapStyle.modernMinimal.routeGlowColor.alpha, 0,
+            "the shipped preset must not stroke a glow under the trail on a light base map"
+        )
+    }
+
     /// The glow pass widens the trail without replacing its core colour.
+    ///
+    /// Still exercised, and deliberately **not** read off `modernMinimal` any
+    /// more: no shipped style asks for a glow today, so the mechanism has to be
+    /// asked for explicitly here or it goes untested and rots (Arch.md §7.2 — a
+    /// case you merely believe still works is one you have not tested). The
+    /// values are the ones the preset carried until 2026-08-22, so this is the
+    /// same experiment it always ran.
     func testRouteGlowWidensTheTrail() async throws {
         var plain = RecapStyle()
         plain.routeColor = RecapStyle.modernMinimal.routeColor
         plain.routeWidthPx = RecapStyle.modernMinimal.routeWidthPx
 
         var glowing = plain
-        glowing.routeGlowColor = RecapStyle.modernMinimal.routeGlowColor
-        glowing.routeGlowWidthMultiple = RecapStyle.modernMinimal.routeGlowWidthMultiple
+        glowing.routeGlowColor = CGColor(srgbRed: 0.22, green: 0.62, blue: 0.92, alpha: 0.32)
+        glowing.routeGlowWidthMultiple = 3.0
 
         // Count pixels that are neither bare map nor the trail's own core: with
         // the glow enabled the trail acquires a halo of blended tones.
