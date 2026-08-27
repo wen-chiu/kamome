@@ -109,8 +109,47 @@ public struct MapKitSnapshotProvider: MapRenderer {
     /// bug it prevents is a missing one, and a missing multiply inside a closure
     /// is not something any existing gate can see: the golden-frame gates render
     /// on `FlatSnapshotProvider` and the continuity gate never renders at all.
+    ///
+    /// **Why `displayScale` is the right factor, and not whatever MapKit rastered
+    /// at.** Measured 2026-08-22 (`MapKitSnapshotProbeTests`): `point(for:)`
+    /// answers in the *point canvas the snapshotter was given* — a 540x960pt
+    /// canvas puts the region's centre at (270, 480) — never in the image's
+    /// pixels. `FrameCompositor` then draws that image into the full pixel frame
+    /// whatever size it came back at. So a feature travels canvas → frame by
+    /// `widthPx / canvasWidth`, which is `displayScale` by construction of
+    /// `pointSize`, and the image's own raster scale never enters it.
     public static func pixel(_ point: CGPoint, displayScale: Int) -> CGPoint {
         CGPoint(x: point.x * CGFloat(displayScale), y: point.y * CGFloat(displayScale))
+    }
+
+    /// What MapKit actually rastered, as a multiple of the canvas it was handed.
+    ///
+    /// **It is not always the scale that was requested.** An Iceland film asked
+    /// for 2 and got a 1620x2880px image for its 540x960pt canvas — 3x, the
+    /// simulator device's own scale. Eighteen probe snapshots across three
+    /// scales, three region spans and eight concurrent requests never reproduced
+    /// it, so the trigger is unknown and it is treated as something MapKit may
+    /// do rather than something Kamome can prevent.
+    ///
+    /// That deviation is **not** a correctness problem — see `pixel(_:_:)`; the
+    /// compositor resamples the larger image into the same frame and the labels
+    /// still land at the requested size. What *would* break the projection is a
+    /// raster that is not a uniform multiple of the canvas, because then no
+    /// single factor maps canvas to frame. That is what this refuses.
+    public static func rasterScale(imageWidth: Int, imageHeight: Int, canvas: CGSize) throws -> Double {
+        let horizontal = Double(imageWidth) / Double(canvas.width)
+        let vertical = Double(imageHeight) / Double(canvas.height)
+        // A tenth of a percent: far tighter than any real deviation, loose enough
+        // for the rounding a non-integral canvas edge could introduce.
+        guard abs(horizontal - vertical) < 0.001, horizontal >= 1 else {
+            throw ScaleError(
+                widthPx: imageWidth, heightPx: imageHeight, displayScale: 0,
+                detail: "MapKit returned \(imageWidth)x\(imageHeight)px for a \(Int(canvas.width))x"
+                    + "\(Int(canvas.height))pt canvas — \(horizontal) across and \(vertical) down, "
+                    + "so no single factor maps the canvas onto the frame"
+            )
+        }
+        return horizontal
     }
 
     public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
@@ -138,17 +177,11 @@ public struct MapKitSnapshotProvider: MapRenderer {
         guard let image = snapshot.image.cgImage(forProposedRect: &proposedRect, context: nil, hints: nil)
         else { throw SnapshotError() }
         #endif
-        // The projection is corrected by `displayScale`, so the image had better
-        // actually be at `displayScale`. Checked rather than assumed: this is the
-        // one place the assumption is observable, and a platform that ignores the
-        // trait collection would otherwise hand back a silently wrong film.
-        guard image.width == widthPx, image.height == heightPx else {
-            throw ScaleError(
-                widthPx: widthPx, heightPx: heightPx, displayScale: displayScale,
-                detail: "MapKit returned \(image.width)x\(image.height)px for a \(Int(size.width))x"
-                    + "\(Int(size.height))pt canvas — it did not honour the requested scale"
-            )
-        }
+        // Checked rather than assumed — this is the one place MapKit's actual
+        // rastering is observable. It may legitimately differ from the requested
+        // scale (see `rasterScale`); what it may not do is stretch, because the
+        // projection below rests on one factor mapping canvas to frame.
+        _ = try Self.rasterScale(imageWidth: image.width, imageHeight: image.height, canvas: size)
         let scale = displayScale
         return MapSnapshot(image: image) { lat, lon in
             Self.pixel(

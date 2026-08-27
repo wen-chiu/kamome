@@ -91,6 +91,37 @@ final class MapKitSnapshotScaleTests: XCTestCase {
         )
     }
 
+    /// **MapKit rastering at a scale nobody asked for is tolerated; stretching
+    /// is not** (measured 2026-08-22, `MapKitSnapshotProbeTests`).
+    ///
+    /// An Iceland render asked for 2 and got a 1620x2880px image for its
+    /// 540x960pt canvas — 3x. That is harmless: `point(for:)` answers in the
+    /// canvas, so the correction is still `widthPx / canvasWidth`, and the
+    /// compositor resamples the bigger image into the same frame. A raster that
+    /// is not *uniform*, though, has no single factor at all, and every overlay
+    /// would sit wrong on one axis.
+    func testAnUnrequestedRasterScaleIsToleratedButAStretchedOneIsNot() throws {
+        let canvas = CGSize(width: 540, height: 960)
+        XCTAssertEqual(
+            try MapKitSnapshotProvider.rasterScale(imageWidth: 1080, imageHeight: 1920, canvas: canvas),
+            2, accuracy: 0.001, "the requested scale"
+        )
+        XCTAssertEqual(
+            try MapKitSnapshotProvider.rasterScale(imageWidth: 1620, imageHeight: 2880, canvas: canvas),
+            3, accuracy: 0.001, "the scale the Iceland render actually got — uniform, so usable"
+        )
+        XCTAssertThrowsError(
+            try MapKitSnapshotProvider.rasterScale(imageWidth: 1620, imageHeight: 1920, canvas: canvas),
+            "3x across and 2x down cannot be corrected by one factor"
+        ) { error in
+            XCTAssertTrue(error is MapKitSnapshotProvider.ScaleError, "got \(error)")
+        }
+        XCTAssertThrowsError(
+            try MapKitSnapshotProvider.rasterScale(imageWidth: 270, imageHeight: 480, canvas: canvas),
+            "an image smaller than its own canvas is not a raster of it"
+        )
+    }
+
     /// The default is the behaviour every caller had before the parameter
     /// existed. It is what ships until Chiu judges a render, so it is pinned.
     func testTheDefaultProviderIsUnchangedFromBeforeTheParameterExisted() throws {

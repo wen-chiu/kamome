@@ -195,6 +195,7 @@ schemes:
         - { variable: KAMOME_KEYFRAME_INTERVAL, value: "$(TEST_RUNNER_KAMOME_KEYFRAME_INTERVAL)", isEnabled: true }
         - { variable: KAMOME_LIVE_GEOCODE, value: "$(TEST_RUNNER_KAMOME_LIVE_GEOCODE)", isEnabled: true }
         - { variable: KAMOME_MAP_APPEARANCE, value: "$(TEST_RUNNER_KAMOME_MAP_APPEARANCE)", isEnabled: true }
+        - { variable: KAMOME_MAP_PROBE, value: "$(TEST_RUNNER_KAMOME_MAP_PROBE)", isEnabled: true }
         - { variable: KAMOME_MAP_DISPLAY_SCALE, value: "$(TEST_RUNNER_KAMOME_MAP_DISPLAY_SCALE)", isEnabled: true }
         - { variable: KAMOME_MARKER_STILLS, value: "$(TEST_RUNNER_KAMOME_MARKER_STILLS)", isEnabled: true }
         - { variable: KAMOME_MATCHING_E, value: "$(TEST_RUNNER_KAMOME_MATCHING_E)", isEnabled: true }
