@@ -1,7 +1,7 @@
 # HANDOFF — current state
 
-**Updated 2026-08-21.** Branch `feature/geoapify-routing`. PR #11 merged to
-`main` on 2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written
+**Updated 2026-08-22.** Branch `feature/p4-visual-checks`, off `main`. PR #11
+merged to `main` on 2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written
 so a fresh session (or a fresh person) can pick this up without being briefed by
 hand.
 
@@ -14,6 +14,160 @@ by default**, as amended by the routing ADRs (`Docs/decisions.md` 2026-08-16 and
 known bugs. Closed, resolved, and superseded sections were moved verbatim to
 `Docs/_archive/handoff-2026-08.md` on 2026-08-21 — that file is history, never
 current state.
+
+---
+
+## Findings — engineering session, three visual checks (2026-08-22)
+
+**Context.** `Docs/eng-session-P4-visual.md`, run on `feature/p4-visual-checks`
+off `main`. Three cheap visual changes Chiu judges by looking, plus the stale
+`XCTFail`. Ordered by what can go wrong silently.
+
+**Films for review** (outside the repo, §0 — renders of a real trip). All three
+are the same Iceland dump, `car-toy`, 21 stops, 64 legs, 211.5 s:
+
+| | `~/Kamome-films/` | what varies |
+|---|---|---|
+| A | `2026-08-22-cartoy-light/kamome-iceland.mp4` | today's shipping look, halo removed · 472 s |
+| B | `2026-08-22-cartoy-dark-x2/kamome-iceland.mp4` | dark, displayScale 2 · 491 s |
+| C | `2026-08-22-cartoy-dark-x3/kamome-iceland.mp4` | dark, displayScale 3 · 475 s |
+
+---
+
+### 1. The halo was the configured glow, and the brief's premise was wrong
+
+**Decision.** `RecapStyle.modernMinimal` no longer sets a glow alpha
+(`a58942d`). The pass and its style properties stay.
+
+**Why.** `RecapStyle()` has `routeGlowColor` alpha 0 — but nothing renders the
+neutral default. Both the app (`UI/Recap/RecapModel.swift:202`) and the desk
+harness (`Tests/AppTests/RecapDemoFilmTests.swift:63`) select
+`RecapStyle.modernMinimal`, which set **alpha 0.32** with
+`routeGlowWidthMultiple` **3.0**. The glow pass ran on every frame of the
+2026-08-21 film.
+
+**Evidence.** Measured on frame t=120 s of that film, against the preset's own
+numbers — VERIFIED, not inferred:
+
+| | measured in the film | the preset says |
+|---|---:|---:|
+| core stroke width, min over the curve | 17 px | `routeWidthPx` 17 |
+| band ÷ core, median of 917 columns | 3.12 | multiple 3.0 |
+| halo colour over terrain | (150, 183, 186) | (150, 184, 187) |
+
+The colour figure is the glow at alpha 0.32 composited over the de-graded
+terrain sample and re-graded; it lands within 1/255 on all three channels. After
+the fix, the same measurement on film A gives band ÷ core **1.14** — a single
+stroke plus its antialiased edge.
+
+**Why it inverted.** The preset's comment says it was tuned against the dark
+subtractive souvenir map, where translucent light-blue over near-black reads as
+*light*. MapLibre was parked 2026-08-15 and films render on Apple Maps' light
+base, where the same mid-blue composites **darker** than the terrain. Same code,
+opposite effect — a consequence of the substrate ADR, the same class as finding
+6 of 2026-08-21, **not** a defect in `RecapOverlayRouteDrawing`.
+
+**Risk.** The glow is the right treatment again the day a dark base returns, and
+film B shows a dark base is now one parameter away. Whoever turns that on must
+re-judge the trail, not assume the glow should come back with it.
+
+### 2. ⚠️ The golden-frame and continuity gates cannot see `MapKitSnapshotProvider` at all
+
+**Decision.** `MapKitSnapshotScaleTests` was written because the brief's
+proposed verification could not have worked.
+
+**Why.** The golden-frame gates render on `FlatSnapshotProvider`, which carries
+its own projection and its own `RecapStyle()`. `RecapCameraContinuityTests` runs
+offline over `CameraFrame`s and never renders. **Neither touches the shipping
+base-map provider.** Every other `MapKitSnapshotProvider` reference in the suite
+is an env-gated bench.
+
+**Risk, and it is wider than this task.** Apple Maps has been the shipping
+substrate since 2026-08-08, and the type that produces it has no always-on test.
+A projection error there is invisible to CI, and invisible in a still frame.
+
+### 3. 🔴 MapKit may raster at a scale nobody asked for — measured, cause UNKNOWN
+
+**What happened.** The first scale-2 render was refused by the provider's own
+guard: MapKit returned a **1620x2880px image for a 540x960pt canvas — 3x**, the
+simulator device's native scale.
+
+**What was then measured** (`MapKitSnapshotProbeTests`, live SDK):
+
+- `point(for:)` answers in the **point canvas the snapshotter was given** — a
+  540x960pt canvas puts the region's centre at (270, 480). VERIFIED across
+  scales 1/2/3. This is what the correction rests on, and it means the factor is
+  `widthPx / canvasWidth` — the *requested* scale — never the raster scale.
+- Scales 1/2/3 × spans 20/200/900 km × 8 concurrent requests: **every one
+  honoured the request exactly.** The deviation did not reproduce.
+
+**So the trigger is UNKNOWN** and is treated as something MapKit may do rather
+than something Kamome can prevent. The guard now refuses only a **non-uniform**
+raster, where no single factor maps canvas to frame; a uniform one at any scale
+is resampled into the frame and the labels still arrive at the requested size
+(`f995b13`).
+
+**Cheapest thing that would settle it:** re-run the scale-2 film and watch for a
+second occurrence. One deviation in three renders is not a rate.
+
+### 4. The keyed path works — the 2026-08-21 UNKNOWN is closed
+
+**VERIFIED.** All three renders routed against Geoapify with the key in
+`Config/Secrets.xcconfig`, through the app's own configuration. No 401, no
+locally-run Worker:
+
+    matchTrip: 58/64 legs routable, budget 120s
+    matchTrip: 50/58 legs reconstructed; 8 have no road route, 0 unreachable,
+               0 rate-limited, 0 never asked
+
+**Better than the reference run**, which reported 49/58 and 1 unreachable. The
+1 unreachable was the timeout it named as retryable, and it routed this time —
+so 50 solid legs, and the reference film's own reading of it was right. The 8
+without a road route are identical, and the detour-gate rejection is
+byte-identical (61.6 km routed vs 17.5 km straight, 3.5×), which is a good
+cross-check that this is the same trip through the same policies.
+
+Reproduced on all three renders. Nothing here reopens ADR 2026-08-20 (d).
+
+### 5. displayScale changes label *density*, not only label size
+
+**Reported, not decided — this is Chiu's judgement.**
+
+Labels roughly double from scale 1 to scale 2, as predicted. But MapKit also
+chooses **fewer** of them, and the effect is strong by scale 3:
+
+| | scale 1 | scale 2 | scale 3 |
+|---|---|---|---|
+| Sauðárkrókur | present, small | present, ~2× | **absent** |
+| Blönduós | present | absent | absent |
+| Akureyri | present | present | large, **collides with the route line** |
+
+Scale 2 reads as the balance; scale 3 buys size by spending the place names the
+souvenir map is partly made of. Road-network detail thins at 3 as well. Both
+knobs are env overrides (`KAMOME_MAP_APPEARANCE`, `KAMOME_MAP_DISPLAY_SCALE`),
+**not** config keys — nothing is shipped until Chiu picks one.
+
+### 6. `RecapPilotFilmTests` and `RecapStopStillTests` cannot run at all
+
+**Not fixed — flagged.** `RecapReviewScene.make` throws `SetupError.noRegion`
+when no `.pmtiles` region covers the trip, and since 2026-08-15 none is
+installed. Both harnesses that depend on it are therefore dead, including the
+one that limits a render to N seconds and the only one that writes stills.
+
+**Consequence for this session:** every review render had to be a **full
+211.5 s film, ~8 minutes each**, because `RecapDemoFilmTests` has no frame
+limit. That is why `KAMOME_SUBJECT` was wired into that harness (`cad1dba`)
+rather than reused from `RecapReviewScene`.
+
+**Cheapest fix, when someone wants it:** give `RecapReviewScene` the same
+report-and-fall-back-to-Apple-Maps treatment `snapshotProvider` just got
+(`77b71b4`). It is the identical stale assumption in a second place.
+
+### 7. The seagull's sprite size — for Chiu, no action taken
+
+The film sprite is `seagull/omni.png`; `logo.png` beside it is only the S3
+picker thumbnail. Size is `length_fraction` in `vehicles.json`, currently `0.7`.
+Left untouched, as the brief directed.
 
 ---
 
