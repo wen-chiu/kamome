@@ -18,11 +18,21 @@ import UniformTypeIdentifiers
 /// cross-fade reads as one place. Point `KAMOME_STOP_PHOTOS` at a folder of
 /// images and they are dealt across the trip's photo slots in filename order.
 struct RecapReviewScene {
+    /// **`noRegion` is gone deliberately** (2026-08-27). Having no installed map
+    /// region is not a failure — Apple Maps is the shipping substrate since the
+    /// 2026-08-08 ADR — and this case additionally stood in for two unrelated
+    /// failures, so any one of the three read as "you forgot the tiles path".
     enum SetupError: Error, CustomStringConvertible {
-        case noRegion
+        /// The trip has no usable route geometry, so no timeline could be built.
+        case noTimeline
+        /// CoreGraphics would not give us a bitmap for the stand-in photo.
+        case noPhotoTile
 
         var description: String {
-            "no installed map region covers the trip — set TEST_RUNNER_KAMOME_TILES_PATH"
+            switch self {
+            case .noTimeline: return "the trip produced no timeline — it has no usable route geometry"
+            case .noPhotoTile: return "could not create the stand-in photo bitmap"
+            }
         }
     }
 
@@ -36,16 +46,24 @@ struct RecapReviewScene {
         let (trip, imported) = try await RecapDemoFilmTests.importedRecap(named: fixture)
         let config = keyframeIntervalOverride(imported)
         adoptTilesPathForTerrain()
-        guard let bounds = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }),
-              let region = RecapMapRegionResolver.resolve(covering: bounds) else { throw SetupError.noRegion }
-        print("KAMOME_REVIEW region \(region.tilesURL.lastPathComponent) · terrain "
-            + (region.terrainURL?.lastPathComponent ?? "NONE — the map will be flat"))
-        let establishing = RecapBounds(
-            minLat: region.bounds.minLat, minLon: region.bounds.minLon,
-            maxLat: region.bounds.maxLat, maxLon: region.bounds.maxLon
-        )
+        // **No installed region is not a failure** — the second of the two places
+        // this rule was written (see `ReviewSubstrate`). Until 2026-08-27 this
+        // threw, which made every harness built on this scene impossible to run
+        // once MapLibre was parked on 2026-08-15: the length-limited film
+        // (`RecapPilotFilmTests`) and every still (`RecapStopStillTests`).
+        let region = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) })
+            .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
+        // The establishing shot is the region's bounds when there is a region.
+        // With none it is nil — exactly what the shipped app passes, and what
+        // `buildWideOpening` already has a branch for.
+        let establishing = region.map {
+            RecapBounds(
+                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
+                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
+            )
+        }
         guard let timeline = LinearTimeline(trip: trip, config: config, establishing: establishing) else {
-            throw SetupError.noRegion
+            throw SetupError.noTimeline
         }
 
         let style = RecapStyle.modernMinimal.withEndCard(config.endCardStyle)
@@ -58,7 +76,7 @@ struct RecapReviewScene {
                 style: style,
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
             ),
-            provider: try Self.provider(region: region)
+            provider: try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_REVIEW")
         )
     }
 
@@ -129,16 +147,6 @@ struct RecapReviewScene {
 
     // MARK: - Construction
 
-    private static func provider(region: RecapMapRegion) throws -> MapRenderer {
-        #if canImport(MapLibre)
-        return MapLibreSnapshotProvider(styleURL: try RecapMapStyle.resolvedStyleURL(
-            styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL, terrainURL: region.terrainURL
-        ))
-        #else
-        return MapKitSnapshotProvider()
-        #endif
-    }
-
     private struct FolderResolver: RecapPhotoResolving {
         let images: [String: CGImage]
         func image(for ref: PhotoRef, targetPx: Int) -> CGImage? {
@@ -203,7 +211,7 @@ struct RecapReviewScene {
               let context = CGContext(
                   data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
                   space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-              ) else { throw SetupError.noRegion }
+              ) else { throw SetupError.noPhotoTile }
         let hue = CGFloat(index % 5) / 5
         if let gradient = CGGradient(colorsSpace: space, colors: [
             CGColor(srgbRed: 0.25 + hue * 0.5, green: 0.45, blue: 0.7 - hue * 0.4, alpha: 1),
@@ -211,7 +219,7 @@ struct RecapReviewScene {
         ] as CFArray, locations: [0, 1]) {
             context.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: side, y: side), options: [])
         }
-        guard let image = context.makeImage() else { throw SetupError.noRegion }
+        guard let image = context.makeImage() else { throw SetupError.noPhotoTile }
         return image
     }
 
