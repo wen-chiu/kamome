@@ -93,7 +93,10 @@ struct RecapReviewScene {
         let lengthPx = HarnessEnv.value("KAMOME_SUBJECT_LENGTH_PX")
             .flatMap(Double.init).map { CGFloat($0) } ?? CGFloat(config.subjectLengthPx)
         let subjectId = HarnessEnv.value("KAMOME_SUBJECT")
-        print("KAMOME_REVIEW subject \(subjectId ?? VehicleCatalog.defaultSubjectId) at \(Int(lengthPx))px")
+        // Not `Int(lengthPx)`: a sweep may ask for a fractional size (157.5 is
+        // 30% below 225), and truncating it to "157px" in the one line a reviewer
+        // reads is how a still gets judged against a number nobody rendered.
+        print("KAMOME_REVIEW subject \(subjectId ?? VehicleCatalog.defaultSubjectId) at \(lengthPx)px")
         return VehicleSubjectRenderer.make(style: style, subjectId: subjectId, lengthPx: lengthPx)
     }
 
