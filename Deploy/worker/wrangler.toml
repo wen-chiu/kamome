@@ -2,6 +2,31 @@ name = "kamome-routing"
 main = "src/index.js"
 compatibility_date = "2026-08-20"
 
+# 🔴 **Also load-bearing.** Both of these are `true` by default, and leaving them
+# to the default is what `wrangler deploy` warns about. Written here for the same
+# reason as `[observability]` below: in the deployed config rather than in
+# someone's memory.
+#
+# `workers_dev` is the production hostname the app will call —
+# `kamome-routing.<subdomain>.workers.dev`. It stays on.
+#
+# `preview_urls` is the *other* door. With it on, Cloudflare gives every deployed
+# version its own permanent public hostname,
+# `<first-8-of-version-id>-kamome-routing.<subdomain>.workers.dev`, running the
+# same code with the same `GEOAPIFY_API_KEY` binding. Measured 2026-08-27, not
+# assumed: the preview host of version 75c481ad answered a keyless
+# `GET /v1/routing` with **200 and 9,842 bytes of route** — the same body
+# production returned. So each deploy adds a permanent extra public door onto
+# Kamome's Geoapify quota, and the hostname costs an attacker nothing to guess:
+# it was derived from the Version ID at the first attempt. `x-robots-tag:
+# noindex`, which Cloudflare sets on these, stops indexing — not access.
+#
+# **Do not turn this back on as tidying.** Kamome does not use versioned or
+# gradual deploys, so nothing is lost. If a preview is ever genuinely needed,
+# deploy it to a Worker that holds no production secret.
+workers_dev = true
+preview_urls = false
+
 # 🔴 **Load-bearing, not tidiness** (`Docs/pre-launch.md`). Workers Logs record
 # request URLs, and `/v1/routing` is GET-only — so every logged line would carry
 # a trip's coordinates *and*, before this Worker existed, the API key. §0 says a
