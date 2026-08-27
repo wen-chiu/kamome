@@ -1,6 +1,6 @@
 # HANDOFF — current state
 
-**Updated 2026-08-22.** Branch `feature/p4-visual-checks`, off `main`. PR #11
+**Updated 2026-08-27.** Branch `feature/p4-visual-checks`, off `main`, open as PR #18. PR #11
 merged to `main` on 2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written
 so a fresh session (or a fresh person) can pick this up without being briefed by
 hand.
@@ -147,27 +147,43 @@ souvenir map is partly made of. Road-network detail thins at 3 as well. Both
 knobs are env overrides (`KAMOME_MAP_APPEARANCE`, `KAMOME_MAP_DISPLAY_SCALE`),
 **not** config keys — nothing is shipped until Chiu picks one.
 
-### 6. `RecapPilotFilmTests` and `RecapStopStillTests` cannot run at all
+### 6. ✅ FIXED 2026-08-27 — `RecapPilotFilmTests` and `RecapStopStillTests` could not run at all
 
-**Not fixed — flagged.** `RecapReviewScene.make` throws `SetupError.noRegion`
-when no `.pmtiles` region covers the trip, and since 2026-08-15 none is
-installed. Both harnesses that depend on it are therefore dead, including the
-one that limits a render to N seconds and the only one that writes stills.
+**Was:** `RecapReviewScene.make` threw `SetupError.noRegion` when no `.pmtiles`
+region covered the trip, so since 2026-08-15 both harnesses depending on it were
+dead — the one that limits a render to N seconds, and the only one that writes
+stills. Every review render this session had to be a full 211.5 s film, ~8
+minutes each, which is why `KAMOME_SUBJECT` was wired into `RecapDemoFilmTests`
+(`cad1dba`) rather than reused.
 
-**Consequence for this session:** every review render had to be a **full
-211.5 s film, ~8 minutes each**, because `RecapDemoFilmTests` has no frame
-limit. That is why `KAMOME_SUBJECT` was wired into that harness (`cad1dba`)
-rather than reused from `RecapReviewScene`.
+**Fixed in `bbf08c4`**, and the rule now has **one** implementation
+(`ReviewSubstrate`) because two copies had already proved they get corrected
+separately: `77b71b4` fixed the `RecapDemoFilmTests` copy and did nothing for
+this one. Stills now render in under a minute, which is what made the
+subject-size sweep (`70e6bd0`) cheap enough to do properly.
 
-**Cheapest fix, when someone wants it:** give `RecapReviewScene` the same
-report-and-fall-back-to-Apple-Maps treatment `snapshotProvider` just got
-(`77b71b4`). It is the identical stale assumption in a second place.
+**The lesson worth keeping:** a rule stated twice is a rule that will be fixed
+once. Both copies here were wrong, in different directions — one `XCTFail`ed and
+carried on, the other threw.
 
-### 7. The seagull's sprite size — for Chiu, no action taken
+### 7. ✅ DECIDED 2026-08-27 — the subject shrinks 30%, the mark does not follow
 
-The film sprite is `seagull/omni.png`; `logo.png` beside it is only the S3
-picker thumbnail. Size is `length_fraction` in `vehicles.json`, currently `0.7`.
-Left untouched, as the brief directed.
+`export.subject_length_px` **225 → 157.5** (Chiu, from a 225/180/157.5 still
+sweep on the film he had just watched), and the seagull's `length_fraction`
+**0.7 → 1.0** so the mark holds its current 157.5 px rendered size. `70e6bd0`.
+
+**Why the mark was asked about rather than left to follow:** at 0.7 of the new
+base it would render at 110.25 px, and 112.5 px (0.5 of the old base) is the size
+rejected on 2026-08-18 for reading too small.
+
+⚠️ **Carry this forward:** pinning at 1.0 discards the relational intent
+`cb14ae8` built the fraction for. The mark is now the same length as a vehicle
+and **will** follow the base fully next time it moves — today's size survives
+only because the base fell by the reciprocal. If `subject_length_px` changes
+again, the mark's size is a fresh judgement, not something this value protects.
+
+The film sprite is `seagull/omni.png`; `logo.png` beside it is only the S3 picker
+thumbnail.
 
 ---
 
