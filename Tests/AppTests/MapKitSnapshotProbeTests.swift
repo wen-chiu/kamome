@@ -14,116 +14,124 @@ import XCTest
 /// That is the second-order behaviour a scale experiment has to know about, and
 /// it is not documented anywhere Kamome controls.
 ///
-/// The question this settles, and the reason it must be measured rather than
-/// reasoned about: `snapshot.point(for:)` answers in the **point** canvas, not
-/// in the image's pixels. If it were the other way round, the correction in
+/// The question `testPointForAnswersInTheCanvasNotTheImage` settles is the one
+/// the whole correction rests on, and it had to be measured rather than reasoned
+/// about: if `point(for:)` spoke pixels instead of points, the correction in
 /// `MapKitSnapshotProvider.pixel(_:displayScale:)` would be wrong by whatever
-/// scale MapKit chose — and wrong by a constant, which is the failure mode that
-/// looks plausible in a still frame and drifts in motion.
+/// scale MapKit chose — wrong by a constant, which is the failure that looks
+/// plausible in a still frame and drifts in motion.
 ///
-/// Needs the network (Apple Maps tiles), so it is env-gated like every other
-/// live-substrate harness in this target:
+/// These need the network (Apple Maps tiles), so they are env-gated like every
+/// other live-substrate harness in this target:
 ///
 ///   TEST_RUNNER_KAMOME_MAP_PROBE=1 \
 ///   xcodebuild -scheme Kamome test -destination '…' \
 ///     -only-testing:KamomeTests/MapKitSnapshotProbeTests
 final class MapKitSnapshotProbeTests: XCTestCase {
-    func testWhatMapKitDoesWithARequestedDisplayScale() async throws {
+    /// A public landmark, never a fixture coordinate (CLAUDE.md §0).
+    private let center = CLLocationCoordinate2D(latitude: 64.1466, longitude: -21.9426)
+    private let widthPx = 1080
+    private let heightPx = 1920
+
+    private func requireProbe() throws {
         try XCTSkipUnless(
             HarnessEnv.value("KAMOME_MAP_PROBE") == "1",
             "Live MapKit probe — set TEST_RUNNER_KAMOME_MAP_PROBE=1."
         )
-        // A public landmark, not a fixture coordinate (CLAUDE.md §0).
-        let center = CLLocationCoordinate2D(latitude: 64.1466, longitude: -21.9426)
-        let widthPx = 1080, heightPx = 1920
+    }
 
+    /// One probe result: what was asked for, and what came back.
+    private struct Probe {
+        let snapshot: MKMapSnapshotter.Snapshot
+        let canvas: CGSize
+        let image: CGImage
+    }
+
+    private func snapshot(displayScale: Int, spanM: Double = 20_000) async throws -> Probe {
+        let canvas = try MapKitSnapshotProvider.pointSize(
+            widthPx: widthPx, heightPx: heightPx, displayScale: displayScale
+        )
+        let options = MKMapSnapshotter.Options()
+        options.region = MKCoordinateRegion(
+            center: center, latitudinalMeters: spanM * Double(heightPx) / Double(widthPx),
+            longitudinalMeters: spanM
+        )
+        options.size = canvas
+        options.traitCollection = UITraitCollection(traitsFrom: [
+            UITraitCollection(displayScale: CGFloat(displayScale)),
+            UITraitCollection(userInterfaceStyle: .dark)
+        ])
+        let snapshot = try await MKMapSnapshotter(options: options).start()
+        return Probe(snapshot: snapshot, canvas: canvas, image: try XCTUnwrap(snapshot.image.cgImage))
+    }
+
+    /// **The finding the projection rests on.** `point(for:)` answers in the
+    /// point canvas the snapshotter was handed — a 540x960pt canvas puts the
+    /// region's centre at (270, 480), not at the image's (540, 960).
+    func testPointForAnswersInTheCanvasNotTheImage() async throws {
+        try requireProbe()
         for displayScale in 1...3 {
-            let size = try MapKitSnapshotProvider.pointSize(
-                widthPx: widthPx, heightPx: heightPx, displayScale: displayScale
-            )
-            let options = MKMapSnapshotter.Options()
-            options.region = MKCoordinateRegion(
-                center: center, latitudinalMeters: 20_000 * Double(heightPx) / Double(widthPx),
-                longitudinalMeters: 20_000
-            )
-            options.size = size
-            options.traitCollection = UITraitCollection(traitsFrom: [
-                UITraitCollection(displayScale: CGFloat(displayScale)),
-                UITraitCollection(userInterfaceStyle: .dark)
-            ])
-
-            let snapshot = try await MKMapSnapshotter(options: options).start()
-            let image = try XCTUnwrap(snapshot.image.cgImage)
-            let atCenter = snapshot.point(for: center)
-
+            let probe = try await snapshot(displayScale: displayScale)
+            let atCenter = probe.snapshot.point(for: center)
+            let halfCanvas = CGPoint(x: probe.canvas.width / 2, y: probe.canvas.height / 2)
             print(String(
                 format: "KAMOME_MAP_PROBE requested %d — canvas %.0fx%.0fpt · image %dx%dpx "
-                    + "(actual scale %.2f) · UIImage.scale %.1f · point(for: centre) = (%.1f, %.1f)",
-                displayScale, size.width, size.height, image.width, image.height,
-                Double(image.width) / Double(size.width), snapshot.image.scale,
-                atCenter.x, atCenter.y
+                    + "(actual %.2f) · point(for: centre) = (%.1f, %.1f)",
+                displayScale, probe.canvas.width, probe.canvas.height,
+                probe.image.width, probe.image.height,
+                Double(probe.image.width) / Double(probe.canvas.width), atCenter.x, atCenter.y
             ))
-
-            // The centre of the region must land at the centre of whichever
-            // space `point(for:)` speaks. Which space that is, is the finding.
-            let halfCanvas = CGPoint(x: size.width / 2, y: size.height / 2)
-            let halfImage = CGPoint(x: Double(image.width) / 2, y: Double(image.height) / 2)
-            print(String(
-                format: "KAMOME_MAP_PROBE   → half-canvas (%.1f, %.1f) · half-image (%.1f, %.1f) · "
-                    + "answer is in %@",
-                halfCanvas.x, halfCanvas.y, halfImage.x, halfImage.y,
-                abs(atCenter.x - halfCanvas.x) < abs(atCenter.x - halfImage.x) ? "POINTS" : "PIXELS"
-            ))
+            XCTAssertEqual(atCenter.x, halfCanvas.x, accuracy: 1, "the centre must land mid-canvas, in points")
+            XCTAssertEqual(atCenter.y, halfCanvas.y, accuracy: 1, "the centre must land mid-canvas, in points")
         }
+    }
 
-        // Which variable makes MapKit deviate? The render that hit 3x was asking
-        // for Iceland's country beat — a span two orders of magnitude wider than
-        // the probe above — and was doing it from several concurrent tasks.
-        for spanM in [20_000.0, 200_000.0, 900_000.0] {
-            let size = try MapKitSnapshotProvider.pointSize(widthPx: widthPx, heightPx: heightPx, displayScale: 2)
-            let options = MKMapSnapshotter.Options()
-            options.region = MKCoordinateRegion(
-                center: center, latitudinalMeters: spanM * Double(heightPx) / Double(widthPx),
-                longitudinalMeters: spanM
-            )
-            options.size = size
-            options.traitCollection = UITraitCollection(traitsFrom: [
-                UITraitCollection(displayScale: 2),
-                UITraitCollection(userInterfaceStyle: .dark)
-            ])
-            let snapshot = try await MKMapSnapshotter(options: options).start()
-            let image = try XCTUnwrap(snapshot.image.cgImage)
-            print(String(
-                format: "KAMOME_MAP_PROBE span %.0fkm at scale 2 — image %dx%dpx (actual scale %.2f)",
-                spanM / 1000, image.width, image.height, Double(image.width) / Double(size.width)
-            ))
+    /// Whatever MapKit rasters at, it must be *uniform* — that is the one thing
+    /// the provider refuses, so it is the one thing worth measuring live.
+    func testEveryRasterIsAUniformMultipleOfItsCanvas() async throws {
+        try requireProbe()
+        for displayScale in 1...3 {
+            for spanM in [20_000.0, 200_000.0, 900_000.0] {
+                let probe = try await snapshot(displayScale: displayScale, spanM: spanM)
+                let raster = try MapKitSnapshotProvider.rasterScale(
+                    imageWidth: probe.image.width, imageHeight: probe.image.height, canvas: probe.canvas
+                )
+                print(String(
+                    format: "KAMOME_MAP_PROBE scale %d · span %.0fkm — image %dx%dpx · raster %.2f%@",
+                    displayScale, spanM / 1000, probe.image.width, probe.image.height, raster,
+                    abs(raster - Double(displayScale)) < 0.001 ? "" : "  <- NOT what was requested"
+                ))
+            }
         }
+    }
 
-        // The render loop fires its snapshots as unstructured concurrent tasks
-        // (`RecapRenderLoop` line 84). Same request, several at once.
-        let size = try MapKitSnapshotProvider.pointSize(widthPx: widthPx, heightPx: heightPx, displayScale: 2)
+    /// The render loop fires its snapshots as unstructured concurrent tasks
+    /// (`RecapRenderLoop`), which was the first suspect for the 3x deviation.
+    func testConcurrentRequestsDoNotChangeTheRasterScale() async throws {
+        try requireProbe()
+        let canvas = try MapKitSnapshotProvider.pointSize(widthPx: widthPx, heightPx: heightPx, displayScale: 2)
         let scales = try await withThrowingTaskGroup(of: Double.self) { group -> [Double] in
             for index in 0..<8 {
                 group.addTask {
                     let options = MKMapSnapshotter.Options()
                     options.region = MKCoordinateRegion(
                         center: CLLocationCoordinate2D(
-                            latitude: center.latitude + Double(index) * 0.05, longitude: center.longitude
+                            latitude: self.center.latitude + Double(index) * 0.05, longitude: self.center.longitude
                         ),
-                        latitudinalMeters: 20_000 * Double(heightPx) / Double(widthPx), longitudinalMeters: 20_000
+                        latitudinalMeters: 20_000 * Double(self.heightPx) / Double(self.widthPx),
+                        longitudinalMeters: 20_000
                     )
-                    options.size = size
+                    options.size = canvas
                     options.traitCollection = UITraitCollection(traitsFrom: [
                         UITraitCollection(displayScale: 2),
                         UITraitCollection(userInterfaceStyle: .dark)
                     ])
                     let snapshot = try await MKMapSnapshotter(options: options).start()
-                    let image = snapshot.image.cgImage
-                    return Double(image?.width ?? 0) / Double(size.width)
+                    return Double(snapshot.image.cgImage?.width ?? 0) / Double(canvas.width)
                 }
             }
             return try await group.reduce(into: []) { $0.append($1) }
         }
-        print("KAMOME_MAP_PROBE 8 concurrent at scale 2 — actual scales \(scales.sorted())")
+        print("KAMOME_MAP_PROBE 8 concurrent at scale 2 — rasters \(scales.sorted())")
     }
 }
