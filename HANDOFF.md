@@ -32,6 +32,11 @@ are the same Iceland dump, `car-toy`, 21 stops, 64 legs, 211.5 s:
 | B | `2026-08-22-cartoy-dark-x2/kamome-iceland.mp4` | dark, displayScale 2 · 491 s |
 | C | `2026-08-22-cartoy-dark-x3/kamome-iceland.mp4` | dark, displayScale 3 · 475 s |
 
+**Stills** (seconds each, since finding 6 was fixed), same frame t=114.3 s:
+`2026-08-27-subject-stills/` — the 225/180/157.5 sweep plus the seagull;
+`2026-08-27-appearance/{light,dark}/` — the light-vs-dark pair at displayScale 2,
+which is the only place that axis has been compared on equal terms.
+
 ---
 
 ### 1. The halo was the configured glow, and the brief's premise was wrong
@@ -186,6 +191,49 @@ The film sprite is `seagull/omni.png`; `logo.png` beside it is only the S3 picke
 thumbnail.
 
 ---
+### 8. 🔴 IF DARK SHIPS, `a58942d` REOPENS — the halo verdict is light-only
+
+**Not acted on. Do not touch `RecapStyle` on this.**
+
+`a58942d` turned the glow off **because the base was light**, and its own message
+says the pass "is the right treatment again the day a dark base returns". Chiu
+accepted "the halo is gone" from film A, which was rendered **light**. That
+acceptance is therefore not a settled result on a dark base — the glow was
+designed for one and inverted only on the other.
+
+So the appearance choice is not just a look decision: **picking dark reopens a
+closed one.** The mechanism is intact and one line away (`routeGlowColor` alpha
+in `RecapStyle.modernMinimal`), which is why it was kept rather than deleted.
+
+**Evidence for the choice, rendered 2026-08-27:** two stills, light and dark, both
+at displayScale 2, same frame (t=114.3 s), same subject size — one variable.
+`~/Kamome-films/2026-08-27-appearance/{light,dark}/`. Chiu had never compared the
+axis on equal terms: film A was light *and* scale 1, while B and C were both dark.
+
+**Cheapest thing that would settle the glow question if dark is chosen:** render
+that same still twice on the dark base, glow alpha 0 vs 0.32. Minutes, now that
+`RecapStopStillTests` runs.
+
+### 9. ⚠️ PROCESS — a wide `git add` committed a wrangler cache file
+
+`Deploy/worker/.wrangler/cache/wrangler-account.json` was swept into `bbf08c4`, a
+commit about substrate fallback. The Cloudflare account id in it is **not a
+secret** — it is in dashboard URLs and authenticates nothing.
+
+**Why it still mattered:** it is a 32-hex string, and this project's key-leak
+check is "zero 32-hex hits over the pushed range" — used three times since
+2026-08-21. One permanent false positive there teaches people to skip the check.
+CI never would have caught it and was **not** widened: its guard greps
+`*.xcconfig` for the routing key specifically, and that narrowness is deliberate.
+
+Chiu chose to rewrite the branch (nothing had reached `main`);
+`backup/p4-visual-prerewrite` at `0d7de54` is the pre-rewrite tip, his to delete
+after the PR merges. `.wrangler/` is now gitignored (`834b0fc`).
+
+**The habit worth changing:** `git add -A` was used for every commit this session.
+It is why an unrelated file rode along in a commit whose message says nothing
+about it.
+
 
 ## Findings — PO/Architecture session (2026-08-21)
 
