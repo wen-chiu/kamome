@@ -161,11 +161,11 @@ stills. Every review render this session had to be a full 211.5 s film, ~8
 minutes each, which is why `KAMOME_SUBJECT` was wired into `RecapDemoFilmTests`
 (`cad1dba`) rather than reused.
 
-**Fixed in `bbf08c4`**, and the rule now has **one** implementation
+**Fixed in `78a910e`**, and the rule now has **one** implementation
 (`ReviewSubstrate`) because two copies had already proved they get corrected
 separately: `77b71b4` fixed the `RecapDemoFilmTests` copy and did nothing for
 this one. Stills now render in under a minute, which is what made the
-subject-size sweep (`70e6bd0`) cheap enough to do properly.
+subject-size sweep (`57a5692`) cheap enough to do properly.
 
 **The lesson worth keeping:** a rule stated twice is a rule that will be fixed
 once. Both copies here were wrong, in different directions — one `XCTFail`ed and
@@ -175,7 +175,7 @@ carried on, the other threw.
 
 `export.subject_length_px` **225 → 157.5** (Chiu, from a 225/180/157.5 still
 sweep on the film he had just watched), and the seagull's `length_fraction`
-**0.7 → 1.0** so the mark holds its current 157.5 px rendered size. `70e6bd0`.
+**0.7 → 1.0** so the mark holds its current 157.5 px rendered size. `57a5692`.
 
 **Why the mark was asked about rather than left to follow:** at 0.7 of the new
 base it would render at 110.25 px, and 112.5 px (0.5 of the old base) is the size
@@ -216,7 +216,7 @@ that same still twice on the dark base, glow alpha 0 vs 0.32. Minutes, now that
 
 ### 9. ⚠️ PROCESS — a wide `git add` committed a wrangler cache file
 
-`Deploy/worker/.wrangler/cache/wrangler-account.json` was swept into `bbf08c4`, a
+`Deploy/worker/.wrangler/cache/wrangler-account.json` was swept into `78a910e` (pre-rewrite `bbf08c4`), a
 commit about substrate fallback. The Cloudflare account id in it is **not a
 secret** — it is in dashboard URLs and authenticates nothing.
 
