@@ -7,8 +7,18 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-08-21 against decisions.md 2026-08-21 (the Iceland film
-passed; the Geoapify migration is accepted).
+Last synced: 2026-08-28 against decisions.md **2026-08-27** (the film follows the
+device's system appearance; light gets a warm trail). Synced by the engineering
+session that appended that entry, which is also why the sync is narrow: the
+"Active work" section below was corrected only where this session had first-hand
+evidence, and a governance pass is still owed the rest.
+
+⚠️ **A note on this protocol, from 2026-08-28.** It keys on the ADR ledger alone,
+so this file can pass its own check while its *Active work* section is months out
+of date — which is what happened here: "Last synced: 2026-08-21" matched the
+newest ADR exactly, and the section below still called the three visual checks
+"NOT YET RUN" after they had run and merged. Reading the check as "this file is
+current" is a mistake; it only certifies the decisions half.
 
 This file MUST be updated when any of the following occur:
 - a new entry is appended to Docs/decisions.md
@@ -75,6 +85,11 @@ P7 backend deferred.
   (`Docs/pre-launch.md` item 7). Anything further is Chiu's decision.
 - **MapLibre parked, Apple Maps ships** (ADR 2026-08-15). Pixel Art and map
   labels parked with it. Reopening condition is Chiu's, verbatim in the ADR.
+- **The film follows the device's system appearance** (ADR 2026-08-27), one
+  `RecapAppearance` selecting both the map's trait and the overlay palette,
+  captured at export and never read inside the render loop. A **manual picker is
+  deferred** — do not build one. Two values inside it are still Chiu's from
+  renders (the light trail's orange; the glow on dark).
 - **Routing is Geoapify** (ADR 2026-08-20 (a)–(d)); detour gate stays 2.5. The
   Iceland film was the acceptance test and **it passed** — Chiu judged the 49
   solid legs correct (owner report, 2026-08-21), closing ADR 2026-08-20 (d)
@@ -100,18 +115,18 @@ P7 backend deferred.
 - **Camera-arc Pass 1** — design recommended 2026-08-21 (`Docs/camera-arcs.md`);
   brief ready (`Docs/eng-session-camera-arc.md`), **not yet run**; nothing built;
   Chiu judges the render before anything else moves.
-- **Three visual checks** (`Docs/eng-session-P4-visual.md`) — **NOT YET RUN**,
-  VERIFIED from source 2026-08-21: `MapKitSnapshotProvider` still sets only
-  `displayScale: 1` with no `userInterfaceStyle`, and
-  `RecapDemoFilmTests.swift:357` still carries the stale `XCTFail`. Task 0
-  (confirm the key) is closed on owner report; **no run log of the keyed path
-  exists**, so the brief folds that confirmation into the car-toy render.
-  Precondition: PR #16 merged; branch off `main`.
-- **Pull requests opened 2026-08-21** — **#16** routing (4 commits, CI green,
-  film judged, no product blocker left) and **#17** documentation governance
-  (3 commits), both against `main`. Read their live state with `gh pr list`
-  rather than from this line. `backup/docs-2026-08-21` at `0f06d57` is #17's
-  pre-rebase recovery point and is deletable once it lands.
+- **Three visual checks** (`Docs/eng-session-P4-visual.md`) — **RUN and MERGED**
+  as PR #18 (`Docs/eng-session-P4-visual.md`; findings in `HANDOFF.md`
+  2026-08-22/27). The halo was the configured glow and is off; the subject
+  shrank to 157.5 px; the keyed routing path is confirmed working. Corrected
+  2026-08-28 — this line previously still read "NOT YET RUN".
+- **Appearance follows the device** (`Docs/eng-session-appearance.md`,
+  ADR 2026-08-27) — built on `feature/p4-appearance-follows-system`, **awaiting
+  Chiu's judgement of two renders**: which orange the light trail takes, and
+  whether the dark base gets its glow back. Everything else in that change is
+  landed and gated.
+- **Pull requests** — #16, #17 and #18 have **merged**. Read live state with
+  `gh pr list` rather than from this line.
 - **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — **executed
   in substance**: sprite tree committed (`6cc6543`, `c0d4583`, VERIFIED); key
   fine per owner report (2026-08-21, informal).

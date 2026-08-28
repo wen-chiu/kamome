@@ -1935,3 +1935,64 @@ locally-run Worker because the key then in `Config/Secrets.xcconfig` returned 40
 Chiu fixed the key on 2026-08-21 and reports it fine, but **no run log exists**;
 `Docs/eng-session-P4-visual.md` item 3 folds that confirmation into its next
 render rather than spending a session on it.
+
+## 2026-08-27 — The film follows the device's system appearance, and light gets a warm trail
+
+**Decision (Chiu, 2026-08-27).** The recap film **follows the device's system
+appearance**. On a light base the trail is **orange** instead of the blue-cyan one.
+
+**Why the trail cannot simply carry over.** Measured, not preference. On Apple
+Maps' light base the trail's cyan `(0.42, 0.87, 0.98)` is in the same colour
+family as the ocean, lakes, rivers and fjords it crosses: in the 2026-08-27
+comparison still the north-coast leg between Sauðárkrókur and Húsavík is not
+distinguishable from a fjord, and the south-coast leg past Hvannadalshnúkur runs
+along the shoreline and disappears into the sea beside it. On the dark base, same
+frame and same subject size, the trail is unmistakably the hero of the frame.
+This is why the preset was tuned dark in the first place (2026-07-22), and the
+2026-08-15 substrate ADR invalidated that tuning without anyone re-tuning it.
+
+**What this constrains, and it is more than a colour** (`Docs/decisions.md`
+2026-08-15, "Export variation enters as a seed, never as randomness"). Appearance
+is ambient device state, so it is bound the way that ADR binds a seed:
+
+- **Captured at the composition boundary** — `RecapView` reads
+  `@Environment(\.colorScheme)` at the tap and hands it to
+  `RecapModel.startExport(appearance:)`. Never read inside the render loop, which
+  is detached and would otherwise let a mid-render dark-mode toggle change a film.
+- **Constant for the render**, and it selects **both** the base map's trait and the
+  overlay palette from one domain value (`RecapAppearance`). A substrate that
+  cannot honour it says so (`MapRendererCapabilities.fixedAppearance`; the MapLibre
+  souvenir map is dark and has no light variant) and wins.
+- **Every gate pins it explicitly.** `RecapStyle.modernMinimal` is now a function
+  of the appearance and `MapKitSnapshotProvider(appearance:)` has no default, so a
+  test cannot inherit the simulator's setting.
+- ⚠️ **NOT persisted.** The ADR also requires the value to be stored with the
+  export; there is no export record in the schema, and the seed feature that would
+  create one is deferred by that same ADR. Until then the resolved appearance is
+  written into the film's log line only, and **re-exporting under a changed system
+  appearance yields a different film**. Recorded as a known gap
+  (`Docs/eng-session-appearance.md` §4.1), not as satisfied.
+
+**Rejected:** an `export.appearance` config key (it is ambient device state, not a
+tunable, and a committed key would ship an answer to the manual-picker question
+Chiu deferred); reading `UITraitCollection.current` inside the provider (an
+environment read inside the render loop — precisely what 2026-08-15 forbids).
+
+**Deferred, explicitly:** a **manual appearance override** in the UI. Chiu wants
+system-follow now and a user picker later; that is a separate feature with its own
+UI decisions.
+
+**⏳ Two values are still open and are Chiu's, from renders:**
+
+1. **Which orange.** Three candidates were swept on one frame (t=114.3 s, the frame
+   that settled the subject size) with their derived dashed variants:
+   `chromeAccentColor` `(0.95, 0.55, 0.32)`; `RecapStyle.routeAccent` `#FF8A5B` —
+   the validated prototype's own `--route`, already the film's progress dot and
+   strap line; and a deeper `(0.96, 0.42, 0.15)`. The code ships the second pending
+   his pick, marked ⏳ in `RecapStylePresets.swift`.
+2. **The glow on dark.** `a58942d` retired the pass *because the base was light*,
+   so Chiu's acceptance of "the halo is gone" — judged on a light render — does not
+   carry to a dark one. Rendered as a pair, α0 vs α0.32, same frame.
+
+**Not decided by this entry:** whether the grade, vignette and chrome should also
+differ by appearance. They are shared today, reported rather than pre-empted.

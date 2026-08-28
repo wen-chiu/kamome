@@ -175,7 +175,7 @@ marked ⏳ are Chiu's, from the stills this session hands over.
 | `chromeTitleColor` / `chromeMetaColor` | near-white / light grey | `Chrome:66,72,78,122,130,168` | follows the scrim; light-on-dark is coherent either way *if the scrim stays dark* |
 | `chromeAccentColor` | orange `(0.95,0.55,0.32)` | `Chrome:137,239–241` | **no** — and see §6, it is why the trail's orange is constrained |
 | `deckMatteColor` | white | `Deck:130` | **no** — it is the photo's keyline, white on both |
-| `cardColor` | dark @ α0.90 | **no consumer** | **no — dead token** (see §7 finding 1) |
+| `cardColor` | dark @ α0.90 | **no consumer** | **no — dead token** (`HANDOFF.md` 2026-08-28 finding 3) |
 | `cardTextColor` | near-white | **no consumer** | **no — dead token** |
 | `markerColor` | red | **no consumer** | **no — dead token** |
 | `markerAccentColor`, `markerOutlineColor` | near-white, near-black | `RecapSubjectRenderer:76` | fallback-only path (sprite load failure) |
