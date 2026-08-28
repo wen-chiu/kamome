@@ -39,9 +39,10 @@ public struct RecapStyle {
     // Route trail (§4.5 step 2, drawn by OverlayRenderer as `routeReveal`). The
     // trail *can* be stroked twice — a wide, soft glow pass under a crisp core,
     // which reads as a lit line on a dark souvenir map rather than a flat
-    // polyline. No shipped style asks for it today: the glow reads as light only
-    // over a dark base, and Apple Maps has been the substrate since the
-    // 2026-08-15 ADR. The pass stays for the day a dark base returns.
+    // polyline. No shipped style asks for it today, in either appearance: it is
+    // settled off on light (it composites darker than pale terrain and rings the
+    // trail with a shadow), and ⏳ open on dark, which arrived on 2026-08-27 when
+    // the film began following the system appearance. See `modernMinimal(_:)`.
     public var routeColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 1)
     public var routeWidthPx: CGFloat = 14
     /// Glow pass under the trail. `routeGlowWidthMultiple` is relative to
@@ -55,6 +56,13 @@ public struct RecapStyle {
     // treatment: a dashed, thinner, unlit stroke. Dashes are the one convention
     // a map reader already knows for "approximate", which is why this is a dash
     // pattern rather than, say, a second color the viewer has to be taught.
+    //
+    // **Derived, never chosen** in the shipped preset — `modernMinimal(_:)` sets
+    // it from `routeColor` at `routeInferredAlpha`. This is honest provenance, a
+    // product rule (spec §0), not styling: whatever colour the solid trail takes,
+    // the dashed one has to be the same claim made more weakly. Written as a
+    // second literal it can drift from the trail by one edit, which is exactly
+    // what an appearance-dependent trail colour makes easy.
     public var routeInferredColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 0.6)
     /// Relative to `routeWidthPx` — an inferred leg reads as the lighter claim.
     public var routeInferredWidthMultiple: CGFloat = 0.65
@@ -107,7 +115,15 @@ public struct RecapStyle {
     /// the subject of it.
     public var titleBandMarkScale: CGFloat = 0.55
 
-    // Legacy panel tokens, still used by the stop label's pill.
+    // Legacy panel tokens. ⚠️ **Nothing draws these** — the stop label's pill
+    // they belonged to was removed on 2026-07-31 when the label was restyled to
+    // the prototype's unplated `.clabel` (see `labelPinColor` below), and no
+    // renderer has read them since; grep-verified 2026-08-28. They survive only
+    // because two tests still assert their values, one of which
+    // (`RecapRenderTestCase.opaqueCardStyle`) believes it is changing what a
+    // frame looks like. Left in place rather than deleted here: removing them
+    // touches four test files and belongs to its own change, not to the
+    // appearance one. Recorded in `HANDOFF.md` 2026-08-28 finding 3.
     public var cardColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.96)
     public var cardTextColor = CGColor(srgbRed: 0.1, green: 0.1, blue: 0.12, alpha: 1)
     public var cardMarginPx: CGFloat = 48
@@ -135,6 +151,10 @@ public struct RecapStyle {
     public var fallbackMarker: VehicleMarker = .seagull
     public var fallbackMarkerLengthPx: CGFloat = 170
     public var fallbackMarkerColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    /// ⚠️ **Nothing draws this** either — the vector marker's fill comes from
+    /// `fallbackMarkerColor` (`RecapSubjectRenderer:76`), and this token has no
+    /// reader anywhere in the repository; grep-verified 2026-08-28. Same
+    /// treatment as the two above: reported, not removed in this change.
     public var markerColor = CGColor(srgbRed: 0.95, green: 0.27, blue: 0.28, alpha: 1)
     public var markerAccentColor = CGColor(srgbRed: 0.98, green: 0.98, blue: 0.99, alpha: 0.92)
     public var markerOutlineColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
@@ -277,56 +297,4 @@ public struct RecapStyle {
     public static let routeAccent = CGColor(srgbRed: 1, green: 0.541, blue: 0.357, alpha: 1)
 
     public init() {}
-
-    /// **Modern Minimal** — the overlay half of the theme whose map half is
-    /// `Config/RecapThemes/modern-minimal.json` (spec §7; the ONE MVP theme).
-    ///
-    /// Tuned against the dark subtractive souvenir map: a cyan trail instead of
-    /// the flat blue polyline, a cool grade, and a soft vignette that pulls the
-    /// eye to the middle of the frame where the car and the photo card live.
-    /// Chrome panels go dark so a white card never punches a hole in a
-    /// night-time film.
-    ///
-    /// This preset is what the app renders; the plain `RecapStyle()` defaults
-    /// stay deliberately neutral for the deterministic golden-frame gates, which
-    /// assert exact pixels and must not move when the theme is retuned.
-    public static var modernMinimal: RecapStyle {
-        var style = RecapStyle()
-        style.routeColor = CGColor(srgbRed: 0.42, green: 0.87, blue: 0.98, alpha: 1)
-        style.routeWidthPx = 17
-        // **No glow pass** (Chiu 2026-08-22). The glow was a wide translucent
-        // stroke under the crisp core, and over the dark souvenir map it read as
-        // light. On the light Apple Maps base that ships since the 2026-08-15
-        // substrate ADR the same mid-blue at alpha 0.32 composites *darker* than
-        // the terrain, so it reads as a shadow ringing the trail — measured in
-        // the 2026-08-21 Iceland film at 3.12x the core's width.
-        //
-        // The pass itself is kept and still runs for any style that asks: it is
-        // guarded on alpha in `drawRouteLeg`, and it is the right treatment again
-        // the day a dark substrate returns. What changed is that the *shipped*
-        // preset no longer asks for it.
-        style.routeGlowColor = style.routeGlowColor.copy(alpha: 0) ?? style.routeGlowColor
-        // Inferred: same hue so it still reads as the journey, but unlit,
-        // thinner and dashed — visibly a guess, not a road.
-        style.routeInferredColor = CGColor(srgbRed: 0.42, green: 0.87, blue: 0.98, alpha: 0.55)
-        // Atmosphere.
-        style.gradeColor = CGColor(srgbRed: 0.05, green: 0.10, blue: 0.19, alpha: 0.16)
-        style.vignetteStrength = 0.42
-        style.vignetteInnerRadius = 0.52
-        // Night chrome: dark panels, light type.
-        style.cardColor = CGColor(srgbRed: 0.07, green: 0.09, blue: 0.13, alpha: 0.90)
-        style.cardTextColor = CGColor(srgbRed: 0.97, green: 0.98, blue: 1, alpha: 1)
-        return style
-    }
-}
-
-public extension RecapStyle {
-    /// This style with `export.end_card_style` applied. An unknown value falls
-    /// back to `.full` rather than failing a render — a bad config string should
-    /// cost the premium look, not the film.
-    func withEndCard(_ raw: String) -> RecapStyle {
-        var copy = self
-        copy.endCard = RecapEndCardTreatment(rawValue: raw) ?? .full
-        return copy
-    }
 }

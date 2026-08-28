@@ -28,18 +28,6 @@ public struct MapKitSnapshotProvider: MapRenderer {
         }
     }
 
-    /// Which of Apple Maps' two appearances the base map draws in.
-    ///
-    /// A look decision, not a rendering detail: the souvenir-map direction has
-    /// been dark since `Docs/decisions.md` 2026-07-22, and the film's grade and
-    /// vignette sit over whatever comes back. Named here rather than taken as a
-    /// `UIUserInterfaceStyle` so the type's public surface stays free of UIKit —
-    /// MapKit exists on platforms UIKit does not.
-    public enum Appearance {
-        case light
-        case dark
-    }
-
     /// Points per pixel in the snapshot MapKit is asked for.
     ///
     /// **1 is not a tuning choice — it is what every caller got before this
@@ -52,9 +40,22 @@ public struct MapKitSnapshotProvider: MapRenderer {
     /// An `Int` rather than a `CGFloat` because it must divide the frame exactly
     /// (see `pointSize`), and MapKit's own scales are whole numbers anyway.
     public let displayScale: Int
-    public let appearance: Appearance
 
-    public init(displayScale: Int = 1, appearance: Appearance = .light) {
+    /// Which of Apple Maps' two appearances to draw the base map in.
+    ///
+    /// **No default, deliberately** (2026-08-28). Since the film follows the
+    /// device's system appearance, an implicit `.light` here is a caller that
+    /// silently disagrees with the palette drawn over it — and a golden-frame or
+    /// still gate that inherits an appearance nobody stated is a gate whose
+    /// verdict moves when someone toggles dark mode. Every construction site says
+    /// which base it means, or it does not compile.
+    ///
+    /// The value is a domain one (`RecapAppearance`), not a UIKit style: the
+    /// palette and the base map must be selected by the same value, and this type
+    /// runs on platforms UIKit does not.
+    public let appearance: RecapAppearance
+
+    public init(displayScale: Int = 1, appearance: RecapAppearance) {
         self.displayScale = displayScale
         self.appearance = appearance
     }
@@ -63,8 +64,11 @@ public struct MapKitSnapshotProvider: MapRenderer {
     /// (handoff §3). The `CameraFrame.bearing` is honestly declared unsupported
     /// (heading-up would mean a rotated `MKMapCamera`) rather than silently
     /// accepted-and-ignored — the follow-cam resolver reads this.
+    ///
+    /// It *can* render either appearance, so `fixedAppearance` stays nil and the
+    /// device's choice reaches the map unchanged.
     public var capabilities: MapRendererCapabilities {
-        MapRendererCapabilities(supportsBearing: false, supportsHeadingUp: false)
+        MapRendererCapabilities(supportsBearing: false, supportsHeadingUp: false, fixedAppearance: nil)
     }
 
     // MARK: - The points/pixels seam
