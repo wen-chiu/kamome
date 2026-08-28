@@ -41,7 +41,11 @@ final class RecapStopStillTests: XCTestCase {
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let url = outDir.appendingPathComponent("title-\(fixture).png")
+        // Suffixed like the other two (2026-08-28). It was not, and a light/dark
+        // pair of the title card would have silently overwritten itself — the
+        // exact failure `variantSuffix` exists to prevent, in the one harness that
+        // had been left out of it.
+        let url = outDir.appendingPathComponent("title-\(fixture)-\(scene.variantSuffix).png")
         try write(image, to: url)
         print("KAMOME_TITLE_STILL \(url.path) — t=\(peak)s of a \(scene.timeline.durationS)s film")
     }
