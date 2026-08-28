@@ -32,6 +32,15 @@ Tests/Fixtures/trips/local/
 Config/Secrets.xcconfig
 !Config/Secrets.xcconfig.example
 
+# Wrangler's local secret file for `npx wrangler dev`. Same class as
+# Secrets.xcconfig, and added 2026-08-28 alongside the Worker README's debug
+# runbook, which now names it: `.dev.vars` holds a plaintext GEOAPIFY_API_KEY,
+# Wrangler does not ignore it for you, and `RoutingKeyTests` guards the config
+# path rather than the filesystem — so nothing else here would have caught it.
+.dev.vars
+**/.dev.vars
+!**/.dev.vars.example
+
 # Built routing + tile artifacts are gigabytes and live outside the repo
 # ($KAMOME_DATA_DIR, default ~/kamome-osrm) — this only catches strays.
 *.osm.pbf
