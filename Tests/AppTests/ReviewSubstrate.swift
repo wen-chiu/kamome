@@ -44,10 +44,16 @@ enum ReviewSubstrate {
     static func experiment() throws -> Experiment {
         var experiment = Experiment()
         if let raw = HarnessEnv.value("KAMOME_MAP_DISPLAY_SCALE") {
-            // Deliberately `Int`: `pointSize` needs the scale to divide the frame
-            // exactly. 1.5 also divides 1080x1920 (720x1280pt) and would sit
-            // between today's label density and scale 2's — a legal notch nobody
-            // has asked for, recorded so it need not be rediscovered.
+            // Deliberately `Int`, matching `MapKitSnapshotProvider.displayScale`,
+            // whose own comment gives the reason: the scale must divide the frame
+            // exactly, and MapKit's own scales are whole numbers.
+            //
+            // The *arithmetic* would tolerate 1.5 — it divides 1080x1920 into a
+            // 720x1280pt canvas, and would sit between today's label density and
+            // scale 2's. But it is **not reachable**: the type forbids it, and
+            // getting there means widening `Int` to `CGFloat` against a written
+            // reason, not passing a different string here. Recorded so nobody
+            // mistakes it for a value they can already try.
             guard let parsed = Int(raw), parsed >= 1 else {
                 throw HarnessError("KAMOME_MAP_DISPLAY_SCALE=\(raw) is not a display scale (try 1, 2 or 3)")
             }
