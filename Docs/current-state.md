@@ -7,8 +7,8 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-08-21 against decisions.md 2026-08-21 (the Iceland film
-passed; the Geoapify migration is accepted).
+Last synced: 2026-08-28 against decisions.md 2026-08-28 (the film follows the
+device's appearance; light gets an orange trail).
 
 This file MUST be updated when any of the following occur:
 - a new entry is appended to Docs/decisions.md
@@ -51,7 +51,17 @@ P7 backend deferred.
 - **Rendering:** `RecapSnapshotProviding` is the boundary; each renderer is
   confined to one file. **In practice the app renders Apple Maps** — MapLibre
   is parked, not removed (ADR 2026-08-15); the provider fallback fires because
-  no `.pmtiles` region is installed.
+  no `.pmtiles` region is installed. Falling back is **not** a failure, and two
+  harnesses now assert that rather than `XCTFail`ing on it (PR #18).
+- **The points/pixels seam** (PR #18): `MapKitSnapshotProvider` takes an
+  `Appearance` (light/dark, a Kamome enum — no UIKit in its public surface) and
+  an **`Int`** `displayScale` that must divide the frame exactly.
+  `pointSize(widthPx:heightPx:displayScale:)` throws rather than rounding;
+  `pixel(_:displayScale:)` is the correction. `point(for:)` answers in the
+  **point canvas MapKit was given**, so the correction factor is the *requested*
+  scale by construction and whatever MapKit chooses to raster at never enters
+  the projection. A guard rejects only a **non-uniform** raster, which is the
+  case no single factor can correct.
 - **Routing:** `RouteProvider`-shaped boundary; provider is **Geoapify** (ADR
   2026-08-20 (a)), migrated in PR #16 (`e366df2`), API key behind a
   Cloudflare Worker (`556f828`). Detour-ratio gate (2.5) carried out of the
@@ -80,6 +90,18 @@ P7 backend deferred.
   solid legs correct (owner report, 2026-08-21), closing ADR 2026-08-20 (d)
   item 4. The film is `~/Kamome-films/2026-08-21-iceland-geoapify.mp4`, outside
   the repository deliberately (§0).
+- **The film follows the device's appearance; light gets an orange trail**
+  (ADR 2026-08-28). `displayScale` **2** for label size. **Decided, not yet
+  built** — the engineering session opened 2026-08-28. The binding constraint:
+  the appearance is **captured at export and recorded with that export**, like
+  the seed (ADR 2026-08-15), never read from the environment mid-render, and
+  every golden-frame gate pins it explicitly. Which orange, whether the glow
+  returns on dark, and which other style values differ by appearance are all
+  **open**.
+- **The subject is 157.5 px and the mark is pinned at `length_fraction` 1.0**
+  (ADR 2026-08-27). ⚠️ That pin **spends** the relational guarantee `cb14ae8`
+  built the fraction for: next time `subject_length_px` moves, the mark follows
+  at full rate and its size is a fresh judgement.
 - **Snapshot numbers frozen** — `keyframe_interval_frames` (15) and the
   opening's every-frame interval are held for the camera-arc design; nothing
   changes until Chiu judges the Pass 1 render (`CLAUDE.md`-recorded freeze,
@@ -97,25 +119,41 @@ P7 backend deferred.
 
 ## Active work
 
-- **Camera-arc Pass 1** — design recommended 2026-08-21 (`Docs/camera-arcs.md`);
-  brief ready (`Docs/eng-session-camera-arc.md`), **not yet run**; nothing built;
-  Chiu judges the render before anything else moves.
-- **Three visual checks** (`Docs/eng-session-P4-visual.md`) — **NOT YET RUN**,
-  VERIFIED from source 2026-08-21: `MapKitSnapshotProvider` still sets only
-  `displayScale: 1` with no `userInterfaceStyle`, and
-  `RecapDemoFilmTests.swift:357` still carries the stale `XCTFail`. Task 0
-  (confirm the key) is closed on owner report; **no run log of the keyed path
-  exists**, so the brief folds that confirmation into the car-toy render.
-  Precondition: PR #16 merged; branch off `main`.
-- **Pull requests opened 2026-08-21** — **#16** routing (4 commits, CI green,
-  film judged, no product blocker left) and **#17** documentation governance
-  (3 commits), both against `main`. Read their live state with `gh pr list`
-  rather than from this line. `backup/docs-2026-08-21` at `0f06d57` is #17's
-  pre-rebase recovery point and is deletable once it lands.
-- **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — **executed
-  in substance**: sprite tree committed (`6cc6543`, `c0d4583`, VERIFIED); key
-  fine per owner report (2026-08-21, informal).
+*(Rewritten 2026-08-28. PRs #16, #17 and #18 are merged; do not read a PR's state
+from this file — `gh pr list` is authoritative.)*
+
+- **Appearance: follow the system theme, orange trail in light** — engineering
+  session opened **2026-08-28**, off `main`. ADR 2026-08-28 records what is
+  decided and what is not. This is the first change in the series that moves
+  **shipped behaviour**, so `Arch.md` §12 applies in full and Chiu judges the
+  result from stills.
+- **PR #19 — the Worker's preview door** (`chore/worker-preview-urls`), open.
+  Measured before the fix: the preview hostname served **full keyless routing,
+  byte-identical to production**, from a name derived from the Version ID at the
+  first attempt. `preview_urls = false` is committed; the redeploy is Chiu's and
+  the after-probe waits on it. ⚠️ **That branch owns `Docs/pre-launch.md` item 1b
+  and `Deploy/worker/README.md`** — do not edit those elsewhere until it lands.
+- **Camera-arc Pass 1** — design `Docs/camera-arcs.md`, brief
+  `Docs/eng-session-camera-arc.md`, **still not run**, nothing built. Its
+  precondition (the visual branch merged) is now satisfied; §7 was updated
+  2026-08-28 for the points/pixels seam PR #18 introduced.
+- **The Worker is deployed but the app does not use it.** `matching.base_url` is
+  still `""` and `api_key_required` still `true`, so builds call Geoapify
+  directly and **the key is still inside every IPA**. Flipping those two values
+  is a separate session, gated on nothing but sequencing — it touches
+  `Config/TrackingConfig.json`, which the appearance session may also touch.
 - **Pre-launch list** (`Docs/pre-launch.md`) stands as the submission gate.
+
+### Owner decisions from this stretch, so they are not re-derived
+
+| date | decision |
+|---|---|
+| 2026-08-21 | The Iceland film's routes are correct — Geoapify migration accepted (ADR) |
+| 2026-08-27 | Subject 225 → 157.5 px; the mark pinned at fraction 1.0 (ADR) |
+| 2026-08-27 | `displayScale` **2**; scale 3 loses labels and is not tunable back |
+| 2026-08-27 | Halo accepted as fixed **on the light base** — the acceptance does not transfer to dark |
+| 2026-08-28 | The film follows the device appearance; light gets an orange trail (ADR) |
+| 2026-08-27 | Geoapify is the **free plan with no payment method** (owner report) — an overage cannot be billed |
 
 ## Blockers / risks
 
@@ -134,8 +172,30 @@ P7 backend deferred.
   `4ed8774` / `6cc6543` (re-centred sets) and `c0d4583` (reindeer sets);
   VERIFIED 2026-08-21, `git status` clean of PNGs. The closeout session's
   *other* tasks (key verification) remain not recorded — see Active work.
+- 🟠 **MapKit rastered at 3× when asked for 2×, once, and nobody knows why.**
+  One occurrence in three renders on 2026-08-22; **not reproduced** across 18
+  probe snapshots at scales 1/2/3, three spans and eight concurrent requests
+  (`MapKitSnapshotProbeTests`). It cannot misproject — the correction factor is
+  the requested scale by construction — but a **non-uniform** raster would abort
+  an export at the guard. Trigger UNKNOWN, deliberately unchased; the cheapest
+  next step is watching the next scale-2 render.
+- 🟠 **The routing key is still inside every IPA.** The Worker exists and is
+  deployed, but the app is not pointed at it (see Active work). Nothing has
+  changed for builds already on other people's phones.
+- 🟡 **Kamome's routing endpoint is an open proxy on a free quota.** The Worker
+  URL ships in every IPA by design, and the account has **no payment method**
+  (owner report 2026-08-27), so an overage cannot be billed. The harm is
+  therefore not a bill: someone burning the 3,000 credits/day takes routing away
+  from **every** user until the daily reset, and their films draw dashed. Abuse
+  control (`Docs/pre-launch.md` checklist item 5) is still undecided.
 - Two sessions sharing one checkout contaminate each other's test/lint counts;
-  worktrees fix it but silently skip half the secrets guard (`HANDOFF.md` 3e).
+  worktrees fix it — the secrets guard's worktree blind spot was fixed in
+  `2d221e0`, so that objection is gone (`HANDOFF.md` 3e is stale on this point).
+- ⚠️ **Process, three times now:** a branch ref picked up another session's
+  commits, and a `git add -A` swept an unrelated file into a commit whose message
+  said nothing about it (`HANDOFF.md` findings 8–9). Sessions should confirm
+  which branch they are on before committing and stage explicit paths only.
+  Whether that becomes a rule in `Arch.md` is Chiu's call and is not yet made.
 
 ## Deferred — do not implement opportunistically
 

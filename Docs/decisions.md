@@ -1935,3 +1935,128 @@ locally-run Worker because the key then in `Config/Secrets.xcconfig` returned 40
 Chiu fixed the key on 2026-08-21 and reports it fine, but **no run log exists**;
 `Docs/eng-session-P4-visual.md` item 3 folds that confirmation into its next
 render rather than spending a session on it.
+
+---
+
+## 2026-08-27 — The subject shrinks 30%, and the mark's fraction is spent doing it
+
+**Decision (Chiu, from stills).** `export.subject_length_px` **225 → 157.5**, and
+the seagull mark's `length_fraction` **0.7 → 1.0** so the mark stays the size it
+already was. Landed on `feature/p4-visual-checks` (PR #18).
+
+**Why 157.5 and not a per-vehicle override.** `length_fraction` per directional
+subject is forbidden by `VehicleCatalogTests
+.testEveryDirectionalSubjectTakesTheConfiguredSize`, and correctly:
+`center-sprites.py` equalises apparent size across sets, so an override would be
+fighting the tool. car-toy did not look big *as car-toy*; the subject looked big.
+The 2026-08-22 car-toy film was the first film anyone had watched with a **vehicle**
+in it — every earlier judged film used the seagull — so 225 had never actually been
+seen in motion.
+
+**Method, deliberately the same one that set 225.** Stills at 225 / 180 / 157.5 on
+one frame, not a film. 225 itself was Chiu's call from stills at 200/220/250 after
+a hard-coded 300 was reported too big.
+
+### ⚠️ What this spends, and it will be rediscovered painfully if it is not written here
+
+`cb14ae8` gave the mark a *fraction* so that its size would stay **relative** to the
+vehicle: change the vehicle, and the mark follows in proportion. Pinning the
+fraction at **1.0 spends that guarantee.** The mark is now simply the same length as
+a vehicle.
+
+Today's sizes are unchanged only because the base fell by the reciprocal:
+
+    before   225   × 0.7 = 157.5 px
+    after    157.5 × 1.0 = 157.5 px
+
+**So the next time `subject_length_px` moves, the mark moves with it at full rate,
+and its size becomes a fresh judgement rather than a maintained relation.** That is
+the cost Chiu accepted, and it was the right trade: letting the mark follow this
+change would have put it at 110.25 px — **2.25 px below the 112.5 px he rejected on
+2026-08-18** as too small.
+
+`testAnOmniMarkMayDeclareItsOwnProportion` would have gone vacuous at 1.0 (any
+number × 1.0 is itself), so per `Arch.md` §7.3 its documentation now names the test
+that still drives the mechanism with a non-unit fraction. **The mechanism is not
+deleted — only this subject stopped using it.**
+
+---
+
+## 2026-08-28 — The film follows the device's appearance, and light gets an orange trail
+
+**Decided by Chiu 2026-08-27/28. Not yet implemented, not yet judged** — the
+engineering session began 2026-08-28. This entry records what was decided and, just
+as importantly, what was **not**, so neither gets re-derived.
+
+### Decided
+
+1. **The film follows the device's system appearance** (light or dark) rather than
+   shipping one fixed look. A user-facing override is wanted **later**, as its own
+   feature.
+2. **Light mode uses an orange trail**, not the shipped blue.
+3. **`displayScale` 2** is the map's label size, chosen from three rendered films.
+
+### Why light needs a different trail colour — legibility, not taste
+
+On Apple Maps' light base the trail's blue `(0.13, 0.45, 0.95)` is the same colour
+family as the ocean, lakes, rivers and fjords it crosses. In the 2026-08-27
+comparison still — one frame, one variable — the north-coast leg between
+Sauðárkrókur and Húsavík **cannot be told apart from a fjord**. On the dark base the
+identical trail is unmistakably the subject of the frame.
+
+**VERIFIED** by two stills rendered at the same frame, same subject size, same
+scale, differing only in appearance. This is also the mechanism behind the
+2026-07-22 "dark atmospheric souvenir map" direction: that was never only an art
+preference.
+
+Kamome already owns an orange — `RecapStyle.chromeAccentColor` `(0.95, 0.55, 0.32)`.
+A second, unrelated orange would fight it.
+
+### Why scale 3 lost
+
+Label **density follows the point canvas**, not the raster: scale 3 asks MapKit for
+a 360×640 pt canvas, and MapKit spends fewer labels on a small canvas. Sauðárkrókur
+is present at 1 and 2 and **gone at 3**; Akureyri collides with the trail at 3. No
+public MapKit API separates label density from label size, so this is a trade, not a
+tuning problem. **The durable answer to "big legible place names" remains the
+iceboxed Kamome-drawn overlay**, not a base-map knob.
+
+`displayScale` is an `Int` by deliberate design — it must divide the 1080×1920 frame
+exactly. 1.5 divides arithmetically (720×1280 pt) but is **not reachable** without
+widening the type against a documented reason.
+
+### ⚠️ The constraint this creates against ADR 2026-08-15
+
+"Follow the system appearance" makes the film a function of **ambient device state**,
+which is exactly what *"export variation enters as a seed, never as randomness"* was
+written against. The two are reconciled on one condition, and it is binding:
+
+> **The appearance is captured at the moment of export and recorded with that
+> export, the same way the seed is** — never read from the environment during
+> rendering.
+
+Two consequences that are easy to miss:
+
+- **Every golden-frame and still gate must pin the appearance explicitly.** A gate
+  that inherits the simulator's setting changes verdict when somebody toggles dark
+  mode on their Mac.
+- A film is **baked**. "Follows the system appearance" therefore means *the theme at
+  export time*: the same trip exported twice in different themes yields two
+  different films, and a shared film carries the **exporter's** theme, not the
+  viewer's. Accepted; the later override feature is what gives a user control.
+
+### Explicitly NOT decided
+
+- **Which orange.** A sweep of candidates around `chromeAccentColor` goes to Chiu as
+  stills; the dashed/inferred variant is derived from it and is judged in the same
+  sweep, because honest provenance requires a dashed leg to keep reading as the
+  lighter claim.
+- **Whether the glow returns on dark.** `a58942d` turned it off *because the base was
+  light*, so that acceptance does not transfer. One dark still at alpha 0 versus
+  0.32 settles it. **INFERRED, worth knowing before judging:** the 2026-08-27 dark
+  still already reads strongly with no glow at all.
+- **Which of the remaining style values need to differ by appearance** — the chrome
+  scrim and text, the stop cards, the deck matte, the grade and vignette, the marker
+  colours. All were tuned against one base. "Survived on the light still" is not
+  "was judged".
+- The user-facing appearance picker.

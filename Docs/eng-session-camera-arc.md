@@ -1,7 +1,10 @@
 # Engineering session — the contained arc, Pass 1 (rendering only)
 
-**Status: NOT YET RUN (as of 2026-08-21).** Ready to paste; Pass 2 is gated on
-Chiu judging Pass 1's render.
+**Status: NOT YET RUN. Refreshed 2026-08-28.** Its precondition — the
+visual-checks branch merged — is now satisfied (PR #18, `87d1d4e`), and
+`Docs/camera-arcs.md` §7 gained a dated addendum for the points/pixels seam that
+branch introduced. Read the addendum: the design holds, the arithmetic has one
+more term. Pass 2 remains gated on Chiu judging Pass 1's render.
 
 **Paste the block below as the first message of a fresh Claude Code session.**
 
@@ -22,10 +25,11 @@ discipline), §11 (plan deviation) and §12 (communicate before implementing) ar
 the parts I will hold you to. §14: never say "done".
 
 Read in this order before proposing anything:
-- `CLAUDE.md` — current state, Phase 4, and §0 (location data never leaves the
-  device). Phase 4 item 3 records that `keyframe_interval_frames` and the
-  opening's every-frame interval are FROZEN for a design conversation. That
-  conversation has happened; this task is its first half.
+- `Docs/current-state.md` — the snapshot; run its staleness check first.
+- `CLAUDE.md` — Phase 4 and §0 (location data never leaves the device). Phase 4
+  item 3 records that `keyframe_interval_frames` and the opening's every-frame
+  interval are FROZEN for a design conversation. That conversation has happened;
+  this task is its first half.
 - `Docs/camera-arcs.md` — the design. §2 (the cost model), §4 Case A, §7 (the
   rendering rule), §8 (the gates) and §10 Pass 1 are your task. Everything else in
   that file is Pass 2 and is **not yours**.
@@ -34,11 +38,23 @@ Read in this order before proposing anything:
 Where a `Docs/handoff-*.md` file contradicts an ADR, the ADR wins and the handoff
 is stale. Say so rather than resolving it quietly.
 
-⚠️ Other sessions are working in this tree (routing → Geoapify; the sprite
-commit). Code facts in `Docs/camera-arcs.md` were read on 2026-08-21 and are named
-by symbol, not by line number. **Re-verify each one you rely on** and say so if
-one has moved. Stage explicit paths only — no `git add -A`, no `git reset --hard`,
-no `git clean`: the tree has held uncommitted art with no other copy.
+⚠️ Code facts in `Docs/camera-arcs.md` were read on 2026-08-21 and are named by
+symbol, not by line number. Several **have** moved: PR #18 rewrote
+`MapKitSnapshotProvider`'s projection seam, which §7's dated addendum covers.
+**Re-verify every fact you rely on** and say so when one has moved.
+
+⚠️ **Another session is live.** Appearance work — the film follows the device
+theme, orange trail in light (ADR 2026-08-28) — is in flight off `main` and
+touches `RecapStyle` and the same provider. Branch off `main`, never off its
+branch, and **do not start a long render while it is rendering**: the two contend
+on DerivedData, and this project has already lost a 13.7-hour render to an
+avoidable collision.
+
+Stage explicit paths only — **no `git add -A`, no `git add .`**, no
+`git reset --hard`, no `git clean`. A `git add -A` is exactly how an unrelated file
+entered a commit whose message said nothing about it on 2026-08-27 (`HANDOFF.md`
+finding 9). **Confirm which branch you are on before committing** — a branch ref
+has silently picked up another session's commits three times now.
 
 ## The task
 
@@ -105,6 +121,14 @@ it before writing it (§12).
   modified.
 - One honest paragraph on the artifact in variant (3): where the map goes soft,
   and whether a station boundary is visible.
+
+  Two things moved under that judgement and you should know both before you
+  render: the shipped preset **no longer strokes a glow under the trail**
+  (`a58942d`), so sharp-graphics-over-soft-map is a cleaner contrast than when
+  this brief was written; and **appearance is now a provider input that another
+  session is actively changing.** **Hold the appearance fixed across all three
+  clips** — one variable, and the variable is how the base map is produced. State
+  in your report which appearance you rendered on.
 - A `HANDOFF.md` entry saying what you found, including anything that contradicts
   `Docs/camera-arcs.md`. A finding that only exists in your session has not been
   delivered.

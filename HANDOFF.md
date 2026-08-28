@@ -1,9 +1,8 @@
 # HANDOFF — current state
 
-**Updated 2026-08-27.** Branch `feature/p4-visual-checks`, off `main`, open as PR #18. PR #11
-merged to `main` on 2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written
-so a fresh session (or a fresh person) can pick this up without being briefed by
-hand.
+**Updated 2026-08-28.** `main` is at `87d1d4e` — PRs #16, #17 and #18 are merged.
+**PR #19** (`chore/worker-preview-urls`) is open. Written so a fresh session (or a
+fresh person) can pick this up without being briefed by hand.
 
 Read `Docs/current-state.md` first for the project snapshot, then `CLAUDE.md`
 for the standing rules — especially **§0, location data never leaves the device
@@ -14,6 +13,59 @@ by default**, as amended by the routing ADRs (`Docs/decisions.md` 2026-08-16 and
 known bugs. Closed, resolved, and superseded sections were moved verbatim to
 `Docs/_archive/handoff-2026-08.md` on 2026-08-21 — that file is history, never
 current state.
+
+---
+
+## Findings — PO/Architecture session (2026-08-28)
+
+A documentation pass, not new work. Recorded here because a finding that exists
+only in a session has not been delivered.
+
+### 1. Two ADRs landed, and one of them spends something
+
+`Docs/decisions.md` gained **2026-08-27** (the subject is 157.5 px; the mark is
+pinned at `length_fraction` 1.0) and **2026-08-28** (the film follows the device
+appearance; light gets an orange trail; `displayScale` 2).
+
+The 2026-08-27 entry exists mainly for one sentence: **pinning the mark at 1.0
+spends the relational guarantee `cb14ae8` built the fraction for.** Today's sizes
+survive only because the base fell by the reciprocal. The next time
+`subject_length_px` moves, the mark follows at full rate and its size becomes a
+fresh judgement. That is the kind of spent guarantee that gets rediscovered
+painfully, so it is in the ledger rather than only in a commit message.
+
+### 2. `Docs/camera-arcs.md` §7 has a dated addendum — read it before Pass 1
+
+PR #18 changed the ground the crop-scaling design stands on. `point(for:)` answers
+in the **point canvas**, so the provider composes a second correction; a
+crop-scaled arc therefore composes **two**, not one. `pointSize` throws rather than
+rounding and `displayScale` is an `Int`, so a crop factor is not free. And MapKit
+returned **more pixels than requested** once — good news for a design that spends
+detail, provided an arc reads a station's real pixel dimensions back instead of
+assuming them.
+
+`Docs/eng-session-camera-arc.md` was refreshed with the same facts, plus the
+current live-session constraint.
+
+### 3. ⚠️ Awaiting Chiu — a process rule this session did NOT write
+
+Three times now a branch ref has silently picked up another session's commits, and
+once a `git add -A` swept an unrelated file into a commit whose message said
+nothing about it (findings 8–9 below). Both were caught and repaired, both cost
+real time, and both are the same class of mistake.
+
+**Recommendation: a standing rule in `Arch.md` — confirm the current branch before
+committing, and stage explicit paths only, never `-A` or `.`** `Arch.md` is the
+engineering charter, so per `PO.md` this session may recommend it and may not write
+it. It is currently recorded in `Docs/current-state.md` as "Chiu's call and not yet
+made". **It is not in force until he says so.**
+
+### 4. Ownership note while PR #19 is open
+
+`chore/worker-preview-urls` owns `Docs/pre-launch.md` **item 1b** and
+`Deploy/worker/README.md`. This pass deliberately did not touch either. The Worker's
+deployed state is recorded in `Docs/current-state.md` instead, so nothing depends on
+that PR landing before the snapshot is true.
 
 ---
 
