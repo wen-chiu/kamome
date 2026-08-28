@@ -66,4 +66,49 @@ extension RecapDemoFilmTests {
         // And this harness's own wrapper still routes to it.
         XCTAssertTrue(try snapshotProvider(region: nil) is MapKitSnapshotProvider)
     }
+
+    /// **A substrate that is locked to one appearance overrides the device's**
+    /// (2026-08-28).
+    ///
+    /// The film follows the system appearance, and the palette drawn over the
+    /// base map is selected by the same value — so the one case where those can
+    /// disagree has to be settled by the renderer, not by hope. Apple Maps takes
+    /// either. The souvenir map is a dark style sheet with no light variant, and
+    /// a light-mode device with tiles installed would otherwise get an orange
+    /// trail and a light-tuned grade over a near-black map: the halo defect's
+    /// mechanism, running the other way.
+    ///
+    /// Not env-gated, for the same reason as the test above it: no snapshot, no
+    /// tiles, no network, and the regression it guards is silent in a still.
+    func testASubstrateLockedToOneAppearanceOverridesTheDevices() throws {
+        let appleMaps = try ReviewSubstrate.renderer(region: nil, reporting: "KAMOME_DEMO_FILM").capabilities
+        XCTAssertNil(
+            appleMaps.fixedAppearance,
+            "Apple Maps renders either appearance — it must not claim to be locked to one"
+        )
+        for requested in RecapAppearance.allCases {
+            XCTAssertEqual(
+                appleMaps.appearance(honouring: requested), requested,
+                "a substrate with no fixed appearance must pass the device's choice through"
+            )
+        }
+
+        #if canImport(MapLibre)
+        // Any style URL: the capability is a property of the substrate, and this
+        // takes no snapshot.
+        let souvenir = MapLibreSnapshotProvider(
+            styleURL: URL(fileURLWithPath: "/dev/null")
+        ).capabilities
+        XCTAssertEqual(
+            souvenir.fixedAppearance, .dark,
+            "the souvenir map's style sheet is dark and has no light variant — it must say so"
+        )
+        for requested in RecapAppearance.allCases {
+            XCTAssertEqual(
+                souvenir.appearance(honouring: requested), .dark,
+                "a light-mode device must not get Kamome's light palette over the dark souvenir map"
+            )
+        }
+        #endif
+    }
 }

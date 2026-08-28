@@ -136,7 +136,10 @@ final class RecapSnapshotBudgetTests: XCTestCase {
             LinearTimeline(trip: trip, config: config, establishing: nil),
             "the fixture produced no timeline"
         )
-        let style = RecapStyle.modernMinimal.withEndCard(config.endCardStyle)
+        // Pinned, not inherited: this bench counts snapshots and its numbers must
+        // not move because someone toggled the simulator's appearance. Light is
+        // the shipped Apple Maps base it has always measured against.
+        let style = RecapStyle.modernMinimal(.light).withEndCard(config.endCardStyle)
         return Scene(
             timeline: timeline,
             compositor: FrameCompositor(
