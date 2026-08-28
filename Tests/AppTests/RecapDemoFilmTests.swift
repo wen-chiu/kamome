@@ -72,7 +72,7 @@ final class RecapDemoFilmTests: XCTestCase {
         let provider = try snapshotProvider(region: region)
         let compositor = FrameCompositor(
             timeline: timeline,
-            subject: VehicleSubjectRenderer.make(style: style, config: config),
+            subject: Self.subjectRenderer(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: DeckResolver(images: images)),
             style: style,
             widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
@@ -349,24 +349,7 @@ final class RecapDemoFilmTests: XCTestCase {
         )
     }
 
-    // MARK: - Providers and assets
-
-    private func snapshotProvider(region: RecapMapRegion?) throws -> MapRenderer {
-        #if canImport(MapLibre)
-        guard let region else {
-            XCTFail("no region covering the trip — set TEST_RUNNER_KAMOME_TILES_PATH")
-            return MapKitSnapshotProvider()
-        }
-        print("KAMOME_DEMO_FILM region bounds \(region.bounds), terrain: \(region.terrainURL != nil)")
-        let styleURL = try RecapMapStyle.resolvedStyleURL(
-            styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL,
-            terrainURL: region.terrainURL
-        )
-        return MapLibreSnapshotProvider(styleURL: styleURL)
-        #else
-        return MapKitSnapshotProvider()
-        #endif
-    }
+    // MARK: - Assets
 
     private func outputDirectory() -> URL {
         if let override = HarnessEnv.value("KAMOME_RENDER_OUT") {

@@ -137,7 +137,7 @@
     "total_duration_min_s": 60,
     "total_duration_max_s": 90,
     "keyframe_interval_frames": 15,
-    "subject_length_px": 225,
+    "subject_length_px": 157.5,
     "title_card_s": 3.0,
     "end_card_s": 3.0,
     "video_bitrate_mbps": 5,
