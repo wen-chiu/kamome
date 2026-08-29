@@ -41,6 +41,14 @@ Config/Secrets.xcconfig
 **/.dev.vars
 !**/.dev.vars.example
 
+# Node dependency trees. The repository had no rule at all until 2026-08-29,
+# because it had no JavaScript dependencies to install — `Deploy/worker/` ran on
+# whatever `npx` happened to resolve that day. Pinning wrangler there creates a
+# real `node_modules/`, and `@cloudflare/workerd-*` alone is tens of megabytes of
+# platform binary that must never enter git.
+node_modules/
+**/node_modules/
+
 # Built routing + tile artifacts are gigabytes and live outside the repo
 # ($KAMOME_DATA_DIR, default ~/kamome-osrm) — this only catches strays.
 *.osm.pbf

@@ -24,10 +24,14 @@ allowlist, HTTP referrer, CORS origin) are all browser mechanisms.
 
 ```bash
 cd Deploy/worker
+npm ci                                     # pinned wrangler, right arch for this machine
 npx wrangler login
 npx wrangler secret put GEOAPIFY_API_KEY   # paste the key from ~/.kamome/routing.env
-npx wrangler deploy
+npm run deploy
 ```
+
+**`npm ci` first is not optional, and `npm` here must be Node 22 or newer.** See
+"The Node version trap" below — skipping it is what broke the 2026-08-28 deploy.
 
 Then point the app at it, which is **two config values** and no code:
 
@@ -50,6 +54,42 @@ refused (§0 — exposure for nothing).
 `Config/Secrets.xcconfig` becomes unnecessary at that point. Leaving a key in it
 is harmless — the app just stops sending one — but delete it from any machine
 that builds for distribution.
+
+## The Node version trap
+
+**This cost a deploy on 2026-08-28.** `npx wrangler deploy` died with:
+
+```
+Error: You installed workerd on another platform than the one you're currently
+using. The "@cloudflare/workerd-darwin-64" package is present but this platform
+needs "@cloudflare/workerd-darwin-arm64".
+```
+
+The error names neither Node nor a version, so here is what it means. wrangler
+pulls `workerd` as a set of platform-specific optional dependencies, each
+declaring `cpu` and `os`; npm installs whichever matches `process.arch` **at
+install time**. A login shell on this machine defaulted to **Node 17, which is an
+x64 build running under Rosetta**, so npm resolved the Intel `workerd` into the
+shared `~/.npm/_npx/` cache — and `npx` reuses that cache afterwards even once an
+arm64 Node is active.
+
+Purging the cache unblocks it once. It comes back the next time a shell defaults
+to 17, which is why the fix is in this directory instead:
+
+- **`package.json` pins `wrangler` exactly** (not `^`), so a deploy tool that
+  holds an API key resolves to a known version rather than whatever was latest
+  that day.
+- **`package-lock.json` carries every platform's `workerd`** with its `cpu`/`os`
+  constraints, so one committed lockfile still resolves correctly per machine —
+  `npm ci` picks arm64 here and x64 elsewhere.
+- **`node_modules/` is local to this directory**, so `npx wrangler` finds it
+  before it ever consults the shared npx cache.
+- **`.npmrc` sets `engine-strict=true`**, so running this under Node 17 now fails
+  with `EBADENGINE … Required: {"node":">=22.0.0"} Actual: v17.0.0` rather than
+  the workerd message above. A clear failure instead of a puzzling one.
+
+If `npm ci` reports `EBADENGINE`, switch Node (`nvm use 24.3.0`) — do not work
+around it by deleting `.npmrc`. wrangler 4.127.1 genuinely requires Node ≥ 22.
 
 ## What this Worker will and will not do
 
@@ -108,11 +148,12 @@ Worker that holds no production secret.
 ## Checking it before you deploy
 
 ```bash
-node Deploy/worker/test/worker.test.mjs
+cd Deploy/worker && npm test
 ```
 
 Nine assertions against a stubbed upstream — no Cloudflare, no key, no network.
-Needs Node 18+ for the `fetch`/`Request`/`Response` globals (run on v24.3.0). It
+Needs Node 22+ to match `package.json`'s `engines` (run on v24.3.0); the globals
+it actually uses — `fetch`/`Request`/`Response` — have been there since 18. It
 is **not** part of `xcodebuild test`: this repository's CI is the Xcode suite,
 and a deploy artifact should not invent a second one.
 
