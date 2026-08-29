@@ -154,33 +154,59 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
         }
     }
 
-    /// **The fallback marker must contrast with the base map it lands on.**
+    /// **The fallback marker must be noticed when it appears at all** — restated
+    /// 2026-08-29, because the marker became a badge and the old assertion
+    /// measured a relationship the badge no longer has.
     ///
     /// It is drawn only when the vehicle artwork cannot be loaded — an
     /// intermittent, undiagnosed failure. On 2026-08-28 it fired by itself in one
     /// review render of four, and **the wrong still survived review because a
-    /// white gull on a light base is hard to see.** So this is not a look rule:
-    /// the marker's job includes being noticed when it appears at all.
+    /// white gull on a light base is hard to see.** That is the rule, and it has
+    /// not changed. What changed is how the marker satisfies it.
     ///
-    /// Asserted as luminance against the base rather than as two colour literals,
-    /// because what must hold is "it is visible", not "it is this ink".
-    func testTheFallbackMarkerContrastsWithItsBaseMap() throws {
+    /// **Was:** one colour, the gull's fill, against an *assumed* base — dark on
+    /// light, light on dark. That rule was sound for a thin stroked bird whose
+    /// only defence was differing from whatever it flew over. It also could not
+    /// be satisfied in blue: every value dark enough to clear the ceiling was too
+    /// dark for its hue to register (measured 2026-08-29 — the navy sweep).
+    ///
+    /// **Is:** the badge carries its own contrast, so the pair that must hold
+    /// apart is the **disc and what is drawn on it**, and the base map stops
+    /// being a term. Two conditions, and both are the rule rather than the
+    /// value:
+    ///
+    /// 1. they straddle mid-grey, so whichever side the terrain falls on, one of
+    ///    the two is on the other side of it;
+    /// 2. they are far apart — wider than the **0.30** the old thresholds implied
+    ///    between a compliant dark value and a compliant light one, which is the
+    ///    anchor for this number rather than a fresh judgement.
+    ///
+    /// Asserted for **both** appearances, deliberately: whether one badge serves
+    /// both is Chiu's open question, and this holds either answer to the same bar.
+    func testTheFallbackMarkerCarriesItsOwnContrast() throws {
         func luminance(_ color: CGColor) throws -> CGFloat {
             let rgb = try XCTUnwrap(color.components)
             return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
         }
-        // Comfortably clear of mid-grey in each direction: the marker has to read
-        // at a glance on a pale map or a near-black one, not merely differ from it.
-        let ceiling: CGFloat = 0.35
-        let floor: CGFloat = 0.65
-        XCTAssertLessThan(
-            try luminance(RecapStyle.modernMinimal(.light).fallbackMarkerColor), ceiling,
-            "on a light base the fallback marker must be dark — a white gull is how a failed render passed review"
-        )
-        XCTAssertGreaterThan(
-            try luminance(RecapStyle.modernMinimal(.dark).fallbackMarkerColor), floor,
-            "on a dark base it must stay light"
-        )
+        let midGrey: CGFloat = 0.5
+        let minimumSeparation: CGFloat = 0.45
+        for appearance in [RecapAppearance.light, .dark] {
+            let style = RecapStyle.modernMinimal(appearance)
+            let disc = try luminance(style.fallbackMarkerColor)
+            let onDisc = try luminance(style.fallbackMarkerOnDiscColor)
+            XCTAssertGreaterThan(
+                abs(disc - onDisc), minimumSeparation,
+                "\(appearance): the ring and gull must read against the disc — \(disc) vs \(onDisc)"
+            )
+            XCTAssertLessThan(
+                min(disc, onDisc), midGrey,
+                "\(appearance): one part of the badge must be dark enough to read on a pale map"
+            )
+            XCTAssertGreaterThan(
+                max(disc, onDisc), midGrey,
+                "\(appearance): one part of the badge must be light enough to read on a dark map"
+            )
+        }
     }
 
     /// The dark base keeps the cyan it was tuned for, and it is *not* the same

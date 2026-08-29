@@ -149,7 +149,17 @@ public struct RecapStyle {
     /// freely. The gull is the brand mascot and reads as a light glyph over the
     /// dark souvenir map — deliberately not the car's red, so the two are never
     /// confused in a still.
-    public var fallbackMarker: VehicleMarker = .seagull
+    /// A **badge** since 2026-08-29 (Chiu), not a bare bird: a disc, a ring, and
+    /// the gull inside it. The reasoning is in `drawSeagullBadge` — in short, a
+    /// bare gull is only as visible as the terrain under it happens to allow,
+    /// and a badge carries its own contrast.
+    ///
+    /// `.seagull` is deliberately still here and still drawn: it is the end-card
+    /// brand mark (`RecapOverlayChromeDrawing.drawMark`), and it is what the
+    /// cross-region narrator would use. Pointing this token at a new case rather
+    /// than restyling `.seagull` is what keeps the fault indicator and the brand
+    /// mark from being one drawing with two jobs.
+    public var fallbackMarker: VehicleMarker = .seagullBadge
     /// The marker's size **as a fraction of the subject it stands in for**, not
     /// as pixels of its own (Chiu 2026-08-29).
     ///
@@ -166,13 +176,29 @@ public struct RecapStyle {
     /// cannot supply this one — the fallback fires precisely when the manifest
     /// could not be read.
     public var fallbackMarkerLengthFraction: CGFloat = 1
-    public var fallbackMarkerColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
+    /// The badge's **disc**. Still named for the marker as a whole because it is
+    /// still the marker's own colour — the one a preset picks per appearance.
+    public var fallbackMarkerColor = CGColor(srgbRed: 0.114, green: 0.435, blue: 0.878, alpha: 1)
+    /// The badge's **ring and gull**, which are one colour: the badge has three
+    /// parts but two colours, and the contrast that matters is between this and
+    /// the disc rather than between either of them and the map.
+    ///
+    /// Fallback-specific for the reason `fallbackMarkerColor` is: it is the
+    /// marker's own value, and `markerAccentColor` means "handlebars and wheels"
+    /// on the line-art markers. Sharing one token would have been two roles
+    /// under one name, which this file already has one casualty of.
+    public var fallbackMarkerOnDiscColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     /// ⚠️ **Nothing draws this** either — the vector marker's fill comes from
     /// `fallbackMarkerColor` (`VehicleSubjectRenderer.make`'s guard), and this
     /// token has no reader anywhere in the repository; grep-verified 2026-08-28,
     /// re-checked 2026-08-29. Same treatment as the two above: reported, not
     /// removed in this change.
     public var markerColor = CGColor(srgbRed: 0.95, green: 0.27, blue: 0.28, alpha: 1)
+    /// ⚠️ **Joined the list on 2026-08-29.** The badge takes its ring and gull
+    /// from `fallbackMarkerOnDiscColor`, so the only markers that still read this
+    /// are `.scooter` and `.bike` — and those are reachable from
+    /// `RecapMarkerDeckStillsTests` and nowhere else. Reported here rather than
+    /// removed, because the line-art markers are not this change's to delete.
     public var markerAccentColor = CGColor(srgbRed: 0.98, green: 0.98, blue: 0.99, alpha: 0.92)
     public var markerOutlineColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
 
