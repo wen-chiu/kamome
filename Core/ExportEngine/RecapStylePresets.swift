@@ -116,6 +116,35 @@ public extension RecapStyle {
             // the core's width in the 2026-08-21 Iceland film, and judged gone by
             // Chiu on film A (`a58942d`, 2026-08-22).
             style.routeGlowColor = style.routeColor.copy(alpha: 0) ?? style.routeColor
+            // ⏳ **Two tokens caught in the same water-colour trap as the trail**
+            // (Chiu approved the direction 2026-08-29; the *values* are still his
+            // to judge from `~/Kamome-films/2026-08-29-tokens/`).
+            //
+            // The stop pin takes the trail's own hue. That is not a new rule
+            // being invented for light — it is the rule the dark preset has
+            // always followed without saying so: `labelPinColor` `(0.35,0.85,0.95)`
+            // is within 0.07 of `trailOnDark` on every channel. Left as cyan on a
+            // light base it is a water-coloured dot sitting on a coastline, which
+            // is exactly the collision the trail was moved out of. Dark is
+            // deliberately not touched here, so the change is one appearance wide.
+            style.labelPinColor = trailOnLight
+            // The fallback marker's job changed on 2026-08-28, and that is why
+            // this is not cosmetic. It is drawn only when the vehicle artwork
+            // cannot be loaded — a failure that is intermittent, undiagnosed, and
+            // (until another branch made it log) silent. During the appearance
+            // renders one still in four came back with the gull instead of the
+            // car, and **the wrong still survived review precisely because a
+            // white gull on a light base is hard to see**. So this token is now
+            // partly a diagnostic: it has to say "something went wrong" at a
+            // glance.
+            //
+            // Hence the ink rather than the trail's orange — a warm gull would
+            // sit on the warm trail it is travelling along and read as styling.
+            // The value is `markerOutlineColor`'s, reused rather than invented,
+            // so the film gains no new colour. Only `fill` matters: the shipped
+            // `.seagull` is a single stroked arc and never reads `accent` or
+            // `outline` (`RecapVehicleMarker.drawSeagull`).
+            style.fallbackMarkerColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
         }
         // Derived, never chosen: the dashed leg is the same claim made weaker.
         // See `routeInferredAlpha` — this is the product rule, not a colour pick.

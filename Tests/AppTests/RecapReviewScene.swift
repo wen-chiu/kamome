@@ -113,6 +113,19 @@ struct RecapReviewScene {
         // 30% below 225), and truncating it to "157px" in the one line a reviewer
         // reads is how a still gets judged against a number nobody rendered.
         print("KAMOME_REVIEW subject \(subjectId ?? VehicleCatalog.defaultSubjectId) at \(lengthPx)px")
+        // `KAMOME_FORCE_FALLBACK_MARKER` drives the **failure** visual on purpose
+        // (2026-08-29). `make`'s doc comment used to say that path "only fires
+        // when the app's own resource bundle cannot be found — a state no test can
+        // arrange"; on 2026-08-28 it fired by itself in one review render out of
+        // four, silently, and the wrong still survived review. A token whose job
+        // is now partly to make that failure visible has to be renderable on
+        // demand, or its colour can only ever be judged by accident.
+        guard HarnessEnv.value("KAMOME_FORCE_FALLBACK_MARKER") == nil else {
+            print("KAMOME_REVIEW FORCING the fallback marker — the sprite path is deliberately bypassed")
+            return VehicleSubjectRenderer.make(
+                style: style, subjectId: subjectId, lengthPx: lengthPx, resolve: { _ in nil }
+            )
+        }
         return VehicleSubjectRenderer.make(style: style, subjectId: subjectId, lengthPx: lengthPx)
     }
 

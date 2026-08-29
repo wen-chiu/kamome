@@ -41,6 +41,18 @@ enum ReviewPalette {
                 ?? style.routeColor
         }
 
+        if let raw = HarnessEnv.value("KAMOME_ROUTE_INFERRED_ALPHA") {
+            guard let alpha = Double(raw), (0...1).contains(alpha) else {
+                throw HarnessError("KAMOME_ROUTE_INFERRED_ALPHA=\(raw) is not an alpha between 0 and 1")
+            }
+            // Applied *after* the derivation above, so it overrides the product
+            // rule's alpha without breaking the rule's shape: the dashed leg is
+            // still the trail's own hue, just a different amount of it. This is
+            // the one lever the 2026-08-29 separation question turns on — see
+            // `HANDOFF.md` finding 8.
+            style.routeInferredColor = style.routeColor.copy(alpha: CGFloat(alpha)) ?? style.routeColor
+        }
+
         if let raw = HarnessEnv.value("KAMOME_ROUTE_GLOW_ALPHA") {
             guard let alpha = Double(raw), (0...1).contains(alpha) else {
                 throw HarnessError("KAMOME_ROUTE_GLOW_ALPHA=\(raw) is not an alpha between 0 and 1")
@@ -111,9 +123,13 @@ enum ReviewPalette {
         if HarnessEnv.value("KAMOME_ROUTE_COLOR") != nil {
             parts.append("trail\(hex(style.routeColor))")
         }
+        if HarnessEnv.value("KAMOME_ROUTE_INFERRED_ALPHA") != nil {
+            parts.append("dash\(String(format: "%.2f", style.routeInferredColor.alpha))")
+        }
         if HarnessEnv.value("KAMOME_ROUTE_GLOW_ALPHA") != nil {
             parts.append("glow\(String(format: "%.2f", style.routeGlowColor.alpha))")
         }
+        if HarnessEnv.value("KAMOME_FORCE_FALLBACK_MARKER") != nil { parts.append("fallback") }
         return parts.joined(separator: "-")
     }
 }

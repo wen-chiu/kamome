@@ -129,6 +129,60 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
         XCTAssertGreaterThan(red, green, "the warm hue must lead on red")
     }
 
+    /// **The stop pin travels with the trail's hue** (2026-08-29).
+    ///
+    /// Not a rule invented for light — the rule the dark preset had always
+    /// followed without saying so: `labelPinColor` `(0.35,0.85,0.95)` is within
+    /// 0.07 of `trailOnDark` on every channel. Saying it out loud is what stops a
+    /// cyan pin being left on a light base, where it is a water-coloured dot on a
+    /// coastline: the same collision the trail itself was moved out of, on a
+    /// token nobody had looked at.
+    ///
+    /// Held as *hue family* rather than as equality, because the dark pin is
+    /// deliberately a shade off its trail and equality would demand a change to a
+    /// value nobody asked to move.
+    func testTheStopPinTravelsWithTheTrailsHue() throws {
+        for appearance in RecapAppearance.allCases {
+            let style = RecapStyle.modernMinimal(appearance)
+            let trail = try XCTUnwrap(style.routeColor.components)
+            let pin = try XCTUnwrap(style.labelPinColor.components)
+            let dominant = { (rgb: [CGFloat]) in rgb.prefix(3).enumerated().max { $0.element < $1.element }?.offset }
+            XCTAssertEqual(
+                dominant(Array(pin)), dominant(Array(trail)),
+                "\(appearance): the stop pin must sit in the trail's colour family, not the base map's"
+            )
+        }
+    }
+
+    /// **The fallback marker must contrast with the base map it lands on.**
+    ///
+    /// It is drawn only when the vehicle artwork cannot be loaded — an
+    /// intermittent, undiagnosed failure. On 2026-08-28 it fired by itself in one
+    /// review render of four, and **the wrong still survived review because a
+    /// white gull on a light base is hard to see.** So this is not a look rule:
+    /// the marker's job includes being noticed when it appears at all.
+    ///
+    /// Asserted as luminance against the base rather than as two colour literals,
+    /// because what must hold is "it is visible", not "it is this ink".
+    func testTheFallbackMarkerContrastsWithItsBaseMap() throws {
+        func luminance(_ color: CGColor) throws -> CGFloat {
+            let rgb = try XCTUnwrap(color.components)
+            return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+        }
+        // Comfortably clear of mid-grey in each direction: the marker has to read
+        // at a glance on a pale map or a near-black one, not merely differ from it.
+        let ceiling: CGFloat = 0.35
+        let floor: CGFloat = 0.65
+        XCTAssertLessThan(
+            try luminance(RecapStyle.modernMinimal(.light).fallbackMarkerColor), ceiling,
+            "on a light base the fallback marker must be dark — a white gull is how a failed render passed review"
+        )
+        XCTAssertGreaterThan(
+            try luminance(RecapStyle.modernMinimal(.dark).fallbackMarkerColor), floor,
+            "on a dark base it must stay light"
+        )
+    }
+
     /// The dark base keeps the cyan it was tuned for, and it is *not* the same
     /// trail the light base draws. One value, two films — the whole point of
     /// `modernMinimal(_:)` being a function.

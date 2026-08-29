@@ -191,6 +191,7 @@ schemes:
         - { variable: KAMOME_E, value: "$(TEST_RUNNER_KAMOME_E)", isEnabled: true }
         - { variable: KAMOME_FOLLOWCAM_STILLS, value: "$(TEST_RUNNER_KAMOME_FOLLOWCAM_STILLS)", isEnabled: true }
         - { variable: KAMOME_FORCE_DURATION_S, value: "$(TEST_RUNNER_KAMOME_FORCE_DURATION_S)", isEnabled: true }
+        - { variable: KAMOME_FORCE_FALLBACK_MARKER, value: "$(TEST_RUNNER_KAMOME_FORCE_FALLBACK_MARKER)", isEnabled: true }
         - { variable: KAMOME_GEOCODE_STOPS, value: "$(TEST_RUNNER_KAMOME_GEOCODE_STOPS)", isEnabled: true }
         - { variable: KAMOME_KEYFRAME_INTERVAL, value: "$(TEST_RUNNER_KAMOME_KEYFRAME_INTERVAL)", isEnabled: true }
         - { variable: KAMOME_LIVE_GEOCODE, value: "$(TEST_RUNNER_KAMOME_LIVE_GEOCODE)", isEnabled: true }
@@ -208,6 +209,7 @@ schemes:
         - { variable: KAMOME_RECAP_MODE, value: "$(TEST_RUNNER_KAMOME_RECAP_MODE)", isEnabled: true }
         - { variable: KAMOME_RENDER_BENCH, value: "$(TEST_RUNNER_KAMOME_RENDER_BENCH)", isEnabled: true }
         - { variable: KAMOME_ROUTE_COLOR, value: "$(TEST_RUNNER_KAMOME_ROUTE_COLOR)", isEnabled: true }
+        - { variable: KAMOME_ROUTE_INFERRED_ALPHA, value: "$(TEST_RUNNER_KAMOME_ROUTE_INFERRED_ALPHA)", isEnabled: true }
         - { variable: KAMOME_ROUTE_GLOW_ALPHA, value: "$(TEST_RUNNER_KAMOME_ROUTE_GLOW_ALPHA)", isEnabled: true }
         - { variable: KAMOME_ROUTING_BASE_URL, value: "$(TEST_RUNNER_KAMOME_ROUTING_BASE_URL)", isEnabled: true }
         - { variable: KAMOME_RENDER_OUT, value: "$(TEST_RUNNER_KAMOME_RENDER_OUT)", isEnabled: true }
