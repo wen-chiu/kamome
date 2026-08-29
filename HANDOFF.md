@@ -287,6 +287,50 @@ Apple Maps base *and* the orange trail, and its solid stroke measures
 `(216,120,84)`, matching candidate B exactly. That is the shipped path working end
 to end, not a harness-only result.
 
+### 12. ✅ 2026-08-29 — two more tokens were in the water, and the enumeration was wrong twice
+
+Chiu approved the direction; the **values are candidates** for him, rendered into
+`~/Kamome-films/2026-08-29-tokens/`.
+
+**`fallbackMarkerColor` → ink `(0.11, 0.13, 0.19)` on light.** Finding 10 is the
+reason this is not cosmetic: the marker only appears when the vehicle artwork
+cannot be loaded, and *the wrong still survived review because a white gull on a
+light base is hard to see*. So the token's job now includes being noticed.
+Measured, with the sprite path deliberately bypassed:
+
+| | marker, composited | terrain beside it | luminance gap |
+|---|---|---|---:|
+| light, **white** (what happened by accident) | `(216,218,222)` | `(211,213,217)` | **~5** |
+| light, **ink** (the candidate) | `(25,32,48)` | `(212,213,218)` | **~180** |
+| dark, white (unchanged) | `(216,218,222)` | `(91,115,152)` | ~105 |
+
+Ink rather than the trail's orange, deliberately: a warm gull would sit on the warm
+trail it is travelling along and read as styling rather than as a fault. The value
+is `markerOutlineColor`'s, reused so the film gains no new colour, and only `fill`
+matters — the shipped `.seagull` is a single stroked arc that reads neither
+`accent` nor `outline`.
+
+**`labelPinColor` → the trail's own hue on light.** Not a new rule: the dark preset
+had followed it silently all along — `(0.35,0.85,0.95)` is within **0.07** of
+`trailOnDark` on every channel. Left cyan on Apple Maps it is a water-coloured dot
+sitting on a coastline. Dark is deliberately untouched, so the change is one
+appearance wide.
+
+⚠️ **The part worth carrying forward is how the enumeration failed.** The design
+doc's palette table (§5) got two answers wrong, both the same way: I judged each
+token by *where it is drawn* rather than by *what it is drawn on*.
+`fallbackMarkerColor` was written off as "fallback-only" and the fallback fired by
+itself the same day. `labelPinColor` was never enumerated at all — the brief did
+not list it and it is not part of the trail. The question that catches both is not
+"does this token matter?" but **"what does this colour sit on, on each base?"**
+Anyone auditing the remaining tokens should ask it that way.
+
+Both are held by new always-on guards, each shown red by a positive control — as
+*rules*, not values: the pin must sit in the trail's hue family (not equality, since
+the dark pin is deliberately a shade off), and the fallback marker must contrast
+with its base by luminance (not "must be this ink", since what has to be true is
+that it is visible).
+
 ---
 
 ## Findings — engineering session, three visual checks (2026-08-22)

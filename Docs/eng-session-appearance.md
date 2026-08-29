@@ -179,15 +179,24 @@ marked ⏳ are Chiu's, from the stills this session hands over.
 | `cardColor` | dark @ α0.90 | **no consumer** | **no — dead token** (`HANDOFF.md` 2026-08-28 finding 3) |
 | `cardTextColor` | near-white | **no consumer** | **no — dead token** |
 | `markerColor` | red | **no consumer** | **no — dead token** |
-| `markerAccentColor`, `markerOutlineColor` | near-white, near-black | `RecapSubjectRenderer:76` | fallback-only path (sprite load failure) |
-| `fallbackMarkerColor` | white | `RecapSubjectRenderer:76` | fallback-only, but a **white** gull on a light base is the one that would need it if that path ever ships |
+| `markerAccentColor`, `markerOutlineColor` | near-white, near-black | `RecapSubjectRenderer:76` | **no** — the shipped `.seagull` is a single stroked arc and reads neither (`RecapVehicleMarker.drawSeagull`) |
+| `fallbackMarkerColor` | white | `RecapSubjectRenderer:76` | **YES — changed 2026-08-29.** Ink on light. This row said "fallback-only" and was wrong within a day: the fallback fired by itself during the renders, and the white gull is *why the wrong still survived review* |
+| `labelPinColor` | cyan `(0.35,0.85,0.95)` | `RecapOverlayRenderer:132` | **YES — changed 2026-08-29.** Takes the trail's hue; it was a water-coloured dot on a coastline. Not in the brief's list |
 
 **Tokens the brief's list omits and that are on screen in the reviewed frame:**
 `hudPillColor` (dark pill @ α0.72) and `hudTextColor` (near-white) —
-`RecapOverlayHUDDrawing:42,54,77`, the "Day 9" / "1,594 km" row; and
-`labelTextColor` (white type) with `labelShadowColor` — `RecapOverlayRenderer:216`.
-The HUD pill survives on light in the 2026-08-27 still. The stop label is not in
-that frame and is handed over separately.
+`RecapOverlayHUDDrawing:42,54,77`, the "Day 9" / "1,594 km" row; `labelTextColor`
+(white type) with `labelShadowColor` — `RecapOverlayRenderer:216`; and
+`labelPinColor`, which turned out to be in the same water-colour trap as the trail
+and **has since been changed** (above).
+
+⚠️ **The lesson this table taught, worth more than the table.** Two of its "no"
+answers were wrong, and both were wrong the same way: I judged a token by *where
+it is drawn* rather than by *what it is drawn on*. `fallbackMarkerColor` was
+dismissed as a fallback path — then the fallback fired on its own the same day.
+`labelPinColor` was not enumerated at all, because the brief did not list it and it
+is not part of the trail. The question that catches both is not "does this token
+matter?" but "**what does this colour sit on, on each base?**" 
 
 ## 6. Which orange — the sweep, and the constraint nobody named
 
