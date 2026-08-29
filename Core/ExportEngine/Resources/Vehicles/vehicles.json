@@ -116,7 +116,7 @@
       "kind": "omni",
       "type": "mark",
       "selectable": true,
-      "length_fraction": 0.7,
+      "length_fraction": 1.0,
       "names": {
         "en": "Seagull",
         "zh-Hant": "海鷗"

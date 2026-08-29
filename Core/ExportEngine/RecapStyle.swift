@@ -37,8 +37,11 @@ public struct RecapStyle {
     /// without competing with the route it is signing.
     public var minimalMarkSidePx: CGFloat = 56
     // Route trail (§4.5 step 2, drawn by OverlayRenderer as `routeReveal`). The
-    // trail is stroked twice: a wide, soft glow pass under a crisp core, so it
-    // reads as a lit line on the dark souvenir map rather than a flat polyline.
+    // trail *can* be stroked twice — a wide, soft glow pass under a crisp core,
+    // which reads as a lit line on a dark souvenir map rather than a flat
+    // polyline. No shipped style asks for it today: the glow reads as light only
+    // over a dark base, and Apple Maps has been the substrate since the
+    // 2026-08-15 ADR. The pass stays for the day a dark base returns.
     public var routeColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 1)
     public var routeWidthPx: CGFloat = 14
     /// Glow pass under the trail. `routeGlowWidthMultiple` is relative to
@@ -278,10 +281,10 @@ public struct RecapStyle {
     /// **Modern Minimal** — the overlay half of the theme whose map half is
     /// `Config/RecapThemes/modern-minimal.json` (spec §7; the ONE MVP theme).
     ///
-    /// Tuned against the dark subtractive souvenir map: a glowing cyan trail
-    /// instead of the flat blue polyline, a cool grade, and a soft vignette that
-    /// pulls the eye to the middle of the frame where the car and the photo card
-    /// live. Chrome panels go dark so a white card never punches a hole in a
+    /// Tuned against the dark subtractive souvenir map: a cyan trail instead of
+    /// the flat blue polyline, a cool grade, and a soft vignette that pulls the
+    /// eye to the middle of the frame where the car and the photo card live.
+    /// Chrome panels go dark so a white card never punches a hole in a
     /// night-time film.
     ///
     /// This preset is what the app renders; the plain `RecapStyle()` defaults
@@ -289,11 +292,20 @@ public struct RecapStyle {
     /// assert exact pixels and must not move when the theme is retuned.
     public static var modernMinimal: RecapStyle {
         var style = RecapStyle()
-        // Glowing trail: a wide translucent pass under a bright, crisp core.
         style.routeColor = CGColor(srgbRed: 0.42, green: 0.87, blue: 0.98, alpha: 1)
         style.routeWidthPx = 17
-        style.routeGlowColor = CGColor(srgbRed: 0.22, green: 0.62, blue: 0.92, alpha: 0.32)
-        style.routeGlowWidthMultiple = 3.0
+        // **No glow pass** (Chiu 2026-08-22). The glow was a wide translucent
+        // stroke under the crisp core, and over the dark souvenir map it read as
+        // light. On the light Apple Maps base that ships since the 2026-08-15
+        // substrate ADR the same mid-blue at alpha 0.32 composites *darker* than
+        // the terrain, so it reads as a shadow ringing the trail — measured in
+        // the 2026-08-21 Iceland film at 3.12x the core's width.
+        //
+        // The pass itself is kept and still runs for any style that asks: it is
+        // guarded on alpha in `drawRouteLeg`, and it is the right treatment again
+        // the day a dark substrate returns. What changed is that the *shipped*
+        // preset no longer asks for it.
+        style.routeGlowColor = style.routeGlowColor.copy(alpha: 0) ?? style.routeGlowColor
         // Inferred: same hue so it still reads as the journey, but unlit,
         // thinner and dashed — visibly a guess, not a road.
         style.routeInferredColor = CGColor(srgbRed: 0.42, green: 0.87, blue: 0.98, alpha: 0.55)

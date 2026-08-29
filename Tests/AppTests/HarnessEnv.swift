@@ -17,3 +17,15 @@ enum HarnessEnv {
         return raw
     }
 }
+
+/// A desk-harness variable was set to something the harness cannot use.
+///
+/// Refusing beats defaulting: a review render is judged by looking, and a film
+/// that quietly ignored the setting the reviewer asked for looks exactly like a
+/// film that honoured it. `HarnessEnv.value` already collapses empty to nil, so
+/// reaching this means a real value was typed and misread.
+struct HarnessError: Error, CustomStringConvertible {
+    let description: String
+
+    init(_ description: String) { self.description = description }
+}

@@ -90,26 +90,41 @@ final class VehicleCatalogTests: XCTestCase {
     ///
     /// The seagull's value is asserted rather than merely allowed, so changing it
     /// is a deliberate edit to this test and not a silent drift in a JSON file.
-    /// It moved 0.5 → 0.7 on 2026-08-18, and this is the whole argument for a
-    /// fraction earning its keep: the proportion changed and nothing else had to.
+    /// It moved 0.5 → 0.7 on 2026-08-18, then **0.7 → 1.0 on 2026-08-27**.
+    ///
+    /// ⚠️ **At 1.0 this pair can no longer prove the multiply happens** — a mark
+    /// that ignored its fraction entirely would render at exactly the same size.
+    /// The mechanism is kept honest by `testADeclaredSizeOverrideWinsOverConfig`,
+    /// which drives it with a non-unit fraction; what is asserted *here* is the
+    /// shipped value and the size it produces. Arch.md §7.2: a case you merely
+    /// believe still works is one you have not tested, so the two tests split the
+    /// work rather than one of them quietly going vacuous.
     func testAnOmniMarkMayDeclareItsOwnProportion() throws {
         let seagull = try XCTUnwrap(VehicleCatalog.subject(id: "seagull"))
         XCTAssertEqual(seagull.kind, .omni)
         XCTAssertEqual(
-            seagull.lengthFraction, 0.7,
-            "the mark is 0.7 of a vehicle — Chiu's call 2026-08-18, after 0.5 read too small"
+            seagull.lengthFraction, 1.0,
+            "the mark is pinned at full subject size — Chiu's call 2026-08-27, when the base fell to 157.5"
         )
 
-        // At the shipped 225 that is 157.5 px, and it tracks any later change.
-        for configured in [CGFloat(225), 200, 300] {
+        // Whatever the base, the mark takes it whole and tracks later changes.
+        for configured in [CGFloat(157.5), 200, 300] {
             let renderer = VehicleSubjectRenderer.make(
                 style: RecapStyle(), subjectId: "seagull", lengthPx: configured
             )
             XCTAssertEqual(
-                renderer.lengthPx, configured * 0.7, accuracy: 0.001,
-                "the mark must stay 0.7 of the subject size at \(configured)"
+                renderer.lengthPx, configured, accuracy: 0.001,
+                "the mark must take the full subject size at \(configured)"
             )
         }
+        // The point of pinning: at the new base the mark renders at 157.5 px,
+        // which is exactly what it rendered at before (225 × 0.7). Letting it
+        // follow the base down would have given 110.25 px — below the 112.5 px
+        // that was rejected as too small on 2026-08-18.
+        let shipped = VehicleSubjectRenderer.make(
+            style: RecapStyle(), subjectId: "seagull", lengthPx: 157.5
+        )
+        XCTAssertEqual(shipped.lengthPx, 157.5, accuracy: 0.001, "the mark's rendered size must not have moved")
     }
 
     /// The override mechanism still exists for the set that eventually needs it,

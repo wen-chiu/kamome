@@ -54,3 +54,10 @@ node_modules/
 *.osm.pbf
 *.pmtiles
 !Tests/Fixtures/tiles/*.pmtiles
+
+# wrangler's local state. `.wrangler/cache/wrangler-account.json` holds the
+# Cloudflare account id — not a secret (it appears in dashboard URLs and
+# authenticates nothing), but it is a 32-hex string, and this project's key-leak
+# check is "zero 32-hex hits over the pushed range". A permanent false positive
+# there trains people to ignore the check, which is how a real one gets through.
+.wrangler/

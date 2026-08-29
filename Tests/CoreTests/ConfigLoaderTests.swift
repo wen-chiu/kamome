@@ -133,10 +133,12 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.totalDurationMaxS, 90)
         XCTAssertEqual(config.export.keyframeIntervalFrames, 15)
         // The moving subject's canvas size (Phase 4). Was a hard-coded 300 in
-        // RecapStyle — 28% of frame width, which users said was too big. 225 is
+        // RecapStyle — 28% of frame width, which users said was too big; then 225,
         // Chiu's call from the 200/220/250 stills, judged on the head-on drawing
-        // where heading is hardest to read.
-        XCTAssertEqual(config.export.subjectLengthPx, 225)
+        // where heading is hardest to read. **157.5 is Chiu's call 2026-08-27**,
+        // 30% below 225, from a 225/180/157.5 sweep on the Iceland film he had
+        // just watched — where car-toy read as too big at 225.
+        XCTAssertEqual(config.export.subjectLengthPx, 157.5)
         XCTAssertEqual(config.export.titleCardS, 3.0)
         XCTAssertEqual(config.export.endCardS, 3.0)
         XCTAssertEqual(config.export.videoBitrateMbps, 5)
