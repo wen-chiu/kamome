@@ -996,28 +996,37 @@ red flag to stop and report — the same applies to sources.
 **For Chiu, not the implementer:** two sessions in one checkout will keep producing
 this. A git worktree per session removes it entirely and costs nothing.
 
-#### ⚠️ But the worktree fix silently disables half the new key guard — **VERIFIED**
+#### ✅ CLOSED 2026-08-21 by `2d221e0` — ~~the worktree fix silently disables half the new key guard~~
 
-Two independent lines of evidence, and they agree:
+**The subsection that stood here is struck, not edited.** It said
+`testTheSecretsFileIsNotTracked` reads `<repoRoot>/.git/index`, that a worktree's
+`.git` is a *file* so the read fails and the test throws `XCTSkip`, and that the
+local half of the key guard therefore never runs in the setup this project now
+recommends. **`2d221e0` ("fix(test): the secrets guard resolves the git index in
+a worktree too", on `main` since PR #16) fixed exactly that**: `gitIndexURL`
+resolves a worktree's `gitdir:` pointer, absolute or relative, and reserves
+`XCTSkip` for the one honest case of no `.git` at all.
 
-- **Code:** `testTheSecretsFileIsNotTracked` reads `<repoRoot>/.git/index` directly.
-  **In a worktree `.git` is a *file*, not a directory**, so the read fails and the
-  test throws `XCTSkip`. The test's own comment names this case.
-- **Measurement, from the isolating session's own table:** main tree reported
-  `109 (16 skipped)`; both worktrees reported `109 (**17** skipped)`. One extra skip,
-  in exactly the run where the index is unreachable.
+**Re-measured 2026-08-29 in a worktree, by running it rather than reading it**
+(`.claude/worktrees/nice-pare-08dedf`, `.git` a file pointing at
+`Kamome/.git/worktrees/nice-pare-08dedf`):
 
-**Not a defect anyone introduced** — the fallback was documented and points at the CI
-step, which is unaffected (CI clones normally, so `.git` is a directory). It is an
-interaction between two decisions made hours apart: the guard was written for a
-normal checkout, and worktrees are now recommended.
+    -only-testing:KamomeTests/RoutingKeyTests
+    Test Case '-[KamomeTests.RoutingKeyTests testTheSecretsFileIsNotTracked]' passed (0.001 seconds)
+    Executed 10 tests, with 0 failures (0 unexpected)
 
-**Consequence if left:** in the setup being adopted, the local half of the guard never
-runs. Protection still exists, but only at PR time.
+**Passed — 10 executed, 0 skipped.** And the pass is not vacuous: the guard scans
+the index for the NUL-terminated byte string `Config/Secrets.xcconfig`, and that
+worktree's 44,845-byte index **contains that needle exactly once**, at offset
+3914, as the prefix of the tracked `Config/Secrets.xcconfig.example`. For the
+test to pass rather than skip, it had to resolve the pointer, read those bytes,
+find the occurrence and reject it on the NUL check. A skip or an unreadable index
+could not produce this result.
 
-**Fix, small:** when `.git` is a file, read its `gitdir: <path>` line and resolve the
-index there. ~5 lines, and it restores the local half. Low priority — CI covers the
-actual risk — but do it before anyone concludes the local test is protecting them.
+**The habit this cost:** the stale claim was carried forward on 2026-08-29 by
+quoting this section instead of running the test — a repo document treated as
+current state when the code had moved four days earlier. §7 already says
+verification is not self-certified; the same applies to citing someone else's.
 
 ---
 
@@ -1432,19 +1441,37 @@ the doc comment that called this "a state no test can arrange" is corrected.
 in every render log prove it — so the next occurrence names itself in the same
 file a reviewer already reads.
 
-**Cheapest thing that would settle the trigger.** A one-shot diagnostic in
-`VehicleResourceBundle.resolved` naming, per candidate, the URL tried and whether
-it existed on disk. It fires once per process and would turn the next occurrence
-from "bundle NOT FOUND" into a diagnosis. **Not built** — it is investigation
-instrumentation on shipped code and belongs to its own decision.
+**Done, approved (Chiu, 2026-08-28): the lookup now says what it tried.**
+`VehicleResourceBundle.resolved` logs a one-shot trace naming, per candidate, the
+URL and — the fact both incidents lacked — **whether the nested bundle was on
+disk**, which is what separates an install-timing fault from a packaging one.
+Scope as approved: failure path only (a process that resolves logs nothing),
+filesystem paths only (nothing derived from a trip, so §0 is not engaged), and
+shipped rather than reached for afterwards, because an intermittent failure has
+to be instrumented *before* it happens.
 
-**Still not measured:** the rate. One miss in four renders is not a rate, and no
-recurrence has been attempted since the diagnostic landed.
+The walk moved into `VehicleResourceBundle.resolve(hosts:)` so the message can be
+exercised — `resolved` is a lazily-initialised global with no seam, and a
+diagnostic that can never be shown to fire is one nobody should trust. Order and
+acceptance rule are unchanged. Two tests hold the contract in
+`RecapSubjectOrientationTests`: a host with no manifest produces
+`…KamomeCore_KamomeExportEngine.bundle: not on disk`, and a resolving lookup
+produces an **empty** trace.
 
-**Stale references left alone, deliberately.** `Docs/current-state.md` (blockers,
-"🔴 intermittent … bundle crash") is the synced index and its neighbouring
-section is being rewritten on `feature/p4-appearance-follows-system`; the
-correction belongs to the pass that re-syncs it. `Docs/gate-P3.5-checklist.md`
+**Two lines, not one, when it next fires:** the bundle trace once per process,
+and `VehicleSubjectRenderer.make`'s per-subject line naming the consequence. One
+says why, the other says what the viewer will see.
+
+**Still not measured:** the rate, and the trigger. The next occurrence is what
+this exists to catch.
+
+**Stale references left alone, deliberately.** `Docs/current-state.md` is the
+synced index and its neighbouring sections are being rewritten on
+`feature/p4-appearance-follows-system`, so **two** lines there belong to the pass
+that re-syncs it, not to this change: the blockers entry "🔴 intermittent …
+bundle crash", and "worktrees fix it but silently skip half the secrets guard
+(`HANDOFF.md` 3e)" — struck above, closed by `2d221e0`.
+`Docs/gate-P3.5-checklist.md`
 and `Docs/handoff-P3.5.md` describe a closed phase and are history.
 `Docs/decisions.md` 2026-08-15 records the `Bundle.module` mechanism as it stood
 and is append-only — it is not wrong, it is superseded.
