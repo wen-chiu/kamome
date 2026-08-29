@@ -1,8 +1,9 @@
 # HANDOFF — current state
 
-**Updated 2026-08-28.** Branch `feature/p4-appearance-follows-system`, off `main`
-at `87d1d4e`. PR #18 (`feature/p4-visual-checks`) **merged**; PR #11 merged on
-2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written so a fresh
+**Updated 2026-08-29.** Branch `claude/mystifying-lalande-a203b3`, off `main` at
+`c906912`. PR #21 (`feature/p4-appearance-follows-system`) **merged**, as did #18
+and, on 2026-08-15, #11 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close).
+`docs/state-2026-08-28` (PR #20) is still open and goes last. Written so a fresh
 session (or a fresh person) can pick this up without being briefed by hand.
 
 Read `Docs/current-state.md` first for the project snapshot, then `CLAUDE.md`
@@ -14,6 +15,142 @@ by default**, as amended by the routing ADRs (`Docs/decisions.md` 2026-08-16 and
 known bugs. Closed, resolved, and superseded sections were moved verbatim to
 `Docs/_archive/handoff-2026-08.md` on 2026-08-21 — that file is history, never
 current state.
+
+---
+
+## Findings — engineering session, the silent subject fallback (2026-08-29)
+
+**Context.** The task 2026-08-28's finding 10 spawned: make the marker fallback
+loud, and find out whether it is the bundle crash wearing a different symptom.
+Both answered below and in the bundle-lookup entry. Chiu then approved the
+resolution diagnostic and asked for two changes to the marker itself.
+
+**Renders for review** (outside the repo, §0): `~/Kamome-films/2026-08-29-fallback-navy/`,
+five stills and a `README.md` with the numbers. Same trip, same frame (t=114.3 s)
+as every subject still since the size sweep; the failure visual is *forced*, so it
+is judged on purpose rather than by accident.
+
+---
+
+### 1. ✅ FIXED — the stand-in had become larger than the thing it stands in for
+
+`fallbackMarkerLengthPx` was a hard-coded **170** while ADR 2026-08-27 moved
+`export.subject_length_px` **225 → 157.5**. From that day the fallback seagull
+rendered **12.5 px longer than the car**, and nothing failed, because the two
+numbers sat side by side with nothing tying them together. Chiu noticed it by
+looking.
+
+**The fix is the relationship, not the number.** `fallbackMarkerLengthFraction`
+(default **1**) replaces the absolute, and `fallbackMarkerLength(subjectLengthPx:)`
+is the one place it is applied. At ≤ 1 the marker is at most the subject, whatever
+the subject becomes — the inversion is now structurally impossible rather than
+merely corrected. Deliberately the same shape as `length_fraction` in
+`vehicles.json`, whose own comment gives this exact reasoning; the manifest cannot
+supply this one, because the fallback fires precisely when the manifest could not
+be read.
+
+`subjectLengthPx(configured:)` keeps its `max` as defence for a fraction above 1,
+and keeps its signature, so no probe call site moved.
+
+**Positive control, run rather than reasoned.** With the fraction set to 1.2 the
+new guard fails at all five swept subject lengths —
+`("135.0") is greater than ("112.5")` and so on up to `("360.0") is greater than
+("300.0")` — and passes at 1. The neighbouring wiring test passed either way,
+which is correct: it holds the wiring, the new one holds the bound.
+
+### 2. `RecapRenderTestCase:57`'s `configured: 300` is consistent, not stale — reported, not changed
+
+Asked to look at it and say what I found rather than update it silently. What I
+found is that **300 is not a leftover shipped value in this file — it is this
+file's own fixture.** `RecapRenderTestCase` builds its `TrackingConfig.Export`
+with `subjectLengthPx: 300` (line ~119), and `vehicleHalfPx` clears
+`configured: 300`. The probe clears exactly what the render under test draws, so
+the two agree and nothing is wrong. 300 is also the suite-wide convention for a
+synthetic subject: `CameraPathTests`, `RecapPacingTests`, `RecapEncoderTests`,
+`LinearTimelineTests`, `RecapMarkerDeckStillsTests` and `RecapFollowCamStillsTests`
+all use it.
+
+**What is true is the reading risk**, and it is the same one that has now cost
+this project four times: a number in a test file that resembles a shipped value
+but is not one. Changing it would mean changing the fixture too, which moves what
+the golden-frame probes render and clear — a real change, for no defect.
+**Left alone.**
+
+### 3. ⏳ OPEN — which navy, and the constraint stated as a number
+
+Chiu wants the marker blue rather than the near-black ink. The constraint is
+**luminance, not hue**: `testTheFallbackMarkerContrastsWithItsBaseMap` asserts
+< 0.35 on light and > 0.65 on dark, and says in its own comment that it is
+asserting visibility rather than an ink.
+
+Measured on the rendered stills, in 0–255 units, against the terrain within 6 px
+of the stroke:
+
+| candidate | hex | gull L | beside | **gap** | guard |
+|---|---|---:|---:|---:|---|
+| white — what shipped until 2026-08-28 | `#FFFFFF` | 217.4 | 191.0 | **26.4** | ✗ |
+| the ink, today | `#1C2130` | 34.0 | 190.9 | **156.9** | ✓ |
+| A · near | `#17204A` | 34.0 | 190.9 | **156.9** | ✓ |
+| B · deep | `#1B2A5B` | 41.5 | 190.9 | **149.4** | ✓ |
+| C · bright | `#23407F` | 58.3 | 190.9 | **132.6** | ✓ |
+
+**All three navies clear the guard — run, not calculated** (one temporary edit to
+the preset per candidate, reverted; logs `~/Kamome-wt/logs-fallback-diag/guard-*.log`).
+A bright cyan `#4FC3F7` was run as a control and **failed at 0.683**, so the guard
+bites and is not pinning today's value.
+
+Two things the table does not say. **The white baseline was rendered rather than
+recalled** — 26.4 against 156.9 is the argument for the change, in the same frame
+and the same units. And **clearing the bar is not clearing the water trap**: the
+bar is brightness, the trap is hue, and `navy-C-bright` is included to show where
+that begins, not as a recommendation.
+
+**Chiu picks; nothing is committed.** The pick replaces one line in
+`RecapStylePresets.modernMinimal(.light)`.
+
+### 4. ⚠️ Base-versus-preset has now bitten four times, and the fourth is the sharp one
+
+The glow "verified fact" quoted the neutral default's alpha 0; the PO session's
+ADR quoted the neutral default's blue; both times the shipped preset said
+something else. The third was spotting that the ink lives in the preset while the
+base `RecapStyle.fallbackMarkerColor` is still white.
+
+**The fourth is worse than a stale reading, and it is live.** `modernMinimal(.dark)`
+**does not set `fallbackMarkerColor` at all.** The dark film therefore draws the
+base default — white — and the guard's dark assertion (`> 0.65`) passes on a value
+nobody wrote for dark. White happens to be right there. That is not the same thing
+as it being chosen.
+
+Two consequences worth Chiu's decision, neither acted on:
+
+1. **Changing the base default silently changes the dark film.** This is the
+   mechanical reason a navy goes in the light preset — not merely a procedural one.
+2. `RecapStyle()`'s neutral defaults are load-bearing for the golden-frame gates
+   (its own comment says so) *and* are the dark preset's palette by omission. Those
+   are two jobs. Whether `.dark` should state its marker colour explicitly, or the
+   base should be documented as "the dark preset's value, and the gates'", is a
+   small design question — **reported, not folded into the colour sweep.**
+
+### 5. 🔵 CARRY — the fault gull and the narrator gull are the same bird
+
+`Docs/cross-region-journeys.md` requirement 4 — *"the load-bearing one"* — wants a
+seagull as the **narrator of an unmodelled crossing**: honest provenance made
+visual, *"we know you went from here to there; we do not know how"*. Its own words
+are that this answer "must be cheap and **good-looking** rather than a failure
+state."
+
+The marker is being styled in the opposite direction: since 2026-08-28 it is
+partly a diagnostic, and it has to say *something went wrong* at a glance.
+
+**They are different objects** — the narrator is the `seagull` subject in
+`vehicles.json` (omni sprite, `length_fraction` 1.0), the fault is
+`VehicleMarker.seagull`, a stroked vector arc from `RecapStyle`. **A viewer cannot
+tell them apart**, and that is the collision: the same bird would mean "we could
+not classify your crossing" in one film and "the artwork failed to load" in
+another. Nobody has decided which reading wins, and the navy pick makes the fault
+bird more distinctive, not less.
+
+**Noted at Chiu's instruction; deliberately not designed for.**
 
 ---
 
@@ -243,6 +380,15 @@ returns nil, and its doc comment says that "only fires when the app's own resour
 bundle cannot be found — a state no test can arrange". **That claim is now false by
 observation.** Whether it is the same resource-bundle problem as the intermittent
 `KamomeCore_KamomeExportEngine` crash below is *suggestive, not established*.
+
+> **Answered 2026-08-29 — read the bundle-lookup entry below instead of this
+> paragraph.** The spawned task settled it as far as the evidence goes: **one
+> mechanism, two symptoms** (the crash's `Bundle.module` trap was removed on
+> 2026-08-15 and the same lookup has returned nil ever since), but **not one root
+> cause** — the trigger is still UNKNOWN, and two tested hypotheses came back
+> negative. Consequence 1's diagnostic is built; so is a second one that names
+> which candidate the bundle lookup tried. Consequence 2 was acted on: the token
+> is ink on light, and is being swept for a navy.
 
 Three consequences:
 
