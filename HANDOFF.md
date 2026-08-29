@@ -190,39 +190,88 @@ what one colour could never do.
 
 Stills and a README: `~/Kamome-films/2026-08-29-fallback-badge/`.
 
-**Two things are Chiu's, and neither is decided here:**
+**Chiu answered two of the three (2026-08-29):**
 
-1. **Size.** `fallbackMarkerLengthFraction` is 1. A filled disc reads heavier than
-   an outline gull at the same length, and "too big" was the original complaint.
-   1.00× / 0.80× / 0.65× rendered; all three stay legible, the gull readable even
-   at 102 px.
-2. **One badge or one per appearance.** The pair is the *same* badge and works on
-   both. Accepting that ends this token's per-appearance life and closes the
-   2026-08-28 oddity where `modernMinimal(.dark)` never set it and the dark film
-   drew an unchosen base default. The alternative is one line back in the light
-   preset.
+1. ✅ **One badge for both appearances — accepted.** The token no longer varies by
+   appearance: the disc and the on-disc colour live on `RecapStyle` and neither
+   preset touches them. The 2026-08-28 oddity — `modernMinimal(.dark)` never set
+   this token, so the guard's dark half passed on a white nobody chose — is
+   **closed by the design rather than fixed**. There is no longer a dark value to
+   choose, so there is nothing left to forget to choose.
+2. ✅ **Size: 0.60×**, from the 1.00 / 0.80 / 0.65 sweep — smaller than the
+   smallest rendered, so **0.60 was rendered on its own rather than assumed to
+   carry**. It draws at **94.5 px** and **legibility does not break between 0.65
+   and 0.60**: the gull's double-arc still reads and the ring is still a ring.
+   ⏳ **Judged from a still, and Chiu has reserved the right to revisit it from a
+   film. Not settled.**
+3. ⏳ **The blue is open, and what he needs is the room rather than another
+   sweep** — see finding 6b.
 
-**Three caveats carried deliberately:**
+**Two caveats carried deliberately:**
 
-- **The guard measures tokens; the viewer sees the graded frame.** The disc's
-  token luminance is 0.399 and it renders at 0.349; white renders at 0.853. The
-  rule survives — still straddling mid-grey, still far apart — but the test's
-  numbers are not the screen's. No guard measures post-grade output, and this is
-  the first token whose whole job is how it looks against the frame.
 - **The white ring's outer edge is soft on light** and crisp on dark, since white
   against pale terrain is a small step. Worth knowing before judging ring width.
 - **`#1D6FE0` is a starting value.** It would have **failed** the old 0.35
   ceiling outright, which is the point: the badge freed the hue.
 
-### 7. ⚠️ `markerAccentColor` has joined the no-reader list
+### 6b. ⏳ OPEN — the blue, and exactly how much room it has
+
+Rendered at the shipped 0.60× so the colour is judged at the size it ships at:
+`~/Kamome-films/2026-08-29-badge-060-blues/`.
+
+| hex | token L | disc | ring + gull | badge's own | terrain | disc vs terrain |
+|---|---:|---:|---:|---:|---:|---:|
+| `#0B4FC4` deeper | 0.286 | 64.9 | 217.1 | **152.2** | 193.5 | 128.6 |
+| `#1D6FE0` today | 0.399 | 89.1 | 217.1 | **127.9** | 193.5 | 104.3 |
+| `#2E7FE8` lighter | 0.460 | 102.9 | 217.0 | **114.1** | 193.4 | 90.6 |
+| `#1D6FE0` on dark | 0.399 | 89.1 | 217.1 | **127.9** | 102.9 | 13.7 |
+
+**The boundary, stated rather than implied.** The ring and gull are white. Against
+white, straddling mid-grey needs the disc below **0.50** and the 0.45 separation
+needs it below **0.55**, so **0.50 is the wall** and today's 0.399 has **0.101 of
+headroom**. `#2E7FE8` at 0.460 is deliberately near it — 0.040 left — so the last
+usable step is visible rather than described.
+
+**Direction: deeper and more saturated is free** (darker only widens the
+separation; no lower bound). **Markedly lighter is not** — past 0.50 the badge
+has no dark half and disappears on a pale map exactly as the white gull did.
+
+**A genuinely light blue is reachable by inverting the pair** — light disc, dark
+ring and gull. The rule is symmetric and already permits it: **verified by running
+the guard** against a light disc (0.685) and an ink ring (0.130), which passes
+unchanged with no code change. **Not built**, and not a recommendation; recorded
+so a dark blue is chosen rather than settled for.
+
+### 6c. ⚠️ KNOWN LIMIT — nothing in this project measures post-grade output
+
+The guard asserts **token** luminance; the viewer sees the frame **after the
+film's grade**. The disc is 0.399 as a token and renders at 0.349; white renders
+at 0.851. The rule survives the grade — the pair still straddles mid-grey and
+stays far apart — but the numbers in the test are not the numbers on screen, and
+nothing checks that they stay compatible.
+
+**This is the same class of gap as the golden-frame gates being unable to see
+`MapKitSnapshotProvider`** (2026-08-22 finding 2): a property that only exists in
+the rendered output, guarded only where the rendered output is not. Named here as
+a known limit rather than left implicit in a mismatch between two numbers. The
+fallback marker is the first token whose entire job is how it reads against the
+finished frame, so it is where the gap first bites.
+
+### 7. ⚠️ The no-reader token cluster is now **four**, and it is growing one at a time
 
 The badge takes its ring and gull from the new `fallbackMarkerOnDiscColor`, so the
 only markers still reading `markerAccentColor` are `.scooter` and `.bike` — and
 those are reachable from `RecapMarkerDeckStillsTests` and nowhere else. It is now
-in the same state as `markerColor`, `cardColor` and `cardTextColor`. **Reported,
-not removed**: the line-art markers are not this change's to delete, and the
-five `RecapOverlayRendererTests` assertions that believe otherwise are their own
-change in four test files.
+in the same state as `markerColor`, `cardColor` and `cardTextColor`.
+
+**Counted deliberately, because that is the point:** `cardColor`,
+`cardTextColor`, `markerColor`, `markerAccentColor` — **four** tokens that
+nothing renders, plus the five `RecapOverlayRendererTests` assertions that
+believe they render against an opaque card. Each arrived separately and was
+reported separately, which is how a cluster grows without anyone deciding to keep
+it. **Reported, not removed**: it is its own change across four test files, and
+the line-art markers are not this change's to delete. The number is here so the
+next one to join is the fifth rather than another isolated note.
 
 The fallback-specific token was added rather than reusing `markerAccentColor`
 because that token means "handlebars and wheels" on the line-art markers. Two
