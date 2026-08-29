@@ -18,7 +18,7 @@ current state.
 
 ---
 
-## Findings — engineering session, the silent subject fallback (2026-08-29)
+## Findings — engineering session, the silent subject fallback and the badge (2026-08-29)
 
 **Context.** The task 2026-08-28's finding 10 spawned: make the marker fallback
 loud, and find out whether it is the bundle crash wearing a different symptom.
@@ -131,7 +131,104 @@ Two consequences worth Chiu's decision, neither acted on:
    base should be documented as "the dark preset's value, and the gates'", is a
    small design question — **reported, not folded into the colour sweep.**
 
-### 5. 🔵 CARRY — the fault gull and the narrator gull are the same bird
+### 5. ✅ RESOLVED BY THE BADGE — the fault gull and the narrator gull are no longer the same bird
+
+**This entry stood as 🔵 CARRY. The badge (finding 6) closed it structurally**,
+which is a better outcome than the decision it was waiting for.
+
+`Docs/cross-region-journeys.md` requirement 4 — *"the load-bearing one"* — wants a
+seagull as the **narrator of an unmodelled crossing**: honest provenance made
+visual, and its own words are that this answer "must be cheap and
+**good-looking** rather than a failure state." The fault marker was being styled
+in the opposite direction. They were different objects — an omni sprite from
+`vehicles.json` versus a vector arc from `RecapStyle` — but a viewer could not
+tell them apart.
+
+**A badge reads as a marker; a bare bird reads as a bird.** `.seagull` is
+untouched and still drawn (see below); `.seagullBadge` is the fault indicator.
+The narrator keeps the plain gull, and nothing has to be decided about which
+reading wins.
+
+### 5b. 🔴 THE NEAR-MISS — `.seagull` is also the end-card brand mark
+
+**Found while designing the badge, and it is the reason the badge is a new case
+rather than a restyle.** `RecapOverlayChromeDrawing.drawMark` draws
+`VehicleMarker.seagull` as **the Kamome wordmark's bird on the end card**, in
+`chromeAccentColor`, unrotated — "from the same vector the fallback vehicle
+marker uses rather than a bespoke asset".
+
+So the obvious implementation — change `drawSeagull` to draw a badge — would
+have **silently turned the brand mark on every end card into a blue disc.** No
+test asserts the end card's mark shape; it would have shipped.
+
+The bare gull now has three consumers and they are properly separate: the brand
+mark, the fault badge (via its own case), and the cross-region narrator that has
+not been built. **Do not restyle `.seagull` in place.**
+
+### 6. ⏳ OPEN — the badge, and the two questions it hands back
+
+**Chiu's verdict on the navy sweep: they do not read as blue**, and he is right
+about why — every candidate that clears a 0.35 luminance ceiling is too dark for
+hue to register. His design instead: a blue disc, a white ring, the gull in white.
+
+**It is structurally better than any colour, and the measurements are the
+argument.** Rendered, in 0–255 units:
+
+| still | disc | ring + gull | **badge's own contrast** | terrain | disc vs terrain | ring vs terrain |
+|---|---:|---:|---:|---:|---:|---:|
+| light · 1.00× | 89.1 | 217.4 | **128.3** | 183.9 | 94.8 | 33.5 |
+| light · 0.80× | 89.1 | 217.3 | **128.2** | 186.2 | 97.1 | 31.1 |
+| light · 0.65× | 89.1 | 217.1 | **127.9** | 190.5 | 101.3 | 26.6 |
+| dark · 1.00× | 89.1 | 217.4 | **128.3** | 81.6 | **7.5** | 135.8 |
+
+The badge's own contrast is **identical to a decimal across three sizes and both
+appearances** while the terrain moves 183.9 → 81.6. And the dark row is the proof
+of the mechanism: **the blue disc alone is nearly invisible there (7.5)**, yet the
+badge reads, because the ring stands 135.8 off it. On light the roles swap — disc
+94.8, ring 33.5. Neither colour suffices alone; the pair does, on both. That is
+what one colour could never do.
+
+Stills and a README: `~/Kamome-films/2026-08-29-fallback-badge/`.
+
+**Two things are Chiu's, and neither is decided here:**
+
+1. **Size.** `fallbackMarkerLengthFraction` is 1. A filled disc reads heavier than
+   an outline gull at the same length, and "too big" was the original complaint.
+   1.00× / 0.80× / 0.65× rendered; all three stay legible, the gull readable even
+   at 102 px.
+2. **One badge or one per appearance.** The pair is the *same* badge and works on
+   both. Accepting that ends this token's per-appearance life and closes the
+   2026-08-28 oddity where `modernMinimal(.dark)` never set it and the dark film
+   drew an unchosen base default. The alternative is one line back in the light
+   preset.
+
+**Three caveats carried deliberately:**
+
+- **The guard measures tokens; the viewer sees the graded frame.** The disc's
+  token luminance is 0.399 and it renders at 0.349; white renders at 0.853. The
+  rule survives — still straddling mid-grey, still far apart — but the test's
+  numbers are not the screen's. No guard measures post-grade output, and this is
+  the first token whose whole job is how it looks against the frame.
+- **The white ring's outer edge is soft on light** and crisp on dark, since white
+  against pale terrain is a small step. Worth knowing before judging ring width.
+- **`#1D6FE0` is a starting value.** It would have **failed** the old 0.35
+  ceiling outright, which is the point: the badge freed the hue.
+
+### 7. ⚠️ `markerAccentColor` has joined the no-reader list
+
+The badge takes its ring and gull from the new `fallbackMarkerOnDiscColor`, so the
+only markers still reading `markerAccentColor` are `.scooter` and `.bike` — and
+those are reachable from `RecapMarkerDeckStillsTests` and nowhere else. It is now
+in the same state as `markerColor`, `cardColor` and `cardTextColor`. **Reported,
+not removed**: the line-art markers are not this change's to delete, and the
+five `RecapOverlayRendererTests` assertions that believe otherwise are their own
+change in four test files.
+
+The fallback-specific token was added rather than reusing `markerAccentColor`
+because that token means "handlebars and wheels" on the line-art markers. Two
+roles under one name is how `markerColor` ended up with no reader at all.
+
+
 
 `Docs/cross-region-journeys.md` requirement 4 — *"the load-bearing one"* — wants a
 seagull as the **narrator of an unmodelled crossing**: honest provenance made
