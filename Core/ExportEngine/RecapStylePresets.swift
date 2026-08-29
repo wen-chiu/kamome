@@ -36,10 +36,11 @@ public extension RecapStyle {
     /// fourth warm value would be the "three near-misses" the accent exists to
     /// prevent.
     ///
-    /// ⏳ **PENDING CHIU'S PICK.** He chose *orange*; the value is his, from the
-    /// 2026-08-28 three-candidate sweep (`Docs/eng-session-appearance.md` §6 —
-    /// this value is candidate B). It is set here so the change is complete and
-    /// renderable, not because the sweep has been judged.
+    /// ✅ **CHOSEN by Chiu, 2026-08-29**, from the three-candidate sweep rendered
+    /// on one frame (`Docs/eng-session-appearance.md` §6): this is candidate **B**,
+    /// against `chromeAccentColor` `(0.95,0.55,0.32)` and a deeper
+    /// `(0.96,0.42,0.15)`. Judged from
+    /// `~/Kamome-films/2026-08-28-appearance/light-*`.
     static let trailOnLight = routeAccent
 
     /// How much weaker a dashed leg is than the solid trail it is derived from.
@@ -91,13 +92,20 @@ public extension RecapStyle {
         switch appearance {
         case .dark:
             style.routeColor = trailOnDark
-            // **The glow is off, and on the dark base that is not settled.**
-            // `a58942d` retired the pass because the base was light, and its own
-            // message says it is the right treatment again the day a dark base
-            // returns — so Chiu's acceptance of "the halo is gone", judged on a
-            // light render, does not carry over. The retired colour and width are
-            // held here (see `retiredGlowColor`) so the alpha is the only
-            // variable in the A/B that decides it.
+            // **No glow, and on the dark base this is now settled too** (Chiu,
+            // 2026-08-29, from the α0 / α0.32 pair at
+            // `~/Kamome-films/2026-08-28-appearance/dark-glow-*`).
+            //
+            // The question was real rather than inherited: `a58942d` retired the
+            // pass *because the base was light*, and its own message says it is
+            // the right treatment again the day a dark base returns — so Chiu's
+            // acceptance of "the halo is gone", judged on a light render, did not
+            // carry over. Rendered on dark, the pass works exactly as designed
+            // (measured: it lifts the terrain beside the trail by (8,29,29), i.e.
+            // it composites *lighter* than the ground) and he chose the trail
+            // without it anyway. The mechanism stays, guarded on alpha in
+            // `drawRouteLeg`; `retiredGlowColor` keeps the original blue so a
+            // future A/B still has alpha as its only variable.
             style.routeGlowColor = retiredGlowColor.copy(alpha: 0) ?? retiredGlowColor
             style.routeGlowWidthMultiple = 3.0
         case .light:

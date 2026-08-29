@@ -1982,17 +1982,28 @@ environment read inside the render loop — precisely what 2026-08-15 forbids).
 system-follow now and a user picker later; that is a separate feature with its own
 UI decisions.
 
-**⏳ Two values are still open and are Chiu's, from renders:**
+**✅ Both open values closed by Chiu on 2026-08-29**, from the renders in
+`~/Kamome-films/2026-08-28-appearance/`:
 
-1. **Which orange.** Three candidates were swept on one frame (t=114.3 s, the frame
-   that settled the subject size) with their derived dashed variants:
-   `chromeAccentColor` `(0.95, 0.55, 0.32)`; `RecapStyle.routeAccent` `#FF8A5B` —
-   the validated prototype's own `--route`, already the film's progress dot and
-   strap line; and a deeper `(0.96, 0.42, 0.15)`. The code ships the second pending
-   his pick, marked ⏳ in `RecapStylePresets.swift`.
-2. **The glow on dark.** `a58942d` retired the pass *because the base was light*,
-   so Chiu's acceptance of "the halo is gone" — judged on a light render — does not
-   carry to a dark one. Rendered as a pair, α0 vs α0.32, same frame.
+1. **The orange is `RecapStyle.routeAccent` `#FF8A5B`** — candidate **B** of three
+   swept on one frame (t=114.3 s, the frame that settled the subject size) with
+   their derived dashed variants, against `chromeAccentColor` `(0.95, 0.55, 0.32)`
+   and a deeper `(0.96, 0.42, 0.15)`. It is the validated prototype's own
+   `--route`, already the film's progress dot and strap line, so the film keeps
+   one warm accent rather than gaining a fourth.
+2. **The glow stays off on dark**, at α0. The question was not inherited: `a58942d`
+   retired the pass *because the base was light*, so the acceptance of "the halo is
+   gone" did not carry to a dark base. Rendered as an α0 / α0.32 pair; on dark the
+   pass works exactly as designed (measured: it lifts the terrain beside the trail
+   by `(8,29,29)`, compositing *lighter* than the ground) and he chose the trail
+   without it regardless. The mechanism stays, guarded on alpha.
+
+**A correction to this entry's own lineage** (Chiu, 2026-08-29): a parallel draft of
+this decision quoted the trail's blue as `(0.13, 0.45, 0.95)`. That is `RecapStyle`'s
+**neutral default**, which nothing renders; the shipped `modernMinimal` preset's
+trail was the cyan `(0.42, 0.87, 0.98)` measured here. It is the same trap the glow
+brief fell into, from the same source, twice — reading a value off the struct's
+defaults rather than off the preset the app actually selects.
 
 **Not decided by this entry:** whether the grade, vignette and chrome should also
 differ by appearance. They are shared today, reported rather than pre-empted.

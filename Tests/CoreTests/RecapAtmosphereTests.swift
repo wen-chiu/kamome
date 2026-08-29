@@ -58,13 +58,12 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
     /// because that test now supplies its own glow: with nothing asserting the
     /// preset, re-enabling it would be silent.
     ///
-    /// **Both appearances, and for different reasons** (2026-08-28). On light it
-    /// is settled — judged gone by Chiu on film A. On dark it is *pending*: the
-    /// glow was designed for a dark base, and the 0-vs-0.32 pair rendered this
-    /// session is what decides it. Until that is judged the shipped answer is
-    /// still "no glow", and this holds it in both so a return cannot be silent in
-    /// either. If Chiu picks the glow back on for dark, this assertion is what
-    /// changes, deliberately, with the reason in the commit message (§7.5).
+    /// **Both appearances, and each was decided separately.** On light: judged
+    /// gone by Chiu on film A (2026-08-22). On dark: the acceptance did *not*
+    /// carry over — the glow was designed for a dark base — so it was rendered as
+    /// an α0/α0.32 pair on 2026-08-29 and he chose the trail without it. The
+    /// mechanism is intact and one alpha away in either appearance, which is
+    /// exactly why this holds the rule in both: a return must never be silent.
     func testModernMinimalDrawsNoGlowUnderTheTrail() {
         for appearance in RecapAppearance.allCases {
             XCTAssertEqual(

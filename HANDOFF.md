@@ -25,14 +25,15 @@ before any code), on `feature/p4-appearance-follows-system` off `main` at
 appearance, and light mode gets an orange trail. **The first change in this series
 that moves shipped behaviour.**
 
-Two values in it are still Chiu's and are marked ⏳ below: **which orange**, and
-**whether the dark base gets its glow back**.
+Both values that were Chiu's are now **closed** (2026-08-29): the orange is
+candidate **B**, `RecapStyle.routeAccent` `#FF8A5B`, and the glow **stays off on
+dark**. See `Docs/decisions.md` 2026-08-27.
 
 **Stills for review** (outside the repo, §0 — renders of a real trip), all Iceland,
 `car-toy` at the shipped 157.5 px, displayScale 2, the same frame the subject sweep
 used: `~/Kamome-films/2026-08-28-appearance/`.
 
-### 1. ⏳ OPEN — which orange, and the constraint the brief could not know
+### 1. ✅ CLOSED 2026-08-29 — the orange is `#FF8A5B`, and the constraint the brief could not know
 
 `RecapStyle.routeAccent` is **`#FF8A5B`** and its own comment calls it "the trail's
 brand colour" — it is the validated web prototype's `--route`
@@ -50,8 +51,9 @@ the pair — **that is Chiu's call and was not done here.**
 
 Sweep candidates (`Docs/eng-session-appearance.md` §6): **A** = `chromeAccentColor`
 exactly, **B** = `routeAccent` `#FF8A5B`, **C** = `(0.96, 0.42, 0.15)`, deeper, as
-the hedge against a pale base. `trailOnLight` ships as **B** pending his pick —
-marked ⏳ in the source, not a decision.
+the hedge against a pale base. **Chiu chose B** (2026-08-29), so the film keeps one
+warm accent rather than gaining a fourth. Collapsing `chromeAccentColor` into it
+remains open and is still his.
 
 ### 2. 🔴 CORRECTS finding 8 — the glow was **not** "one line away"
 
@@ -69,6 +71,11 @@ changes while reporting one.
 Closed by `RecapStyle.retiredGlowColor`, which holds the original colour so the
 dark preset's alpha is genuinely the only variable. **VERIFIED from `git show
 a58942d`,** not inferred.
+
+The A/B it enabled has since been judged: **the glow stays off on dark** (Chiu,
+2026-08-29). On dark the pass works exactly as designed — it lifts the terrain
+beside the trail by `(8,29,29)`, compositing *lighter* than the ground, which is
+the opposite of what it did on light — and he chose the trail without it anyway.
 
 ### 3. ⚠️ Three `RecapStyle` tokens have no consumer, and one test helper is a no-op
 

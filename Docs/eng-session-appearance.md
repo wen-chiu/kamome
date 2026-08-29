@@ -8,9 +8,10 @@ the blue one.** What is designed here is *how* that becomes shipped behaviour
 without breaking the reproducibility rule.
 
 This is the first change in the Phase 4 visual series that **moves shipped
-behaviour**. Two values inside it are still Chiu's to pick from renders and are
-marked ⏳ throughout: **which orange**, and **whether the dark base gets its glow
-back**.
+behaviour**. The two values reserved for Chiu were closed on **2026-08-29**: the
+orange is candidate **B**, `RecapStyle.routeAccent` `#FF8A5B`, and the glow **stays
+off on dark**. The ⏳ markers below are kept as the record of what was open and how
+it was settled.
 
 ---
 

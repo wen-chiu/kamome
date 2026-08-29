@@ -39,10 +39,11 @@ public struct RecapStyle {
     // Route trail (§4.5 step 2, drawn by OverlayRenderer as `routeReveal`). The
     // trail *can* be stroked twice — a wide, soft glow pass under a crisp core,
     // which reads as a lit line on a dark souvenir map rather than a flat
-    // polyline. No shipped style asks for it today, in either appearance: it is
-    // settled off on light (it composites darker than pale terrain and rings the
-    // trail with a shadow), and ⏳ open on dark, which arrived on 2026-08-27 when
-    // the film began following the system appearance. See `modernMinimal(_:)`.
+    // polyline. No shipped style asks for it in either appearance, and both are
+    // now settled: off on light because it composites darker than pale terrain
+    // and rings the trail with a shadow (Chiu 2026-08-22), and off on dark
+    // because he judged the pair and preferred the trail without it (2026-08-29).
+    // The pass stays for a style that asks. See `modernMinimal(_:)`.
     public var routeColor = CGColor(srgbRed: 0.13, green: 0.45, blue: 0.95, alpha: 1)
     public var routeWidthPx: CGFloat = 14
     /// Glow pass under the trail. `routeGlowWidthMultiple` is relative to

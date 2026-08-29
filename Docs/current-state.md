@@ -88,8 +88,8 @@ P7 backend deferred.
 - **The film follows the device's system appearance** (ADR 2026-08-27), one
   `RecapAppearance` selecting both the map's trait and the overlay palette,
   captured at export and never read inside the render loop. A **manual picker is
-  deferred** — do not build one. Two values inside it are still Chiu's from
-  renders (the light trail's orange; the glow on dark).
+  deferred** — do not build one. The light trail is `RecapStyle.routeAccent`
+  `#FF8A5B` and the glow is off in both appearances (Chiu 2026-08-29).
 - **Routing is Geoapify** (ADR 2026-08-20 (a)–(d)); detour gate stays 2.5. The
   Iceland film was the acceptance test and **it passed** — Chiu judged the 49
   solid legs correct (owner report, 2026-08-21), closing ADR 2026-08-20 (d)
@@ -121,10 +121,11 @@ P7 backend deferred.
   shrank to 157.5 px; the keyed routing path is confirmed working. Corrected
   2026-08-28 — this line previously still read "NOT YET RUN".
 - **Appearance follows the device** (`Docs/eng-session-appearance.md`,
-  ADR 2026-08-27) — built on `feature/p4-appearance-follows-system`, **awaiting
-  Chiu's judgement of two renders**: which orange the light trail takes, and
-  whether the dark base gets its glow back. Everything else in that change is
-  landed and gated.
+  ADR 2026-08-27) — built on `feature/p4-appearance-follows-system`. Both open
+  values **closed 2026-08-29**: the light trail is `#FF8A5B` and the glow stays off
+  on dark. Two further tokens caught in the same water-colour trap
+  (`fallbackMarkerColor`, `labelPinColor`) are in the same branch, awaiting a
+  colour judgement.
 - **Pull requests** — #16, #17 and #18 have **merged**. Read live state with
   `gh pr list` rather than from this line.
 - **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — **executed
