@@ -175,7 +175,17 @@ public struct RecapStyle {
     /// `vehicles.json`: a mark is sized *against* the vehicle. The manifest
     /// cannot supply this one — the fallback fires precisely when the manifest
     /// could not be read.
-    public var fallbackMarkerLengthFraction: CGFloat = 1
+    ///
+    /// **0.60 (Chiu, 2026-08-29)**, from a 1.00 / 0.80 / 0.65 still sweep of the
+    /// badge — he asked for smaller than the smallest rendered, so 0.60 was
+    /// rendered and judged on its own rather than assumed to carry. At the
+    /// shipped `subject_length_px` of 157.5 the badge draws at **94.5 px**.
+    /// A filled disc reads heavier than the outline gull it replaced, which is
+    /// why the number went down rather than staying where the bare marker sat.
+    ///
+    /// ⏳ **Open, deliberately:** judged from a still, and Chiu has reserved the
+    /// right to revisit it from a film. Do not record this as settled.
+    public var fallbackMarkerLengthFraction: CGFloat = 0.60
     /// The badge's **disc**. Still named for the marker as a whole because it is
     /// still the marker's own colour — the one a preset picks per appearance.
     public var fallbackMarkerColor = CGColor(srgbRed: 0.114, green: 0.435, blue: 0.878, alpha: 1)
