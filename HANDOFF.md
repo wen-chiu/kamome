@@ -1324,37 +1324,130 @@ is arithmetic, and the render is what settles it.
 all. Switching it to Variant B is a live alternative Chiu named, and the §6a/§6b
 split means both films of the same trip exist anyway.
 
-## 🔴 Open — intermittent `KamomeCore_KamomeExportEngine` bundle crash (2026-08-13)
+## 🟠 Open — the `KamomeCore_KamomeExportEngine` subject lookup still misses; it no longer crashes
 
-**Not diagnosed, deliberately not chased, and explicitly not a flake.** Logged
-here because it is a §6b gate risk and the evidence would otherwise live only in a
-chat transcript.
+**Retitled and corrected 2026-08-28.** This entry stood as "🔴 intermittent bundle
+crash (2026-08-13)" and described an unguarded `fatalError` reached through
+`Bundle.module` in `Core/ExportEngine/RecapCarSprite.swift:75`. **That mechanism
+no longer exists** — its own closing line ("the eventual fix is small and
+defensive — a non-trapping bundle lookup") was carried out two days later and the
+entry was never updated. Kept, not deleted: the *lookup* still misses, and the
+same miss now degrades a film silently instead of crashing it.
 
-**Symptom.** `Fatal error: unable to find bundle named
-KamomeCore_KamomeExportEngine`, thrown during map-renderer creation — after the
-region resolves, before any frame is drawn.
+### The history, as observed (2026-08-13)
 
-**Evidence in hand.** Hit on 2 of 3 New Zealand render attempts; never on
-Miyakojima; never on the Iceland run. Cleared on retry, and again under
-`-retry-tests-on-failure`. The resource bundle **is** present in the built
-`Kamome.app`, so this is a runtime lookup failure, not a packaging fault. Timing-
-or state-dependent, not deterministic.
+`Fatal error: unable to find bundle named KamomeCore_KamomeExportEngine`, thrown
+during map-renderer creation — after the region resolves, before any frame is
+drawn. Hit **2 of 3** New Zealand render attempts; never on Miyakojima, never on
+the Iceland run — so it read as trip-correlated rather than evenly random.
+Cleared on retry, and again under `-retry-tests-on-failure`. The resource bundle
+**is** present in the built `Kamome.app`, so it was a runtime lookup failure, not
+a packaging fault. (Those are this file's own 2026-08-13 figures, kept verbatim;
+no wider tally is recorded in the repository.)
 
-**Why it matters more than a harness annoyance.** `Bundle.module` is used at
-`Core/ExportEngine/RecapCarSprite.swift:75` to load the vehicle sprite, and
-`RecapSubjectRenderer.swift:39` draws that sprite **on the shipped export path**.
-SwiftPM's generated `Bundle.module` accessor calls `fatalError` when it cannot
-locate the bundle, so the defensive `guard … else { return nil }` immediately
-below it — and the `if let` at the call site — **can never run.** That is an
-unguarded crash on the path §6b requires to be crash-free on a real device.
+### What changed the symptom — VERIFIED from the tree, 2026-08-28
 
-**Whether it reproduces on device is UNKNOWN.** The desk is the only place it has
-been seen. §6b carries a "watch for this crash" item; the device sitting is what
-answers it.
+| when | commit | what |
+|---|---|---|
+| 2026-08-15 | `b44a7fc` | "the sprite fallback stops being unreachable" — the trap is replaced by a non-trapping resolver |
+| 2026-08-16 | `e2a1478` | `RecapCarSprite.swift` deleted; the resolver is generalised into `VehicleResourceBundle` (`Core/ExportEngine/SpriteDirection.swift:43`). Its message: "`Bundle.module` does not return." |
 
-**Not fixed this round** (owner call): it is app code, and the renders came first.
-The eventual fix is small and defensive — a non-trapping bundle lookup — but it is
-a change to shipped behaviour and needs its own pass.
+`grep -rn "Bundle.module" --include="*.swift" .` returns **only comments** — no
+call site anywhere in the repository, and no `fatalError` or `try!` in
+`Core/ExportEngine`. **The crash as this entry described it cannot recur.** The
+generated accessor still exists in DerivedSources, as it does for every target
+with resources, but nothing calls it.
+
+### What the same lookup does now — observed 2026-08-28
+
+`VehicleCatalog.resolve` returns nil and `VehicleSubjectRenderer.make` draws the
+vector seagull. **Whether `VehicleResourceBundle.resolved` was itself nil is
+UNKNOWN** — nothing recorded it, which is the gap the new log line closes. Four
+`RecapStopStillTests/testRenderSubjectStill` runs differing only in
+`TEST_RUNNER_KAMOME_ROUTE_COLOR` produced three cars and one gull
+(`light-C-deeper`, `~/Kamome-wt/logs/render-light-C-deeper.log`); the test passed
+in 25.8 s with no retry.
+
+**VERIFIED here, not taken on report:**
+
+- The still really is the fallback. Diffing it against the re-render at >8/255 on
+  any channel gives **9,291 differing pixels of 2,073,600, all inside one
+  126×131 box** — the subject and nothing else. Crops confirm gull vs car.
+- **Nothing distinguished the run.** Stripped of timestamps, pids and paths, the
+  two console outputs are identical **line for line**; the only differences are
+  the colour, the output path and the elapsed seconds.
+- The harness could not have told anyone either: `RecapReviewScene` prints
+  `KAMOME_REVIEW subject <id> at <n>px` **before** calling `make`, so it reports
+  what was asked for, and `KAMOME_SUBJECT_STILL … (se drawing)` derives the
+  direction from the heading, not from what was drawn.
+- The bundle carries `Vehicles/` and nothing else (`Package.swift`,
+  `resources: [.copy("Resources/Vehicles")]`), so a whole-bundle miss would
+  degrade **only** the subject. The single-box pixel diff is therefore consistent
+  with a whole-bundle miss and **cannot discriminate** it from missing art.
+
+### Same mechanism — established. Same trigger — UNKNOWN.
+
+Same bundle name, same lookup, same code lineage, same point in the sequence
+(map-renderer/compositor construction), same intermittency, both cleared by a
+re-run. `b44a7fc` is exactly the commit that would turn the one symptom into the
+other. That is enough to call it **one mechanism with two symptoms**.
+
+It is **not** enough to call it one root cause. Neither occurrence was diagnosed,
+and two things argue for caution: the crash tracked New Zealand and is recorded
+above as never having fired on the Iceland run, while this miss *was* Iceland; and
+`VehicleResourceBundle` is *stricter* than `Bundle.module` was — it accepts a
+candidate only if `Vehicles/vehicles.json` is findable inside it, so a bundle
+directory that exists but does not answer a resource query fails here and would
+have succeeded there.
+
+### Two hypotheses tested and weakened — 2026-08-28
+
+**An install/launch race: WEAKENED, and it was the leading idea.** The tempting
+mechanism was that the bundle being probed is a directory written moments before
+the process launched. **MEASURED** on iPhone 17 Pro over four runs: a run whose
+build produces a changed product installs into a **brand-new container**, taking
+the old one with it (`9979C474-…` 22:24:56 → `D4A52666-…` 22:27:12 →
+`E91959A1-…` 22:29:19), and the installed
+`Kamome.app/KamomeCore_KamomeExportEngine.bundle` carries the install time rather
+than the build time. **But a run that compiles nothing does not reinstall at
+all** — a fourth run with 0 `SwiftCompile` and 0 packaging tasks left
+`E91959A1-…` untouched. The four appearance renders differed only in environment
+variables, so on that evidence the app was installed once and reused across them,
+and no install sat next to the failing launch. INFERRED for that batch — no
+install record from it survives — but it points away from the race, not towards
+it.
+
+**A build-work difference: RULED OUT.** `light-C-deeper`'s build did more than
+`light-A`/`light-B`'s — two `CompileXCStrings` and four `CopyStringsFile` against
+one and two. That is a real difference and it is **not** the discriminator: the
+clean re-render (`render-light-C-rerender.log`) ran the *same* heavier pattern
+and drew the car.
+
+### What was done about it, and what was not
+
+**Done (this change).** `VehicleSubjectRenderer.make` now logs the miss
+(`KamomeLog.recap.error`) instead of degrading in silence, per Arch.md §5, and
+the doc comment that called this "a state no test can arrange" is corrected.
+`KamomeLog` reaches the xcodebuild console on the simulator — the routing lines
+in every render log prove it — so the next occurrence names itself in the same
+file a reviewer already reads.
+
+**Cheapest thing that would settle the trigger.** A one-shot diagnostic in
+`VehicleResourceBundle.resolved` naming, per candidate, the URL tried and whether
+it existed on disk. It fires once per process and would turn the next occurrence
+from "bundle NOT FOUND" into a diagnosis. **Not built** — it is investigation
+instrumentation on shipped code and belongs to its own decision.
+
+**Still not measured:** the rate. One miss in four renders is not a rate, and no
+recurrence has been attempted since the diagnostic landed.
+
+**Stale references left alone, deliberately.** `Docs/current-state.md` (blockers,
+"🔴 intermittent … bundle crash") is the synced index and its neighbouring
+section is being rewritten on `feature/p4-appearance-follows-system`; the
+correction belongs to the pass that re-syncs it. `Docs/gate-P3.5-checklist.md`
+and `Docs/handoff-P3.5.md` describe a closed phase and are history.
+`Docs/decisions.md` 2026-08-15 records the `Bundle.module` mechanism as it stood
+and is append-only — it is not wrong, it is superseded.
 
 ## `stop_weighting_enabled` — reachable in BOTH modes, containment only empirical
 
