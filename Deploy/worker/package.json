@@ -1,0 +1,16 @@
+{
+  "name": "kamome-routing-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker that holds the Geoapify API key so the iOS app never ships one. Deploy config only — the Worker runtime itself has no dependencies.",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "node test/worker.test.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.127.1"
+  }
+}

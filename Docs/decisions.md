@@ -2031,6 +2031,15 @@ had never actually been seen in motion.
 frame, not a film. 225 was itself Chiu's call from stills at 200/220/250 after a
 hard-coded 300 was reported too big (`ConfigLoaderTests` carries that history).
 
+⚠️ **INFERRED, and corrected here before it hardened:** an earlier draft of this
+entry asserted that the 2026-08-22 car-toy film was *the first film anyone had
+watched with a vehicle in it*. That is not established. What is established is
+narrower — the 2026-08-21 reference film's subject was the seagull, and vehicle
+sprites predate the subject catalogue (`4c2a9a7`, 2026-08-17), so what the §6a
+films of 2026-08-13/14 drew is **UNKNOWN** from this repository. The cheapest
+thing that would settle it is the subject named in those films' own log lines, if
+they were kept.
+
 ### ⚠️ What this spends
 
 `cb14ae8` gave the mark a *fraction* so its size would stay **relative** to the
@@ -2054,3 +2063,27 @@ only in a commit message.
 `Arch.md` §7.3 its documentation now names the test that still drives the mechanism
 with a non-unit fraction. **The mechanism is not deleted — only this subject stopped
 using it.**
+
+### The same week went the other way for the other gull, and both were right
+
+PR #22 (2026-08-29) **re-established** exactly the relation this entry spends: the
+*fallback* marker's size stopped being an absolute `170` and became
+`fallbackMarkerLengthFraction` — a fraction of the subject it stands in for.
+
+The trigger was this entry's own change. With `subject_length_px` at 225 an absolute
+170 was 0.756 of the vehicle; when it fell to 157.5 **the stand-in silently became
+larger than the thing it replaced**, because nothing tied the two numbers together.
+
+So the codebase now holds **two seagulls sized by opposite mechanisms** — the
+choosable sprite pinned at `length_fraction` 1.0, and the vector fallback derived
+from the subject. Both are correct for their case: the sprite is *the* subject and
+takes the configured size, while the fallback is a stand-in and must never outgrow
+what it stands in for. But the pair is a trip hazard, and this is the one place the
+two decisions meet, so it is recorded here rather than left to be rediscovered.
+
+⚠️ **Open, and small:** the fallback's fraction is `1` and nothing states *why* 1
+rather than the 0.756 that shipped, nor pins it. This repository's own precedent
+says a mark's proportion should be both asserted and explained
+(`testAnOmniMarkMayDeclareItsOwnProportion`: *"asserted rather than merely allowed,
+so changing it is a deliberate edit to this test and not a silent drift"*). Raised
+against PR #22 after it merged; a sentence and one assertion close it.

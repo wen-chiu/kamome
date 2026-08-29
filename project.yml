@@ -192,6 +192,7 @@ schemes:
         - { variable: KAMOME_FOLLOWCAM_STILLS, value: "$(TEST_RUNNER_KAMOME_FOLLOWCAM_STILLS)", isEnabled: true }
         - { variable: KAMOME_FORCE_DURATION_S, value: "$(TEST_RUNNER_KAMOME_FORCE_DURATION_S)", isEnabled: true }
         - { variable: KAMOME_FORCE_FALLBACK_MARKER, value: "$(TEST_RUNNER_KAMOME_FORCE_FALLBACK_MARKER)", isEnabled: true }
+        - { variable: KAMOME_FALLBACK_MARKER_COLOR, value: "$(TEST_RUNNER_KAMOME_FALLBACK_MARKER_COLOR)", isEnabled: true }
         - { variable: KAMOME_GEOCODE_STOPS, value: "$(TEST_RUNNER_KAMOME_GEOCODE_STOPS)", isEnabled: true }
         - { variable: KAMOME_KEYFRAME_INTERVAL, value: "$(TEST_RUNNER_KAMOME_KEYFRAME_INTERVAL)", isEnabled: true }
         - { variable: KAMOME_LIVE_GEOCODE, value: "$(TEST_RUNNER_KAMOME_LIVE_GEOCODE)", isEnabled: true }
