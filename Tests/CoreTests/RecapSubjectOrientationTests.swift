@@ -1,6 +1,7 @@
 import CoreGraphics
+import Foundation
 import KamomeConfig
-import KamomeExportEngine
+@testable import KamomeExportEngine
 import XCTest
 
 /// The subject-orientation contract after the north-up reversal (Chiu
@@ -82,6 +83,42 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
             return XCTFail("the shipped car must load")
         }
         XCTAssertEqual(set.count, SpriteDirection.allCases.count)
+    }
+
+    /// The diagnostic approved on 2026-08-28, exercised rather than assumed.
+    ///
+    /// The lookup has failed twice in the field and been diagnosed neither time,
+    /// and both times the only fact available was "not found". These two tests
+    /// hold the message's contract: on failure it names every candidate and
+    /// whether the nested bundle was **on disk**, which is what separates an
+    /// install-timing fault from a packaging one; on success it says nothing.
+    func testAFailedLookupNamesEveryCandidateAndWhetherItWasOnDisk() throws {
+        let empty = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kamome-bundle-probe-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: empty, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: empty) }
+        let host = try XCTUnwrap(Bundle(url: empty), "a directory must be openable as a Bundle")
+
+        let outcome = VehicleResourceBundle.resolve(hosts: [host])
+
+        XCTAssertNil(outcome.bundle, "a host with no manifest must not resolve")
+        XCTAssertTrue(
+            outcome.trace.contains("KamomeCore_KamomeExportEngine.bundle: not on disk"),
+            "the trace must say the nested bundle was absent, not merely that nothing resolved — got: \(outcome.trace)"
+        )
+        XCTAssertTrue(
+            outcome.trace.contains("opened, no Vehicles/vehicles.json"),
+            "the trace must also name the host tried as a candidate — got: \(outcome.trace)"
+        )
+    }
+
+    /// The other half, and the one that keeps this off a successful render's
+    /// console: a lookup that resolves reports nothing at all.
+    func testAResolvedLookupTracesNothing() throws {
+        let shipped = try XCTUnwrap(VehicleResourceBundle.resolved)
+        let outcome = VehicleResourceBundle.resolve(hosts: [shipped])
+        XCTAssertNotNil(outcome.bundle)
+        XCTAssertEqual(outcome.trace, "", "a resolved lookup must leave nothing to log")
     }
 
     // MARK: - Rendering
