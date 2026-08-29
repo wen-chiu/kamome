@@ -59,11 +59,17 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
     /// one. Only a mark declares one — the centring tool already equalises
     /// apparent size between vehicles.
     ///
-    /// `resolve` is injectable so a test can drive the marker fallback, which
-    /// otherwise only fires when the app's own resource bundle cannot be found —
-    /// a state no test can arrange. It is a closure rather than an optional
-    /// result because "resolved to nothing" and "caller said nothing" are
-    /// different answers and must not collapse into one nil.
+    /// `resolve` is injectable so a test can drive the marker fallback
+    /// deliberately. It is a closure rather than an optional result because
+    /// "resolved to nothing" and "caller said nothing" are different answers and
+    /// must not collapse into one nil.
+    ///
+    /// ⚠️ **The marker fallback fires at render time.** This comment used to say
+    /// it could only follow a missing resource bundle — "a state no test can
+    /// arrange". Falsified by observation on 2026-08-28: of four review stills
+    /// that differed only in a trail colour, one drew the marker and three drew
+    /// the car, and the three consoles were line-for-line identical to the
+    /// fourth. That is why the miss is now logged rather than merely handled.
     public static func make(
         style: RecapStyle,
         subjectId: String? = nil,
@@ -71,6 +77,21 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
         resolve: (String?) -> (subject: VehicleSubject, artwork: SubjectArtwork)? = VehicleCatalog.resolve(id:)
     ) -> VehicleSubjectRenderer {
         guard let found = resolve(subjectId) else {
+            // No silent fallbacks (Arch.md §5). A film whose subject is a vector
+            // gull rather than the chosen vehicle still looks finished, so a log
+            // line is the only thing that can report the degradation — the same
+            // rule the region and routing choices already follow (`KamomeLog`).
+            //
+            // The bundle is named apart from the artwork because they are
+            // different problems: an unresolvable bundle is the intermittent
+            // lookup `VehicleResourceBundle` exists for, while a bundle that
+            // resolves and still yields nothing means missing or partial art.
+            KamomeLog.recap.error("""
+                subject: the asked-for \(subjectId ?? VehicleCatalog.defaultSubjectId, privacy: .public) and \
+                the \(VehicleCatalog.defaultSubjectId, privacy: .public) fallback behind it both loaded no \
+                artwork — the film draws the vector marker instead of a vehicle. Resource bundle \
+                \(VehicleResourceBundle.resolved == nil ? "NOT FOUND" : "found", privacy: .public).
+                """)
             return VehicleSubjectRenderer(
                 visual: .marker(style.fallbackMarker, palette: VehicleMarker.Palette(
                     fill: style.fallbackMarkerColor, accent: style.markerAccentColor, outline: style.markerOutlineColor
