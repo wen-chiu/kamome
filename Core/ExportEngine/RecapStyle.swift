@@ -150,22 +150,50 @@ public struct RecapStyle {
     /// dark souvenir map — deliberately not the car's red, so the two are never
     /// confused in a still.
     public var fallbackMarker: VehicleMarker = .seagull
-    public var fallbackMarkerLengthPx: CGFloat = 170
+    /// The marker's size **as a fraction of the subject it stands in for**, not
+    /// as pixels of its own (Chiu 2026-08-29).
+    ///
+    /// It was an absolute `170` until then, and an absolute encodes a
+    /// relationship at one particular subject size and afterwards stops meaning
+    /// it. That is not hypothetical here: ADR 2026-08-27 moved
+    /// `export.subject_length_px` 225 → 157.5 and **the stand-in became larger
+    /// than the vehicle**, silently, because the two numbers sat side by side
+    /// with nothing tying them together. A fraction cannot invert — at ≤ 1 the
+    /// marker is at most the subject, whatever the subject becomes.
+    ///
+    /// Same reasoning, and deliberately the same shape, as `length_fraction` in
+    /// `vehicles.json`: a mark is sized *against* the vehicle. The manifest
+    /// cannot supply this one — the fallback fires precisely when the manifest
+    /// could not be read.
+    public var fallbackMarkerLengthFraction: CGFloat = 1
     public var fallbackMarkerColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 1)
     /// ⚠️ **Nothing draws this** either — the vector marker's fill comes from
-    /// `fallbackMarkerColor` (`RecapSubjectRenderer:76`), and this token has no
-    /// reader anywhere in the repository; grep-verified 2026-08-28. Same
-    /// treatment as the two above: reported, not removed in this change.
+    /// `fallbackMarkerColor` (`VehicleSubjectRenderer.make`'s guard), and this
+    /// token has no reader anywhere in the repository; grep-verified 2026-08-28,
+    /// re-checked 2026-08-29. Same treatment as the two above: reported, not
+    /// removed in this change.
     public var markerColor = CGColor(srgbRed: 0.95, green: 0.27, blue: 0.28, alpha: 1)
     public var markerAccentColor = CGColor(srgbRed: 0.98, green: 0.98, blue: 0.99, alpha: 0.92)
     public var markerOutlineColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
+
+    /// The marker's drawn length for a subject of `subjectLengthPx` — the one
+    /// place the fraction is applied, so no caller can reintroduce a second
+    /// number by multiplying it itself.
+    public func fallbackMarkerLength(subjectLengthPx: CGFloat) -> CGFloat {
+        subjectLengthPx * fallbackMarkerLengthFraction
+    }
 
     /// How much room the subject may occupy, whichever visual is drawn.
     /// Callers pass the configured length; this answers with the larger of that
     /// and the marker, so a pixel probe can clear the subject without knowing
     /// which visual rendered.
+    ///
+    /// The `max` is now defence rather than arithmetic: while the fraction is
+    /// ≤ 1 this is always `configured`. It stays because the day someone sets a
+    /// fraction above 1 is the day a probe would otherwise start clipping the
+    /// thing it is meant to clear.
     public func subjectLengthPx(configured: CGFloat) -> CGFloat {
-        max(configured, fallbackMarkerLengthPx)
+        max(configured, fallbackMarkerLength(subjectLengthPx: configured))
     }
 
     // Photo deck (§5; zoom-in reveal, Chiu 2026-07-25): the card opens from

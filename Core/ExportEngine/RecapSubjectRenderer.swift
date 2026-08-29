@@ -96,7 +96,10 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
                 visual: .marker(style.fallbackMarker, palette: VehicleMarker.Palette(
                     fill: style.fallbackMarkerColor, accent: style.markerAccentColor, outline: style.markerOutlineColor
                 )),
-                lengthPx: style.fallbackMarkerLengthPx
+                // Sized from the subject it replaces, never from a number of its
+                // own: a stand-in larger than the vehicle is what an absolute
+                // produced when `subject_length_px` moved (Chiu 2026-08-29).
+                lengthPx: style.fallbackMarkerLength(subjectLengthPx: lengthPx)
             )
         }
         let size = found.subject.lengthFraction.map { CGFloat($0) * lengthPx } ?? lengthPx

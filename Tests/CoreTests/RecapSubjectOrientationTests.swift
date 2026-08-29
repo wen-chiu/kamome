@@ -69,7 +69,34 @@ final class RecapSubjectOrientationTests: RecapRenderTestCase {
             return XCTFail("a nil sprite set must select the vector marker, got \(renderer.visual)")
         }
         XCTAssertEqual(marker, RecapStyle().fallbackMarker)
-        XCTAssertEqual(renderer.lengthPx, RecapStyle().fallbackMarkerLengthPx)
+        // Sized from the subject that could not be drawn, not from a number of
+        // the marker's own (2026-08-29). The expectation changed because the
+        // rule changed, not because it was failing.
+        XCTAssertEqual(renderer.lengthPx, RecapStyle().fallbackMarkerLength(subjectLengthPx: 250))
+    }
+
+    /// **The stand-in may never be bigger than the thing it stands in for.**
+    ///
+    /// It was, from ADR 2026-08-27 until 2026-08-29: `fallbackMarkerLengthPx`
+    /// was an absolute 170 while `export.subject_length_px` moved 225 → 157.5,
+    /// so the fallback seagull rendered 12.5 px longer than the car. Nothing
+    /// failed, because nothing tied the two numbers together.
+    ///
+    /// Swept across the sizes this project has actually shipped or tried, so the
+    /// guard is about the rule and not about today's number.
+    func testTheFallbackMarkerIsNeverLargerThanTheSubjectItReplaces() throws {
+        for subjectLength in [CGFloat(112.5), 157.5, 170, 225, 300] {
+            let renderer = VehicleSubjectRenderer.make(
+                style: RecapStyle(), subjectId: "car-red", lengthPx: subjectLength, resolve: { _ in nil }
+            )
+            guard case .marker = renderer.visual else {
+                return XCTFail("a nil sprite set must select the vector marker, got \(renderer.visual)")
+            }
+            XCTAssertLessThanOrEqual(
+                renderer.lengthPx, subjectLength,
+                "the fallback marker drew at \(renderer.lengthPx) for a \(subjectLength) subject"
+            )
+        }
     }
 
     /// The other half of the same contract: the resolver really does find the
