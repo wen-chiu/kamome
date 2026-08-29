@@ -27,18 +27,29 @@ enum ReviewSubstrate {
     /// `KAMOME_MAP_APPEARANCE` (2026-08-22).
     ///
     /// Review-only overrides for questions Chiu judges by looking. They are env
-    /// rather than config keys precisely because the appearance is **still
-    /// undecided** — scale 2 was chosen on 2026-08-27, light vs dark was not,
-    /// because the three films never isolated that axis. A `TrackingConfig` key
-    /// would ship an answer to a question still open, so the defaults here stay
-    /// today's shipped behaviour.
+    /// rather than config keys precisely because the answers are **still open** —
+    /// scale 2 was chosen on 2026-08-27 and has not shipped. A `TrackingConfig`
+    /// key would ship an answer to a question still being asked, so the defaults
+    /// here stay today's shipped behaviour.
+    ///
+    /// `appearance` changed meaning on 2026-08-28. It used to set only the base
+    /// map's trait, which meant a "dark" still was a dark Apple Maps under a
+    /// palette tuned for a dark souvenir map by coincidence. Now it is the same
+    /// `RecapAppearance` the app captures at export, and `RecapReviewScene` builds
+    /// the style from it — so a review still is the film the app would render on a
+    /// device in that appearance, rather than a half of it. The default below is
+    /// still light, and it is a *stated* default in one place rather than an
+    /// appearance inherited from whatever the simulator happens to be set to;
+    /// every render prints which one it used.
     ///
     /// An unparseable value is refused rather than quietly ignored. A review
     /// render that silently used a different setting than the reviewer asked for
     /// is worse than one that did not run.
     struct Experiment {
         var displayScale = 1
-        var appearance = MapKitSnapshotProvider.Appearance.light
+        /// Today's shipped behaviour when the reviewer says nothing — the light
+        /// Apple Maps base every film has rendered on since 2026-08-15.
+        var appearance = RecapAppearance.light
     }
 
     static func experiment() throws -> Experiment {

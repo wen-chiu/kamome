@@ -122,10 +122,16 @@ final class MapKitSnapshotScaleTests: XCTestCase {
         )
     }
 
-    /// The default is the behaviour every caller had before the parameter
-    /// existed. It is what ships until Chiu judges a render, so it is pinned.
+    /// The default **display scale** is the behaviour every caller had before the
+    /// parameter existed. It is what ships until Chiu judges a render, so it is
+    /// pinned.
+    ///
+    /// The appearance is passed explicitly because as of 2026-08-28 it has no
+    /// default: the film follows the device, so an implicit `.light` here would be
+    /// a gate silently asserting one half of a pair. `.light` is named rather than
+    /// inherited — which is the whole point.
     func testTheDefaultProviderIsUnchangedFromBeforeTheParameterExisted() throws {
-        let provider = MapKitSnapshotProvider()
+        let provider = MapKitSnapshotProvider(appearance: .light)
         XCTAssertEqual(provider.displayScale, 1, "the shipping path must still be 1 point == 1 pixel")
         let size = try MapKitSnapshotProvider.pointSize(
             widthPx: widthPx, heightPx: heightPx, displayScale: provider.displayScale

@@ -33,7 +33,7 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
     /// The vignette has to actually darken the corners *relative to the middle*,
     /// and must not simply dim the whole frame.
     func testModernMinimalDarkensCornersMoreThanTheCentre() async throws {
-        let frame = try await render(style: .modernMinimal)
+        let frame = try await render(style: .modernMinimal(.dark))
 
         func luma(col: Int, row: Int) throws -> Double {
             let sample = try pixel(frame, col: col, row: row)
@@ -57,11 +57,143 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
     /// Pinned on the preset rather than left to `testRouteGlowWidensTheTrail`,
     /// because that test now supplies its own glow: with nothing asserting the
     /// preset, re-enabling it would be silent.
+    ///
+    /// **Both appearances, and each was decided separately.** On light: judged
+    /// gone by Chiu on film A (2026-08-22). On dark: the acceptance did *not*
+    /// carry over — the glow was designed for a dark base — so it was rendered as
+    /// an α0/α0.32 pair on 2026-08-29 and he chose the trail without it. The
+    /// mechanism is intact and one alpha away in either appearance, which is
+    /// exactly why this holds the rule in both: a return must never be silent.
     func testModernMinimalDrawsNoGlowUnderTheTrail() {
-        XCTAssertEqual(
-            RecapStyle.modernMinimal.routeGlowColor.alpha, 0,
-            "the shipped preset must not stroke a glow under the trail on a light base map"
+        for appearance in RecapAppearance.allCases {
+            XCTAssertEqual(
+                RecapStyle.modernMinimal(appearance).routeGlowColor.alpha, 0,
+                "the shipped \(appearance) preset must not stroke a glow under the trail"
+            )
+        }
+    }
+
+    /// **A dashed leg is the trail's own claim, made weaker** — in every
+    /// appearance (PD-1, spec §0 honest provenance).
+    ///
+    /// This is a product rule, not styling: an inferred leg is a straight guess
+    /// between two photo positions, and the published film is where that has to
+    /// be visible. It is asserted **structurally** rather than as two colour
+    /// literals because the trail colour is now appearance-dependent, and the
+    /// failure this guards is precisely a trail that changes while the dashes it
+    /// derives from stay behind — leaving a film that draws a guess in the colour
+    /// of a road it never proved.
+    func testInferredLegsStayDerivedFromTheTrailInEveryAppearance() throws {
+        for appearance in RecapAppearance.allCases {
+            let style = RecapStyle.modernMinimal(appearance)
+            let trail = try XCTUnwrap(style.routeColor.components)
+            let dashed = try XCTUnwrap(style.routeInferredColor.components)
+            XCTAssertEqual(
+                Array(dashed.prefix(3)), Array(trail.prefix(3)),
+                "\(appearance): the dashed leg must be the trail's own hue, not a second colour"
+            )
+            XCTAssertLessThan(
+                style.routeInferredColor.alpha, style.routeColor.alpha,
+                "\(appearance): the dashed leg must read as the weaker claim"
+            )
+            XCTAssertLessThan(
+                style.routeInferredWidthMultiple, 1,
+                "\(appearance): the dashed leg must be thinner than the road it is not"
+            )
+            XCTAssertGreaterThan(
+                style.routeInferredDashPx, 0,
+                "\(appearance): an inferred leg must actually be dashed"
+            )
+        }
+    }
+
+    /// **The light base's trail must not be in the water's colour family.**
+    ///
+    /// The *measured* reason for the 2026-08-27 decision, held as a rule rather
+    /// than as a value so retuning the orange cannot walk it back to cyan. On
+    /// Apple Maps' light base the ocean, lakes, rivers and fjords are blue, and a
+    /// blue-dominant trail crossing them is not distinguishable from them — the
+    /// north-coast leg between Sauðárkrókur and Húsavík in the 2026-08-27 light
+    /// still reads as a fjord.
+    ///
+    /// "Not blue-dominant" is the cheapest test of that which does not pin a
+    /// colour Chiu has yet to choose: blue must not be the strongest channel, and
+    /// red must lead by a real margin rather than a rounding error.
+    func testTheLightTrailIsNotInTheBaseMapsWaterColours() throws {
+        let components = try XCTUnwrap(RecapStyle.modernMinimal(.light).routeColor.components)
+        let (red, green, blue) = (components[0], components[1], components[2])
+        XCTAssertGreaterThan(
+            red, blue + 0.2,
+            "a light-base trail must be warm — blue is the base map's water, not Kamome's journey"
         )
+        XCTAssertGreaterThan(red, green, "the warm hue must lead on red")
+    }
+
+    /// **The stop pin travels with the trail's hue** (2026-08-29).
+    ///
+    /// Not a rule invented for light — the rule the dark preset had always
+    /// followed without saying so: `labelPinColor` `(0.35,0.85,0.95)` is within
+    /// 0.07 of `trailOnDark` on every channel. Saying it out loud is what stops a
+    /// cyan pin being left on a light base, where it is a water-coloured dot on a
+    /// coastline: the same collision the trail itself was moved out of, on a
+    /// token nobody had looked at.
+    ///
+    /// Held as *hue family* rather than as equality, because the dark pin is
+    /// deliberately a shade off its trail and equality would demand a change to a
+    /// value nobody asked to move.
+    func testTheStopPinTravelsWithTheTrailsHue() throws {
+        for appearance in RecapAppearance.allCases {
+            let style = RecapStyle.modernMinimal(appearance)
+            let trail = try XCTUnwrap(style.routeColor.components)
+            let pin = try XCTUnwrap(style.labelPinColor.components)
+            let dominant = { (rgb: [CGFloat]) in rgb.prefix(3).enumerated().max { $0.element < $1.element }?.offset }
+            XCTAssertEqual(
+                dominant(Array(pin)), dominant(Array(trail)),
+                "\(appearance): the stop pin must sit in the trail's colour family, not the base map's"
+            )
+        }
+    }
+
+    /// **The fallback marker must contrast with the base map it lands on.**
+    ///
+    /// It is drawn only when the vehicle artwork cannot be loaded — an
+    /// intermittent, undiagnosed failure. On 2026-08-28 it fired by itself in one
+    /// review render of four, and **the wrong still survived review because a
+    /// white gull on a light base is hard to see.** So this is not a look rule:
+    /// the marker's job includes being noticed when it appears at all.
+    ///
+    /// Asserted as luminance against the base rather than as two colour literals,
+    /// because what must hold is "it is visible", not "it is this ink".
+    func testTheFallbackMarkerContrastsWithItsBaseMap() throws {
+        func luminance(_ color: CGColor) throws -> CGFloat {
+            let rgb = try XCTUnwrap(color.components)
+            return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+        }
+        // Comfortably clear of mid-grey in each direction: the marker has to read
+        // at a glance on a pale map or a near-black one, not merely differ from it.
+        let ceiling: CGFloat = 0.35
+        let floor: CGFloat = 0.65
+        XCTAssertLessThan(
+            try luminance(RecapStyle.modernMinimal(.light).fallbackMarkerColor), ceiling,
+            "on a light base the fallback marker must be dark — a white gull is how a failed render passed review"
+        )
+        XCTAssertGreaterThan(
+            try luminance(RecapStyle.modernMinimal(.dark).fallbackMarkerColor), floor,
+            "on a dark base it must stay light"
+        )
+    }
+
+    /// The dark base keeps the cyan it was tuned for, and it is *not* the same
+    /// trail the light base draws. One value, two films — the whole point of
+    /// `modernMinimal(_:)` being a function.
+    func testTheTwoAppearancesDoNotShareATrail() throws {
+        let dark = try XCTUnwrap(RecapStyle.modernMinimal(.dark).routeColor.components)
+        let light = try XCTUnwrap(RecapStyle.modernMinimal(.light).routeColor.components)
+        XCTAssertNotEqual(
+            Array(dark.prefix(3)), Array(light.prefix(3)),
+            "the trail that reads on near-black is the one that vanishes into a light map's sea"
+        )
+        XCTAssertGreaterThan(dark[2], dark[0], "the dark base keeps the cool trail it was tuned for")
     }
 
     /// The glow pass widens the trail without replacing its core colour.
@@ -74,8 +206,8 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
     /// same experiment it always ran.
     func testRouteGlowWidensTheTrail() async throws {
         var plain = RecapStyle()
-        plain.routeColor = RecapStyle.modernMinimal.routeColor
-        plain.routeWidthPx = RecapStyle.modernMinimal.routeWidthPx
+        plain.routeColor = RecapStyle.modernMinimal(.dark).routeColor
+        plain.routeWidthPx = RecapStyle.modernMinimal(.dark).routeWidthPx
 
         var glowing = plain
         glowing.routeGlowColor = CGColor(srgbRed: 0.22, green: 0.62, blue: 0.92, alpha: 0.32)
@@ -101,8 +233,13 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
         XCTAssertGreaterThan(with, Int(Double(without) * 1.5), "the glow pass must broaden the trail")
     }
 
+    /// ⚠️ Asserts tokens **no renderer reads** — `cardColor` and `cardTextColor`
+    /// lost their consumer when the stop label's pill was removed on 2026-07-31
+    /// (`HANDOFF.md` 2026-08-28 finding 3). Kept and pinned to `.dark` here
+    /// rather than deleted, because deleting it is a separate change; what it
+    /// asserts today is the *intent* of the token, not the look of a frame.
     func testModernMinimalUsesNightChromeSoPanelsDoNotPunchHoles() {
-        let style = RecapStyle.modernMinimal
+        let style = RecapStyle.modernMinimal(.dark)
         let components = style.cardColor.components ?? []
         XCTAssertEqual(components.count, 4)
         XCTAssertLessThan(components[0], 0.2, "chrome panels must be dark, not white")

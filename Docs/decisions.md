@@ -1936,127 +1936,121 @@ Chiu fixed the key on 2026-08-21 and reports it fine, but **no run log exists**;
 `Docs/eng-session-P4-visual.md` item 3 folds that confirmation into its next
 render rather than spending a session on it.
 
+## 2026-08-27 — The film follows the device's system appearance, and light gets a warm trail
+
+**Decision (Chiu, 2026-08-27).** The recap film **follows the device's system
+appearance**. On a light base the trail is **orange** instead of the blue-cyan one.
+
+**Why the trail cannot simply carry over.** Measured, not preference. On Apple
+Maps' light base the trail's cyan `(0.42, 0.87, 0.98)` is in the same colour
+family as the ocean, lakes, rivers and fjords it crosses: in the 2026-08-27
+comparison still the north-coast leg between Sauðárkrókur and Húsavík is not
+distinguishable from a fjord, and the south-coast leg past Hvannadalshnúkur runs
+along the shoreline and disappears into the sea beside it. On the dark base, same
+frame and same subject size, the trail is unmistakably the hero of the frame.
+This is why the preset was tuned dark in the first place (2026-07-22), and the
+2026-08-15 substrate ADR invalidated that tuning without anyone re-tuning it.
+
+**What this constrains, and it is more than a colour** (`Docs/decisions.md`
+2026-08-15, "Export variation enters as a seed, never as randomness"). Appearance
+is ambient device state, so it is bound the way that ADR binds a seed:
+
+- **Captured at the composition boundary** — `RecapView` reads
+  `@Environment(\.colorScheme)` at the tap and hands it to
+  `RecapModel.startExport(appearance:)`. Never read inside the render loop, which
+  is detached and would otherwise let a mid-render dark-mode toggle change a film.
+- **Constant for the render**, and it selects **both** the base map's trait and the
+  overlay palette from one domain value (`RecapAppearance`). A substrate that
+  cannot honour it says so (`MapRendererCapabilities.fixedAppearance`; the MapLibre
+  souvenir map is dark and has no light variant) and wins.
+- **Every gate pins it explicitly.** `RecapStyle.modernMinimal` is now a function
+  of the appearance and `MapKitSnapshotProvider(appearance:)` has no default, so a
+  test cannot inherit the simulator's setting.
+- ⚠️ **NOT persisted.** The ADR also requires the value to be stored with the
+  export; there is no export record in the schema, and the seed feature that would
+  create one is deferred by that same ADR. Until then the resolved appearance is
+  written into the film's log line only, and **re-exporting under a changed system
+  appearance yields a different film**. Recorded as a known gap
+  (`Docs/eng-session-appearance.md` §4.1), not as satisfied.
+
+**Rejected:** an `export.appearance` config key (it is ambient device state, not a
+tunable, and a committed key would ship an answer to the manual-picker question
+Chiu deferred); reading `UITraitCollection.current` inside the provider (an
+environment read inside the render loop — precisely what 2026-08-15 forbids).
+
+**Deferred, explicitly:** a **manual appearance override** in the UI. Chiu wants
+system-follow now and a user picker later; that is a separate feature with its own
+UI decisions.
+
+**✅ Both open values closed by Chiu on 2026-08-29**, from the renders in
+`~/Kamome-films/2026-08-28-appearance/`:
+
+1. **The orange is `RecapStyle.routeAccent` `#FF8A5B`** — candidate **B** of three
+   swept on one frame (t=114.3 s, the frame that settled the subject size) with
+   their derived dashed variants, against `chromeAccentColor` `(0.95, 0.55, 0.32)`
+   and a deeper `(0.96, 0.42, 0.15)`. It is the validated prototype's own
+   `--route`, already the film's progress dot and strap line, so the film keeps
+   one warm accent rather than gaining a fourth.
+2. **The glow stays off on dark**, at α0. The question was not inherited: `a58942d`
+   retired the pass *because the base was light*, so the acceptance of "the halo is
+   gone" did not carry to a dark base. Rendered as an α0 / α0.32 pair; on dark the
+   pass works exactly as designed (measured: it lifts the terrain beside the trail
+   by `(8,29,29)`, compositing *lighter* than the ground) and he chose the trail
+   without it regardless. The mechanism stays, guarded on alpha.
+
+**A correction to this entry's own lineage** (Chiu, 2026-08-29): a parallel draft of
+this decision quoted the trail's blue as `(0.13, 0.45, 0.95)`. That is `RecapStyle`'s
+**neutral default**, which nothing renders; the shipped `modernMinimal` preset's
+trail was the cyan `(0.42, 0.87, 0.98)` measured here. It is the same trap the glow
+brief fell into, from the same source, twice — reading a value off the struct's
+defaults rather than off the preset the app actually selects.
+
+**Not decided by this entry:** whether the grade, vignette and chrome should also
+differ by appearance. They are shared today, reported rather than pre-empted.
+
 ---
 
-## 2026-08-27 — The subject shrinks 30%, and the mark's fraction is spent doing it
+## 2026-08-27 (b) — The subject shrinks 30%, and the mark's fraction is spent doing it
+
+*A different subject from the same day as the appearance entry above, not an
+amendment to it.*
 
 **Decision (Chiu, from stills).** `export.subject_length_px` **225 → 157.5**, and
 the seagull mark's `length_fraction` **0.7 → 1.0** so the mark stays the size it
-already was. Landed on `feature/p4-visual-checks` (PR #18).
+already was. Landed in PR #18.
 
-**Why 157.5 and not a per-vehicle override.** `length_fraction` per directional
-subject is forbidden by `VehicleCatalogTests
-.testEveryDirectionalSubjectTakesTheConfiguredSize`, and correctly:
-`center-sprites.py` equalises apparent size across sets, so an override would be
-fighting the tool. car-toy did not look big *as car-toy*; the subject looked big.
-The 2026-08-22 car-toy film was the first film anyone had watched with a **vehicle**
-in it — every earlier judged film used the seagull — so 225 had never actually been
-seen in motion.
+**Why not a per-vehicle override.** `length_fraction` on a directional subject is
+forbidden by `VehicleCatalogTests.testEveryDirectionalSubjectTakesTheConfiguredSize`,
+and correctly: `center-sprites.py` equalises apparent size across sets, so an
+override would be fighting the tool. car-toy did not look big *as car-toy* — the
+subject looked big. The 2026-08-22 car-toy film was **the first film anyone had
+watched with a vehicle in it**; every earlier judged film used the seagull, so 225
+had never actually been seen in motion.
 
-**Method, deliberately the same one that set 225.** Stills at 225 / 180 / 157.5 on
-one frame, not a film. 225 itself was Chiu's call from stills at 200/220/250 after
-a hard-coded 300 was reported too big.
+**Method, deliberately the one that set 225.** Stills at 225 / 180 / 157.5 on one
+frame, not a film. 225 was itself Chiu's call from stills at 200/220/250 after a
+hard-coded 300 was reported too big (`ConfigLoaderTests` carries that history).
 
-### ⚠️ What this spends, and it will be rediscovered painfully if it is not written here
+### ⚠️ What this spends
 
-`cb14ae8` gave the mark a *fraction* so that its size would stay **relative** to the
-vehicle: change the vehicle, and the mark follows in proportion. Pinning the
-fraction at **1.0 spends that guarantee.** The mark is now simply the same length as
-a vehicle.
+`cb14ae8` gave the mark a *fraction* so its size would stay **relative** to the
+vehicle: move the vehicle, and the mark follows in proportion. Pinning the fraction
+at **1.0 spends that guarantee.** The mark is now simply the same length as a
+vehicle.
 
 Today's sizes are unchanged only because the base fell by the reciprocal:
 
     before   225   × 0.7 = 157.5 px
     after    157.5 × 1.0 = 157.5 px
 
-**So the next time `subject_length_px` moves, the mark moves with it at full rate,
-and its size becomes a fresh judgement rather than a maintained relation.** That is
-the cost Chiu accepted, and it was the right trade: letting the mark follow this
-change would have put it at 110.25 px — **2.25 px below the 112.5 px he rejected on
-2026-08-18** as too small.
+**So the next time `subject_length_px` moves, the mark moves with it at full rate
+and its size becomes a fresh judgement rather than a maintained relation.** That was
+the right trade — letting the mark follow this change would have put it at 110.25 px,
+**2.25 px below the 112.5 px rejected on 2026-08-18 as too small** — but it is a
+guarantee traded away, not a value changed, and it would otherwise have survived
+only in a commit message.
 
-`testAnOmniMarkMayDeclareItsOwnProportion` would have gone vacuous at 1.0 (any
-number × 1.0 is itself), so per `Arch.md` §7.3 its documentation now names the test
-that still drives the mechanism with a non-unit fraction. **The mechanism is not
-deleted — only this subject stopped using it.**
-
----
-
-## 2026-08-28 — The film follows the device's appearance, and light gets an orange trail
-
-**Decided by Chiu 2026-08-27/28. Not yet implemented, not yet judged** — the
-engineering session began 2026-08-28. This entry records what was decided and, just
-as importantly, what was **not**, so neither gets re-derived.
-
-### Decided
-
-1. **The film follows the device's system appearance** (light or dark) rather than
-   shipping one fixed look. A user-facing override is wanted **later**, as its own
-   feature.
-2. **Light mode uses an orange trail**, not the shipped blue.
-3. **`displayScale` 2** is the map's label size, chosen from three rendered films.
-
-### Why light needs a different trail colour — legibility, not taste
-
-On Apple Maps' light base the trail's blue `(0.13, 0.45, 0.95)` is the same colour
-family as the ocean, lakes, rivers and fjords it crosses. In the 2026-08-27
-comparison still — one frame, one variable — the north-coast leg between
-Sauðárkrókur and Húsavík **cannot be told apart from a fjord**. On the dark base the
-identical trail is unmistakably the subject of the frame.
-
-**VERIFIED** by two stills rendered at the same frame, same subject size, same
-scale, differing only in appearance. This is also the mechanism behind the
-2026-07-22 "dark atmospheric souvenir map" direction: that was never only an art
-preference.
-
-Kamome already owns an orange — `RecapStyle.chromeAccentColor` `(0.95, 0.55, 0.32)`.
-A second, unrelated orange would fight it.
-
-### Why scale 3 lost
-
-Label **density follows the point canvas**, not the raster: scale 3 asks MapKit for
-a 360×640 pt canvas, and MapKit spends fewer labels on a small canvas. Sauðárkrókur
-is present at 1 and 2 and **gone at 3**; Akureyri collides with the trail at 3. No
-public MapKit API separates label density from label size, so this is a trade, not a
-tuning problem. **The durable answer to "big legible place names" remains the
-iceboxed Kamome-drawn overlay**, not a base-map knob.
-
-`displayScale` is an `Int` by deliberate design — it must divide the 1080×1920 frame
-exactly. 1.5 divides arithmetically (720×1280 pt) but is **not reachable** without
-widening the type against a documented reason.
-
-### ⚠️ The constraint this creates against ADR 2026-08-15
-
-"Follow the system appearance" makes the film a function of **ambient device state**,
-which is exactly what *"export variation enters as a seed, never as randomness"* was
-written against. The two are reconciled on one condition, and it is binding:
-
-> **The appearance is captured at the moment of export and recorded with that
-> export, the same way the seed is** — never read from the environment during
-> rendering.
-
-Two consequences that are easy to miss:
-
-- **Every golden-frame and still gate must pin the appearance explicitly.** A gate
-  that inherits the simulator's setting changes verdict when somebody toggles dark
-  mode on their Mac.
-- A film is **baked**. "Follows the system appearance" therefore means *the theme at
-  export time*: the same trip exported twice in different themes yields two
-  different films, and a shared film carries the **exporter's** theme, not the
-  viewer's. Accepted; the later override feature is what gives a user control.
-
-### Explicitly NOT decided
-
-- **Which orange.** A sweep of candidates around `chromeAccentColor` goes to Chiu as
-  stills; the dashed/inferred variant is derived from it and is judged in the same
-  sweep, because honest provenance requires a dashed leg to keep reading as the
-  lighter claim.
-- **Whether the glow returns on dark.** `a58942d` turned it off *because the base was
-  light*, so that acceptance does not transfer. One dark still at alpha 0 versus
-  0.32 settles it. **INFERRED, worth knowing before judging:** the 2026-08-27 dark
-  still already reads strongly with no glow at all.
-- **Which of the remaining style values need to differ by appearance** — the chrome
-  scrim and text, the stop cards, the deck matte, the grade and vignette, the marker
-  colours. All were tuned against one base. "Survived on the light still" is not
-  "was judged".
-- The user-facing appearance picker.
+`testAnOmniMarkMayDeclareItsOwnProportion` would have gone vacuous at 1.0, so per
+`Arch.md` §7.3 its documentation now names the test that still drives the mechanism
+with a non-unit fraction. **The mechanism is not deleted — only this subject stopped
+using it.**

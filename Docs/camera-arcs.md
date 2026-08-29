@@ -292,9 +292,15 @@ term.
   §7 spends. **But an arc must read a station's actual pixel dimensions back
   rather than assuming them**, and it must not defeat the provider's guard, which
   rejects a **non-uniform** raster because no single factor can correct one.
-- **Appearance is now a provider input** (light/dark, ADR 2026-08-28) and is in
-  flight. **Pass 1 holds it fixed** — three clips, one variable, and the variable
-  is how the base map is produced.
+- **Appearance is now a required provider input** (ADR 2026-08-27, merged in
+  PR #21). `MapKitSnapshotProvider(appearance:)` has **no default**, precisely so a
+  test cannot inherit the simulator's setting, and `RecapStyle.modernMinimal` is now
+  a function of the appearance too — the light trail is `#FF8A5B`, the dark one the
+  cyan, and the glow stays off on both. A renderer that cannot honour an appearance
+  declares `MapRendererCapabilities.fixedAppearance` and wins.
+  **Pass 1 therefore passes one explicitly and holds it across all three clips** —
+  one variable, and the variable is how the base map is produced. Say which you
+  chose.
 
 Known artifact to expect and judge: a station snapshot cropped in shows *that
 station's* level of map detail magnified — labels and road widths scale up, and no

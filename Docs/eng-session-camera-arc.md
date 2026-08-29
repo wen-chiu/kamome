@@ -43,12 +43,19 @@ symbol, not by line number. Several **have** moved: PR #18 rewrote
 `MapKitSnapshotProvider`'s projection seam, which §7's dated addendum covers.
 **Re-verify every fact you rely on** and say so when one has moved.
 
-⚠️ **Another session is live.** Appearance work — the film follows the device
-theme, orange trail in light (ADR 2026-08-28) — is in flight off `main` and
-touches `RecapStyle` and the same provider. Branch off `main`, never off its
-branch, and **do not start a long render while it is rendering**: the two contend
-on DerivedData, and this project has already lost a 13.7-hour render to an
-avoidable collision.
+⚠️ **The appearance work has landed** (ADR 2026-08-27, PR #21): the film follows
+the device theme, the light trail is `#FF8A5B`, and
+`MapKitSnapshotProvider(appearance:)` now has **no default** — you must pass one.
+`Docs/camera-arcs.md` §7's addendum says what that means for an arc.
+
+⚠️ **Check what else is live before you start** (`gh pr list`), and **do not start a
+long render while another session is rendering**: the two contend on DerivedData,
+and this project has already lost a 13.7-hour render to an avoidable collision.
+
+⚠️ **CI is blocked account-wide as of 2026-08-29** — jobs fail in seconds with zero
+steps, on `main` too. A red check proves nothing right now; local `xcodebuild test`
+is your only verification, and you must say so rather than quoting a green tick you
+did not get.
 
 Stage explicit paths only — **no `git add -A`, no `git add .`**, no
 `git reset --hard`, no `git clean`. A `git add -A` is exactly how an unrelated file

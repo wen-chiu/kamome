@@ -117,7 +117,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             "manual benchmark — set TEST_RUNNER_KAMOME_RENDER_BENCH=1"
         )
         let config = try fullResolutionConfig()
-        let provider = MapKitSnapshotProvider()
+        let provider = MapKitSnapshotProvider(appearance: .light)
         // Warm-up snapshot excluded from the average (tile cache, GeoServices).
         _ = try await provider.snapshot(
             CameraFrame(centerLat: -32.0, centerLon: 115.75, spanM: config.cameraSpanM, bearing: 0),
@@ -166,7 +166,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let exporter = RecapExporter(
             timeline: timeline, compositor: routeCompositor(timeline, config: config),
-            provider: MapKitSnapshotProvider(), config: config
+            provider: MapKitSnapshotProvider(appearance: .light), config: config
         )
         // Test clones are destroyed after the run, so honor a host output
         // path (simulator doesn't enforce the file sandbox).

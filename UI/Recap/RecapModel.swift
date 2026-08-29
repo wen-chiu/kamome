@@ -79,7 +79,30 @@ final class RecapModel {
         if case .rendering = phase { return true } else { return false }
     }
 
-    func startExport() {
+    /// Starts the render. **`appearance` is captured by the caller at the tap**,
+    /// not read here.
+    ///
+    /// This is the composition boundary in the sense `Docs/decisions.md`
+    /// 2026-08-15 means it: the place where a trip becomes *a specific film*. The
+    /// ADR requires export variation to enter as an explicit value chosen here
+    /// and held constant, never sampled from the environment while rendering —
+    /// written for the photo-selection seed, and binding on this for the same
+    /// reason. The appearance is ambient device state, so left unbound it would
+    /// be exactly the coin toss the ADR names: a film that changes if the user
+    /// toggles dark mode mid-render, and a failing golden frame nobody can
+    /// reproduce.
+    ///
+    /// So it arrives as a parameter from `RecapView`, which reads
+    /// `@Environment(\.colorScheme)` on the main actor at the moment the button
+    /// is pressed, and from here it is a `let` that crosses into the detached
+    /// render task unchanged.
+    ///
+    /// **What is not yet met:** the ADR also says a seed that is not stored is
+    /// not a seed. There is no export record in the schema to store this in — the
+    /// seed feature that would create one is deferred by the same ADR — so the
+    /// resolved value goes into the film's log line below and the gap is written
+    /// down (`Docs/eng-session-appearance.md` §4.1) rather than assumed away.
+    func startExport(appearance: RecapAppearance) {
         guard !isRendering else { return }
         cancelFlag = CancelFlag()
         phase = .rendering(progress: 0)
@@ -91,7 +114,7 @@ final class RecapModel {
             self?.cancelFlag.set()
         }
         exportTask = Task { [weak self] in
-            await self?.runExport()
+            await self?.runExport(appearance: appearance)
             self?.lifecycle.end()
         }
     }
@@ -102,7 +125,7 @@ final class RecapModel {
 
     // MARK: - Pipeline
 
-    private func runExport() async {
+    private func runExport(appearance requested: RecapAppearance) async {
         // Best-effort §4.4 matching before composing: an instant no-op while
         // base_url is empty, and now bounded by `matching.trip_budget_s` for the
         // whole trip rather than only per request. The replay should follow
@@ -165,7 +188,13 @@ final class RecapModel {
         // and its extent is what the opening establishing shot frames.
         let region = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) })
             .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
-        let provider = Self.snapshotProvider(for: region)
+        let provider = Self.snapshotProvider(for: region, appearance: requested)
+        // Resolved once, here, and never asked again — the substrate can veto the
+        // device's choice (the MapLibre souvenir map has no light variant), and
+        // the palette below must follow whatever the *base map* actually is, not
+        // what the device asked for. Same shape as the heading-up line under it:
+        // a capability the renderer declares rather than silently ignores.
+        let appearance = provider.capabilities.appearance(honouring: requested)
         let exportConfig = config.export.withFollowHeadingUp(
             config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
         )
@@ -194,12 +223,18 @@ final class RecapModel {
                 A trip spanning two regions hits this (handoff §"Trips that span two map regions").
                 """)
         }
+        // The appearance is on this line because it is the only record of it.
+        // With no export table to persist it in, the log is where a finished
+        // film's palette can still be recovered from — which is the difference
+        // between "we do not store it yet" and "we cannot tell you what you got".
         KamomeLog.recap.notice("""
             film: \(timeline.durationS, format: .fixed(precision: 1))s · \
             \(timeline.frameCount) frames · opening \(timeline.openingS, format: .fixed(precision: 1))s · \
-            \(trip.stops.count) stops · \(trip.legs.filter(\.provenance.isInferred).count)/\(trip.legs.count) legs dashed
+            \(trip.stops.count) stops · \(trip.legs.filter(\.provenance.isInferred).count)/\(trip.legs.count) legs dashed · \
+            \(appearance.rawValue, privacy: .public) appearance\
+            \(appearance == requested ? "" : " (device asked for \(requested.rawValue), the substrate is fixed)", privacy: .public)
             """)
-        let style = RecapStyle.modernMinimal.withEndCard(config.export.endCardStyle)
+        let style = RecapStyle.modernMinimal(appearance).withEndCard(config.export.endCardStyle)
         let resolver = PhotoLibraryPhotoResolver()
         await warmDeckPhotos(trip: trip, style: style, resolver: resolver)
         let compositor = FrameCompositor(
@@ -280,7 +315,13 @@ final class RecapModel {
     /// The region is chosen per trip (Fable review 2026-07-26): the §6 gate is
     /// three real trips in three places, side-loaded over Finder, so the lookup
     /// matches each render against what it actually covers.
-    private static func snapshotProvider(for region: RecapMapRegion?) -> MapRenderer {
+    ///
+    /// `appearance` is what the *device* asked for. Only Apple Maps can honour
+    /// it; the souvenir map answers `.dark` through its capabilities and the
+    /// caller resolves the two.
+    private static func snapshotProvider(
+        for region: RecapMapRegion?, appearance: RecapAppearance
+    ) -> MapRenderer {
         guard let region,
               let styleURL = try? RecapMapStyle.resolvedStyleURL(
                   styleResource: RecapMapTiles.styleResource,
@@ -289,7 +330,7 @@ final class RecapModel {
                   // strips the layer when it is not (Chiu 2026-07-30).
                   terrainURL: region.terrainURL
               )
-        else { return MapKitSnapshotProvider() }
+        else { return MapKitSnapshotProvider(appearance: appearance) }
         return MapLibreSnapshotProvider(styleURL: styleURL)
     }
 
