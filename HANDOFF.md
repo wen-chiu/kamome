@@ -331,6 +331,55 @@ the dark pin is deliberately a shade off), and the fallback marker must contrast
 with its base by luminance (not "must be this ink", since what has to be true is
 that it is visible).
 
+**The pin, measured** (stop beat, light base): the cyan pin composited to
+`(77,186,211)` beside a sea of `(100,179,218)` — **Δ = (23, 7, 7)**, which is the
+*same margin* that made the trail read as a fjord. The trail's hue puts it at
+`(216,120,84)`, Δ from that sea `(116, 59, 134)`.
+
+### 13. ⏳ OPEN — solid versus dashed, asked as its own question
+
+Chiu asked for this to be judged separately rather than absorbed into the colour
+pick, because it is a **product rule** (PD-1, spec §0): recorded versus
+reconstructed-from-photos has to reach the viewer.
+
+**First, what the orange already did.** The defect in finding 8 was cyan-specific.
+On light, cyan solid `(92,190,218)` vs cyan dashed `(102,188,217)` — Δ `(10,−2,−1)`,
+the same colour. With the chosen `#FF8A5B` the two are plainly different at every
+alpha tried. **The provenance defect this session measured is closed by the trail
+change**; what is left is a preference about how much weaker a guess should look.
+
+**The sweep** — stop beat, light base, `routeInferredAlpha` the only variable, all
+sampled at one pixel over the same terrain (`~/Kamome-films/2026-08-29-tokens/`).
+Solid is `(216,120,84)` in every row:
+
+| `routeInferredAlpha` | dashed, composited | Δ from the solid | chroma |
+|---|---|---|---:|
+| 0.40 | `(192,170,121)` | `(24, 50, 37)` | 71 |
+| **0.55** — ships today | `(198,158,112)` | `(18, 38, 28)` | 86 |
+| 0.70 | `(203,145,103)` | `(13, 25, 19)` | 100 |
+
+Monotonic and exactly the trade you would expect: **lower alpha separates it from
+the solid, higher alpha keeps more of the trail's own hue.** There is no value that
+maximises both, so it is a judgement, not a calculation.
+
+**Two things that constrain the judgement, and neither is alpha.**
+
+1. At the **travelling camera** the dashes do not resolve at all (finding 9 — a
+   43 px leg against a 48 px cycle), so colour is the *only* provenance cue there,
+   and no alpha changes that. If Chiu wants the guess legible during travelling
+   shots, the lever is dash geometry against camera span, which is a separate
+   question with its own render.
+2. **This cannot be gated.** The separation that matters is the *composited*
+   difference, which depends on the terrain the leg crosses — the whole point of
+   finding 8's correction. At style level the only expressible rules are the ones
+   `testInferredLegsStayDerivedFromTheTrailInEveryAppearance` already holds (same
+   hue, weaker alpha, thinner, actually dashed). A rendered gate over
+   `FlatSnapshotProvider` would *pass on the exact defect this session found*,
+   because a flat synthetic background is not Apple Maps' terrain — so it would
+   buy confidence rather than coverage, and is deliberately not added.
+
+**Nothing changed.** `routeInferredAlpha` stays 0.55 until Chiu says otherwise.
+
 ---
 
 ## Findings — engineering session, three visual checks (2026-08-22)
