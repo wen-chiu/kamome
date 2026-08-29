@@ -1,4 +1,20 @@
+import KamomeExportEngine
 import SwiftUI
+
+/// The film's appearance, read from SwiftUI's environment.
+///
+/// `@Environment(\.colorScheme)` rather than `UITraitCollection.current`: the
+/// trait collection is only meaningful inside a view update and is main-actor
+/// besides, so reading it from the model — let alone from the detached render
+/// loop — is the ambient read `Docs/decisions.md` 2026-08-15 forbids. The
+/// environment value is the supported read of the same state and additionally
+/// honours a `.preferredColorScheme` override in the hierarchy, which the trait
+/// collection would not.
+private extension RecapAppearance {
+    init(_ scheme: ColorScheme) {
+        self = scheme == .dark ? .dark : .light
+    }
+}
 
 /// S5 Export (P3 scope): photos toggle, MP4/GIF choice, progress, share.
 /// The toggle copy must make clear it controls photo overlays only — title
@@ -6,6 +22,8 @@ import SwiftUI
 struct RecapView: View {
     @State private var model: RecapModel
     @Environment(\.dismiss) private var dismiss
+    /// Captured at the tap, not during the render — see `RecapModel.startExport`.
+    @Environment(\.colorScheme) private var colorScheme
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: RecapModel(
@@ -47,7 +65,7 @@ struct RecapView: View {
                 Section {
                     switch model.phase {
                     case .idle:
-                        Button("recap_export") { model.startExport() }
+                        Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
 
                     case let .rendering(progress):
                         VStack(alignment: .leading, spacing: 8) {
@@ -69,7 +87,7 @@ struct RecapView: View {
                         ))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                        Button("recap_export_again") { model.startExport() }
+                        Button("recap_export_again") { model.startExport(appearance: RecapAppearance(colorScheme)) }
 
                     case let .failed(message):
                         Label("recap_failed", systemImage: "exclamationmark.triangle")
@@ -77,7 +95,7 @@ struct RecapView: View {
                         Text(message)
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Button("recap_export") { model.startExport() }
+                        Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
                     }
                 }
             }

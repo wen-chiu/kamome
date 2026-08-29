@@ -16,10 +16,42 @@ import Foundation
 public struct MapRendererCapabilities: Equatable {
     public let supportsBearing: Bool
     public let supportsHeadingUp: Bool
+    /// The appearance this substrate is **locked to**, or nil if it renders in
+    /// whichever one it is handed.
+    ///
+    /// Same rule as `supportsBearing`, one field down: a renderer says what it
+    /// cannot do instead of silently ignoring the request. MapKit answers nil —
+    /// it takes a `userInterfaceStyle` and honours it. The MapLibre souvenir map
+    /// answers `.dark`, because its style sheet *is* dark
+    /// (`Config/RecapThemes/modern-minimal.json`: `#08111A`, `#04070C`) and no
+    /// trait makes it otherwise.
+    ///
+    /// **Why this is worth a field rather than a comment.** Without it, a device
+    /// in light mode with tiles installed would render Kamome's light palette —
+    /// an orange trail and a light-tuned grade — over a near-black map. That is
+    /// the same class of defect as the halo (`a58942d`): a palette tuned for one
+    /// base drawn over the other, invisible until someone looks at a finished
+    /// film. It costs one `??` at the composition boundary to make impossible.
+    public let fixedAppearance: RecapAppearance?
 
-    public init(supportsBearing: Bool, supportsHeadingUp: Bool) {
+    public init(
+        supportsBearing: Bool,
+        supportsHeadingUp: Bool,
+        fixedAppearance: RecapAppearance? = nil
+    ) {
         self.supportsBearing = supportsBearing
         self.supportsHeadingUp = supportsHeadingUp
+        self.fixedAppearance = fixedAppearance
+    }
+
+    /// The appearance a film will actually be rendered in on this substrate.
+    ///
+    /// Called once, at the composition boundary, before the style is built —
+    /// never per frame. The requested value is the device's, captured at the tap;
+    /// a substrate that cannot honour it overrides it, and the film's palette
+    /// follows the answer rather than the request.
+    public func appearance(honouring requested: RecapAppearance) -> RecapAppearance {
+        fixedAppearance ?? requested
     }
 }
 

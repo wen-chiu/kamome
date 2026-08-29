@@ -38,8 +38,16 @@ public struct MapLibreSnapshotProvider: MapRenderer {
 
     /// Rotates the map (`MLNMapCamera.heading`), so it drives the heading-up
     /// follow cam (§4) — the substrate the anime hero car needs.
+    ///
+    /// **Locked to dark.** The souvenir map is a dark subtractive style sheet
+    /// (`Config/RecapThemes/modern-minimal.json` — `#08111A`, `#04070C`,
+    /// `#03070d`; the direction decided in `Docs/decisions.md` 2026-07-22), and
+    /// there is no light variant of it. Declaring that here is what stops a
+    /// light-mode device with tiles installed from drawing Kamome's light palette
+    /// over a near-black map — the palette/base mismatch that produced the halo
+    /// defect, in the other direction.
     public var capabilities: MapRendererCapabilities {
-        MapRendererCapabilities(supportsBearing: true, supportsHeadingUp: true)
+        MapRendererCapabilities(supportsBearing: true, supportsHeadingUp: true, fixedAppearance: .dark)
     }
 
     public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {

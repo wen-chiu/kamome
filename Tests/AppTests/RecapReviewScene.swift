@@ -41,6 +41,12 @@ struct RecapReviewScene {
     let timeline: LinearTimeline
     let compositor: FrameCompositor
     let provider: MapRenderer
+    /// The appearance this scene actually rendered in — the reviewer's request
+    /// after the substrate has had its say, exactly as `RecapModel` resolves it.
+    let appearance: RecapAppearance
+    /// The style the compositor was built with, kept so a still can be *named*
+    /// after what varies in it (`variantSuffix`).
+    let style: RecapStyle
 
     static func make(fixture: String) async throws -> RecapReviewScene {
         let (trip, imported) = try await RecapDemoFilmTests.importedRecap(named: fixture)
@@ -66,7 +72,15 @@ struct RecapReviewScene {
             throw SetupError.noTimeline
         }
 
-        let style = RecapStyle.modernMinimal.withEndCard(config.endCardStyle)
+        // The provider first, because it can veto the appearance: the souvenir map
+        // has no light variant and declares so. Resolving it here — rather than
+        // building the style from what the reviewer typed — is what keeps a review
+        // still equal to the film the app would render (`RecapModel.runExport`).
+        let provider = try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_REVIEW")
+        let appearance = provider.capabilities.appearance(
+            honouring: try ReviewSubstrate.experiment().appearance
+        )
+        let style = try ReviewPalette.style(appearance).withEndCard(config.endCardStyle)
         return RecapReviewScene(
             trip: trip, config: config, timeline: timeline,
             compositor: FrameCompositor(
@@ -76,7 +90,9 @@ struct RecapReviewScene {
                 style: style,
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
             ),
-            provider: try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_REVIEW")
+            provider: provider,
+            appearance: appearance,
+            style: style
         )
     }
 
@@ -97,14 +113,33 @@ struct RecapReviewScene {
         // 30% below 225), and truncating it to "157px" in the one line a reviewer
         // reads is how a still gets judged against a number nobody rendered.
         print("KAMOME_REVIEW subject \(subjectId ?? VehicleCatalog.defaultSubjectId) at \(lengthPx)px")
+        // `KAMOME_FORCE_FALLBACK_MARKER` drives the **failure** visual on purpose
+        // (2026-08-29). `make`'s doc comment used to say that path "only fires
+        // when the app's own resource bundle cannot be found — a state no test can
+        // arrange"; on 2026-08-28 it fired by itself in one review render out of
+        // four, silently, and the wrong still survived review. A token whose job
+        // is now partly to make that failure visible has to be renderable on
+        // demand, or its colour can only ever be judged by accident.
+        guard HarnessEnv.value("KAMOME_FORCE_FALLBACK_MARKER") == nil else {
+            print("KAMOME_REVIEW FORCING the fallback marker — the sprite path is deliberately bypassed")
+            return VehicleSubjectRenderer.make(
+                style: style, subjectId: subjectId, lengthPx: lengthPx, resolve: { _ in nil }
+            )
+        }
         return VehicleSubjectRenderer.make(style: style, subjectId: subjectId, lengthPx: lengthPx)
     }
 
     /// Names a still by what varies in it, so a sweep does not overwrite itself.
-    static var variantSuffix: String {
+    ///
+    /// An instance property since 2026-08-28: the palette overrides change the
+    /// image, and a suffix that could not see them would have let a three-colour
+    /// sweep write three times to one filename.
+    var variantSuffix: String {
         let subject = HarnessEnv.value("KAMOME_SUBJECT") ?? VehicleCatalog.defaultSubjectId
         let length = HarnessEnv.value("KAMOME_SUBJECT_LENGTH_PX") ?? "default"
-        return "\(subject)-\(length)px"
+        let palette = ReviewPalette.variantSuffix(style)
+        return "\(subject)-\(length)px-\(appearance.rawValue)"
+            + (palette.isEmpty ? "" : "-\(palette)")
     }
 
     /// `KAMOME_KEYFRAME_INTERVAL` renders the same film at a different snapshot

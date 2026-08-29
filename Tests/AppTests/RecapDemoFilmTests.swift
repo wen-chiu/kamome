@@ -60,8 +60,6 @@ final class RecapDemoFilmTests: XCTestCase {
         let timeline = try XCTUnwrap(
             LinearTimeline(trip: trip, config: config, establishing: establishing)
         )
-        let style = RecapStyle.modernMinimal
-
         // Stand-in photos: the simulator has no real library, and the deck beats
         // are the thing under review. One tile per selected photo.
         var images: [String: CGImage] = [:]
@@ -69,7 +67,15 @@ final class RecapDemoFilmTests: XCTestCase {
             if case let .asset(id) = ref { images[id] = try photoTile(index: index) }
         }
 
+        // Provider before style, and the style built from the *resolved*
+        // appearance — the order `RecapModel.runExport` uses, for its reason: a
+        // substrate that is locked to one appearance (the souvenir map) must not
+        // end up under a palette tuned for the other.
         let provider = try snapshotProvider(region: region)
+        let appearance = provider.capabilities.appearance(
+            honouring: try ReviewSubstrate.experiment().appearance
+        )
+        let style = try ReviewPalette.style(appearance)
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: Self.subjectRenderer(style: style, config: config),

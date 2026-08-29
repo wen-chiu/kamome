@@ -1,9 +1,9 @@
 # HANDOFF — current state
 
-**Updated 2026-08-27.** Branch `feature/p4-visual-checks`, off `main`, open as PR #18. PR #11
-merged to `main` on 2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written
-so a fresh session (or a fresh person) can pick this up without being briefed by
-hand.
+**Updated 2026-08-28.** Branch `feature/p4-appearance-follows-system`, off `main`
+at `87d1d4e`. PR #18 (`feature/p4-visual-checks`) **merged**; PR #11 merged on
+2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written so a fresh
+session (or a fresh person) can pick this up without being briefed by hand.
 
 Read `Docs/current-state.md` first for the project snapshot, then `CLAUDE.md`
 for the standing rules — especially **§0, location data never leaves the device
@@ -14,6 +14,371 @@ by default**, as amended by the routing ADRs (`Docs/decisions.md` 2026-08-16 and
 known bugs. Closed, resolved, and superseded sections were moved verbatim to
 `Docs/_archive/handoff-2026-08.md` on 2026-08-21 — that file is history, never
 current state.
+
+---
+
+## Findings — engineering session, the film follows the system appearance (2026-08-28)
+
+**Context.** `Docs/eng-session-appearance.md` (the `Arch.md` §12 design, written
+before any code), on `feature/p4-appearance-follows-system` off `main` at
+`87d1d4e`. Chiu's decision of 2026-08-27: the film follows the device's system
+appearance, and light mode gets an orange trail. **The first change in this series
+that moves shipped behaviour.**
+
+Both values that were Chiu's are now **closed** (2026-08-29): the orange is
+candidate **B**, `RecapStyle.routeAccent` `#FF8A5B`, and the glow **stays off on
+dark**. See `Docs/decisions.md` 2026-08-27.
+
+**Stills for review** (outside the repo, §0 — renders of a real trip), all Iceland,
+`car-toy` at the shipped 157.5 px, displayScale 2, the same frame the subject sweep
+used: `~/Kamome-films/2026-08-28-appearance/`.
+
+### 1. ✅ CLOSED 2026-08-29 — the orange is `#FF8A5B`, and the constraint the brief could not know
+
+`RecapStyle.routeAccent` is **`#FF8A5B`** and its own comment calls it "the trail's
+brand colour" — it is the validated web prototype's `--route`
+(`Docs/prototype/recap_engine.html`), already shipped in Kamome as the active
+progress dot and the stop's strap line. So "the trail is orange" is not a new
+direction: it is the prototype's direction, which the dark souvenir map's cyan
+overrode in 2026-07-22.
+
+The constraint that follows: **the trail and the end card's mark are in the same
+film.** `chromeAccentColor` `(0.95, 0.55, 0.32)` draws the brand mark and the
+closing line (`RecapOverlayChromeDrawing:137,239–241`). The file already carries
+two near-miss oranges, which is exactly what `routeAccent`'s comment says the
+accent exists to prevent. Whichever candidate wins there is a case for collapsing
+the pair — **that is Chiu's call and was not done here.**
+
+Sweep candidates (`Docs/eng-session-appearance.md` §6): **A** = `chromeAccentColor`
+exactly, **B** = `routeAccent` `#FF8A5B`, **C** = `(0.96, 0.42, 0.15)`, deeper, as
+the hedge against a pale base. **Chiu chose B** (2026-08-29), so the film keeps one
+warm accent rather than gaining a fourth. Collapsing `chromeAccentColor` into it
+remains open and is still his.
+
+### 2. 🔴 CORRECTS finding 8 — the glow was **not** "one line away"
+
+`HANDOFF.md` finding 8 (2026-08-27) says the retired glow is "one line away
+(`routeGlowColor` alpha in `RecapStyle.modernMinimal`)". It is not, and the
+difference matters to the A/B it proposes.
+
+`a58942d` did not zero the alpha on the glow's own colour. It replaced the line
+with `style.routeGlowColor.copy(alpha: 0)` — the alpha of the **plain default's**
+blue `(0.13, 0.45, 0.95)`. The retired pass was `(0.22, 0.62, 0.92)` at α0.32.
+Raising that alpha would therefore have restored *a different blue* than the one
+Chiu once accepted on the dark map, and the A/B would have been measuring two
+changes while reporting one.
+
+Closed by `RecapStyle.retiredGlowColor`, which holds the original colour so the
+dark preset's alpha is genuinely the only variable. **VERIFIED from `git show
+a58942d`,** not inferred.
+
+The A/B it enabled has since been judged: **the glow stays off on dark** (Chiu,
+2026-08-29). On dark the pass works exactly as designed — it lifts the terrain
+beside the trail by `(8,29,29)`, compositing *lighter* than the ground, which is
+the opposite of what it did on light — and he chose the trail without it anyway.
+
+### 3. ⚠️ Three `RecapStyle` tokens have no consumer, and one test helper is a no-op
+
+Grep-verified across `Core UI App Tests` on 2026-08-28:
+
+| token | readers |
+|---|---|
+| `cardColor` | none — only `RecapAtmosphereTests` and `RecapRenderTestCase` assert/set it |
+| `cardTextColor` | none — same |
+| `markerColor` | **none at all**; its declaration is the only occurrence in the repository |
+
+They belonged to the stop label's pill, removed on 2026-07-31 when the label was
+restyled to the prototype's unplated `.clabel`. The comment above them still said
+"still used by the stop label's pill" — corrected in place, tokens left alone.
+
+The consequence worth knowing: **`RecapRenderTestCase.opaqueCardStyle` is
+identical to `RecapStyle()`.** Its doc comment says it makes "chrome panels at
+full opacity so their pixels are exactly white", and it is used by five assertions
+in `RecapOverlayRendererTests` that believe they are rendering against an opaque
+card. They are not — nothing reads the token. Those tests may still be sound for
+other reasons; **nobody has checked**, and that check is not this change.
+
+Removing the three tokens touches four test files and is its own change.
+
+### 4. ⚠️ The reproducibility ADR is met in shape, **not** in persistence
+
+`Docs/decisions.md` 2026-08-15 requires export variation to be chosen at the
+composition boundary, held constant, **and persisted with the export**. The first
+two are met and are the reason the design looks the way it does. The third is not:
+`Core/Persistence/AppDatabase.swift` has **no export table** — the seed feature
+that would create one is deferred by the same ADR.
+
+So today: re-exporting the same trip on a device whose appearance has changed
+produces a different film, and the only record of which one you have is the
+`KamomeLog.recap.notice("film: …")` line, which now names the appearance.
+**Stated, not solved.** When the export record lands it has exactly one obvious
+field to carry. Do not read the design doc's §4.1 as a claim that the ADR is
+satisfied.
+
+### 5. The souvenir map would have got the light palette — closed before it shipped
+
+`RecapModel.snapshotProvider` still returns `MapLibreSnapshotProvider` when a
+`.pmtiles` region covers the trip. Nothing installs one today, so it never fires —
+but with the film following the device, a light-mode phone with tiles installed
+would have drawn an orange trail and a light-tuned grade over a **near-black**
+map. That is the halo defect's mechanism (`a58942d`) running the other way.
+
+`MapRendererCapabilities.fixedAppearance` closes it: the souvenir map declares
+`.dark`, `RecapModel` resolves `fixedAppearance ?? requested`, and a new always-on
+test holds both halves. The MapLibre half of that test **does compile and run** in
+this build — verified by its positive control failing, not assumed from the
+`#if canImport`.
+
+### 6. ℹ️ `Docs/current-state.md` passes its staleness check and is still behind
+
+Its "Last synced" line names 2026-08-21, which **is** the newest ADR in
+`Docs/decisions.md`, so the protocol in `CLAUDE.md` reports it fresh. But its
+*Active work* section still says the three visual checks are "NOT YET RUN" and
+lists PRs #16/#17 as open; #18 has since merged and those checks are done.
+
+The staleness protocol keys on the ADR ledger alone, so a session that only ran
+the check would trust a stale Active-work section. Not fixed here — this is a
+governance-session edit, and the file says as much.
+
+### 7. MEASURED — Chiu's fjord, in numbers, and the trail against the sea
+
+Every figure below is a pixel probe of the rendered stills at **row y = 657**, the
+north-coast trail west of Sauðárkrókur, after the grade and vignette
+(`~/Kamome-wt/pixel`, source `~/Kamome-wt/pixel.swift`). Same frame (t=114.3 s),
+same camera, displayScale 2. **VERIFIED by measurement, not by looking.**
+
+| appearance · trail | solid, composited | dashed (α0.55) | the sea beside it |
+|---|---|---|---|
+| light · cyan `#6BDEFA` *(today)* | `(92,190,218)` | `(102,188,217)` | `(115,184,216)` |
+| light · **A** `#F28C52` | `(205,121,77)` | `(164,149,140)` | `(115,184,216)` |
+| light · **B** `#FF8A5B` | `(216,120,84)` | `(170,148,144)` | `(115,184,216)` |
+| light · **C** `#F56B26` | `(208,94,40)` | `(166,134,120)` | `(115,184,216)` |
+| dark · cyan, glow 0 | `(92,190,218)` | `(62,126,169)` | `(26,49,113)` |
+| dark · cyan, glow 0.32 | `(92,190,218)` | `(61,138,189)` | `(34,78,142)` |
+
+**The fjord, quantified.** On today's light base the solid trail differs from the
+ocean beside it by **(23, 6, 2)** — one channel, by 9%. That is the measured form
+of "not distinguishable from a fjord". Every orange candidate separates it by more
+than 100 on two channels.
+
+### 8. 🔴 On the light base the dashed leg is indistinguishable from the solid one
+
+**The finding this session did not go looking for.** Today, light base: solid
+`(92,190,218)`, dashed `(102,188,217)`. **Δ = (10, −2, −1).** The two are the same
+colour to any viewer. Honest provenance (PD-1, spec §0) is *not reaching the
+viewer* in a shipped light film — the distinction survives only in the dash gaps
+and the stroke width, and see finding 9 for what happens to the gaps.
+
+Why: α0.55 over a **bright** background lands almost on top of the full-alpha
+colour, because the backdrop is already near the trail's own luminance. Over
+near-black it lands well below it — dark, dashed `(62,126,169)` against solid
+`(92,190,218)`, clearly the weaker claim. **This is the halo inversion again**, in
+a second token: an alpha-derived treatment tuned on a dark base behaves oppositely
+on a light one. Worth stating as a rule, because it will keep happening.
+
+**What the oranges do to it.** All three fix the invisibility and are clearly
+weaker than their solid. Chroma (max−min channel) at *this* sample point:
+
+| | solid chroma | dashed chroma, at y=657 | terrain there, for scale |
+|---|---:|---:|---:|
+| A `#F28C52` | 128 | 24 | 54 |
+| B `#FF8A5B` | 132 | 26 | 54 |
+| C `#F56B26` | 168 | 46 | 54 |
+
+⚠️ **Do not read that column as a property of the alpha rule — it is a property of
+what the leg crosses**, and I nearly recorded it as the former. At α0.55 the
+backdrop shows through, and this particular leg crosses a pale **blue-grey**
+terrain patch `(210,212,216)`, which pulls a warm stroke toward grey. Measured on
+the same shipped preset (candidate B) where a dashed leg crosses **green/beige**
+instead — the south coast near Vík in `stop-light` — the dashed stroke is
+`(198,158,112)`, chroma **86**, unmistakably orange. So the honest range for B's
+dashed leg is roughly **26–86 depending on terrain**, not 26.
+
+What survives as a genuine input to the choice: C's deeper start gives its dashed
+variant more colour to lose, so it holds hue on the worst backdrop where A and B
+do not. ⏳ Chiu's call, and it need not be a straight pick of the three — keeping A
+or B and raising `routeInferredAlpha` on light gets to the same place. Nothing was
+changed on this.
+
+### 9. 🟠 The dashes read at the stop camera and **not** at the travelling one
+
+Printed by the harness on every subject still: **43 legs revealed, 8 dashed ·
+longest 17.5 km = 4.0% of the frame width (span 432 km).**
+
+4.0% of 1080 px is **≈43 px**. The dash cycle is `routeInferredDashPx` 26 +
+`routeInferredGapPx` 22 = **48 px**. So at the wide travelling camera the *longest*
+inferred leg in this film is shorter than one on-off cycle, and the other seven are
+shorter still: it renders as **one stub**, not as a dashed line.
+
+⚠️ **I first wrote this as "the dashed convention does not work", and that was
+wrong** — the stop stills falsified it before it was committed. During a stop beat
+the camera is far closer, and in `stop-light` the inferred stretch on the south
+coast near Vík resolves into **unmistakable dashes** beside the solid trail, in a
+clearly lighter orange. So the honest statement is about *where in the film*, not
+about the convention:
+
+- **Travelling shots (span ~432 km):** provenance is carried only by the stroke
+  being thinner and paler. The dashes are not visible as dashes.
+- **Stop beats:** the dashes read exactly as designed.
+
+Whether that matters is a product question — a viewer sees both, and the stop beat
+is where the film asks to be read closely. **Nothing changed.** The dash lengths
+are style, not config, and stated at the 1080 reference width; resizing them
+against the camera span is Chiu's call, not the appearance change's.
+
+The 17.5 km leg is the detour-gate rejection — 61.6 km routed against 17.5 km
+straight, the same one the 2026-08-21 and 2026-08-22 runs named. Routing was
+byte-identical again this session: **50/58 legs reconstructed, 8 with no road
+route, 0 unreachable, 0 rate-limited.**
+
+### 10. ⚠️ A render silently drew the fallback marker instead of the car
+
+Four light stills, identical but for `KAMOME_ROUTE_COLOR`. Three drew the car
+sprite; the **`light-C-deeper`** run drew the **vector seagull fallback** — white,
+on a light base, close to invisible. The test passed in 25.8 s with no retry and
+**nothing in the console said the sprite set had not loaded.**
+
+`VehicleSubjectRenderer.make` falls back to `.marker` when `VehicleCatalog.resolve`
+returns nil, and its doc comment says that "only fires when the app's own resource
+bundle cannot be found — a state no test can arrange". **That claim is now false by
+observation.** Whether it is the same resource-bundle problem as the intermittent
+`KamomeCore_KamomeExportEngine` crash below is *suggestive, not established*.
+
+Three consequences:
+
+1. A review still can be materially wrong while looking fine, and a reviewer would
+   have no way to know. `KamomeLog` is in `KamomeConfig`, which `KamomeExportEngine`
+   already depends on, so the diagnostic is about one line — **not added here**,
+   because this change does not touch that file. Spawned as its own task.
+2. `fallbackMarkerColor` (white) joins the list of tokens that arguably must differ
+   by appearance — §5 of the design doc had it as "fallback-only"; this render is
+   the counter-example. Product call.
+3. `light-C-deeper` was **re-rendered** into `light-C-deeper-rerender/` so the
+   sweep Chiu judges is clean. The affected still is kept beside it as the
+   evidence. The trail pixels are byte-identical between the two runs — only the
+   subject differed.
+
+### 11. The chrome and the deck, on a light base — reported, not judged
+
+`title-{light,dark}` and `stop-{light,dark}`. The brief's point stands: these
+survived on light, but "survived" was not "was judged", and now there is a pair.
+
+- **The title card works in both, differently.** The dark scrim
+  (`chromeScrimColor`, α0.55 + centre boost) fades seamlessly into a dark base and
+  reads as a deliberate letterbox band on a light one. Neither is broken; the dark
+  one is the more elegant of the two. **No change made.**
+- **`labelTextColor` is white type** and on the light base it is close to its
+  limit over pale terrain — `labelShadowColor` is what is holding it up, which is
+  what its comment says it is for ("a bright photograph or a pale glacier"). Worth
+  Chiu's eye.
+- **`labelPinColor` is cyan** `(0.35, 0.85, 0.95)` — the same colour family as the
+  water, on the light base, exactly the trap the trail was in. In `stop-light` the
+  pin sits on the coast at Reykjavík. Not in the brief's list, and not changed.
+- **`deckMatteColor`** (the white photo keyline) reads on both. The deck itself
+  was rendered with the gradient stand-ins — `KAMOME_STOP_PHOTOS` was not set, and
+  the harness says so on the console — so this is a **layout** check, not a check
+  of how a photograph sits on a light base.
+- Stop names read "Unnamed stop": `RecapReviewGeocoder` is opt-in and was off.
+  Expected, not a regression.
+
+**Verification worth noting.** `stop-light` and `stop-dark` used **no colour
+override at all** — only `KAMOME_MAP_APPEARANCE`. One value selected the light
+Apple Maps base *and* the orange trail, and its solid stroke measures
+`(216,120,84)`, matching candidate B exactly. That is the shipped path working end
+to end, not a harness-only result.
+
+### 12. ✅ 2026-08-29 — two more tokens were in the water, and the enumeration was wrong twice
+
+Chiu approved the direction; the **values are candidates** for him, rendered into
+`~/Kamome-films/2026-08-29-tokens/`.
+
+**`fallbackMarkerColor` → ink `(0.11, 0.13, 0.19)` on light.** Finding 10 is the
+reason this is not cosmetic: the marker only appears when the vehicle artwork
+cannot be loaded, and *the wrong still survived review because a white gull on a
+light base is hard to see*. So the token's job now includes being noticed.
+Measured, with the sprite path deliberately bypassed:
+
+| | marker, composited | terrain beside it | luminance gap |
+|---|---|---|---:|
+| light, **white** (what happened by accident) | `(216,218,222)` | `(211,213,217)` | **~5** |
+| light, **ink** (the candidate) | `(25,32,48)` | `(212,213,218)` | **~180** |
+| dark, white (unchanged) | `(216,218,222)` | `(91,115,152)` | ~105 |
+
+Ink rather than the trail's orange, deliberately: a warm gull would sit on the warm
+trail it is travelling along and read as styling rather than as a fault. The value
+is `markerOutlineColor`'s, reused so the film gains no new colour, and only `fill`
+matters — the shipped `.seagull` is a single stroked arc that reads neither
+`accent` nor `outline`.
+
+**`labelPinColor` → the trail's own hue on light.** Not a new rule: the dark preset
+had followed it silently all along — `(0.35,0.85,0.95)` is within **0.07** of
+`trailOnDark` on every channel. Left cyan on Apple Maps it is a water-coloured dot
+sitting on a coastline. Dark is deliberately untouched, so the change is one
+appearance wide.
+
+⚠️ **The part worth carrying forward is how the enumeration failed.** The design
+doc's palette table (§5) got two answers wrong, both the same way: I judged each
+token by *where it is drawn* rather than by *what it is drawn on*.
+`fallbackMarkerColor` was written off as "fallback-only" and the fallback fired by
+itself the same day. `labelPinColor` was never enumerated at all — the brief did
+not list it and it is not part of the trail. The question that catches both is not
+"does this token matter?" but **"what does this colour sit on, on each base?"**
+Anyone auditing the remaining tokens should ask it that way.
+
+Both are held by new always-on guards, each shown red by a positive control — as
+*rules*, not values: the pin must sit in the trail's hue family (not equality, since
+the dark pin is deliberately a shade off), and the fallback marker must contrast
+with its base by luminance (not "must be this ink", since what has to be true is
+that it is visible).
+
+**The pin, measured** (stop beat, light base): the cyan pin composited to
+`(77,186,211)` beside a sea of `(100,179,218)` — **Δ = (23, 7, 7)**, which is the
+*same margin* that made the trail read as a fjord. The trail's hue puts it at
+`(216,120,84)`, Δ from that sea `(116, 59, 134)`.
+
+### 13. ⏳ OPEN — solid versus dashed, asked as its own question
+
+Chiu asked for this to be judged separately rather than absorbed into the colour
+pick, because it is a **product rule** (PD-1, spec §0): recorded versus
+reconstructed-from-photos has to reach the viewer.
+
+**First, what the orange already did.** The defect in finding 8 was cyan-specific.
+On light, cyan solid `(92,190,218)` vs cyan dashed `(102,188,217)` — Δ `(10,−2,−1)`,
+the same colour. With the chosen `#FF8A5B` the two are plainly different at every
+alpha tried. **The provenance defect this session measured is closed by the trail
+change**; what is left is a preference about how much weaker a guess should look.
+
+**The sweep** — stop beat, light base, `routeInferredAlpha` the only variable, all
+sampled at one pixel over the same terrain (`~/Kamome-films/2026-08-29-tokens/`).
+Solid is `(216,120,84)` in every row:
+
+| `routeInferredAlpha` | dashed, composited | Δ from the solid | chroma |
+|---|---|---|---:|
+| 0.40 | `(192,170,121)` | `(24, 50, 37)` | 71 |
+| **0.55** — ships today | `(198,158,112)` | `(18, 38, 28)` | 86 |
+| 0.70 | `(203,145,103)` | `(13, 25, 19)` | 100 |
+
+Monotonic and exactly the trade you would expect: **lower alpha separates it from
+the solid, higher alpha keeps more of the trail's own hue.** There is no value that
+maximises both, so it is a judgement, not a calculation.
+
+**Two things that constrain the judgement, and neither is alpha.**
+
+1. At the **travelling camera** the dashes do not resolve at all (finding 9 — a
+   43 px leg against a 48 px cycle), so colour is the *only* provenance cue there,
+   and no alpha changes that. If Chiu wants the guess legible during travelling
+   shots, the lever is dash geometry against camera span, which is a separate
+   question with its own render.
+2. **This cannot be gated.** The separation that matters is the *composited*
+   difference, which depends on the terrain the leg crosses — the whole point of
+   finding 8's correction. At style level the only expressible rules are the ones
+   `testInferredLegsStayDerivedFromTheTrailInEveryAppearance` already holds (same
+   hue, weaker alpha, thinner, actually dashed). A rendered gate over
+   `FlatSnapshotProvider` would *pass on the exact defect this session found*,
+   because a flat synthetic background is not Apple Maps' terrain — so it would
+   buy confidence rather than coverage, and is deliberately not added.
+
+**Nothing changed.** `routeInferredAlpha` stays 0.55 until Chiu says otherwise.
 
 ---
 

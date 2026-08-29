@@ -1935,3 +1935,75 @@ locally-run Worker because the key then in `Config/Secrets.xcconfig` returned 40
 Chiu fixed the key on 2026-08-21 and reports it fine, but **no run log exists**;
 `Docs/eng-session-P4-visual.md` item 3 folds that confirmation into its next
 render rather than spending a session on it.
+
+## 2026-08-27 — The film follows the device's system appearance, and light gets a warm trail
+
+**Decision (Chiu, 2026-08-27).** The recap film **follows the device's system
+appearance**. On a light base the trail is **orange** instead of the blue-cyan one.
+
+**Why the trail cannot simply carry over.** Measured, not preference. On Apple
+Maps' light base the trail's cyan `(0.42, 0.87, 0.98)` is in the same colour
+family as the ocean, lakes, rivers and fjords it crosses: in the 2026-08-27
+comparison still the north-coast leg between Sauðárkrókur and Húsavík is not
+distinguishable from a fjord, and the south-coast leg past Hvannadalshnúkur runs
+along the shoreline and disappears into the sea beside it. On the dark base, same
+frame and same subject size, the trail is unmistakably the hero of the frame.
+This is why the preset was tuned dark in the first place (2026-07-22), and the
+2026-08-15 substrate ADR invalidated that tuning without anyone re-tuning it.
+
+**What this constrains, and it is more than a colour** (`Docs/decisions.md`
+2026-08-15, "Export variation enters as a seed, never as randomness"). Appearance
+is ambient device state, so it is bound the way that ADR binds a seed:
+
+- **Captured at the composition boundary** — `RecapView` reads
+  `@Environment(\.colorScheme)` at the tap and hands it to
+  `RecapModel.startExport(appearance:)`. Never read inside the render loop, which
+  is detached and would otherwise let a mid-render dark-mode toggle change a film.
+- **Constant for the render**, and it selects **both** the base map's trait and the
+  overlay palette from one domain value (`RecapAppearance`). A substrate that
+  cannot honour it says so (`MapRendererCapabilities.fixedAppearance`; the MapLibre
+  souvenir map is dark and has no light variant) and wins.
+- **Every gate pins it explicitly.** `RecapStyle.modernMinimal` is now a function
+  of the appearance and `MapKitSnapshotProvider(appearance:)` has no default, so a
+  test cannot inherit the simulator's setting.
+- ⚠️ **NOT persisted.** The ADR also requires the value to be stored with the
+  export; there is no export record in the schema, and the seed feature that would
+  create one is deferred by that same ADR. Until then the resolved appearance is
+  written into the film's log line only, and **re-exporting under a changed system
+  appearance yields a different film**. Recorded as a known gap
+  (`Docs/eng-session-appearance.md` §4.1), not as satisfied.
+
+**Rejected:** an `export.appearance` config key (it is ambient device state, not a
+tunable, and a committed key would ship an answer to the manual-picker question
+Chiu deferred); reading `UITraitCollection.current` inside the provider (an
+environment read inside the render loop — precisely what 2026-08-15 forbids).
+
+**Deferred, explicitly:** a **manual appearance override** in the UI. Chiu wants
+system-follow now and a user picker later; that is a separate feature with its own
+UI decisions.
+
+**✅ Both open values closed by Chiu on 2026-08-29**, from the renders in
+`~/Kamome-films/2026-08-28-appearance/`:
+
+1. **The orange is `RecapStyle.routeAccent` `#FF8A5B`** — candidate **B** of three
+   swept on one frame (t=114.3 s, the frame that settled the subject size) with
+   their derived dashed variants, against `chromeAccentColor` `(0.95, 0.55, 0.32)`
+   and a deeper `(0.96, 0.42, 0.15)`. It is the validated prototype's own
+   `--route`, already the film's progress dot and strap line, so the film keeps
+   one warm accent rather than gaining a fourth.
+2. **The glow stays off on dark**, at α0. The question was not inherited: `a58942d`
+   retired the pass *because the base was light*, so the acceptance of "the halo is
+   gone" did not carry to a dark base. Rendered as an α0 / α0.32 pair; on dark the
+   pass works exactly as designed (measured: it lifts the terrain beside the trail
+   by `(8,29,29)`, compositing *lighter* than the ground) and he chose the trail
+   without it regardless. The mechanism stays, guarded on alpha.
+
+**A correction to this entry's own lineage** (Chiu, 2026-08-29): a parallel draft of
+this decision quoted the trail's blue as `(0.13, 0.45, 0.95)`. That is `RecapStyle`'s
+**neutral default**, which nothing renders; the shipped `modernMinimal` preset's
+trail was the cyan `(0.42, 0.87, 0.98)` measured here. It is the same trap the glow
+brief fell into, from the same source, twice — reading a value off the struct's
+defaults rather than off the preset the app actually selects.
+
+**Not decided by this entry:** whether the grade, vignette and chrome should also
+differ by appearance. They are shared today, reported rather than pre-empted.

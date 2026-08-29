@@ -2,6 +2,7 @@ import CoreGraphics
 import ImageIO
 @testable import Kamome
 import KamomeExportEngine
+import KamomeTrackingEngine
 import UniformTypeIdentifiers
 import XCTest
 
@@ -40,7 +41,11 @@ final class RecapStopStillTests: XCTestCase {
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let url = outDir.appendingPathComponent("title-\(fixture).png")
+        // Suffixed like the other two (2026-08-28). It was not, and a light/dark
+        // pair of the title card would have silently overwritten itself — the
+        // exact failure `variantSuffix` exists to prevent, in the one harness that
+        // had been left out of it.
+        let url = outDir.appendingPathComponent("title-\(fixture)-\(scene.variantSuffix).png")
         try write(image, to: url)
         print("KAMOME_TITLE_STILL \(url.path) — t=\(peak)s of a \(scene.timeline.durationS)s film")
     }
@@ -67,7 +72,7 @@ final class RecapStopStillTests: XCTestCase {
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let url = outDir.appendingPathComponent("stop-\(fixture)-\(RecapReviewScene.variantSuffix).png")
+        let url = outDir.appendingPathComponent("stop-\(fixture)-\(scene.variantSuffix).png")
         try write(image, to: url)
         print("KAMOME_STOP_STILL \(url.path) — \(stop.name) · \(stop.photos.count) photos · t=\(peak)s")
     }
@@ -95,7 +100,7 @@ final class RecapStopStillTests: XCTestCase {
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let url = outDir.appendingPathComponent("subject-\(fixture)-\(RecapReviewScene.variantSuffix).png")
+        let url = outDir.appendingPathComponent("subject-\(fixture)-\(scene.variantSuffix).png")
         try write(image, to: url)
 
         let state = scene.timeline.subjectState(atTime: time)
@@ -104,6 +109,44 @@ final class RecapStopStillTests: XCTestCase {
             url.path, time, state.heading,
             SpriteDirection.nearest(toBearing: state.heading).rawValue, state.emphasis
         ))
+        print("KAMOME_SUBJECT_STILL " + dashedReport(scene, at: time))
+    }
+
+    /// **How much dashed trail this still actually contains.**
+    ///
+    /// Added 2026-08-28 for the trail-colour sweep. `routeInferredColor` is
+    /// derived from `routeColor`, so a candidate orange has to be judged with its
+    /// dashed variant beside it — and whether the frame *has* one is a fact, not
+    /// something to squint at. It reports the revealed inferred legs and the
+    /// longest one's size **as a fraction of the frame width**, since a leg a few
+    /// pixels long is present without being judgeable.
+    ///
+    /// Metres rather than a projected length: the camera is north-up and the frame
+    /// spans `spanM` across `frameWidthPx`, so the ratio is the honest number and
+    /// it needs no snapshot to compute.
+    private func dashedReport(_ scene: RecapReviewScene, at time: Double) -> String {
+        let camera = scene.timeline.cameraFrame(atTime: time)
+        var revealed = 0
+        var inferred: [Double] = []
+        for content in scene.timeline.overlayContents(atTime: time) {
+            guard case let .routeReveal(legs) = content else { continue }
+            revealed += legs.count
+            for leg in legs where leg.provenance.isInferred {
+                inferred.append(zip(leg.coordinates, leg.coordinates.dropFirst()).reduce(0) {
+                    $0 + Geo.distanceM(latA: $1.0.lat, lonA: $1.0.lon, latB: $1.1.lat, lonB: $1.1.lon)
+                })
+            }
+        }
+        guard !inferred.isEmpty else {
+            return "provenance — \(revealed) legs revealed, NONE dashed: this frame cannot show an inferred leg"
+        }
+        let longest = inferred.max() ?? 0
+        return String(
+            format: "provenance — %d legs revealed, %d dashed · longest %.1f km"
+                + " = %.1f%% of the frame width (span %.0f km)",
+            revealed, inferred.count, longest / 1000,
+            longest / camera.spanM * 100, camera.spanM / 1000
+        )
     }
 
     /// The latest instant at which the subject is fully drawn — late enough that
