@@ -1,8 +1,9 @@
 # HANDOFF — current state
 
-**Updated 2026-08-28.** Branch `feature/p4-appearance-follows-system`, off `main`
-at `87d1d4e`. PR #18 (`feature/p4-visual-checks`) **merged**; PR #11 merged on
-2026-08-15 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close). Written so a fresh
+**Updated 2026-08-29.** Branch `claude/mystifying-lalande-a203b3`, off `main` at
+`c906912`. PR #21 (`feature/p4-appearance-follows-system`) **merged**, as did #18
+and, on 2026-08-15, #11 (`Docs/decisions.md` 2026-08-15, Phase 3.5 close).
+`docs/state-2026-08-28` (PR #20) is still open and goes last. Written so a fresh
 session (or a fresh person) can pick this up without being briefed by hand.
 
 Read `Docs/current-state.md` first for the project snapshot, then `CLAUDE.md`
@@ -14,6 +15,142 @@ by default**, as amended by the routing ADRs (`Docs/decisions.md` 2026-08-16 and
 known bugs. Closed, resolved, and superseded sections were moved verbatim to
 `Docs/_archive/handoff-2026-08.md` on 2026-08-21 — that file is history, never
 current state.
+
+---
+
+## Findings — engineering session, the silent subject fallback (2026-08-29)
+
+**Context.** The task 2026-08-28's finding 10 spawned: make the marker fallback
+loud, and find out whether it is the bundle crash wearing a different symptom.
+Both answered below and in the bundle-lookup entry. Chiu then approved the
+resolution diagnostic and asked for two changes to the marker itself.
+
+**Renders for review** (outside the repo, §0): `~/Kamome-films/2026-08-29-fallback-navy/`,
+five stills and a `README.md` with the numbers. Same trip, same frame (t=114.3 s)
+as every subject still since the size sweep; the failure visual is *forced*, so it
+is judged on purpose rather than by accident.
+
+---
+
+### 1. ✅ FIXED — the stand-in had become larger than the thing it stands in for
+
+`fallbackMarkerLengthPx` was a hard-coded **170** while ADR 2026-08-27 moved
+`export.subject_length_px` **225 → 157.5**. From that day the fallback seagull
+rendered **12.5 px longer than the car**, and nothing failed, because the two
+numbers sat side by side with nothing tying them together. Chiu noticed it by
+looking.
+
+**The fix is the relationship, not the number.** `fallbackMarkerLengthFraction`
+(default **1**) replaces the absolute, and `fallbackMarkerLength(subjectLengthPx:)`
+is the one place it is applied. At ≤ 1 the marker is at most the subject, whatever
+the subject becomes — the inversion is now structurally impossible rather than
+merely corrected. Deliberately the same shape as `length_fraction` in
+`vehicles.json`, whose own comment gives this exact reasoning; the manifest cannot
+supply this one, because the fallback fires precisely when the manifest could not
+be read.
+
+`subjectLengthPx(configured:)` keeps its `max` as defence for a fraction above 1,
+and keeps its signature, so no probe call site moved.
+
+**Positive control, run rather than reasoned.** With the fraction set to 1.2 the
+new guard fails at all five swept subject lengths —
+`("135.0") is greater than ("112.5")` and so on up to `("360.0") is greater than
+("300.0")` — and passes at 1. The neighbouring wiring test passed either way,
+which is correct: it holds the wiring, the new one holds the bound.
+
+### 2. `RecapRenderTestCase:57`'s `configured: 300` is consistent, not stale — reported, not changed
+
+Asked to look at it and say what I found rather than update it silently. What I
+found is that **300 is not a leftover shipped value in this file — it is this
+file's own fixture.** `RecapRenderTestCase` builds its `TrackingConfig.Export`
+with `subjectLengthPx: 300` (line ~119), and `vehicleHalfPx` clears
+`configured: 300`. The probe clears exactly what the render under test draws, so
+the two agree and nothing is wrong. 300 is also the suite-wide convention for a
+synthetic subject: `CameraPathTests`, `RecapPacingTests`, `RecapEncoderTests`,
+`LinearTimelineTests`, `RecapMarkerDeckStillsTests` and `RecapFollowCamStillsTests`
+all use it.
+
+**What is true is the reading risk**, and it is the same one that has now cost
+this project four times: a number in a test file that resembles a shipped value
+but is not one. Changing it would mean changing the fixture too, which moves what
+the golden-frame probes render and clear — a real change, for no defect.
+**Left alone.**
+
+### 3. ⏳ OPEN — which navy, and the constraint stated as a number
+
+Chiu wants the marker blue rather than the near-black ink. The constraint is
+**luminance, not hue**: `testTheFallbackMarkerContrastsWithItsBaseMap` asserts
+< 0.35 on light and > 0.65 on dark, and says in its own comment that it is
+asserting visibility rather than an ink.
+
+Measured on the rendered stills, in 0–255 units, against the terrain within 6 px
+of the stroke:
+
+| candidate | hex | gull L | beside | **gap** | guard |
+|---|---|---:|---:|---:|---|
+| white — what shipped until 2026-08-28 | `#FFFFFF` | 217.4 | 191.0 | **26.4** | ✗ |
+| the ink, today | `#1C2130` | 34.0 | 190.9 | **156.9** | ✓ |
+| A · near | `#17204A` | 34.0 | 190.9 | **156.9** | ✓ |
+| B · deep | `#1B2A5B` | 41.5 | 190.9 | **149.4** | ✓ |
+| C · bright | `#23407F` | 58.3 | 190.9 | **132.6** | ✓ |
+
+**All three navies clear the guard — run, not calculated** (one temporary edit to
+the preset per candidate, reverted; logs `~/Kamome-wt/logs-fallback-diag/guard-*.log`).
+A bright cyan `#4FC3F7` was run as a control and **failed at 0.683**, so the guard
+bites and is not pinning today's value.
+
+Two things the table does not say. **The white baseline was rendered rather than
+recalled** — 26.4 against 156.9 is the argument for the change, in the same frame
+and the same units. And **clearing the bar is not clearing the water trap**: the
+bar is brightness, the trap is hue, and `navy-C-bright` is included to show where
+that begins, not as a recommendation.
+
+**Chiu picks; nothing is committed.** The pick replaces one line in
+`RecapStylePresets.modernMinimal(.light)`.
+
+### 4. ⚠️ Base-versus-preset has now bitten four times, and the fourth is the sharp one
+
+The glow "verified fact" quoted the neutral default's alpha 0; the PO session's
+ADR quoted the neutral default's blue; both times the shipped preset said
+something else. The third was spotting that the ink lives in the preset while the
+base `RecapStyle.fallbackMarkerColor` is still white.
+
+**The fourth is worse than a stale reading, and it is live.** `modernMinimal(.dark)`
+**does not set `fallbackMarkerColor` at all.** The dark film therefore draws the
+base default — white — and the guard's dark assertion (`> 0.65`) passes on a value
+nobody wrote for dark. White happens to be right there. That is not the same thing
+as it being chosen.
+
+Two consequences worth Chiu's decision, neither acted on:
+
+1. **Changing the base default silently changes the dark film.** This is the
+   mechanical reason a navy goes in the light preset — not merely a procedural one.
+2. `RecapStyle()`'s neutral defaults are load-bearing for the golden-frame gates
+   (its own comment says so) *and* are the dark preset's palette by omission. Those
+   are two jobs. Whether `.dark` should state its marker colour explicitly, or the
+   base should be documented as "the dark preset's value, and the gates'", is a
+   small design question — **reported, not folded into the colour sweep.**
+
+### 5. 🔵 CARRY — the fault gull and the narrator gull are the same bird
+
+`Docs/cross-region-journeys.md` requirement 4 — *"the load-bearing one"* — wants a
+seagull as the **narrator of an unmodelled crossing**: honest provenance made
+visual, *"we know you went from here to there; we do not know how"*. Its own words
+are that this answer "must be cheap and **good-looking** rather than a failure
+state."
+
+The marker is being styled in the opposite direction: since 2026-08-28 it is
+partly a diagnostic, and it has to say *something went wrong* at a glance.
+
+**They are different objects** — the narrator is the `seagull` subject in
+`vehicles.json` (omni sprite, `length_fraction` 1.0), the fault is
+`VehicleMarker.seagull`, a stroked vector arc from `RecapStyle`. **A viewer cannot
+tell them apart**, and that is the collision: the same bird would mean "we could
+not classify your crossing" in one film and "the artwork failed to load" in
+another. Nobody has decided which reading wins, and the navy pick makes the fault
+bird more distinctive, not less.
+
+**Noted at Chiu's instruction; deliberately not designed for.**
 
 ---
 
@@ -243,6 +380,15 @@ returns nil, and its doc comment says that "only fires when the app's own resour
 bundle cannot be found — a state no test can arrange". **That claim is now false by
 observation.** Whether it is the same resource-bundle problem as the intermittent
 `KamomeCore_KamomeExportEngine` crash below is *suggestive, not established*.
+
+> **Answered 2026-08-29 — read the bundle-lookup entry below instead of this
+> paragraph.** The spawned task settled it as far as the evidence goes: **one
+> mechanism, two symptoms** (the crash's `Bundle.module` trap was removed on
+> 2026-08-15 and the same lookup has returned nil ever since), but **not one root
+> cause** — the trigger is still UNKNOWN, and two tested hypotheses came back
+> negative. Consequence 1's diagnostic is built; so is a second one that names
+> which candidate the bundle lookup tried. Consequence 2 was acted on: the token
+> is ink on light, and is being swept for a navy.
 
 Three consequences:
 
@@ -996,28 +1142,37 @@ red flag to stop and report — the same applies to sources.
 **For Chiu, not the implementer:** two sessions in one checkout will keep producing
 this. A git worktree per session removes it entirely and costs nothing.
 
-#### ⚠️ But the worktree fix silently disables half the new key guard — **VERIFIED**
+#### ✅ CLOSED 2026-08-21 by `2d221e0` — ~~the worktree fix silently disables half the new key guard~~
 
-Two independent lines of evidence, and they agree:
+**The subsection that stood here is struck, not edited.** It said
+`testTheSecretsFileIsNotTracked` reads `<repoRoot>/.git/index`, that a worktree's
+`.git` is a *file* so the read fails and the test throws `XCTSkip`, and that the
+local half of the key guard therefore never runs in the setup this project now
+recommends. **`2d221e0` ("fix(test): the secrets guard resolves the git index in
+a worktree too", on `main` since PR #16) fixed exactly that**: `gitIndexURL`
+resolves a worktree's `gitdir:` pointer, absolute or relative, and reserves
+`XCTSkip` for the one honest case of no `.git` at all.
 
-- **Code:** `testTheSecretsFileIsNotTracked` reads `<repoRoot>/.git/index` directly.
-  **In a worktree `.git` is a *file*, not a directory**, so the read fails and the
-  test throws `XCTSkip`. The test's own comment names this case.
-- **Measurement, from the isolating session's own table:** main tree reported
-  `109 (16 skipped)`; both worktrees reported `109 (**17** skipped)`. One extra skip,
-  in exactly the run where the index is unreachable.
+**Re-measured 2026-08-29 in a worktree, by running it rather than reading it**
+(`.claude/worktrees/nice-pare-08dedf`, `.git` a file pointing at
+`Kamome/.git/worktrees/nice-pare-08dedf`):
 
-**Not a defect anyone introduced** — the fallback was documented and points at the CI
-step, which is unaffected (CI clones normally, so `.git` is a directory). It is an
-interaction between two decisions made hours apart: the guard was written for a
-normal checkout, and worktrees are now recommended.
+    -only-testing:KamomeTests/RoutingKeyTests
+    Test Case '-[KamomeTests.RoutingKeyTests testTheSecretsFileIsNotTracked]' passed (0.001 seconds)
+    Executed 10 tests, with 0 failures (0 unexpected)
 
-**Consequence if left:** in the setup being adopted, the local half of the guard never
-runs. Protection still exists, but only at PR time.
+**Passed — 10 executed, 0 skipped.** And the pass is not vacuous: the guard scans
+the index for the NUL-terminated byte string `Config/Secrets.xcconfig`, and that
+worktree's 44,845-byte index **contains that needle exactly once**, at offset
+3914, as the prefix of the tracked `Config/Secrets.xcconfig.example`. For the
+test to pass rather than skip, it had to resolve the pointer, read those bytes,
+find the occurrence and reject it on the NUL check. A skip or an unreadable index
+could not produce this result.
 
-**Fix, small:** when `.git` is a file, read its `gitdir: <path>` line and resolve the
-index there. ~5 lines, and it restores the local half. Low priority — CI covers the
-actual risk — but do it before anyone concludes the local test is protecting them.
+**The habit this cost:** the stale claim was carried forward on 2026-08-29 by
+quoting this section instead of running the test — a repo document treated as
+current state when the code had moved four days earlier. §7 already says
+verification is not self-certified; the same applies to citing someone else's.
 
 ---
 
@@ -1324,37 +1479,148 @@ is arithmetic, and the render is what settles it.
 all. Switching it to Variant B is a live alternative Chiu named, and the §6a/§6b
 split means both films of the same trip exist anyway.
 
-## 🔴 Open — intermittent `KamomeCore_KamomeExportEngine` bundle crash (2026-08-13)
+## 🟠 Open — the `KamomeCore_KamomeExportEngine` subject lookup still misses; it no longer crashes
 
-**Not diagnosed, deliberately not chased, and explicitly not a flake.** Logged
-here because it is a §6b gate risk and the evidence would otherwise live only in a
-chat transcript.
+**Retitled and corrected 2026-08-28.** This entry stood as "🔴 intermittent bundle
+crash (2026-08-13)" and described an unguarded `fatalError` reached through
+`Bundle.module` in `Core/ExportEngine/RecapCarSprite.swift:75`. **That mechanism
+no longer exists** — its own closing line ("the eventual fix is small and
+defensive — a non-trapping bundle lookup") was carried out two days later and the
+entry was never updated. Kept, not deleted: the *lookup* still misses, and the
+same miss now degrades a film silently instead of crashing it.
 
-**Symptom.** `Fatal error: unable to find bundle named
-KamomeCore_KamomeExportEngine`, thrown during map-renderer creation — after the
-region resolves, before any frame is drawn.
+### The history, as observed (2026-08-13)
 
-**Evidence in hand.** Hit on 2 of 3 New Zealand render attempts; never on
-Miyakojima; never on the Iceland run. Cleared on retry, and again under
-`-retry-tests-on-failure`. The resource bundle **is** present in the built
-`Kamome.app`, so this is a runtime lookup failure, not a packaging fault. Timing-
-or state-dependent, not deterministic.
+`Fatal error: unable to find bundle named KamomeCore_KamomeExportEngine`, thrown
+during map-renderer creation — after the region resolves, before any frame is
+drawn. Hit **2 of 3** New Zealand render attempts; never on Miyakojima, never on
+the Iceland run — so it read as trip-correlated rather than evenly random.
+Cleared on retry, and again under `-retry-tests-on-failure`. The resource bundle
+**is** present in the built `Kamome.app`, so it was a runtime lookup failure, not
+a packaging fault. (Those are this file's own 2026-08-13 figures, kept verbatim;
+no wider tally is recorded in the repository.)
 
-**Why it matters more than a harness annoyance.** `Bundle.module` is used at
-`Core/ExportEngine/RecapCarSprite.swift:75` to load the vehicle sprite, and
-`RecapSubjectRenderer.swift:39` draws that sprite **on the shipped export path**.
-SwiftPM's generated `Bundle.module` accessor calls `fatalError` when it cannot
-locate the bundle, so the defensive `guard … else { return nil }` immediately
-below it — and the `if let` at the call site — **can never run.** That is an
-unguarded crash on the path §6b requires to be crash-free on a real device.
+### What changed the symptom — VERIFIED from the tree, 2026-08-28
 
-**Whether it reproduces on device is UNKNOWN.** The desk is the only place it has
-been seen. §6b carries a "watch for this crash" item; the device sitting is what
-answers it.
+| when | commit | what |
+|---|---|---|
+| 2026-08-15 | `b44a7fc` | "the sprite fallback stops being unreachable" — the trap is replaced by a non-trapping resolver |
+| 2026-08-16 | `e2a1478` | `RecapCarSprite.swift` deleted; the resolver is generalised into `VehicleResourceBundle` (`Core/ExportEngine/SpriteDirection.swift:43`). Its message: "`Bundle.module` does not return." |
 
-**Not fixed this round** (owner call): it is app code, and the renders came first.
-The eventual fix is small and defensive — a non-trapping bundle lookup — but it is
-a change to shipped behaviour and needs its own pass.
+`grep -rn "Bundle.module" --include="*.swift" .` returns **only comments** — no
+call site anywhere in the repository, and no `fatalError` or `try!` in
+`Core/ExportEngine`. **The crash as this entry described it cannot recur.** The
+generated accessor still exists in DerivedSources, as it does for every target
+with resources, but nothing calls it.
+
+### What the same lookup does now — observed 2026-08-28
+
+`VehicleCatalog.resolve` returns nil and `VehicleSubjectRenderer.make` draws the
+vector seagull. **Whether `VehicleResourceBundle.resolved` was itself nil is
+UNKNOWN** — nothing recorded it, which is the gap the new log line closes. Four
+`RecapStopStillTests/testRenderSubjectStill` runs differing only in
+`TEST_RUNNER_KAMOME_ROUTE_COLOR` produced three cars and one gull
+(`light-C-deeper`, `~/Kamome-wt/logs/render-light-C-deeper.log`); the test passed
+in 25.8 s with no retry.
+
+**VERIFIED here, not taken on report:**
+
+- The still really is the fallback. Diffing it against the re-render at >8/255 on
+  any channel gives **9,291 differing pixels of 2,073,600, all inside one
+  126×131 box** — the subject and nothing else. Crops confirm gull vs car.
+- **Nothing distinguished the run.** Stripped of timestamps, pids and paths, the
+  two console outputs are identical **line for line**; the only differences are
+  the colour, the output path and the elapsed seconds.
+- The harness could not have told anyone either: `RecapReviewScene` prints
+  `KAMOME_REVIEW subject <id> at <n>px` **before** calling `make`, so it reports
+  what was asked for, and `KAMOME_SUBJECT_STILL … (se drawing)` derives the
+  direction from the heading, not from what was drawn.
+- The bundle carries `Vehicles/` and nothing else (`Package.swift`,
+  `resources: [.copy("Resources/Vehicles")]`), so a whole-bundle miss would
+  degrade **only** the subject. The single-box pixel diff is therefore consistent
+  with a whole-bundle miss and **cannot discriminate** it from missing art.
+
+### Same mechanism — established. Same trigger — UNKNOWN.
+
+Same bundle name, same lookup, same code lineage, same point in the sequence
+(map-renderer/compositor construction), same intermittency, both cleared by a
+re-run. `b44a7fc` is exactly the commit that would turn the one symptom into the
+other. That is enough to call it **one mechanism with two symptoms**.
+
+It is **not** enough to call it one root cause. Neither occurrence was diagnosed,
+and two things argue for caution: the crash tracked New Zealand and is recorded
+above as never having fired on the Iceland run, while this miss *was* Iceland; and
+`VehicleResourceBundle` is *stricter* than `Bundle.module` was — it accepts a
+candidate only if `Vehicles/vehicles.json` is findable inside it, so a bundle
+directory that exists but does not answer a resource query fails here and would
+have succeeded there.
+
+### Two hypotheses tested and weakened — 2026-08-28
+
+**An install/launch race: WEAKENED, and it was the leading idea.** The tempting
+mechanism was that the bundle being probed is a directory written moments before
+the process launched. **MEASURED** on iPhone 17 Pro over four runs: a run whose
+build produces a changed product installs into a **brand-new container**, taking
+the old one with it (`9979C474-…` 22:24:56 → `D4A52666-…` 22:27:12 →
+`E91959A1-…` 22:29:19), and the installed
+`Kamome.app/KamomeCore_KamomeExportEngine.bundle` carries the install time rather
+than the build time. **But a run that compiles nothing does not reinstall at
+all** — a fourth run with 0 `SwiftCompile` and 0 packaging tasks left
+`E91959A1-…` untouched. The four appearance renders differed only in environment
+variables, so on that evidence the app was installed once and reused across them,
+and no install sat next to the failing launch. INFERRED for that batch — no
+install record from it survives — but it points away from the race, not towards
+it.
+
+**A build-work difference: RULED OUT.** `light-C-deeper`'s build did more than
+`light-A`/`light-B`'s — two `CompileXCStrings` and four `CopyStringsFile` against
+one and two. That is a real difference and it is **not** the discriminator: the
+clean re-render (`render-light-C-rerender.log`) ran the *same* heavier pattern
+and drew the car.
+
+### What was done about it, and what was not
+
+**Done (this change).** `VehicleSubjectRenderer.make` now logs the miss
+(`KamomeLog.recap.error`) instead of degrading in silence, per Arch.md §5, and
+the doc comment that called this "a state no test can arrange" is corrected.
+`KamomeLog` reaches the xcodebuild console on the simulator — the routing lines
+in every render log prove it — so the next occurrence names itself in the same
+file a reviewer already reads.
+
+**Done, approved (Chiu, 2026-08-28): the lookup now says what it tried.**
+`VehicleResourceBundle.resolved` logs a one-shot trace naming, per candidate, the
+URL and — the fact both incidents lacked — **whether the nested bundle was on
+disk**, which is what separates an install-timing fault from a packaging one.
+Scope as approved: failure path only (a process that resolves logs nothing),
+filesystem paths only (nothing derived from a trip, so §0 is not engaged), and
+shipped rather than reached for afterwards, because an intermittent failure has
+to be instrumented *before* it happens.
+
+The walk moved into `VehicleResourceBundle.resolve(hosts:)` so the message can be
+exercised — `resolved` is a lazily-initialised global with no seam, and a
+diagnostic that can never be shown to fire is one nobody should trust. Order and
+acceptance rule are unchanged. Two tests hold the contract in
+`RecapSubjectOrientationTests`: a host with no manifest produces
+`…KamomeCore_KamomeExportEngine.bundle: not on disk`, and a resolving lookup
+produces an **empty** trace.
+
+**Two lines, not one, when it next fires:** the bundle trace once per process,
+and `VehicleSubjectRenderer.make`'s per-subject line naming the consequence. One
+says why, the other says what the viewer will see.
+
+**Still not measured:** the rate, and the trigger. The next occurrence is what
+this exists to catch.
+
+**Stale references left alone, deliberately.** `Docs/current-state.md` is the
+synced index and its neighbouring sections are being rewritten on
+`feature/p4-appearance-follows-system`, so **two** lines there belong to the pass
+that re-syncs it, not to this change: the blockers entry "🔴 intermittent …
+bundle crash", and "worktrees fix it but silently skip half the secrets guard
+(`HANDOFF.md` 3e)" — struck above, closed by `2d221e0`.
+`Docs/gate-P3.5-checklist.md`
+and `Docs/handoff-P3.5.md` describe a closed phase and are history.
+`Docs/decisions.md` 2026-08-15 records the `Bundle.module` mechanism as it stood
+and is append-only — it is not wrong, it is superseded.
 
 ## `stop_weighting_enabled` — reachable in BOTH modes, containment only empirical
 

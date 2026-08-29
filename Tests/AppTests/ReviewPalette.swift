@@ -20,6 +20,10 @@ import KamomeExportEngine
 ///   cannot be judged apart from the solid one it weakens.
 /// - `KAMOME_ROUTE_GLOW_ALPHA` — 0 vs 0.32 on the dark base. `a58942d` retired
 ///   the glow *because the base was light*, so dark reopens it.
+/// - `KAMOME_FALLBACK_MARKER_COLOR` — which navy the fallback gull takes
+///   (2026-08-29). Orthogonal to `KAMOME_FORCE_FALLBACK_MARKER`, and
+///   deliberately so: that lever decides *whether* the failure visual is drawn,
+///   this one decides what colour it is. Sweeping the colour needs both.
 ///
 /// Neither touches `Config/TrackingConfig.json` or `RecapStyle`, so a value tried
 /// for one still can never be committed by accident. An unparseable value is
@@ -64,6 +68,19 @@ enum ReviewPalette {
             style.routeGlowColor = style.routeGlowColor.copy(alpha: CGFloat(alpha)) ?? style.routeGlowColor
         }
 
+        if let raw = HarnessEnv.value("KAMOME_FALLBACK_MARKER_COLOR") {
+            // The contrast rule the token exists for is a luminance bar
+            // (`testTheFallbackMarkerContrastsWithItsBaseMap`), not a hue, so
+            // the harness refuses nothing here — it *reports* the luminance
+            // beside the colour, and the guard decides what is allowed. A
+            // candidate that fails the bar should fail it in the suite, where
+            // the failure is a sentence, not in a still nobody measured.
+            style.fallbackMarkerColor = try color(raw, variable: "KAMOME_FALLBACK_MARKER_COLOR")
+        }
+
+        print("KAMOME_REVIEW fallback marker \(describe(style.fallbackMarkerColor))"
+            + " · luminance \(String(format: "%.3f", luminance(style.fallbackMarkerColor)))"
+            + " · drawn at \(String(format: "%.2f", style.fallbackMarkerLengthFraction))x the subject")
         print("KAMOME_REVIEW palette \(appearance.rawValue)"
             + " · trail \(describe(style.routeColor))"
             + " · dashed \(describe(style.routeInferredColor))"
@@ -71,14 +88,23 @@ enum ReviewPalette {
         return style
     }
 
+    /// Rec. 709 relative luminance — **the same expression the contrast guard
+    /// uses**, restated here rather than shared because the guard is the rule
+    /// and this is a report of it; if they ever disagree, the guard wins and the
+    /// still was mislabelled, which is the failure worth being able to see.
+    static func luminance(_ color: CGColor) -> CGFloat {
+        guard let rgb = color.components, rgb.count >= 3 else { return .nan }
+        return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]
+    }
+
     /// `#RRGGBB`, or three comma-separated 0…1 components — the form `RecapStyle`
     /// itself is written in, so a candidate can be pasted either way round.
-    private static func color(_ raw: String) throws -> CGColor {
+    private static func color(_ raw: String, variable: String = "KAMOME_ROUTE_COLOR") throws -> CGColor {
         let text = raw.trimmingCharacters(in: .whitespaces)
         if text.hasPrefix("#") {
             let digits = String(text.dropFirst())
             guard digits.count == 6, let packed = UInt32(digits, radix: 16) else {
-                throw HarnessError("KAMOME_ROUTE_COLOR=\(raw) is not a #RRGGBB hex colour")
+                throw HarnessError("\(variable)=\(raw) is not a #RRGGBB hex colour")
             }
             return CGColor(
                 srgbRed: CGFloat((packed >> 16) & 0xFF) / 255,
@@ -90,7 +116,7 @@ enum ReviewPalette {
         let parts = text.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
         guard parts.count == 3, parts.allSatisfy({ (0...1).contains($0) }) else {
             throw HarnessError(
-                "KAMOME_ROUTE_COLOR=\(raw) is neither #RRGGBB nor three 0-1 components (e.g. 0.95,0.55,0.32)"
+                "\(variable)=\(raw) is neither #RRGGBB nor three 0-1 components (e.g. 0.95,0.55,0.32)"
             )
         }
         return CGColor(srgbRed: parts[0], green: parts[1], blue: parts[2], alpha: 1)
@@ -130,6 +156,9 @@ enum ReviewPalette {
             parts.append("glow\(String(format: "%.2f", style.routeGlowColor.alpha))")
         }
         if HarnessEnv.value("KAMOME_FORCE_FALLBACK_MARKER") != nil { parts.append("fallback") }
+        if HarnessEnv.value("KAMOME_FALLBACK_MARKER_COLOR") != nil {
+            parts.append("gull\(hex(style.fallbackMarkerColor))")
+        }
         return parts.joined(separator: "-")
     }
 }
