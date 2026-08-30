@@ -266,6 +266,42 @@ compositor's draw call takes a source rect. The Story layer, `LinearTimeline` an
 the camera math are untouched. **The move (§3–§6) and the rendering (§7) are
 independent changes and must be shipped and judged separately** (§10).
 
+### ⚠️ Updated 2026-08-28 — the projection this rests on gained a second half
+
+PR #18 changed `MapKitSnapshotProvider` underneath this section. Re-read it before
+building anything here; the design still holds, but the arithmetic has one more
+term.
+
+- **`point(for:)` answers in the *point canvas* MapKit was given, not in pixels.**
+  The provider now composes a point→pixel correction (`pixel(_:displayScale:)`),
+  and the canvas is `pointSize(widthPx:heightPx:displayScale:)`. So a crop-scaled
+  arc composes **two** corrections, not one, and the *derived* `MapSnapshot` this
+  section calls for must carry both. A missing multiply here is invisible in a
+  still frame and drifts in motion — which is exactly why that function is named
+  rather than inlined.
+- **`pointSize` throws rather than rounding** when the scale does not divide the
+  frame exactly, and `displayScale` is an **`Int`** for the same reason. A crop
+  factor is therefore not free: whatever geometry an arc asks for has to stay
+  expressible. (1.5 divides 1080×1920 arithmetically but is not reachable without
+  widening the type against a documented reason.)
+- **MapKit may return more pixels than were asked for.** Measured once on
+  2026-08-22: a 540×960 pt canvas came back at 1620×2880 px — 3×, the simulator's
+  native scale, not the 2 requested. Not reproduced in 18 probe snapshots; trigger
+  **UNKNOWN**. For this design that is mostly *good* news — a station snapshot may
+  hold more real detail than its requested scale implies, which is the resource
+  §7 spends. **But an arc must read a station's actual pixel dimensions back
+  rather than assuming them**, and it must not defeat the provider's guard, which
+  rejects a **non-uniform** raster because no single factor can correct one.
+- **Appearance is now a required provider input** (ADR 2026-08-27, merged in
+  PR #21). `MapKitSnapshotProvider(appearance:)` has **no default**, precisely so a
+  test cannot inherit the simulator's setting, and `RecapStyle.modernMinimal` is now
+  a function of the appearance too — the light trail is `#FF8A5B`, the dark one the
+  cyan, and the glow stays off on both. A renderer that cannot honour an appearance
+  declares `MapRendererCapabilities.fixedAppearance` and wins.
+  **Pass 1 therefore passes one explicitly and holds it across all three clips** —
+  one variable, and the variable is how the base map is produced. Say which you
+  chose.
+
 Known artifact to expect and judge: a station snapshot cropped in shows *that
 station's* level of map detail magnified — labels and road widths scale up, and no
 new roads appear until the next station loads.

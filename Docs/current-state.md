@@ -7,11 +7,8 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-08-28 against decisions.md **2026-08-27** (the film follows the
-device's system appearance; light gets a warm trail). Synced by the engineering
-session that appended that entry, which is also why the sync is narrow: the
-"Active work" section below was corrected only where this session had first-hand
-evidence, and a governance pass is still owed the rest.
+Last synced: 2026-08-29 against decisions.md 2026-08-27 (b) (the subject is
+157.5 px and the mark's fraction is spent).
 
 ⚠️ **A note on this protocol, from 2026-08-28.** It keys on the ADR ledger alone,
 so this file can pass its own check while its *Active work* section is months out
@@ -104,6 +101,10 @@ P7 backend deferred.
 - **Film duration must scale with trip size — direction decided, rule NOT**
   (Chiu 2026-08-14, `HANDOFF.md`). Do not implement the candidate rule as if
   settled.
+- **The subject is 157.5 px and the mark is pinned at `length_fraction` 1.0**
+  (ADR 2026-08-27 (b)). ⚠️ That pin **spends** the relational guarantee `cb14ae8`
+  built the fraction for: next time `subject_length_px` moves, the mark follows at
+  full rate and its size becomes a fresh judgement.
 - **Reindeer sets are choosable subjects**, not crossing art (2026-08-20 (3d),
   `HANDOFF.md`).
 - **Honest provenance** — never "Verified Trip"; recorded vs
@@ -150,6 +151,31 @@ P7 backend deferred.
   `4ed8774` / `6cc6543` (re-centred sets) and `c0d4583` (reindeer sets);
   VERIFIED 2026-08-21, `git status` clean of PNGs. The closeout session's
   *other* tasks (key verification) remain not recorded — see Active work.
+- 🔴 **GitHub Actions is blocked account-wide** (from 2026-08-29): jobs fail in
+  ~3 seconds with **zero steps executed** — *"the job was not started because
+  recent account payments have failed or your spending limit needs to be
+  increased"*. `main` fails identically, so **a red check on any PR right now says
+  nothing about that PR.** Until Chiu clears it in GitHub billing, local
+  `xcodebuild test` is the only verification, and the CI-as-merge-gate discipline
+  this project relies on does not exist.
+- 🟠 **MapKit rastered at 3× when asked for 2×, once, and nobody knows why.** Not
+  reproduced across 18 probe snapshots (`MapKitSnapshotProbeTests`). It cannot
+  misproject — the correction factor is the requested scale by construction — but a
+  **non-uniform** raster would abort an export at the guard. Trigger UNKNOWN,
+  deliberately unchased.
+- 🟠 **The routing key is still inside every IPA.** The Worker is deployed and
+  serves keyless (2026-08-29), but `matching.base_url` is still `""` and
+  `api_key_required` still `true`, so builds call Geoapify directly. Nothing has
+  changed for builds already on other people's phones.
+- 🟡 **No spend ceiling exists anywhere.** VERIFIED from Geoapify's own pages: their
+  limits are **soft** on every tier, there is no customer-settable cap, and the
+  escalation ends in **account blocking** — so the worst case is not a self-healing
+  daily outage, it is every user losing routing until Chiu resolves it with the
+  provider. The account has no payment method today, but that is a consequence of
+  scale, **not a control** (Chiu, 2026-08-28), and the design must hold when a card
+  exists. The only ceiling that can exist is a per-day budget counter in Kamome's
+  Worker; Chiu's sequencing is that it lands **with or before** the app-side wiring,
+  so the endpoint never carries real traffic uncapped (`Docs/pre-launch.md` item 5).
 - Two sessions sharing one checkout contaminate each other's test/lint counts;
   worktrees fix it but silently skip half the secrets guard (`HANDOFF.md` 3e).
 
