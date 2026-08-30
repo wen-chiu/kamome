@@ -1,3 +1,14 @@
+> ## 📦 HISTORY — a snapshot of the tree as it stood on 2026-08-21
+>
+> Bannered 2026-08-30. This is the raw inventory the 2026-08-21 documentation
+> governance pass worked from (`Docs/_audit/audit-2026-08-21.md`). It is a
+> **point-in-time listing, never current state** — at least nine PRs have merged
+> since, and several status lines quoted below have been corrected in place in
+> their own files.
+>
+> Current state is `Docs/current-state.md`; decisions are `Docs/decisions.md`;
+> live findings are `HANDOFF.md`. Nothing here is a work instruction.
+
 # Inventory — 2026-08-21
 
 Stage 1 of the documentation audit (PO.md governance). Mechanical inventory only —

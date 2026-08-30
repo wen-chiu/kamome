@@ -14,10 +14,17 @@ crossing → export that survives). Phase 3.5 (Replay MVP) **CLOSED 2026-08-15**
 ## Session-start reading order
 
 1. **`Docs/current-state.md`** — the snapshot: phase, boundaries, locked
-   decisions, active work, deferred items. **Staleness check first:** its
-   "Last synced" line must name the newest ADR in `Docs/decisions.md`; if it
-   does not, the file is stale, `decisions.md` wins, and you report the
-   staleness before proceeding.
+   decisions, active work, deferred items. **Staleness check first, and it has
+   two halves** (amended 2026-08-30): its "Last synced" line must name **both**
+   the newest ADR in `Docs/decisions.md` **and** the newest merged PR on `main`
+   (`gh pr list --state merged --limit 1`). If either is behind, the file is
+   stale — `decisions.md` wins on decisions, `HANDOFF.md` wins on live findings
+   and blockers — and you report the staleness before proceeding. The ADR-only
+   version of this check passed twice while the file's own blocker list was
+   weeks out of date.
+   **Also confirm where you are**: `git status -sb` and your distance from
+   `origin/main`. A PO session read a full generation of stale documents on
+   2026-08-30 because the checkout sat on an already-merged branch.
 2. Your charter: `Arch.md` (engineering session) or `PO.md` (product-owner /
    governance session).
 3. `HANDOFF.md` — live findings, open experiments, known bugs. Current only.
@@ -33,7 +40,9 @@ handoff, and this file. Closed HANDOFF/CLAUDE history lives in
 - **§0 — Location data never leaves the device by default** (Chiu 2026-08-03).
   A user's real trip, route or location history is never logged off-device,
   synced, sent to analytics or crash reporting, or **committed to this repo**
-  (real dumps live only in gitignored `Tests/Fixtures/trips/local/`;
+  (real dumps live only in gitignored locations: `Tests/Fixtures/trips/local/`
+  for trip dumps and `Docs/tests/` for raw device-test artifacts — the second was
+  added to this sentence on 2026-08-30, having been in the tree all along;
   `KamomeLog` may name *which* stop failed, never its coordinates). If a
   feature needs real coordinates to leave the device, that is a product
   decision for Chiu, never an implementation detail.

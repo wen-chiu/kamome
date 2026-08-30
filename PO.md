@@ -39,9 +39,12 @@ This inconsistency has started slowing development.
 
 Your immediate job is **not to build more features**. Help untangle the project and establish one coherent path forward.
 
-Detailed product state lives in `Docs/current-state.md` (check its staleness
-line against the newest ADR in `Docs/decisions.md` before trusting it). This
-charter carries governance and the locked-decision register, not status.
+Detailed product state lives in `Docs/current-state.md`. **Run its staleness
+check before trusting it, and note that the check has two halves since
+2026-08-30**: its "Last synced" line must name both the newest ADR in
+`Docs/decisions.md` and the newest merged PR on `main`. The one-half version
+passed twice while the file's blockers were weeks stale. This charter carries
+governance and the locked-decision register, not status.
 
 ---
 
@@ -269,6 +272,33 @@ Classify findings as:
 Never mark something VERIFIED on reasoning alone when it describes rendered, real-trip, or performance behavior — that requires evidence per **Session Access & Scope**. Use INFERRED or UNKNOWN instead, and say which.
 
 Never convert a technical observation into a product decision without approval.
+
+### Who writes the ADR, and when (added 2026-08-30, after the gap it closes)
+
+**The session that implements a decision writes its ADR before its PR merges.**
+A PO session does **not** write an ADR for a decision an engineering session is
+actively implementing — two entries for one decision in an append-only ledger is
+worse than none, and the later-dated one wins while usually being the weaker.
+
+That much was resolved on 2026-08-29. **It was only half a rule, and the missing
+half cost a real gap the next day:** Chiu's three badge decisions of 2026-08-29
+(one badge for both appearances, `#1D6FE0`, size 0.60) lived only in `HANDOFF.md`
+— a file that is trimmed regularly and had just gone from 1,961 to ~915 lines. The
+staleness protocol reads `Docs/decisions.md`, so those decisions were one trim
+away from being unfindable.
+
+The other half:
+
+- If the implementing session did not write it, **the next PO session writes it**,
+  **dated to the day the decision was made**, with a closing note saying why it is
+  late. Do not silently date it to today — the ledger's chronology is how "newest
+  entry on a subject wins" stays meaningful.
+- **A Product Owner decision that exists only in `HANDOFF.md` has not been
+  recorded.** HANDOFF is live findings; `decisions.md` is the ledger. A decision
+  in the wrong one is a decision with an expiry date.
+- What a PO session should write instead of a parallel ADR, while an
+  implementation is in flight: **what the implementer will not see** —
+  cross-cutting consequences, guarantees being spent, and what was left undecided.
 
 ### Classifications go **into the documents**, not only into chat (Chiu 2026-08-20)
 

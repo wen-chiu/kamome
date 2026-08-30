@@ -19,7 +19,7 @@ mandatory for a submission, and each is small.
 | **1** | ✅ **DONE 2026-08-21 — Routing: Geoapify integration, then a real film** | Migrated (PR #16), and the Iceland film was rendered and **judged correct by Chiu** — `Docs/decisions.md` 2026-08-21. One thing still unobserved: the keyed path through the app's own config (no run log), folded into the next render. |
 | **1b** | **Cloudflare Worker, key out of the binary** — written (`556f828`), **deployed by Chiu 2026-08-27** to `https://kamome-routing.kamome-site.workers.dev`, answering a keyless `GET /v1/routing` with 200. Preview URLs turned off 2026-08-28 (see below). **Still open: the app is not pointed at it**, and abuse control (item 5) is undecided. | The URL is deliberately not a secret — it ships in every IPA by design; the *key* is what had to stop shipping. Until `matching.base_url` / `api_key_required` are flipped, builds still call Geoapify directly and **the key is in those IPAs today**, so exits 2 and 3 stay open in anything already on someone's phone. The flip is a separate session. |
 | **2** | **Cross-region: the flight/crossing beat** | `Docs/cross-region-journeys.md`. Every overseas trip hits it on device. |
-| **3** | **Export survives: background, performance** | `ExportLifecycleGuard` is written and **never verified on a device**. |
+| **3** | 🔴 **Export survives: background, performance, and the film does not shake** | `ExportLifecycleGuard` is written and **never verified on a device**. ⬆️ **Gained the P0 on 2026-08-30**: outside feedback made camera shake / ghosting the highest-priority defect in the project and an explicit submission blocker (`Docs/decisions.md` 2026-08-30; mechanism in `HANDOFF.md` 2026-08-30 finding 1). It rides with item 2's session for evidence; the fix is camera-arc Pass 1's crop-scaling. |
 | **4** | *(optional)* **Lower-quality export option** | A real feature with real design questions. Genuinely optional. |
 | **5** | **Export time estimate** ⬆️ | **Promoted out of 4.** Not optional: a six-minute export with no estimate reads as broken. The loop already knows the frame count and the measured per-snapshot cost. |
 | **6** | **Attribution in the app** | **Mandatory on the Geoapify free plan.** One line in an About screen. Was missing from the list. |
@@ -34,6 +34,17 @@ verification**, whose outcome is not recorded (`Docs/eng-session-closeout.md`).
 **Of the §6b six, two actually bite:** Limited Photo Library on hardware, and a
 crash-free export across three trips. The souvenir-map item is moot while MapLibre is
 parked.
+
+✅ **Updated 2026-08-30 — one of the two is closed.** A **crash-free export across
+three trips** passed on two other people's phones (Chiu, owner report; no log kept
+and none reconstructed). **Limited Photo Library on hardware is now the only one of
+the biting pair still open.**
+
+❌ **And one item got worse, not better: per-trip export time was not recorded**
+during those runs. That is not bookkeeping — **it is the input to item 5** (the
+export-time estimate), which cannot be built honestly without a measured
+per-snapshot cost on current hardware. Capture it in the next device session, along
+with the memory reading at full frame count.
 
 ---
 
@@ -296,11 +307,20 @@ linear.
   **implemented but never verified on a device** — a locked screen mid-export is
   exactly what a simulator cannot tell you. **Verify it in the first device
   session**: start an export, lock the screen, wait, see whether it survives.
+  **Record the per-trip export time while you are there** — it was missed on the
+  2026-08-30 runs and item 5 needs it.
 - Resumable export is deliberately **not** built. `AVAssetWriter` cannot resume
   across process death; that is a project, not a fix.
 - The largest available saving — the opening's per-frame snapshotting, worth
   roughly 3.3× — is **frozen pending a camera-transition design conversation**,
   not forgotten.
+- ⚠️ **The shake fix and the export budget pull in opposite directions, and this
+  is the tension to hold** (2026-08-30). The naive fix for the shake —
+  fine-sampling the moving body — multiplies snapshots by roughly **15**, which
+  at 0.72–1.55 s each turns a six-minute export into an hour. **Crop-scaling
+  (`Docs/camera-arcs.md` §7) is the one move that improves both**: fewer
+  snapshots *and* no cross-fade. Anyone proposing a shake fix that raises the
+  snapshot count has not solved this item, they have traded it.
 
 ## 🟡 The user is never told that importing contacts a third party
 
