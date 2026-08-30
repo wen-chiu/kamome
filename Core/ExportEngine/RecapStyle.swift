@@ -186,8 +186,27 @@ public struct RecapStyle {
     /// ⏳ **Open, deliberately:** judged from a still, and Chiu has reserved the
     /// right to revisit it from a film. Do not record this as settled.
     public var fallbackMarkerLengthFraction: CGFloat = 0.60
-    /// The badge's **disc**. Still named for the marker as a whole because it is
-    /// still the marker's own colour — the one a preset picks per appearance.
+    /// The badge's **disc**: `#1D6FE0` (Chiu, 2026-08-29), token luminance
+    /// **0.399**. One value for both appearances — the badge carries its own
+    /// contrast, so no preset picks this per appearance and there is no dark
+    /// variant to choose.
+    ///
+    /// **How much room there is, because the next person to change it will need
+    /// it.** `testTheFallbackMarkerCarriesItsOwnContrast` requires this and
+    /// `fallbackMarkerOnDiscColor` to straddle mid-grey and sit ≥ 0.45 apart.
+    /// While the ring and gull are white, straddling binds first: **the disc must
+    /// stay below 0.50**, so this value has **0.101 of headroom**.
+    ///
+    /// - **Deeper and more saturated is free** — going darker only widens the
+    ///   separation, and there is no lower bound.
+    /// - **Markedly lighter is not.** `#2E7FE8` (0.460) was the last usable step;
+    ///   it was rendered at the shipped size, Chiu saw it, and he moved back here
+    ///   deliberately once the wall was explained. Past 0.50 the badge has no
+    ///   dark half and disappears on a pale map exactly as the white gull did.
+    /// - A genuinely **light** blue is reachable only by **inverting the pair** —
+    ///   light disc, dark ring and gull. The rule is symmetric and already allows
+    ///   it (verified by running the guard, not by reading it), so that is the
+    ///   exit rather than a test to argue with.
     public var fallbackMarkerColor = CGColor(srgbRed: 0.114, green: 0.435, blue: 0.878, alpha: 1)
     /// The badge's **ring and gull**, which are one colour: the badge has three
     /// parts but two colours, and the contrast that matters is between this and

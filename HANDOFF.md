@@ -76,7 +76,16 @@ but is not one. Changing it would mean changing the fixture too, which moves wha
 the golden-frame probes render and clear — a real change, for no defect.
 **Left alone.**
 
-### 3. ⏳ OPEN — which navy, and the constraint stated as a number
+### 3. ⛔️ SUPERSEDED BY THE BADGE — which navy, and the constraint stated as a number
+
+> **Closed 2026-08-29 without a pick.** Chiu's verdict on these stills was that
+> none of them read as blue, and the measurements below say why: every candidate
+> that clears a luminance ceiling is too dark for hue to register. The badge
+> (finding 6) removed the premise rather than answering the question. **No navy
+> was chosen and none should be.** Kept because the numbers are what made the
+> badge's case, and because "the target could not be hit" is only visible from
+> them.
+
 
 Chiu wants the marker blue rather than the near-black ink. The constraint is
 **luminance, not hue**: `testTheFallbackMarkerContrastsWithItsBaseMap` asserts
@@ -165,7 +174,7 @@ The bare gull now has three consumers and they are properly separate: the brand
 mark, the fault badge (via its own case), and the cross-region narrator that has
 not been built. **Do not restyle `.seagull` in place.**
 
-### 6. ⏳ OPEN — the badge, and the two questions it hands back
+### 6. ✅ DECIDED — the badge, and the questions it handed back
 
 **Chiu's verdict on the navy sweep: they do not read as blue**, and he is right
 about why — every candidate that clears a 0.35 luminance ceiling is too dark for
@@ -204,8 +213,8 @@ Stills and a README: `~/Kamome-films/2026-08-29-fallback-badge/`.
    and 0.60**: the gull's double-arc still reads and the ring is still a ring.
    ⏳ **Judged from a still, and Chiu has reserved the right to revisit it from a
    film. Not settled.**
-3. ⏳ **The blue is open, and what he needs is the room rather than another
-   sweep** — see finding 6b.
+3. ✅ **The blue: `#1D6FE0`** — see finding 6b. Decided with the numbers in hand,
+   not defaulted to.
 
 **Two caveats carried deliberately:**
 
@@ -214,9 +223,15 @@ Stills and a README: `~/Kamome-films/2026-08-29-fallback-badge/`.
 - **`#1D6FE0` is a starting value.** It would have **failed** the old 0.35
   ceiling outright, which is the point: the badge freed the hue.
 
-### 6b. ⏳ OPEN — the blue, and exactly how much room it has
+### 6b. ✅ DECIDED 2026-08-29 — the blue is `#1D6FE0`, and here is the room around it
 
-Rendered at the shipped 0.60× so the colour is judged at the size it ships at:
+**Nothing renders differently**: it is the value the branch already carried. What
+changed is that it is now a decision. Chiu considered `#2E7FE8`, the lightest
+still that clears the rule, and **moved back deliberately once the wall was
+explained** — so this is a pick with the numbers in hand rather than a default
+that survived.
+
+Rendered at the shipped 0.60× so the colour was judged at the size it ships at:
 `~/Kamome-films/2026-08-29-badge-060-blues/`.
 
 | hex | token L | disc | ring + gull | badge's own | terrain | disc vs terrain |
@@ -236,11 +251,17 @@ usable step is visible rather than described.
 separation; no lower bound). **Markedly lighter is not** — past 0.50 the badge
 has no dark half and disappears on a pale map exactly as the white gull did.
 
-**A genuinely light blue is reachable by inverting the pair** — light disc, dark
-ring and gull. The rule is symmetric and already permits it: **verified by running
-the guard** against a light disc (0.685) and an ink ring (0.130), which passes
-unchanged with no code change. **Not built**, and not a recommendation; recorded
-so a dark blue is chosen rather than settled for.
+**A genuinely light blue is reachable only by inverting the pair** — light disc,
+dark ring and gull. The rule is symmetric and already permits it: **verified by
+running the guard** against a light disc (0.685) and an ink ring (0.130), which
+passes unchanged with no code change. Not built, and the still was deliberately
+not rendered — it existed to inform a choice that has now been made. It is
+recorded so that **the next person who wants a lighter blue finds the exit rather
+than failing a test**.
+
+**Nothing about the badge is open except the size**, which Chiu has explicitly
+reserved the right to revisit **from a film**; that one is marked open in
+`RecapStyle.fallbackMarkerLengthFraction`'s own comment, where it will be read.
 
 ### 6c. ⚠️ KNOWN LIMIT — nothing in this project measures post-grade output
 
@@ -256,6 +277,23 @@ the rendered output, guarded only where the rendered output is not. Named here a
 a known limit rather than left implicit in a mismatch between two numbers. The
 fallback marker is the first token whose entire job is how it reads against the
 finished frame, so it is where the gap first bites.
+
+### 6d. ⚠️ KNOWN GAP — nothing asserts the end card's brand mark
+
+**The same shape as 6c, and found by the same change.** The near-miss in finding
+5b — that `drawSeagull` is also the end card's brand mark, so restyling it would
+have turned the wordmark's bird into a blue disc — was caught by reading the call
+graph, and confirmed on this branch by a second person reading the diff.
+
+**That is the whole safety net.** `RecapMarkerDeckStillsTests` iterates
+`VehicleMarker.allCases` and *writes* stills; it asserts nothing about them. No
+test anywhere asserts the brand mark's shape, so the guarantee that the end card
+still shows a bird currently rests on a human noticing.
+
+**A golden still of the end card would close it.** Not built here — it is a new
+gate with its own baseline to agree, and this change is already carrying a
+restated guard. Named so it is a gap on record rather than a habit of careful
+reading.
 
 ### 7. ⚠️ The no-reader token cluster is now **four**, and it is growing one at a time
 
