@@ -93,8 +93,13 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
                 \(VehicleResourceBundle.resolved == nil ? "NOT FOUND" : "found", privacy: .public).
                 """)
             return VehicleSubjectRenderer(
+                // `accent` is the badge's ring and gull; `outline` is unused by
+                // it, exactly as the bare gull uses neither. See
+                // `VehicleMarker.Palette` for which marker reads which role.
                 visual: .marker(style.fallbackMarker, palette: VehicleMarker.Palette(
-                    fill: style.fallbackMarkerColor, accent: style.markerAccentColor, outline: style.markerOutlineColor
+                    fill: style.fallbackMarkerColor,
+                    accent: style.fallbackMarkerOnDiscColor,
+                    outline: style.markerOutlineColor
                 )),
                 // Sized from the subject it replaces, never from a number of its
                 // own: a stand-in larger than the vehicle is what an absolute

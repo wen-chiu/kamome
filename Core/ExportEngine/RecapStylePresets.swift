@@ -128,23 +128,24 @@ public extension RecapStyle {
             // is exactly the collision the trail was moved out of. Dark is
             // deliberately not touched here, so the change is one appearance wide.
             style.labelPinColor = trailOnLight
-            // The fallback marker's job changed on 2026-08-28, and that is why
-            // this is not cosmetic. It is drawn only when the vehicle artwork
-            // cannot be loaded — a failure that is intermittent, undiagnosed, and
-            // (until another branch made it log) silent. During the appearance
-            // renders one still in four came back with the gull instead of the
-            // car, and **the wrong still survived review precisely because a
-            // white gull on a light base is hard to see**. So this token is now
-            // partly a diagnostic: it has to say "something went wrong" at a
-            // glance.
+            // ⏳ **The fallback marker is no longer set per appearance, and that
+            // is a question for Chiu rather than a decision taken here**
+            // (2026-08-29).
             //
-            // Hence the ink rather than the trail's orange — a warm gull would
-            // sit on the warm trail it is travelling along and read as styling.
-            // The value is `markerOutlineColor`'s, reused rather than invented,
-            // so the film gains no new colour. Only `fill` matters: the shipped
-            // `.seagull` is a single stroked arc and never reads `accent` or
-            // `outline` (`RecapVehicleMarker.drawSeagull`).
-            style.fallbackMarkerColor = CGColor(srgbRed: 0.11, green: 0.13, blue: 0.19, alpha: 1)
+            // The ink that stood here was the right answer to the wrong shape.
+            // It is drawn only when the vehicle artwork cannot be loaded — an
+            // intermittent, undiagnosed failure — and on 2026-08-28 a wrong still
+            // survived review because a white gull on a light base is hard to
+            // see. The fix was read as "pick a darker colour", and it worked, but
+            // it could not be made *blue*: every value dark enough to clear the
+            // old contrast bar was too dark for its hue to register.
+            //
+            // The badge removes the premise. It carries its own contrast — a
+            // white ring and a white gull against a coloured disc — so what it is
+            // drawn over stops being a variable, and the colour is free to be a
+            // colour. One badge therefore *may* serve both appearances, which
+            // would end this token's per-appearance life entirely. Rendered as a
+            // pair for that judgement; the alternative is one line back here.
         }
         // Derived, never chosen: the dashed leg is the same claim made weaker.
         // See `routeInferredAlpha` — this is the product rule, not a colour pick.
