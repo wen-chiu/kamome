@@ -84,14 +84,52 @@ he would notice, remedied by rotating. It is recorded as *accepted*, not as *saf
 
 ### ⚠️ The Worker moves the secret. It does not close the abuse surface.
 
-The step everyone forgets: once the key is off the device, **the app ships the Worker
-URL instead** — and that URL is in the same readable `Info.plist`. It is not a secret,
-but it is an **open routing proxy on Kamome's quota**. Anyone who unzips the IPA gets
-free routing.
+Once the key is off the device the app ships the **Worker URL** instead, in the same
+readable `Info.plist`. It is not a secret, but it is an **open routing proxy on
+Kamome's quota**: anyone who unzips the IPA gets free routing. "Key removed" is not
+"problem solved".
 
-So "key removed" is not "problem solved". **App Attest** (already noted below as
-optional) is what actually closes it, or failing that a per-IP rate limit on the
-Worker. Decide which before submission — not after a quota bill.
+**Decided 2026-08-29 — item 5 of the checklist below is answered, in two parts.**
+
+**a. What is accepted, and until when.** The endpoint is open, and that is accepted
+**while all three of these hold**:
+
+- the audience is TestFlight builds to people Chiu knows — the same bounded
+  population already accepted for the key on 2026-08-20;
+- the Geoapify account has **no payment method**;
+- no quota exhaustion has occurred that Chiu's own rendering did not cause.
+
+**The acceptance ends the moment any one of them stops being true** — a card added,
+a public release, or the first unexplained exhaustion — and it ends *automatically*,
+without anyone deciding to reopen it.
+
+**b. What must exist before it ends: a per-day budget counter in the Worker.**
+Not optional, and not the burst limiter.
+
+⚠️ **VERIFIED 2026-08-29, and it inverts the obvious assumption:** *Geoapify has no
+hard spend cap on any tier.* Their own pages say the limits are **soft** — over-quota
+usage brings emails asking for an upgrade, and they reserve the right to **block the
+account**. So there is no provider-side ceiling to fall back on, on free or paid, and:
+
+- the free-tier worst case is **not** a self-healing day of dashed legs — it is every
+  user losing routing until Chiu resolves it with the provider by hand;
+- on a paid tier, soft limits plus no cap means an abuser's burn has **no automatic
+  ceiling at all**.
+
+**Therefore the only ceiling that can exist anywhere is one Kamome writes**, and it
+has to work whether or not a card is on file. The absence of a payment method is a
+consequence of today's scale, **not a control** (Chiu, 2026-08-28) — designing around
+it would write "cannot grow" into the architecture.
+
+**Sequencing (Chiu, 2026-08-29): the counter lands with, or before, the app-side
+wiring** (`matching.base_url` / `api_key_required`), so the endpoint never carries
+real traffic uncapped. It does not exist today, and nor does the exposure: no IPA
+carries the Worker URL yet.
+
+**The mechanism is not repeated here.** `Deploy/worker/README.md` costs the counter,
+the burst limiter (a speed bump — its `period` is 10 or 60 s, so it cannot express a
+daily total) and App Attest, and records that both surviving layers are additive to
+the current handler. This page records the decision; that page records how.
 
 ### The submission checklist — mechanical, run on the artifact
 
@@ -106,8 +144,9 @@ Not a promise; a set of commands whose output is the evidence.
    deploy is verified to answer with the app sending none.
 4. **The Worker is explicitly no-log** — no request bodies, no coordinates, no
    retention. A proxy that logs makes §0 worse while appearing to make it better.
-5. **Abuse control is decided** — App Attest, or a rate limit, or an explicit written
-   acceptance that the endpoint is open.
+5. **Abuse control is decided** — ✅ **answered above** (2026-08-29): bounded
+   acceptance with three expiry conditions, and a per-day budget counter in the
+   Worker before any of them fires.
 6. **Build logs.** Once the key is not a build setting, exit 2 closes by construction.
    Until then, no build log leaves the machine unscrubbed.
 7. **Rotate once at submission**, after the artifact check passes, so that whatever
