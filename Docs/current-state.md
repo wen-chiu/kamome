@@ -7,24 +7,33 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-08-29 against decisions.md 2026-08-27 (b) (the subject is
-157.5 px and the mark's fraction is spent).
+Last synced: 2026-08-30 against decisions.md **2026-08-30** and `main` at
+**PR #24**. Synced by the PO/governance pass of that day.
 
-⚠️ **A note on this protocol, from 2026-08-28.** It keys on the ADR ledger alone,
-so this file can pass its own check while its *Active work* section is months out
-of date — which is what happened here: "Last synced: 2026-08-21" matched the
-newest ADR exactly, and the section below still called the three visual checks
-"NOT YET RUN" after they had run and merged. Reading the check as "this file is
-current" is a mistake; it only certifies the decisions half.
+⚠️ **The protocol gained a second half on 2026-08-30, because the first half was
+not enough.** It used to key on the ADR ledger alone, so this file could pass its
+own check while its *Active work* and *Blockers* sections were weeks out of date.
+That happened twice: on 2026-08-28 ("Last synced: 2026-08-21" matched the newest
+ADR exactly while the three visual checks were still called "NOT YET RUN" after
+they had run and merged), and again on 2026-08-30, when the 2026-08-29 re-sync
+passed the check while leaving three blocker lines that `HANDOFF.md` had already
+closed. **A check that certifies only the decisions half will keep passing while
+the state half rots.**
+
+So "Last synced" now names **two** things, and both must be true:
+
+1. the newest entry in `Docs/decisions.md`, and
+2. the newest **merged PR** on `main` (`gh pr list --state merged --limit 1`).
+
+If either is behind, this file is STALE. `Docs/decisions.md` wins on decisions,
+`HANDOFF.md` wins on live findings and blockers, and the session must report the
+staleness before proceeding.
 
 This file MUST be updated when any of the following occur:
 - a new entry is appended to Docs/decisions.md
+- **a PR merges to `main`** — added 2026-08-30
 - the current phase changes
 - the Product Owner makes an explicit decision that changes anything above
-
-If "Last synced" does not match the newest ADR in Docs/decisions.md, this file
-is STALE. In that case Docs/decisions.md wins, and the session must report the
-staleness before proceeding.
 
 ## Product
 
@@ -105,6 +114,15 @@ P7 backend deferred.
   (ADR 2026-08-27 (b)). ⚠️ That pin **spends** the relational guarantee `cb14ae8`
   built the fraction for: next time `subject_length_px` moves, the mark follows at
   full rate and its size becomes a fresh judgement.
+- **The fallback marker is a badge, not a bare bird** (ADR 2026-08-29): one
+  `#1D6FE0` disc with a white ring and gull, **the same in both appearances**, at
+  `fallbackMarkerLengthFraction` **0.60** of the subject. The bare
+  `VehicleMarker.seagull` stays the **end-card brand mark** and the future
+  cross-region narrator — three gull objects, do not restyle in place.
+- **The film gets a named opening and ending, and the user names the trip**
+  (ADR 2026-08-30, from outside feedback). Camera shake is a **P0 that blocks
+  submission**. Recording ships **behind a beta marker**. Read the ADR before
+  designing any of it.
 - **Reindeer sets are choosable subjects**, not crossing art (2026-08-20 (3d),
   `HANDOFF.md`).
 - **Honest provenance** — never "Verified Trip"; recorded vs
@@ -113,31 +131,60 @@ P7 backend deferred.
 
 ## Active work
 
-- **Camera-arc Pass 1** — design recommended 2026-08-21 (`Docs/camera-arcs.md`);
-  brief ready (`Docs/eng-session-camera-arc.md`), **not yet run**; nothing built;
-  Chiu judges the render before anything else moves.
-- **Three visual checks** (`Docs/eng-session-P4-visual.md`) — **RUN and MERGED**
-  as PR #18 (`Docs/eng-session-P4-visual.md`; findings in `HANDOFF.md`
-  2026-08-22/27). The halo was the configured glow and is off; the subject
-  shrank to 157.5 px; the keyed routing path is confirmed working. Corrected
-  2026-08-28 — this line previously still read "NOT YET RUN".
-- **Appearance follows the device** (`Docs/eng-session-appearance.md`,
-  ADR 2026-08-27) — built on `feature/p4-appearance-follows-system`. Both open
-  values **closed 2026-08-29**: the light trail is `#FF8A5B` and the glow stays off
-  on dark. Two further tokens caught in the same water-colour trap
-  (`fallbackMarkerColor`, `labelPinColor`) are in the same branch, awaiting a
-  colour judgement.
-- **Pull requests** — #16, #17 and #18 have **merged**. Read live state with
-  `gh pr list` rather than from this line.
-- **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — **executed
-  in substance**: sprite tree committed (`6cc6543`, `c0d4583`, VERIFIED); key
-  fine per owner report (2026-08-21, informal).
-- **Pre-launch list** (`Docs/pre-launch.md`) stands as the submission gate.
+**The one live line of work is the crossing beat, and the camera shake rides with
+it** (Chiu 2026-08-30). Everything else below is closed or waiting.
+
+- 🎬 **Cross-region crossing beat, session 1 of 2** — brief ready and current:
+  `Docs/eng-session-cross-region.md`; design `Docs/camera-arcs.md` (**read its
+  §0 amendment first** — the trigger is routability, not distance). **Not yet
+  run.** Carries the P0 shake investigation with it (ADR 2026-08-30), because the
+  brief's step 5 already touches the mechanism.
+- ⏸️ **Camera-arc Pass 1** (`Docs/eng-session-camera-arc.md`) — designed
+  2026-08-21, **not yet run**, and **deliberately not the next session**: the
+  cross-region brief states it is not a prerequisite. It is where the shake's
+  real fix (crop-scaling, `Docs/camera-arcs.md` §7) lives, so it follows the
+  crossing rather than preceding it.
+- ✅ **Closed and merged, PR #18 → #24**: three visual checks (#18), appearance
+  follows the device (#21), the loud subject fallback (#22), the fallback badge
+  (#23), the arc trigger + cross-region brief (#24). **The appearance series has
+  no session after it** — Chiu directed the work to the crossing and the shake on
+  2026-08-30. The only visual value still open is the badge's **size**, which he
+  reserved to judge **from a film** (ADR 2026-08-29), so it belongs to the next
+  film review rather than to a session of its own. *(Stated as sequencing, not as
+  a "the palette is closed" decision — no such decision was made.)*
+- ✅ **Sprite tree + key closeout** (`Docs/eng-session-closeout.md`) — executed in
+  substance: sprite tree committed (`6cc6543`, `c0d4583`, VERIFIED); key fine per
+  owner report (2026-08-21, informal).
+- **Pre-launch list** (`Docs/pre-launch.md`) stands as the submission gate. Its
+  item 2 is the crossing beat above; **its item 3 gained the shake** (ADR
+  2026-08-30).
+- **Pull requests** — read live state with `gh pr list`, never from this line.
 
 ## Blockers / risks
 
-- 🔴 Intermittent `KamomeCore_KamomeExportEngine` bundle crash on the shipped
-  export path — undiagnosed, a §6b-class device risk (`HANDOFF.md`).
+- 🔴 **Camera shake / ghosting in the body of every film — P0, blocks submission**
+  (outside feedback, ADR 2026-08-30). Mechanism VERIFIED in code, effect
+  INFERRED: `RecapRenderLoop` snapshots the base map every
+  `keyframe_interval_frames` (15) and **alpha-blends the two neighbouring
+  snapshots** for the frames between (`FrameCompositor:90–93`). While the camera
+  moves those two snapshots are the *same map at different positions*, so the
+  frame carries a double image that also steps twice a second. The interval was
+  sized for the **static** camera of 2026-07-25 and never re-tuned when
+  `FollowCamera` made the camera move (2026-08-01). See `HANDOFF.md` 2026-08-30
+  finding 1 for the falsification test and why the fix is *not* a smaller
+  interval.
+- 🟠 **The opening never shows the country, on any trip** — same class, VERIFIED
+  from code. `establishing` comes only from an installed `.pmtiles` region
+  (`RecapModel:204`), none is ever installed since MapLibre was parked, so the
+  "country" beat always falls back to **the trip's own bounds × 2.2**
+  (`CameraPathPrologue:70–75`). This is the reported "I can't tell where in
+  Australia this is". `HANDOFF.md` 2026-08-30 finding 2.
+- 🟠 `KamomeCore_KamomeExportEngine` **subject lookup still misses; it no longer
+  crashes** — the `fatalError` mechanism was removed 2026-08-15 (`b44a7fc`,
+  VERIFIED from the tree). The same miss now degrades a film **silently**; a
+  diagnostic was shipped 2026-08-29 to name the next occurrence. Rate and trigger
+  still UNKNOWN. Corrected here 2026-08-30 — this line read "intermittent bundle
+  crash" for two days after `HANDOFF.md` had retitled it.
 - 🐛 Import date range clips at timezone edges — known, deliberately not fixed;
   workaround documented (`HANDOFF.md`).
 - The 2026-08-15 P0 (app died on someone else's device): **CLOSED by owner
@@ -176,8 +223,16 @@ P7 backend deferred.
   exists. The only ceiling that can exist is a per-day budget counter in Kamome's
   Worker; Chiu's sequencing is that it lands **with or before** the app-side wiring,
   so the endpoint never carries real traffic uncapped (`Docs/pre-launch.md` item 5).
-- Two sessions sharing one checkout contaminate each other's test/lint counts;
-  worktrees fix it but silently skip half the secrets guard (`HANDOFF.md` 3e).
+- ~~Worktrees silently skip half the secrets guard~~ **CLOSED** by `2d221e0`
+  (the guard resolves the git index in a worktree too). The remaining half stands:
+  two sessions sharing one checkout contaminate each other's test/lint counts, so
+  measure in a clean tree before quoting a number as evidence.
+- ✅ **Repository hygiene restored 2026-08-30** (Chiu): merged branches deleted,
+  worktrees removed, checkout returned to `main`. This was the cause of the
+  "a branch ref silently picked up another session's commits" incidents — a PO
+  session hit it a fourth time on 2026-08-30, reading a whole generation of stale
+  documents before noticing. **Confirm your branch and your distance from
+  `origin/main` before trusting anything on disk.**
 
 ## Deferred — do not implement opportunistically
 

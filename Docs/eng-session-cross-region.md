@@ -14,6 +14,24 @@ The move and the crop-scale rendering are independent by design
 (`Docs/camera-arcs.md` §7). This session pays the snapshot cost instead; Pass 1
 later refunds it.
 
+> ## ⚠️ Added 2026-08-30 — this session also carries a **P0**, and it is measurement only
+>
+> Chiu's second round of outside feedback made **camera shake / ghosting in the
+> body of every film** the highest-priority defect in the project and a
+> submission blocker (`Docs/decisions.md` 2026-08-30). He decided it **rides with
+> this session** rather than opening a fourth parallel line, because step 5 below
+> already touches the mechanism.
+>
+> **`HANDOFF.md` 2026-08-30 finding 1 is required reading** — it has the code
+> references, the falsification test, and the reason the obvious fix is wrong.
+> In one line: the loop **alpha-blends two snapshots of the same map at different
+> positions** for the 14 frames between keyframes, which is both the double image
+> and the twice-a-second step.
+>
+> **What this session owes on it: evidence, not a fix.** Step 5b. The real fix is
+> Pass 1's crop-scaling and belongs there — fine-sampling the whole body would
+> multiply snapshots by ~15 and is not shippable.
+
 ---
 
 ```
@@ -23,9 +41,11 @@ discipline), §11 (plan deviation) and §12 (communicate before implementing). �
 never say "done".
 
 Read in this order before proposing anything:
-- `Docs/current-state.md` — the snapshot. **Run its staleness check first**: its
-  "Last synced" line must name the newest ADR in `Docs/decisions.md`. If it does
-  not, `decisions.md` wins and you report the staleness before proceeding.
+- `Docs/current-state.md` — the snapshot. **Run its staleness check first, and
+  it has two halves** (amended 2026-08-30): its "Last synced" line must name both
+  the newest ADR in `Docs/decisions.md` **and** the newest merged PR on `main`.
+  If either is behind, report the staleness before proceeding — `decisions.md`
+  wins on decisions, `HANDOFF.md` wins on live findings and blockers.
 - `CLAUDE.md` — standing rules, especially §0 (location data never leaves the
   device).
 - `Docs/camera-arcs.md` — **§0 first (the 2026-08-30 amendment), then §3–§9.**
@@ -34,8 +54,14 @@ Read in this order before proposing anything:
   before touching any snapshot geometry.
 - `Docs/cross-region-journeys.md` — the requirements (Chiu 2026-08-14). Not
   reopened here.
-- `HANDOFF.md` — the 2026-08-21 PO findings (items 3, 4, 5 constrain this
-  directly) and the 2026-08-29 entry (the two gulls).
+- `HANDOFF.md` — the **2026-08-30 PO findings, item 1 first** (the shake
+  mechanism; it constrains step 5 and is a P0), then the 2026-08-21 PO findings
+  (items 3, 4, 5 constrain this directly) and the 2026-08-29 entry (the two
+  gulls).
+- `Docs/decisions.md` **2026-08-30** — the feedback round that made the shake a
+  P0, and what else it decided. Note item 3: the opening's establishing shot has
+  never shown a country, for a reason in the same family. **Not yours to fix
+  here** — do not let it pull you off the crossing.
 
 Where a `Docs/handoff-*.md` contradicts an ADR, the ADR wins and the handoff is
 stale — say so rather than resolving it quietly.
@@ -142,6 +168,36 @@ This is a **known temporary cost**, replaced by crop-scaling in camera-arc Pass 
 the number. Do **not** change `keyframe_interval_frames` in
 `Config/TrackingConfig.json` — it is frozen.
 
+### 5b. The same mechanism is in the **whole body**, not only the arc — measure it, do not fix it
+
+⚠️ **The premise of step 5 is wider than step 5 says, and this is the P0.**
+`RecapRenderLoop`'s cross-fade is not specific to arcs: `FollowCamera` is a
+continuously-moving dolly, so **anywhere the camera moves**, the two neighbouring
+snapshots are geometrically different and get alpha-blended. That is every
+travelling shot in every film. `HANDOFF.md` 2026-08-30 finding 1 has the working.
+
+**What this session owes — one render pair and one honest paragraph:**
+
+- Render ~10 s of **body** (not opening, and not your arc) twice, identical but
+  for the body interval — **15 versus 1** — and report what differs.
+- **The prediction to test:** ghosting and stepping are present during **travel**
+  and absent during **stop beats** (during a stop the subject is still, the
+  dead-zone dolly parks, `previousKey == nextKey`, and the loop takes the
+  no-blend branch). If stop beats are also affected, the mechanism is *not* what
+  finding 1 claims — **say so loudly**; that is a more valuable result than a
+  confirmation.
+- Report the snapshot count of each, so the cost of the naive fix is a number
+  rather than an argument.
+
+**Do not fix it here**, and specifically do not lower `keyframe_interval_frames`
+(frozen, and it would make export times unshippable). If your arc work happens to
+make the body worse or better, say which and by how much. Fixing it is Pass 1's
+crop-scaling.
+
+**If the render pair falsifies the mechanism, stop and report** rather than
+hunting further — the next suspect is the camera track itself, which is a
+different session.
+
 ### 6. The sprite — one for every crossing, and pick it deliberately
 
 Make the crossing's subject a **parameter of the beat**, not a decision baked into
@@ -200,6 +256,9 @@ crossing art (and the reindeer sets, which are choosable and are *not* — ADR
   arc's share named.
 - An honest paragraph on what the destination's framing looks like now versus the
   union-derived span it replaces.
+- **The step 5b render pair and its verdict** — confirmed, falsified, or
+  inconclusive, with the snapshot counts. This is the P0's evidence and it is not
+  optional.
 - A `HANDOFF.md` entry, including anything that contradicts `Docs/camera-arcs.md`
   or this brief. A finding that exists only in your session has not been
   delivered.

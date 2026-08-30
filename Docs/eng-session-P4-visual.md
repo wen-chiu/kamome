@@ -1,6 +1,21 @@
 # Engineering session — three visual checks, on the merged routing
 
-**Status: NOT YET RUN (2026-08-21).** Established from source rather than asked:
+> ## ✅ EXECUTED AND MERGED — PR #18, 2026-08-27
+>
+> All three checks ran and the branch merged (`87d1d4e`). The halo was the
+> configured glow and is now off (`a58942d`); the subject shrank 225 → 157.5 px
+> (ADR 2026-08-27 (b)); the keyed routing path is confirmed working. Findings are
+> in `HANDOFF.md` 2026-08-22, and two of them outlived the session — the
+> golden-frame gates cannot see `MapKitSnapshotProvider`, and MapKit rastered at
+> 3× once for reasons still UNKNOWN.
+>
+> **Do not paste this brief into a new session.** The status line below is of its
+> era and is kept as the record of what was asked. Corrected 2026-08-30: it read
+> "NOT YET RUN" for three days after the work merged, while
+> `Docs/current-state.md` said the opposite — the contradiction a governance pass
+> is meant to catch.
+
+**Status when written: NOT YET RUN (2026-08-21).** Established from source rather than asked:
 `MapKitSnapshotProvider` still sets only `displayScale: 1` and no
 `userInterfaceStyle`, and `RecapDemoFilmTests.swift:357` still carries the stale
 `XCTFail`, so none of items 1–3 or the assertion fix has landed. **Task 0 (confirm

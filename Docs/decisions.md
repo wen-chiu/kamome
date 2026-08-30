@@ -2087,3 +2087,214 @@ says a mark's proportion should be both asserted and explained
 (`testAnOmniMarkMayDeclareItsOwnProportion`: *"asserted rather than merely allowed,
 so changing it is a deliberate edit to this test and not a silent drift"*). Raised
 against PR #22 after it merged; a sentence and one assertion close it.
+
+## 2026-08-29 — The fallback marker becomes a badge, and it is one badge for both appearances
+
+*Recorded 2026-08-30, after the fact. It should have been written on the day; see
+the note at the end of this entry, which is the process half of the decision.*
+
+**Context.** On 2026-08-28 a render silently drew the vector seagull instead of
+the car sprite, and the still survived review because a **white gull on a light
+Apple Maps base** is close to invisible (`HANDOFF.md` 2026-08-28 finding 10). The
+token's job therefore now includes *being noticed*. A navy sweep followed; Chiu's
+verdict on it was that none of the candidates read as blue.
+
+**Decision (Chiu, 2026-08-29), three parts.**
+
+1. **A badge, not a recoloured bird** — a blue disc, a white ring, the gull in
+   white. It replaced the colour question rather than answering it.
+2. **One badge for both appearances.** The disc and the on-disc colour live on
+   `RecapStyle` and neither preset touches them.
+3. **The blue is `#1D6FE0`**, and the size is **`fallbackMarkerLengthFraction`
+   0.60** of the subject — 94.5 px today.
+
+**Why a pair of colours beats any single one — MEASURED, not argued.** The
+badge's own internal contrast is **identical to a decimal across three sizes and
+both appearances** (127.9–128.3 in 0–255 units) while the terrain under it moves
+183.9 → 81.6. On dark the disc alone is nearly invisible against the ground
+(gap 7.5) and the ring carries it (135.8); on light the roles swap (94.8 / 33.5).
+**Neither colour suffices alone; the pair does, on both bases.** That is what no
+single ink could do, and it is why every navy that cleared the old 0.35 luminance
+ceiling was too dark for its hue to register — the target could not be hit.
+
+**The room around `#1D6FE0`, stated as a boundary rather than a value.** Ring and
+gull are white, so straddling mid-grey needs the disc below **0.50** luminance;
+today's 0.399 has **0.101 of headroom**. Deeper and more saturated is free;
+markedly lighter is not. A genuinely light blue is reachable **only by inverting
+the pair** (light disc, dark ring) — verified by running the guard, not built.
+Recorded so the next person wanting a lighter blue finds the exit rather than a
+failing test.
+
+**Why this also closed a structural collision.** `Docs/cross-region-journeys.md`
+requirement 4 wants a seagull as the **narrator of an unmodelled crossing** —
+"cheap and good-looking rather than a failure state". The fault marker was being
+styled in the opposite direction, and a viewer could not tell the two birds
+apart. **A badge reads as a marker; a bare bird reads as a bird**, so the
+narrator keeps the plain gull and nothing has to be decided about which reading
+wins. This is what unblocked the crossing beat's default sprite.
+
+⚠️ **Three gull objects now exist and they are not interchangeable:**
+`VehicleMarker.seagull` (the bare vector — **also the end-card brand mark**),
+`VehicleMarker.seagullBadge` (the fault marker, never the narrator), and the
+`seagull` folder in `vehicles.json` (a choosable omni sprite). Restyling the
+first in place would have silently turned the wordmark's bird into a blue disc,
+and **no test asserts the brand mark's shape** — that near-miss was caught by a
+human reading the call graph.
+
+**The related change that went the other way, deliberately.** PR #22
+re-established the relation ADR 2026-08-27 (b) spent: the fallback marker's size
+stopped being an absolute `170` and became a **fraction of the subject it stands
+in for**. With `subject_length_px` at 157.5 the absolute had made *the stand-in
+larger than the thing it replaces*. So the codebase now holds two seagulls sized
+by opposite mechanisms, and both are correct for their case — the sprite *is* the
+subject and takes the configured size; the fallback is a stand-in and must never
+outgrow it.
+
+**Open, and only this:** the **0.60 size**, which Chiu explicitly reserved the
+right to revisit **from a film** rather than a still. Marked in
+`RecapStyle.fallbackMarkerLengthFraction`'s own comment, where it will be read.
+It belongs to the next film review, not to a session of its own.
+
+**Two known limits this decision does not close, both named rather than hidden:**
+the guard asserts **token** luminance while the viewer sees the frame **after the
+grade** (the disc is 0.399 as a token, 0.349 on screen — the rule survives, but
+nothing checks that it keeps surviving); and nothing anywhere asserts the end
+card's brand mark. Same class as the golden-frame gates being unable to see
+`MapKitSnapshotProvider`.
+
+### ⚠️ Why this entry is dated 2026-08-29 and was written on 2026-08-30
+
+**The decision lived only in `HANDOFF.md` for a day.** That file is by its own
+definition "only what is current" and is trimmed regularly — it went from 1,961
+to ~915 lines on 2026-08-29 — so these three decisions were one trim away from
+being archived out of the ledger the staleness protocol actually reads.
+
+The gap has a specific cause worth keeping. On 2026-08-29 the PO session correctly
+resolved that **it must not write an ADR for a decision an engineering session is
+actively implementing** (two entries for one decision in an append-only ledger is
+worse than none). That rule is right and stands. **It was only half a rule**:
+nobody was named to write it afterwards, so nobody did. The other half is now in
+`PO.md` — *the session that implements a decision writes its ADR before its PR
+merges; a PO session writing one afterwards dates it to the day of the decision
+and says why it is late.*
+
+## 2026-08-30 — The second round of outside feedback: shake is a P0, the film gets a frame, and the trip gets a name
+
+**Context.** The second batch of feedback from people other than Chiu, on films
+they were given. The first batch (2026-08-15) reordered Phase 4 around the vehicle
+request and parked MapLibre. This one is about the film's **motion** and its
+**frame** — nobody mentioned colour, which is worth recording on its own, given
+that colour is what the previous nine days of merged work was about.
+
+### 1. 🔴 Camera shake / ghosting is a **P0 that blocks submission** (Chiu)
+
+Chiu's words: *"影片晃動感太明顯 不夠流暢 會有殘影 這是上架前最重要一定要解決的問題."*
+**This is the highest-priority defect in the project.** It is added to
+`Docs/pre-launch.md` item 3 (*export survives*), which until now meant only
+lifecycle and performance.
+
+**A mechanism is VERIFIED in code** and the effect is INFERRED from it — nobody
+has yet rendered the falsification pair. It is not a new defect but an old
+parameter whose premise expired: `keyframe_interval_frames` (15) was sized for the
+**static** camera of 2026-07-25, and `FollowCamera` made the camera move on
+2026-08-01 without the interval being revisited. Between two snapshots the loop
+**alpha-blends two pictures of the same map at different positions**. Full working
+and the falsification test are `HANDOFF.md` 2026-08-30 finding 1 — read it before
+proposing any fix, because **the obvious fix is wrong**: fine-sampling the whole
+body multiplies the snapshot count by ~15, and a 3.5-minute film already costs six
+minutes to export.
+
+**Sequencing (Chiu, 2026-08-30): the shake rides with the crossing beat**, rather
+than becoming a fourth parallel line. `Docs/eng-session-cross-region.md` step 5
+already extends fine sampling for arc windows and therefore already touches this
+mechanism. The **real** fix — reprojecting instead of cross-fading — is
+camera-arc Pass 1's crop-scaling (`Docs/camera-arcs.md` §7), which follows.
+
+### 2. The film gains an opening and an ending, and the trip gains a name (Chiu)
+
+Four things, decided as a set because they are one impression:
+
+- **Opening zooms in; ending zooms out and ends.** The arc shape this implies is
+  already the decided design — `Docs/camera-arcs.md`'s contained arc opens out to
+  an apex, translates, and closes in — so a crossing is *zoom out → cross → zoom
+  in*, and the opening/ending are the same move at the film's two edges. No new
+  camera concept is being introduced here.
+- **The user can name the trip, and the name appears at the opening as a
+  pop-in title.**
+- **The end card carries a trip summary.**
+- ⚠️ **The summary is computed statistics, never generated prose.** Not a new
+  call — an AI prose diary is already iceboxed (this ledger, 2026-07-20 §; the
+  icebox entry stands).
+
+**INFERRED, and it makes this much smaller than it looks:** *the data model
+already carries the name.* `Trip.title` is a stored column
+(`Core/Persistence/Records.swift`), it already flows to the title card
+(`LinearTimeline`: `title = trip.title`), and album imports already use the
+album's own name while date-range imports generate one from the dates
+(`ImportFlowModel`). **What is missing is an edit surface, not a schema change.**
+Verified by reading; no UI work has been attempted.
+
+**Open and genuinely Chiu's**, not to be defaulted by an implementer: whether the
+name can be edited *after* import, and what the generated default should be when
+there is no album to borrow from.
+
+### 3. 🟠 The opening never establishes *where in the world* — and it is a MapLibre-parking casualty
+
+Reported from a film of a friend's East Australia trip: *"因為可能地圖太大 所以開頭
+畫面看不到整個澳洲 就是我之前說的會不知道在哪裡."*
+
+**VERIFIED from code, and it is not a tuning problem.** The opening's country beat
+frames `establishing`, which is *only* ever an installed `.pmtiles` region's
+extent (`RecapModel:204`). MapLibre was parked on 2026-08-15 and no region is ever
+installed, so `establishing` is permanently nil and the country beat has **always**
+fallen back to the trip's own bounds × `country_view_padding` (2.2)
+(`CameraPathPrologue:70–75`). The film has therefore never shown a country to
+anybody; it shows the trip, slightly wider.
+
+**This is the fourth instance of one pattern** — a behaviour tuned for the
+MapLibre substrate that silently degraded when Apple Maps became what ships. The
+other three: the route glow inverting on a light base, the cyan trail
+disappearing into water, and the dashed leg becoming indistinguishable from the
+solid one. **The pattern is now named, and a sweep for the rest is owed** — it is
+cheaper to look for these deliberately than to keep meeting them one film at a
+time.
+
+**Not designed here.** Worth an implementer knowing: Apple Maps is a *global* base
+map with no extent limit, and the app already geocodes every stop, so a
+country-level frame is **more** reachable after parking MapLibre than before, not
+less. `country_view_padding` is a config key and is **not** frozen.
+
+### 4. Recording ships, behind a beta marker (Chiu)
+
+Passive capture is no longer the main line and will be completed in a later phase,
+but it stays **usable**, marked as beta so its status is honest in the UI rather
+than only in a document.
+
+**This resolves a standing tension rather than creating one.** The spec has always
+forbidden MVP copy from claiming 12-day zero-touch capture or imperceptible
+battery — those are Capture-Beta-validated promises (spec §1/§7/§10). A beta
+marker is that rule made visible. It is also consistent with **honest provenance**,
+the same principle that forbids "Verified Trip".
+
+**Focus, stated explicitly (Chiu):** the photo-import path is the subject now;
+recording is discussed later. A recorded-trip log exists and is deliberately not
+being worked yet.
+
+### 5. Device evidence, from two other people's phones (Chiu, owner report)
+
+- ✅ **"A crash-free export across three trips" — PASSED.** One of the two §6b
+  items `Docs/pre-launch.md` calls the ones that actually bite. Closed by owner
+  report; no log was kept, and none is reconstructed.
+- ❌ **Per-trip export time was not recorded.** It stays open, and it is not
+  bookkeeping: it is the **input to pre-launch item 5** (the export-time
+  estimate). Capture it in the next device session.
+- The other §6b items — Limited Photo Library on hardware, S5 UX pass, memory at
+  full frame count — remain unrun.
+
+### What this entry does **not** decide
+
+The **shake's fix** (only its priority and its owner). The **camera-arc Pass 1**
+schedule beyond "after the crossing". The **badge's 0.60 size**, still reserved
+for a judgement from a film (ADR 2026-08-29). Whether the **grade, vignette and
+chrome** should differ by appearance (ADR 2026-08-27 left it open and it stays
+open). Nothing here reopens a locked decision.
