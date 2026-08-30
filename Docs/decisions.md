@@ -2007,3 +2007,83 @@ defaults rather than off the preset the app actually selects.
 
 **Not decided by this entry:** whether the grade, vignette and chrome should also
 differ by appearance. They are shared today, reported rather than pre-empted.
+
+---
+
+## 2026-08-27 (b) — The subject shrinks 30%, and the mark's fraction is spent doing it
+
+*A different subject from the same day as the appearance entry above, not an
+amendment to it.*
+
+**Decision (Chiu, from stills).** `export.subject_length_px` **225 → 157.5**, and
+the seagull mark's `length_fraction` **0.7 → 1.0** so the mark stays the size it
+already was. Landed in PR #18.
+
+**Why not a per-vehicle override.** `length_fraction` on a directional subject is
+forbidden by `VehicleCatalogTests.testEveryDirectionalSubjectTakesTheConfiguredSize`,
+and correctly: `center-sprites.py` equalises apparent size across sets, so an
+override would be fighting the tool. car-toy did not look big *as car-toy* — the
+subject looked big. The 2026-08-22 car-toy film was **the first film anyone had
+watched with a vehicle in it**; every earlier judged film used the seagull, so 225
+had never actually been seen in motion.
+
+**Method, deliberately the one that set 225.** Stills at 225 / 180 / 157.5 on one
+frame, not a film. 225 was itself Chiu's call from stills at 200/220/250 after a
+hard-coded 300 was reported too big (`ConfigLoaderTests` carries that history).
+
+⚠️ **INFERRED, and corrected here before it hardened:** an earlier draft of this
+entry asserted that the 2026-08-22 car-toy film was *the first film anyone had
+watched with a vehicle in it*. That is not established. What is established is
+narrower — the 2026-08-21 reference film's subject was the seagull, and vehicle
+sprites predate the subject catalogue (`4c2a9a7`, 2026-08-17), so what the §6a
+films of 2026-08-13/14 drew is **UNKNOWN** from this repository. The cheapest
+thing that would settle it is the subject named in those films' own log lines, if
+they were kept.
+
+### ⚠️ What this spends
+
+`cb14ae8` gave the mark a *fraction* so its size would stay **relative** to the
+vehicle: move the vehicle, and the mark follows in proportion. Pinning the fraction
+at **1.0 spends that guarantee.** The mark is now simply the same length as a
+vehicle.
+
+Today's sizes are unchanged only because the base fell by the reciprocal:
+
+    before   225   × 0.7 = 157.5 px
+    after    157.5 × 1.0 = 157.5 px
+
+**So the next time `subject_length_px` moves, the mark moves with it at full rate
+and its size becomes a fresh judgement rather than a maintained relation.** That was
+the right trade — letting the mark follow this change would have put it at 110.25 px,
+**2.25 px below the 112.5 px rejected on 2026-08-18 as too small** — but it is a
+guarantee traded away, not a value changed, and it would otherwise have survived
+only in a commit message.
+
+`testAnOmniMarkMayDeclareItsOwnProportion` would have gone vacuous at 1.0, so per
+`Arch.md` §7.3 its documentation now names the test that still drives the mechanism
+with a non-unit fraction. **The mechanism is not deleted — only this subject stopped
+using it.**
+
+### The same week went the other way for the other gull, and both were right
+
+PR #22 (2026-08-29) **re-established** exactly the relation this entry spends: the
+*fallback* marker's size stopped being an absolute `170` and became
+`fallbackMarkerLengthFraction` — a fraction of the subject it stands in for.
+
+The trigger was this entry's own change. With `subject_length_px` at 225 an absolute
+170 was 0.756 of the vehicle; when it fell to 157.5 **the stand-in silently became
+larger than the thing it replaced**, because nothing tied the two numbers together.
+
+So the codebase now holds **two seagulls sized by opposite mechanisms** — the
+choosable sprite pinned at `length_fraction` 1.0, and the vector fallback derived
+from the subject. Both are correct for their case: the sprite is *the* subject and
+takes the configured size, while the fallback is a stand-in and must never outgrow
+what it stands in for. But the pair is a trip hazard, and this is the one place the
+two decisions meet, so it is recorded here rather than left to be rediscovered.
+
+⚠️ **Open, and small:** the fallback's fraction is `1` and nothing states *why* 1
+rather than the 0.756 that shipped, nor pins it. This repository's own precedent
+says a mark's proportion should be both asserted and explained
+(`testAnOmniMarkMayDeclareItsOwnProportion`: *"asserted rather than merely allowed,
+so changing it is a deliberate edit to this test and not a silent drift"*). Raised
+against PR #22 after it merged; a sentence and one assertion close it.
