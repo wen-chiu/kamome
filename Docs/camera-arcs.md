@@ -23,6 +23,94 @@ sprite sessions at the time of writing.
 
 ---
 
+## 0 · AMENDMENT 2026-08-30 — the arc trigger is routability, not distance
+
+**Read this before §3–§8. It corrects this document.**
+
+As written on 2026-08-21 this file implied that **every** route discontinuity
+becomes an arc, on the reasoning that the seagull makes every discontinuity
+narrated (§8). Measured on 2026-08-30 over the fixtures in the tree, that is
+wrong and would be a catastrophe:
+
+| fixture | points | largest gap | gaps > `act_split_km` (25 km) |
+|---|---:|---:|---:|
+| `local/iceland` | 2300 | 133.7 km | **20** |
+| `local/new-zealand` | 160 | 173.1 km | **14** |
+| `nz-real` | 25 | 183.1 km | 9 |
+| `new-zealand` | 13 | 119.6 km | 4 |
+| `iceland` | 16 | 79.3 km | 3 |
+| `finland` | 11 | 64.7 km | 1 |
+| `miyakojima` (committed) | 13 | 31.8 km | 1 |
+| **`local/miyakojima` (the real dump)** | 53 | **20.0 km** | **0** |
+
+*(Distances only. No coordinates were printed or written anywhere — §0.)*
+
+An Iceland film would fly out and back **twenty times**. Those gaps are
+photograph gaps inside long drives, not journeys by another mode, and an arc for
+each is precisely the 2026-08-02 act-camera defect wearing this design's clothes.
+
+**The correction: a crossing is a leg with no road, not a leg that is long.**
+
+The distinction already exists in the tree, and the 2026-08-15 routing ADR drew
+it *for this feature* — `RouteMatchProviding`'s own comment says a ferry crossing
+"looked exactly like a server on the wrong Wi-Fi" and that this is what the
+failure vocabulary fixes. Three cases, and they must not be collapsed:
+
+| the provider says | means | crossing? |
+|---|---|---|
+| **answered, no plausible route** — Geoapify `400 No suitable edges`, which `GeoapifyRouteProvider` turns into a nil outcome ("a clean keep-raw verdict, and what a leg across water… returns") | there is no road here | **yes** |
+| **detour gate rejected it** (`RoutePlausibility`, ratio 2.5) | a road exists, this route is not trustworthy | **no** — dashed, not flown |
+| **thrown `RouteProviderFailure`** (`unreachable` / `rateLimited` / `refused`) | nobody answered; retryable, "never the geography's fault" | **no** |
+
+**`act_split_km` (25) therefore keeps its existing job** — camera-discontinuity
+detection for the continuity gate — and does **not** become the crossing trigger.
+`HANDOFF.md` 2026-08-21 finding 3 anticipated exactly this ("`act_split_km` may be
+right for 'insert an arc' and wrong for 'send a bird'"); this is the measurement
+that settles it, and the answer is that they are different questions, not
+different values.
+
+**The work this creates.** `GeoapifyRouteProvider` has six `return nil` sites —
+too few waypoints, no base URL, decode failure, the detour gate, and the
+geography verdict all arrive as the same nil. **The "no road here" verdict has to
+survive out of the provider as a named reason**, or the crossing cannot be
+triggered honestly. That is the same class of lift the detour gate needed during
+the migration (a Kamome policy trapped inside a provider file — ADR 2026-08-16),
+and it is a prerequisite for everything below.
+
+**On display scale, read §7's own 2026-08-28 note instead** — it is more precise
+than a summary here, and it is where the projection arithmetic lives.
+
+**Second thing this measurement settles:** `HANDOFF.md` 2026-08-21 finding 3
+listed as UNKNOWN whether any committed fixture exercises `permittedCutTimesS`.
+It does — heavily. Every fixture but `margaret-river` and the real Miyakojima dump
+carries at least one permitted cut today.
+
+**Fourth: the narrator gull is free — the fault marker became a badge**
+(PR #23, `724d4a0`, 2026-08-30). This document briefly carried the collision as
+open: requirement 4 wants a seagull as the narrator of an unmodelled crossing,
+while the subject **fault** marker was also a gull, so one symbol would have meant
+*"we could not classify your crossing"* in one film and *"the artwork failed to
+load"* in another. It was closed **structurally rather than by decision** — the
+fault marker is now `VehicleMarker.seagullBadge`, an upright non-rotating disc at
+`#1D6FE0`, and *"a badge reads as a marker, a bare bird reads as a bird"*.
+
+⚠️ **One collision survives, and it is milder.** `VehicleMarker.seagull` — the
+bare vector — **is also the end-card brand mark**, which is why the badge had to
+be a new case rather than a restyle. A crossing narrator drawn from it would be
+its third consumer, and the PR notes that nothing asserts its shape. The omni
+sprite in `vehicles.json` is a separate object again. Pick deliberately and say
+which; do not restyle a shared vector.
+
+**Third, and it blocks judgement: no fixture in the tree contains a crossing.**
+The real Miyakojima dump has a 20.0 km largest gap and zero discontinuities —
+confirming `cross-region-journeys.md`'s warning that the desk fixtures were built
+from folders hand-curated to the destination, while the device import pulls the
+travel days. A crossing fixture has to be authored (hand-written plausible
+coordinates, as every committed fixture already is) before any of this can be
+gated or judged.
+
+---
+
 ## 1 · The premise this corrects
 
 The two moves were held together on the belief that both "cross a distance far
