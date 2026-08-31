@@ -10,7 +10,7 @@ extension TrackingConfig.Export {
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, targetZoomRatio: Double = 2.5,
             zoomTransitionS: Double,
-            actSplitKm: Double, followHeadingUp: Bool,
+            actSplitKm: Double, crossingBeatS: Double, crossingApexPadding: Double, followHeadingUp: Bool,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
             deckPhotoHoldS: Double, deckPhotoMinHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
@@ -36,13 +36,13 @@ extension TrackingConfig.Export {
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
             self.targetZoomRatio = targetZoomRatio
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
+            self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
             self.followHeadingUp = followHeadingUp
             self.cameraPanWindowFractionPerS = cameraPanWindowFractionPerS
             self.cameraDeadZoneFraction = cameraDeadZoneFraction
             self.cameraSafeZoneFraction = cameraSafeZoneFraction
             self.cameraResponsiveness = cameraResponsiveness
-            self.endRevealS = endRevealS
-            self.endRevealPadding = endRevealPadding
+            self.endRevealS = endRevealS; self.endRevealPadding = endRevealPadding
             self.endCardStyle = endCardStyle
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckPhotoMinHoldS = deckPhotoMinHoldS
             self.deckZoomS = deckZoomS

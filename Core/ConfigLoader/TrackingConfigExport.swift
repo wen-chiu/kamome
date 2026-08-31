@@ -43,6 +43,38 @@ public extension TrackingConfig {
         /// held frame (Chiu 2026-07-25: a still map is what makes the distance
         /// covered legible).
         public let actSplitKm: Double
+        /// How long one **crossing** plays — the beat a leg with no road gets to
+        /// itself, so the film opens out, carries the sprite across, and closes
+        /// back in (`Docs/camera-arcs.md` §3).
+        ///
+        /// Deliberately **not** `act_split_km`'s job and deliberately not derived
+        /// from the crossing's length. The trigger is routability, not distance
+        /// (`Docs/camera-arcs.md` §0), and a beat sized from the distance would
+        /// give a 9,000 km flight three times the screen time of a 3,000 km one
+        /// for no story reason — the audience is being told "you flew", once,
+        /// however far.
+        ///
+        /// Sized as two `zoom_transition_s` eases plus a beat at the apex where
+        /// both places are on screen together. The crossing's arc may be long
+        /// where the opening's must be short, because a crossing has a subject to
+        /// follow and the opening does not (`Docs/camera-arcs.md` §6).
+        public let crossingBeatS: Double
+        /// How far past the two ends a crossing's **apex** opens out.
+        ///
+        /// Load-bearing twice over, which is why it is not a taste value:
+        ///
+        /// 1. The subject sits at `1 / crossing_apex_padding` of the half-frame at
+        ///    its furthest, so ≥ 1.25 is what satisfies `camera_safe_zone_fraction`
+        ///    (0.8) and keeps `CameraPath.confine` a no-op. A confine that fires
+        ///    drags the frame off the arc and breaks containment.
+        /// 2. Containment itself: an apex that contains both end footprints is
+        ///    exactly the condition under which the arc never shows ground the
+        ///    neighbouring sample did not (`CameraPath.crossingArcFrame`).
+        ///
+        /// 1.5 rather than the bare 1.25 minimum: it lands the subject at 67% of
+        /// the half-frame, leaving room for the ends' own footprints rather than
+        /// sitting on the limit.
+        public let crossingApexPadding: Double
         /// Rotate the map heading-up (needs a `bearing`-honoring provider; §3).
         public let followHeadingUp: Bool
         /// How much of a window the travel camera may cross per second — the
@@ -287,6 +319,8 @@ public extension TrackingConfig {
             case targetZoomRatio = "target_zoom_ratio"
             case zoomTransitionS = "zoom_transition_s"
             case actSplitKm = "act_split_km"
+            case crossingBeatS = "crossing_beat_s"
+            case crossingApexPadding = "crossing_apex_padding"
             case followHeadingUp = "follow_heading_up"
             case deckPhotoHoldS = "deck_photo_hold_s"
             case deckPhotoMinHoldS = "deck_photo_min_hold_s"

@@ -42,6 +42,9 @@ public struct LinearTimeline {
         let range: Range<Int>
         let mode: TransportMode
         let provenance: RouteProvenance
+        /// Whether routing established there is no road here — the one fact that
+        /// earns a leg its own beat and a camera arc (`RecapTrip.Leg.isCrossing`).
+        let isCrossing: Bool
     }
 
     let path: CameraPath
@@ -110,6 +113,10 @@ public struct LinearTimeline {
         // stop would silently lose `2 · subject_park_s` of photo time.
         let (plan, stopHolds) = Self.pacing(for: trip, config: config, pacing: pacing)
 
+        // Where the legs with no road sit on the concatenated polyline — the
+        // camera needs them before it can size the body span.
+        let crossingRanges = Self.crossingVertexRanges(in: trip.legs)
+
         guard let path = CameraPath(
             route: routePoints, stops: stopPoints, config: config,
             stopHoldsS: stopHolds,
@@ -120,7 +127,8 @@ public struct LinearTimeline {
             // end card appears, so the closing panel never prints across a stop's
             // photo card. Without this the last hold ran to the final frame and
             // the two overlapped.
-            journeyEndsBeforeS: plan.map { _ in config.endCardS } ?? 0
+            journeyEndsBeforeS: plan.map { _ in config.endCardS } ?? 0,
+            crossingVertexRanges: crossingRanges
         ) else { return nil }
 
         self.path = path
@@ -135,7 +143,9 @@ public struct LinearTimeline {
         legRanges = trip.legs.map { leg in
             let range = offset..<(offset + leg.coordinates.count)
             offset = range.upperBound
-            return LegRange(range: range, mode: leg.mode, provenance: leg.provenance)
+            return LegRange(
+                range: range, mode: leg.mode, provenance: leg.provenance, isCrossing: leg.isCrossing
+            )
         }
         deck = RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
@@ -243,7 +253,8 @@ public struct LinearTimeline {
         let presence = subjectPresence(atTime: time)
         return SubjectState(
             lat: position.lat, lon: position.lon, heading: position.heading,
-            emphasis: presence, isVisible: presence > 0.001
+            emphasis: presence, isVisible: presence > 0.001,
+            role: path.isCrossing(atTime: time) ? .crossing : .vehicle
         )
     }
 

@@ -1,0 +1,22 @@
+{
+  "_comment": "THE CROSSING FIXTURE (authored 2026-08-30). Measured that day: no fixture in the tree contained one — the real Miyakojima dump has a 20.0 km largest gap and zero discontinuities, because the desk fixtures were built from folders hand-curated to the destination while the device import pulls the travel days (Docs/cross-region-journeys.md). Shape: a short drive across Taipei to Taoyuan airport, an unroutable crossing of open sea, then four stops on Ishigaki. Hand-written plausible coordinates of public places, like every committed fixture — never a real trip (CLAUDE.md §0). The crossing is established by ROUTABILITY, not by its length: RecapCameraContinuityTests supplies a provider that answers 'no suitable edges' for a leg straddling the sea, exactly as Geoapify does.",
+  "title": "石垣島",
+  "photos": [
+    { "id": "taipei-1", "t": 0,     "lat": 25.03400, "lon": 121.56450 },
+    { "id": "taipei-2", "t": 600,   "lat": 25.03650, "lon": 121.56100 },
+    { "id": "taipei-3", "t": 1200,  "lat": 25.03120, "lon": 121.56680 },
+    { "id": "taoyuan-1", "t": 5400, "lat": 25.07770, "lon": 121.23280 },
+    { "id": "taoyuan-2", "t": 5700, "lat": 25.08010, "lon": 121.23550 },
+    { "id": "taoyuan-3", "t": 6000, "lat": 25.07550, "lon": 121.23010 },
+    { "id": "ishigaki-port-1", "t": 17400, "lat": 24.33630, "lon": 124.15580 },
+    { "id": "ishigaki-port-2", "t": 18000, "lat": 24.33910, "lon": 124.15330 },
+    { "id": "kabira-1", "t": 25200, "lat": 24.45400, "lon": 124.14550 },
+    { "id": "kabira-2", "t": 25800, "lat": 24.45620, "lon": 124.14810 },
+    { "id": "kabira-3", "t": 26400, "lat": 24.45190, "lon": 124.14300 },
+    { "id": "hirakubo-1", "t": 34200, "lat": 24.61000, "lon": 124.31050 },
+    { "id": "hirakubo-2", "t": 34800, "lat": 24.60780, "lon": 124.31320 },
+    { "id": "taketomi-1", "t": 43200, "lat": 24.33350, "lon": 124.09300 },
+    { "id": "taketomi-2", "t": 43800, "lat": 24.33580, "lon": 124.09510 },
+    { "id": "taketomi-3", "t": 44400, "lat": 24.33120, "lon": 124.09080 }
+  ]
+}

@@ -25,8 +25,12 @@ final class RouteMatchBoundsTests: XCTestCase {
     private actor ScriptedReconstructor: RouteReconstructing {
         enum Behaviour {
             case succeed
-            /// The provider answered: no road joins these places. Permanent.
+            /// The provider answered: **no road** joins these places. Permanent,
+            /// and the one verdict a crossing may be built on.
             case noRoute
+            /// The provider answered with a route the detour gate refused. A
+            /// road exists — dashed, never flown.
+            case implausible
             /// Nobody answered, after burning `delayS` of the trip's budget.
             case unreachable(delayS: Double)
             case rateLimited
@@ -39,15 +43,17 @@ final class RouteMatchBoundsTests: XCTestCase {
             self.behaviour = behaviour
         }
 
-        func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome? {
+        func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction {
             calls += 1
             switch behaviour {
             case .succeed:
-                return RouteMatchOutcome(
+                return .routed(RouteMatchOutcome(
                     geometry: waypoints.map { GeoPoint(lat: $0.lat, lon: $0.lon) }, confidence: 1
-                )
+                ))
             case .noRoute:
-                return nil
+                return .noRoadHere
+            case .implausible:
+                return .implausible
             case let .unreachable(delayS):
                 try? await Task.sleep(nanoseconds: UInt64(delayS * 1_000_000_000))
                 throw RouteProviderFailure.unreachable("stub: nothing answered")
@@ -71,6 +77,18 @@ final class RouteMatchBoundsTests: XCTestCase {
         XCTAssertEqual(noRoute.noPlausibleRoute, 3)
         XCTAssertEqual(noRoute.unreachable, 0)
         XCTAssertEqual(noRoute.headline, .someLegsHaveNoRoad)
+
+        // **Split apart on 2026-08-30**, because one of these two moves the
+        // camera and the other must never be allowed to. Both still leave the
+        // film with a dashed leg and both still say the same thing to the user;
+        // what changed is that the counts no longer lie about which happened.
+        let implausible = try await report(legs: 3, behaviour: .implausible)
+        XCTAssertEqual(implausible.implausibleRoute, 3)
+        XCTAssertEqual(
+            implausible.noPlausibleRoute, 0,
+            "a route the detour gate refused means a road exists — reading it as water would fly a plane over one"
+        )
+        XCTAssertEqual(implausible.headline, .someLegsHaveNoRoad)
 
         let unreachable = try await report(legs: 3, behaviour: .unreachable(delayS: 0))
         XCTAssertEqual(unreachable.unreachable, 3)

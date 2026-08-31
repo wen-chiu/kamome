@@ -36,6 +36,16 @@ extension CameraPath {
     enum Phase {
         case travel(fromM: Double, toM: Double)
         case hold(stopIndex: Int, atM: Double)
+        /// A stretch with **no road under it**, played in its own fixed beat
+        /// rather than at the film's travel rate (`Docs/camera-arcs.md` §3).
+        ///
+        /// Its own case rather than a flag on `.travel` because two things have
+        /// to tell it apart, and both are load-bearing: `travelSeconds` must not
+        /// count it (or the body span is sized against a flight), and the camera
+        /// plays an arc over it instead of a dolly. The subject still moves
+        /// across it exactly as it moves across travel, which is why every
+        /// distance-from-time reader treats the two the same.
+        case crossing(fromM: Double, toM: Double)
     }
 
     struct TimelineEntry {
@@ -130,7 +140,7 @@ extension CameraPath {
         switch entry.phase {
         case let .hold(_, atM):
             return atM
-        case let .travel(fromM, toM):
+        case let .travel(fromM, toM), let .crossing(fromM, toM):
             let span = entry.endS - entry.startS
             let progress = span > 0 ? (clamped - entry.startS) / span : 1
             return fromM + (toM - fromM) * smoothstep(min(max(progress, 0), 1))
@@ -138,11 +148,36 @@ extension CameraPath {
     }
 
     /// Film seconds spent travelling in `timeline` — the body span's denominator.
+    ///
+    /// **Crossings are deliberately excluded** (`HANDOFF.md` 2026-08-21 finding
+    /// 5). The body span is a *rate*: how much window the ground crosses per
+    /// second while the dolly is following. A crossing is not followed by the
+    /// dolly at all — it has its own arc — so counting its seconds here would
+    /// buy the body a slower rate it never gets to spend.
     static func travelSeconds(in timeline: [TimelineEntry]) -> Double {
         timeline.reduce(0.0) { total, entry in
             guard case let .travel(fromM, toM) = entry.phase, toM > fromM else { return total }
             return total + max(entry.endS - entry.startS, 0)
         }
+    }
+
+    /// Along-route metres the **body camera** actually has to cross — the whole
+    /// route less every crossing.
+    ///
+    /// The other half of the same correction. `RecapDurationPlan.bodySpanM`
+    /// floors the span at `routeDistanceM / (travelS × pan rate)`, so on a
+    /// cross-region trip the flight's hundreds of kilometres were what forced the
+    /// destination to render as a smudge — symptom 2 of
+    /// `Docs/cross-region-journeys.md` in exact code terms.
+    ///
+    /// **This is still one span per trip, not a span per segment.** With travel
+    /// time shared in proportion to distance (`buildTimeline`), every local
+    /// journey crosses ground at the same rate, so "derived from the largest
+    /// local journey" and "derived from the union of the local journeys" are the
+    /// same number — and this computes it without introducing the per-act framing
+    /// rejected on 2026-08-02.
+    static func localDistanceM(totalM: Double, crossings: [Crossing]) -> Double {
+        max(totalM - crossings.reduce(0) { $0 + $1.distanceM }, 0)
     }
 
     static func coordinate(atDistance distanceM: Double, route: [Point], cumulativeM: [Double]) -> Point {
@@ -175,6 +210,7 @@ extension CameraPath {
         let route: [Point]
         let anchors: [(stopIndex: Int, distanceM: Double)]
         let totalM: Double
+        let crossings: [Crossing]
         let stopHoldsS: [Double]?
         let totalDurationS: Double
         let establishing: RecapBounds?
@@ -187,14 +223,19 @@ extension CameraPath {
         // exist yet, because it starts where the opening ends.
         let provisional = buildTimeline(
             anchors: request.anchors, totalM: totalM, config: config,
-            stopHoldsS: request.stopHoldsS, startS: 0, targetS: request.totalDurationS
+            stopHoldsS: request.stopHoldsS, crossings: request.crossings,
+            startS: 0, targetS: request.totalDurationS
         )
         return RecapDurationPlan.bodySpanM(
             establishedSpanM: establishedSpanM(
                 prologue: request.prologue, route: route,
                 establishing: request.establishing, config: config
             ),
-            routeDistanceM: totalM, travelS: travelSeconds(in: provisional), config: config
+            // The crossing's distance leaves the term and its seconds leave the
+            // denominator together — half of either correction would be worse
+            // than neither.
+            routeDistanceM: localDistanceM(totalM: totalM, crossings: request.crossings),
+            travelS: travelSeconds(in: provisional), config: config
         )
     }
 
@@ -235,6 +276,9 @@ extension CameraPath {
                 ?? request.journeyTimeline[0]
             let distanceM = distance(atTime: time, timeline: request.journeyTimeline, durationS: request.durationS)
             let parked: Bool
+            // A crossing is motion, not a hold: the dolly keeps following, so
+            // that the frame the arc lands on is the body camera's own — which
+            // is what makes the rejoin exact rather than approximately equal.
             if case .hold = entry.phase { parked = true } else { parked = false }
             return (coordinate(atDistance: distanceM, route: request.route, cumulativeM: request.cumulativeM), parked)
         }
@@ -251,11 +295,35 @@ extension CameraPath {
     static func endRevealFrame(
         route: [Point], establishing: RecapBounds?, config: TrackingConfig.Export
     ) -> CameraFrame {
-        let revealFrame = frame(for: bounds(of: route), config: config, padding: config.endRevealPadding)
-        return CameraFrame(
-            centerLat: revealFrame.centerLat, centerLon: revealFrame.centerLon,
-            spanM: cappedToRegion(revealFrame.spanM, establishing: establishing, config: config),
-            bearing: 0
-        )
+        let routeBounds = bounds(of: route)
+        let revealFrame = frame(for: routeBounds, config: config, padding: config.endRevealPadding)
+        let spanM = cappedToRegion(revealFrame.spanM, establishing: establishing, config: config)
+        // **A reveal too tight to hold the journey must land where the journey
+        // ended** — the same correction `wideBeat` got on 2026-08-08, arriving
+        // here on 2026-08-30 because the first fixture elongated enough to
+        // trigger it did not exist until then.
+        //
+        // `cappedToRegion` can shrink the reveal below the span the route needs,
+        // because beyond the installed tiles there is nothing to draw. Centred on
+        // the route's box anyway, the "reveal" then flies from the destination out
+        // to a point neither end of the trip is near — 150 km of open sea on the
+        // crossing fixture, across a 47 km frame, which broke the continuity gate
+        // at 64.0 s with 38% of the ground surviving. It is the same fault
+        // `wideBeat` describes: a beat that has lost its reason to exist and kept
+        // its motion.
+        //
+        // **No shipped film changes.** `establishing` is permanently nil since
+        // MapLibre was parked (2026-08-15), so `cappedToRegion` is a no-op and the
+        // padded reveal contains the route by construction — the guard below never
+        // fires. Measured on the crossing fixture: 0 continuity breaks either way
+        // on that path.
+        guard spanM < fittingSpanM(bounds: routeBounds, config: config) else {
+            return CameraFrame(
+                centerLat: revealFrame.centerLat, centerLon: revealFrame.centerLon,
+                spanM: spanM, bearing: 0
+            )
+        }
+        let landing = route[route.count - 1]
+        return CameraFrame(centerLat: landing.lat, centerLon: landing.lon, spanM: spanM, bearing: 0)
     }
 }

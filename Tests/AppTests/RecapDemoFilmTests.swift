@@ -183,9 +183,17 @@ final class RecapDemoFilmTests: XCTestCase {
     /// `Config/Secrets.xcconfig` routes against Geoapify, and one without it
     /// gets 401s reported as an unreachable provider. Every caller that reaches
     /// this default is env-gated and never runs in CI.
+    ///
+    /// `reconstructor` replaces the routing provider outright. The offline gates
+    /// need it because their `baseURL: ""` disables routing altogether, which
+    /// means **nothing is ever established** about any leg — and a crossing is a
+    /// leg something *was* established about (`SegmentRoutability`). A stub is
+    /// the only way to render a crossing without a live endpoint, and it is the
+    /// same seam `RouteMatchService` already offers the app.
     static func importedRecap(
         named fixture: String,
-        baseURL requestedBaseURL: String? = nil
+        baseURL requestedBaseURL: String? = nil,
+        reconstructor: RouteReconstructing? = nil
     ) async throws -> (RecapTrip, TrackingConfig.Export) {
         let full = try AppConfig.loadOrDie()
         let baseURL = requestedBaseURL
@@ -199,7 +207,8 @@ final class RecapDemoFilmTests: XCTestCase {
         // app deliberately does not.
         let routing = RouteMatchService(
             repository: repository, matching: full.matching,
-            reconstructor: GeoapifyRouteProvider(config: full.matching.withBaseURL(baseURL))
+            reconstructor: reconstructor
+                ?? GeoapifyRouteProvider(config: full.matching.withBaseURL(baseURL))
         )
 
         let trip = try Self.tripFixture(named: fixture)
@@ -216,7 +225,9 @@ final class RecapDemoFilmTests: XCTestCase {
         let legs = RecapComposer.legs(
             from: detail.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
         )
-        print("KAMOME_DEMO_FILM_IMPORT legs: " + legs.map { "\($0.mode.rawValue)/\($0.provenance)" }.joined(separator: ", "))
+        print("KAMOME_DEMO_FILM_IMPORT legs: "
+            + legs.map { "\($0.mode.rawValue)/\($0.provenance)\($0.isCrossing ? "/CROSSING" : "")" }
+                .joined(separator: ", "))
 
         // TEMPORARY (2026-08-04, duration-ratio experiment): pin the film length
         // for a review render without editing the config between runs.

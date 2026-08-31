@@ -35,6 +35,8 @@ final class CameraPathTests: XCTestCase {
             wideSpanPadding: 1.15,
             zoomTransitionS: 0.8,
             actSplitKm: 25,
+            crossingBeatS: 6.0,
+            crossingApexPadding: 1.5,
             followHeadingUp: followHeadingUp,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",

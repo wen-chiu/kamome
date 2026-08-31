@@ -140,6 +140,18 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE trip ADD COLUMN vehicle TEXT")
         }
 
+        // Schema v4 — what routing established about a segment's routability
+        // (Phase 4, the cross-region crossing beat). Nullable on purpose, and for
+        // a sharper reason than v2's and v3's columns: NULL here means "nobody
+        // ever found out", which is a genuinely different answer from either
+        // stored value. `SegmentRoutability` refuses to default it. Forward-only.
+        migrator.registerMigration("v4") { db in
+            // road | no_road | implausible_route. Free text like `trip.vehicle`,
+            // for the same reason: the routing layer is the authority on the
+            // vocabulary and it ships with the app, not with the database.
+            try db.execute(sql: "ALTER TABLE segment ADD COLUMN routability TEXT")
+        }
+
         return migrator
     }
 }

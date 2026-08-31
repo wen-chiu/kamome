@@ -48,13 +48,40 @@ public struct SubjectState: Equatable {
     public let emphasis: Double
     /// Hidden outright — fully parked, or a pure-chrome beat a style wants clear.
     public let isVisible: Bool
+    /// **Which subject is on screen** — the trip's vehicle, or the one that
+    /// crosses a leg with no road (`Docs/cross-region-journeys.md` requirement 4).
+    ///
+    /// A role, not a sprite. The timeline says "this stretch is being crossed";
+    /// what that looks like is the renderer's business, exactly as `emphasis`
+    /// says "half present" and not "50% alpha". This is where the split in
+    /// `Docs/camera-arcs.md` §6 lands in code: the **camera** is one primitive
+    /// and learns nothing about transport, while the **narration** is not
+    /// unified and travels through the state stream that already carries the
+    /// subject.
+    public let role: SubjectRole
 
-    public init(lat: Double, lon: Double, heading: Double, emphasis: Double = 1, isVisible: Bool = true) {
+    /// The two subjects a film can put on screen.
+    ///
+    /// Two rather than a mode enum on purpose: **there is no classifier**
+    /// (session 1 of 2, `Docs/eng-session-cross-region.md`). Every crossing gets
+    /// the same subject, so there is nothing to tune and nothing to guess. When
+    /// the plane/ship/seagull classifier arrives it decides which *art* the
+    /// crossing role resolves to; it does not add cases here.
+    public enum SubjectRole: Equatable, Sendable {
+        case vehicle
+        case crossing
+    }
+
+    public init(
+        lat: Double, lon: Double, heading: Double,
+        emphasis: Double = 1, isVisible: Bool = true, role: SubjectRole = .vehicle
+    ) {
         self.lat = lat
         self.lon = lon
         self.heading = heading
         self.emphasis = emphasis
         self.isVisible = isVisible
+        self.role = role
     }
 }
 

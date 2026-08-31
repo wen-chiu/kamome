@@ -82,6 +82,34 @@ public enum VehicleCatalog {
     /// named subject cannot be loaded. A car is a better failure than a dot.
     public static let defaultSubjectId = "car-red"
 
+    /// **What crosses a leg with no road**, when nothing has classified it —
+    /// `Docs/cross-region-journeys.md` requirement 4, *"the load-bearing one"*.
+    ///
+    /// The seagull, because the honest answer to an unmodelled crossing is *we
+    /// know you went from here to there; we do not know how*, and that answer has
+    /// to be **cheap and good-looking rather than a failure state**. A plane drawn
+    /// over a ferry route would be a fabrication of exactly the kind PD-1/PD-2
+    /// exist to prevent.
+    ///
+    /// ⚠️ **Three gull objects exist and this is only one of them.** This is the
+    /// `seagull` folder in `vehicles.json` — an **omni PNG sprite**, a choosable
+    /// subject in its own right. It is *not* `VehicleMarker.seagull`, the bare
+    /// vector that is also the end card's brand mark (`HANDOFF.md` 2026-08-29
+    /// finding 5b — restyling it would silently turn the wordmark's bird into
+    /// something else), and it is *not* `VehicleMarker.seagullBadge`, the fault
+    /// marker, which must never narrate: using it would re-create the collision
+    /// PR #23 closed, where one symbol meant both "we could not classify your
+    /// crossing" and "the artwork failed to load".
+    ///
+    /// ⏳ **Open, and Chiu's:** this sprite is still `selectable: true`, i.e. a
+    /// subject a user may pick for their whole trip. The precedent for crossing
+    /// art is `plane` / `boat`, both `selectable: false`; the counter-precedent is
+    /// the reindeer sets, which are choosable and are not crossing art (ADR
+    /// 2026-08-20 (3d)). Nothing is changed here, because "does the seagull carry
+    /// the brand or dilute it?" is an open question in
+    /// `Docs/cross-region-journeys.md` and a brand decision, not an implementer's.
+    public static let crossingSubjectId = "seagull"
+
     private static let store = Store()
 
     /// Every declared subject, manifest order.

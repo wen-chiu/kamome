@@ -49,7 +49,16 @@ struct RecapReviewScene {
     let style: RecapStyle
 
     static func make(fixture: String) async throws -> RecapReviewScene {
-        let (trip, imported) = try await RecapDemoFilmTests.importedRecap(named: fixture)
+        // The crossing fixture is routed by the offline sea provider, never by
+        // the live endpoint: its "no road here" is a **fixture fact**, authored
+        // with the coordinates, and a review render must not have it depend on
+        // whether a key is present or what a commercial router thinks of a
+        // 300 km sea leg (`UnroutableSeaProvider`).
+        let (trip, imported) = try await RecapDemoFilmTests.importedRecap(
+            named: fixture,
+            baseURL: UnroutableSeaProvider.forFixture(fixture) == nil ? nil : "",
+            reconstructor: UnroutableSeaProvider.forFixture(fixture)
+        )
         let config = keyframeIntervalOverride(imported)
         adoptTilesPathForTerrain()
         // **No installed region is not a failure** — the second of the two places
@@ -88,7 +97,8 @@ struct RecapReviewScene {
                 subject: Self.subjectRenderer(style: style, config: config),
                 overlay: RecapOverlayRenderer(style: style, resolver: try Self.resolver(for: trip)),
                 style: style,
-                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+                crossingSubject: Self.crossingRenderer(style: style, config: config)
             ),
             provider: provider,
             appearance: appearance,
@@ -127,6 +137,27 @@ struct RecapReviewScene {
             )
         }
         return VehicleSubjectRenderer.make(style: style, subjectId: subjectId, lengthPx: lengthPx)
+    }
+
+    /// **What crosses a leg with no road, for a review render.**
+    ///
+    /// Defaults to the shipped answer (`VehicleCatalog.crossingSubjectId`, the
+    /// seagull) and is overridden per run by `KAMOME_CROSSING_SUBJECT`. The
+    /// judgement film for the crossing beat is rendered with **`plane`**: on a
+    /// hand-authored flight fixture that is a fixture fact rather than a guess,
+    /// and `plane` is already `selectable: false` in `vehicles.json` — reserved
+    /// for exactly this and never offered to a user as a trip subject.
+    ///
+    /// Env rather than a config key, for the reason every other review override
+    /// here is: the question *which* sprite is still open (session 2 builds the
+    /// classifier), and a config key would ship an answer to a question still
+    /// being asked.
+    private static func crossingRenderer(
+        style: RecapStyle, config: TrackingConfig.Export
+    ) -> VehicleSubjectRenderer {
+        let subjectId = HarnessEnv.value("KAMOME_CROSSING_SUBJECT") ?? VehicleCatalog.crossingSubjectId
+        print("KAMOME_REVIEW crossing subject \(subjectId)")
+        return VehicleSubjectRenderer.make(style: style, config: config, subjectId: subjectId)
     }
 
     /// Names a still by what varies in it, so a sweep does not overwrite itself.

@@ -70,9 +70,13 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
     /// How this segment's geometry was obtained (schema v2, §3). Nullable;
     /// NULL reads as `gpsHifi`. Use `segmentSource` for the typed value.
     public var source: String?
+    /// What routing established about whether a road joins this segment's ends
+    /// (schema v4). Nullable, and NULL means **nothing was established** — never
+    /// "no road". Use `routeVerdict` for the typed value.
+    public var routability: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, mode, source
+        case id, mode, source, routability
         case tripId = "trip_id"
         case startedAt = "started_at"
         case endedAt = "ended_at"
@@ -86,7 +90,8 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
         startedAt: Double,
         endedAt: Double? = nil,
         matchedPolyline: String? = nil,
-        source: String? = nil
+        source: String? = nil,
+        routability: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -95,10 +100,16 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
         self.endedAt = endedAt
         self.matchedPolyline = matchedPolyline
         self.source = source
+        self.routability = routability
     }
 
     /// Typed source; NULL/unknown reads as `.gpsHifi`.
     public var segmentSource: SegmentSource { SegmentSource(storage: source) }
+
+    /// Typed routability, or **nil when routing never established anything**.
+    /// The nil is the point: a leg nobody asked about must not read as a leg
+    /// with no road (`SegmentRoutability`).
+    public var routeVerdict: SegmentRoutability? { SegmentRoutability(storage: routability) }
 }
 
 public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
