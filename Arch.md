@@ -98,7 +98,7 @@ You do not get to self-certify. Never claim "fixed" / "working" / "done" / "test
 
 **7.3 A test that can no longer be *exercised* is restated, not deleted.** When shipped data makes a case unreachable — art landing so that "no thumbnail, still selectable" has no subject left to exercise — rewrite the assertion so it holds the **rule** structurally. Deleting it discards the rule along with the case.
 
-**7.4 Report the test count, and flag any change in it.** A suite that loses tests does not go red. On 2026-08-16 an accidental deletion was caught only because the count fell from 13 to 11; both suites were green with the tests missing, and every other signal said the change was fine.
+**7.4 The test count is enforced, not reported.** `./check.sh` fails on any drift from `Scripts/test-count.baseline`, in either direction. Adding tests means raising the baseline in the same commit, so a deletion cannot pass silently. The incident behind the rule is in `Docs/rule-rationale.md`.
 
 **7.5 The bar moves only when the rule moves.** A test may change because a specification or requirement changed — and then the change is deliberate, and the reason goes in the commit message. "It passes now" is never that reason.
 
@@ -108,7 +108,7 @@ You do not get to self-certify. Never claim "fixed" / "working" / "done" / "test
 
 Passing tests alone proves nothing by itself.
 
-- **Level 1 — Build/Test:** compiles, builds, passes automated tests. Report exact commands + output.
+- **Level 1 — Build/Test:** `./check.sh` exits 0. That is the whole of Level 1; paste the failing stage, not a summary, when it does not.
 - **Level 2 — Behavioral:** actual behavior matches intent, checked against a known-good baseline / committed fixture / golden output / explicit acceptance criterion. No baseline? Say so and propose one. "No errors" ≠ "correct."
 - **Level 3 — Architectural:** the change preserves module boundaries, dependency direction, existing abstractions, domain ownership, ADRs, and product decisions. Tests passing while violating architecture is **not correct**.
 

@@ -64,7 +64,7 @@ failure vocabulary fixes. Three cases, and they must not be collapsed:
 
 **`act_split_km` (25) therefore keeps its existing job** — camera-discontinuity
 detection for the continuity gate — and does **not** become the crossing trigger.
-`HANDOFF.md` 2026-08-21 finding 3 anticipated exactly this ("`act_split_km` may be
+`Docs/handoff-camera-arc-findings.md` finding 3 anticipated exactly this ("`act_split_km` may be
 right for 'insert an arc' and wrong for 'send a bird'"); this is the measurement
 that settles it, and the answer is that they are different questions, not
 different values.
@@ -80,7 +80,7 @@ and it is a prerequisite for everything below.
 **On display scale, read §7's own 2026-08-28 note instead** — it is more precise
 than a summary here, and it is where the projection arithmetic lives.
 
-**Second thing this measurement settles:** `HANDOFF.md` 2026-08-21 finding 3
+**Second thing this measurement settles:** `Docs/handoff-camera-arc-findings.md` finding 3
 listed as UNKNOWN whether any committed fixture exercises `permittedCutTimesS`.
 It does — heavily. Every fixture but `margaret-river` and the real Miyakojima dump
 carries at least one permitted cut today.

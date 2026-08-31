@@ -1,5 +1,10 @@
 name: CI
 
+# CI runs exactly what a developer runs: ./check.sh. Every gate lives in
+# Scripts/ so the two can never drift — a check that only exists in this file
+# cannot be run before pushing, and a check that only runs locally does not
+# guard the branch.
+
 on:
   push:
     branches: [main]
@@ -15,58 +20,6 @@ jobs:
       - name: Install tools
         run: brew install xcodegen swiftlint
 
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: SwiftLint
-        run: swiftlint --strict
-
-      - name: No secrets tracked
-        # Config/Secrets.xcconfig is gitignored and must never be committed.
-        # A key-shaped value in a tracked xcconfig is the same failure by a
-        # different path. This catches it at PR time; RoutingKeyTests catches
-        # it during local development.
-        run: |
-          if git ls-files --error-unmatch Config/Secrets.xcconfig 2>/dev/null; then
-            echo "Config/Secrets.xcconfig is tracked — it must be gitignored" >&2
-            exit 1
-          fi
-          # A real key is 32 hex chars. The placeholder and the empty default
-          # are both shorter and non-hex, so they pass.
-          if git grep -lP 'KAMOME_ROUTING_API_KEY\s*=\s*[0-9a-f]{32,}' -- '*.xcconfig' ':!*.example'; then
-            echo "A tracked xcconfig contains a key-shaped value" >&2
-            exit 1
-          fi
-          echo "No secrets tracked — OK"
-
-      - name: SDK confinement (MapLibre stays in one file)
-        # The RecapSnapshotProviding protocol is the renderer boundary
-        # (ADR 2026-07-19): MapLibre types must never leak past the provider.
-        # Same discipline keeps import MapKit / import Photos each in one file.
-        run: |
-          offenders=$(grep -rl --include='*.swift' 'import MapLibre' . \
-            | grep -v 'App/Services/MapLibreSnapshotProvider.swift' || true)
-          if [ -n "$offenders" ]; then
-            echo "import MapLibre outside its provider file:" >&2
-            echo "$offenders" >&2
-            exit 1
-          fi
-          echo "MapLibre confinement OK"
-
-      - name: Shipped routing endpoint is distributable
-        # The committed matching.base_url must be "" or https. A LAN address is
-        # correct on the developer's desk and unreachable on anyone else's
-        # network, where it costs one matching.timeout_s per leg (P0 2026-08-15).
-        # This catches the commit; AppConfig.loadOrDie catches the archive. Both
-        # are needed — a working-tree edit never reaches CI at all.
-        run: |
-          url=$(/usr/bin/python3 -c \
-            'import json; print(json.load(open("Config/TrackingConfig.json"))["matching"]["base_url"])')
-          case "$url" in
-            "" | https://*) echo "matching.base_url OK: \"$url\"" ;;
-            *) echo "matching.base_url must be \"\" or https, got \"$url\"" >&2; exit 1 ;;
-          esac
-
       - name: Pick an available iPhone simulator
         # Runner images vary in which device sets they ship — never hardcode
         # a model name.
@@ -76,11 +29,7 @@ jobs:
             | grep -E "^\s+iPhone" | head -1 | sed -E 's/^ *([^(]+[^ (]) *\(.*/\1/')
           if [ -z "$DEVICE" ]; then echo "No iPhone simulator on runner" >&2; exit 1; fi
           echo "Using simulator: $DEVICE"
-          echo "SIM_DEVICE=$DEVICE" >> "$GITHUB_ENV"
+          echo "KAMOME_TEST_DESTINATION=platform=iOS Simulator,name=$DEVICE" >> "$GITHUB_ENV"
 
-      - name: Test (app + KamomeCore package via scheme)
-        run: |
-          set -o pipefail
-          xcodebuild -scheme Kamome test \
-            -destination "platform=iOS Simulator,name=$SIM_DEVICE" \
-            CODE_SIGNING_ALLOWED=NO
+      - name: ./check.sh
+        run: ./check.sh
