@@ -1,0 +1,39 @@
+{
+  "_comment": [
+    "The allowed dependency graph and SDK confinement, enforced by",
+    "Scripts/check-architecture.sh. SwiftPM's compiler already stops a module",
+    "importing what Package.swift does not declare; this file is the other half —",
+    "Package.swift cannot gain an edge without a decision.",
+    "",
+    "Adding a key or a value here is an architecture change, so CLAUDE.md rule 2",
+    "applies: stop and confirm first.",
+    "",
+    "Two properties worth naming, because they are easy to break by accident:",
+    "KamomePersistence depends on nothing internal (the domain does not depend on",
+    "the database), and KamomeExportEngine does not depend on KamomePersistence",
+    "(the renderer never sees the database)."
+  ],
+
+  "allowed": {
+    "KamomeConfig":         [],
+    "KamomePersistence":    [],
+    "KamomeImportKit":      [],
+    "KamomeTrackingEngine": ["KamomeConfig"],
+    "KamomeTripComposer":   ["KamomeConfig", "KamomeTrackingEngine"],
+    "KamomeExportEngine":   ["KamomeConfig", "KamomeTrackingEngine"],
+    "KamomeRouteMatching":  ["KamomeConfig", "KamomeTrackingEngine"]
+  },
+
+  "_confined_comment": [
+    "An SDK listed here may be imported only under the given path. MapKit and",
+    "Photos are deliberately NOT here: a CI comment claimed each was confined to",
+    "one file, and on 2026-08-31 that was measured false — MapKit is in 3 files",
+    "and Photos in 4, all legitimate (a live map view is not the film renderer).",
+    "The claim was wrong, not the code."
+  ],
+  "confined": {
+    "MapLibre":     "App/Services/MapLibreSnapshotProvider.swift",
+    "GRDB":         "Core/Persistence/",
+    "AVFoundation": "Core/ExportEngine/RecapVideoEncoder.swift"
+  }
+}

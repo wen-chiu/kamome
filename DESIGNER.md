@@ -15,13 +15,9 @@ design decision serves both functional clarity and emotional experience.
 
 ## 0. Decision authority
 
-Higher overrides lower. This is the same order `Arch.md` §0 uses.
-
-1. Explicit product decisions by Chiu
-2. Approved ADRs — `Docs/decisions.md`, newest entry on a subject wins
-3. Locked decisions — the register is in `PO.md`
-4. Existing rendered behaviour and established visual conventions
-5. Your design judgement
+The order is in `CLAUDE.md` and governs this session: Chiu's explicit decisions,
+then ADRs, then the locked register in `PO.md`, then existing rendered behaviour
+and established visual conventions, then your design judgement.
 
 You may flag a decision as wrong and propose an alternative. You may **not**
 treat it as reopened. A locked decision reopens only when Chiu names it and says

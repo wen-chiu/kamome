@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Arch.md §7.4 — a suite that loses tests does not go red.
+# A suite that loses tests does not go red (Arch.md, "Tests").
 #
 # On 2026-08-16 an accidental deletion was caught only because the count fell
 # from 13 to 11. Both suites were green with the tests missing and every other
@@ -26,7 +26,7 @@ fi
 
 if [ "$actual" -lt "$baseline" ]; then
   kamome_fail "test count FELL from $baseline to $actual — $((baseline - actual)) test(s) disappeared"
-  kamome_info "Arch.md §7.1/§7.2: a test is removed only with proof it cannot fail."
+  kamome_info "CLAUDE.md rule 3: a test is removed only with proof it cannot fail."
   kamome_info "If the removal is deliberate and proven, lower $baseline_file in the same commit."
 else
   kamome_fail "test count rose from $baseline to $actual — the baseline was not updated"

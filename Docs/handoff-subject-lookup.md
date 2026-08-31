@@ -112,7 +112,7 @@ and drew the car.
 ### What was done about it, and what was not
 
 **Done (this change).** `VehicleSubjectRenderer.make` now logs the miss
-(`KamomeLog.recap.error`) instead of degrading in silence, per Arch.md §5, and
+(`KamomeLog.recap.error`) instead of degrading in silence, per Arch.md's no-silent-fallbacks rule, and
 the doc comment that called this "a state no test can arrange" is corrected.
 `KamomeLog` reaches the xcodebuild console on the simulator — the routing lines
 in every render log prove it — so the next occurrence names itself in the same

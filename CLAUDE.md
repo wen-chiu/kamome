@@ -55,6 +55,23 @@ never a work instruction.
    **Phase gates are hard gates**, each owing a demo artifact. **Boring
    technology.** Flag anything that needs the physical device.
 
+## Decision authority — every session, every role
+
+Higher overrides lower:
+
+1. Explicit product decisions by Chiu
+2. Approved ADRs — `Docs/decisions.md`, newest entry on a subject wins
+3. Locked decisions — the register is in `PO.md`
+4. Existing tested behaviour and established conventions
+5. Your engineering or design judgement
+
+Existing code is **evidence, not truth**: where it contradicts a higher
+authority, treat the implementation as potentially stale. Where two sources at
+the same level conflict, state the conflict — never silently pick one.
+
+**A finding that exists only in a conversation has not been delivered.** It goes
+to `HANDOFF.md` as a summary and a pointer, or it did not happen.
+
 ## Done means `./check.sh` is green
 
     ./check.sh            # gates, lint, build, tests

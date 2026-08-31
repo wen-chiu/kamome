@@ -18,7 +18,7 @@ what has **no other home**, plus pointers.
 |---|---|
 | §0 exceptions (Geoapify, one share) | `Docs/decisions.md` 2026-08-16, 2026-08-20 (b)/(c) — the trigger was a scaling trap: self-hosted OSRM only routes preloaded regions, and a friend's Tokyo trip had no routable legs because the Japan extract was Kyushu |
 | Mark VERIFIED / INFERRED / UNKNOWN | `Docs/decisions.md` 2026-08-20 (d) — a snap-radius claim written as fact, measured, and found backwards. `PO.md` carries the rule it produced, including that **a comparison table is where an inference launders into a fact** |
-| Never weaken or delete a test | `Arch.md` §7.1–§7.3 — both failure modes, 2026-08-16 |
+| Never weaken or delete a test | `Arch.md`, "Tests", and `CLAUDE.md` rule 3 — both failure modes, 2026-08-16 |
 | A locked decision reopens only when Chiu names it | `PO.md`, *"a superseded lock is a governance hazard"* — twice a lock outlived the ADR that amended it |
 | The staleness check has two halves | `PO.md` — the ADR-only version **passed twice** while the file's blockers were weeks stale |
 | `TEST_RUNNER_<VAR>` must be declared | `project.yml`, the comment above `environmentVariables` — `xcodebuild` turns it into a *build setting*, so an undeclared variable silently reaches nothing and every env-gated harness skips while reporting success |
