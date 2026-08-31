@@ -170,7 +170,7 @@ it** (Chiu 2026-08-30). Everything else below is closed or waiting.
   moves those two snapshots are the *same map at different positions*, so the
   frame carries a double image that also steps twice a second. The interval was
   sized for the **static** camera of 2026-07-25 and never re-tuned when
-  `FollowCamera` made the camera move (2026-08-01). See `HANDOFF.md` 2026-08-30
+  `FollowCamera` made the camera move (2026-08-01). See `Docs/handoff-audit-2026-08-30.md`
   finding 1 for the falsification test and why the fix is *not* a smaller
   interval.
 - 🟠 **The opening never shows the country, on any trip** — same class, VERIFIED
@@ -178,7 +178,7 @@ it** (Chiu 2026-08-30). Everything else below is closed or waiting.
   (`RecapModel:204`), none is ever installed since MapLibre was parked, so the
   "country" beat always falls back to **the trip's own bounds × 2.2**
   (`CameraPathPrologue:70–75`). This is the reported "I can't tell where in
-  Australia this is". `HANDOFF.md` 2026-08-30 finding 2.
+  Australia this is". `Docs/handoff-audit-2026-08-30.md` finding 2.
 - 🟠 `KamomeCore_KamomeExportEngine` **subject lookup still misses; it no longer
   crashes** — the `fatalError` mechanism was removed 2026-08-15 (`b44a7fc`,
   VERIFIED from the tree). The same miss now degrades a film **silently**; a
@@ -186,7 +186,7 @@ it** (Chiu 2026-08-30). Everything else below is closed or waiting.
   still UNKNOWN. Corrected here 2026-08-30 — this line read "intermittent bundle
   crash" for two days after `HANDOFF.md` had retitled it.
 - 🐛 Import date range clips at timezone edges — known, deliberately not fixed;
-  workaround documented (`HANDOFF.md`).
+  workaround documented (`Docs/handoff-known-bugs.md`).
 - The 2026-08-15 P0 (app died on someone else's device): **CLOSED by owner
   report** (Chiu 2026-08-21) — issues found on the other device were
   subsequently fixed and the app runs on others' devices; the mechanism was
@@ -243,9 +243,10 @@ it** (Chiu 2026-08-30). Everything else below is closed or waiting.
   v1.8 §4.4.1); walk-narrowing for recorded trips parked to Capture Beta
   (ADR 2026-08-20 (c) tail).
 - The duration rule's candidate formula; the travel-pacing tunable
-  (`HANDOFF.md` — experiments, nothing decided).
+  (`Docs/handoff-pacing.md` — experiments, nothing decided).
 - Per-act / per-segment camera framing (rejected 2026-08-02; see
-  `HANDOFF.md` 2026-08-21 finding 5 for the one sanctioned derivation change).
+  `Docs/handoff-camera-arc-findings.md` finding 5 for the one sanctioned
+  derivation change).
 - iCloud original fetching (option B); "Place names as narrative rhythm"
   (`Docs/icebox.md`).
 
@@ -255,7 +256,9 @@ it** (Chiu 2026-08-30). Everything else below is closed or waiting.
 |---|---|
 | Product intent & rules | `Docs/kamome-poc-spec.md` (v1.8 — reference, not status) |
 | Decisions (append-only ledger) | `Docs/decisions.md` — newest entry on a subject wins |
-| Current state | this file; `CLAUDE.md` (boot); `HANDOFF.md` (live findings only) |
+| Current state | this file; `CLAUDE.md` (boot, 80-line budget); `HANDOFF.md` (live index, 300-line budget, pointing at `Docs/handoff-*.md`) |
+| Rule rationale | `Docs/rule-rationale.md` — the incident behind each `CLAUDE.md` rule |
+| Finding an ADR | `Docs/decisions-index.md` — one row per ledger entry |
 | Governance / conduct | `PO.md` (product-owner charter), `Arch.md` (engineering) |
 | Task docs | `Docs/camera-arcs.md`, `Docs/cross-region-journeys.md`, `Docs/pre-launch.md`, `Docs/eng-session-*.md` (each carries a status line) |
 | History | `Docs/_archive/handoff-2026-08.md`, `Docs/decisions.md` entries, `Docs/demos/`, `Docs/device-test-*.md`, `Docs/prototype/`; bannered-in-place legacy docs (kept for inbound citations): `Docs/handoff-P3.5.md` (§6 item definitions stay authoritative), `Docs/handoff-recap-visuals.md` (§3 sprite constraints stay authoritative), `Docs/handoff-render-layers.md`, `Docs/kamome-animation-vision.md` (vision, substrate parts parked) |

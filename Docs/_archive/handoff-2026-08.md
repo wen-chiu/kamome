@@ -2119,3 +2119,71 @@ bird more distinctive, not less.
 
 ---
 
+
+---
+
+# Archived 2026-08-31 — closed sections from `HANDOFF.md`
+
+*Moved when `HANDOFF.md` was put on a 300-line budget. History, never a work
+instruction.*
+
+## Findings — engineering session, the film follows the system appearance (2026-08-28)
+
+**Context.** `Docs/eng-session-appearance.md` (the `Arch.md` §12 design, written
+before any code), on `feature/p4-appearance-follows-system` off `main` at
+`87d1d4e`. Chiu's decision of 2026-08-27: the film follows the device's system
+appearance, and light mode gets an orange trail. **The first change in this series
+that moves shipped behaviour.**
+
+## Findings — PO/Architecture session (2026-08-29)
+
+Three things that outlive the session. Everything else it found is in
+`Docs/decisions.md` 2026-08-27 (b) or in the commits, and is not repeated here.
+
+### 1. Two rules, learned the expensive way
+
+- **Read a style value off the preset the app actually selects (`modernMinimal`),
+  never off `RecapStyle`'s defaults.** The defaults are unrendered. This was got
+  wrong twice from the same source — the glow brief, then a PO draft of the
+  appearance ADR — and cost a correction in the ledger both times.
+- **The PO session does not write an ADR for a decision an engineering session is
+  actively implementing.** It drafted one for the appearance decision in parallel;
+  two entries for one decision in an append-only ledger is worse than none, and the
+  later-dated one would have won while being the weaker. The draft was withdrawn.
+  What the PO session should record instead is what the implementer will not see:
+  cross-cutting consequences, spent guarantees, and what was left undecided.
+
+### 2. 🔴 CI is blocked account-wide — a red check currently means nothing
+
+From 2026-08-29, GitHub Actions jobs fail in ~3 seconds with **zero steps
+executed**: the Actions **spending limit** is exhausted. `main` fails identically,
+so this is not a signal about any branch. Until it is cleared, **local
+`xcodebuild test` is the only verification there is, and a PR must say so** rather
+than let a red check read as a broken suite. It recurs when the monthly allowance
+runs out unless the limit is raised.
+
+### 3. Awaiting Chiu — a rule this session may recommend and may not write
+
+A branch ref has silently picked up another session's commits three times, and a
+`git add -A` swept an unrelated file into an unrelated commit once. **Recommendation:
+a standing rule in `Arch.md` — confirm the current branch before committing, and
+stage explicit paths only, never `-A` or `.`** `Arch.md` is the engineering charter,
+so per `PO.md` this is a recommendation. **It is not in force until Chiu says so.**
+
+### 4. Known remaining duplication, reported not acted on
+
+The 2026-08-29 trim moved four merged sessions' findings to
+`Docs/_archive/handoff-2026-08.md` (1,961 → ~915 lines). Two overlaps are left, both
+deliberate:
+
+- **"Reference — Phase 4 scope…"** below restates `Docs/current-state.md`'s phase,
+  camera and routing entries at greater length. It is left because
+  `Docs/eng-session-camera-arc.md` cites the freeze it records, and because it
+  carries reasoning the index does not. **If it moves, current-state must absorb
+  the reasoning first** — do not simply delete it.
+- **"Findings — PO/Architecture session (2026-08-21)"** is the working analysis that
+  produced `Docs/camera-arcs.md`. Once Pass 1 has run and been judged, the design
+  doc is the surviving form and that section should be archived.
+
+---
+

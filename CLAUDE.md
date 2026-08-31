@@ -1,93 +1,95 @@
-# Kamome — boot file for Claude Code sessions
+# Kamome — session boot
 
 Kamome (卡摸咩) is a **memory engine for road trips**: import or capture a
-journey once, then turn it into a cinematic recap film (MP4) worth keeping and
-sharing. Product reference: `Docs/kamome-poc-spec.md` (v1.8 — what Kamome *is*,
-not a status report; later ADRs in `Docs/decisions.md` override its stale
-status text).
+journey once, then turn it into a cinematic recap film worth keeping and
+sharing. What Kamome *is*: `Docs/kamome-poc-spec.md` (later ADRs override its
+stale status text).
 
-**Current phase: 4 — films worth keeping** (vehicle sprites → cross-region
-crossing → export that survives). Phase 3.5 (Replay MVP) **CLOSED 2026-08-15**:
-§6a passed, §6b's unmet items moved to Phase 2 (App Store release,
-`Docs/pre-launch.md`). Later: P5 Capture Beta, P6 Plans, P7 backend.
+**Phase 4 — films worth keeping**: vehicle sprites → cross-region crossing →
+export that survives. Phase 3.5 closed 2026-08-15. Later: P5 Capture Beta,
+P6 Plans, P7 backend.
 
-## Session-start reading order
+## Read at session start
 
-1. **`Docs/current-state.md`** — the snapshot: phase, boundaries, locked
-   decisions, active work, deferred items. **Staleness check first, and it has
-   two halves** (amended 2026-08-30): its "Last synced" line must name **both**
-   the newest ADR in `Docs/decisions.md` **and** the newest merged PR on `main`
-   (`gh pr list --state merged --limit 1`). If either is behind, the file is
-   stale — `decisions.md` wins on decisions, `HANDOFF.md` wins on live findings
-   and blockers — and you report the staleness before proceeding. The ADR-only
-   version of this check passed twice while the file's own blocker list was
-   weeks out of date.
-   **Also confirm where you are**: `git status -sb` and your distance from
-   `origin/main`. A PO session read a full generation of stale documents on
-   2026-08-30 because the checkout sat on an already-merged branch.
-2. Your charter: `Arch.md` (engineering session) or `PO.md` (product-owner /
-   governance session).
-3. `HANDOFF.md` — live findings, open experiments, known bugs. Current only.
-4. The task doc your work names (pointer map in `Docs/current-state.md`).
+1. `Docs/current-state.md` — the snapshot. **Run its staleness check first**:
+   its "Last synced" line must name **both** the newest ADR in
+   `Docs/decisions.md` **and** the newest merged PR on `main`. If either is
+   behind, report the staleness before proceeding — `decisions.md` wins on
+   decisions, `HANDOFF.md` wins on live findings and blockers.
+2. `git status -sb` — confirm which branch you are on and your distance from
+   `origin/main` before trusting anything you read.
+3. Your charter, exactly one: `Arch.md` (engineering), `PO.md` (product owner /
+   governance), or `DESIGNER.md` (visual and UX).
+4. `HANDOFF.md` — live findings, open experiments, known bugs, each pointing at
+   its detail document.
+5. The task document your work names.
 
-**Do not treat historical documents as current state.** `Docs/decisions.md` is
-append-only — the newest entry on a subject wins over any older entry, any
-handoff, and this file. Closed HANDOFF/CLAUDE history lives in
-`Docs/_archive/handoff-2026-08.md` and is never a work instruction.
+`Docs/decisions.md` is append-only: the newest entry on a subject wins over any
+older entry, any handoff, and this file. `Docs/_archive/` is history and is
+never a work instruction.
 
-## Critical standing rules
+## Hard rules — a violation stops the work
 
-- **§0 — Location data never leaves the device by default** (Chiu 2026-08-03).
-  A user's real trip, route or location history is never logged off-device,
-  synced, sent to analytics or crash reporting, or **committed to this repo**
-  (real dumps live only in gitignored locations: `Tests/Fixtures/trips/local/`
-  for trip dumps and `Docs/tests/` for raw device-test artifacts — the second was
-  added to this sentence on 2026-08-30, having been in the tree all along;
-  `KamomeLog` may name *which* stop failed, never its coordinates). If a
-  feature needs real coordinates to leave the device, that is a product
-  decision for Chiu, never an implementation detail.
-  **Decided exceptions** (explicit owner decisions — `Docs/decisions.md`
-  2026-08-16 and 2026-08-20 (b)/(c)): routing sends real trip leg coordinates
-  to Geoapify (photo-imported trips, walks included; recorded traces for
-  map-matching), and one user-initiated share of one trip. Honest disclosure
-  is the decided posture (`Docs/pre-launch.md` item 7).
-- **Rules of Engagement** (spec §0): phase gates are hard gates; **no magic
-  numbers** — all tunables in `Config/TrackingConfig.json`; boring tech; demo
-  artifact per phase; flag anything needing the physical device; **honest
-  provenance** (never "Verified Trip"; recorded vs reconstructed-from-photos
-  is a product rule; a wrong road is never drawn as fact).
-- **Never write an assumption as though established** — mark VERIFIED /
-  INFERRED / UNKNOWN beside claims in documents, and name the cheapest thing
-  that would settle each (PO.md, Chiu 2026-08-20).
-- Do not reopen locked decisions (register in `Docs/current-state.md`; the
-  reopening rule is `PO.md` §"Reopening a Locked Decision").
+1. **§0 — real location data never leaves the device.** Never logged
+   off-device, synced, sent to analytics or crash reporting, or committed to
+   this repository. Real dumps live only in `Tests/Fixtures/trips/local/` and
+   `Docs/tests/`, both gitignored. `KamomeLog` may name *which* stop failed,
+   never where it is. Decided exceptions, and only these: routing sends real leg
+   coordinates to Geoapify, and one user-initiated share of one trip. Anything
+   further is a product decision for Chiu, never an implementation detail.
+2. **Stop and confirm** before changing product behaviour, the Story/Rendering
+   separation, the `RouteProvider` boundary, a public interface, what ships in
+   MVP, or before adding a dependency.
+3. **Never weaken a test to make it pass.** If you believe a test is wrong, say
+   so and stop. Removing one needs proof it *cannot fail*, not an argument that
+   it is redundant.
+4. **Never write an assumption as though it were established.** Mark claims in
+   documents VERIFIED / INFERRED / UNKNOWN, and name the cheapest thing that
+   would settle each unmeasured one.
+5. **Honest provenance.** Never "Verified Trip". Recorded and
+   reconstructed-from-photos are different things, and a wrong road is never
+   drawn as fact.
+6. **A locked decision reopens only when Chiu names it** and says he is
+   reopening it. Register: `Docs/current-state.md`. Procedure: `PO.md`.
+7. **No magic numbers** — every tunable lives in `Config/TrackingConfig.json`.
+   **Phase gates are hard gates**, each owing a demo artifact. **Boring
+   technology.** Flag anything that needs the physical device.
 
-## Verification commands (run from repo root)
+## Decision authority — every session, every role
 
-```bash
-xcodegen generate
-xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
-swiftlint
-```
+Higher overrides lower:
 
-(Local Xcode is 26.6 → destination iPhone 17 Pro; CI auto-picks its simulator.
-swiftlint locally needs `XCODE_DEFAULT_TOOLCHAIN_OVERRIDE=/Library/Developer/CommandLineTools`
-— Rosetta swiftlint can't load Xcode 26's arm64-only SourceKit.)
+1. Explicit product decisions by Chiu
+2. Approved ADRs — `Docs/decisions.md`, newest entry on a subject wins
+3. Locked decisions — the register is in `PO.md`
+4. Existing tested behaviour and established conventions
+5. Your engineering or design judgement
 
-The `.xcodeproj` is generated — never hand-edit it; change `project.yml` and
-re-run `xcodegen generate`.
+Existing code is **evidence, not truth**: where it contradicts a higher
+authority, treat the implementation as potentially stale. Where two sources at
+the same level conflict, state the conflict — never silently pick one.
 
-## Desk harnesses — `TEST_RUNNER_` env (fixed 2026-08-15)
+**A finding that exists only in a conversation has not been delivered.** It goes
+to `HANDOFF.md` as a summary and a pointer, or it did not happen.
 
-```bash
-xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  -only-testing:KamomeTests/RecapTimelineReportTests TEST_RUNNER_KAMOME_TIMELINE_REPORT=miyakojima
-```
+## Done means `./check.sh` is green
 
-On this toolchain, xcodebuild turns `TEST_RUNNER_FOO=bar` into a **build
-setting**, and scheme environment values expand build settings — so
-`project.yml` declares each harness variable as `$(TEST_RUNNER_<VAR>)`. Two
-consequences: an unset variable arrives as a defined **empty string** (harnesses
-must read it through `HarnessEnv.value`, which collapses empty to nil), and
-adding a harness variable means adding a line to `project.yml`, or it can never
-be set.
+    ./check.sh            # gates, lint, build, tests
+    ./check.sh --static   # gates only, no Xcode required
+
+Never report "done", "fixed" or "ready for review" from a partial run. A visual
+change owes a render as well: `./check.sh` cannot see the film.
+
+The `.xcodeproj` is generated — change `project.yml` and re-run
+`xcodegen generate`, never hand-edit it. Desk harnesses read
+`TEST_RUNNER_<VAR>`, and each variable must be declared in `project.yml` or it
+can never be set:
+
+    xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      -only-testing:KamomeTests/RecapTimelineReportTests TEST_RUNNER_KAMOME_TIMELINE_REPORT=miyakojima
+
+## Why these rules exist
+
+Every rule above was paid for by an incident. Those are in
+`Docs/rule-rationale.md` — read it when a rule looks arbitrary or when you are
+about to work around one. Not at session start.
