@@ -18,7 +18,8 @@ P6 Plans, P7 backend.
    decisions, `HANDOFF.md` wins on live findings and blockers.
 2. `git status -sb` — confirm which branch you are on and your distance from
    `origin/main` before trusting anything you read.
-3. Your charter: `Arch.md` (engineering) or `PO.md` (product owner / governance).
+3. Your charter, exactly one: `Arch.md` (engineering), `PO.md` (product owner /
+   governance), or `DESIGNER.md` (visual and UX).
 4. `HANDOFF.md` — live findings, open experiments, known bugs, each pointing at
    its detail document.
 5. The task document your work names.

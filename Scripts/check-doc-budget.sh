@@ -28,4 +28,16 @@ budget() {
 budget CLAUDE.md  80  "read at the start of every session"
 budget HANDOFF.md 300 "read at the start of every session"
 
+# One charter is read per session, so these do not add up — but each is a whole
+# session's governing document and has to fit in working memory. 180 is where
+# Arch.md and DESIGNER.md actually sit; it is a working charter's size.
+budget Arch.md     180 "the engineering charter"
+budget DESIGNER.md 180 "the visual charter"
+
+# PO.md is the outlier at 481 lines — it grew the way HANDOFF.md grew, by
+# carrying its stories inline. This is a ratchet at today's size with no
+# headroom: it cannot grow, and the next addition has to trim something first.
+# Slimming it is a pending owner decision, not this script's call.
+budget PO.md       481 "the product-owner charter — ratchet, see above"
+
 exit $status
