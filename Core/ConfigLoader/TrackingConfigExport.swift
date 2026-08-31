@@ -195,7 +195,40 @@ public extension TrackingConfig {
         public let totalDurationMinS: Double
         public let totalDurationMaxS: Double
         /// One map snapshot per this many frames; in-between frames cross-fade (§4.5).
+        ///
+        /// ⚠️ **Not read by the reprojected render path** (`Docs/camera-arcs.md`
+        /// §7). A station's length is set by `snapshotStationMaxMagnification`,
+        /// because the interval bounded *geometric mismatch in a cross-fade* and a
+        /// reprojected frame has none to bound. The value is unchanged and still
+        /// frozen; it simply no longer decides anything, which is what §7 predicted
+        /// it would stop doing. Left in place rather than removed: whether the
+        /// cross-fade path goes for good is Chiu's call from the Pass 1 render.
         public let keyframeIntervalFrames: Int
+        /// How far a station snapshot may be magnified before a new one is taken.
+        ///
+        /// **This is the knob the keyframe interval used to be**, and it measures
+        /// the thing that actually degrades: a reprojected frame is geometrically
+        /// exact at any magnification and only loses *sharpness*, so the budget is
+        /// stated in zoom rather than in frames. 1.0 means a snapshot per distinct
+        /// camera value, which is interval 1 exactly — same pixels, and the
+        /// transform is the identity.
+        ///
+        /// **1.1 is measured, not `Docs/camera-arcs.md` §7's 1.5** — §7 reasoned
+        /// 1.5 for an *arc*, a large zoom, and it had never been priced against a
+        /// body camera that pans. Rendered against an interval-1 reference on
+        /// `miyakojima`, every candidate beat the cross-fade on travelling error
+        /// *and* on frame-to-frame swing, so the choice is sharpness against
+        /// export time. 1.1 costs 51 snapshots on `ishigaki-crossing` where the
+        /// cross-fade cost 367 and interval 1 costs 691. The table, and why swing
+        /// is the column that answers Chiu's 晃動: `Docs/handoff-crop-scaling.md`.
+        public let snapshotStationMaxMagnification: Double
+        /// The slack a station carries beyond the frames it must contain.
+        ///
+        /// `CameraPath.containingFrame` unions footprints on a flat earth while the
+        /// provider projects in mercator; over a 700 km station that disagreement
+        /// reaches ~1% of the span, and it would show as a frame dropping ground at
+        /// one edge. Not a quality knob — raising it only softens the picture.
+        public let snapshotStationPadding: Double
         /// The moving subject's **canvas** side at the 1080 reference. Was a
         /// hard-coded 300 (28% of frame width, which users called too big).
         /// `vehicles.json` may override it per subject; why it is a canvas
@@ -338,6 +371,8 @@ public extension TrackingConfig {
             case totalDurationMinS = "total_duration_min_s"
             case totalDurationMaxS = "total_duration_max_s"
             case keyframeIntervalFrames = "keyframe_interval_frames"
+            case snapshotStationMaxMagnification = "snapshot_station_max_magnification"
+            case snapshotStationPadding = "snapshot_station_padding"
             case subjectLengthPx = "subject_length_px"
             case titleCardS = "title_card_s"
             case endCardS = "end_card_s"

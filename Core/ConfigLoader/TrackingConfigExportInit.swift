@@ -18,7 +18,9 @@ extension TrackingConfig.Export {
             openingCollapseZoomRatio: Double, openingCollapseDriftFraction: Double,
             stopDwellMinS: Double, stopDwellMaxS: Double,
             totalDurationMinS: Double, totalDurationMaxS: Double,
-            keyframeIntervalFrames: Int, subjectLengthPx: Double, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double,
+            keyframeIntervalFrames: Int,
+            snapshotStationMaxMagnification: Double, snapshotStationPadding: Double,
+            subjectLengthPx: Double, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double,
             stopWeightingEnabled: Bool, waypointMaxPhotos: Int, waypointMaxDwellS: Double, waypointHoldS: Double,
             uncappedPhotoHoldS: Double,
             allocationZeroShare: Double, allocationOneShare: Double,
@@ -54,11 +56,10 @@ extension TrackingConfig.Export {
             self.openingCollapseZoomRatio = openingCollapseZoomRatio
             self.openingCollapseDriftFraction = openingCollapseDriftFraction
             self.firstStopDwellScale = firstStopDwellScale
-            self.stopDwellMinS = stopDwellMinS
-            self.stopDwellMaxS = stopDwellMaxS
-            self.totalDurationMinS = totalDurationMinS
-            self.totalDurationMaxS = totalDurationMaxS
-            self.keyframeIntervalFrames = keyframeIntervalFrames
+            self.stopDwellMinS = stopDwellMinS; self.stopDwellMaxS = stopDwellMaxS
+            self.totalDurationMinS = totalDurationMinS; self.totalDurationMaxS = totalDurationMaxS
+            self.keyframeIntervalFrames = keyframeIntervalFrames; self.snapshotStationPadding = snapshotStationPadding
+            self.snapshotStationMaxMagnification = snapshotStationMaxMagnification
             self.subjectLengthPx = subjectLengthPx; self.titleCardS = titleCardS
             self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
             self.stopWeightingEnabled = stopWeightingEnabled

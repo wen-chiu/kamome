@@ -78,7 +78,9 @@ final class RecapPilotFilmTests: XCTestCase {
         // Named by what varies, so an interval pair does not overwrite itself —
         // the same rule `RecapReviewScene.variantSuffix` follows for stills.
         let url = outDir.appendingPathComponent(
-            "pilot-\(fixture)-from\(Int(startS))s-interval\(scene.config.keyframeIntervalFrames).mp4"
+            "pilot-\(fixture)-from\(Int(startS))s-mag"
+                + String(format: "%.2f", scene.config.snapshotStationMaxMagnification)
+                + String(format: "-pad%.2f", scene.config.snapshotStationPadding) + ".mp4"
         )
         try? FileManager.default.removeItem(at: url)
 
@@ -137,10 +139,10 @@ final class RecapPilotFilmTests: XCTestCase {
         }
         try await encoder.finish()
         print(String(
-            format: "KAMOME_PILOT_SNAPSHOTS %@ · window %.1fs–%.1fs · interval %d · %d snapshots in the window "
-                + "(%d before it, %d total)",
+            format: "KAMOME_PILOT_SNAPSHOTS %@ · window %.1fs–%.1fs · magnification %.2f · "
+                + "%d snapshots in the window (%d before it, %d total)",
             url.lastPathComponent, startS, startS + Double(written) / Double(scene.config.fps),
-            scene.config.keyframeIntervalFrames, counting.count - before, before, counting.count
+            scene.config.snapshotStationMaxMagnification, counting.count - before, before, counting.count
         ))
         return written
     }

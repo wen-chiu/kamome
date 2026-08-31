@@ -59,7 +59,7 @@ struct RecapReviewScene {
             baseURL: UnroutableSeaProvider.forFixture(fixture) == nil ? nil : "",
             reconstructor: UnroutableSeaProvider.forFixture(fixture)
         )
-        let config = keyframeIntervalOverride(imported)
+        let config = stationBudgetOverride(keyframeIntervalOverride(imported))
         adoptTilesPathForTerrain()
         // **No installed region is not a failure** — the second of the two places
         // this rule was written (see `ReviewSubstrate`). Until 2026-08-27 this
@@ -184,6 +184,32 @@ struct RecapReviewScene {
         else { return config }
         print("KAMOME_KEYFRAME_INTERVAL \(interval) (was \(config.keyframeIntervalFrames))")
         return config.withKeyframeIntervalFrames(interval)
+    }
+
+    /// `KAMOME_STATION_MAX_MAGNIFICATION` / `KAMOME_STATION_PADDING` render the
+    /// same film at a different crop-scaling budget (`Docs/camera-arcs.md` §7).
+    ///
+    /// **This replaces `KAMOME_KEYFRAME_INTERVAL` as the export-cost lever**,
+    /// because the reprojected loop does not read the interval: what a wider
+    /// budget spends is *sharpness*, not cross-fade smoothness, and it is judged
+    /// the same way — two renders of one trip. Setting both to 1.0 produces the
+    /// interval-1 reference: one snapshot per camera value, identity transform.
+    private static func stationBudgetOverride(_ config: TrackingConfig.Export) -> TrackingConfig.Export {
+        let magnification = HarnessEnv.value("KAMOME_STATION_MAX_MAGNIFICATION").flatMap(Double.init)
+        let padding = HarnessEnv.value("KAMOME_STATION_PADDING").flatMap(Double.init)
+        guard magnification != nil || padding != nil else { return config }
+        let resolved = (
+            magnification: magnification ?? config.snapshotStationMaxMagnification,
+            padding: padding ?? config.snapshotStationPadding
+        )
+        print(String(
+            format: "KAMOME_STATION_BUDGET magnification %.3f (was %.3f) · padding %.3f (was %.3f)",
+            resolved.magnification, config.snapshotStationMaxMagnification,
+            resolved.padding, config.snapshotStationPadding
+        ))
+        return config.withSnapshotStations(
+            maxMagnification: resolved.magnification, padding: resolved.padding
+        )
     }
 
     /// Terrain lives behind its **own** environment variable, and every review

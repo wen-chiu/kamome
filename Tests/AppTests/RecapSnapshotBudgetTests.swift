@@ -72,39 +72,88 @@ final class RecapSnapshotBudgetTests: XCTestCase {
         // requested for the body — small, and named rather than hidden.
         let opening = try await fetches(shipped, stoppingAfter: openingFrames)
         let total = try await fetches(shipped)
-        report(label: "as-is (opening every frame)", opening: opening, total: total, scene: shipped)
+        report(label: "crop-scaled stations", opening: opening, total: total, scene: shipped)
 
-        // The two alternatives Chiu is being asked to judge. Only the interval
-        // changes; the film — duration, camera, stops, photos — is identical.
-        for interval in [30] {
-            let coarser = Scene(
-                timeline: shipped.timeline, compositor: shipped.compositor,
-                config: shipped.config.withKeyframeIntervalFrames(interval)
-            )
-            let coarseOpening = try await fetches(coarser, stoppingAfter: openingFrames)
-            let coarseTotal = try await fetches(coarser)
-            report(
-                label: "keyframe_interval_frames = \(interval)",
-                opening: coarseOpening, total: coarseTotal, scene: coarser
-            )
+        // **Where the stations fall**, three ways, so task A's saving can be
+        // attributed rather than admired in aggregate. The arc's seconds are the
+        // crossing's own; the opening is everything before `openingS`; the rest
+        // is body. Counted off the plan rather than the loop because the plan is
+        // pure and the loop's answer must equal it — asserted below.
+        let plan = RecapRenderLoop(
+            timeline: shipped.timeline, compositor: shipped.compositor,
+            provider: CountingFlatProvider(), config: shipped.config
+        ).stations
+        let arcWindows = shipped.timeline.path.arcWindowsS
+        func inArc(_ station: RecapSnapshotStations.Station) -> Bool {
+            let start = Double(station.frames.lowerBound) / Double(shipped.config.fps)
+            return arcWindows.contains { $0.contains(start) }
         }
+        let openingStations = plan.filter { $0.frames.lowerBound < openingFrames }.count
+        let arcStations = plan.filter { $0.frames.lowerBound >= openingFrames && inArc($0) }.count
+        print(String(
+            format: "KAMOME_SNAPSHOT_AUDIT   stations: %d = %d opening + %d arc + %d body · "
+                + "longest %d frames · shortest %d frames",
+            plan.count, openingStations, arcStations,
+            plan.count - openingStations - arcStations,
+            plan.map(\.frames.count).max() ?? 0, plan.map(\.frames.count).min() ?? 0
+        ))
+        XCTAssertEqual(
+            total, plan.count,
+            "the loop must fetch exactly the planned stations — a difference means the "
+                + "value cache and the plan disagree about what one picture is"
+        )
 
-        // **What the crossing's arc costs, named rather than inferred.** The arc
-        // is fine-sampled because a cross-fade between two geometrically
+        // **What the crossing's arc costs.** It used to be fine-sampled — one
+        // snapshot per frame — because a cross-fade between two geometrically
         // different pictures is the ghosting mechanism (`HANDOFF.md` 2026-08-30
-        // finding 1); this is the price of that, and camera-arc Pass 1's
-        // crop-scaling is what refunds it (`Docs/camera-arcs.md` §7).
-        let arcs = shipped.timeline.path.arcWindowsS
-        if !arcs.isEmpty {
-            let arcSeconds = arcs.reduce(0.0) { $0 + ($1.upperBound - $1.lowerBound) }
+        // finding 1). Crop-scaling refunded that, and the arc is now the film's
+        // cheapest big move per second of screen time rather than its dearest.
+        if !arcWindows.isEmpty {
+            let arcSeconds = arcWindows.reduce(0.0) { $0 + ($1.upperBound - $1.lowerBound) }
             print(String(
-                format: "KAMOME_SNAPSHOT_AUDIT   %d crossing arc(s) covering %.1fs are fine-sampled — "
-                    + "body %d of which the arcs are at most %d",
-                arcs.count, arcSeconds, max(total - opening, 0),
+                format: "KAMOME_SNAPSHOT_AUDIT   %d crossing arc(s) covering %.1fs cost %d stations — "
+                    + "one snapshot per frame would have cost %d",
+                arcWindows.count, arcSeconds, arcStations,
                 Int((arcSeconds * Double(shipped.config.fps)).rounded())
             ))
         }
         XCTAssertGreaterThan(total, 0, "the audit fetched no snapshots")
+    }
+
+    /// **The cost/sharpness curve `snapshot_station_max_magnification` buys**,
+    /// so the value is chosen from a table rather than from `Docs/camera-arcs.md`
+    /// §7's "roughly every 1.5× of zoom", which was reasoned for an *arc* and had
+    /// never been priced against a body camera that pans.
+    ///
+    /// 1.0 is the interval-1 reference: one station per camera value, identity
+    /// transform, pixel-identical to snapshotting every frame. Everything above
+    /// it trades sharpness for snapshots, and only a render says how much
+    /// sharpness — this half is the cost half.
+    func testWhatEachStationBudgetCosts() async throws {
+        let fixture = ProcessInfo.processInfo.environment["KAMOME_SNAPSHOT_AUDIT"] ?? ""
+        try XCTSkipUnless(!fixture.isEmpty, "Measurement harness — set KAMOME_SNAPSHOT_AUDIT.")
+        let shipped = try await scene(fixture: fixture)
+        let openingFrames = Int((shipped.timeline.openingS * Double(shipped.config.fps)).rounded())
+        let arcWindows = shipped.timeline.path.arcWindowsS
+
+        for budget in [1.0, 1.02, 1.05, 1.1, 1.2, 1.35, 1.5, 2.0] {
+            let config = shipped.config.withSnapshotStations(
+                maxMagnification: budget, padding: budget == 1 ? 1 : shipped.config.snapshotStationPadding
+            )
+            let plan = RecapRenderLoop(
+                timeline: shipped.timeline, compositor: shipped.compositor,
+                provider: CountingFlatProvider(), config: config
+            ).stations
+            let opening = plan.filter { $0.frames.lowerBound < openingFrames }.count
+            let arc = plan.filter { station in
+                let start = Double(station.frames.lowerBound) / Double(shipped.config.fps)
+                return station.frames.lowerBound >= openingFrames && arcWindows.contains { $0.contains(start) }
+            }.count
+            print(String(
+                format: "KAMOME_STATION_CURVE %@ · magnification %.2f · %4d snapshots = %3d opening + %3d arc + %3d body",
+                fixture, budget, plan.count, opening, arc, plan.count - opening - arc
+            ))
+        }
     }
 
     // MARK: - Measurement

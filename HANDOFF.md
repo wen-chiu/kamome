@@ -1,7 +1,8 @@
 # HANDOFF — live findings
 
-**Updated 2026-08-31.** `main` carries PRs #16–#24 and the cross-region
-crossing beat (`f21b82f`) — **built and measured, not yet judged by Chiu.**
+**Updated 2026-08-31.** `main` carries PRs #16–#25. The cross-region crossing
+beat and **crop-scaling** (camera-arc Pass 1) are both **built and measured, not
+yet judged by Chiu.**
 
 This file holds **only what is live**: open blockers, unfinished questions,
 traps, and known bugs. Each entry is a summary and a pointer; the reasoning,
@@ -28,27 +29,26 @@ verification there is, and a PR must say so** rather than let a red check read
 as a broken suite. Recurs when the monthly allowance runs out unless the limit
 is raised.
 
-### The shake and the ghosting are one mechanism, and the obvious fix is wrong
+### The shake and the ghosting — FIXED, awaiting Chiu's judgement of the render
 Chiu's P0 (`Docs/decisions.md` 2026-08-30): *"影片晃動感太明顯 不夠流暢 會有殘影."*
-The base map is snapshotted every `keyframe_interval_frames` (15) and the 14
-frames between are filled by **alpha-blending two snapshots of the same map at
-two different geographic positions** — the double image is the 殘影, the 0.5 s
-stepping is the 晃動.
+The loop alpha-blended two snapshots of the same map at two different positions;
+the double image was the 殘影, the 0.5 s stepping the 晃動.
 
-✅ **CONFIRMED end to end 2026-08-30.** The falsification pair was rendered —
-`miyakojima`, 10 s of body, identical but for the interval (15 vs 1) — and the
-difference is a **sawtooth locked to the blend**: 0.07 at blend 0.00, rising
-monotonically to 0.57 at the half-blend and back. At blend 0 the two clips are
-the same picture, because that frame is a real snapshot either way. The
-mechanism is not a hypothesis any more.
+**`RecapRenderLoop` no longer cross-fades.** It plans **stations**
+(`RecapSnapshotStations`) — one snapshot per run of frames — and reprojects each
+onto each frame. A reprojected frame is geometrically exact, so there is nothing
+to fine-sample against and nothing to blend wrongly.
 
-⚠️ **Do not "fix" this by lowering `keyframe_interval_frames`.** It is frozen,
-it multiplies snapshot cost ~15×, and the right operation is reprojecting one
-snapshot rather than cross-fading two.
-
-→ **`Docs/handoff-audit-2026-08-30.md` finding 1** — the falsification test to
-run first, the cost figures, and why crop-scaling is the fix.
-**Read it before touching the render loop, the camera, or that config key.**
+Measured against an interval-1 reference by the 2026-08-30 method (`miyakojima`
+body 20–30 s): **the frame-to-frame swing — what 晃動 actually is — falls from
+1.402 to 0.077**, and travelling error from 2.005 to 0.818. A level of error that
+never changes is softness, not shake. `ishigaki-crossing` goes **367 → 51**
+snapshots (14 opening + 25 arc + 12 body), 7.2×; on device, 4.4–9.5 min of export
+becomes 37–79 s. The cost is a uniformly slightly softer map — a look, and
+**Chiu's to judge**; the dial is `snapshot_station_max_magnification`.
+⏳ **Films:** `~/Kamome-films/2026-08-31-crop-scaling/judgement/{before,after}/`.
+→ **`Docs/handoff-crop-scaling.md`** — the table, the budget split, the two
+opening proposals, and the worktree trap that invalidated the first comparison.
 
 ---
 
@@ -87,15 +87,15 @@ is not "is this value good?" but **"what was this value tuned against?"**
 **RECOMMENDATION, needs Chiu. Not scheduled, not started.**
 → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
-### The crossing costs 182 snapshots, and that is Pass 1's bill
-Measured through the shipped loop: `ishigaki-crossing` goes **185 → 367
-snapshots** when the crossing is established — one per frame over a 180-frame
-arc, very nearly doubling the film's budget. On device that is 133–287 s
-becoming 264–569 s for a 69-second film. **This is the number camera-arc Pass
-1's crop-scaling has to refund**, and it is now measured rather than estimated.
-The opening stays 151 in every row; if that moves, something touched the
-prologue.
-→ `Docs/handoff-cross-region-crossing.md` finding 10.
+### ⏳ The opening: two design questions are Chiu's, and nothing was built
+Crop-scaling refunded the crossing's 182-snapshot bill (367 → 51), so that item
+is closed. The **opening** was measured but deliberately not changed: where a
+country's extent comes from, and how beat 2's frame is defined, are proposals for
+Chiu (`Arch.md` §7). Both proposals, with costs and offline behaviour, are in the
+doc. ⚠️ **One §0 point was not foreseen**: a MapKit/CLGeocoder country lookup
+sends a real coordinate off-device to draw a wider opening — a *new* exception,
+so a product decision, not an implementation detail.
+→ `Docs/handoff-crop-scaling.md` §4–§5.
 
 ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
 `Docs/camera-arcs.md` §5 and `Docs/handoff-camera-arc-findings.md` finding 5
@@ -104,7 +104,13 @@ false**: `asked` is ~274 km against a pan floor of ~16 km, so the floor never
 binds and taking the crossing out of it changes the body span by nothing.
 `target_zoom_ratio` over the establishing shot is what sets the body span.
 **Two documents still state the superseded premise.**
-→ `Docs/handoff-cross-region-crossing.md` finding 1.
+
+⚠️ **Widened 2026-08-31: the ratio is 2.50× in *six* configurations**, from
+`establishing: nil` to an extent far wider than the trip. The floor binds
+**nowhere**, not merely on the shipped path — so this is a property of
+`bodySpanM`, not a fact about one fixture.
+→ `Docs/handoff-cross-region-crossing.md` finding 1,
+`Docs/handoff-crop-scaling.md` §4.
 
 ---
 
@@ -181,13 +187,11 @@ cross-region narrator that has not been built.
 → `Docs/handoff-marker-badge.md` finding 5b.
 
 ### The continuity gate has never measured the shipped camera
-`RecapCameraContinuityTests` passes a synthetic `establishing` extent, and its
-own comment claims that is "the same code path, not a stub." **It is not** — a
-non-nil `establishing` takes the other branch and activates `cappedToRegion` in
-three places. The shipped app has passed `establishing: nil` since 2026-08-15;
-on one fixture the two differ by **18.6 km vs 274 km of body span**. Not changed,
-deliberately: `nil` is more forgiving, so swapping would weaken the gate — a bar
-move for Chiu. The cheap fix is to scan **both**.
+It passes a synthetic `establishing` extent; the shipped app has passed `nil`
+since 2026-08-15, which takes the other branch — **18.6 km vs 274 km of body
+span** on one fixture. Not changed, deliberately: `nil` is the more forgiving
+configuration, so swapping would weaken the gate, and that is a bar move for
+Chiu. Re-confirmed still true 2026-08-31. The cheap fix is to scan **both**.
 → `Docs/handoff-cross-region-crossing.md` finding 2.
 
 ### `Docs/camera-arcs.md` §8 states an invariant no arc can satisfy
@@ -196,6 +200,21 @@ construction — an arc opens out and closes back in. The property survives in t
 halves and `RecapCrossingArcTests` asserts it that way. **§8 should be
 reworded**; not done, because that is a design document.
 → `Docs/handoff-cross-region-crossing.md` finding 4.
+
+### A worktree renders a different film — two gitignored paths decide it
+`git worktree add` carries no gitignored files, so a worktree has no
+`Config/Secrets.xcconfig` (no routing key → `drive/inferred`, straight lines
+instead of roads) and no `Tests/Fixtures/trips/local/`. A before/after across
+worktrees is then two different films, and it looks plausible — the first
+crop-scaling comparison read 4.08 where the answer had to be ~0. Copy both, then
+count `drive/reconstructed` in each log. **A render comparison without a "these
+two must be identical" control row is not evidence.**
+→ `Docs/handoff-crop-scaling.md` §3.
+
+### A 70-second MapKit render is killed on this machine — on `main` too
+`RecapPilotFilmTests` at 70 s dies with `Test crashed with signal kill` ~94 s in;
+`-retry-tests-on-failure` does not recover it. **Reproduced identically on
+`main`**, so it is not crop-scaling. Render judgement clips as ≤25 s windows.
 
 ### Read a style value off the preset the app selects, never off the defaults
 `RecapStyle`'s defaults are unrendered. This was got wrong twice from the same
@@ -256,6 +275,7 @@ corrected, so they resolve here:
 |---|---|
 | `Docs/handoff-audit-2026-08-30.md` | the render-loop P0, the country beat, the duration comment, the owed sweep, the §0 question |
 | `Docs/handoff-cross-region-crossing.md` | the crossing beat: the P0 confirmation, the pan-floor correction, the snapshot bill |
+| `Docs/handoff-crop-scaling.md` | crop-scaling: the interval-1 comparison, the budget split, the opening measurement and its two open proposals |
 | `Docs/handoff-marker-badge.md` | the fallback badge: what was decided, and the four gaps it left |
 | `Docs/handoff-camera-arc-findings.md` | the working analysis behind `Docs/camera-arcs.md` — **nothing settled** |
 | `Docs/handoff-pacing.md` | film duration and travel pacing |

@@ -116,7 +116,35 @@ extension CameraPath {
     static func apexFrame(
         source: CameraFrame, destination: CameraFrame, config: TrackingConfig.Export
     ) -> CameraFrame {
-        let referenceLat = (source.centerLat + destination.centerLat) / 2
+        containingFrame([source, destination], padding: config.crossingApexPadding, config: config)
+    }
+
+    /// **The smallest frame whose footprint contains every one of `frames`**,
+    /// padded — the geometry `apexFrame` was, generalised to N frames because a
+    /// second consumer needs exactly it.
+    ///
+    /// That consumer is `RecapSnapshotStations`: a station is one snapshot that
+    /// serves a run of frames by reprojection, and it is correct precisely when
+    /// it contains all of them (`Docs/camera-arcs.md` §7). Written as two
+    /// separate footprint unions the two would drift, and the failure would be a
+    /// frame that drops ground at one edge — invisible in a still, a flicker in
+    /// motion.
+    ///
+    /// Footprints, not centres: containing the two centres would leave half of
+    /// each end frame outside, which breaks the inequality `containedLerp`
+    /// depends on.
+    ///
+    /// Flat-earth about the first frame's centre, which is why every caller
+    /// pads. Over a station spanning hundreds of kilometres the difference
+    /// between this and the provider's mercator is a fraction of a percent of
+    /// the span — small, real, and absorbed by the padding rather than ignored.
+    static func containingFrame(
+        _ frames: [CameraFrame], padding: Double, config: TrackingConfig.Export
+    ) -> CameraFrame {
+        guard let origin = frames.first else {
+            return CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0)
+        }
+        let referenceLat = frames.reduce(0.0) { $0 + $1.centerLat } / Double(frames.count)
         let metresPerDegreeLat = 111_320.0
         let metresPerDegreeLon = 111_320.0 * cos(referenceLat * .pi / 180)
         // Vertical ground covered by a frame is `spanM · height/width`; the
@@ -124,7 +152,7 @@ extension CameraPath {
         // extent times width/height. Same convention as `fittingSpanM`.
         let aspect = Double(config.frameWidthPx) / Double(config.frameHeightPx)
 
-        /// One end's ground rectangle, in metres about `source`'s centre.
+        /// One frame's ground rectangle, in metres about `origin`'s centre.
         struct Footprint {
             let minEast: Double, maxEast: Double, minNorth: Double, maxNorth: Double
 
@@ -137,8 +165,8 @@ extension CameraPath {
                 maxNorth = north + frame.spanM / aspect / 2
             }
         }
-        let ends = [source, destination].map {
-            Footprint($0, origin: source, perLon: metresPerDegreeLon, perLat: metresPerDegreeLat, aspect: aspect)
+        let ends = frames.map {
+            Footprint($0, origin: origin, perLon: metresPerDegreeLon, perLat: metresPerDegreeLat, aspect: aspect)
         }
         let minEast = ends.map(\.minEast).min() ?? 0
         let maxEast = ends.map(\.maxEast).max() ?? 0
@@ -148,10 +176,10 @@ extension CameraPath {
         let contained = max(maxEast - minEast, (maxNorth - minNorth) * aspect)
         // Never tighter than the frames it has to contain: a crossing whose two
         // ends already share one body frame has nothing to open out of.
-        let spanM = max(contained * config.crossingApexPadding, max(source.spanM, destination.spanM))
+        let spanM = max(contained * padding, frames.map(\.spanM).max() ?? 0)
         return CameraFrame(
-            centerLat: source.centerLat + (minNorth + maxNorth) / 2 / metresPerDegreeLat,
-            centerLon: source.centerLon + (minEast + maxEast) / 2 / metresPerDegreeLon,
+            centerLat: origin.centerLat + (minNorth + maxNorth) / 2 / metresPerDegreeLat,
+            centerLon: origin.centerLon + (minEast + maxEast) / 2 / metresPerDegreeLon,
             spanM: spanM,
             bearing: 0
         )
