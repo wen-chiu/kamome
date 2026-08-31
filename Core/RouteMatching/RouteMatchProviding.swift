@@ -48,9 +48,10 @@ public struct RouteMatchOutcome: Equatable, Sendable {
 /// failures that are *temporary*, and where the honest thing to tell the user is
 /// "try again", not "there is no road here".
 ///
-/// So: a nil `RouteMatchOutcome` means the provider answered and the answer was
-/// "no plausible route" — permanent, correct, dashed forever. One of these means
-/// nobody answered — retryable, and never the geography's fault.
+/// So: a `RouteReconstruction` means the provider **answered**, and the answer
+/// says which of its verdicts applied — permanent, correct, dashed forever in the
+/// `.noRoadHere` case. One of these means nobody answered — retryable, and never
+/// the geography's fault.
 public enum RouteProviderFailure: Error, Equatable, Sendable {
     /// Nothing answered: DNS, ATS, a LAN address on someone else's network, a
     /// dropped connection, a timeout, a cold start that outran `timeout_s`.
@@ -60,6 +61,65 @@ public enum RouteProviderFailure: Error, Equatable, Sendable {
     case rateLimited(retryAfterS: Double?)
     /// Answered, with a status that is neither success nor an OSRM verdict.
     case refused(status: Int)
+}
+
+/// **What one reconstruction request established** — the named verdict that
+/// replaced `RouteMatchOutcome?` on 2026-08-30.
+///
+/// **Why the optional had to go.** `GeoapifyRouteProvider` had six `return nil`
+/// sites — routing switched off, too few waypoints after thinning, an answer it
+/// could not read, the PD-3 detour gate, and the provider's own "there is no
+/// road here" — and downstream they were one indistinguishable nil. Each was
+/// named in the log as it happened and then forgotten by the type, so the only
+/// record of *which* had occurred was a line in a device console.
+///
+/// That was survivable while every one of them merely produced a dashed leg.
+/// It stopped being survivable when the **crossing beat** (`Docs/camera-arcs.md`
+/// §0) made one of them load-bearing: a leg with no road is a journey by another
+/// mode and earns its own stretch of film, while a leg nobody asked about is a
+/// leg nobody asked about. Guessing which nil meant water is the one failure the
+/// whole cross-region design exists to avoid, so the verdict travels as a value.
+///
+/// The `RouteProviderFailure` distinction is unchanged and orthogonal: these are
+/// the answers, that is thrown when **nobody answered**.
+public enum RouteReconstruction: Equatable, Sendable {
+    /// A road route came back and survived the detour gate. Store it; the leg
+    /// draws solid as `.reconstructed`.
+    case routed(RouteMatchOutcome)
+    /// **The provider answered, and there is no road joining these places.**
+    /// Geoapify's `400 No suitable edges near location` / `No path could be
+    /// found` — a ferry, an island hop, a photograph taken on a beach.
+    /// Permanent, correct, and the **only** verdict a crossing may be built on.
+    case noRoadHere
+    /// A route came back and `RoutePlausibility` refused it. **A road exists**;
+    /// this particular route is not trustworthy, usually because one EXIF fix is
+    /// plainly wrong. Draws dashed, and is emphatically *not* a crossing —
+    /// treating it as one would fly a plane over a road.
+    case implausible
+    /// Nothing was established about the geography at all. Retryable in
+    /// principle, and never a claim about the ground.
+    case notEstablished(Reason)
+
+    /// Why nothing was established. An enum rather than a message because these
+    /// are three different states a caller may want to act on differently, and a
+    /// string is a state nobody can switch over (`Arch.md` §5).
+    public enum Reason: String, Equatable, Sendable, CaseIterable {
+        /// `matching.base_url` is empty. The shipped default, and not a failure.
+        case routingDisabled
+        /// Fewer than two waypoints survived thinning, or no URL could be built.
+        case tooFewWaypoints
+        /// The provider answered 200 with something this client could not turn
+        /// into a route: no feature, under two points, an unexpected geometry.
+        case unreadableAnswer
+    }
+
+    /// The geometry, when there is any. Callers that only want to store a
+    /// polyline should not have to switch over four cases to find out there
+    /// isn't one.
+    public var outcome: RouteMatchOutcome? {
+        guard case let .routed(outcome) = self else { return nil }
+        return outcome
+    }
 }
 
 /// Boundary for map matching (§4.4) — the same one-file-per-backend
@@ -85,12 +145,15 @@ public protocol RouteMatchProviding: Sendable {
 /// hours apart, which a Hidden-Markov matcher will either reject outright or
 /// match to an arbitrary road. The question there is "what is the plausible
 /// driving route *through* these places?" — a routing query with the photos as
-/// via-waypoints (PD-3). Same return type, because the caller does the same
-/// thing with both: store the geometry, or keep the raw leg and render it
-/// inferred (PD-2).
+/// via-waypoints (PD-3). The caller does the same two things with both answers —
+/// store the geometry, or keep the raw leg and render it inferred (PD-2) — but
+/// only this side can say *why* there is no geometry, which is what
+/// `RouteReconstruction` carries and `RouteMatchOutcome?` could not.
 ///
-/// Returns nil when no plausible route exists (routing disabled, too few
-/// waypoints, sanity gate rejected the answer) — never a guess.
+/// Answers with a **named verdict** (`RouteReconstruction`), never a guess and
+/// never a bare optional: "there is no road here" and "we did not ask" are
+/// different facts and the crossing beat is built on exactly one of them.
+/// Throws only when nobody answered.
 public protocol RouteReconstructing: Sendable {
-    func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome?
+    func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction
 }

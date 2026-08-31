@@ -28,6 +28,18 @@ public struct RecapRenderLoop {
     /// network concurrency and cache memory (~8 MB per 1080×1920 snapshot).
     private static let prefetchDepth = 4
 
+    /// The stretches snapshotted every frame, asked frame by frame.
+    private struct FineSampling {
+        let windowsS: [ClosedRange<Double>]
+        let fps: Int
+
+        func covers(frame: Int) -> Bool {
+            guard !windowsS.isEmpty else { return false }
+            let time = Double(frame) / Double(fps)
+            return windowsS.contains { $0.contains(time) }
+        }
+    }
+
     /// What a snapshot is a function of. Two keyframes with equal keys are the
     /// same picture, so they share one fetch.
     private struct SnapshotKey: Hashable {
@@ -61,8 +73,20 @@ public struct RecapRenderLoop {
         // where the camera actually moves, and at that interval the map steps
         // twice a second while the overlays run at 30 — which is exactly what
         // read as a janky zoom. Snapshot every frame there and nowhere else.
+        // **Extended 2026-08-30 from "the opening" to "wherever the camera moves
+        // a lot".** The premise above is still the right one; what changed is
+        // that the opening stopped being the only stretch that satisfies it. A
+        // crossing arc opens the frame out and closes it back in mid-body, so at
+        // the coarse interval it cross-fades between two geometrically different
+        // pictures — the same double-image mechanism, arriving in the body.
+        //
+        // ⚠️ This does **not** fix the wider defect `HANDOFF.md` 2026-08-30
+        // finding 1 names: `FollowCamera` is a continuously-moving dolly, so
+        // every travelling shot has some of it. Fine-sampling the whole body
+        // multiplies snapshots by ~15 and is not shippable; the fix is
+        // camera-arc Pass 1's crop-scaling (`Docs/camera-arcs.md` §7).
         let interval = max(config.keyframeIntervalFrames, 1)
-        let movingUntilFrame = Int((timeline.openingS * Double(config.fps)).rounded())
+        let fine = FineSampling(windowsS: timeline.fineSampledWindowsS, fps: config.fps)
         // The last frame blends toward this keyframe; never fetch past it. Uses
         // the coarse interval because the fine one only applies to the opening.
         let lastKeyframe = (timeline.frameCount - 1) / interval + 1
@@ -90,7 +114,7 @@ public struct RecapRenderLoop {
 
         var currentKeyframe = -1
         for frame in 0..<timeline.frameCount {
-            let interval = frame < movingUntilFrame ? 1 : interval
+            let interval = fine.covers(frame: frame) ? 1 : interval
             let keyframe = frame / interval
             let previousKey = key(keyframe, interval: interval)
             let nextKey = key(keyframe + 1, interval: interval)

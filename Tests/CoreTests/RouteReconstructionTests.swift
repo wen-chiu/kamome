@@ -81,7 +81,7 @@ final class RouteReconstructionTests: XCTestCase {
         }
 
         let outcome = try await provider.route(waypoints(count: 3))
-        XCTAssertEqual(outcome?.geometry, road)
+        XCTAssertEqual(outcome.outcome?.geometry, road)
 
         let url = try XCTUnwrap(seenURL.get()?.absoluteString)
         XCTAssertTrue(url.hasPrefix("https://routing.invalid/v1/routing?"), "sparse legs go to /v1/routing")
@@ -147,7 +147,7 @@ final class RouteReconstructionTests: XCTestCase {
         }
 
         let outcome = try await provider.route(waypoints(count: 3))
-        XCTAssertEqual(outcome?.geometry, [first[0], joint, second[1]], "the shared joint appears once")
+        XCTAssertEqual(outcome.outcome?.geometry, [first[0], joint, second[1]], "the shared joint appears once")
     }
 
     /// PD-3 outlier protection: routing always answers *something* drivable, so
@@ -159,7 +159,11 @@ final class RouteReconstructionTests: XCTestCase {
             (self.routeBody(distanceM: 300_000, parts: [road]), self.http(200, request.url))
         }
         let outcome = try await provider.route(waypoints(count: 3))
-        XCTAssertNil(outcome)
+        // **Not `.noRoadHere`**, and this is the assertion the crossing beat
+        // rests on: the detour gate means a road exists and this route is not
+        // trustworthy. Read as a crossing it would fly a sprite over a motorway
+        // (`Docs/camera-arcs.md` §0).
+        XCTAssertEqual(outcome, .implausible)
     }
 
     func testPlausibleDetourWithinRatioIsAccepted() async throws {
@@ -170,7 +174,7 @@ final class RouteReconstructionTests: XCTestCase {
             (self.routeBody(distanceM: straightM * 2.4, parts: [road]), self.http(200, request.url))
         }
         let outcome = try await provider.route(waypoints(count: 3))
-        XCTAssertNotNil(outcome)
+        XCTAssertNotNil(outcome.outcome)
     }
 
     /// The class the OSRM snap radius used to guard — a waypoint with no road
@@ -182,7 +186,37 @@ final class RouteReconstructionTests: XCTestCase {
              self.http(400, request.url))
         }
         let outcome = try await provider.route(waypoints(count: 3))
-        XCTAssertNil(outcome, "an unroutable leg keeps raw geometry (PD-2)")
+        XCTAssertEqual(
+            outcome, .noRoadHere,
+            "an unroutable leg keeps raw geometry (PD-2) — and now says why, because this is the one verdict "
+                + "the cross-region crossing beat is allowed to be built on"
+        )
+    }
+
+    /// **The reasons nothing was established, kept apart from the geography
+    /// verdict** — the whole point of the 2026-08-30 lift.
+    ///
+    /// Until then every case here returned the same `nil` as the test above, so
+    /// the only thing separating "there is no road here" from "we could not read
+    /// the answer" was a log line nobody downstream could switch over.
+    func testTheReasonsNothingWasEstablishedAreNotAGeographyVerdict() async throws {
+        let single = GeoapifyRouteProvider(config: routingConfig) { _ in
+            XCTFail("one waypoint is not a request worth making")
+            return (Data(), self.http(200, URL(string: "https://routing.invalid")!))
+        }
+        let tooFew = try await single.route(Array(waypoints(count: 3).prefix(1)))
+        XCTAssertEqual(tooFew, .notEstablished(.tooFewWaypoints))
+
+        let unreadable = GeoapifyRouteProvider(config: routingConfig) { request in
+            // swiftlint:disable:next force_try
+            let body = try! JSONSerialization.data(withJSONObject: ["type": "FeatureCollection", "features": []])
+            return (body, self.http(200, request.url))
+        }
+        let unreadableOutcome = try await unreadable.route(waypoints(count: 3))
+        XCTAssertEqual(
+            unreadableOutcome, .notEstablished(.unreadableAnswer),
+            "a 200 this client cannot read says nothing at all about the ground"
+        )
     }
 
     /// A bad key is not a verdict about the geography — it must throw, so the
@@ -229,7 +263,10 @@ final class RouteReconstructionTests: XCTestCase {
             throw URLError(.badURL)
         }
         let outcome = try await provider.route(waypoints(count: 3))
-        XCTAssertNil(outcome)
+        XCTAssertEqual(
+            outcome, .notEstablished(.routingDisabled),
+            "routing off is the shipped default — it must never read as 'there is no road here'"
+        )
     }
 
     // MARK: - Waypoint hygiene

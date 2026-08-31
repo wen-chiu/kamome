@@ -127,11 +127,36 @@ public struct RecapTrip {
         /// renderer draws a walk differently from a drive yet.
         public let mode: TransportMode
         public let provenance: RouteProvenance
+        /// **There is no road here** — routing answered, and no road joins this
+        /// leg's ends (`SegmentRoutability.noRoad`). A ferry, a flight, an island
+        /// hop. The film gives it its own beat and a contained camera arc
+        /// (`Docs/camera-arcs.md` §3).
+        ///
+        /// **Separate from `provenance` on purpose.** A crossing is dashed, so
+        /// provenance already says `.inferred` — but so is every leg the provider
+        /// was never asked about, and most of those are roads. Provenance answers
+        /// "how honest is this line?"; this answers "is this a journey between
+        /// places?", and only the second may move the camera.
+        ///
+        /// **Deliberately not derived from length.** Measured 2026-08-30: on the
+        /// Iceland dump, 20 gaps exceed `act_split_km`, all of them photograph
+        /// gaps inside long drives. An arc per gap is the 2026-08-02 act-camera
+        /// defect rebuilt (`Docs/camera-arcs.md` §0).
+        ///
+        /// Defaults to `false`, which is what "nothing was established" must
+        /// mean: a leg nobody asked about is never flown.
+        public let isCrossing: Bool
 
-        public init(coordinates: [RecapCoordinate], mode: TransportMode, provenance: RouteProvenance) {
+        public init(
+            coordinates: [RecapCoordinate],
+            mode: TransportMode,
+            provenance: RouteProvenance,
+            isCrossing: Bool = false
+        ) {
             self.coordinates = coordinates
             self.mode = mode
             self.provenance = provenance
+            self.isCrossing = isCrossing
         }
     }
 

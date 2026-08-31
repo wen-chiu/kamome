@@ -1,6 +1,8 @@
 import AVFoundation
 @testable import Kamome
-import KamomeExportEngine
+// `@testable` for `LinearTimeline.holds` — the stop beats inside the encoded
+// window, which `reportHolds` prints beside the clip.
+@testable import KamomeExportEngine
 import XCTest
 
 /// Encodes the **opening stretch** of a real film — a motion check, env-gated,
@@ -16,8 +18,22 @@ import XCTest
 /// It also prints the beats it just encoded, in seconds, so a claim about pacing
 /// can be checked against numbers rather than against a stopwatch on a video.
 ///
+/// **`KAMOME_PILOT_START_S` moves the window off the opening** (2026-08-30).
+/// The P0 is ghosting in the **body** of every film (`HANDOFF.md` 2026-08-30
+/// finding 1), and the body is exactly the stretch this harness could not reach:
+/// it always encoded from frame 0, so every clip anyone had watched was mostly
+/// the one stretch that is already fine-sampled. Frames are re-indexed from zero
+/// in the encode, so the clip plays from its first frame rather than opening on
+/// a minute of black.
+///
+/// The snapshot count for the window is printed too, because the interval pair
+/// the P0 asks for is only evidence if the cost of the naive fix is a number
+/// rather than an argument.
+///
 ///   TEST_RUNNER_KAMOME_PILOT_FILM=iceland \
 ///   TEST_RUNNER_KAMOME_PILOT_SECONDS=32 \
+///   TEST_RUNNER_KAMOME_PILOT_START_S=40 \
+///   TEST_RUNNER_KAMOME_KEYFRAME_INTERVAL=1 \
 ///   TEST_RUNNER_KAMOME_TILES_PATH=$HOME/kamome-osrm/tiles \
 ///   TEST_RUNNER_KAMOME_TERRAIN_PATH=$HOME/kamome-osrm/terrain \
 ///   TEST_RUNNER_KAMOME_STOP_PHOTOS=/path/to/jpegs \
@@ -25,6 +41,26 @@ import XCTest
 ///   xcodebuild -scheme Kamome test -destination '…' \
 ///     -only-testing:KamomeTests/RecapPilotFilmTests
 final class RecapPilotFilmTests: XCTestCase {
+    /// Counts provider hits without changing what the loop asks for. Lock-guarded
+    /// because the loop prefetches concurrently.
+    private final class CountingProvider: MapRenderer {
+        private let inner: MapRenderer
+        private let lock = NSLock()
+        private var hits = 0
+
+        init(inner: MapRenderer) { self.inner = inner }
+
+        var capabilities: MapRendererCapabilities { inner.capabilities }
+        var count: Int { lock.withLock { hits } }
+
+        func snapshot(
+            _ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int
+        ) async throws -> MapSnapshot {
+            lock.withLock { hits += 1 }
+            return try await inner.snapshot(frame, map: map, widthPx: widthPx, heightPx: heightPx)
+        }
+    }
+
     func testRenderPilotFilm() async throws {
         let fixture = ProcessInfo.processInfo.environment["KAMOME_PILOT_FILM"] ?? ""
         try XCTSkipUnless(
@@ -32,43 +68,97 @@ final class RecapPilotFilmTests: XCTestCase {
             "Manual review harness — set KAMOME_PILOT_FILM to a fixture name (e.g. iceland)."
         )
         let seconds = ProcessInfo.processInfo.environment["KAMOME_PILOT_SECONDS"].flatMap(Double.init) ?? 30
+        let startS = HarnessEnv.value("KAMOME_PILOT_START_S").flatMap(Double.init) ?? 0
         let scene = try await RecapReviewScene.make(fixture: fixture)
-        let limit = min(scene.timeline.frameCount, Int(seconds * Double(scene.config.fps)))
+        let firstFrame = max(Int(startS * Double(scene.config.fps)), 0)
+        let limit = min(scene.timeline.frameCount, firstFrame + Int(seconds * Double(scene.config.fps)))
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
-        let url = outDir.appendingPathComponent("pilot-\(fixture).mp4")
+        // Named by what varies, so an interval pair does not overwrite itself —
+        // the same rule `RecapReviewScene.variantSuffix` follows for stills.
+        let url = outDir.appendingPathComponent(
+            "pilot-\(fixture)-from\(Int(startS))s-interval\(scene.config.keyframeIntervalFrames).mp4"
+        )
         try? FileManager.default.removeItem(at: url)
 
-        let encoder = try RecapVideoEncoder(
-            outputURL: url, widthPx: scene.config.frameWidthPx, heightPx: scene.config.frameHeightPx,
-            fps: scene.config.fps, bitrateMbps: scene.config.videoBitrateMbps
-        )
         let started = Date.now
-        let loop = RecapRenderLoop(
-            timeline: scene.timeline, compositor: scene.compositor,
-            provider: scene.provider, config: scene.config
-        )
-        var written = 0
-        try await loop.renderFrames { frame, image in
-            guard frame < limit else { return false }
-            try encoder.append(image, frame: frame)
-            written += 1
-            return true
-        }
-        try await encoder.finish()
+        let written = try await encode(scene: scene, to: url, firstFrame: firstFrame, limit: limit, startS: startS)
 
         let sizeMB = Double(
             (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
         ) / 1e6
         print(String(
-            format: "KAMOME_PILOT_FILM %@ — %d/%d frames · %.1fs of a %.1fs film · %.1f MB · rendered in %.0fs",
+            format: "KAMOME_PILOT_FILM %@ — %d/%d frames · %.1fs from %.1fs of a %.1fs film · %.1f MB "
+                + "· rendered in %.0fs",
             url.path, written, scene.timeline.frameCount,
-            Double(written) / Double(scene.config.fps), scene.timeline.durationS,
+            Double(written) / Double(scene.config.fps), startS, scene.timeline.durationS,
             sizeMB, Date.now.timeIntervalSince(started)
         ))
         reportOpeningBeats(scene)
+        reportHolds(scene, fromS: startS, toS: startS + Double(written) / Double(scene.config.fps))
         XCTAssertGreaterThan(written, 0, "the pilot encoded no frames")
+    }
+
+    /// Encodes `[firstFrame, limit)` and returns how many frames were written,
+    /// printing the window's **snapshot count** on the way out.
+    ///
+    /// The count is taken through the shipped loop rather than modelled, for the
+    /// reason `RecapSnapshotBudgetTests` exists: `frames ÷ interval` under-counts
+    /// by ~3× wherever the loop fine-samples. Frames before the window are still
+    /// composited, because the loop is sequential and its snapshot cache is
+    /// stateful — skipping them would price a window no export ever reaches that
+    /// way — and their snapshots are reported separately.
+    private func encode(
+        scene: RecapReviewScene, to url: URL, firstFrame: Int, limit: Int, startS: Double
+    ) async throws -> Int {
+        let encoder = try RecapVideoEncoder(
+            outputURL: url, widthPx: scene.config.frameWidthPx, heightPx: scene.config.frameHeightPx,
+            fps: scene.config.fps, bitrateMbps: scene.config.videoBitrateMbps
+        )
+        let counting = CountingProvider(inner: scene.provider)
+        let loop = RecapRenderLoop(
+            timeline: scene.timeline, compositor: scene.compositor,
+            provider: counting, config: scene.config
+        )
+        var written = 0
+        var before = 0
+        try await loop.renderFrames { frame, image in
+            guard frame < limit else { return false }
+            guard frame >= firstFrame else {
+                before = counting.count
+                return true
+            }
+            // Re-indexed from zero: the clip is a window on the film, not the
+            // film with a minute of nothing at the front.
+            try encoder.append(image, frame: written)
+            written += 1
+            return true
+        }
+        try await encoder.finish()
+        print(String(
+            format: "KAMOME_PILOT_SNAPSHOTS %@ · window %.1fs–%.1fs · interval %d · %d snapshots in the window "
+                + "(%d before it, %d total)",
+            url.lastPathComponent, startS, startS + Double(written) / Double(scene.config.fps),
+            scene.config.keyframeIntervalFrames, counting.count - before, before, counting.count
+        ))
+        return written
+    }
+
+    /// **The stop beats inside the encoded window.**
+    ///
+    /// Added 2026-08-30, with `KAMOME_PILOT_START_S`: once the window can sit
+    /// anywhere in the film, "the beats it just encoded" stops meaning the
+    /// opening's. It is also what a ghosting comparison needs — the mechanism in
+    /// `HANDOFF.md` 2026-08-30 finding 1 predicts a double image **while
+    /// travelling** and a clean picture **during a stop**, and that claim can only
+    /// be checked against a clip if the stops' seconds are printed beside it.
+    private func reportHolds(_ scene: RecapReviewScene, fromS: Double, toS: Double) {
+        let inside = scene.timeline.holds
+            .filter { $0.endS > fromS && $0.startS < toS }
+            .map { String(format: "%.2f–%.2fs", max($0.startS, fromS), min($0.endS, toS)) }
+        print("KAMOME_PILOT_HOLDS window \(String(format: "%.2f–%.2fs", fromS, toS)) contains "
+            + (inside.isEmpty ? "no stop beat" : inside.joined(separator: ", ")))
     }
 
     /// The beats the encoded stretch contains, measured off the timeline. The

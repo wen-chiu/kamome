@@ -46,6 +46,11 @@ public struct FrameCompositor {
 
     private let timeline: LinearTimeline
     private let subject: SubjectRenderer
+    /// What crosses a leg with no road. **nil is a real answer** — a film whose
+    /// caller supplied none draws its own vehicle across the crossing, which is
+    /// exactly the behaviour every film had before crossings existed, rather
+    /// than nothing at all.
+    private let crossingSubject: SubjectRenderer?
     private let overlay: OverlayRenderer
     private let style: RecapStyle
     private let widthPx: Int
@@ -62,10 +67,12 @@ public struct FrameCompositor {
         overlay: OverlayRenderer,
         style: RecapStyle = RecapStyle(),
         widthPx: Int,
-        heightPx: Int
+        heightPx: Int,
+        crossingSubject: SubjectRenderer? = nil
     ) {
         self.timeline = timeline
         self.subject = subject
+        self.crossingSubject = crossingSubject
         self.overlay = overlay
         self.style = style
         self.widthPx = widthPx
@@ -107,7 +114,13 @@ public struct FrameCompositor {
         for content in contents where Self.drawsBelowSubject(content) {
             overlay.render(content, camera: camera, into: surface)
         }
-        subject.render(timeline.subjectState(atTime: time), camera: camera, into: surface)
+        // The crossing's narrator, when there is one. The choice is made here —
+        // the last place before pixels — because which sprite means what is a
+        // rendering decision, while *that* this stretch is being crossed is a
+        // fact about the journey the timeline already established.
+        let subjectState = timeline.subjectState(atTime: time)
+        let drawing = subjectState.role == .crossing ? (crossingSubject ?? subject) : subject
+        drawing.render(subjectState, camera: camera, into: surface)
         for content in contents where !Self.drawsBelowSubject(content) {
             overlay.render(content, camera: camera, into: surface)
         }

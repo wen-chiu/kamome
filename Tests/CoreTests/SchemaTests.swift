@@ -59,6 +59,55 @@ final class SchemaTests: XCTestCase {
         }
     }
 
+    // MARK: - Schema v4 (what routing established about a segment's routability)
+
+    func testMigrationToV4AddsRoutabilityAndLeavesLegacyRowsUnknown() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v1")
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO trip (id, title, started_at, status) VALUES ('t1', 'Legacy', 0, 'done')")
+            try db.execute(sql: "INSERT INTO segment (id, trip_id, mode, started_at) VALUES ('s1', 't1', 'drive', 0)")
+        }
+        try AppDatabase.migrator.migrate(queue)
+
+        try queue.read { db in
+            XCTAssertTrue(try db.columns(in: "segment").map(\.name).contains("routability"))
+            XCTAssertNil(try String.fetchOne(db, sql: "SELECT routability FROM segment WHERE id = 's1'"))
+        }
+    }
+
+    /// **NULL is a third answer, and it must not collapse into either of the
+    /// other two.** `SegmentSource` and `TripSource` both default a NULL to a
+    /// safe legacy value; this one cannot, because "nobody ever asked" is not
+    /// "there is no road here" — and reading it as the latter would fly a
+    /// crossing sprite over every motorway in a library imported before schema v4
+    /// (`Docs/camera-arcs.md` §0).
+    func testUnknownRoutabilityStaysNilRatherThanDefaulting() throws {
+        XCTAssertNil(SegmentRoutability(storage: nil))
+        XCTAssertNil(SegmentRoutability(storage: "something-a-later-version-wrote"))
+        XCTAssertEqual(SegmentRoutability(storage: "no_road"), .noRoad)
+        XCTAssertEqual(SegmentRoutability(storage: "implausible_route"), .implausibleRoute)
+        XCTAssertEqual(SegmentRoutability(storage: "road"), .road)
+
+        let database = try AppDatabase.inMemory()
+        let repository = TripRepository(database: database)
+        try database.writer.write { db in
+            try TripRecord(id: "t1", title: "Ishigaki", startedAt: 0, status: "completed").insert(db)
+            try SegmentRecord(id: "sea", tripId: "t1", mode: "drive", startedAt: 0).insert(db)
+            try SegmentRecord(id: "road", tripId: "t1", mode: "drive", startedAt: 1).insert(db)
+        }
+        XCTAssertNil(
+            try XCTUnwrap(try database.writer.read { try SegmentRecord.fetchOne($0, key: "sea") }).routeVerdict,
+            "a segment nothing was established about reads as unknown, never as no-road"
+        )
+        try repository.setRoutability(segmentId: "sea", .noRoad)
+
+        try database.writer.read { db in
+            XCTAssertEqual(try XCTUnwrap(try SegmentRecord.fetchOne(db, key: "sea")).routeVerdict, .noRoad)
+            XCTAssertNil(try XCTUnwrap(try SegmentRecord.fetchOne(db, key: "road")).routeVerdict)
+        }
+    }
+
     func testProvenanceRecordsRoundTrip() throws {
         let database = try AppDatabase.inMemory()
         try database.writer.write { db in

@@ -191,3 +191,41 @@ extension LinearTimeline {
         return min(max(Int((time - rotateStart) / slot), 0), count - 1)
     }
 }
+
+// MARK: - Where the crossings are, and where the map must be sampled per frame
+
+extension LinearTimeline {
+    /// The stretches the render loop must **snapshot every frame**: the opening,
+    /// plus every crossing arc.
+    ///
+    /// One list rather than two rules, because the question is one question —
+    /// *where does the camera move enough that cross-fading two snapshots shows
+    /// the map twice?* The opening was the only answer while the body camera was
+    /// believed static; an arc is the second (`HANDOFF.md` 2026-08-30 finding 1).
+    ///
+    /// **This is a known temporary cost.** Camera-arc Pass 1 replaces the
+    /// cross-fade with a reprojection of one wide snapshot, at which point this
+    /// list is empty and the interval stops being a quality knob at all
+    /// (`Docs/camera-arcs.md` §7).
+    public var fineSampledWindowsS: [ClosedRange<Double>] {
+        (openingS > 0 ? [0...openingS] : []) + path.arcWindowsS
+    }
+
+    /// The windows of the concatenated route with **no road under them**, one per
+    /// crossing leg.
+    ///
+    /// A static because `CameraPath` needs it inside `LinearTimeline.init`, before
+    /// `self` exists. Legs are laid end to end and each keeps its own coordinate
+    /// list — consecutive legs repeat the shared endpoint — so a leg's window is
+    /// simply its offset and its length.
+    static func crossingVertexRanges(in legs: [RecapTrip.Leg]) -> [Range<Int>] {
+        var offset = 0
+        var ranges: [Range<Int>] = []
+        for leg in legs {
+            let range = offset..<(offset + leg.coordinates.count)
+            offset = range.upperBound
+            if leg.isCrossing { ranges.append(range) }
+        }
+        return ranges
+    }
+}

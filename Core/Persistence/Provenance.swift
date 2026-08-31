@@ -44,3 +44,40 @@ public enum SegmentSource: String, CaseIterable, Sendable {
         self = storage.flatMap(SegmentSource.init(rawValue:)) ?? .gpsHifi
     }
 }
+
+/// **What routing established about whether a road joins a segment's ends**
+/// (schema v4, 2026-08-30). Raw values are the on-disk `segment.routability`
+/// strings; the column is nullable and **NULL means nothing was established**.
+///
+/// Stored rather than derived, for the reason `stop.kind` and `segment.source`
+/// are: it is a fact about the journey, learnt once, by a step that no longer
+/// runs anywhere near the export. Routing was detached from import on
+/// 2026-08-15 and runs in the background; a recap may be rendered days later,
+/// after a relaunch, and cannot re-ask. The alternative — carrying the verdict
+/// in `RouteMatchReport` — dies with the run that produced it.
+///
+/// **NULL must never be read as `noRoad`.** Routing ships disabled
+/// (`matching.base_url` empty), and every leg of every trip imported before this
+/// column existed is NULL. Treating that as "there is no road here" would fly a
+/// sprite over every motorway in the library — which is exactly the collapse
+/// this enum exists to prevent (`RouteReconstruction`).
+public enum SegmentRoutability: String, CaseIterable, Sendable {
+    /// A road route came back and is stored in `matched_polyline`.
+    case road
+    /// The provider answered and there is **no road** joining these places.
+    /// The only verdict the cross-region crossing beat may be built on
+    /// (`Docs/camera-arcs.md` §0).
+    case noRoad = "no_road"
+    /// A road route came back and the PD-3 detour gate refused it. A road
+    /// exists; this route is not trustworthy. Dashed, never flown.
+    case implausibleRoute = "implausible_route"
+
+    /// NULL / unknown stays **nil** rather than defaulting, unlike its two
+    /// sibling enums. Both of those have a safe legacy meaning ("this was a
+    /// recording"); this one does not — "we never found out" is a third state
+    /// and collapsing it into either answer is a claim about the ground.
+    public init?(storage: String?) {
+        guard let storage, let value = SegmentRoutability(rawValue: storage) else { return nil }
+        self = value
+    }
+}

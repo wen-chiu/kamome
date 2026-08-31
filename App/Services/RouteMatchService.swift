@@ -9,7 +9,7 @@ import KamomeTrackingEngine
 ///
 /// **Why a report rather than a Bool.** Every one of these outcomes used to
 /// produce the same artifact: a film with dashed legs and no way to tell which
-/// of four completely different things had happened. That was tolerable against
+/// of several completely different things had happened. That was tolerable against
 /// a routing box on the developer's LAN, which either answered or did not. A
 /// hosted provider adds timeouts, 429s, cold starts and outages, and the honest
 /// response to those is "try again", while the honest response to a ferry
@@ -19,9 +19,22 @@ struct RouteMatchReport: Equatable {
     var attempted = 0
     /// Legs that came back with road geometry, now stored.
     var reconstructed = 0
-    /// The provider answered and the answer was "no road route joins these" —
-    /// a ferry, an island hop, a detour the photos never evidenced. Permanent.
+    /// The provider answered and the answer was **"there is no road here"** —
+    /// a ferry, an island hop, a leg across water. Permanent, and the only
+    /// verdict a cross-region crossing beat may be built on
+    /// (`Docs/camera-arcs.md` §0).
+    ///
+    /// **Narrowed 2026-08-30.** It used to count every nil the reconstructor
+    /// returned, which lumped in the detour gate, an unreadable answer and a
+    /// disabled endpoint. Those are the two fields below.
     var noPlausibleRoute = 0
+    /// A road route came back and the PD-3 detour gate refused it. A road
+    /// exists; this one is not trustworthy. Dashed, and never flown.
+    var implausibleRoute = 0
+    /// Nothing was established about the ground at all — routing disabled, too
+    /// few waypoints, or an answer the client could not read. Not a claim about
+    /// the geography and not a provider failure either.
+    var notEstablished = 0
     /// Nobody answered. Retryable, and never a fact about the geography.
     var unreachable = 0
     /// Refused for load. Retryable, and worth waiting before retrying.
@@ -51,7 +64,11 @@ struct RouteMatchReport: Equatable {
         if rateLimited > 0 { return .rateLimited }
         if unreachable > 0 { return .providerUnreachable }
         if skipped > 0 { return .budgetExhausted }
-        if noPlausibleRoute > 0 { return .someLegsHaveNoRoad }
+        // Both leave the film with a dashed leg the provider could not turn into
+        // road, and the user-facing sentence for both is the same one it has
+        // always been. Splitting the *counts* is what the crossing beat needed;
+        // splitting the *message* is a copy decision nobody has made.
+        if noPlausibleRoute > 0 || implausibleRoute > 0 { return .someLegsHaveNoRoad }
         return .allRouted
     }
 
@@ -191,15 +208,21 @@ struct RouteMatchService {
         // The headline a dogfooder needs: how much of the film will draw as road.
         KamomeLog.routing.notice("""
             matchTrip \(tripId, privacy: .public): \(report.reconstructed)/\(report.attempted) legs reconstructed; \
-            \(report.noPlausibleRoute) have no road route, \(report.unreachable) unreachable, \
+            \(report.noPlausibleRoute) have NO ROAD (crossings), \(report.implausibleRoute) implausible, \
+            \(report.notEstablished) not established, \(report.unreachable) unreachable, \
             \(report.rateLimited) rate-limited, \(report.skipped) never asked — the rest draw dashed (PD-1)
             """)
         return report
     }
 
-    /// One leg, with its four possible answers kept apart. A nil outcome is the
-    /// provider's own verdict — it answered, and the answer was "no road route".
-    /// A thrown `RouteProviderFailure` means nobody answered.
+    /// One leg, with every answer kept apart — and, for a reconstructed leg,
+    /// **written down**. A `RouteReconstruction` is the provider's own verdict;
+    /// a thrown `RouteProviderFailure` means nobody answered.
+    ///
+    /// The write is what makes the crossing beat possible at all. Routing is a
+    /// detached background step since 2026-08-15 and the recap may be rendered
+    /// days later, so a verdict that lived only in this report would be gone by
+    /// the time the film needed it (`SegmentRoutability`).
     private func route(
         _ trace: [RouteMatchPoint],
         source: SegmentSource,
@@ -210,7 +233,10 @@ struct RouteMatchService {
             let outcome: RouteMatchOutcome?
             switch source {
             case .exif, .timeline:
-                outcome = try await reconstructor.route(trace)
+                outcome = reconstructed(
+                    try await reconstructor.route(trace), segmentId: segmentId, into: &report
+                )
+                guard outcome != nil else { return }
             case .gpsHifi, .gpsPassive:
                 guard let matcher else {
                     // Unreachable — `shouldReconstruct` filters recorded legs out
@@ -222,15 +248,24 @@ struct RouteMatchService {
                     report.skipped += 1
                     return
                 }
-                outcome = try await matcher.match(trace)
+                // Map matching keeps its optional: `RouteMatchProviding` answers
+                // "which road were these dense fixes on?", and a nil there is a
+                // confidence floor, never a claim that no road exists. No matcher
+                // is constructed on the shipped path (see `matcher`).
+                guard let matched = try await matcher.match(trace) else {
+                    report.notEstablished += 1
+                    return
+                }
+                outcome = matched
             }
             guard let outcome else {
-                report.noPlausibleRoute += 1
+                report.notEstablished += 1
                 return
             }
             try? repository.setMatchedPolyline(
                 segmentId: segmentId, encodedPolyline: outcome.encodedPolyline
             )
+            try? repository.setRoutability(segmentId: segmentId, .road)
             report.reconstructed += 1
         } catch let failure as RouteProviderFailure {
             switch failure {
@@ -242,6 +277,38 @@ struct RouteMatchService {
             // it is not evidence about the geography.
             report.unreachable += 1
         }
+    }
+
+    /// Records one reconstruction verdict and returns its geometry, if any.
+    ///
+    /// **Two of the four are written down and two are not**, and that asymmetry
+    /// is the whole point: `.noRoadHere` and `.implausible` are facts about the
+    /// ground that a later render must be able to read, while
+    /// `.notEstablished(…)` is the absence of a fact and NULL is how the schema
+    /// says so (`SegmentRoutability`).
+    private func reconstructed(
+        _ reconstruction: RouteReconstruction, segmentId: String, into report: inout RouteMatchReport
+    ) -> RouteMatchOutcome? {
+        switch reconstruction {
+        case let .routed(outcome):
+            return outcome
+        case .noRoadHere:
+            // The one verdict that is a fact about the ground, and the only one a
+            // crossing beat may be built on.
+            try? repository.setRoutability(segmentId: segmentId, .noRoad)
+            report.noPlausibleRoute += 1
+        case .implausible:
+            // A road exists and this route is not it. Stored so a later reader
+            // cannot mistake the dashed line for water.
+            try? repository.setRoutability(segmentId: segmentId, .implausibleRoute)
+            report.implausibleRoute += 1
+        case let .notEstablished(reason):
+            KamomeLog.routing.notice(
+                "matchTrip: nothing established for one leg — \(reason.rawValue, privacy: .public)"
+            )
+            report.notEstablished += 1
+        }
+        return nil
     }
 
     private func shouldReconstruct(_ segment: SegmentRecord, points: [TrackpointRecord]) -> Bool {

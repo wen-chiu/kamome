@@ -42,7 +42,8 @@ enum RecapComposer {
             return RecapTrip.Leg(
                 coordinates: coordinates,
                 mode: TransportMode(rawValue: item.segment.mode) ?? .unknown,
-                provenance: provenance(for: item.segment)
+                provenance: provenance(for: item.segment),
+                isCrossing: isCrossing(item.segment)
             )
         }
     }
@@ -63,6 +64,17 @@ enum RecapComposer {
         case .gpsHifi, .gpsPassive: return .recorded
         case .exif, .timeline: return .inferred
         }
+    }
+
+    /// Whether this segment is a **crossing**: routing answered, and the answer
+    /// was that no road joins its ends (`Docs/camera-arcs.md` §0).
+    ///
+    /// One stored verdict and nothing else — no distance, no mode, no endpoint
+    /// name. NULL (nobody asked, routing disabled, the provider never answered)
+    /// is `false`, because the honest reading of "we do not know" is "do not fly
+    /// a sprite over it".
+    static func isCrossing(_ segment: SegmentRecord) -> Bool {
+        segment.routeVerdict == .noRoad
     }
 
     /// The whole display polyline. Kept for callers that only need geometry

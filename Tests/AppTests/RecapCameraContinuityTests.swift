@@ -1,6 +1,7 @@
 @testable import Kamome
 import KamomeConfig
 @testable import KamomeExportEngine
+import KamomeRouteMatching
 import XCTest
 
 /// **The camera continuity gate** (Chiu 2026-08-01).
@@ -30,8 +31,13 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// Committed photo-import fixtures spanning the scales the camera has to
     /// survive: a day trip, an island, two countries, and a multi-day road trip.
     private static let fixtures = [
-        "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real"
+        "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real", crossingFixture
     ]
+
+    /// The fixture with a leg that has no road under it. Named in one place —
+    /// see `UnroutableSeaProvider`, which also holds the geography and why it is
+    /// a meridian rather than a distance.
+    static let crossingFixture = UnroutableSeaProvider.crossingFixture
 
     /// Fraction of the frame's ground that must still be on screen one frame
     /// later. Generous on purpose — this is a catastrophe detector, not a
@@ -77,7 +83,9 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// fast legs before the safe-zone clamp was added.
     func testSubjectNeverEntersTheOuterMargin() async throws {
         for fixture in Self.fixtures {
-            let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture, baseURL: "")
+            let (trip, config) = try await RecapDemoFilmTests.importedRecap(
+                named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
+            )
             let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
             let line = try XCTUnwrap(LinearTimeline(
                 trip: trip, config: config,
@@ -139,7 +147,9 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// Builds `fixture`'s real timeline and walks every frame of it.
     @discardableResult
     private func scan(fixture: String) async throws -> String {
-        let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture, baseURL: "")
+        let (trip, config) = try await RecapDemoFilmTests.importedRecap(
+            named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
+        )
         // A synthetic establishing extent: the gate is about camera motion, not
         // about which tiles happen to be installed, and pacing is gated on this
         // being non-nil. Widening the trip's own bounds is what the prologue does
@@ -155,6 +165,7 @@ final class RecapCameraContinuityTests: XCTestCase {
         let snapshotStep = Double(config.keyframeIntervalFrames) / Double(config.fps)
 
         var violations: [Violation] = []
+        var excusedCount = 0
         var worst = (overlap: 1.0, timeS: 0.0)
 
         for frame in 1..<line.frameCount {
@@ -173,7 +184,16 @@ final class RecapCameraContinuityTests: XCTestCase {
                 let excused = permitted.contains {
                     $0 >= timeS - gap - Self.cutToleranceS && $0 <= timeS + Self.cutToleranceS
                 }
-                guard !excused else { continue }
+                if excused {
+                    // **Counted, not merely skipped** — the free evidence
+                    // `HANDOFF.md` 2026-08-21 finding 3 asked for and nobody had
+                    // collected. `permitted.count` says how many cuts are
+                    // *available*; this says how many were actually spent, which
+                    // is the number that decides whether the exemption can go to
+                    // zero (`Docs/camera-arcs.md` §8).
+                    excusedCount += 1
+                    continue
+                }
                 violations.append(Violation(
                     timeS: timeS, overlap: overlap,
                     movedM: Self.meters(before.centerLat, before.centerLon, now.centerLat, now.centerLon),
@@ -182,11 +202,24 @@ final class RecapCameraContinuityTests: XCTestCase {
             }
         }
 
+        return Self.report(
+            fixture: fixture, line: line, violations: violations,
+            worst: worst, permitted: permitted.count, excused: excusedCount
+        )
+    }
+
+    /// One line per fixture, plus a failure per violation. Split out of `scan`
+    /// so the scan itself stays a walk over frames.
+    private static func report(
+        fixture: String, line: LinearTimeline, violations: [Violation],
+        worst: (overlap: Double, timeS: Double), permitted: Int, excused: Int
+    ) -> String {
         let summary = String(
             format: "  %-16@ %5.1fs · span %6.1f km · worst frame overlap %3.0f%% at %5.1fs · "
-                + "%d violations · %d permitted cuts",
+                + "%d violations · %d permitted cuts · %d excused · %d arcs",
             fixture as NSString, line.durationS, line.path.bodySpanM / 1000,
-            worst.overlap * 100, worst.timeS, violations.count, permitted.count
+            worst.overlap * 100, worst.timeS, violations.count, permitted, excused,
+            line.path.arcWindowsS.count
         )
         for violation in violations.prefix(3) {
             XCTFail(String(

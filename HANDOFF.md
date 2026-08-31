@@ -1,6 +1,7 @@
 # HANDOFF — live findings
 
-**Updated 2026-08-31.** `main` carries PRs #16–#24.
+**Updated 2026-08-31.** `main` carries PRs #16–#24 and the cross-region
+crossing beat (`f21b82f`) — **built and measured, not yet judged by Chiu.**
 
 This file holds **only what is live**: open blockers, unfinished questions,
 traps, and known bugs. Each entry is a summary and a pointer; the reasoning,
@@ -32,9 +33,14 @@ Chiu's P0 (`Docs/decisions.md` 2026-08-30): *"影片晃動感太明顯 不夠流
 The base map is snapshotted every `keyframe_interval_frames` (15) and the 14
 frames between are filled by **alpha-blending two snapshots of the same map at
 two different geographic positions** — the double image is the 殘影, the 0.5 s
-stepping is the 晃動. Mechanism **VERIFIED** from `RecapRenderLoop.swift:93–118`
-and `FrameCompositor.swift:90–93`; effect **INFERRED** — nobody has rendered the
-falsifying pair yet.
+stepping is the 晃動.
+
+✅ **CONFIRMED end to end 2026-08-30.** The falsification pair was rendered —
+`miyakojima`, 10 s of body, identical but for the interval (15 vs 1) — and the
+difference is a **sawtooth locked to the blend**: 0.07 at blend 0.00, rising
+monotonically to 0.57 at the half-blend and back. At blend 0 the two clips are
+the same picture, because that frame is a real snapshot either way. The
+mechanism is not a hypothesis any more.
 
 ⚠️ **Do not "fix" this by lowering `keyframe_interval_frames`.** It is frozen,
 it multiplies snapshot cost ~15×, and the right operation is reprojecting one
@@ -81,6 +87,25 @@ is not "is this value good?" but **"what was this value tuned against?"**
 **RECOMMENDATION, needs Chiu. Not scheduled, not started.**
 → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
+### The crossing costs 182 snapshots, and that is Pass 1's bill
+Measured through the shipped loop: `ishigaki-crossing` goes **185 → 367
+snapshots** when the crossing is established — one per frame over a 180-frame
+arc, very nearly doubling the film's budget. On device that is 133–287 s
+becoming 264–569 s for a 69-second film. **This is the number camera-arc Pass
+1's crop-scaling has to refund**, and it is now measured rather than estimated.
+The opening stays 151 in every row; if that moves, something touched the
+prologue.
+→ `Docs/handoff-cross-region-crossing.md` finding 10.
+
+### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
+`Docs/camera-arcs.md` §5 and `Docs/handoff-camera-arc-findings.md` finding 5
+both say the pan floor is the mechanism. **Measured on the shipped path, that is
+false**: `asked` is ~274 km against a pan floor of ~16 km, so the floor never
+binds and taking the crossing out of it changes the body span by nothing.
+`target_zoom_ratio` over the establishing shot is what sets the body span.
+**Two documents still state the superseded premise.**
+→ `Docs/handoff-cross-region-crossing.md` finding 1.
+
 ---
 
 ## ⏳ Awaiting a Chiu decision
@@ -100,29 +125,34 @@ placeholder, and `Scripts/check-location-data.sh` now enforces both halves that
 pre-empt the owner call.
 → `Docs/handoff-audit-2026-08-30.md` finding 7.
 
-### Film duration must scale with trip size
-**The direction IS decided (Chiu 2026-08-14). The rule is NOT.** Every trip
-currently presents exactly 8 stops and 24 photographs whether it has 10 stops or
-65, because duration is clamped to the same 60–90 s window. A candidate
-inversion reproduces all three of Chiu's targets, but its three parameters were
-reverse-derived from three trips — which is exactly how `body_span_padding` and
-`tier_skip_share` were derived, and both failed. The acceptance condition is
-decided in advance and is in the doc.
-→ `Docs/handoff-pacing.md`.
+### Film length: two questions, in this order
+**Duration must scale with trip size — direction decided (Chiu 2026-08-14), rule
+NOT.** Every trip presents exactly 8 stops and 24 photographs whether it has 10
+or 65, because duration is clamped to one 60–90 s window. The candidate
+inversion reproduces all three of Chiu's targets, but its parameters were
+reverse-derived from three trips — exactly how `body_span_padding` and
+`tier_skip_share` were derived, and both failed.
 
-### Travel pacing in Variant A — an experiment, nothing decided
-Chiu lost interest during Iceland's 4 min 47 s of driving; all three trips sit at
-the same ~49% travel share, so what broke was an **absolute quantity**, not a
-proportion. Sequenced *after* the duration inversion. `travel_max_s` is a
-candidate name for a thing that does not exist — do not let it reach
-`TrackingConfig.json`.
-→ `Docs/handoff-pacing.md`.
+**Then travel pacing**, an experiment with nothing decided: all three trips sit
+at the same ~49% travel share, so what lost Chiu on Iceland was an **absolute
+quantity**, not a proportion. `travel_max_s` names a thing that does not exist —
+do not let it reach `TrackingConfig.json`.
+→ `Docs/handoff-pacing.md` for both, including the acceptance condition decided
+in advance.
 
 ### The badge's size is provisional
 0.60× was chosen from a rendered sweep and draws at 94.5 px. ⏳ **Judged from a
 still; Chiu reserved the right to revisit it from a film.** Everything else
 about the badge is decided (`Docs/decisions.md` 2026-08-29).
 → `Docs/handoff-marker-badge.md` finding 6.
+
+### The crossing beat — four things this session refused to default
+The film is built and measured but **unjudged**. Open, and Chiu's: whether the
+crossing seagull stays a choosable trip subject (it ships `selectable: true`
+against the `plane`/`boat` precedent); whether the apex wants a hold; whether
+`crossing_beat_s` 6.0 survives a judged film (it is reasoned, not measured); and
+Case C — a trip that *begins* with the crossing — is not built.
+→ `Docs/handoff-cross-region-crossing.md` finding 9.
 
 ### A staging rule for `Arch.md` — recommended, not in force
 A branch ref has silently picked up another session's commits three times, and a
@@ -150,30 +180,42 @@ three consumers: the brand mark, the fault badge (its own case), and the
 cross-region narrator that has not been built.
 → `Docs/handoff-marker-badge.md` finding 5b.
 
+### The continuity gate has never measured the shipped camera
+`RecapCameraContinuityTests` passes a synthetic `establishing` extent, and its
+own comment claims that is "the same code path, not a stub." **It is not** — a
+non-nil `establishing` takes the other branch and activates `cappedToRegion` in
+three places. The shipped app has passed `establishing: nil` since 2026-08-15;
+on one fixture the two differ by **18.6 km vs 274 km of body span**. Not changed,
+deliberately: `nil` is more forgiving, so swapping would weaken the gate — a bar
+move for Chiu. The cheap fix is to scan **both**.
+→ `Docs/handoff-cross-region-crossing.md` finding 2.
+
+### `Docs/camera-arcs.md` §8 states an invariant no arc can satisfy
+"The tighter must lie entirely inside the looser" fails across the apex by
+construction — an arc opens out and closes back in. The property survives in two
+halves and `RecapCrossingArcTests` asserts it that way. **§8 should be
+reworded**; not done, because that is a design document.
+→ `Docs/handoff-cross-region-crossing.md` finding 4.
+
 ### Read a style value off the preset the app selects, never off the defaults
 `RecapStyle`'s defaults are unrendered. This was got wrong twice from the same
 source and cost a correction in the ledger both times. The app selects
 `modernMinimal`.
 
-### Nothing measures post-grade output
-The guards assert **token** luminance; the viewer sees the frame **after the
-film's grade**. The rule survives the grade today, but nothing checks that it
-keeps doing so. Same class of gap as the golden-frame gates being unable to see
-`MapKitSnapshotProvider`.
-→ `Docs/handoff-marker-badge.md` finding 6c.
+### Three gaps the badge work left on record
+All in `Docs/handoff-marker-badge.md`, findings 6c, 6d and 7.
 
-### Nothing asserts the end card's brand mark
-`RecapMarkerDeckStillsTests` iterates `VehicleMarker.allCases` and *writes*
-stills; it asserts nothing about them. The guarantee that the end card still
-shows a bird currently rests on a human noticing. A golden still would close it.
-→ `Docs/handoff-marker-badge.md` finding 6d.
-
-### The no-reader token cluster is now four, and grows one at a time
-`cardColor`, `cardTextColor`, `markerColor`, `markerAccentColor` — four tokens
-nothing renders, plus five `RecapOverlayRendererTests` assertions that believe
-they render against an opaque card. Counted deliberately so the next one to join
-is the fifth rather than another isolated note.
-→ `Docs/handoff-marker-badge.md` finding 7.
+- **Nothing measures post-grade output.** The guards assert *token* luminance;
+  the viewer sees the graded frame. The rule survives the grade today, and
+  nothing checks that it keeps doing so.
+- **Nothing asserts the end card's brand mark.** `RecapMarkerDeckStillsTests`
+  *writes* stills and asserts nothing about them, so the guarantee that the end
+  card still shows a bird rests on a human noticing. A golden still closes it.
+- **The no-reader token cluster is four** — `cardColor`, `cardTextColor`,
+  `markerColor`, `markerAccentColor` render nowhere, plus five
+  `RecapOverlayRendererTests` assertions that believe they render against an
+  opaque card. Counted so the next one to join is the fifth, not another
+  isolated note.
 
 ---
 
@@ -201,7 +243,8 @@ is the fifth rather than another isolated note.
 finding N"**. Those sections moved on 2026-08-31 and the ledger cannot be
 corrected, so they resolve here:
 
-- 2026-08-30 finding N → `Docs/handoff-audit-2026-08-30.md`
+- 2026-08-30 finding N → `Docs/handoff-audit-2026-08-30.md` (PO audit) or
+  `Docs/handoff-cross-region-crossing.md` (the crossing session)
 - 2026-08-29 finding N → `Docs/handoff-marker-badge.md`
 - 2026-08-21 finding N → `Docs/handoff-camera-arc-findings.md`
 - "Pending experiment — travel pacing" → `Docs/handoff-pacing.md`
@@ -212,6 +255,7 @@ corrected, so they resolve here:
 | document | what is in it |
 |---|---|
 | `Docs/handoff-audit-2026-08-30.md` | the render-loop P0, the country beat, the duration comment, the owed sweep, the §0 question |
+| `Docs/handoff-cross-region-crossing.md` | the crossing beat: the P0 confirmation, the pan-floor correction, the snapshot bill |
 | `Docs/handoff-marker-badge.md` | the fallback badge: what was decided, and the four gaps it left |
 | `Docs/handoff-camera-arc-findings.md` | the working analysis behind `Docs/camera-arcs.md` — **nothing settled** |
 | `Docs/handoff-pacing.md` | film duration and travel pacing |
