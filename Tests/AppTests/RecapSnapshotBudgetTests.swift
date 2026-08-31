@@ -1,7 +1,9 @@
 import CoreGraphics
 @testable import Kamome
 import KamomeConfig
-import KamomeExportEngine
+// `@testable` for `LinearTimeline.path` — the arc windows, so the audit can name
+// the crossing's own share of the budget rather than leave it to arithmetic.
+@testable import KamomeExportEngine
 import XCTest
 
 /// **Where an export's snapshots actually go** (2026-08-15).
@@ -87,6 +89,21 @@ final class RecapSnapshotBudgetTests: XCTestCase {
             )
         }
 
+        // **What the crossing's arc costs, named rather than inferred.** The arc
+        // is fine-sampled because a cross-fade between two geometrically
+        // different pictures is the ghosting mechanism (`HANDOFF.md` 2026-08-30
+        // finding 1); this is the price of that, and camera-arc Pass 1's
+        // crop-scaling is what refunds it (`Docs/camera-arcs.md` §7).
+        let arcs = shipped.timeline.path.arcWindowsS
+        if !arcs.isEmpty {
+            let arcSeconds = arcs.reduce(0.0) { $0 + ($1.upperBound - $1.lowerBound) }
+            print(String(
+                format: "KAMOME_SNAPSHOT_AUDIT   %d crossing arc(s) covering %.1fs are fine-sampled — "
+                    + "body %d of which the arcs are at most %d",
+                arcs.count, arcSeconds, max(total - opening, 0),
+                Int((arcSeconds * Double(shipped.config.fps)).rounded())
+            ))
+        }
         XCTAssertGreaterThan(total, 0, "the audit fetched no snapshots")
     }
 
@@ -131,7 +148,16 @@ final class RecapSnapshotBudgetTests: XCTestCase {
     /// export frames from the trip's own bounds and renders on Apple's map.
     private func scene(fixture: String) async throws -> Scene {
         let baseURL = ProcessInfo.processInfo.environment["KAMOME_ROUTING_BASE_URL"] ?? ""
-        let (trip, config) = try await RecapDemoFilmTests.importedRecap(named: fixture, baseURL: baseURL)
+        // **The crossing fixture has to be routed by the sea provider or this
+        // prices the wrong film** (2026-08-30). With routing disabled nothing is
+        // established about any leg, so the crossing is not a crossing, no arc is
+        // built, and the audit reports a body that never fine-samples — measured
+        // at 34 body snapshots against the 214 the same fixture costs once the
+        // crossing exists. A budget for a feature that was switched off is worse
+        // than no budget.
+        let (trip, config) = try await RecapDemoFilmTests.importedRecap(
+            named: fixture, baseURL: baseURL, reconstructor: UnroutableSeaProvider.forFixture(fixture)
+        )
         let timeline = try XCTUnwrap(
             LinearTimeline(trip: trip, config: config, establishing: nil),
             "the fixture produced no timeline"

@@ -120,6 +120,16 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.export.deckPhotoHoldS, 2.5)
         XCTAssertEqual(config.export.deckZoomS, 0.5)
         XCTAssertEqual(config.export.actSplitKm, 25)
+        // The crossing beat and its apex padding, decoded from the shipped file.
+        // `crossing_apex_padding` in particular is not a taste value: below 1.25
+        // the subject leaves `camera_safe_zone_fraction` at the widest point of
+        // an arc and `CameraPath.confine` starts fighting the move.
+        XCTAssertEqual(config.export.crossingBeatS, 6.0)
+        XCTAssertEqual(config.export.crossingApexPadding, 1.5)
+        XCTAssertGreaterThanOrEqual(
+            config.export.crossingApexPadding, 1 / config.export.cameraSafeZoneFraction,
+            "an apex padded less than 1 / camera_safe_zone_fraction puts the subject outside the safe zone"
+        )
         XCTAssertEqual(config.export.deckLabelLeadS, 0.6)
         // Cinematic pass (Chiu 2026-07-30): a one-time opening prologue, and a
         // film whose length follows its content instead of a flat 30 s.

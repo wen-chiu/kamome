@@ -196,8 +196,12 @@ private actor SpyReconstructor: RouteReconstructing {
         self.outcome = outcome
     }
 
-    func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome? {
+    func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction {
         calls += 1
-        return outcome
+        // A spy with no outcome is a leg nothing was learnt about — deliberately
+        // not `.noRoadHere`, which is a claim about the ground this stub is in no
+        // position to make.
+        guard let outcome else { return .notEstablished(.unreadableAnswer) }
+        return .routed(outcome)
     }
 }

@@ -29,8 +29,10 @@ import KamomeConfig
 /// - A bad key is `401 Invalid apiKey`. No 429 has ever been observed — see
 ///   `RouteProviderFailure.rateLimited` for why the case is kept anyway.
 ///
-/// With `matching.base_url` empty this provider is a no-network no-op returning
-/// nil, so simulator runs and CI never need an endpoint or a key.
+/// With `matching.base_url` empty this provider is a no-network no-op answering
+/// `.notEstablished(.routingDisabled)`, so simulator runs and CI never need an
+/// endpoint or a key — and, importantly, a disabled endpoint never reads as
+/// "there is no road here".
 public struct GeoapifyRouteProvider: RouteReconstructing {
     /// Injectable so tests replay recorded responses without a live endpoint.
     public typealias Transport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
@@ -52,39 +54,40 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         }
     }
 
-    /// Every `return nil` here is a leg that will draw dashed, and each is named
-    /// in the log as it happens — "disabled", "no suitable edges", "detour 4.1×"
-    /// and a transport failure are four very different problems with one
-    /// identical symptom in the finished film.
-    public func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteMatchOutcome? {
+    /// Every answer but `.routed` is a leg that will draw dashed, and each is
+    /// named — in the log as it happens, and now in the **return type**, because
+    /// "disabled", "no suitable edges" and "detour 4.1×" are three very different
+    /// problems with one identical symptom in the finished film, and exactly one
+    /// of them is a crossing (`RouteReconstruction`).
+    public func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction {
         guard !config.baseURL.isEmpty else {
             KamomeLog.routing.notice("route: skipped — matching.base_url is empty, so the leg stays raw (PD-2)")
-            return nil
+            return .notEstablished(.routingDisabled)
         }
         let thinned = RouteWaypoints.thinned(
             waypoints, minSpacingM: config.routeWaypointMinSpacingM, limit: config.chunkSize
         )
         guard thinned.count >= 2, let url = requestURL(for: thinned) else {
             KamomeLog.routing.notice("route: skipped — \(thinned.count) usable waypoints after thinning")
-            return nil
+            return .notEstablished(.tooFewWaypoints)
         }
 
-        guard let data = try await fetch(url) else { return nil }
+        guard case let .body(data) = try await fetch(url) else { return .noRoadHere }
         let body = try JSONDecoder().decode(Response.self, from: data)
         guard let route = body.features?.first else {
             KamomeLog.routing.notice("route: the provider returned no route feature — leg stays raw")
-            return nil
+            return .notEstablished(.unreadableAnswer)
         }
         let geometry = route.geometry.points
         guard geometry.count >= 2 else {
             KamomeLog.routing.notice("route: the provider returned \(geometry.count) points — leg stays raw")
-            return nil
+            return .notEstablished(.unreadableAnswer)
         }
         guard RoutePlausibility.acceptsRoute(
             distanceM: route.properties.distance,
             through: thinned,
             maxDetourRatio: config.routeMaxDetourRatio
-        ) else { return nil }
+        ) else { return .implausible }
 
         KamomeLog.routing.notice("""
             route: reconstructed \(route.properties.distance / 1000, format: .fixed(precision: 1)) km \
@@ -93,21 +96,31 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         // Routing reports no confidence of its own. Passing the gate is the
         // verdict: the caller stores the geometry, which is what marks the leg
         // reconstructed rather than inferred.
-        return RouteMatchOutcome(geometry: geometry, confidence: 1)
+        return .routed(RouteMatchOutcome(geometry: geometry, confidence: 1))
+    }
+
+    /// What one HTTP exchange produced. A two-case enum rather than `Data?` for
+    /// the reason the whole verdict lift exists: the nil that meant "there is no
+    /// road here" was indistinguishable at the call site from any other, and this
+    /// one is load-bearing.
+    private enum Fetched {
+        case body(Data)
+        case noRoadHere
     }
 
     /// One request, with the provider's verdicts told apart from its failures.
     ///
-    /// Returns nil for "these waypoints cannot be joined by road", answered as
-    /// HTTP 400 — a clean keep-raw verdict, and what a leg across water or a
-    /// photograph taken on a beach correctly gets. **Throws** for anything else,
-    /// because a transport failure is not a verdict about the geography.
+    /// Answers `.noRoadHere` for "these waypoints cannot be joined by road",
+    /// answered as HTTP 400 — a clean keep-raw verdict, and what a leg across
+    /// water or a photograph taken on a beach correctly gets. **Throws** for
+    /// anything else, because a transport failure is not a verdict about the
+    /// geography.
     ///
     /// **§0: the URL is never logged.** GET-only means it carries the API key
     /// *and* real trip coordinates in its query string, and a device log is the
     /// last place either belongs. Only the host is named, and the provider's own
     /// message is redacted before it is written (`HANDOFF.md` item 0b).
-    private func fetch(_ url: URL) async throws -> Data? {
+    private func fetch(_ url: URL) async throws -> Fetched {
         var request = URLRequest(url: url)
         request.timeoutInterval = config.timeoutS
 
@@ -122,11 +135,11 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
                 """)
             throw RouteProviderFailure.unreachable(error.localizedDescription)
         }
-        guard let http = response as? HTTPURLResponse else { return data }
+        guard let http = response as? HTTPURLResponse else { return .body(data) }
 
         switch http.statusCode {
         case 200:
-            return data
+            return .body(data)
         case 400:
             // The provider's own geography verdict — "No suitable edges near
             // location" (no road anywhere near a waypoint) or "No path could be
@@ -135,7 +148,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             KamomeLog.routing.notice(
                 "route: the provider said \(Self.redacted(Self.message(in: data)), privacy: .public) — leg stays raw"
             )
-            return nil
+            return .noRoadHere
         case 429:
             // Never observed on Geoapify, which sheds load as a TCP reset. Kept
             // because the pre-launch Cloudflare Worker is the natural place to

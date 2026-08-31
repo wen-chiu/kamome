@@ -82,6 +82,13 @@ public struct CameraPath {
     private let track: [CameraFrame]
     /// The trip's one body span. Every frame of the body uses it.
     let bodySpanM: Double
+    /// The crossing moves, in film time (`Docs/camera-arcs.md` §3). Empty for
+    /// every trip with a road under all of it, which is why a local trip's camera
+    /// does not change at all (§4 Case A).
+    let arcs: [Arc]
+    /// When each crossing **beat** plays. Wider than `arcs`: a crossing that
+    /// earns no zoom still earns its sprite (`isCrossing(atTime:)`).
+    let crossingBeatsS: [ClosedRange<Double>]
     /// Kept whole so the discontinuity detector and the dead-zone camera read the
     /// same tunables the path was built with, rather than a copied subset that
     /// can drift out of step with it.
@@ -136,7 +143,15 @@ public struct CameraPath {
         openingS: Double = 0,
         /// Time reserved at the end for the closing chrome. The journey's last
         /// hold finishes before it, so the end card never lands on a stop.
-        journeyEndsBeforeS: Double = 0
+        journeyEndsBeforeS: Double = 0,
+        /// Windows of `route` with **no road under them** — one per crossing leg,
+        /// as vertex ranges into the concatenated polyline.
+        ///
+        /// Ranges rather than a predicate, and geometry rather than a mode: the
+        /// camera is told *where* the ground has no road and never what crosses
+        /// it (`Docs/camera-arcs.md` §6). Empty is every trip that has ever been
+        /// rendered, and produces exactly the film it produced before.
+        crossingVertexRanges: [Range<Int>] = []
     ) {
         guard route.count >= 2 else { return nil }
         var cumulative = [0.0]
@@ -152,8 +167,7 @@ public struct CameraPath {
 
         let anchors = Self.stopAnchors(route: route, cumulativeM: cumulative, stops: stops)
 
-        self.route = route
-        self.cumulativeM = cumulative
+        self.route = route; self.cumulativeM = cumulative
         let total = totalDurationS ?? config.targetDurationS
         let frames = Int((total * Double(config.fps)).rounded())
 
@@ -166,12 +180,12 @@ public struct CameraPath {
         let builtPrologue = openingS > 0
             ? Self.buildWideOpening(route: route, establishing: establishing, config: config)
             : nil
+        let crossings = Self.crossings(vertexRanges: crossingVertexRanges, cumulativeM: cumulative)
         let span = Self.bodySpan(BodySpanRequest(
             prologue: builtPrologue, route: route, anchors: anchors, totalM: totalM,
-            stopHoldsS: stopHoldsS, totalDurationS: total,
+            crossings: crossings, stopHoldsS: stopHoldsS, totalDurationS: total,
             establishing: establishing, config: config
         ))
-        bodySpanM = span
 
         // The wide beats, the closing-zoom handoff, and where the journey
         // timeline itself starts and ends — all sized together in one call
@@ -182,21 +196,19 @@ public struct CameraPath {
             prologue: builtPrologue, route: route, establishing: establishing, config: config,
             bodySpanM: span, totalDurationS: total, journeyEndsBeforeS: journeyEndsBeforeS
         ))
+        bodySpanM = span
         wideEndS = plan.wideEndS
         let journeyTimeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
-            stopHoldsS: stopHoldsS, startS: plan.openingEndsS, targetS: plan.journeyEndS
+            stopHoldsS: stopHoldsS, crossings: crossings,
+            startS: plan.openingEndsS, targetS: plan.journeyEndS
         )
         timeline = journeyTimeline
-        self.fps = config.fps
-        cutConfig = config
-        durationS = total
-        frameCount = frames
+        self.fps = config.fps; cutConfig = config
+        durationS = total; frameCount = frames
 
-        zoomTransitionS = config.zoomTransitionS
-        followHeadingUp = config.followHeadingUp
-        prologue = plan.prologue
-        openingEndsS = plan.openingEndsS
+        zoomTransitionS = config.zoomTransitionS; followHeadingUp = config.followHeadingUp
+        prologue = plan.prologue; openingEndsS = plan.openingEndsS
 
         track = Self.simulatedTrack(TrackRequest(
             route: route, cumulativeM: cumulative, journeyTimeline: journeyTimeline,
@@ -204,6 +216,15 @@ public struct CameraPath {
         ))
         endRevealStartS = plan.revealS > 0 ? plan.journeyEndS : nil
         endRevealFrame = Self.endRevealFrame(route: route, establishing: establishing, config: config)
+
+        // Built last, from the simulated track: an arc leaves and rejoins the
+        // body camera at the value the dolly already had, so the handoff at both
+        // ends is exact rather than approximately equal — the same reason the
+        // opening's closing zoom targets `track[frame]` rather than a copy.
+        let moves = Self.crossingMoves(
+            timeline: journeyTimeline, track: track, fps: config.fps, config: config
+        )
+        arcs = moves.arcs; crossingBeatsS = moves.beatsS
     }
 
     /// How long the opening actually runs, after collapsing beats that do not
@@ -267,7 +288,15 @@ public struct CameraPath {
         let live = trackFrame(atTime: time)
 
         let composed: CameraFrame
-        if let endRevealStartS, time >= endRevealStartS {
+        if let arc = arcs.first(where: { $0.contains(time) }), time >= openingEndsS,
+           endRevealStartS.map({ time < $0 }) ?? true {
+            // The crossing owns the frame while it plays. Checked before the body
+            // and after the film's two edges: an arc that overlapped the opening
+            // or the end reveal would be two beats fighting for the same seconds,
+            // and merging them is `Docs/camera-arcs.md` §4 Case C, which is not
+            // built here.
+            composed = arc.frame(atTime: time)
+        } else if let endRevealStartS, time >= endRevealStartS {
             let reveal = max(cutConfig.endRevealS, 1e-6)
             let blend = Self.smoothstep(min(max((time - endRevealStartS) / reveal, 0), 1))
             composed = Self.lerp(live, endRevealFrame, blend)
@@ -334,7 +363,11 @@ public struct CameraPath {
         switch entry.phase {
         case let .hold(stopIndex, atM):
             return (atM, stopIndex)
-        case let .travel(fromM, toM):
+        // A crossing moves the subject exactly as travel does — eased from one
+        // end to the other — and only the *camera* treats it differently. The
+        // sprite still crosses the water, which is what makes the discontinuity
+        // narrated rather than excused (`Docs/camera-arcs.md` §8).
+        case let .travel(fromM, toM), let .crossing(fromM, toM):
             let span = entry.endS - entry.startS
             let progress = span > 0 ? (clamped - entry.startS) / span : 1
             let eased = Self.smoothstep(min(max(progress, 0), 1))

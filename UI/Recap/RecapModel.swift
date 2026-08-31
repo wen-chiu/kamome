@@ -245,7 +245,14 @@ final class RecapModel {
             overlay: RecapOverlayRenderer(style: style, resolver: resolver),
             style: style,
             widthPx: config.export.frameWidthPx,
-            heightPx: config.export.frameHeightPx
+            heightPx: config.export.frameHeightPx,
+            // Built for every film, not only for a trip that has a crossing:
+            // whether one exists is a fact the timeline discovers, and a
+            // compositor that had to be told in advance would be a second place
+            // for the answer to be wrong. Unused films pay one sprite decode.
+            crossingSubject: VehicleSubjectRenderer.make(
+                style: style, config: exportConfig, subjectId: VehicleCatalog.crossingSubjectId
+            )
         )
         let exporter = RecapExporter(
             timeline: timeline,

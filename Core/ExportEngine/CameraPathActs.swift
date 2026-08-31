@@ -24,6 +24,7 @@ extension CameraPath {
         totalM: Double,
         config: TrackingConfig.Export,
         stopHoldsS: [Double]?,
+        crossings: [Crossing] = [],
         startS: Double = 0,
         targetS: Double
     ) -> [TimelineEntry] {
@@ -39,8 +40,16 @@ extension CameraPath {
             let factor = cap / totalHold
             holds = holds.map { $0 * factor }
         }
-        let travelS = max(targetS - startS - holds.reduce(0, +), 0)
+        let budgetS = max(targetS - startS - holds.reduce(0, +), 0)
 
+        // **A crossing is paid for out of the travel budget, at a fixed price.**
+        // Everything else is priced by distance, which is exactly what a crossing
+        // must not be: a 450 km flight charged at the film's travel rate is what
+        // ate the driving's time and forced the destination's scale
+        // (`Docs/cross-region-journeys.md`, symptom 2).
+        let beatS = crossingBeatS(count: crossings.count, travelS: budgetS, config: config)
+        let localM = localDistanceM(totalM: totalM, crossings: crossings)
+        let localTravelS = max(budgetS - beatS * Double(crossings.count), 0)
         var timeline: [TimelineEntry] = []
         var clock = startS
         if startS > 0 {
@@ -48,23 +57,88 @@ extension CameraPath {
             // has not begun and the camera has the frame to itself.
             timeline.append(.init(startS: 0, endS: startS, phase: .travel(fromM: 0, toM: 0)))
         }
+        let pricing = TravelPricing(
+            crossings: crossings, beatS: beatS, localM: localM, localTravelS: localTravelS
+        )
+
         var legStartM = 0.0
         for (index, anchor) in anchors.enumerated() {
-            let holdS = holds[index]
-            let legM = max(0, anchor.distanceM - legStartM)
-            let legS = travelS * legM / totalM
-            timeline.append(
-                .init(startS: clock, endS: clock + legS, phase: .travel(fromM: legStartM, toM: anchor.distanceM))
+            timeline += pricing.entries(
+                fromM: legStartM, toM: max(anchor.distanceM, legStartM), clock: clock
             )
-            clock += legS
+            clock = timeline.last?.endS ?? clock
+            let holdS = holds[index]
             timeline.append(
                 .init(startS: clock, endS: clock + holdS, phase: .hold(stopIndex: anchor.stopIndex, atM: anchor.distanceM))
             )
             clock += holdS
             legStartM = anchor.distanceM
         }
-        timeline.append(.init(startS: clock, endS: targetS, phase: .travel(fromM: legStartM, toM: totalM)))
+        timeline += pricing.entries(fromM: legStartM, toM: totalM, clock: clock, landingS: targetS)
         return timeline
+    }
+
+    /// **What one stretch of route costs in film seconds**, split at every
+    /// crossing boundary inside it.
+    ///
+    /// Local sub-stretches are priced per local metre; a crossing is priced per
+    /// beat, because the beat prices the *event* rather than the metres — a
+    /// 9,000 km flight is not nine times the story a 1,000 km one is.
+    ///
+    /// The share arithmetic is deliberately written as
+    /// `localTravelS × legM / localM` rather than as a pre-divided rate: with no
+    /// crossings those are `travelS` and `totalM`, so a film without one gets
+    /// **the identical floating-point value it got before this existed**, and the
+    /// golden-frame gates are untouched.
+    struct TravelPricing {
+        let crossings: [Crossing]
+        let beatS: Double
+        let localM: Double
+        let localTravelS: Double
+
+        /// `landingS` pins the final entry's end, which the last stretch of the
+        /// film uses so it lands exactly on the plan's clock rather than on
+        /// whatever the division left over.
+        func entries(
+            fromM: Double, toM: Double, clock: Double, landingS: Double? = nil
+        ) -> [TimelineEntry] {
+            var built: [TimelineEntry] = []
+            guard toM > fromM else {
+                built.append(.init(startS: clock, endS: landingS ?? clock, phase: .travel(fromM: fromM, toM: toM)))
+                return built
+            }
+            let inside = crossings
+                .filter { $0.toM > fromM && $0.fromM < toM }
+                .sorted { $0.fromM < $1.fromM }
+            var cursorM = fromM
+            var cursorS = clock
+
+            func local(to markM: Double, endingAt endS: Double?) {
+                guard markM > cursorM else { return }
+                let legS = localM > 0 ? localTravelS * (markM - cursorM) / localM : 0
+                let landing = endS ?? cursorS + legS
+                built.append(.init(startS: cursorS, endS: landing, phase: .travel(fromM: cursorM, toM: markM)))
+                cursorS = landing
+                cursorM = markM
+            }
+
+            for crossing in inside {
+                local(to: max(crossing.fromM, fromM), endingAt: nil)
+                let leaveM = min(crossing.toM, toM)
+                built.append(
+                    .init(startS: cursorS, endS: cursorS + beatS, phase: .crossing(fromM: cursorM, toM: leaveM))
+                )
+                cursorS += beatS
+                cursorM = leaveM
+            }
+            local(to: toM, endingAt: inside.isEmpty ? landingS : nil)
+            if let landingS, cursorS < landingS {
+                // Only reachable when a crossing consumed the stretch's tail:
+                // hold at the far end rather than leaving a gap in the clock.
+                built.append(.init(startS: cursorS, endS: landingS, phase: .travel(fromM: toM, toM: toM)))
+            }
+            return built
+        }
     }
 
     /// A genuine leap in the journey: two consecutive route vertices further
@@ -108,7 +182,13 @@ extension CameraPath {
         atDistance distanceM: Double, timeline: [TimelineEntry], durationS: Double
     ) -> Double {
         for entry in timeline {
-            guard case let .travel(fromM, toM) = entry.phase else { continue }
+            let fromM: Double, toM: Double
+            switch entry.phase {
+            case let .travel(from, to), let .crossing(from, to):
+                (fromM, toM) = (from, to)
+            case .hold:
+                continue
+            }
             if distanceM <= toM {
                 guard toM > fromM else { return entry.startS }
                 let fraction = min(max((distanceM - fromM) / (toM - fromM), 0), 1)
