@@ -2494,9 +2494,10 @@ been one undifferentiated "cross-region" problem into three shapes.
 **Why the deferral costs nothing.** Type 3 is a *loop over* type 2, not a new
 mechanism — `Docs/cross-region-journeys.md`'s own reframing is "N local journeys
 joined by discontinuities", so type 1 is N=1, type 2 is N=2, and type 3 is N>2.
-Building 2 properly is what makes 3 cheap. ⚠️ **`ishigaki-crossing` renders a
+Building 2 properly is what makes 3 cheap. ~~⚠️ **`ishigaki-crossing` renders a
 type 3 today** (it contains the Taipei drive *and* the crossing *and* Ishigaki);
-Chiu keeps it deliberately as the type-3 reference film.
+Chiu keeps it deliberately as the type-3 reference film.~~ **Struck — this
+sentence was wrong. See the correction at the end of this entry.**
 
 **The film ends at the destination. There is no return flight.** The import
 carries the homeward leg and its photographs; the film does not. The trip's last
@@ -2552,3 +2553,39 @@ so the boundary becomes a config threshold with the frozen card past it, and
 **Not decided by this entry:** the flight question above; the title card's text
 (it still shows trip title + dates, not the country name); the badge's 0.60 size,
 still reserved for a judgement from a film (ADR 2026-08-29).
+
+### ⚠️ Correction, 2026-09-01 — `ishigaki-crossing` is a **type 2**, and this entry said otherwise
+
+**Written by the PO session, caught by the implementing session the same day, and
+corrected here rather than left to be rediscovered.**
+
+**Measured**, not argued: the fixture holds 16 photographs, **6 west of
+`UnroutableSeaProvider`'s 122.5°E meridian and 10 east** — longitudes 121.23–121.57
+and 124.09–124.31. That is **exactly one crossing**, therefore **two distinct local
+journeys**, therefore a **type 2** by this entry's own rule. Its own `_comment`
+describes the same shape: *"a short drive across Taipei to Taoyuan airport, an
+unroutable crossing of open sea, then four stops on Ishigaki."*
+
+**The error was a category confusion, and it is worth naming because it is easy to
+repeat:** the *film* `ishigaki-crossing` currently renders does show the origin's
+drive — that is true, and it is what the type-2 form removes. But *showing the
+origin's drive* is a property of **the film**, not of **the trip**. The
+classification rule this entry states runs on the trip. One sentence let a fact
+about the render decide a fact about the journey.
+
+⚠️ **This is `PO.md`'s own rule broken by the session that enforces it** — an
+inference written as though established, in a comparison the entry itself made at
+the same visual weight as its measured claims. It joins the snap-radius (2026-08-20
+(d)) and the trail-blue (2026-08-27) corrections as the third of its kind, and all
+three share one shape: **a claim about the system asserted from reasoning when the
+tree could have been asked.**
+
+**Two practical consequences:**
+
+1. **The tree already has a committed type-2 fixture**, and
+   `RecapCameraContinuityTests` already scans it. **No type-2 fixture needs
+   authoring** — an instruction to write one was issued on this mistake and is
+   withdrawn.
+2. **What the tree lacks is a type-3 fixture** — two or more crossings. Out of
+   scope while type 3 is deferred, but it is what the gate cannot currently see,
+   and it is the fixture to author on the day type 3 opens.
