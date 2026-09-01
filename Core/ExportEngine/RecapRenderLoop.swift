@@ -2,46 +2,47 @@ import CoreGraphics
 import Foundation
 import KamomeConfig
 
-/// §4.5 step 2 orchestration: walks the timeline frame by frame, requests
-/// base-map snapshots, and cross-fades between neighboring keyframes for the
-/// frames in between — snapshotting all 900 frames would blow the < 90 s render
-/// budget.
+/// §4.5 step 2 orchestration: walks the timeline frame by frame and paints each
+/// one over a base map produced by **reprojecting one station snapshot**
+/// (`Docs/camera-arcs.md` §7).
 ///
-/// Snapshots are taken at the timeline's `cameraFrame`, so the base map is
-/// always framed exactly as the film is. Prefetched a few keyframes ahead so
-/// network-bound snapshot fetches overlap CPU-bound compositing (2026-07-19
-/// benchmark: serial fetches alone cost ~40 s of the budget). Prefetch only
-/// changes timing, never pixels — frames are delivered strictly in order, so
-/// encoders consume them as a stream.
+/// ## What this used to do, and why it stopped
 ///
-/// **Snapshots are cached by camera value, not by keyframe index** (Fable
-/// review 2026-07-26). Since the camera went static (Chiu 2026-07-25) it holds
-/// one fixed frame per act, so on a single-act trip — the common case — every
-/// keyframe asks for the *same* view. Keying the cache by index re-fetched that
-/// identical snapshot ~60 times per film; keying it by `CameraFrame` fetches it
-/// once. The cross-fade is untouched at act boundaries, where the frames really
-/// do differ; within an act the two keyframes now resolve to one snapshot and
-/// the redundant full-frame alpha blend is skipped rather than composited over
-/// itself.
+/// It snapshotted every `keyframe_interval_frames` and filled the frames in
+/// between by alpha-blending the two neighbouring snapshots. While the camera
+/// moves those two are the same map at two different geographic positions, so
+/// every coastline and label was drawn twice, offset — Chiu's P0, 殘影 for the
+/// double image and 晃動 for it stepping forward twice a second (`HANDOFF.md`
+/// 2026-08-30 finding 1, confirmed end to end by a rendered falsification pair).
+///
+/// The workaround was to snapshot *every* frame wherever the camera moves — the
+/// opening, then crossing arcs too. That is why 91% of a crossing film's 367
+/// snapshots were camera movement, and why an export cost 4.4–9.5 minutes on
+/// device for a 69-second film.
+///
+/// **Both were one mechanism, and reprojection ends both.** Between two cameras
+/// the correct operation is not a blend; it is a translate and a scale. The
+/// result is geometrically exact, so there is nothing to fine-sample against,
+/// and one snapshot serves as many frames as its magnification budget allows.
+/// `RecapSnapshotStations` decides where those stations fall.
+///
+/// **Cost stops depending on how long a move takes and depends only on how far
+/// it zooms** (`Docs/camera-arcs.md` §7 consequence 1). A held frame is still
+/// free — a parked camera magnifies by 1.0 and its station never expires — so
+/// the value-cache property that made stop beats cost one snapshot survives as
+/// a special case of the general rule rather than as its own mechanism.
+///
+/// Stations are prefetched a few ahead so provider-bound fetches overlap
+/// CPU-bound compositing; prefetch only changes timing, never pixels, and frames
+/// are delivered strictly in order so encoders consume them as a stream.
 public struct RecapRenderLoop {
-    /// Keyframes requested ahead of the one being composited. Bounds both
-    /// network concurrency and cache memory (~8 MB per 1080×1920 snapshot).
+    /// Stations requested ahead of the one being composited. Bounds both
+    /// provider concurrency and cache memory (~8 MB per 1080×1920 snapshot).
     private static let prefetchDepth = 4
 
-    /// The stretches snapshotted every frame, asked frame by frame.
-    private struct FineSampling {
-        let windowsS: [ClosedRange<Double>]
-        let fps: Int
-
-        func covers(frame: Int) -> Bool {
-            guard !windowsS.isEmpty else { return false }
-            let time = Double(frame) / Double(fps)
-            return windowsS.contains { $0.contains(time) }
-        }
-    }
-
-    /// What a snapshot is a function of. Two keyframes with equal keys are the
-    /// same picture, so they share one fetch.
+    /// What a snapshot is a function of. Two stations with equal keys are the
+    /// same picture, so they share one fetch — a trip that returns to a framing
+    /// it has already held pays for it once.
     private struct SnapshotKey: Hashable {
         let camera: CameraFrame
         let map: MapState
@@ -64,40 +65,36 @@ public struct RecapRenderLoop {
         self.config = config
     }
 
+    /// The stations this film will render from — pure, so a caller can price an
+    /// export without taking a single snapshot. `RecapSnapshotBudgetTests` reads
+    /// it, and so does anything that wants the number before paying it.
+    public var stations: [RecapSnapshotStations.Station] {
+        let timeline = self.timeline
+        let camera = { (time: Double) in timeline.cameraFrame(atTime: time) }
+        return RecapSnapshotStations.plan(
+            frameCount: timeline.frameCount, fps: config.fps,
+            camera: camera,
+            map: { timeline.mapState(atTime: $0) },
+            // A stop beat gets its own station, so the frames the viewer is asked
+            // to look at longest are the ones reprojected least.
+            mustStartAt: RecapSnapshotStations.splitFrames(
+                holds: timeline.holds, frameCount: timeline.frameCount,
+                fps: config.fps, camera: camera
+            ),
+            config: config
+        )
+    }
+
     /// Renders every frame in order. `frame` is the frame index; the closure
     /// returns false to cancel the render (user backed out of S5).
     public func renderFrames(_ deliver: (Int, CGImage) throws -> Bool) async throws {
-        // `keyframe_interval_frames` (15 → two map updates a second) is sized for
-        // a **static** camera, where consecutive keyframes are identical and the
-        // value cache makes them free. The opening prologue is the one stretch
-        // where the camera actually moves, and at that interval the map steps
-        // twice a second while the overlays run at 30 — which is exactly what
-        // read as a janky zoom. Snapshot every frame there and nowhere else.
-        // **Extended 2026-08-30 from "the opening" to "wherever the camera moves
-        // a lot".** The premise above is still the right one; what changed is
-        // that the opening stopped being the only stretch that satisfies it. A
-        // crossing arc opens the frame out and closes it back in mid-body, so at
-        // the coarse interval it cross-fades between two geometrically different
-        // pictures — the same double-image mechanism, arriving in the body.
-        //
-        // ⚠️ This does **not** fix the wider defect `HANDOFF.md` 2026-08-30
-        // finding 1 names: `FollowCamera` is a continuously-moving dolly, so
-        // every travelling shot has some of it. Fine-sampling the whole body
-        // multiplies snapshots by ~15 and is not shippable; the fix is
-        // camera-arc Pass 1's crop-scaling (`Docs/camera-arcs.md` §7).
-        let interval = max(config.keyframeIntervalFrames, 1)
-        let fine = FineSampling(windowsS: timeline.fineSampledWindowsS, fps: config.fps)
-        // The last frame blends toward this keyframe; never fetch past it. Uses
-        // the coarse interval because the fine one only applies to the opening.
-        let lastKeyframe = (timeline.frameCount - 1) / interval + 1
+        let plan = stations
+        guard !plan.isEmpty else { return }
         var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
         defer { fetches.values.forEach { $0.cancel() } }
 
-        /// What the camera and map are doing at a keyframe — pure, so it is
-        /// cheap to ask repeatedly.
-        func key(_ keyframe: Int, interval: Int) -> SnapshotKey {
-            let time = min(Double(keyframe * interval) / Double(config.fps), timeline.durationS)
-            return SnapshotKey(camera: timeline.cameraFrame(atTime: time), map: timeline.mapState(atTime: time))
+        func key(_ station: RecapSnapshotStations.Station) -> SnapshotKey {
+            SnapshotKey(camera: station.camera, map: station.map)
         }
 
         func fetch(_ key: SnapshotKey) -> Task<MapSnapshot, Error> {
@@ -112,39 +109,36 @@ public struct RecapRenderLoop {
             return task
         }
 
-        var currentKeyframe = -1
-        for frame in 0..<timeline.frameCount {
-            let interval = fine.covers(frame: frame) ? 1 : interval
-            let keyframe = frame / interval
-            let previousKey = key(keyframe, interval: interval)
-            let nextKey = key(keyframe + 1, interval: interval)
-
-            if keyframe != currentKeyframe || interval == 1 {
-                currentKeyframe = keyframe
-                // Evict anything outside the live window — with value keys the
-                // window has to be named explicitly rather than compared by index.
-                var live: Set<SnapshotKey> = [previousKey, nextKey]
-                for ahead in 2...(2 + Self.prefetchDepth) where keyframe + ahead <= lastKeyframe {
-                    let ahead = key(keyframe + ahead, interval: interval)
-                    live.insert(ahead)
-                    _ = fetch(ahead)
-                }
-                fetches = fetches.filter { live.contains($0.key) }
+        for (index, station) in plan.enumerated() {
+            // Evict anything outside the live window. Named explicitly rather
+            // than compared by index, because the keys are values and two distant
+            // stations may legitimately be the same picture.
+            var live: Set<SnapshotKey> = [key(station)]
+            for ahead in 1...Self.prefetchDepth where index + ahead < plan.count {
+                let next = key(plan[index + ahead])
+                live.insert(next)
+                _ = fetch(next)
             }
+            fetches = fetches.filter { live.contains($0.key) }
 
-            let previous = try await fetch(previousKey).value
-            let background: RecapBackground
-            if previousKey == nextKey {
-                // Same view either side: compositing the picture over itself at
-                // a partial alpha is a wasted full-frame blend per frame.
-                background = RecapBackground(current: previous)
-            } else {
-                let next = try await fetch(nextKey).value
-                let blend = Double(frame % interval) / Double(interval)
-                background = RecapBackground(current: next, previous: previous, blend: blend)
+            let snapshot = try await fetch(key(station)).value
+            for frame in station.frames {
+                let time = Double(frame) / Double(config.fps)
+                // Throws rather than drawing a frame with an edge of nothing. A
+                // station that does not contain its own frame is a planner bug,
+                // and the one thing that must never happen quietly is a film that
+                // renders anyway (`Arch.md` §6).
+                let reprojection = try SnapshotReprojection(
+                    station: snapshot, stationCamera: station.camera,
+                    target: timeline.cameraFrame(atTime: time),
+                    widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+                )
+                let image = try compositor.render(
+                    atTime: time,
+                    background: RecapBackground(station: snapshot, reprojection: reprojection)
+                )
+                if try !deliver(frame, image) { return }
             }
-            let image = try compositor.render(atTime: Double(frame) / Double(config.fps), background: background)
-            if try !deliver(frame, image) { return }
         }
     }
 }

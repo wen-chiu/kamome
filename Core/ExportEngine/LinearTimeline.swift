@@ -29,6 +29,9 @@ public struct LinearTimeline {
     /// How much of the film is the opening establishing sequence — 0 when there
     /// is no prologue. Exposed so a render can report its own pacing.
     public let openingS: Double
+    /// The film's one sanctioned discontinuity — see `CameraPath.titleCutS`.
+    /// Published so the continuity gate can scan *from* it.
+    public let titleCutS: Double?
     /// When the trail and the vehicle start moving. Earlier than `openingS`: the
     /// opening's closing zoom plays over an already-moving journey, which is what
     /// removed the frozen opening (Chiu 2026-08-01).
@@ -135,6 +138,7 @@ public struct LinearTimeline {
         durationS = path.durationS
         frameCount = path.frameCount
         openingS = path.openingS
+        titleCutS = path.titleCutS
         journeyStartS = path.journeyStartS
         stops = trip.stops
         holds = path.holds

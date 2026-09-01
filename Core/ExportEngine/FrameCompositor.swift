@@ -1,24 +1,49 @@
 import CoreGraphics
 import Foundation
 
-/// The two keyframe snapshots a frame blends between. At `blend == 0` the
-/// frame is pure `previous`; at 1, pure `current`. Overlay/subject geometry
-/// projects through both snapshots and lerps the pixel positions, so the trail
-/// and marker track the base map through the cross-fade instead of sliding over
-/// it (§4.5 step 2).
+/// The base map behind one frame, in one of two forms.
+///
+/// **Reprojected** (`station:reprojection:`) is what the render loop produces:
+/// one station snapshot, translated and scaled onto this frame's camera
+/// (`Docs/camera-arcs.md` §7). The frame is geometrically exact, so the
+/// projection is exact too and the trail and marker sit *on* the map.
+///
+/// **Cross-faded** (`current:previous:blend:`) is the older form, kept because
+/// the still harnesses pass a single snapshot through it (`blend` 1, no
+/// `previous`) and because `RecapFrameTests` asserts the blend arithmetic
+/// itself. ⚠️ Two snapshots at two *different* cameras must not be blended
+/// through it: that is Chiu's P0 — the 殘影 is the double image and the 晃動 is
+/// it snapping forward twice a second (`HANDOFF.md` 2026-08-30 finding 1). The
+/// loop no longer does it; the type still can, so the way to keep that honest is
+/// that nothing in the shipping path constructs it that way any more.
 public struct RecapBackground {
     public let current: MapSnapshot
     public let previous: MapSnapshot?
     public let blend: Double
+    /// How `current` is placed on this frame. `nil` draws it 1:1 into the frame,
+    /// which is the still harnesses' case: a snapshot taken at exactly this
+    /// camera needs no transform.
+    public let reprojection: SnapshotReprojection?
 
     public init(current: MapSnapshot, previous: MapSnapshot? = nil, blend: Double = 1) {
         self.current = current
         self.previous = previous
         self.blend = min(max(blend, 0), 1)
+        reprojection = nil
+    }
+
+    /// One station serving this frame by reprojection — no second snapshot, and
+    /// therefore no blend to be wrong about.
+    public init(station: MapSnapshot, reprojection: SnapshotReprojection) {
+        current = station
+        previous = nil
+        blend = 1
+        self.reprojection = reprojection
     }
 
     func point(lat: Double, lon: Double) -> CGPoint {
         let currentPoint = current.point(lat: lat, lon: lon)
+        if let reprojection { return reprojection.map(currentPoint) }
         guard let previous, blend < 1 else { return currentPoint }
         let previousPoint = previous.point(lat: lat, lon: lon)
         return CGPoint(
@@ -94,7 +119,16 @@ public struct FrameCompositor {
         else { throw RenderError() }
 
         let frameRect = CGRect(x: 0, y: 0, width: widthPx, height: heightPx)
-        if let previous = background.previous, background.blend < 1 {
+        if let reprojection = background.reprojection {
+            // The station's whole image, placed so its contained sub-rectangle
+            // lands on the frame. Clipped because the rest of it hangs off every
+            // edge by design and resampling what will not be seen is waste.
+            context.saveGState()
+            context.clip(to: frameRect)
+            context.interpolationQuality = .high
+            context.draw(background.current.image, in: reprojection.destinationRect)
+            context.restoreGState()
+        } else if let previous = background.previous, background.blend < 1 {
             context.draw(previous.image, in: frameRect)
             context.setAlpha(CGFloat(background.blend))
             context.draw(background.current.image, in: frameRect)

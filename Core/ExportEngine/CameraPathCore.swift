@@ -94,6 +94,44 @@ extension CameraPath {
         return min(spanM, max(containedSpanM(bounds: bounds, config: config), config.cameraSpanM))
     }
 
+    /// **The local journey the film opens in** — the vertices up to the first
+    /// crossing, or the whole route when there is none.
+    ///
+    /// `Docs/cross-region-journeys.md` reframes a trip as N local journeys joined
+    /// by discontinuities. Chiu decided on 2026-08-31 (proposal 2A) that beat 2
+    /// frames **the destination's** local journey, and his reason was that in the
+    /// cross-region film he wants, *the origin's drive is not in the recap at
+    /// all*: title → departure → crossing → arrival → the trip at the
+    /// destination.
+    ///
+    /// ⚠️ **That premise is not true of the film that exists today**, and building
+    /// to it early produces an incoherent opening rather than an early version of
+    /// the right one. Measured on `ishigaki-crossing`
+    /// (`RecapOpeningFramingTests`): beat 2 fitted to the destination sits 275 km
+    /// from where the body camera starts, so the closing zoom has to travel
+    /// **273 km across a 33.3 km frame** — 8.2 frame-widths — to reach a journey
+    /// that then drives the origin and flies to the destination the opening
+    /// already showed. `RecapCameraContinuityTests` fails it as 69 violations,
+    /// correctly: it is the 2026-08-08 pre-pan defect at eight times the scale,
+    /// and it is "多餘畫面" of exactly the kind the title-card cut was decided to
+    /// remove.
+    ///
+    /// So this frames **the journey the body camera actually starts in**, which
+    /// makes the decision self-executing rather than premature:
+    ///
+    /// - on a **local** trip — every trip that is not cross-region, and the case
+    ///   Chiu also asked to change — first and last are the same journey, so this
+    ///   *is* proposal 2A, with no difference of any kind;
+    /// - on a **cross-region** trip it is the origin today, and it becomes the
+    ///   destination the moment the next session drops the origin from the recap,
+    ///   because the destination will then be the only local journey. **No further
+    ///   change is needed here when that lands.**
+    static func openingRoute(route: [Point], crossings: [Range<Int>]) -> [Point] {
+        guard let first = crossings.first, first.lowerBound > 0 else { return route }
+        let head = Array(route[..<min(first.lowerBound + 1, route.count)])
+        return head.count >= 2 ? head : route
+    }
+
     /// Where the body camera is when the opening hands over to it.
     ///
     /// **Corrected 2026-08-08.** This used to be the route's own framing — the
@@ -245,7 +283,16 @@ extension CameraPath {
     static func establishedSpanM(
         prologue: Prologue?, route: [Point], establishing: RecapBounds?, config: TrackingConfig.Export
     ) -> Double {
-        if let first = prologue?.beats.first { return first.frame.spanM }
+        // **The LAST wide beat, not the first** (Chiu 2026-08-31). One number was
+        // doing two incompatible jobs: the span of beat 1 was both the "where in
+        // the world" establishing shot *and*, through `target_zoom_ratio`, the
+        // divisor that set how tightly the destination is framed — so the country
+        // could not be widened without smudging the destination, and vice versa.
+        // The title-card cut breaks that chain: beat 1 no longer has to be
+        // continuous with anything, so the body divides the frame the film proper
+        // actually opens on. With a single-beat prologue first and last are the
+        // same beat, so nothing moves there.
+        if let last = prologue?.beats.last { return last.frame.spanM }
         return cappedToRegion(
             frame(for: bounds(of: route), config: config, padding: config.wideSpanPadding).spanM,
             establishing: establishing, config: config

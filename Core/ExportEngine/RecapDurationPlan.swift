@@ -167,7 +167,17 @@ public struct RecapDurationPlan: Equatable {
         config: TrackingConfig.Export,
         deck: RecapDeck
     ) -> RecapDurationPlan {
-        let opening = config.openingCountryS + config.openingRegionalS + 2 * config.zoomTransitionS
+        // **One ease, not two, since the title card cuts** (Chiu 2026-08-31). The
+        // opening is the card's held country frame, a cut, the destination beat,
+        // and one closing zoom into the body — `title_card_s` + `opening_regional_s`
+        // + `zoom_transition_s`. It used to be `opening_country_s` + regional +
+        // *two* transitions, because the country eased into the region.
+        //
+        // This has to track `CameraPath.buildWideOpening` or the film budgets an
+        // opening it does not have: the plan reserves these seconds and the stop
+        // dwells divide what is left, so 2.5 s of phantom prologue is 2.5 s the
+        // stops never get back. `opening_country_s` is no longer read by anything.
+        let opening = config.titleCardS + config.openingRegionalS + config.zoomTransitionS
 
         switch config.recapMode {
         case .full:

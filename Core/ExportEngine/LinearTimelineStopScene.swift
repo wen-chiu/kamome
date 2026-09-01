@@ -195,21 +195,14 @@ extension LinearTimeline {
 // MARK: - Where the crossings are, and where the map must be sampled per frame
 
 extension LinearTimeline {
-    /// The stretches the render loop must **snapshot every frame**: the opening,
-    /// plus every crossing arc.
-    ///
-    /// One list rather than two rules, because the question is one question —
-    /// *where does the camera move enough that cross-fading two snapshots shows
-    /// the map twice?* The opening was the only answer while the body camera was
-    /// believed static; an arc is the second (`HANDOFF.md` 2026-08-30 finding 1).
-    ///
-    /// **This is a known temporary cost.** Camera-arc Pass 1 replaces the
-    /// cross-fade with a reprojection of one wide snapshot, at which point this
-    /// list is empty and the interval stops being a quality knob at all
-    /// (`Docs/camera-arcs.md` §7).
-    public var fineSampledWindowsS: [ClosedRange<Double>] {
-        (openingS > 0 ? [0...openingS] : []) + path.arcWindowsS
-    }
+    // `fineSampledWindowsS` lived here until 2026-08-31. It listed the stretches
+    // the loop had to snapshot **every frame** — the opening, plus every crossing
+    // arc — because cross-fading two snapshots taken at two different cameras
+    // shows the map twice. Its own doc named its end condition: "Camera-arc Pass 1
+    // replaces the cross-fade with a reprojection of one wide snapshot, at which
+    // point this list is empty." That happened (`RecapSnapshotStations`), the last
+    // caller went with it, and a property still claiming the opening is
+    // fine-sampled would now be a lie a reader has no way to check.
 
     /// The windows of the concatenated route with **no road under them**, one per
     /// crossing leg.

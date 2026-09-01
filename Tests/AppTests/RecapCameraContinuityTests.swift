@@ -144,6 +144,32 @@ final class RecapCameraContinuityTests: XCTestCase {
         let kind: String
     }
 
+    /// **The card beat must be a still frame, and the film proper starts after
+    /// it** — the first frame the continuity scan may begin at.
+    ///
+    /// ⚠️ **This is not an exemption and must not become one.** An exemption
+    /// forgives a violation inside a window. This asserts instead that there is
+    /// no camera motion to be continuous *with* before the cut — the card beat is
+    /// one framing, held — and then everything after it is scanned with nothing
+    /// forgiven. If the card beat ever moved, this fails rather than skips, which
+    /// is the whole difference.
+    private func assertTheCardBeatIsStill(
+        _ line: LinearTimeline, fixture: String, fps: Int
+    ) throws -> Int {
+        guard let cut = line.titleCutS else { return 1 }
+        let step = 1.0 / Double(fps)
+        let card = line.cameraFrame(atTime: 0)
+        for frame in 0..<max(Int((cut * Double(fps)).rounded(.down)), 1) {
+            XCTAssertEqual(
+                Self.groundOverlap(card, line.cameraFrame(atTime: Double(frame) * step)), 1.0,
+                accuracy: 1e-9,
+                "\(fixture): the title card's beat moved at frame \(frame) — a cut is only honest "
+                    + "out of a still frame, so this is a violation, not an exemption"
+            )
+        }
+        return Int((cut * Double(fps)).rounded(.up)) + 1
+    }
+
     /// Builds `fixture`'s real timeline and walks every frame of it.
     @discardableResult
     private func scan(fixture: String) async throws -> String {
@@ -168,13 +194,30 @@ final class RecapCameraContinuityTests: XCTestCase {
         var excusedCount = 0
         var worst = (overlap: 1.0, timeS: 0.0)
 
-        for frame in 1..<line.frameCount {
+        // **The film proper begins at the title-card cut** (Chiu 2026-08-31).
+        // Before it the camera is a *held* frame under a title card, which the
+        // viewer reads as chrome; a cut out of chrome is a film convention and
+        // costs no continuity. After it, every rule below applies to every frame
+        // with nothing forgiven.
+        //
+        // ⚠️ **This is not an exemption and must not become one.** An exemption
+        // would forgive a violation inside a window. This asserts instead that
+        // there is no camera motion to be continuous *with* before the cut — the
+        // card beat is one frame, held — and then scans everything after it. If
+        // the card beat ever moved, the loop below would fail rather than skip,
+        // which is the whole difference.
+        let scanFrom = try assertTheCardBeatIsStill(line, fixture: fixture, fps: config.fps)
+        for frame in scanFrom..<line.frameCount {
             let timeS = Double(frame) * step
             for (gap, floor, kind) in [
                 (step, Self.minFrameOverlap, "frame"),
                 (snapshotStep, Self.minSnapshotOverlap, "snapshot")
             ] {
                 guard timeS - gap >= 0 else { continue }
+                // Never compare across the cut itself: the pair would straddle a
+                // discontinuity the film declares, and the frames after it are
+                // already scanned against each other.
+                if let cut = line.titleCutS, timeS - gap <= cut { continue }
                 let now = line.cameraFrame(atTime: timeS)
                 let before = line.cameraFrame(atTime: timeS - gap)
                 let overlap = Self.groundOverlap(before, now)

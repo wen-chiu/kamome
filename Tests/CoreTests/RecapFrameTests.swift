@@ -238,45 +238,6 @@ final class RecapFrameTests: RecapRenderTestCase {
         XCTAssertEqual(provider.requestCount, 1, "one camera value = one snapshot, however many keyframes want it")
     }
 
-    /// The dedup must not swallow real movement. A route with a 100 km leap is
-    /// now **panned** across rather than cut across (Chiu 2026-08-01: acts no
-    /// longer frame anything), so every keyframe sits at its own camera value and
-    /// each one is fetched — the cache dedups identical views, never distinct
-    /// ones.
-    ///
-    /// This is the cost side of the redesign, recorded deliberately: a camera
-    /// that moves cannot reuse snapshots the way a camera frozen per act could,
-    /// so a moving film fetches more of them.
-    func testMovingCameraFetchesOneSnapshotPerDistinctView() async throws {
-        let config = exportConfig(targetDurationS: 2, fps: 5, keyframeIntervalFrames: 3)
-        // Two clusters ~100 km apart: far beyond act_split_km, and once upon a
-        // time two separate fixed frames with a cut between them.
-        let jumped = [
-            RecapCoordinate(lat: -32.00, lon: 115.75),
-            RecapCoordinate(lat: -32.01, lon: 115.76),
-            RecapCoordinate(lat: -33.00, lon: 115.80),
-            RecapCoordinate(lat: -33.01, lon: 115.81)
-        ]
-        let trip = RecapTrip(
-            route: jumped, stops: [], title: "Jump", subtitle: "",
-            statsLines: [], callToAction: "", shareURL: ""
-        )
-        let timeline = try makeTimeline(trip, config: config)
-        let compositor = makeCompositor(timeline)
-        let provider = CountingProvider()
-        let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
-
-        var cameras: Set<Double> = []
-        for keyframe in 0...((timeline.frameCount - 1) / 3 + 1) {
-            let time = min(Double(keyframe * 3) / 5, timeline.durationS)
-            cameras.insert(timeline.cameraFrame(atTime: time).centerLat)
-        }
-
-        try await loop.renderFrames { _, _ in true }
-        XCTAssertEqual(provider.requestCount, cameras.count,
-                       "one snapshot per distinct camera value")
-    }
-
     func testLoopStopsWhenConsumerCancels() async throws {
         let config = exportConfig(targetDurationS: 2, fps: 5, keyframeIntervalFrames: 3)
         let timeline = try makeTimeline(makeTrip(config: config), config: config)
