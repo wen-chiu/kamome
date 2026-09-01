@@ -1,6 +1,19 @@
 # Engineering session — the contained arc, Pass 1 (rendering only)
 
-**Status: NOT YET RUN. Refreshed 2026-08-28.** Its precondition — the
+> ## ✅ EXECUTED AND MERGED — PR #26, 2026-09-01
+>
+> Delivered as **crop-scaling** (`RecapSnapshotStations`), which is
+> `Docs/camera-arcs.md` §7. It closed the shake P0 (ADR 2026-08-31 (b)) and
+> carried the opening's rework with it (ADR 2026-08-31). Measured on
+> `ishigaki-crossing`: 367 → 178 snapshots, 1216 → 219 s wall clock,
+> frame-to-frame swing 1.402 → 0.747, stop beats pixel-exact.
+>
+> ⚠️ **Do not paste this brief into a new session**, and note that its "do not
+> change `keyframe_interval_frames`" instruction is now moot: that key has **no
+> shipping reader at all** since crop-scaling replaced the interval with
+> stations. The text below is kept as the record of what was asked.
+
+**Status when written: NOT YET RUN. Refreshed 2026-08-28.** Its precondition — the
 visual-checks branch merged — is now satisfied (PR #18, `87d1d4e`), and
 `Docs/camera-arcs.md` §7 gained a dated addendum for the points/pixels seam that
 branch introduced. Read the addendum: the design holds, the arithmetic has one

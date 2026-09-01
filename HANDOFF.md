@@ -1,8 +1,9 @@
 # HANDOFF — live findings
 
-**Updated 2026-09-01.** `main` carries PRs #16–#25. The cross-region crossing
-beat, **crop-scaling** and **the title-card opening** are built and measured;
-Chiu has judged crop-scaling (accepted) and has **not yet seen the opening.**
+**Updated 2026-09-01.** `main` carries PRs #16–#26. The crossing beat,
+**crop-scaling** and **the title-card opening** are built, measured and **judged
+by Chiu** (ADRs 2026-08-31, 2026-08-31 (b), 2026-09-01). The live line is the
+**type-2 film form**.
 
 This file holds **only what is live**: open blockers, unfinished questions,
 traps, and known bugs. Each entry is a summary and a pointer; the reasoning,
@@ -30,46 +31,26 @@ green run since; the allowance resets with the month.
 **Treat a red check as real again.** The dead-CI tell is unmistakable: ~3 s wall
 clock and `steps=0`. Anything with steps is a real signal.
 
-### The shake and the ghosting — FIXED and accepted; magnification still open
-Chiu's P0 (`Docs/decisions.md` 2026-08-30). `RecapRenderLoop` no longer
-cross-fades two snapshots taken at two different cameras: `RecapSnapshotStations`
-plans one snapshot per run of frames and **reprojects** it onto each frame, which
-is exact. Chiu watched the before/after on 2026-08-31 and **accepted it**.
+### ✅ CLOSED — the shake, and the opening that came with it
+Both judged and accepted by Chiu; the decisions, numbers and reasoning are ADRs
+**2026-08-31** (the opening cuts out of a title card held over the country) and
+**2026-08-31 (b)** (crop-scaling closes the P0). Detail:
+`Docs/handoff-crop-scaling.md`.
 
-Against an interval-1 reference (`miyakojima` body 20–30 s) — the column that
-answers 晃動 is the swing, since a level of error that never changes is softness:
+What survives here as **live**, and only this:
 
-    shipped cross-fade   travel 2.005  swing 1.402   holds 0.038 / 0.121
-    1.10 + hold splits   travel 1.061  swing 0.747   holds 0.046 / 0.142
-
-Stop beats are pixel-exact again: a station starts at each hold's first frame, at
-the frame after its last, and at the frame the camera **settles** — so a parked
-run reprojects to itself at magnification 1.0. Threshold-free.
-
-⏳ **Two for Chiu.** `snapshot_station_max_magnification` is **1.1**, measured;
-1.05 is sharper at ~3× the snapshots. And a **new** artifact: a sharpness step of
-0.747 exactly at the hold boundaries, where a pixel-exact parked station abuts a
-magnified travelling one. §7's remedy (cross-fade *at a station boundary*) costs
-no extra fetches and is **not built**, pending a judged render.
-→ `Docs/handoff-crop-scaling.md` §1, §10.
-
-### ⏳ The opening is built and unjudged — and the cost went UP
-Beat 1 is a **held country frame under the title card** that **cuts** to beat 2
-(Chiu 2026-08-31); beat 2 is one local journey; `bodySpanM` divides **beat 2**,
-breaking the chain that made "widen the country" and "smudge the destination" one
-knob. `ishigaki-crossing`: opening 9.0 → **6.5 s**, beat 1 685 km (trip × 2.2) →
-**285.6 km (Taiwan)**, body span **274.0 → 20.0 km**.
-
-⚠️ **Snapshots went 367 → 51 → 178**, and the reason is the point: **the 51 was
-cheap because the destination was a smudge.** Net against what ships: **367 → 178,
-2.1× cheaper**, ghosting gone, destination 13.7× tighter.
-
-⚠️ **One deviation from proposal 2A, deliberate** (`Arch.md` §7): beat 2 frames
-the journey **the body camera starts in**, not the destination. Framing the
-destination while the body still starts at the origin makes the closing zoom
-travel **273 km across a 33.3 km frame** (69 gate violations). Identical on a
-local trip; becomes the destination on its own once the origin leaves the recap.
-→ `Docs/handoff-crop-scaling.md` §11, §12.
+- ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*,
+  not fixed. §7's remedy (cross-fade at a station boundary) costs no extra
+  fetches and is not built. Revisit only if someone notices it in a film.
+- ⚠️ **`keyframe_interval_frames` is now dead config** — VERIFIED 2026-09-01:
+  after crop-scaling, `Core`/`UI`/`App` mention it only in a past-tense comment
+  in `RecapRenderLoop`. It is still in `Config/TrackingConfig.json` and still
+  passed by ~8 test fixtures, so it **looks live and is not** — the same trap as
+  `route_waypoint_radius_m`. Two consequences, neither acted on: tuning it does
+  nothing, and `RecapBudgetAndDemoTests:140` still computes
+  `frameCount / keyframeIntervalFrames`, which **may now be measuring a quantity
+  the render path no longer has**. Nobody has checked that test; check it before
+  trusting its number.
 
 ---
 
