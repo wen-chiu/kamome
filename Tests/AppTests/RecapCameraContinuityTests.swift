@@ -246,23 +246,23 @@ final class RecapCameraContinuityTests: XCTestCase {
         }
 
         return Self.report(
-            fixture: fixture, line: line, violations: violations,
-            worst: worst, permitted: permitted.count, excused: excusedCount
+            fixture: fixture, line: line, violations: violations, filmType: trip.filmType,
+            worst: worst, cuts: (permitted: permitted.count, excused: excusedCount)
         )
     }
 
     /// One line per fixture, plus a failure per violation. Split out of `scan`
     /// so the scan itself stays a walk over frames.
     private static func report(
-        fixture: String, line: LinearTimeline, violations: [Violation],
-        worst: (overlap: Double, timeS: Double), permitted: Int, excused: Int
+        fixture: String, line: LinearTimeline, violations: [Violation], filmType: RecapFilmType,
+        worst: (overlap: Double, timeS: Double), cuts: (permitted: Int, excused: Int)
     ) -> String {
         let summary = String(
             format: "  %-16@ %5.1fs · span %6.1f km · worst frame overlap %3.0f%% at %5.1fs · "
-                + "%d violations · %d permitted cuts · %d excused · %d arcs",
+                + "%d violations · %d permitted cuts · %d excused · %d arcs · type %@",
             fixture as NSString, line.durationS, line.path.bodySpanM / 1000,
-            worst.overlap * 100, worst.timeS, violations.count, permitted, excused,
-            line.path.arcWindowsS.count
+            worst.overlap * 100, worst.timeS, violations.count, cuts.permitted, cuts.excused,
+            line.path.arcWindowsS.count, "\(filmType)" as NSString
         )
         for violation in violations.prefix(3) {
             XCTFail(String(

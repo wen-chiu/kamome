@@ -49,6 +49,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
             keyframeIntervalFrames: 15,
             snapshotStationMaxMagnification: 1.5,
             snapshotStationPadding: 1.03,
+            crossingFlightMaxLongitudeDeg: 70,
             subjectLengthPx: 300, titleCardS: 1, endCardS: 1, videoBitrateMbps: 5,
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,
             uncappedPhotoHoldS: 1.0,

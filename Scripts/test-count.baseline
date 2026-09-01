@@ -1,4 +1,4 @@
 # The number of test functions under Tests/, counted by Scripts/check-test-count.sh.
 # Raise or lower this only in the same commit that adds or (per Arch.md §7.2) proves
 # the removal of a test.
-371
+393

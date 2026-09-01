@@ -77,6 +77,29 @@ enum RecapComposer {
         segment.routeVerdict == .noRoad
     }
 
+    /// Whether routing answered — with any of its three verdicts — for **every**
+    /// segment of this trip (`RecapTrip.everyLegRoutabilityEstablished`).
+    ///
+    /// The film type needs the distinction `isCrossing` deliberately throws
+    /// away. That Bool reads NULL as "not a crossing", which is right for *the
+    /// camera* — never fly a sprite over a leg nobody asked about — and wrong for
+    /// *the type*, where a NULL leg is a crossing that may simply not have been
+    /// established yet. One trip, two honest readings of the same nil.
+    ///
+    /// An empty trip answers `false`: nothing was established because there was
+    /// nothing to establish, and `RecapFilmType.unknown` is the truthful verdict
+    /// on a journey with no legs.
+    ///
+    /// ⚠️ Counts **every** segment handed in, including any too degenerate to
+    /// become a leg (`legs(from:)` drops those under two points). Deliberate: a
+    /// dropped segment is still a stretch routing was meant to answer for, and
+    /// counting it errs toward `unknown`, which is the safe direction.
+    static func everyLegRoutabilityEstablished(
+        _ segments: [(segment: SegmentRecord, points: [TrackpointRecord])]
+    ) -> Bool {
+        !segments.isEmpty && segments.allSatisfy { $0.segment.routeVerdict != nil }
+    }
+
     /// The whole display polyline. Kept for callers that only need geometry
     /// (S3's map, distance math) — the film goes through `legs`.
     static func route(
@@ -104,7 +127,8 @@ enum RecapComposer {
         stopHoldS: Double = 1.5,
         rawPhotoCounts: [String: Int] = [:],
         favoriteCounts: [String: Int] = [:],
-        weighting: TrackingConfig.Export? = nil
+        weighting: TrackingConfig.Export? = nil,
+        everyLegRoutabilityEstablished: Bool = false
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
 
@@ -146,7 +170,8 @@ enum RecapComposer {
             subtitle: titleSubtitle(trip: trip, stats: stats),
             statsLines: statsLines(stats: stats, stopCount: stops.count),
             callToAction: String(localized: "recap_end_cta"),
-            shareURL: nil
+            shareURL: nil,
+            everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
         )
     }
 

@@ -171,11 +171,35 @@ final class RecapModel {
             stopHoldS: config.export.stopHoldS,
             rawPhotoCounts: rawPhotoCounts(detail: detail),
             favoriteCounts: favoriteCounts(detail: detail),
-            weighting: config.export
+            weighting: config.export,
+            everyLegRoutabilityEstablished:
+                RecapComposer.everyLegRoutabilityEstablished(detail.segments)
         ) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }
+        // The film type is derived, never stored (`RecapFilmType`), so it is
+        // resolved here — after routing has had whatever time it has had — and
+        // announced. `.unknown` renders the local film, and saying so is the
+        // difference between a declared fallback and a silent one: a trip whose
+        // crossing has not been routed yet looks exactly like a trip with no
+        // crossing, and only this line tells them apart (`Arch.md` §6).
+        let journeyCount = RecapFilmType.distinctJourneyCount(legs: trip.legs)
+        switch trip.filmType {
+        case .unknown:
+            KamomeLog.recap.notice(
+                "recap: film type UNKNOWN — routing has not answered for every leg, so a crossing may not have been found; rendering the local film and a later export may differ"
+            )
+        case .multiRegion:
+            KamomeLog.recap.notice(
+                "recap: film type multi-region, \(journeyCount, privacy: .public) local journeys — that film is not built, rendering the local one"
+            )
+        case .local:
+            KamomeLog.recap.notice("recap: film type local — one journey, no crossing")
+        case .oneDestination:
+            KamomeLog.recap.notice("recap: film type one destination abroad — 2 local journeys")
+        }
+
         // Layer 3 pipeline. The map stays north-up (product decision, Chiu
         // 2026-07-25) and the 8-direction car sprite carries the heading, so the
         // subject looks identical whichever base map renders underneath.

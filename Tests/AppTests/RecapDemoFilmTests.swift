@@ -252,8 +252,14 @@ final class RecapDemoFilmTests: XCTestCase {
             stopHoldS: config.stopHoldS,
             rawPhotoCounts: selections.rawPhotoCounts,
             favoriteCounts: selections.favoriteCounts,
-            weighting: config
+            weighting: config,
+            everyLegRoutabilityEstablished:
+                RecapComposer.everyLegRoutabilityEstablished(detail.segments)
         ))
+        print("KAMOME_DEMO_FILM_IMPORT film type: \(recap.filmType) "
+            + "(\(RecapFilmType.distinctJourneyCount(legs: recap.legs)) local journeys, "
+            + "routing established for every leg: "
+            + "\(RecapComposer.everyLegRoutabilityEstablished(detail.segments)))")
         let waypoints = recap.stops.filter(\.photos.isEmpty).count
         print("KAMOME_STOP_WEIGHTS \(recap.stops.count) stops · \(waypoints) waypoints · "
             + "\(recap.stops.count - waypoints) highlights · weighting "

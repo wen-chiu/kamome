@@ -40,6 +40,7 @@ class LinearTimelineTestCase: XCTestCase {
             keyframeIntervalFrames: 15,
             snapshotStationMaxMagnification: 1.5,
             snapshotStationPadding: 1.03,
+            crossingFlightMaxLongitudeDeg: 70,
             subjectLengthPx: 300, titleCardS: 2.5, endCardS: 3, videoBitrateMbps: 5,
             // Stop weighting off: these gates measure the unweighted pacing.
             stopWeightingEnabled: false, waypointMaxPhotos: 2, waypointMaxDwellS: 900, waypointHoldS: 0.8,

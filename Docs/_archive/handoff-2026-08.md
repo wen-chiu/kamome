@@ -2187,3 +2187,15 @@ deliberate:
 
 ---
 
+
+
+---
+
+## Moved from HANDOFF.md on 2026-09-01 (closed)
+
+### CI outage 2026-08-29 → 2026-09-01
+
+### ✅ CI is alive again as of 2026-09-01 — a red check means something now
+Actions failed account-wide from 2026-08-29 (spending limit) in ~3 s with **zero
+steps executed**; PR #26 then ran `./check.sh` green on a runner in 5m44s.
+**Treat a red check as real.** The dead-CI tell is ~3 s wall clock and `steps=0`.

@@ -20,6 +20,7 @@ extension TrackingConfig.Export {
             totalDurationMinS: Double, totalDurationMaxS: Double,
             keyframeIntervalFrames: Int,
             snapshotStationMaxMagnification: Double, snapshotStationPadding: Double,
+            crossingFlightMaxLongitudeDeg: Double,
             subjectLengthPx: Double, titleCardS: Double, endCardS: Double, videoBitrateMbps: Double,
             stopWeightingEnabled: Bool, waypointMaxPhotos: Int, waypointMaxDwellS: Double, waypointHoldS: Double,
             uncappedPhotoHoldS: Double,
@@ -60,6 +61,7 @@ extension TrackingConfig.Export {
             self.totalDurationMinS = totalDurationMinS; self.totalDurationMaxS = totalDurationMaxS
             self.keyframeIntervalFrames = keyframeIntervalFrames; self.snapshotStationPadding = snapshotStationPadding
             self.snapshotStationMaxMagnification = snapshotStationMaxMagnification
+            self.crossingFlightMaxLongitudeDeg = crossingFlightMaxLongitudeDeg
             self.subjectLengthPx = subjectLengthPx; self.titleCardS = titleCardS
             self.endCardS = endCardS; self.videoBitrateMbps = videoBitrateMbps
             self.stopWeightingEnabled = stopWeightingEnabled
