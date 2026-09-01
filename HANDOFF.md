@@ -21,13 +21,14 @@ standing rules first.
 
 ## 🔴 Blockers
 
-### CI is blocked account-wide — a red check currently means nothing
-From 2026-08-29 GitHub Actions jobs fail in ~3 seconds with **zero steps
-executed**: the Actions spending limit is exhausted. `main` fails identically,
-so this is not a signal about any branch. **Local `./check.sh` is the only
-verification there is, and a PR must say so** rather than let a red check read
-as a broken suite. Recurs when the monthly allowance runs out unless the limit
-is raised.
+### ✅ CI is alive again as of 2026-09-01 — a red check means something now
+From 2026-08-29 Actions jobs failed in ~3 s with **zero steps executed** (spending
+limit), so `main` failed identically and no branch's check carried information.
+**PR #26 ran `./check.sh` end to end on a runner in 5m44s and passed** — the first
+green run since; the allowance resets with the month.
+
+**Treat a red check as real again.** The dead-CI tell is unmistakable: ~3 s wall
+clock and `steps=0`. Anything with steps is a real signal.
 
 ### The shake and the ghosting — FIXED and accepted; magnification still open
 Chiu's P0 (`Docs/decisions.md` 2026-08-30). `RecapRenderLoop` no longer
