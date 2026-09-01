@@ -69,10 +69,18 @@ public struct RecapRenderLoop {
     /// export without taking a single snapshot. `RecapSnapshotBudgetTests` reads
     /// it, and so does anything that wants the number before paying it.
     public var stations: [RecapSnapshotStations.Station] {
-        RecapSnapshotStations.plan(
+        let timeline = self.timeline
+        let camera = { (time: Double) in timeline.cameraFrame(atTime: time) }
+        return RecapSnapshotStations.plan(
             frameCount: timeline.frameCount, fps: config.fps,
-            camera: { timeline.cameraFrame(atTime: $0) },
+            camera: camera,
             map: { timeline.mapState(atTime: $0) },
+            // A stop beat gets its own station, so the frames the viewer is asked
+            // to look at longest are the ones reprojected least.
+            mustStartAt: RecapSnapshotStations.splitFrames(
+                holds: timeline.holds, frameCount: timeline.frameCount,
+                fps: config.fps, camera: camera
+            ),
             config: config
         )
     }

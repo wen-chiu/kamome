@@ -1,4 +1,4 @@
-# Findings — crop-scaling, and what the opening measurement changed (2026-08-31)
+# Findings — crop-scaling and the opening (2026-08-31 → 2026-09-01)
 
 The engineering session that replaced the render loop's cross-fade with
 reprojection (`Docs/camera-arcs.md` §7, camera-arc Pass 1), and measured the
@@ -271,3 +271,235 @@ and asserts the rule structurally and more strongly: the plan partitions the fil
 every frame's magnification is ≥ 1 (its station contains it) and ≤ the budget
 (no station "contains everything" by being enormous). Both bounds are checked on
 the snapshots the provider actually produced.
+
+---
+
+# Round 2 — 2026-09-01
+
+Chiu accepted round 1's crop-scaling, answered both proposals, and pushed back on
+one claim. §§9–12 are that round.
+
+## 9. 🔴 I WAS WRONG: there is no render length limit, and the "control" was confounded
+
+Round 1 reported that a 70-second `RecapPilotFilmTests` render is SIGKILLed on
+this Mac, "reproduced identically on `main`, so it is not crop-scaling." Chiu
+pushed back from direct experience — he has watched 3-, 5- and 10-minute films
+render here. **He is right and the claim was wrong, not merely over-broad.**
+
+Re-run with nothing else running, whole `ishigaki-crossing`, 2,070 frames:
+
+| path | result |
+|---|---|
+| `RecapPilotFilmTests` → `RecapRenderLoop` | **2070/2070 frames · 96 s** |
+| `RecapDemoFilmTests` → `RecapExporter` (what the app uses) | **2070 frames · 38.9 MB · 99 s** |
+
+**What actually happened.** All six failures fall in one five-minute window
+(22:51–22:56) in which **six xcodebuild processes were competing for one
+simulator**: a background script running four renders — which was still alive —
+plus two foreground runs launched in the belief it had died. Every one failed,
+with `Executed 0 tests` or `Test crashed with signal kill`. The log timestamps
+interleave exactly.
+
+**The part worth keeping is the reasoning, not the number.** A control run on
+`main` reproduced the failure, and that was read as proof the defect was
+pre-existing. It was not a control — it was confounded in precisely the same way,
+because it ran inside the same collision. **A control that shares the confound
+manufactures confidence instead of removing it**, which is worse than having no
+control at all. `pgrep -fl xcodebuild` before trusting any render result.
+
+Round 1's *other* control — the `establishing`/`Secrets.xcconfig` one in §3 —
+worked correctly and caught a real error, so the technique is sound; the mistake
+was not checking that the control was clean.
+
+`HANDOFF.md` is corrected. **A whole film is renderable, so judgement no longer
+has to be made from disconnected windows** — which was Chiu's actual point:
+"沒有銜接", pacing and length cannot be judged from clips that are by
+construction discontinuous.
+
+## 10. ✅ Stop beats are pixel-exact again — stations split at hold boundaries
+
+Round 1 measured the cross-fade as pixel-exact during a parked camera (0.038) and
+crop-scaling as not (0.585), and offered a tighter global magnification at 3× the
+cost. Chiu asked whether there is a trade to make at all, since a parked frame's
+station should be the frame itself.
+
+**There is not — it is fixable, and cheaply.** The cause was that a station sized
+to contain a run of frames spanning *both* a travelling stretch and a parked one
+is wider than the parked frames need. `RecapSnapshotStations.splitFrames` now
+forces a station to begin at each hold's first frame, at the frame after its last,
+and **at the frame where the camera settles inside the hold** — the dead-zone
+dolly is still coasting when a beat opens. Everything after that settle point is
+one camera value, so its station is that value at magnification 1.0: the identity.
+
+Threshold-free on purpose. The holds are a fact the story layer already states
+(`CameraPath.holds`), and the settle point is *the last frame at which the camera
+changes* — measured, not chosen. "A parked run longer than N frames earns a
+station" would have been a number nobody could later justify.
+
+Measured against the interval-1 reference, `miyakojima` body 20–30 s:
+
+| | hold 1 | travelling | hold 2 | whole | swing (max) | snapshots |
+|---|---:|---:|---:|---:|---:|---:|
+| shipped cross-fade | 0.038 | 2.005 | 0.121 | 0.503 | **1.402** | 191 |
+| 1.10, no hold splits | 0.585 | 0.818 | 0.640 | 0.658 | 0.077 | 42 |
+| **1.10 + hold splits** | **0.046** | 1.061 | **0.142** | **0.307** | 0.747 | 55 |
+| 1.05 + hold splits | 0.035 | 0.617 | 0.127 | 0.199 | 0.448 | 161 |
+
+Holds go 0.585 → **0.046** and 0.640 → **0.142**, matching the cross-fade's
+0.038/0.121. Cost: **+10 snapshots** on `ishigaki-crossing`, +13 on `miyakojima`.
+
+⚠️ **One new artifact, and Chiu should know before he picks.** The worst
+frame-to-frame swing rose from 0.077 to 0.747, and it is localised exactly at
+**23.87 s and 26.07 s** — the two hold boundaries. It is a *sharpness* step, not a
+double image: a pixel-exact parked station now abuts a magnified travelling one.
+Still half the cross-fade's 1.402, and it lands where the car pulls away rather
+than twice a second throughout. `Docs/camera-arcs.md` §7 anticipated it and
+prescribes the remedy — cross-fade *at a station boundary*, where the two images
+are the same framing and differ only in resolution, which costs **no extra
+fetches** because both stations are already in the cache. **Not built**; it is
+~30 lines and a blend-length tunable, and it should be judged from the render
+first.
+
+## 11. The opening, built — and one deviation from proposal 2A, with its reason
+
+Chiu's answers: **proposal 1 → A** (built-in table), **proposal 2 → A** (the
+destination's local-journey bounds), and apply it to local trips too.
+
+### What was built
+
+- `CountryExtent` — a built-in table, ISO 3166-1 alpha-2 → bounding box, **six
+  countries**, the ones Kamome renders. Point-in-box, no network, no coordinate
+  leaves the process, so **no new §0 exception**. The country *name* comes from
+  `Locale.localizedString(forRegionCode:)`, so it is the viewer's own language
+  offline — **the persistence change turned out not to be needed**, which is why
+  it was not made.
+- **Beat 1 is the country, held for `title_card_s`, and it CUTS to beat 2.** The
+  beat's length *is* the card's length — written as `titleCardS` rather than
+  checked against `opening_country_s`, so "the cut lands as the title leaves"
+  cannot drift apart. `opening_country_s` is now read by nothing.
+- **Beat 2 is one local journey × `wide_span_padding`**, and `bodySpanM` divides
+  **beat 2** rather than beat 1 — the chain-break.
+- The closing zoom is now `containedLerp`, not `lerp`.
+
+⚠️ **A country whose single bounding box would be a lie is left out, not
+approximated.** One box for the United States spans Alaska to Florida; a trip in
+California would be established by a frame in which California is a speck. France
+and Norway have the same problem. Those need more than one box per country, and
+an unknown country **falls back loudly** (a `KamomeLog` line) to the previous
+trip-bounds behaviour. Extending it is adding a row.
+
+### The deviation, and why (`Arch.md` §7)
+
+Proposal 2A says beat 2 frames the **destination's** local journey. Chiu's reason
+was that in the film he wants, *the origin's drive is not in the recap at all*.
+
+**That premise is not true of the film that exists today**, and building to it
+early produces an incoherent opening rather than an early version of the right
+one. Measured on `ishigaki-crossing` (`RecapOpeningFramingTests`):
+
+    beat 2 fitted to the destination sits 275 km from where the body camera starts
+    → the closing zoom must travel 273 km across a 33.3 km frame — 8.2 frame-widths
+
+`RecapCameraContinuityTests` failed it as **69 violations**, correctly: it is the
+2026-08-08 pre-pan defect at eight times the scale, and it is "多餘畫面" of exactly
+the kind the cut was decided to remove — the film would show the destination, jump
+back 275 km to the origin, drive, then fly to the destination it had already shown.
+
+So beat 2 frames **the local journey the body camera actually starts in**:
+
+- on a **local** trip — the case Chiu also asked to change — first and last are the
+  same journey, so this **is** proposal 2A, with no difference of any kind;
+- on a **cross-region** trip it is the origin today, and it becomes the destination
+  **on its own** the moment the next session drops the origin from the recap,
+  because the destination will then be the only local journey. No further change
+  is needed in the camera when that lands.
+
+`CameraPath.openingRoute` carries this reasoning; it is one function to flip if
+Chiu wants the literal reading instead, and the gate says what that costs.
+
+### What the opening now does
+
+`ishigaki-crossing`, shipped path (`establishing: nil`):
+
+| | before | after |
+|---|---:|---:|
+| opening length | 9.0 s | **6.5 s** |
+| beat 1 | 685.0 km (trip × 2.2) | **285.6 km — Taiwan** |
+| beat 2 | 467.1 km (trip × 1.5) | **50.1 km — the drive itself** |
+| body span | **274.0 km** | **20.0 km** (13.7× tighter) |
+| moving frames in the opening | 148 | **74** |
+
+The 1.4667× non-move is gone: beat 1 and beat 2 are now 5.7× apart on this film
+and 44× apart on `miyakojima` (2111.6 km of Japan → 47.4 km), instead of being the
+same picture at two paddings.
+
+## 12. ⚠️ The cost went UP, and the reason is the point
+
+| | `ishigaki-crossing` | `miyakojima` |
+|---|---:|---:|
+| shipped, before this session | 367 | 191 |
+| + crop-scaling (§1) | 51 | 42 |
+| + hold splits (§10) | 61 | 55 |
+| **+ the opening and body span (§11)** | **178** | **80** |
+
+**Round 1's 51 was cheap because the destination was a smudge.** A 274 km body
+span barely moves relative to its own window, so stations lasted hundreds of
+frames. At 20.0 km the camera crosses far more of its window per second and
+stations expire faster. **The smudge was free; framing the destination properly
+costs snapshots**, and no amount of rendering cleverness changes that — it is the
+camera moving relative to its frame.
+
+Net against what ships today: **367 → 178, still 2.1× cheaper** (191 → 80, 2.4×),
+with the ghosting gone, stop beats pixel-exact, a real country establishing shot,
+a 13.7× tighter destination and 2.5 s less opening. On device that is 4.4–9.5
+minutes of export becoming **2.1–4.6 minutes**.
+
+If 178 is too many, the dial is `snapshot_station_max_magnification` and §10's
+table prices it. This is the number to watch when the next session removes the
+origin from the recap: a shorter film with one local journey should fall again.
+
+## 13. The gates
+
+`RecapCameraContinuityTests`, all seven fixtures, **0 violations and 0 excused**,
+with the title-card cut in place and **no exemption added or widened**.
+
+**How the gate stays honest about the cut.** It does not excuse a frame range. It
+asserts that **the card beat is a still frame** — every frame from 0 to the cut
+must have ground overlap 1.0 with the frame at t=0 — and then scans everything
+from the cut onward with nothing forgiven. If the card beat ever moved, the gate
+fails rather than skips, which is the whole difference between this and an
+exemption. A cut out of a held picture under a title is a film convention; a cut
+out of a *shot* would be the bug, and that is what is now checked.
+
+Three tests were **restated, not deleted** (`Arch.md` §4), each because its case
+became unreachable:
+
+- `testARegionNoWiderThanTheBodyOpensOnTheJourneyWithoutPanning` asserted "the span
+  never changes and the centre never moves 10% of a frame", both of which encoded
+  the tiles-era `cappedToRegion` as the mechanism. Now: the card beat is still,
+  and every frame of the closing zoom **lies inside the establishing frame** —
+  strictly stronger, since a small translate that also zoomed *out* would pass the
+  old budget and fail this.
+- `testOpeningCollapsesBeatsThatDoNotMoveTheCamera` reached `collapse` through a
+  fixture whose country and regional beats could be made near-duplicates. A whole
+  country against one trip's bounds cannot be. `collapse` is now driven directly.
+- `RecapDeckBudgetTests` re-baselined [2,6,6,6] → [2,5,5,5], and the arithmetic
+  points the *other* way, which is why it is worth stating: that test passes a
+  synthetic extent under which the opening used to collapse to **3.0 s with no
+  establishing shot at all**. It now gets a real 6.5 s one. Holds 8.61 s → 8.02 s,
+  which is one photo of deck. The shipped path went the other way, 9.0 s → 6.5 s.
+
+## 14. Still open
+
+- **The station-boundary sharpness step** (§10) — 0.747 at hold boundaries. §7's
+  cross-fade remedy costs no extra fetches. Not built; judge the render first.
+- **`opening_country_s` is now read by nothing**, like `keyframe_interval_frames`.
+  Both left in config deliberately.
+- **The country table has six rows.** Every trip outside them falls back loudly to
+  trip bounds × `country_view_padding`.
+- **The title card's text** still shows trip title + dates·km. The country name is
+  now available offline via `CountryExtent.Country.localizedName`, but **wiring it
+  into the card was not done** — that is `App/Services/RecapComposer.titleSubtitle`
+  and a `RecapTrip` field, and it is chrome layout, which is DESIGNER territory.
+- **The continuity gate still never measures the shipped `establishing: nil`
+  camera.** Unchanged deliberately; re-confirmed still true.

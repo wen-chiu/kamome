@@ -2,6 +2,7 @@
 import KamomeConfig
 @testable import KamomeExportEngine
 import KamomeRouteMatching
+import KamomeTrackingEngine
 import XCTest
 
 /// **What the opening establishes, and what that does to the body span**
@@ -36,6 +37,33 @@ final class RecapOpeningFramingTests: XCTestCase {
             trip.legs.firstIndex(where: \.isCrossing), "the fixture has no crossing"
         )
         return trip.legs[..<crossingIndex].flatMap(\.coordinates)
+    }
+
+    /// Where the film's body camera actually starts, against where beat 2 frames.
+    func testWhereTheOpeningFramesVersusWhereTheBodyStarts() async throws {
+        let (trip, config) = try await RecapDemoFilmTests.importedRecap(
+            named: UnroutableSeaProvider.crossingFixture, baseURL: "",
+            reconstructor: UnroutableSeaProvider.forFixture(UnroutableSeaProvider.crossingFixture)
+        )
+        let line = try XCTUnwrap(LinearTimeline(trip: trip, config: config, establishing: nil))
+        let cut = try XCTUnwrap(line.titleCutS)
+        let beat2 = line.cameraFrame(atTime: cut + 0.1)
+        let body = line.cameraFrame(atTime: line.openingS + 0.5)
+        let origin = try XCTUnwrap(trip.route.first)
+        let destination = try XCTUnwrap(destinationCoordinates(trip).first)
+        print(String(
+            format: "KAMOME_OPENING_ANCHOR beat2 is %.0f km from the origin and %.0f km from the destination · "
+                + "the body starts %.0f km from the origin · closing zoom travels %.0f km across a %.1f km frame",
+            Geo.distanceM(latA: beat2.centerLat, lonA: beat2.centerLon, latB: origin.lat, lonB: origin.lon) / 1000,
+            Geo.distanceM(
+                latA: beat2.centerLat, lonA: beat2.centerLon, latB: destination.lat, lonB: destination.lon
+            ) / 1000,
+            Geo.distanceM(latA: body.centerLat, lonA: body.centerLon, latB: origin.lat, lonB: origin.lon) / 1000,
+            Geo.distanceM(
+                latA: beat2.centerLat, lonA: beat2.centerLon, latB: body.centerLat, lonB: body.centerLon
+            ) / 1000,
+            beat2.spanM / 1000
+        ))
     }
 
     func testWhatEachEstablishingExtentDoesToTheBodySpan() async throws {

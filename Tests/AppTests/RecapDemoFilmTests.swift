@@ -170,7 +170,16 @@ final class RecapDemoFilmTests: XCTestCase {
             "Manual demo render — set KAMOME_DEMO_FILM_IMPORT to a fixture name (e.g. iceland)."
         )
         let fixture = requested == "1" ? "margaret-river" : requested
-        let (recap, config) = try await Self.importedRecap(named: fixture)
+        // **The crossing fixture is routed by the offline sea provider, never by
+        // the live endpoint** — the same rule `RecapReviewScene` and
+        // `RecapSnapshotBudgetTests` already follow. Its "no road here" is a
+        // fixture fact authored with the coordinates; routed live, the crossing is
+        // not a crossing, no arc is built, and this renders a different film while
+        // looking like it worked.
+        let sea = UnroutableSeaProvider.forFixture(fixture)
+        let (recap, config) = try await Self.importedRecap(
+            named: fixture, baseURL: sea == nil ? nil : "", reconstructor: sea
+        )
         try await renderFilm(trip: recap, config: config, named: "kamome-\(fixture)")
     }
 

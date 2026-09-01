@@ -1,8 +1,8 @@
 # HANDOFF — live findings
 
-**Updated 2026-08-31.** `main` carries PRs #16–#25. The cross-region crossing
-beat and **crop-scaling** (camera-arc Pass 1) are both **built and measured, not
-yet judged by Chiu.**
+**Updated 2026-09-01.** `main` carries PRs #16–#25. The cross-region crossing
+beat, **crop-scaling** and **the title-card opening** are built and measured;
+Chiu has judged crop-scaling (accepted) and has **not yet seen the opening.**
 
 This file holds **only what is live**: open blockers, unfinished questions,
 traps, and known bugs. Each entry is a summary and a pointer; the reasoning,
@@ -29,47 +29,57 @@ verification there is, and a PR must say so** rather than let a red check read
 as a broken suite. Recurs when the monthly allowance runs out unless the limit
 is raised.
 
-### The shake and the ghosting — FIXED, awaiting Chiu's judgement of the render
-Chiu's P0 (`Docs/decisions.md` 2026-08-30): *"影片晃動感太明顯 不夠流暢 會有殘影."*
-The loop alpha-blended two snapshots of the same map at two different positions;
-the double image was the 殘影, the 0.5 s stepping the 晃動.
+### The shake and the ghosting — FIXED and accepted; magnification still open
+Chiu's P0 (`Docs/decisions.md` 2026-08-30). `RecapRenderLoop` no longer
+cross-fades two snapshots taken at two different cameras: `RecapSnapshotStations`
+plans one snapshot per run of frames and **reprojects** it onto each frame, which
+is exact. Chiu watched the before/after on 2026-08-31 and **accepted it**.
 
-**`RecapRenderLoop` no longer cross-fades.** It plans **stations**
-(`RecapSnapshotStations`) — one snapshot per run of frames — and reprojects each
-onto each frame. A reprojected frame is geometrically exact, so there is nothing
-to fine-sample against and nothing to blend wrongly.
+Against an interval-1 reference (`miyakojima` body 20–30 s) — the column that
+answers 晃動 is the swing, since a level of error that never changes is softness:
 
-Measured against an interval-1 reference by the 2026-08-30 method (`miyakojima`
-body 20–30 s): **the frame-to-frame swing — what 晃動 actually is — falls from
-1.402 to 0.077**, and travelling error from 2.005 to 0.818. A level of error that
-never changes is softness, not shake. `ishigaki-crossing` goes **367 → 51**
-snapshots (14 opening + 25 arc + 12 body), 7.2×; on device, 4.4–9.5 min of export
-becomes 37–79 s. The cost is a uniformly slightly softer map — a look, and
-**Chiu's to judge**; the dial is `snapshot_station_max_magnification`.
-⏳ **Films:** `~/Kamome-films/2026-08-31-crop-scaling/judgement/{before,after}/`.
-→ **`Docs/handoff-crop-scaling.md`** — the table, the budget split, the two
-opening proposals, and the worktree trap that invalidated the first comparison.
+    shipped cross-fade   travel 2.005  swing 1.402   holds 0.038 / 0.121
+    1.10 + hold splits   travel 1.061  swing 0.747   holds 0.046 / 0.142
+
+Stop beats are pixel-exact again: a station starts at each hold's first frame, at
+the frame after its last, and at the frame the camera **settles** — so a parked
+run reprojects to itself at magnification 1.0. Threshold-free.
+
+⏳ **Two for Chiu.** `snapshot_station_max_magnification` is **1.1**, measured;
+1.05 is sharper at ~3× the snapshots. And a **new** artifact: a sharpness step of
+0.747 exactly at the hold boundaries, where a pixel-exact parked station abuts a
+magnified travelling one. §7's remedy (cross-fade *at a station boundary*) costs
+no extra fetches and is **not built**, pending a judged render.
+→ `Docs/handoff-crop-scaling.md` §1, §10.
+
+### ⏳ The opening is built and unjudged — and the cost went UP
+Beat 1 is a **held country frame under the title card** that **cuts** to beat 2
+(Chiu 2026-08-31); beat 2 is one local journey; `bodySpanM` divides **beat 2**,
+breaking the chain that made "widen the country" and "smudge the destination" one
+knob. `ishigaki-crossing`: opening 9.0 → **6.5 s**, beat 1 685 km (trip × 2.2) →
+**285.6 km (Taiwan)**, body span **274.0 → 20.0 km**.
+
+⚠️ **Snapshots went 367 → 51 → 178**, and the reason is the point: **the 51 was
+cheap because the destination was a smudge.** Net against what ships: **367 → 178,
+2.1× cheaper**, ghosting gone, destination 13.7× tighter.
+
+⚠️ **One deviation from proposal 2A, deliberate** (`Arch.md` §7): beat 2 frames
+the journey **the body camera starts in**, not the destination. Framing the
+destination while the body still starts at the origin makes the closing zoom
+travel **273 km across a 33.3 km frame** (69 gate violations). Identical on a
+local trip; becomes the destination on its own once the origin leaves the recap.
+→ `Docs/handoff-crop-scaling.md` §11, §12.
 
 ---
 
 ## 🟠 Open — nobody is on these
 
-### The opening has never shown a country
-`RecapModel.swift:204` builds `establishing` only from an installed `.pmtiles`
-region; MapLibre was parked 2026-08-15 and nothing installs one, so it is
-permanently `nil` and the "country" beat has always been *this trip × 2.2*.
-VERIFIED. Parking MapLibre made this **easier** — Apple Maps is global, so the
-original "never wider than the tiles we have" constraint is gone, and
-`country_view_padding` is not frozen.
-→ `Docs/handoff-audit-2026-08-30.md` finding 2.
-
 ### Content-derived pacing may be implemented but permanently dead
-A shipping-path comment in `RecapModel.swift:201–203` has been shown wrong on
-its first clause ("no region means … no prologue" — every film gets a prologue,
-VERIFIED). If its *second* clause is true, content-derived pacing sits behind a
-tile condition that can never be satisfied, and the film-duration question below
-becomes an unlocking job rather than a design job. **UNKNOWN, worth an hour**;
-the cheapest settling test is in the doc.
+A shipping-path comment in `RecapModel.swift:201–203` is wrong on its first clause
+("no region means … no prologue" — every film gets one, VERIFIED). If its *second*
+clause is true, content-derived pacing sits behind a tile condition that can never
+be satisfied, and the film-duration question becomes an unlocking job rather than
+a design job. **UNKNOWN, worth an hour**; the settling test is in the doc.
 → `Docs/handoff-audit-2026-08-30.md` finding 3.
 
 ### The subject lookup still misses; it no longer crashes
@@ -80,35 +90,31 @@ ship specifically to name the next occurrence.
 → `Docs/handoff-subject-lookup.md`.
 
 ### A sweep is owed: which values were tuned against MapLibre?
-Four defects now share one shape — a value chosen while MapLibre was the
-substrate that silently degraded when Apple Maps became what ships. Each was
-found **one film at a time, by accident**. The question that catches this class
-is not "is this value good?" but **"what was this value tuned against?"**
-**RECOMMENDATION, needs Chiu. Not scheduled, not started.**
+Five defects now share one shape — a value chosen while MapLibre was the
+substrate that silently degraded when Apple Maps became what ships; the country
+beat's `cappedToRegion` (fixed 2026-09-01) was the fifth. Each was found **one
+film at a time, by accident**. The question that catches the class is not "is this
+value good?" but **"what was this value tuned against?"**
+**RECOMMENDATION, needs Chiu. Not scheduled.**
 → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
-### ⏳ The opening: two design questions are Chiu's, and nothing was built
-Crop-scaling refunded the crossing's 182-snapshot bill (367 → 51), so that item
-is closed. The **opening** was measured but deliberately not changed: where a
-country's extent comes from, and how beat 2's frame is defined, are proposals for
-Chiu (`Arch.md` §7). Both proposals, with costs and offline behaviour, are in the
-doc. ⚠️ **One §0 point was not foreseen**: a MapKit/CLGeocoder country lookup
-sends a real coordinate off-device to draw a wider opening — a *new* exception,
-so a product decision, not an implementation detail.
-→ `Docs/handoff-crop-scaling.md` §4–§5.
+### The country table has six rows; the title card has no country name yet
+`CountryExtent` is a built-in table — Chiu chose it over MapKit/`CLGeocoder`, so
+**no new §0 exception**: the lookup is point-in-box and no coordinate leaves the
+process. **A country whose single box would be a lie is left out, not
+approximated** (the US spans Alaska to Florida); unknown countries fall back
+loudly. The name is available offline via `Locale.localizedString(forRegionCode:)`
+— **so no persistence change was needed** — but wiring it into the card is not
+done. → `Docs/handoff-crop-scaling.md` §11, §14.
 
 ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
-`Docs/camera-arcs.md` §5 and `Docs/handoff-camera-arc-findings.md` finding 5
-both say the pan floor is the mechanism. **Measured on the shipped path, that is
-false**: `asked` is ~274 km against a pan floor of ~16 km, so the floor never
-binds and taking the crossing out of it changes the body span by nothing.
-`target_zoom_ratio` over the establishing shot is what sets the body span.
-**Two documents still state the superseded premise.**
-
-⚠️ **Widened 2026-08-31: the ratio is 2.50× in *six* configurations**, from
-`establishing: nil` to an extent far wider than the trip. The floor binds
-**nowhere**, not merely on the shipped path — so this is a property of
-`bodySpanM`, not a fact about one fixture.
+`Docs/camera-arcs.md` §5 and `Docs/handoff-camera-arc-findings.md` finding 5 both
+say the pan floor is the mechanism. **It is false**: `bodySpanM` returns
+`asked = established / target_zoom_ratio` (~274 km) against a floor of ~16 km.
+Measured 2026-08-31 across **six** `establishing` configurations, from `nil` to an
+extent far wider than the trip, the ratio is `target_zoom_ratio` (2.50×) in every
+one — the floor binds **nowhere**, so this is a property of the function, not a
+fact about one fixture. **Two documents still state the superseded premise.**
 → `Docs/handoff-cross-region-crossing.md` finding 1,
 `Docs/handoff-crop-scaling.md` §4.
 
@@ -118,31 +124,24 @@ binds and taking the crossing out of it changes the body span by nothing.
 
 ### §0 — two films of real trips are committed to this repository
 `Docs/demos/phase3/kamome-p3-recap.mp4` and
-`Docs/demos/phase3_5/kamome-recap-NZ-disaster.MP4`, while current practice
-writes films to `~/Kamome-films/` deliberately. They are phase demo artifacts,
-which the Rules of Engagement require — so two rules genuinely pull against each
-other. **They are not in §0's decided-exceptions list.** Either they become a
-recorded exception or they move out; what should not persist is a standing rule
-saying one thing and the tree saying another.
-
-Checked and clean: `Docs/tests/` is gitignored, the prototype ships a
-placeholder, and `Scripts/check-location-data.sh` now enforces both halves that
-*are* decided. **No check gates on this one, deliberately** — gating it would
-pre-empt the owner call.
+`Docs/demos/phase3_5/kamome-recap-NZ-disaster.MP4`, while practice writes films
+to `~/Kamome-films/`. They are phase demo artifacts the Rules of Engagement
+require, so two rules genuinely pull against each other, and **they are not in
+§0's decided-exceptions list.** Either they become a recorded exception or they
+move out. Otherwise checked and clean; **no check gates this one, deliberately** —
+gating it would pre-empt the owner call.
 → `Docs/handoff-audit-2026-08-30.md` finding 7.
 
 ### Film length: two questions, in this order
 **Duration must scale with trip size — direction decided (Chiu 2026-08-14), rule
-NOT.** Every trip presents exactly 8 stops and 24 photographs whether it has 10
-or 65, because duration is clamped to one 60–90 s window. The candidate
-inversion reproduces all three of Chiu's targets, but its parameters were
-reverse-derived from three trips — exactly how `body_span_padding` and
-`tier_skip_share` were derived, and both failed.
+NOT.** Every trip presents 8 stops and 24 photographs whether it has 10 or 65.
+The candidate inversion hits all three of Chiu's targets, but its parameters were
+reverse-derived from three trips — how `body_span_padding` and `tier_skip_share`
+were derived, and both failed.
 
-**Then travel pacing**, an experiment with nothing decided: all three trips sit
-at the same ~49% travel share, so what lost Chiu on Iceland was an **absolute
-quantity**, not a proportion. `travel_max_s` names a thing that does not exist —
-do not let it reach `TrackingConfig.json`.
+**Then travel pacing**, nothing decided: all three trips sit at the same ~49%
+travel share, so what lost Chiu on Iceland was an **absolute quantity**, not a
+proportion. `travel_max_s` names a thing that does not exist.
 → `Docs/handoff-pacing.md` for both, including the acceptance condition decided
 in advance.
 
@@ -203,18 +202,25 @@ reworded**; not done, because that is a design document.
 
 ### A worktree renders a different film — two gitignored paths decide it
 `git worktree add` carries no gitignored files, so a worktree has no
-`Config/Secrets.xcconfig` (no routing key → `drive/inferred`, straight lines
-instead of roads) and no `Tests/Fixtures/trips/local/`. A before/after across
-worktrees is then two different films, and it looks plausible — the first
-crop-scaling comparison read 4.08 where the answer had to be ~0. Copy both, then
-count `drive/reconstructed` in each log. **A render comparison without a "these
-two must be identical" control row is not evidence.**
+`Config/Secrets.xcconfig` (no routing key → `drive/inferred`, straight lines not
+roads) and no `Tests/Fixtures/trips/local/`. A before/after across worktrees is
+then two different films and it looks plausible. Copy both, then count
+`drive/reconstructed` in each log. **A render comparison without a "these two
+must be identical" control row is not evidence.**
 → `Docs/handoff-crop-scaling.md` §3.
 
-### A 70-second MapKit render is killed on this machine — on `main` too
-`RecapPilotFilmTests` at 70 s dies with `Test crashed with signal kill` ~94 s in;
-`-retry-tests-on-failure` does not recover it. **Reproduced identically on
-`main`**, so it is not crop-scaling. Render judgement clips as ≤25 s windows.
+### ⚠️ CORRECTED — there is no render length limit; that was simulator contention
+A 2026-08-31 entry here claimed a 70 s `RecapPilotFilmTests` render is SIGKILLed
+on this Mac. **Wrong, not merely over-broad.** Re-run clean, 2026-09-01, whole
+`ishigaki-crossing`: pilot **2070/2070 frames in 96 s**; `RecapExporter` via
+`RecapDemoFilmTests` **2070 frames, 38.9 MB, 99 s**. The six failures all fell in
+one five-minute window with **six xcodebuild processes on one simulator** (a
+background script still alive, plus foreground runs launched believing it dead).
+
+**Keep the reasoning, not the number.** A control run on `main` reproduced the
+failure and was read as proof the defect was pre-existing. It shared the
+confound, so it manufactured confidence instead of removing it. `pgrep -fl
+xcodebuild` before trusting any render result.
 
 ### Read a style value off the preset the app selects, never off the defaults
 `RecapStyle`'s defaults are unrendered. This was got wrong twice from the same
@@ -222,19 +228,11 @@ source and cost a correction in the ledger both times. The app selects
 `modernMinimal`.
 
 ### Three gaps the badge work left on record
-All in `Docs/handoff-marker-badge.md`, findings 6c, 6d and 7.
-
-- **Nothing measures post-grade output.** The guards assert *token* luminance;
-  the viewer sees the graded frame. The rule survives the grade today, and
-  nothing checks that it keeps doing so.
-- **Nothing asserts the end card's brand mark.** `RecapMarkerDeckStillsTests`
-  *writes* stills and asserts nothing about them, so the guarantee that the end
-  card still shows a bird rests on a human noticing. A golden still closes it.
-- **The no-reader token cluster is four** — `cardColor`, `cardTextColor`,
-  `markerColor`, `markerAccentColor` render nowhere, plus five
-  `RecapOverlayRendererTests` assertions that believe they render against an
-  opaque card. Counted so the next one to join is the fifth, not another
-  isolated note.
+Nothing measures **post-grade** output; nothing asserts the end card's **brand
+mark** (`RecapMarkerDeckStillsTests` writes stills and asserts nothing, so "the
+end card still shows a bird" rests on a human noticing); and the **no-reader token
+cluster is four**, counted so the next one to join is the fifth.
+→ `Docs/handoff-marker-badge.md` findings 6c, 6d, 7.
 
 ---
 
@@ -258,16 +256,12 @@ All in `Docs/handoff-marker-badge.md`, findings 6c, 6d and 7.
 
 ## Older citations
 
-`Docs/decisions.md` is append-only and cites findings as **"`HANDOFF.md` <date>
-finding N"**. Those sections moved on 2026-08-31 and the ledger cannot be
-corrected, so they resolve here:
-
-- 2026-08-30 finding N → `Docs/handoff-audit-2026-08-30.md` (PO audit) or
-  `Docs/handoff-cross-region-crossing.md` (the crossing session)
-- 2026-08-29 finding N → `Docs/handoff-marker-badge.md`
-- 2026-08-21 finding N → `Docs/handoff-camera-arc-findings.md`
-- "Pending experiment — travel pacing" → `Docs/handoff-pacing.md`
-- anything older → `Docs/_archive/handoff-2026-08.md`
+`Docs/decisions.md` cites findings as **"`HANDOFF.md` <date> finding N"**. Those
+sections moved on 2026-08-31: 2026-08-30 → `Docs/handoff-audit-2026-08-30.md`
+(PO audit) or `Docs/handoff-cross-region-crossing.md` (the crossing session);
+2026-08-29 → `Docs/handoff-marker-badge.md`; 2026-08-21 →
+`Docs/handoff-camera-arc-findings.md`; travel pacing → `Docs/handoff-pacing.md`;
+anything older → `Docs/_archive/handoff-2026-08.md`.
 
 ## Where the detail lives
 

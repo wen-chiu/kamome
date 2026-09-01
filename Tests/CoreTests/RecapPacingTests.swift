@@ -1,5 +1,5 @@
 import KamomeConfig
-import KamomeExportEngine
+@testable import KamomeExportEngine
 import KamomeTrackingEngine
 import XCTest
 
@@ -208,8 +208,14 @@ final class RecapPacingTests: XCTestCase {
             trip: sample, config: export,
             establishing: RecapBounds(minLat: -44.2, minLon: 170.2, maxLat: -43.0, maxLon: 170.8)
         ))
-        let configured = export.openingCountryS + export.openingRegionalS + 2 * export.zoomTransitionS
-        XCTAssertLessThan(line.openingS, configured - 2, "duplicate beats must be dropped")
+        // And the opening this fixture actually produces is the full shape, since
+        // nothing collapses in it any more: card + destination beat + closing zoom.
+        let configured = export.titleCardS + export.openingRegionalS + export.zoomTransitionS
+        XCTAssertEqual(
+            line.openingS, configured, accuracy: 0.01,
+            "the opening must be exactly what the duration plan reserves for it — when these two "
+                + "disagree the film budgets a prologue it does not have, and the stops pay for it"
+        )
         XCTAssertGreaterThan(line.openingS, export.zoomTransitionS, "but the zoom itself still runs")
 
         // No stretch of the opening longer than one hold sits completely still —

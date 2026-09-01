@@ -63,6 +63,8 @@ public enum RecapSnapshotStations {
     ///   `snapshot_station_max_magnification`;
     /// - `MapState` changes — the snapshot is a function of it, so a station
     ///   cannot span two values of it;
+    /// - a frame in `mustStartAt` — see `splitFrames`, which is how a parked stop
+    ///   beat keeps its own station and therefore its own exact snapshot;
     /// - `bearing` changes — reprojection is a similarity transform and cannot
     ///   rotate. On the shipped path (`follow_heading_up: false`, and MapKit
     ///   declares `supportsBearing: false`) bearing is constant 0 and this never
@@ -74,6 +76,7 @@ public enum RecapSnapshotStations {
         fps: Int,
         camera: (Double) -> CameraFrame,
         map: (Double) -> MapState,
+        mustStartAt: Set<Int> = [],
         config: TrackingConfig.Export
     ) -> [Station] {
         guard frameCount > 0, fps > 0 else { return [] }
@@ -89,6 +92,7 @@ public enum RecapSnapshotStations {
             var end = start + 1
             while end < frameCount {
                 let time = Double(end) / Double(fps)
+                guard !mustStartAt.contains(end) else { break }
                 let next = camera(time)
                 guard map(time) == startMap, next.bearing == startCamera.bearing else { break }
                 // **Padding only when the run actually unions two framings.**
@@ -119,6 +123,58 @@ public enum RecapSnapshotStations {
             start = end
         }
         return stations
+    }
+
+    /// **Where a station must begin, so a stop beat is pixel-exact.**
+    ///
+    /// A station is sized to contain every frame it serves, so a station that
+    /// spans both a travelling stretch and a parked one is wider than the parked
+    /// frames need — and those are exactly the frames the film asks the viewer to
+    /// *look* at, held still for seconds while a photo deck plays over them. The
+    /// first crop-scaling render measured that as 0.585 mean difference during a
+    /// stop beat where the old cross-fade scored 0.038, because a parked camera
+    /// gets `previousKey == nextKey` and no blend at all.
+    ///
+    /// The fix is not a tighter global budget — that would pay for the stop beats
+    /// everywhere in the film. It is to stop merging the two kinds of frame:
+    ///
+    /// - a station starts at each hold's **first** frame, and again at the frame
+    ///   after its last, so a hold is never folded into a travelling run;
+    /// - and again at the frame where the camera **settles** inside the hold. The
+    ///   dead-zone dolly is still coasting when the hold opens (the 2026-08-30
+    ///   pair saw it as a residue just after the beat began), so without this the
+    ///   settle frames drag the whole hold's station wider.
+    ///
+    /// Everything after that settle point is one camera value, so its station is
+    /// that value, magnified 1.0 — the identity, and the same pixels a snapshot
+    /// taken at that frame would have given.
+    ///
+    /// **Threshold-free on purpose.** It would have been easy to write "a parked
+    /// run longer than N frames earns a station" and to tune N. The holds are
+    /// already a fact the story layer states (`CameraPath.holds`), and the settle
+    /// point is *the last frame at which the camera changes* — measured, not
+    /// chosen. A tunable here would be a number nobody could later justify.
+    public static func splitFrames(
+        holds: [CameraPath.Hold], frameCount: Int, fps: Int, camera: (Double) -> CameraFrame
+    ) -> Set<Int> {
+        guard frameCount > 0, fps > 0 else { return [] }
+        var splits: Set<Int> = []
+        for hold in holds {
+            let first = max(Int((hold.startS * Double(fps)).rounded(.up)), 0)
+            let last = min(Int((hold.endS * Double(fps)).rounded(.down)), frameCount - 1)
+            guard first <= last else { continue }
+            splits.insert(first)
+            if last + 1 < frameCount { splits.insert(last + 1) }
+            // The settle point: after this frame the camera does not move again
+            // before the hold ends, so everything past it shares one value.
+            var settled: Int?
+            for frame in first..<last where camera(Double(frame) / Double(fps))
+                != camera(Double(frame + 1) / Double(fps)) {
+                settled = frame + 1
+            }
+            if let settled { splits.insert(settled) }
+        }
+        return splits
     }
 
     /// The camera math and the narrow waist name the same thing with two types

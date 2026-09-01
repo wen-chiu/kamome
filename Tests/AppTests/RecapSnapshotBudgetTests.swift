@@ -74,7 +74,14 @@ final class RecapSnapshotBudgetTests: XCTestCase {
         let total = try await fetches(shipped)
         report(label: "crop-scaled stations", opening: opening, total: total, scene: shipped)
 
-        // **Where the stations fall**, three ways, so task A's saving can be
+        try await reportStations(shipped, openingFrames: openingFrames, total: total)
+
+        XCTAssertGreaterThan(total, 0, "the audit fetched no snapshots")
+    }
+
+    /// Where the stations fall, three ways, so a saving can be attributed rather
+    /// than admired in aggregate.
+    private func reportStations(_ shipped: Scene, openingFrames: Int, total: Int) async throws {
         // attributed rather than admired in aggregate. The arc's seconds are the
         // crossing's own; the opening is everything before `openingS`; the rest
         // is body. Counted off the plan rather than the loop because the plan is
@@ -97,27 +104,22 @@ final class RecapSnapshotBudgetTests: XCTestCase {
             plan.count - openingStations - arcStations,
             plan.map(\.frames.count).max() ?? 0, plan.map(\.frames.count).min() ?? 0
         ))
-        XCTAssertEqual(
+        // Fetches may be **fewer** than stations and never more: two stations that
+        // resolve to the same camera and map are the same picture, and the value
+        // cache pays for it once. Hold-aware splitting (2026-09-01) made that
+        // common — a stop beat's own station often repeats a framing the film has
+        // already held. More fetches than stations would mean the cache and the
+        // plan disagree about what one picture is, which is the real failure.
+        XCTAssertLessThanOrEqual(
             total, plan.count,
-            "the loop must fetch exactly the planned stations — a difference means the "
-                + "value cache and the plan disagree about what one picture is"
+            "the loop fetched more snapshots than there are stations"
         )
-
-        // **What the crossing's arc costs.** It used to be fine-sampled — one
-        // snapshot per frame — because a cross-fade between two geometrically
-        // different pictures is the ghosting mechanism (`HANDOFF.md` 2026-08-30
-        // finding 1). Crop-scaling refunded that, and the arc is now the film's
-        // cheapest big move per second of screen time rather than its dearest.
-        if !arcWindows.isEmpty {
-            let arcSeconds = arcWindows.reduce(0.0) { $0 + ($1.upperBound - $1.lowerBound) }
+        if total < plan.count {
             print(String(
-                format: "KAMOME_SNAPSHOT_AUDIT   %d crossing arc(s) covering %.1fs cost %d stations — "
-                    + "one snapshot per frame would have cost %d",
-                arcWindows.count, arcSeconds, arcStations,
-                Int((arcSeconds * Double(shipped.config.fps)).rounded())
+                format: "KAMOME_SNAPSHOT_AUDIT   %d of %d stations shared a fetch (identical camera and map)",
+                plan.count - total, plan.count
             ))
         }
-        XCTAssertGreaterThan(total, 0, "the audit fetched no snapshots")
     }
 
     /// **The cost/sharpness curve `snapshot_station_max_magnification` buys**,

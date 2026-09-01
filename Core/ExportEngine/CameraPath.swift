@@ -61,9 +61,8 @@ public struct CameraPath {
     public let durationS: Double
 
     /// Hold windows in video time, in playback order — what `LinearTimeline`
-    /// anchors each stop scene (pin/label lead → photo deck) to (decisions.md
-    /// 2026-07-17: overlay moments are timeline events, not per-frame reads of
-    /// the camera's hold state).
+    /// anchors each stop scene to (decisions.md 2026-07-17: overlay moments are
+    /// timeline events, not per-frame reads of the camera's hold state).
     public var holds: [Hold] {
         timeline.compactMap { entry in
             guard case let .hold(stopIndex, _) = entry.phase else { return nil }
@@ -100,17 +99,17 @@ public struct CameraPath {
     /// blended into over `zoomTransitionS`, which is what makes the handoff exact
     /// rather than approximately equal (Chiu 2026-08-01).
     private let prologue: Prologue?
-    /// When the wide beats end and the closing zoom into the body begins.
-    ///
-    /// The journey does **not** start here — it starts when the zoom finishes.
-    /// An earlier pass started it here so the closing zoom would play over a
-    /// moving car, but that made the first stop reveal itself mid-zoom, against
-    /// the rule that the camera never zooms while the journey is being presented.
-    /// The freeze it was working around is fixed at its source instead: the wide
-    /// beats are capped at ~1 s each, so the opening is continuous motion.
+    /// The film's one sanctioned discontinuity (Chiu 2026-08-31): when the title
+    /// card's held frame cuts to the film proper, nil when there is none. The
+    /// gate scans **from** it rather than excusing a window around it.
+    let titleCutS: Double?
+    /// When the wide beats end and the closing zoom into the body begins. The
+    /// journey does **not** start here — it starts when the zoom finishes, so no
+    /// stop reveals itself mid-zoom (the camera never zooms while the journey is
+    /// being presented).
     private let wideEndS: Double
-    /// The closing reveal: eases out to frame the whole journey once the last
-    /// stop is done, landing exactly as the end card arrives.
+    /// The closing reveal: eases out once the last stop is done, landing exactly
+    /// as the end card arrives.
     private let endRevealStartS: Double?
     private let endRevealFrame: CameraFrame
     /// When the opening finishes handing the frame to the body camera.
@@ -172,14 +171,13 @@ public struct CameraPath {
         let frames = Int((total * Double(config.fps)).rounded())
 
         // **The opening is built first, and the body is derived from it** (Chiu
-        // 2026-08-09). `body = established / target_zoom_ratio`, so each trip
-        // divides its own establishing shot and the zoom the viewer sees is the
-        // thing configured. This ordering is only possible because the wide beats
-        // never depended on the body span — `buildWideOpening` took one and never
-        // read it.
-        let builtPrologue = openingS > 0
-            ? Self.buildWideOpening(route: route, establishing: establishing, config: config)
-            : nil
+        // 2026-08-09) — `body = established / target_zoom_ratio`, where
+        // `established` is the *last* wide beat since 2026-08-31. See
+        // `establishedSpanM`, which is where that changed and why.
+        let builtPrologue = Self.wideOpening(
+            openingS: openingS, route: route,
+            crossings: crossingVertexRanges, establishing: establishing, config: config
+        )
         let crossings = Self.crossings(vertexRanges: crossingVertexRanges, cumulativeM: cumulative)
         let span = Self.bodySpan(BodySpanRequest(
             prologue: builtPrologue, route: route, anchors: anchors, totalM: totalM,
@@ -196,19 +194,18 @@ public struct CameraPath {
             prologue: builtPrologue, route: route, establishing: establishing, config: config,
             bodySpanM: span, totalDurationS: total, journeyEndsBeforeS: journeyEndsBeforeS
         ))
-        bodySpanM = span
-        wideEndS = plan.wideEndS
+        bodySpanM = span; wideEndS = plan.wideEndS
         let journeyTimeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
             stopHoldsS: stopHoldsS, crossings: crossings,
             startS: plan.openingEndsS, targetS: plan.journeyEndS
         )
-        timeline = journeyTimeline
-        self.fps = config.fps; cutConfig = config
+        timeline = journeyTimeline; self.fps = config.fps; cutConfig = config
         durationS = total; frameCount = frames
 
         zoomTransitionS = config.zoomTransitionS; followHeadingUp = config.followHeadingUp
         prologue = plan.prologue; openingEndsS = plan.openingEndsS
+        titleCutS = plan.prologue?.cutTimeS
 
         track = Self.simulatedTrack(TrackRequest(
             route: route, cumulativeM: cumulative, journeyTimeline: journeyTimeline,
@@ -306,7 +303,12 @@ public struct CameraPath {
             } else {
                 let transition = max(zoomTransitionS, 1e-6)
                 let blend = Self.smoothstep(min(max((time - wideEndS) / transition, 0), 1))
-                composed = Self.lerp(prologue.finalFrame, live, blend)
+                // **Contained, not a plain lerp** (2026-09-01): beat 2 frames the
+                // trip's own local journey now, so the closing zoom has a real
+                // translate in it and `lerp` would walk the centre out of step
+                // with the span. `containedLerp` — same function the crossing arc
+                // uses, same reason — keeps every frame inside the one before it.
+                composed = Self.containedLerp(prologue.finalFrame, live, blend)
             }
         } else {
             composed = live

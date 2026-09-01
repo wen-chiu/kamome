@@ -1,6 +1,6 @@
 @testable import Kamome
 import KamomeConfig
-import KamomeExportEngine
+@testable import KamomeExportEngine
 import KamomeImportKit
 import KamomePersistence
 import XCTest
@@ -130,13 +130,40 @@ final class RecapDeckBudgetTests: XCTestCase {
     /// Separately iceboxed, not discarded: `first_stop_dwell_scale` is
     /// scale-invariant in intent but scale-dependent in effect, which is why the
     /// first stop is the one that falls through the floor here.
+    ///
+    /// **Re-baselined again 2026-09-01, [2, 6, 6, 6] → [2, 5, 5, 5]**, and the
+    /// reason is worth stating because the arithmetic points the other way. The
+    /// opening got *shorter* on the shipped path (9.0 s → 6.5 s: the
+    /// country→region ease became a cut, Chiu 2026-08-31) — but longer *here*,
+    /// 3.0 s → 6.5 s. This test passes a synthetic `establishing` extent, and
+    /// under it `cappedToRegion` used to collapse the country beat into the
+    /// regional one and skip the closing zoom, so the film opened with **no
+    /// establishing shot at all**. It now gets a real one: a title card over the
+    /// country, a cut, then the trip's own frame. Measured holds 8.61 s → 8.02 s,
+    /// which is one photo of deck.
+    ///
+    /// So the expectation moved because the product rule moved, not to make a red
+    /// test green, and the guard below still holds the rule that matters: every
+    /// stop after the first still shows a real deck.
     func testASmallTripShowsWholeDecks() async throws {
         let config = AppConfig.loadOrDie()
         let recap = try await trip(stops: 4, photosPerStop: 8, config: config)
-        let shown = photosShownPerStop(try timeline(recap, config: config.export), trip: recap)
+        let line = try timeline(recap, config: config.export)
+        let shown = photosShownPerStop(line, trip: recap)
+        // Printed because this expectation has now moved twice for reasons that
+        // were not visible from the assertion alone: what decides it is the film's
+        // length, the opening it must pay for, and the dwell that is left.
+        print(String(
+            format: "KAMOME_DECK_BUDGET film %.1fs · opening %.1fs · journey starts %.1fs · shown %@ · "
+                + "allocated %@ · holds %@",
+            line.durationS, line.openingS, line.journeyStartS,
+            shown.map(String.init).joined(separator: "/") as NSString,
+            recap.stops.map { String($0.photos.count) }.joined(separator: "/") as NSString,
+            line.holds.map { String(format: "%.2f", $0.endS - $0.startS) }.joined(separator: "/") as NSString
+        ))
         XCTAssertEqual(shown.count, 4)
         XCTAssertEqual(
-            shown, [2, 6, 6, 6],
+            shown, [2, 5, 5, 5],
             "a four-stop trip is a 60 s film: the first stop shows 2 and the rest show whole decks"
         )
         XCTAssertTrue(

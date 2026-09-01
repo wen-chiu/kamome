@@ -45,6 +45,18 @@ extension CameraPath {
             beats.last?.frame ?? CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0)
         }
 
+        /// When the title card's held frame cuts to the film proper, or nil when
+        /// there is no card beat to cut out of.
+        ///
+        /// Exposed so the continuity gate can begin its scan **at** the cut. That
+        /// is not an exemption: it is the statement that the establishing card is
+        /// not part of the continuous camera, which is what makes the one
+        /// sanctioned discontinuity checkable instead of forgiven.
+        var cutTimeS: Double? {
+            guard beats.count > 1, transitionS == 0 else { return nil }
+            return beats[0].holdS
+        }
+
         /// The framing at `time`. Holds, then eases, then holds — the same
         /// smoothstep the act seams use, so the opening feels like the rest of the
         /// film rather than a separate title sequence.
@@ -86,67 +98,100 @@ extension CameraPath {
     /// that already frames the body tightly can collapse against it", but the
     /// parameter was never read. Removing it is what lets the opening be built
     /// *before* the body span, which is now derived from what this establishes.
+    /// The wide beats, or nil when the film has no opening at all. Lifted out of
+    /// the initializer purely for its length; the ordering comment above the call
+    /// is the part that matters.
+    static func wideOpening(
+        openingS: Double, route: [Point], crossings: [Range<Int>],
+        establishing: RecapBounds?, config: TrackingConfig.Export
+    ) -> Prologue? {
+        guard openingS > 0 else { return nil }
+        return buildWideOpening(
+            route: route,
+            openingRoute: openingRoute(route: route, crossings: crossings),
+            establishing: establishing, config: config
+        )
+    }
+
     static func buildWideOpening(
         route: [Point],
+        openingRoute: [Point],
         establishing: RecapBounds?,
         config: TrackingConfig.Export
     ) -> Prologue {
-        let tripBounds = bounds(of: route)
-        let regionalAsked = frame(for: tripBounds, config: config, padding: config.wideSpanPadding)
-        // Same cap as the body: a trip covering most of its region asks for more
-        // frame than there are tiles to fill it with.
+        // **Beat 2 is one local journey, not the trip's union** (Chiu 2026-08-31,
+        // proposal 2A). A frame fitted to the union spends its span on ground the
+        // viewer never visits and leaves the place a smudge — 274 km of body span
+        // against 18.6 km on `ishigaki-crossing`
+        // (`Docs/handoff-crop-scaling.md` §4).
+        //
+        // *Which* local journey is `CameraPath.openingRoute`, and its doc is worth
+        // reading before changing anything here: on a local trip it is the whole
+        // trip, which is proposal 2A exactly; on a cross-region trip it is the one
+        // the body camera actually starts in, which becomes the destination on its
+        // own once the origin leaves the recap.
+        let destination = openingRoute.count >= 2 ? openingRoute : route
+        let destinationBounds = bounds(of: destination)
+        let regionalAsked = frame(for: destinationBounds, config: config, padding: config.wideSpanPadding)
         let regional = wideBeat(
-            spanM: cappedToRegion(regionalAsked.spanM, establishing: establishing, config: config),
-            route: route, tripBounds: tripBounds, config: config
+            spanM: regionalAsked.spanM,
+            route: destination, tripBounds: destinationBounds, config: config
         )
 
-        let countryBounds: Bounds
-        if let establishing {
-            countryBounds = Bounds(
-                minLat: min(establishing.minLat, tripBounds.minLat),
-                maxLat: max(establishing.maxLat, tripBounds.maxLat),
-                minLon: min(establishing.minLon, tripBounds.minLon),
-                maxLon: max(establishing.maxLon, tripBounds.maxLon)
-            )
-        } else {
-            countryBounds = tripBounds
-        }
-        // **The country beat is framed to fit *inside* the region, not to contain
-        // it** (2026-08-02). Framing to contain, then padding, puts the tiles'
-        // own edge on screen: outside them there is no water layer, only the
-        // style's background, so the data boundary draws itself as a lighter
-        // rectangle across the establishing shot. Fitting within the extent shows
-        // as much of the country as a portrait frame can hold and never a pixel
-        // of nothing.
+        // **Beat 1 is the country, and it is a title card's backdrop.** The
+        // country is what an ordinary viewer recognises — nobody knows where "New
+        // South Wales" is. Framed to *contain* the country exactly (padding 1.0),
+        // which is not a tunable: it is "the whole country and no more".
         //
-        // Without an extent there are no tiles to fall off, so the trip's own
-        // bounds are widened by `country_view_padding` as before — the most an
-        // offline app can claim to know about the surrounding geography.
-        let country = establishing == nil
-            ? frame(for: countryBounds, config: config, padding: config.countryViewPadding)
-            : wideBeat(
-                spanM: max(config.cameraSpanM, containedSpanM(bounds: countryBounds, config: config)),
-                route: route, tripBounds: tripBounds, config: config,
-                containingCentre: (
-                    lat: (countryBounds.minLat + countryBounds.maxLat) / 2,
-                    lon: (countryBounds.minLon + countryBounds.maxLon) / 2
-                )
-            )
+        // `cappedToRegion` is deliberately NOT applied here any more. It fits a
+        // beat *inside* an extent so the tiles' own edge never shows, and with
+        // MapLibre parked there are no tiles to fall off — Apple Maps is global.
+        // Left in place it turned a country beat into the largest portrait frame
+        // that fits inside the trip's bounds: 46.6 km on `ishigaki-crossing`,
+        // which is a city, not a country.
+        let country = destination.first.flatMap { CountryExtent.containing(lat: $0.lat, lon: $0.lon) }
+        let countryFrame: CameraFrame
+        if let country {
+            countryFrame = frame(for: Self.bounds(of: country.bounds), config: config, padding: 1.0)
+        } else {
+            // **A real answer, said out loud** (`Arch.md` §6). No row covers this
+            // trip, so the film cannot claim to show a country and falls back to
+            // exactly what every film did before: the trip's own bounds widened.
+            // Adding a row to `CountryExtent.all` is what fixes it.
+            KamomeLog.recap.notice("opening: no country extent covers this trip, establishing on trip bounds")
+            countryFrame = frame(for: bounds(of: route), config: config, padding: config.countryViewPadding)
+        }
 
-        // A region cut tightly around one trip is not a wider context — framed to
-        // fit inside its own extent it can come out *narrower* than the trip's
-        // padded view, which would open the film by zooming out and then back in.
-        // When the region has nothing wider to say, the country beat is simply not
-        // built, and the regional view carries the title.
-        let countryAddsContext = country.spanM > regional.spanM * config.openingCollapseZoomRatio
+        // A country beat barely wider than the destination beat is two pictures
+        // the eye cannot tell apart, so the title simply rides the destination
+        // frame and the film opens where it stays.
+        let countryAddsContext = countryFrame.spanM > regional.spanM * config.openingCollapseZoomRatio
         let wanted = countryAddsContext
             ? [
-                Beat(frame: country, holdS: config.openingCountryS),
+                // **The beat's length IS the card's length.** Chiu's rule is that
+                // the cut lands as the title leaves: a cut under the card reads as
+                // a film convention, a cut a moment after it reads as a bug.
+                // Written as `titleCardS` rather than checked against
+                // `opening_country_s`, so the two cannot drift apart at all.
+                Beat(frame: countryFrame, holdS: config.titleCardS),
                 Beat(frame: regional, holdS: config.openingRegionalS)
             ]
             // The title always belongs to the first beat, whichever that is.
-            : [Beat(frame: regional, holdS: config.openingCountryS)]
-        return Prologue(beats: collapse(wanted, config: config), transitionS: config.zoomTransitionS)
+            : [Beat(frame: regional, holdS: config.titleCardS)]
+        // `transitionS: 0` **is the cut** (Chiu 2026-08-31). Beat 1 is chrome —
+        // the viewer reads a title card as a card, not as a camera — so a cut out
+        // of it costs no continuity. Everything after it is the film proper and
+        // obeys continuity in full; `CameraPath.titleCutS` names the instant so
+        // the gate can scan from it rather than excuse a frame range.
+        return Prologue(beats: collapse(wanted, config: config), transitionS: 0)
+    }
+
+    /// A `RecapBounds` in the camera math's own bounds type.
+    static func bounds(of recap: RecapBounds) -> Bounds {
+        Bounds(
+            minLat: recap.minLat, maxLat: recap.maxLat,
+            minLon: recap.minLon, maxLon: recap.maxLon
+        )
     }
 
     /// One wide beat, centred where it can honestly claim to be.
