@@ -6,6 +6,14 @@ are in one place rather than scattered across ADRs, a closed gate and a handoff.
 
 Nothing here blocks Phase 4. Everything here blocks a submission.
 
+> ⚠️ **This file is no longer the gate — `Docs/release-readiness.md` is**
+> (ADR 2026-09-02). **Nothing here was deleted or waived.** This page keeps the
+> reasoning, the dated provider research, the three key exits and the accepted
+> risks, and the gate cites it row by row. What moved is the *question* "where
+> does the release stand?", which this page answered as prose and the gate
+> answers by who can settle each row. **Phase 4 item 3 was dissolved into that
+> gate** — it and this page were tracking the same work under two names.
+
 ---
 
 ## The order to ship in (Chiu 2026-08-20)

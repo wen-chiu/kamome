@@ -1,6 +1,6 @@
 # HANDOFF — live findings
 
-**Updated 2026-09-01.** `main` carries PRs #16–#26. The crossing beat,
+**Updated 2026-09-02.** `main` carries PRs #16–#28. The crossing beat,
 **crop-scaling** and **the title-card opening** are built, measured and **judged
 by Chiu** (ADRs 2026-08-31, 2026-08-31 (b), 2026-09-01). The live line is the
 **type-2 film form**.
@@ -20,16 +20,42 @@ standing rules first.
 
 ---
 
+## Findings — PO/Architecture session (2026-09-02)
+
+**Chiu changed how this project is gated** (ADR 2026-09-02, read it before
+planning work). **Phase 4 has no hard gate** — it closes when he judges a film,
+and rule 7 is amended for that phase only. In exchange, **engineering owns that
+the code does not break and that a release carries no security, licence or
+privacy fault.** You may no longer answer "is this ready?" with a film.
+
+**Your half is `Docs/release-readiness.md`** — new, superseding
+`Docs/pre-launch.md` as the release gate (which keeps the reasoning). It sorts
+every obligation by who can settle it: what `check.sh` holds, what is claimed but
+enforced by nobody, and what only a device can answer. **Phase 4 item 3 is
+dissolved** into it — that overlap is why "is item 3 done?" had no single answer.
+
+Three findings VERIFIED there, none previously recorded:
+
+- 🔴 **The app has no attribution string at all** — zero hits for `Geoapify`,
+  `OpenStreetMap` or `Powered by` in either `.xcstrings`. Mandatory on the free
+  plan: a licence condition. **No privacy notice string either.** → S2, S3.
+- 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
+  known ones, and it is the dangerous one — **film duration is an open question
+  and this is the key anyone would reach for first.** → C1.
+- 🟠 **`RecapBudgetAndDemoTests` derives an export-time estimate from a dead
+  quantity**, and that estimate is a mandatory submission item. → C2.
+
+**No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
+pointer to a topic document.
+
+---
+
 ## 🔴 Blockers
 
 ### ✅ CI is alive again as of 2026-09-01 — a red check means something now
 From 2026-08-29 Actions jobs failed in ~3 s with **zero steps executed** (spending
-limit), so `main` failed identically and no branch's check carried information.
-**PR #26 ran `./check.sh` end to end on a runner in 5m44s and passed** — the first
-green run since; the allowance resets with the month.
-
-**Treat a red check as real again.** The dead-CI tell is unmistakable: ~3 s wall
-clock and `steps=0`. Anything with steps is a real signal.
+limit). PR #26 ran `./check.sh` end to end in 5m44s and passed. **Treat a red
+check as real again** — the dead-CI tell is ~3 s wall clock and `steps=0`.
 
 ### ✅ CLOSED — the shake, and the opening that came with it
 Both judged and accepted by Chiu; the decisions, numbers and reasoning are ADRs
@@ -42,15 +68,10 @@ What survives here as **live**, and only this:
 - ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*,
   not fixed. §7's remedy (cross-fade at a station boundary) costs no extra
   fetches and is not built. Revisit only if someone notices it in a film.
-- ⚠️ **`keyframe_interval_frames` is now dead config** — VERIFIED 2026-09-01:
-  after crop-scaling, `Core`/`UI`/`App` mention it only in a past-tense comment
-  in `RecapRenderLoop`. It is still in `Config/TrackingConfig.json` and still
-  passed by ~8 test fixtures, so it **looks live and is not** — the same trap as
-  `route_waypoint_radius_m`. Two consequences, neither acted on: tuning it does
-  nothing, and `RecapBudgetAndDemoTests:140` still computes
-  `frameCount / keyframeIntervalFrames`, which **may now be measuring a quantity
-  the render path no longer has**. Nobody has checked that test; check it before
-  trusting its number.
+- ⚠️ **`keyframe_interval_frames` is dead config, and it is one of three.** The
+  test that still divides by it *was* checked (2026-09-02) and is measuring a
+  quantity the render path no longer has. Detail and the check that would end the
+  class: `Docs/release-readiness.md` C1, C2.
 
 ---
 

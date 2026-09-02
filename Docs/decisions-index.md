@@ -75,3 +75,4 @@ does not.
 | 55 | `2026-08-31` | The opening cuts out of a title card, and the frame it cuts out of is the country |  |
 | 56 | `2026-08-31 (b)` | The P0 is closed: the loop reprojects one snapshot instead of cross-fading two |  |
 | 57 | `2026-09-01` | Kamome's films are three types, and the film ends where the trip does |  |
+| 58 | `2026-09-02` | Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest | **amends `CLAUDE.md` rule 7 for Phase 4 only** |

@@ -1,0 +1,22 @@
+# Config keys that decode but have no consumer outside Core/ConfigLoader/,
+# counted by Scripts/check-dead-config.sh. Each line is a key that is KNOWN dead
+# and deliberately still present.
+#
+# This list should only ever shrink. Adding a line means a tunable stopped
+# controlling anything and that was accepted — which needs a reason in the
+# commit message, not a quiet edit here.
+#
+# All three below are recorded in Docs/release-readiness.md C1.
+
+# Superseded by the detour-ratio gate; ADR 2026-08-20 (d) — the snap radius was
+# never guarding what it was said to guard.
+matching.route_waypoint_radius_m
+
+# Superseded by RecapSnapshotStations when crop-scaling landed; ADR 2026-08-31 (b).
+export.keyframe_interval_frames
+
+# Stopped applying when the duration plan was rewritten; the code says so at
+# RecapDurationPlan.swift:221 and RecapComposer.swift:237. DANGEROUS: film
+# duration is an open design question (HANDOFF.md) and this is the key anyone
+# would reach for first.
+export.total_duration_max_s
