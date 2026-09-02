@@ -90,12 +90,42 @@ final class RecapFilmTypeTests: XCTestCase {
 
     // MARK: - Unknown is a state, not a default
 
-    func testALegNobodyRoutedMakesTheTripUnclassifiable() {
+    /// **The reading is monotonic**, and this is the test that pins it. An
+    /// unrouted leg can only ever *add* a local journey, never remove one — so a
+    /// confirmed crossing is a fact whatever the unknowns turn out to be, and the
+    /// trip is at least a type 2.
+    ///
+    /// The first version of this rule returned `unknown` whenever any leg was
+    /// NULL. That sounded careful and was not: routing ships disabled and the
+    /// offline gate establishes nothing, so **every fixture classified `unknown`
+    /// and the type-2 form would have had no coverage at all.**
+    func testAConfirmedCrossingSurvivesLegsNobodyRouted() {
         let trip = [leg(taipei), leg([taipei[1], ishigaki[0]], crossing: true), leg(ishigaki)]
         XCTAssertEqual(
-            RecapFilmType.classify(legs: trip, everyLegEstablished: false), .unknown,
-            "an unrouted leg may be hiding a crossing, and 'we never found out' is not 'local'"
+            RecapFilmType.classify(legs: trip, everyLegEstablished: false), .oneDestination,
+            "one confirmed crossing is two local journeys whatever the unrouted legs turn out to be"
         )
+    }
+
+    /// The other half: with **no** confirmed crossing, an unrouted leg may still
+    /// be hiding one, so the trip is not yet `local`.
+    func testWithNoConfirmedCrossingAnUnroutedLegLeavesTheTripUnclassifiable() {
+        XCTAssertEqual(
+            RecapFilmType.classify(legs: [leg(taipei)], everyLegEstablished: false), .unknown,
+            "'we never found out' is not 'local'"
+        )
+        XCTAssertEqual(
+            RecapFilmType.classify(legs: [leg(taipei)], everyLegEstablished: true), .local,
+            "nothing outstanding and no crossing is a local trip"
+        )
+    }
+
+    /// A lower bound of 2 may still resolve to 3, and today both render the same
+    /// way — which is the only reason collapsing them is safe. **If this
+    /// assertion is ever changed, `classify`'s type-3 caveat is what changed.**
+    func testTheDeferredMultiRegionFilmRendersTheTypeTwoForm() {
+        XCTAssertEqual(RecapFilmType.multiRegion.renderedForm, .oneDestination)
+        XCTAssertTrue(RecapFilmType.multiRegion.hasDestinationAbroad)
     }
 
     /// Unknown must be *distinguishable* from local while *rendering* as local.
@@ -119,6 +149,16 @@ final class RecapFilmTypeTests: XCTestCase {
 
     /// The default on `RecapTrip` must be the honest one: a synthetic trip that
     /// was never routed is unknown, and renders exactly what it renders today.
+    /// The offline gate establishes nothing, so this is the case that decides
+    /// whether the type-2 form is ever exercised by an always-on test.
+    func testTheCrossingFixtureShapeIsClassifiableWithNothingRouted() {
+        let trip = [leg(taipei), leg([taipei[1], ishigaki[0]], crossing: true), leg(ishigaki)]
+        XCTAssertTrue(
+            RecapFilmType.classify(legs: trip, everyLegEstablished: false).hasDestinationAbroad,
+            "the continuity gate must be able to reach the type-2 form offline"
+        )
+    }
+
     func testASyntheticTripDefaultsToUnknownRatherThanLocal() {
         let trip = RecapTrip(
             route: [RecapCoordinate(lat: 25.03, lon: 121.56), RecapCoordinate(lat: 25.08, lon: 121.23)],

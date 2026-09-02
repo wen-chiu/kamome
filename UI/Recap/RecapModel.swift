@@ -231,7 +231,14 @@ final class RecapModel {
                 maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
             )
         }
-        guard let timeline = LinearTimeline(trip: trip, config: exportConfig, establishing: establishing) else {
+        guard let timeline = LinearTimeline(
+            trip: trip, config: exportConfig, establishing: establishing,
+            // The capability layer reaching the film's form: the substrate says
+            // how wide a frame it can draw, and the type-2 opening picks between
+            // its two forms accordingly rather than discovering the answer one
+            // snapshot at a time (`CrossingFraming`).
+            substrateMaxLongitudeDeg: provider.capabilities.maxFramableLongitudeDeg
+        ) else {
             phase = .failed(message: String(localized: "recap_failed"))
             return
         }

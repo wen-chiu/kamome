@@ -170,6 +170,40 @@ final class RecapCameraContinuityTests: XCTestCase {
         return Int((cut * Double(fps)).rounded(.up)) + 1
     }
 
+    /// **The flight beat may not move** (Chiu 2026-09-01: "the plane and its
+    /// trail move, the camera does not").
+    ///
+    /// Same shape as `assertTheCardBeatIsStill`, and the same reason: this is the
+    /// one beat in the film whose whole point is that the camera is parked, so it
+    /// is asserted rather than assumed. The continuity scan alone could not catch
+    /// a drift here — a slow pan keeps 99% overlap frame to frame and passes
+    /// everything, while being exactly the thing this beat must not do.
+    ///
+    /// It also pins the beat's *extent*: the camera must still be parked at the
+    /// instant the aircraft lands. An earlier build closed the camera while the
+    /// sprite was still crossing, and `CameraPath.confine` chased the subject 24 km
+    /// in a single snapshot step (31 violations). That is not a continuity bug
+    /// this catches by luck; it is the defect this assertion names.
+    private func assertTheFlightBeatIsStill(_ line: LinearTimeline, fixture: String, fps: Int) {
+        guard line.opensOnTheFlight, let arc = line.path.arcWindowsS.first else { return }
+        let step = 1.0 / Double(fps)
+        let parked = line.cameraFrame(atTime: 0)
+        // Up to the landing: the arc's own hold, which ends when the crossing beat
+        // does. Read off the beat rather than assumed to be the arc's midpoint.
+        let landing = line.path.crossingBeatWindowsS.first?.upperBound ?? arc.lowerBound
+        var moved = 0
+        for frame in 0...max(Int((landing * Double(fps)).rounded(.down)), 0)
+        where Self.groundOverlap(parked, line.cameraFrame(atTime: Double(frame) * step)) < 1 - 1e-9 {
+            moved += 1
+        }
+        XCTAssertEqual(
+            moved, 0,
+            "\(fixture): the flight beat moved on \(moved) frames before the aircraft landed at "
+                + "\(landing)s — a still camera is the whole of this beat, and a drift here is a "
+                + "violation, not a tolerance"
+        )
+    }
+
     /// Builds `fixture`'s real timeline and walks every frame of it.
     @discardableResult
     private func scan(fixture: String) async throws -> String {
@@ -206,6 +240,7 @@ final class RecapCameraContinuityTests: XCTestCase {
         // card beat is one frame, held — and then scans everything after it. If
         // the card beat ever moved, the loop below would fail rather than skip,
         // which is the whole difference.
+        assertTheFlightBeatIsStill(line, fixture: fixture, fps: config.fps)
         let scanFrom = try assertTheCardBeatIsStill(line, fixture: fixture, fps: config.fps)
         for frame in scanFrom..<line.frameCount {
             let timeS = Double(frame) * step
@@ -259,10 +294,11 @@ final class RecapCameraContinuityTests: XCTestCase {
     ) -> String {
         let summary = String(
             format: "  %-16@ %5.1fs · span %6.1f km · worst frame overlap %3.0f%% at %5.1fs · "
-                + "%d violations · %d permitted cuts · %d excused · %d arcs · type %@",
+                + "%d violations · %d permitted cuts · %d excused · %d arcs · type %@%@",
             fixture as NSString, line.durationS, line.path.bodySpanM / 1000,
             worst.overlap * 100, worst.timeS, violations.count, cuts.permitted, cuts.excused,
-            line.path.arcWindowsS.count, "\(filmType)" as NSString
+            line.path.arcWindowsS.count, "\(filmType)" as NSString,
+            (line.opensOnTheFlight ? " · opens on the flight" : "") as NSString
         )
         for violation in violations.prefix(3) {
             XCTFail(String(

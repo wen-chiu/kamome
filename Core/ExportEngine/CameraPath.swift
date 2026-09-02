@@ -150,7 +150,15 @@ public struct CameraPath {
         /// camera is told *where* the ground has no road and never what crosses
         /// it (`Docs/camera-arcs.md` §6). Empty is every trip that has ever been
         /// rendered, and produces exactly the film it produced before.
-        crossingVertexRanges: [Range<Int>] = []
+        crossingVertexRanges: [Range<Int>] = [],
+        /// **The still frame a type-2 film opens on** — both ends of the flight,
+        /// the title card over it, the aircraft crossing it (Chiu 2026-09-01).
+        /// nil for every other film, and for a type-2 one too wide to frame,
+        /// which takes the country card instead — the *other* main path, not a
+        /// degraded one. A frame rather than a flag, because deciding it needs
+        /// the substrate's ceiling and the camera never learns about renderers
+        /// (`CrossingFraming`).
+        openingFlightFrame: CameraFrame? = nil
     ) {
         guard route.count >= 2 else { return nil }
         var cumulative = [0.0]
@@ -170,30 +178,17 @@ public struct CameraPath {
         let total = totalDurationS ?? config.targetDurationS
         let frames = Int((total * Double(config.fps)).rounded())
 
-        // **The opening is built first, and the body is derived from it** (Chiu
-        // 2026-08-09) — `body = established / target_zoom_ratio`, where
-        // `established` is the *last* wide beat since 2026-08-31. See
-        // `establishedSpanM`, which is where that changed and why.
-        let builtPrologue = Self.wideOpening(
-            openingS: openingS, route: route,
-            crossings: crossingVertexRanges, establishing: establishing, config: config
-        )
-        let crossings = Self.crossings(vertexRanges: crossingVertexRanges, cumulativeM: cumulative)
-        let span = Self.bodySpan(BodySpanRequest(
-            prologue: builtPrologue, route: route, anchors: anchors, totalM: totalM,
-            crossings: crossings, stopHoldsS: stopHoldsS, totalDurationS: total,
-            establishing: establishing, config: config
+        let opening = Self.openingAndBodySpan(OpeningAssembly(
+            route: route, cumulativeM: cumulative, anchors: anchors, totalM: totalM,
+            crossingVertexRanges: crossingVertexRanges, stopHoldsS: stopHoldsS,
+            totalDurationS: total, establishing: establishing, openingS: openingS,
+            journeyEndsBeforeS: journeyEndsBeforeS, openingFlightFrame: openingFlightFrame,
+            config: config
         ))
-
-        // The wide beats, the closing-zoom handoff, and where the journey
-        // timeline itself starts and ends — all sized together in one call
-        // because each value depends on the one before it (Chiu 2026-08-07:
-        // pulled out of the initializer so the dependency chain reads as a
-        // single plan rather than six lets threaded through it).
-        let plan = Self.openingPlan(OpeningRequest(
-            prologue: builtPrologue, route: route, establishing: establishing, config: config,
-            bodySpanM: span, totalDurationS: total, journeyEndsBeforeS: journeyEndsBeforeS
-        ))
+        let crossings = opening.crossings
+        let span = opening.bodySpanM
+        let plan = opening.plan
+        let opensOnTheFlight = opening.opensOnTheFlight
         bodySpanM = span; wideEndS = plan.wideEndS
         let journeyTimeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
@@ -219,7 +214,9 @@ public struct CameraPath {
         // ends is exact rather than approximately equal — the same reason the
         // opening's closing zoom targets `track[frame]` rather than a copy.
         let moves = Self.crossingMoves(
-            timeline: journeyTimeline, track: track, fps: config.fps, config: config
+            timeline: journeyTimeline, track: track, fps: config.fps, config: config,
+            openingFrame: opensOnTheFlight ? plan.prologue?.finalFrame : nil,
+            openingEndsS: plan.openingEndsS
         )
         arcs = moves.arcs; crossingBeatsS = moves.beatsS
     }

@@ -58,12 +58,23 @@ public enum RecapFilmType: Equatable, Sendable {
     /// film will improve, which a silent `.local` cannot.
     case unknown
 
-    /// The form the film actually takes. `unknown` renders the local film,
-    /// because the honest reading of "we do not know whether you flew" is "do
-    /// not draw a flight" — the same rule `RecapTrip.Leg.isCrossing` already
-    /// follows one level down.
+    /// The form the film actually takes.
+    ///
+    /// `unknown` renders the local film, because the honest reading of "we do not
+    /// know whether you flew" is "do not draw a flight" — the same rule
+    /// `RecapTrip.Leg.isCrossing` already follows one level down.
+    ///
+    /// ⚠️ **`multiRegion` renders the type-2 form**, because the multi-region film
+    /// is deferred and a trip with three local journeys is still, in every part
+    /// the type-2 form draws, a journey out to somewhere else. It flies the first
+    /// crossing and lets the rest play as arcs in the body, which is what happens
+    /// today. **Revisit when type 3 opens** — see `classify`.
     public var renderedForm: RecapFilmType {
-        self == .unknown ? .local : self
+        switch self {
+        case .unknown: return .local
+        case .multiRegion: return .oneDestination
+        case .local, .oneDestination: return self
+        }
     }
 
     /// Whether this trip's film shows a journey to somewhere else.
@@ -73,13 +84,37 @@ public enum RecapFilmType: Equatable, Sendable {
 
     /// Classify a trip from its legs in travel order.
     ///
-    /// - Parameter everyLegEstablished: whether routing answered — with any of
-    ///   its three verdicts — for **every** leg. False means at least one leg is
-    ///   NULL and the partition below may be missing a cut.
+    /// ## The reading is monotonic, and that is what makes it useful
+    ///
+    /// An unrouted leg can only ever **add** a local journey — if it turns out to
+    /// be a crossing it splits a run in two; it can never merge two runs into
+    /// one. So `distinctJourneyCount` over the *confirmed* crossings is a **lower
+    /// bound**, and a lower bound of 2 is already a fact: whatever the unknowns
+    /// turn out to be, this trip has at least two local journeys.
+    ///
+    /// This claims strictly less than it knows and degrades safely, and it is
+    /// what stops `unknown` from swallowing every trip. **The first version of
+    /// this function returned `unknown` whenever any leg was NULL**, which sounded
+    /// careful and was not: routing ships disabled and the offline gate
+    /// establishes nothing, so every fixture classified `unknown`, fell back to
+    /// the local film, and **the type-2 form would have had no test coverage at
+    /// all** — the fifth instance in this project of a property that only exists
+    /// on the shipping path being guarded only where the shipping path is not.
+    ///
+    /// ⚠️ **`>= 2` maps to the type-2 form, and that is sound only while type 3 is
+    /// deferred.** A lower bound of 2 could still resolve to 3, and today both
+    /// render the same way, so nothing is claimed that could be wrong. **The day
+    /// the multi-region film is built, this collapses two different answers into
+    /// one and must be revisited** — a lower bound of 2 with unknowns outstanding
+    /// will no longer be enough to choose between them.
+    ///
+    /// - Parameter everyLegEstablished: whether routing answered — with any of its
+    ///   three verdicts — for **every** leg. It only decides the *bottom* of the
+    ///   range now: with no confirmed crossing, a trip is `local` if nothing is
+    ///   outstanding and `unknown` if something still is.
     public static func classify(legs: [RecapTrip.Leg], everyLegEstablished: Bool) -> RecapFilmType {
-        guard everyLegEstablished else { return .unknown }
         switch distinctJourneyCount(legs: legs) {
-        case ..<2: return .local
+        case ...1: return everyLegEstablished ? .local : .unknown
         case 2: return .oneDestination
         default: return .multiRegion
         }

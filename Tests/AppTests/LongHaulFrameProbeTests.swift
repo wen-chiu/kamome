@@ -47,6 +47,15 @@ final class LongHaulFrameProbeTests: XCTestCase {
 
     /// The distances the type-2 design has to survive, shortest first.
     ///
+    /// **Auckland and Moscow were added 2026-09-02 to fill the gap the threshold
+    /// sits in.** The policy of 70° is interpolated between two measurements 67°
+    /// apart — Sydney at 29.6° (a good shot) and Helsinki at 96.6° (framed, and
+    /// visually useless) — with nothing rendered in between. Auckland is the
+    /// nearest real pair above Sydney (`CountryExtent` puts the Taiwan–New Zealand
+    /// envelope at 59.3°); Moscow at 83.9° sits **above** the proposed threshold,
+    /// so the rule can be judged on what it excludes and not only on what it
+    /// admits.
+    ///
     /// The last two were added 2026-09-01 at Chiu's request, and they are not
     /// hypothetical: **Iceland and Finland are two of the six rows in
     /// `CountryExtent`**, and the Iceland film is the Geoapify acceptance trip —
@@ -57,6 +66,8 @@ final class LongHaulFrameProbeTests: XCTestCase {
         (taipei, Place("Ishigaki", 24.3448, 124.1572)),
         (taipei, Place("Tokyo", 35.6762, 139.6503)),
         (taipei, Place("Sydney", -33.8688, 151.2093)),
+        (taipei, Place("Auckland", -36.8485, 174.7633)),
+        (taipei, Place("Moscow", 55.7558, 37.6176)),
         (taipei, Place("Helsinki", 60.1699, 24.9384)),
         (taipei, Place("Reykjavik", 64.1466, -21.9426)),
         (taipei, Place("Paris", 48.8566, 2.3522))

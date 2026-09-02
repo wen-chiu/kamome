@@ -151,11 +151,146 @@ Two conditions, and the second is not a number:
    at low latitudes and the zoom floor at high ones, so which one fails first
    depends on where the pair is.
 
-## 2. ⏳ TASK 2 — the rule is proposed, not built
+## 1c. The threshold: 70 ships, and it is interpolated
 
-See `HANDOFF.md` and §3 below. Proposal: count distinct local journeys by folding
-the `SegmentRoutability.noRoad` partition, **derive it rather than store it**, and
-make "unknown" the answer whenever any segment's routability is NULL.
+Chiu: take 70 and move on. **Be clear what it is: interpolated from a gap with no
+data in it.** Sydney at 29.6° is a good shot and Helsinki at 96.6° is framed and
+useless; nothing between them had been rendered, and 70 sat in the middle of that
+67° gap. Two more pairs were measured on 2026-09-02 to fill it:
+
+| pair | Δ longitude | padded ×1.5 | where the ends land |
+|---|---:|---|---|
+| Taipei → Auckland | 53.2° | ✅ frames | 25% and 75% of the width |
+| Taipei → Moscow | 83.9° | ❌ zoom floor | unpadded only: 56 px from opposite bezels |
+
+So the transition sits between **53.2° and 83.9°**, and 70 is inside it. Auckland
+keeps `wide_span_padding` intact and puts both ends where padding is meant to put
+them; Moscow behaves exactly like Helsinki.
+
+⚠️ **One honest caveat on Auckland**: MapKit stops labelling the two cities
+somewhere between Sydney's frame (5,532 km) and Auckland's (8,836 km), so at 53.2°
+the base map names neither end. Kamome draws its own pins and labels over the top,
+so this is a backdrop question rather than an information one — but it is the
+reason the "good shot" boundary could be argued lower than 70.
+
+⚠️ **The policy is not the binding constraint everywhere.** Near the equator the
+portrait aspect refuses a padded frame at ~60°, below the policy; at mid latitudes
+the policy binds first. That is why `CrossingFraming` checks both and neither
+number alone is the rule.
+
+## 2. ✅ TASK 2 — built, and the first rule was wrong
+
+### The monotonic correction (Chiu, 2026-09-02)
+
+The rule as first built returned `unknown` whenever **any** leg was NULL. That
+sounded careful and was not: routing ships disabled and the offline gate
+establishes nothing, so **every fixture classified `unknown`, fell back to the
+local film, and the type-2 form would have had no test coverage at all** — the
+fifth instance in this project of a property that only exists on the shipping path
+being guarded only where the shipping path is not.
+
+**An unrouted leg can only ever *add* a local journey, never remove one.** So the
+journey count over confirmed crossings is a **lower bound**, and a lower bound of 2
+is a fact whatever the unknowns turn out to be. `classify` now reads:
+
+    >= 3          -> multiRegion
+    == 2          -> oneDestination
+    <= 1          -> local if nothing is outstanding, else unknown
+
+`ishigaki-crossing` classifies **`oneDestination` offline**, which is what gives
+the new form its coverage.
+
+⚠️ **`>= 2` maps to the type-2 form, and that is sound only while type 3 is
+deferred.** A lower bound of 2 could still resolve to 3; today both render the same
+way, so nothing is claimed that could be wrong. **Revisit the day the multi-region
+film is built.**
+
+### Derived, never stored
+
+`RecapTrip.everyLegRoutabilityEstablished` + a computed `filmType`. Two consequences
+recorded rather than solved: the same trip yields different films on different days,
+which sharpens ADR 2026-08-15's unmet third requirement (no export record exists);
+and nothing tells a user that re-exporting later would give a better film.
+
+## 3. ✅ TASK 3 — the type-2 film form, built
+
+    title card over the flight frame -> the aircraft crosses, camera still
+      -> the arc closes into the destination -> the destination's local trip
+      -> end card
+
+**The origin's drive is not in the film.** `RecapTypeTwoFilm.trimmedToTheDestination`
+drops every leg before the crossing and every stop before the departure, keeping the
+departure airport and its photographs. What that produces is a trip that *begins*
+with its crossing — exactly `Docs/camera-arcs.md` §4 **Case C**, which that document
+predicted and left unbuilt, and whose rule it already stated: *when the first local
+journey is degenerate, the opening arc **is** the first crossing arc.*
+
+⚠️ **This supersedes §4 Case B's reasoning for a type-2 film.** Case B says the film
+opens on the departure because "you cannot arrive somewhere if the film never showed
+you leaving". Still true — it is now the departure airport's photographs and the
+flight frame that show it, rather than a drive across the origin city. The document
+is stale on that point rather than wrong about the principle.
+
+### Three defects the gate caught on the way, and what each taught
+
+1. **71 violations from 4.33 s.** The arc began after the departure airport's stop
+   hold, so the frame jumped from the flight frame to a 13 km frame on the terminal
+   and back. Fixed by starting the opening arc at the opening's end, so the airport's
+   photographs play over the frame the aircraft is about to cross.
+2. **Body span 177.3 km, frame-to-frame overlap 100% — a still film.** The flight
+   frame is the prologue's last beat, so `establishedSpanM` derived the body span
+   from it and undid the whole 2026-08-31 chain-break. Fixed with an explicit
+   override: a type-2 film keeps beat 2's *meaning* (the destination's own local
+   journey) without having a beat 2 on screen.
+3. **31 violations, the camera moving 24 km per snapshot step against
+   `containedLerp`'s 7 km containment bound.** Not the zoom: `CameraPath.confine`
+   keeps the subject inside the safe zone and was **chasing the aircraft across the
+   sea while the frame shrank**. Fixed by giving `Arc` an explicit `holdUntilS` —
+   the camera holds until the aircraft *lands*, then closes with a stationary
+   subject, so `confine` does nothing and the move is a pure zoom.
+
+**Every one of those was caught by the gate, not by looking.** The second is the
+one worth remembering: it *passed* the gate (100% overlap is perfect continuity)
+and was still wrong. Continuity passing is not the film being right.
+
+### The gate now asserts the beat rather than trusting it
+
+`assertTheFlightBeatIsStill` — every frame from 0 until the aircraft lands must
+have ground overlap 1.0 with the frame at t=0. Same pattern as
+`assertTheCardBeatIsStill`: **assert that there is no motion to be continuous
+with, never forgive a window.** A slow drift keeps 99% frame-to-frame overlap and
+would pass the continuity scan while being exactly what this beat must not do.
+
+    ishigaki-crossing 60.0s · span 13.3 km · worst overlap 70% · 0 violations
+                      · 2 permitted cuts · 0 excused · 1 arcs
+                      · type oneDestination · opens on the flight ✅
+
+No exemption was added or widened. The other six fixtures are unchanged.
+
+### What the film does, measured
+
+| | `main` | now |
+|---|---:|---:|
+| length | 69.0 s | **60.0 s** |
+| body span | 20.0 km | **13.3 km** |
+| snapshots | 178 | **135** |
+| of which the opening | 14 | **1** |
+
+**The opening costs one snapshot** — a still camera at any span, which is the whole
+reason the flight can be drawn at all. Net against what ships today: 367 → 135.
+
+Wall clock, one render at a time on this Mac: **type-2 87 s** (1800 frames, 36.4 MB),
+**type-1 `miyakojima` 109 s** (2640 frames, 54.1 MB). The type-1 control is
+unchanged — it classifies `unknown`, renders the local film, and is the evidence
+that this round's change is confined to type-2 films.
+
+### 🔴 The most visible thing left: a car drives across the sea
+
+The crossing subject is still the **car sprite**. The mode classifier
+(plane / ship / seagull) is explicitly session 2 of the crossing work and was out of
+scope, so this is not a regression — but it is far more visible now, because the
+crossing is the *opening beat* of every type-2 film rather than something in the
+middle of one. Judge the camera from this film; the sprite is the next session's.
 
 ### 🔴 CONFLICT — `ishigaki-crossing` is a **type 2**, not a type 3
 

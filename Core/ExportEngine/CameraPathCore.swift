@@ -122,14 +122,24 @@ extension CameraPath {
     /// - on a **local** trip — every trip that is not cross-region, and the case
     ///   Chiu also asked to change — first and last are the same journey, so this
     ///   *is* proposal 2A, with no difference of any kind;
-    /// - on a **cross-region** trip it is the origin today, and it becomes the
-    ///   destination the moment the next session drops the origin from the recap,
-    ///   because the destination will then be the only local journey. **No further
-    ///   change is needed here when that lands.**
+    /// - on a **cross-region** trip it was the origin until 2026-09-02, and it is
+    ///   the destination now — exactly as that prediction said it would be, and
+    ///   with no change to this rule. `RecapTypeTwoFilm` trims the origin's drive
+    ///   away, so the crossing is the first leg, the head is a single vertex, and
+    ///   the Case C branch below returns the destination. The decision executed
+    ///   itself.
     static func openingRoute(route: [Point], crossings: [Range<Int>]) -> [Point] {
-        guard let first = crossings.first, first.lowerBound > 0 else { return route }
+        guard let first = crossings.first else { return route }
         let head = Array(route[..<min(first.lowerBound + 1, route.count)])
-        return head.count >= 2 ? head : route
+        if head.count >= 2 { return head }
+        // **Case C** (`Docs/camera-arcs.md` §4): the first local journey is one
+        // point, because the photographs start at the departure airport — fitted
+        // to it the opening would establish on a 1,500 m view of a terminal. Now
+        // the normal shape of a type-2 film, since `RecapTypeTwoFilm` trims the
+        // origin away, so the journey framed is the one *after* the crossing:
+        // the destination (`cross-region-journeys.md` requirement 5).
+        let tail = Array(route[min(max(first.upperBound - 1, 0), route.count - 1)...])
+        return tail.count >= 2 ? tail : route
     }
 
     /// Where the body camera is when the opening hands over to it.
@@ -253,6 +263,16 @@ extension CameraPath {
         let totalDurationS: Double
         let establishing: RecapBounds?
         let config: TrackingConfig.Export
+        /// The span the body divides when the opening is a **flight frame**.
+        ///
+        /// That beat holds both countries and is a title card's backdrop, not the
+        /// film's framing of its subject. Left to the default rule it would set
+        /// the body span through `target_zoom_ratio` and undo the 2026-08-31
+        /// chain-break: measured at **177.3 km** on `ishigaki-crossing` against
+        /// the 13.3 km it should be, the camera so wide that frame-to-frame
+        /// overlap read 100% — a still film. So a type-2 film keeps beat 2's
+        /// meaning without having a beat 2 on screen.
+        let establishedSpanOverrideM: Double?
     }
 
     static func bodySpan(_ request: BodySpanRequest) -> Double {
@@ -265,7 +285,7 @@ extension CameraPath {
             startS: 0, targetS: request.totalDurationS
         )
         return RecapDurationPlan.bodySpanM(
-            establishedSpanM: establishedSpanM(
+            establishedSpanM: request.establishedSpanOverrideM ?? establishedSpanM(
                 prologue: request.prologue, route: route,
                 establishing: request.establishing, config: config
             ),

@@ -39,15 +39,28 @@ final class RecapOpeningFramingTests: XCTestCase {
         return trip.legs[..<crossingIndex].flatMap(\.coordinates)
     }
 
-    /// Where the film's body camera actually starts, against where beat 2 frames.
+    /// Where the film's body camera actually starts, against where the opening's
+    /// **last** wide framing sits.
+    ///
+    /// ⚠️ **Restated 2026-09-02, not deleted** (`Arch.md` §4). It used to unwrap
+    /// `titleCutS` and read the frame just after the cut, which was the only way
+    /// to name beat 2 while every opening had two beats. A type-2 film's opening
+    /// is a **single** held frame — the flight — so it has no cut at all, and the
+    /// unwrap became unreachable on the one fixture this harness runs on.
+    ///
+    /// The measurement it was making is unchanged and is now expressed directly:
+    /// the last wide framing is `openingS` minus a frame, whether the opening got
+    /// there through a cut, a transition, or by never moving.
     func testWhereTheOpeningFramesVersusWhereTheBodyStarts() async throws {
         let (trip, config) = try await RecapDemoFilmTests.importedRecap(
             named: UnroutableSeaProvider.crossingFixture, baseURL: "",
             reconstructor: UnroutableSeaProvider.forFixture(UnroutableSeaProvider.crossingFixture)
         )
         let line = try XCTUnwrap(LinearTimeline(trip: trip, config: config, establishing: nil))
-        let cut = try XCTUnwrap(line.titleCutS)
-        let beat2 = line.cameraFrame(atTime: cut + 0.1)
+        print("KAMOME_OPENING_ANCHOR film type \(line.filmType) · "
+            + "opens on the flight: \(line.opensOnTheFlight) · title cut: "
+            + "\(line.titleCutS.map { String(format: "%.2fs", $0) } ?? "none — one beat, nothing to cut")")
+        let beat2 = line.cameraFrame(atTime: max(line.openingS - 1.0 / Double(config.fps), 0))
         let body = line.cameraFrame(atTime: line.openingS + 0.5)
         let origin = try XCTUnwrap(trip.route.first)
         let destination = try XCTUnwrap(destinationCoordinates(trip).first)

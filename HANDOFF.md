@@ -38,44 +38,50 @@ no extra fetches and is **not built**, pending a judged render.
 Beat 1 is a **held country frame under the title card** that **cuts** to beat 2
 (Chiu 2026-08-31); beat 2 is one local journey; `bodySpanM` divides **beat 2**,
 breaking the chain that made "widen the country" and "smudge the destination" one
-knob. `ishigaki-crossing`: opening 9.0 → **6.5 s**, body span **274.0 → 20.0 km**.
-
-⚠️ **Snapshots went 367 → 51 → 178** — the 51 was cheap *because* the destination
-was a smudge. Net **2.1× cheaper** than what ships, ghosting gone, destination
-13.7× tighter. Re-measured 2026-09-01 at 178, unchanged.
-
-⚠️ **One deviation from proposal 2A, deliberate** (`Arch.md` §7): beat 2 frames
-the journey **the body camera starts in**, not the destination — framing the
-destination while the body still starts at the origin makes the closing zoom
-travel 273 km across a 33.3 km frame (69 gate violations). It becomes the
-destination on its own once the origin leaves the recap.
+knob. Snapshots went 367 → 51 → 178 — the 51 was cheap *because* the destination
+was a smudge. ⚠️ A type-2 film now takes a different opening entirely (below); this
+entry is the **local** film's opening, still unjudged.
 → `Docs/handoff-crop-scaling.md` §11, §12.
 
-### ⏳ The type-2 film: measured and decided, the form itself NOT built
-Chiu's three film types (2026-09-01, **not yet in `decisions.md`**): 1 local,
-2 home → one destination abroad, 3 multi-region (deferred).
+### ⏳ The type-2 film is BUILT and unjudged — one whole film exists
+Chiu's three film types (2026-09-01, **not in `decisions.md`**): 1 local, 2 home →
+one destination abroad, 3 multi-region (deferred). Type 2 is built: title card over
+the flight frame → the aircraft crosses with the **camera still** → the arc closes
+into the destination → the destination's local trip. The origin's drive is dropped
+(`RecapTypeTwoFilm`), making every type-2 film `Docs/camera-arcs.md` §4 **Case C** —
+predicted there, unbuilt until now.
 
-🔴 **A long-haul frame often does not exist, and the limit is degrees of
-longitude, not kilometres.** Sydney is 7,206 km and frames beautifully; Paris is
-12,313 km and has none — 29.6° against 119.2° is the reason. **MapKit saturates
-at ~109°**, and a 9:16 frame is 1.778× taller than wide so it runs off the poles
-first at low latitudes. **Taiwan→Iceland fails both at every padding**, and
-Iceland is the Geoapify acceptance film. Taiwan→Finland frames only unpadded,
-neither city labelled: **headroom, not a hard edge**.
+    ~/Kamome-films/type2-2026-09-02/kamome-ishigaki-crossing.mp4   60.0s · 87s
+    ~/Kamome-films/type2-2026-09-02/kamome-miyakojima.mp4          88.0s · 109s
 
-✅ **Built, green, render-neutral** (`ishigaki-crossing` still 178 snapshots): the
-crash guard (`MKCoordinateRegion` raised an **Objective-C** exception — process
-death, invisible to every Swift `catch`), the substrate's declared ceiling,
-`RecapFilmType` (derived, never stored, explicit `unknown`), and `CrossingFraming`
-+ `crossing_flight_max_longitude_deg` (**70 proposed, Chiu picks it**).
+`ishigaki-crossing`: 69.0 → **60.0 s**, body span 20.0 → **13.3 km**, snapshots
+178 → **135**, of which the **opening is 1** — a still camera costs one snapshot at
+any span, which is what makes the flight drawable. `miyakojima` is unchanged, which
+is the evidence the change is confined to type-2 films.
 
-⏳ **NOT built**: the film form — title card over the flight frame, the
-still-camera flight beat, dropping the origin's drive, the frozen-card path. No
-judgement render exists, and offline **every** fixture classifies `unknown`, so
-the gate cannot yet scan a type-2 film. Deriving the type also means the same trip
-yields different films on different days, which sharpens ADR 2026-08-15's unmet
-third requirement (no export record exists).
-→ `Docs/handoff-type2-films.md`.
+🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
+not kilometres.** MapKit saturates at **~109°**; a 9:16 frame is 1.778× taller than
+wide and runs off the poles first at low latitudes. **Taiwan→Iceland fails both at
+every padding** — and Iceland is the acceptance film — so the frozen country card is
+a **main path**. `crossing_flight_max_longitude_deg` is **70**, **interpolated**:
+Auckland 53.2° frames well, Moscow 83.9° does not, nothing between was rendered.
+
+🔴 **A car still drives across the sea** — the mode classifier is session 2 and was
+out of scope. Not a regression, far more visible now the crossing opens the film.
+
+⚠️ **Three defects the gate caught, one of which PASSED it**: framing the body from
+the flight frame gave a 177.3 km body span and 100% overlap — perfect continuity,
+and a still film. **Continuity passing is not the film being right.**
+→ `Docs/handoff-type2-films.md` §3.
+
+### The film type is derived, and the reading is monotonic
+An unrouted leg can only *add* a local journey, so a confirmed crossing means **at
+least** a type 2. The first version returned `unknown` on any NULL leg, which
+sounded careful and would have left the new form with **no test coverage at all** —
+routing ships disabled, so every fixture was `unknown`. ⚠️ `>= 2 ⇒ the type-2 form`
+is sound only while type 3 is deferred. Recorded: the same trip yields different
+films on different days (sharpening ADR 2026-08-15's unmet export-record
+requirement), and nothing tells a user re-exporting later would give a better film.
 
 ---
 
@@ -125,12 +131,11 @@ premise.** → `Docs/handoff-cross-region-crossing.md` finding 1.
 
 ### §0 — two films of real trips are committed to this repository
 `Docs/demos/phase3/kamome-p3-recap.mp4` and
-`Docs/demos/phase3_5/kamome-recap-NZ-disaster.MP4`, while practice writes films
-to `~/Kamome-films/`. They are phase demo artifacts the Rules of Engagement
-require, so two rules genuinely pull against each other, and **they are not in
-§0's decided-exceptions list.** Either they become a recorded exception or they
-move out. Otherwise checked and clean; **no check gates this one, deliberately** —
-gating it would pre-empt the owner call.
+`Docs/demos/phase3_5/kamome-recap-NZ-disaster.MP4`, while practice writes films to
+`~/Kamome-films/`. They are phase demo artifacts the Rules of Engagement require,
+so two rules pull against each other, and **they are not in §0's decided-exceptions
+list.** Either they become a recorded exception or they move out. **No check gates
+this one, deliberately** — gating it would pre-empt the owner call.
 → `Docs/handoff-audit-2026-08-30.md` finding 7.
 
 ### Film length: two questions, in this order
@@ -146,12 +151,6 @@ proportion. `travel_max_s` names a thing that does not exist.
 → `Docs/handoff-pacing.md` for both, including the acceptance condition decided
 in advance.
 
-### The badge's size is provisional
-0.60× was chosen from a rendered sweep and draws at 94.5 px. ⏳ **Judged from a
-still; Chiu reserved the right to revisit it from a film.** Everything else
-about the badge is decided (`Docs/decisions.md` 2026-08-29).
-→ `Docs/handoff-marker-badge.md` finding 6.
-
 ### The crossing beat — four things this session refused to default
 The film is built and measured but **unjudged**. Open, and Chiu's: whether the
 crossing seagull stays a choosable trip subject (it ships `selectable: true`
@@ -163,9 +162,9 @@ Case C — a trip that *begins* with the crossing — is not built.
 ### A staging rule for `Arch.md` — recommended, not in force
 A branch ref has silently picked up another session's commits three times, and a
 `git add -A` swept an unrelated file into an unrelated commit once.
-**Recommendation: confirm the current branch before committing, and stage
-explicit paths only — never `-A` or `.`** `Arch.md` is the engineering charter,
-so per `PO.md` this is a recommendation. **Not in force until Chiu says so.**
+**Recommendation: confirm the current branch before committing, and stage explicit
+paths only — never `-A` or `.`** Per `PO.md` this is a recommendation until Chiu
+says otherwise.
 
 ### `stop_weighting_enabled` — measure before removing
 Reachable in **both** modes; the containment argument is empirical and has never
@@ -229,11 +228,6 @@ five-minute window, and the "control" run on `main` was confounded the same way.
 `RecapStyle`'s defaults are unrendered. This was got wrong twice from the same
 source and cost a correction in the ledger both times. The app selects
 `modernMinimal`.
-
-### Three gaps the badge work left on record
-Nothing measures **post-grade** output; nothing asserts the end card's **brand
-mark**; and the **no-reader token cluster is four**.
-→ `Docs/handoff-marker-badge.md` findings 6c, 6d, 7.
 
 ---
 

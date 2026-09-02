@@ -37,23 +37,58 @@ extension CameraPath {
         let source: CameraFrame
         let apex: CameraFrame
         let destination: CameraFrame
+        /// When the move stops opening out and starts closing in.
+        ///
+        /// **The midpoint for every body crossing** — that is the accepted beat
+        /// and it is unchanged. It is a stored value rather than an assumption
+        /// because the *opening* arc of a type-2 film needs it somewhere else: at
+        /// the instant the aircraft lands.
+        ///
+        /// **Why that matters, measured 2026-09-02.** With the split at the
+        /// midpoint the camera was still closing while the sprite was still
+        /// crossing, and `CameraPath.confine` — which keeps the subject inside the
+        /// safe zone and is applied to every beat — dragged the centre 24 km in
+        /// one snapshot step against `containedLerp`'s 7 km containment bound.
+        /// 31 continuity violations, and the cause was not the zoom: it was a
+        /// shrinking frame chasing a moving subject. Close *after* the subject has
+        /// arrived and it is stationary, so `confine` does nothing and the move is
+        /// a pure zoom, which stays contained by construction.
+        let holdUntilS: Double
+
+        init(
+            startS: Double, endS: Double,
+            source: CameraFrame, apex: CameraFrame, destination: CameraFrame,
+            holdUntilS: Double? = nil
+        ) {
+            self.startS = startS
+            self.endS = endS
+            self.source = source
+            self.apex = apex
+            self.destination = destination
+            self.holdUntilS = holdUntilS ?? (startS + endS) / 2
+        }
 
         func contains(_ time: Double) -> Bool { time >= startS && time <= endS }
 
-        /// The framing at `time`: out to the apex over the first half, back in
-        /// over the second. Both halves are smoothstepped, so the move
-        /// decelerates into the apex — which is the moment both places are on
-        /// screen together — and accelerates out of it.
+        /// The framing at `time`: out to the apex, then back in. Both halves are
+        /// smoothstepped, so the move decelerates into the apex — the moment both
+        /// places are on screen together — and accelerates out of it.
+        ///
+        /// When `source` and `apex` are the same frame the first half is an exact
+        /// identity, which is how a type-2 film's still flight beat is expressed
+        /// without a second primitive: the camera provably does not move, rather
+        /// than nearly not moving.
         func frame(atTime time: Double) -> CameraFrame {
-            let span = max(endS - startS, 1e-6)
-            let progress = min(max((time - startS) / span, 0), 1)
-            if progress <= 0.5 {
+            if time <= holdUntilS {
+                let out = max(holdUntilS - startS, 1e-6)
                 return CameraPath.containedLerp(
-                    source, apex, CameraPath.smoothstepPublic(progress * 2)
+                    source, apex, CameraPath.smoothstepPublic(min(max((time - startS) / out, 0), 1))
                 )
             }
+            let back = max(endS - holdUntilS, 1e-6)
             return CameraPath.containedLerp(
-                apex, destination, CameraPath.smoothstepPublic((progress - 0.5) * 2)
+                apex, destination,
+                CameraPath.smoothstepPublic(min(max((time - holdUntilS) / back, 0), 1))
             )
         }
     }
@@ -212,17 +247,36 @@ extension CameraPath {
     }
 
     static func crossingMoves(
-        timeline: [TimelineEntry], track: [CameraFrame], fps: Int, config: TrackingConfig.Export
+        timeline: [TimelineEntry], track: [CameraFrame], fps: Int, config: TrackingConfig.Export,
+        openingFrame: CameraFrame? = nil, openingEndsS: Double = 0
     ) -> Moves {
         Moves(
-            arcs: buildArcs(timeline: timeline, track: track, fps: fps, config: config),
+            arcs: buildArcs(
+                timeline: timeline, track: track, fps: fps, config: config,
+                openingFrame: openingFrame, openingEndsS: openingEndsS
+            ),
             beatsS: crossingBeats(in: timeline)
         )
     }
 
+    /// - Parameter openingFrame: the still frame a type-2 film opens on. The
+    ///   crossing that starts as the opening ends takes it as **both** its source
+    ///   and its apex, which is what makes that beat a still camera: the first
+    ///   half interpolates a frame to itself, and only the second half moves.
     static func buildArcs(
-        timeline: [TimelineEntry], track: [CameraFrame], fps: Int, config: TrackingConfig.Export
+        timeline: [TimelineEntry], track: [CameraFrame], fps: Int, config: TrackingConfig.Export,
+        openingFrame: CameraFrame? = nil, openingEndsS: Double = 0
     ) -> [Arc] {
+        /// The crossing the film opens on: the first one, and only when nothing
+        /// but stop holds separates it from the title card.
+        func isTheOpeningCrossing(_ entry: TimelineEntry, openingEndsS: Double) -> Bool {
+            guard let firstCrossing = timeline.first(where: {
+                if case .crossing = $0.phase { return true }
+                return false
+            }) else { return false }
+            return entry.startS == firstCrossing.startS && entry.startS >= openingEndsS
+        }
+
         guard !track.isEmpty else { return [] }
         func frame(at time: Double) -> CameraFrame {
             let index = Int((max(time, 0) * Double(fps)).rounded())
@@ -230,8 +284,41 @@ extension CameraPath {
         }
         return timeline.compactMap { entry in
             guard case .crossing = entry.phase, entry.endS > entry.startS else { return nil }
-            let source = frame(at: entry.startS)
             let destination = frame(at: entry.endS)
+
+            // **Case C** (`Docs/camera-arcs.md` §4): the film opened *at* the
+            // apex, so this arc has nowhere to open out to — it holds there while
+            // the aircraft crosses, then closes into the destination. One move,
+            // not two.
+            //
+            // Both `source` and `apex` are the opening's frame on purpose. Equal
+            // endpoints make `containedLerp` an exact identity over the first
+            // half, so the beat is *provably* still rather than nearly still —
+            // which is what lets the continuity gate assert it instead of
+            // forgiving it. The collapse guard below is skipped for the same
+            // reason: it exists to drop an arc that would barely move, and this
+            // one is deliberately motionless for half its length.
+            // **Back to the opening's end, not to the crossing's own start.** The
+            // departure airport is a stop, so its hold sits between the title card
+            // and the flight — and if the arc began after it, the frame would jump
+            // from the flight frame to a ~13 km body frame on the terminal and
+            // back out again (measured: 71 violations from 4.33 s). Held instead,
+            // the airport's photographs play over the frame the aircraft is about
+            // to cross, which is the beat Chiu described.
+            if let openingFrame, isTheOpeningCrossing(entry, openingEndsS: openingEndsS) {
+                // The close begins when the aircraft lands and takes
+                // `zoom_transition_s` — the same knob the opening's own closing
+                // zoom uses, because this *is* that zoom: it is what carries the
+                // film from its establishing frame into the body camera.
+                let closeEndS = entry.endS + config.zoomTransitionS
+                return Arc(
+                    startS: min(entry.startS, openingEndsS), endS: closeEndS,
+                    source: openingFrame, apex: openingFrame,
+                    destination: frame(at: closeEndS), holdUntilS: entry.endS
+                )
+            }
+
+            let source = frame(at: entry.startS)
             let apex = apexFrame(source: source, destination: destination, config: config)
             let widest = max(source.spanM, destination.spanM)
             guard widest > 0, apex.spanM > widest * config.openingCollapseZoomRatio else { return nil }
@@ -273,6 +360,12 @@ extension CameraPath {
     public var arcWindowsS: [ClosedRange<Double>] {
         arcs.map { $0.startS...$0.endS }
     }
+
+    /// The crossing **beats** — the stretches with no road under them, in film
+    /// time. Exposed so the continuity gate can assert that a type-2 film's
+    /// camera is still for the whole of one, rather than for a duration it
+    /// assumed.
+    public var crossingBeatWindowsS: [ClosedRange<Double>] { crossingBeatsS }
 
     /// Whether `time` falls inside a crossing **beat** — the stretch with no road
     /// under it, which the film narrates with its own subject.

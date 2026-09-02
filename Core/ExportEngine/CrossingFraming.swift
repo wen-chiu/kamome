@@ -110,16 +110,46 @@ public enum CrossingFraming {
     /// airline route map already speaks. A camera translating thousands of
     /// kilometres is either a very long shot or the 2026-08-02 strobing defect
     /// rebuilt (`Docs/camera-arcs.md` §0).
+    /// Returns the **camera's** frame type rather than the animation state's:
+    /// this value is handed straight to `CameraPath` as its opening beat, and
+    /// converting at the seam would be a conversion nobody reads.
     public static func flightFrame(
         from origin: RecapCoordinate, to destination: RecapCoordinate, config: TrackingConfig.Export
-    ) -> CameraFrame {
+    ) -> CameraPath.CameraFrame {
         let bounds = CameraPath.Bounds(
             minLat: min(origin.lat, destination.lat), maxLat: max(origin.lat, destination.lat),
             minLon: min(origin.lon, destination.lon), maxLon: max(origin.lon, destination.lon)
         )
-        let frame = CameraPath.frame(for: bounds, config: config, padding: config.wideSpanPadding)
-        return CameraFrame(
-            centerLat: frame.centerLat, centerLon: frame.centerLon, spanM: frame.spanM, bearing: 0
+        return CameraPath.frame(for: bounds, config: config, padding: config.wideSpanPadding)
+    }
+
+    /// The still frame a type-2 film opens on, or nil when it opens on a card.
+    ///
+    /// Resolved here, once, before the camera is built: `CrossingFraming` needs
+    /// the substrate's ceiling and `CameraPath` must never see a renderer.
+    public static func openingFrame(
+        trip: RecapTrip, config: TrackingConfig.Export, substrateMaxLongitudeDeg: Double?
+    ) -> CameraPath.CameraFrame? {
+        guard trip.filmType.hasDestinationAbroad,
+              let ends = RecapTypeTwoFilm.crossingEnds(trip) else { return nil }
+        let verdict = CrossingFraming.verdict(
+            from: ends.origin, to: ends.destination,
+            config: config, substrateMaxLongitudeDeg: substrateMaxLongitudeDeg
         )
+        switch verdict {
+        case .drawTheFlight:
+            return CrossingFraming.flightFrame(from: ends.origin, to: ends.destination, config: config)
+        case let .frozenCard(refusal):
+            // **Said out loud** (`Arch.md` §6). The two forms look nothing alike
+            // and only this line distinguishes "this trip is close enough that we
+            // chose not to fly it" from "no frame exists".
+            KamomeLog.recap.notice(
+                """
+                recap: the flight is not drawn (\(refusal.rawValue, privacy: .public)) — \
+                the title card holds a frozen country frame
+                """
+            )
+            return nil
+        }
     }
 }
