@@ -2227,3 +2227,17 @@ simulator, and the "control" run on `main` was confounded the same way. **A cont
 that shares the confound manufactures confidence.** `pgrep -fl xcodebuild` before
 trusting any render, and one at a time.
 → `Docs/handoff-crop-scaling.md` §9.
+
+---
+
+## Resolving older `HANDOFF.md` citations
+
+*Moved from `HANDOFF.md` 2026-09-02 for the byte budget. It is a lookup table,
+not a live finding.*
+
+`Docs/decisions.md` cites findings as **"`HANDOFF.md` <date> finding N"**. Those
+sections moved on 2026-08-31: 2026-08-30 → `Docs/handoff-audit-2026-08-30.md`
+(PO audit) or `Docs/handoff-cross-region-crossing.md` (the crossing session);
+2026-08-29 → `Docs/handoff-marker-badge.md`; 2026-08-21 →
+`Docs/handoff-camera-arc-findings.md`; travel pacing → `Docs/handoff-pacing.md`;
+anything older → this file.

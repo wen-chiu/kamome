@@ -8,7 +8,9 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 ## Staleness protocol
 
 Last synced: 2026-09-02 against decisions.md **2026-09-02 (b)** and `main` at
-**PR #29**. Synced by the PO/governance pass of that day.
+**PR #31**. Re-synced by the S2/S3 engineering session, which re-read the ledger
+and `HANDOFF.md` and rewrote *Active work* — the type-2 line and the pre-launch
+line — to match what #30 and #31 landed.
 
 ✅ **This is checked now, not remembered** — `Scripts/check-staleness.sh`, in
 every `./check.sh` run (ADR 2026-09-02 (b)).
@@ -186,24 +188,29 @@ P7 backend deferred.
 **One live line: the type-2 film form** (ADR 2026-09-01). Everything else below
 is closed.
 
-- 🎬 **Type 2 — home → one destination abroad.** The session is running. It is
-  gated on a measurement first: **can MapKit render a long-haul frame at all**
-  (Taipei → Ishigaki / Tokyo / Sydney / Paris)? That answer decides whether a
-  type-2 film draws the flight, and **Chiu picks from the images**, including any
-  distance threshold. Design context: `Docs/cross-region-journeys.md`
-  (requirement 5 is load-bearing), `Docs/camera-arcs.md` §0 and §7.
-- ⏳ **Open and Chiu's, all waiting on a film rather than a session**: whether a
-  type-2 film draws the flight (above); the title card's text, which still shows
+- ✅ **Type 2 — home → one destination abroad — is BUILT and judged** (PR #31).
+  The type is **derived, never stored**; `crossing_beat_s` stays 6.0 (Chiu).
+  The measurement it was gated on came back: **MapKit saturates at ~109° of
+  longitude**, so a long-haul frame often does not exist and Taiwan→Iceland fails
+  at every padding — the frozen country card is a **main path**, not a fallback.
+  ⏳ Three things were handed over rather than defaulted, and the 70 threshold is
+  **Chiu's to decide**. → `Docs/handoff-type2-films.md` closeout, `HANDOFF.md`.
+- ⏳ **Open and Chiu's, all waiting on a film rather than a session**: the
+  long-haul flight frame's 70 threshold (above); the title card's text, which still shows
   trip title + dates rather than the country name (a DESIGNER question); the
   badge's 0.60 size (ADR 2026-08-29); the residual 0.747 sharpness step at hold
   boundaries (ADR 2026-08-31 (b) — accepted as it stands).
 - 🧊 **Deferred by name, not forgotten**: the crossing **mode classifier**
   (plane / ship / seagull — crossing session 2 of 2), and **type 3**,
   multi-region films (ADR 2026-09-01 — a loop over type 2, not a new mechanism).
-- **Pre-launch list** (`Docs/pre-launch.md`) stands as the submission gate. Its
-  item 2 is the crossing beat, **now built**; item 3's shake is **closed**
-  (ADR 2026-08-31 (b)), leaving its device verification and the export-time
-  estimate.
+- **Pre-launch list** (`Docs/pre-launch.md`) stands as the submission gate, but
+  `Docs/release-readiness.md` is the thing you read to find out where the release
+  stands (ADR 2026-09-02 §3). Item 2 is the crossing beat, **now built**; item
+  3's shake is **closed** (ADR 2026-08-31 (b)); items **6 and 7 — attribution and
+  the privacy notice — are built** (2026-09-02, `release-readiness.md` S2/S3),
+  with their wording and placement still Chiu's. What is left there is **device
+  verification** (D1–D5) and Apple's App Privacy questionnaire. The export-time
+  estimate's benchmark was re-derived in PR #30; the device figure is still owed.
 - **Pull requests** — read live state with `gh pr list`, never from this line.
 
 ## Blockers / risks

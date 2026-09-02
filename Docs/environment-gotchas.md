@@ -55,6 +55,27 @@ carries the live summary and points here.*
   preserved in `Docs/_archive/handoff-2026-08.md` under "▶ RESUME HERE
   (2026-08-13)". Films go to `~/kamome-renders/`, never `/tmp`.
 
+## One simulator, one process — and it is not only your own processes
+
+The render-length claim this replaces is closed and archived
+(`Docs/_archive/handoff-2026-08.md`: there is no render length limit; six
+`xcodebuild` processes on one simulator were the cause, and the "control" run on
+`main` shared the confound and manufactured confidence). What stays live is the
+operating rule, because it bit again:
+
+    pgrep -fl xcodebuild
+
+before trusting any render result, and one at a time.
+
+⚠️ **NEW 2026-09-02 — the contending process need not be yours.** A session
+capturing simulator screenshots had its app installed-over and terminated
+mid-capture three times, by another process running the suite on the same
+device: `installcoordinationd`, *"Termination requested by simulator host"*. The
+app simply vanishes to the home screen, which reads as a crash in your own code
+and is not one. Check `xcrun simctl list devices` for what is already booted and
+use a second device; `xcrun simctl spawn <udid> log show --predicate 'process ==
+"Kamome"'` names the real terminator.
+
 ## Capture the whole run, or a flake is unattributable
 
 **2026-09-02.** A `./check.sh` run reported `** TEST FAILED **` while the suite

@@ -3,6 +3,108 @@
   "strings": {
     "%@": {},
     "+%@": {},
+    "about_close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
+        }
+      }
+    },
+    "about_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About & Privacy"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於與隱私"
+          }
+        }
+      }
+    },
+    "attribution_geoapify": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powered by Geoapify"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powered by Geoapify"
+          }
+        }
+      }
+    },
+    "attribution_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maps and routing"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地圖與路線"
+          }
+        }
+      }
+    },
+    "attribution_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome asks Geoapify where the roads are, so a journey can be drawn along the roads you actually travelled instead of straight lines between points. Geoapify's road data comes from OpenStreetMap."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩會向 Geoapify 詢問道路的位置，讓旅程沿著你實際走過的路繪製，而不是在點與點之間畫直線。Geoapify 的道路資料來自 OpenStreetMap。"
+          }
+        }
+      }
+    },
+    "attribution_osm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map data © OpenStreetMap contributors"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地圖資料 © OpenStreetMap 貢獻者"
+          }
+        }
+      }
+    },
     "day_all": {
       "extractionState": "manual",
       "localizations": {
@@ -611,6 +713,159 @@
           "stringUnit": {
             "state": "translated",
             "value": "螢幕關閉也持續記錄"
+          }
+        }
+      }
+    },
+    "privacy_control": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You decide what is sent by deciding what to import: a date range, or a single album."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你決定匯入什麼，就決定了會送出什麼：一段日期範圍，或是單一相簿。"
+          }
+        }
+      }
+    },
+    "privacy_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What leaves this device"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "哪些資料會離開這台裝置"
+          }
+        }
+      }
+    },
+    "privacy_imported_body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For each leg, Kamome sends that leg's positions: the centre of each stop and the positions of the photographs between them, thinned so that no two are closer than %1$.0f metres and capped at %2$lld per leg. They travel inside the web address of the request, which is the part of a request most likely to be written down along the way."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每一段路程，卡摸咩會送出該段的位置：每個停留點的中心，以及其間相片的拍攝位置；相距不到 %1$.0f 公尺的點會被略過，每段最多 %2$lld 個點。這些座標放在請求的網址裡，而網址正是一次請求中最容易沿途被記錄下來的部分。"
+          }
+        }
+      }
+    },
+    "privacy_imported_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trips built from photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從相片建立的旅程"
+          }
+        }
+      }
+    },
+    "privacy_intro": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your photos, your trips and the films Kamome makes stay on this device. Kamome has no account, sends nothing to analytics, and reports nowhere you have been. One thing does leave: to draw a journey along real roads, Kamome has to ask Geoapify where those roads are."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的相片、旅程，以及卡摸咩製作的影片，都留在這台裝置上。卡摸咩沒有帳號、不傳送任何分析資料，也不會回報你去過哪裡。只有一件事會送出去：為了讓旅程沿著真實道路繪製，卡摸咩必須向 Geoapify 詢問那些道路的位置。"
+          }
+        }
+      }
+    },
+    "privacy_recorded_body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The path your phone recorded is not sent anywhere. It is already the route, so there is nothing to ask, and it stays on this device. If a future version ever sends it, what would be sent is the whole recorded path — not a start and an end — and this notice will say so."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手機記錄下來的路徑不會送到任何地方。它本身就是路線，沒有什麼需要詢問，因此留在這台裝置上。若日後的版本要送出它，送出的會是整條記錄路徑——不是起點與終點——屆時本說明也會如實寫明。"
+          }
+        }
+      }
+    },
+    "privacy_recorded_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trips Kamome recorded"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩記錄的旅程"
+          }
+        }
+      }
+    },
+    "privacy_retention": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geoapify's own privacy policy says it keeps a request — its web address, its headers, your IP address and the time — for no longer than 24 hours when the request succeeds. Requests that fail are not covered by that sentence."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依 Geoapify 自己的隱私政策，成功的請求最多保留 24 小時，內容包含請求的網址、標頭、你的 IP 位址與時間。失敗的請求不在該句的涵蓋範圍內。"
+          }
+        }
+      }
+    },
+    "privacy_share": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A finished film goes nowhere until you share it. When you do, it goes where you send it."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成的影片在你分享之前不會送到任何地方；你分享時，它就送往你選擇的去處。"
           }
         }
       }

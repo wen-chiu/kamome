@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var vehicle: VehicleType = .car
     @State private var path: [String] = []
     @State private var showingImport = false
+    @State private var showingAbout = false
     #if DEBUG
     @State private var debugShareFile: DebugShareFile?
     #endif
@@ -40,10 +41,11 @@ struct HomeView: View {
                     path = [tripId]
                 }
             }
-            #if DEBUG
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { debugExportMenu }
+            .toolbar { toolbarItems }
+            .sheet(isPresented: $showingAbout) {
+                AboutView(matching: session.config.matching)
             }
+            #if DEBUG
             .sheet(item: $debugShareFile) { file in
                 ActivityShareSheet(url: file.url)
             }
@@ -62,6 +64,33 @@ struct HomeView: View {
                 showingImport = true
             }
             #endif
+        }
+    }
+
+    /// Home is the only screen every user reaches, so it is where the licence
+    /// obligation can be relied on to be reachable (`Docs/release-readiness.md`
+    /// S2). ⏳ The placement is Chiu's and is not ruled on — this is the anchor
+    /// that already existed, not a chosen design.
+    ///
+    /// **The debug menu moves to the leading side rather than sharing this one**
+    /// (2026-09-02). Two `ToolbarItem`s at `.topBarTrailing` are not two buttons:
+    /// the info button rendered on a first launch and was **gone on every clean
+    /// relaunch after it**, which is the worst possible failure for a licence
+    /// obligation — present when you check it, absent when a user looks. The
+    /// debug menu keeps its own slot instead of being deleted, because it is the
+    /// post-drive data path (`Docs/device-test-P1.md`) and a verification route
+    /// is not something to trade for a toolbar corner.
+    @ToolbarContentBuilder
+    private var toolbarItems: some ToolbarContent {
+        #if DEBUG
+        ToolbarItem(placement: .topBarLeading) { debugExportMenu }
+        #endif
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showingAbout = true
+            } label: {
+                Label("about_title", systemImage: "info.circle")
+            }
         }
     }
 

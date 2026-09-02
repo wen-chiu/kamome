@@ -30,8 +30,8 @@ mandatory for a submission, and each is small.
 | **3** | **Export survives: background and performance** | ✅ **The shake is closed** (ADR 2026-08-31 (b)) — crop-scaling: 2.1× fewer snapshots and 5.6× less desk wall clock, and the ghosting is gone. What is left is the part only a phone can answer: `ExportLifecycleGuard` is written and **never verified on a device**, and no per-trip export time has ever been recorded — item 5 needs it. |
 | **4** | *(optional)* **Lower-quality export option** | A real feature with real design questions. Genuinely optional. |
 | **5** | **Export time estimate** ⬆️ | **Promoted out of 4.** Not optional: a six-minute export with no estimate reads as broken. The loop already knows the frame count and the measured per-snapshot cost. |
-| **6** | **Attribution in the app** | **Mandatory on the Geoapify free plan.** One line in an About screen. Was missing from the list. |
-| **7** | **Privacy notice + Apple's App Privacy labels** | Routing sends coordinates to a third party, so Apple's privacy questionnaire must declare it. The notice is decided (2026-08-20 c) but **does not exist**, and the album path ships with it. Was missing from the list. |
+| **6** | ✅ **DONE 2026-09-02 — Attribution in the app** | **Mandatory on the Geoapify free plan.** `Powered by Geoapify` and `Map data © OpenStreetMap contributors`, each with its link, on `UI/About/AboutView.swift` behind Home's `info.circle` button. Gated by `Scripts/release/check-attribution.sh`; **placement still Chiu's** — `Docs/release-readiness.md` S2. |
+| **7** | ✅ **The notice exists** (2026-09-02, as a shipping draft); **the App Privacy labels do not** | The notice ships on the same screen as item 6 and describes both payloads; the album path it names ships too. **Wording is Chiu's and unruled**, and Apple's questionnaire is still unanswered — `Docs/release-readiness.md` S3. ⚠️ Read the payload table below **with S3b**. |
 
 **~~Also unresolved~~ RESOLVED (2026-08-21, VERIFIED):** the sprite working tree
 was committed as `4ed8774` / `6cc6543` (re-centred sets, the 46 modified files) and
@@ -285,6 +285,26 @@ notice must describe the **two different payloads**, because they are not the sa
 
 ⚠️ **"Start and end coordinates" is not a truthful description of either.** A notice
 that understates what is sent is worse than no notice.
+
+⚠️ **STALE 2026-09-02 — the recorded-leg column describes a state that never
+arrived, and the shipped notice was written to the code instead.** The column's own
+shape row says *"POST — in the body (after migration)"*. The migration happened, and
+it was to Geoapify — which has **no map-matching endpoint**, so no matcher can be
+constructed. `RouteMatchService.matcher` is therefore `nil` at all three of its
+shipping call sites, `shouldReconstruct` returns `false` for
+`.gpsHifi`/`.gpsPassive`, and **a recorded leg is never sent at all**. The code
+gives this reason itself at `RouteMatchService.swift:325-327`.
+
+**This is not the two sides of a question.** The technical fact is settled; what is
+**still OPEN** is the product question, and ADR 2026-08-20 (d)'s addendum
+**deferred** it rather than deciding it — *"Deferred to Capture Beta, not decided
+now"*, *"Nothing to build now."* It records Chiu's lean; it decides nothing, and
+citing it as having decided would be an inference written as fact.
+
+The table is left standing rather than edited, because relabelling it is Chiu's —
+`Docs/release-readiness.md` S3b. `RouteMatchRecordedLegTests` now holds the
+behaviour the notice describes, so the day Capture Beta reopens this, the test says
+so before a user reads a false sentence.
 
 ⚠️ **The album path ships with the notice, or the notice does not mention it.**
 Selecting an album (`Docs/cross-region-journeys.md` requirement 1, the cheap half) is

@@ -1,3 +1,4 @@
+import KamomeConfig
 import XCTest
 
 /// Proves the String Catalog pipeline end to end: the compiled app bundle must
@@ -133,6 +134,98 @@ final class LocalizationTests: XCTestCase {
                 let value = try localizedValue(key, locale: locale)
                 XCTAssertTrue(value.contains("%1$d"), "\(key) [\(locale)] must name how many legs: \(value)")
             }
+        }
+    }
+
+    /// **S2 — a licence condition, not copy** (`Docs/release-readiness.md`).
+    /// Geoapify attribution is mandatory on the free plan in the format
+    /// `Powered by Geoapify` with a link, and OpenStreetMap attribution is
+    /// always required. The app shipped its whole life without either.
+    ///
+    /// The Geoapify line is asserted **identical in both languages on purpose**:
+    /// the required thing is that format, so a well-meaning translation pass
+    /// would break the obligation while looking like an improvement — which is
+    /// exactly the failure `testRoutingCopyPromisesARetryOnlyWhereKamomeIsAtFault`
+    /// was written for in the other direction.
+    func testAttributionCarriesBothLicenceObligations() throws {
+        for locale in ["en", "zh-Hant"] {
+            XCTAssertEqual(
+                try localizedValue("attribution_geoapify", locale: locale), "Powered by Geoapify",
+                "[\(locale)] the free plan requires this exact format"
+            )
+            XCTAssertTrue(
+                try localizedValue("attribution_osm", locale: locale).contains("OpenStreetMap"),
+                "[\(locale)] OSM attribution is always required"
+            )
+        }
+    }
+
+    /// **S3 — the notice must describe two different payloads** (`pre-launch.md`,
+    /// ADR 2026-08-20 (c)). The approved one-liner — "the start and end
+    /// coordinates of each leg" — is untrue of both paths, and a notice that
+    /// understates what is sent is worse than no notice.
+    ///
+    /// The imported sentence is held to naming **both** config quantities, which
+    /// is the structural form of "more than a start and an end": a rewrite that
+    /// collapses back to two coordinates cannot keep the specifiers.
+    func testPrivacyNoticeDescribesTwoDifferentPayloads() throws {
+        for locale in ["en", "zh-Hant"] {
+            let imported = try localizedValue("privacy_imported_body", locale: locale)
+            XCTAssertTrue(imported.contains("%1$"), "[\(locale)] the thinning distance must come from config")
+            XCTAssertTrue(imported.contains("%2$"), "[\(locale)] the per-leg cap must come from config")
+        }
+        // Content, not just shape: photograph positions are the half the approved
+        // wording left out, and they are why the payload is not two coordinates.
+        XCTAssertTrue(try localizedValue("privacy_imported_body", locale: "en").contains("photographs"))
+        XCTAssertTrue(try localizedValue("privacy_imported_body", locale: "zh-Hant").contains("相片"))
+        XCTAssertFalse(
+            try localizedValue("privacy_imported_body", locale: "en").lowercased().contains("start and end"),
+            "the corrected wording may not come back"
+        )
+
+        // The recorded payload is a different sentence because it is a different
+        // fact: no matcher is constructed on the shipped path, so nothing is sent.
+        XCTAssertTrue(try localizedValue("privacy_recorded_body", locale: "en").contains("not sent"))
+        XCTAssertTrue(try localizedValue("privacy_recorded_body", locale: "zh-Hant").contains("不會送到"))
+    }
+
+    /// **A notice may not promise a control the app does not offer** (ADR
+    /// 2026-08-20 (c) §4). The album path is what `privacy_control` names, and it
+    /// ships — `ImportSheet.albumSection`. If album import is ever removed, this
+    /// test is the thing that says the notice became a false promise.
+    ///
+    /// Retention is asserted with its exception: Geoapify's ≤24 h sentence covers
+    /// **successful** requests, and dropping the failures clause would overstate
+    /// the guarantee in the user's favour, which is still a false statement.
+    func testPrivacyNoticePromisesOnlyControlsTheAppOffers() throws {
+        XCTAssertTrue(try localizedValue("privacy_control", locale: "en").lowercased().contains("album"))
+        XCTAssertTrue(try localizedValue("privacy_control", locale: "zh-Hant").contains("相簿"))
+
+        let retentionEN = try localizedValue("privacy_retention", locale: "en")
+        XCTAssertTrue(retentionEN.contains("24 hours"), retentionEN)
+        XCTAssertTrue(retentionEN.contains("fail"), "the failures exception must survive: \(retentionEN)")
+        let retentionZH = try localizedValue("privacy_retention", locale: "zh-Hant")
+        XCTAssertTrue(retentionZH.contains("24 小時"), retentionZH)
+        XCTAssertTrue(retentionZH.contains("失敗"), "the failures exception must survive: \(retentionZH)")
+    }
+
+    /// The two specifiers must match the two arguments `AboutView` passes, or the
+    /// notice renders a garbage number to the user while every other test above
+    /// still passes. Formats the sentence exactly as the screen does, against the
+    /// config the app actually ships.
+    func testPrivacyImportedBodyRendersTheShippedConfigNumbers() throws {
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "TrackingConfig", withExtension: "json"))
+        let matching = try TrackingConfigLoader.load(contentsOf: url).matching
+
+        for locale in ["en", "zh-Hant"] {
+            let rendered = String(
+                format: try localizedValue("privacy_imported_body", locale: locale),
+                locale: Locale(identifier: locale),
+                matching.routeWaypointMinSpacingM, matching.chunkSize
+            )
+            XCTAssertTrue(rendered.contains("250"), "[\(locale)] thinning distance: \(rendered)")
+            XCTAssertTrue(rendered.contains("100"), "[\(locale)] per-leg cap: \(rendered)")
+            XCTAssertFalse(rendered.contains("%"), "[\(locale)] an unfilled specifier: \(rendered)")
         }
     }
 }
