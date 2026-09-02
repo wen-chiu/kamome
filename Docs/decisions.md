@@ -2589,3 +2589,125 @@ tree could have been asked.**
 2. **What the tree lacks is a type-3 fixture** — two or more crossings. Out of
    scope while type 3 is deferred, but it is what the gate cannot currently see,
    and it is the fixture to author on the day type 3 opens.
+
+## 2026-09-02 — Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest
+
+**Context.** A PO session reported that Phase 4 had been open 18 days with no exit
+gate and no demo artifact, against `CLAUDE.md` rule 7 (*"Phase gates are hard
+gates, each owing a demo artifact"*), and recommended writing one for Chiu to tick.
+**Chiu rejected the recommendation and replaced it with a different division of
+labour.** His words:
+
+> *「Phase 4 的出口我認為就是我自己判斷影片品質足夠釋出，我認為有時候 hard gate 不
+> 一定符合我後來一直改變的情況。」*
+>
+> *「你在程式端幫我把關，我就專心處理輸出影片品質…你保證程式不會壞，沒有安全性或
+> 其他問題，我確保影片輸出夠好使用者願意用。」*
+
+### 1. Phase 4's exit is Chiu's judgement of a film — this amends `CLAUDE.md` rule 7
+
+**Decision.** Phase 4 closes when Chiu judges a film good enough to release. There
+is no checklist, no demo artifact owed, and **no gate document is to be written for
+it.** Rule 7's "phase gates are hard gates" **does not apply to Phase 4.**
+
+**The reason is Chiu's and it is not a concession.** A hard gate fixes an
+acceptance bar in advance; Phase 4's subject is film quality, and the standard has
+moved every time a film was watched — *"不一定符合我後來一直改變的情況."* Writing a
+bar down would either be obsolete on the day it was judged, or freeze a judgement
+he is deliberately keeping open.
+
+⚠️ **Scope of the amendment, stated so it is not over-read.** This is Phase 4 only,
+and it holds because Phase 4's deliverable is an *aesthetic artefact*. It does not
+amend rule 7 for Phase 5, 6 or 7, and it does not touch rule 3 (never weaken a
+test) or §0. A phase whose deliverable can be stated as a test still owes a gate.
+
+**Not decided by this entry:** when Phase 4 ends. That is the point of it.
+
+### 2. The division of labour, recorded as the operating rule for every session
+
+| | owns | evidence they work from |
+|---|---|---|
+| **Chiu** | whether the film is good enough to release | watching films |
+| **engineering / PO sessions** | that the code does not break, and that a release carries no security, licence or privacy fault | `./check.sh`, and `Docs/release-readiness.md` |
+
+**The consequence that matters:** an engineering session may no longer answer "is
+this ready?" with a film. Film quality is not its question. It answers with the
+gates, and where a gate does not exist it says so rather than reasoning about the
+property.
+
+### 3. `Docs/release-readiness.md` is created, and it supersedes `pre-launch.md` as the gate
+
+**Decision.** `Docs/release-readiness.md` is the release gate and the engineering
+side's half of the bargain above. `Docs/pre-launch.md` is **not archived** — it
+keeps the reasoning, the dated provider research, the three key exits and the
+accepted risks, and is cited row by row — but it stops being the thing you read to
+find out where the release stands.
+
+The new file sorts every obligation by **who can settle it**: what the machine
+already holds, what is claimed but enforced by nobody, and what only a device or a
+person can answer. That ordering is the deliverable; a flat checklist was what
+Chiu declined.
+
+### 4. Phase 4 item 3 is dissolved, which is what made it unanswerable
+
+**Decision.** "Export that survives" ceases to be a Phase 4 item. It was always two
+things, and they have different owners:
+
+- its **film-quality** half — the camera shake — **closed** by ADR 2026-08-31 (b);
+- its **release-readiness** half — device lifecycle, export time, memory — moves to
+  `Docs/release-readiness.md` rows D1–D3, which is where `pre-launch.md` was
+  already tracking it.
+
+**Both documents were tracking the same work under two names**, which is why "is
+item 3 done?" had no answer for two weeks. It had two, and they disagreed. Phase 4
+is now exactly what its name says: films worth keeping.
+
+### 5. A claim about the code may not enter a document without a command behind it
+
+**Context — this is the fourth correction of one shape.** The snap-radius
+(2026-08-20 (d)), the trail-blue (2026-08-27) and `ishigaki-crossing`'s type
+(2026-09-01) were each *a claim about the system asserted from reasoning when the
+tree could have been asked*. #28 was a whole PR spent correcting a sentence written
+hours earlier in #27.
+
+**Decision.** A factual claim about the code entering `decisions.md`, `CLAUDE.md`,
+`HANDOFF.md`, `Docs/current-state.md` or a spec must be accompanied by the command
+that establishes it, and its output must have been read. Reasoning that reaches a
+claim a `grep` could settle is not evidence. This is `PO.md` §6 made operational
+rather than a new rule.
+
+**It is not hypothetical, and this session paid it twice while writing this entry.**
+A dead-config query counted **comments** as readers and returned "0 dead keys",
+contradicting a VERIFIED entry in `HANDOFF.md`; re-run excluding comments and
+decode plumbing it returned **three**, one of which
+(`export.total_duration_max_s`) was not previously named anywhere. And the same
+session described the subject-lookup miss to Chiu as something that might be
+"broken on other people's phones" — which the record does not support: it has never
+been observed on a shipped install.
+
+### 6. Governance overhead is a cost, and three measures are taken against it
+
+**Measured, 2026-09-02:** since 2026-08-08, **73 of 123 non-merge commits (59%)
+touched only documents**; markdown churn was **24,165 lines against 13,434 of
+Swift**; and the documentation corpus (16,044 lines) is now the size of the
+shipping code (17,167). Code output per day was flat across the same period — the
+slowdown Chiu reported is not lost throughput, it is throughput spent elsewhere.
+
+1. **The staleness protocol gets mechanised, not extended.**
+   `Docs/current-state.md`'s "Last synced" check gained a second half on
+   2026-08-30 *because the first half was not enough* — and it then failed again on
+   08-28, 08-30 and 09-01. **A protocol a human must remember is not a protocol.**
+   `check-staleness.sh` compares the line against `git log` and `gh pr list`.
+   Specified in `Docs/release-readiness.md`'s Tier 2 model; it is the cheapest
+   governance fix available.
+2. **No more `Docs/eng-session-*.md`.** Six exist, three carry no status line, and
+   they are a session's working notes rather than a source of truth. A session's
+   findings belong in `HANDOFF.md` with a pointer to a topic document, which is
+   already the rule.
+3. **A PO session does not open a PR to correct a sentence.** Ledger corrections
+   ride with the next substantive change unless the error would misdirect work
+   before then.
+
+**Not decided:** whether the 38 documents in `Docs/` should be consolidated
+further. Recorded as a pressure, not acted on — a consolidation pass is itself
+governance overhead, and this entry is about spending less of it.

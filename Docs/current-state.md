@@ -7,8 +7,15 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-09-01 against decisions.md **2026-09-01** and `main` at
-**PR #26**. Synced by the PO/governance pass of that day.
+Last synced: 2026-09-02 against decisions.md **2026-09-02** and `main` at
+**PR #28**. Synced by the PO/governance pass of that day.
+
+⚠️ **The protocol is being mechanised, because it has now failed a third time.**
+On 2026-09-02 this line still read "PR #26" while `main` carried #27 and #28 —
+the second half, added on 2026-08-30 precisely to catch this, was itself
+forgotten within two days. `check-staleness.sh` is specified in
+`Docs/release-readiness.md` (ADR 2026-09-02 §6): a protocol a human must remember
+is not a protocol.
 
 ⚠️ **The protocol gained a second half on 2026-08-30, because the first half was
 not enough.** It used to key on the ADR ledger alone, so this file could pass its
@@ -50,10 +57,17 @@ worth keeping — deliberately ahead of productisation (Chiu 2026-08-15,
 ## Current phase
 
 **Phase 4 — films worth keeping** (opened 2026-08-15, `Docs/decisions.md`):
-1. Vehicle sprites (top community request).
+1. ✅ Vehicle sprites (top community request) — shipped PR #15, 2026-08-20.
 2. Cross-region flight/crossing display (`Docs/cross-region-journeys.md`;
-   camera design decided-to-recommend in `Docs/camera-arcs.md`).
-3. Export that survives — interruptible, observable, budgeted.
+   camera design decided-to-recommend in `Docs/camera-arcs.md`). **Live.**
+3. ~~Export that survives~~ — **dissolved 2026-09-02** (ADR). Its film-quality
+   half (the shake) closed with ADR 2026-08-31 (b); its release half is
+   `Docs/release-readiness.md` D1–D3. Both documents tracked it under two names,
+   which is why "is item 3 done?" had no single answer.
+
+⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
+amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
+film good enough to release. Do not propose a checklist for it.
 
 **Explicitly closed:** Phase 3.5 (Replay MVP) closed 2026-08-15 — §6a passed,
 §6b did NOT pass; its six unmet items moved to Phase 2 (`Docs/pre-launch.md`
@@ -85,6 +99,13 @@ P7 backend deferred.
 
 ## Locked decisions a fresh session needs
 
+- **The division of labour** (ADR 2026-09-02, Chiu's words): **Chiu owns whether
+  the film is good enough**; **engineering owns that the code does not break and
+  that a release carries no security, licence or privacy fault.** The consequence
+  for a session: you may not answer "is this ready?" with a film — answer with the
+  gates, and where a gate does not exist, say so instead of reasoning about the
+  property. Your half is `Docs/release-readiness.md`.
+
 - **§0 privacy principle, as amended** — location data never leaves the device
   by default; the decided exceptions are routing payloads to Geoapify (ADRs
   2026-08-16, 2026-08-20 (b)/(c)); honest disclosure is the posture
@@ -112,6 +133,10 @@ P7 backend deferred.
   `snapshot_station_padding` (1.03). ⚠️ **`keyframe_interval_frames` is now dead
   config** — same class as `route_waypoint_radius_m`. Do not tune it expecting an
   effect; see `HANDOFF.md` for the test that may still be measuring it.
+  ⚠️ **There are three such keys, not two** — `export.total_duration_max_s`
+  joined them (VERIFIED 2026-09-02, `Docs/release-readiness.md` C1), and it is
+  the dangerous one: film duration is an open question and that key is the first
+  thing anyone would reach for.
 - **Variant B (shipped `highlight` mode) is not to be tuned**; Variant A is
   harness-only env overrides, never config edits (memory + HANDOFF archive).
 - **Film duration must scale with trip size — direction decided, rule NOT**
@@ -233,5 +258,6 @@ history. Trimmed 2026-09-01.*
 | Rule rationale | `Docs/rule-rationale.md` — the incident behind each `CLAUDE.md` rule |
 | Finding an ADR | `Docs/decisions-index.md` — one row per ledger entry |
 | Governance / conduct | `PO.md` (product-owner charter), `Arch.md` (engineering) |
-| Task docs | `Docs/camera-arcs.md`, `Docs/cross-region-journeys.md`, `Docs/pre-launch.md`, `Docs/eng-session-*.md` (each carries a status line) |
+| Release gate | `Docs/release-readiness.md` — supersedes `Docs/pre-launch.md` as the gate; `pre-launch.md` keeps the reasoning and the accepted risks |
+| Task docs | `Docs/camera-arcs.md`, `Docs/cross-region-journeys.md`, `Docs/eng-session-*.md` (each carries a status line; **no new ones** — ADR 2026-09-02 §6) |
 | History | `Docs/_archive/handoff-2026-08.md`, `Docs/decisions.md` entries, `Docs/demos/`, `Docs/device-test-*.md`, `Docs/prototype/`; bannered-in-place legacy docs (kept for inbound citations): `Docs/handoff-P3.5.md` (§6 item definitions stay authoritative), `Docs/handoff-recap-visuals.md` (§3 sprite constraints stay authoritative), `Docs/handoff-render-layers.md`, `Docs/kamome-animation-vision.md` (vision, substrate parts parked) |
