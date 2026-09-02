@@ -55,6 +55,29 @@ carries the live summary and points here.*
   preserved in `Docs/_archive/handoff-2026-08.md` under "▶ RESUME HERE
   (2026-08-13)". Films go to `~/kamome-renders/`, never `/tmp`.
 
+## Capture the whole run, or a flake is unattributable
+
+**2026-09-02.** A `./check.sh` run reported `** TEST FAILED **` while the suite
+itself printed **247 tests, 0 failures** — so the failure was outside the summary
+the console filter showed. The immediate re-run passed, and **three further clean
+runs did not reproduce it**. The output of the failing run had not been kept, so
+there is nothing to attribute it to and no honest claim to make beyond this
+paragraph. Classified **UNKNOWN**.
+
+It is *tempting* to file this under the known intermittent subject lookup
+(`Docs/handoff-subject-lookup.md`) — same profile: rare, clears on retry, never
+diagnosed. **Do not.** That entry already records how much damage one unfounded
+attribution does, and the whole reason two log lines ship there is to catch an
+occurrence *with its evidence attached*.
+
+**So: redirect the whole run to a file, always.** The console filter you use to
+read a run is not the run.
+
+    ./check.sh > /tmp/check-$(date +%H%M%S).log 2>&1; echo "exit=$?"
+
+Then grep the file. A flake you did not capture costs the same time as the
+incident and buys nothing.
+
 ## The seam is bounded by the collapse rule, not by taste
 
 `FollowCameraRestingFrameTests.testTheOpeningHandsOverWithoutAJump` asserts the

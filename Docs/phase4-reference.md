@@ -47,7 +47,16 @@ was to change the vehicle.**
    number of **distinct camera values**, not frames ÷ interval — the 151 is
    5 s of motion, not 9 s of opening.)
 
-   🔒 **Both numbers are frozen — a recorded fact, not a pending change**
+   🔓 **LIFTED 2026-09-01 — read this before the paragraph below.** Chiu judged
+   the Pass 1 render and it merged (PR #26). Crop-scaling did not tune either
+   number, it **removed their consumer**: snapshots are planned by
+   `RecapSnapshotStations`, and `keyframe_interval_frames` now has **no shipping
+   reader at all** (VERIFIED 2026-09-01). The measured 3.3× the paragraph below
+   reasons about was superseded by a measured **2.1× fewer snapshots and 5.6×
+   less wall clock** on the whole round (ADR 2026-08-31 (b)). The text below is
+   the record of why the numbers were held, not a live instruction.
+
+   🔒 **Both numbers were frozen — a recorded fact, not a pending change**
    (Chiu 2026-08-15). Neither `keyframe_interval_frames` (15) nor the opening's
    every-frame interval is to be touched, and the three-way render comparison is
    not owed. They were held for a design conversation about **how the camera

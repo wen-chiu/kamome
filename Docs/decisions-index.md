@@ -72,3 +72,8 @@ does not.
 | 52 | `2026-08-27 (b)` | The subject shrinks 30%, and the mark's fraction is spent doing it |  |
 | 53 | `2026-08-29` | The fallback marker becomes a badge, and it is one badge for both appearances |  |
 | 54 | `2026-08-30` | The second round of outside feedback: shake is a P0, the film gets a frame, and the trip gets a name |  |
+| 55 | `2026-08-31` | The opening cuts out of a title card, and the frame it cuts out of is the country |  |
+| 56 | `2026-08-31 (b)` | The P0 is closed: the loop reprojects one snapshot instead of cross-fading two |  |
+| 57 | `2026-09-01` | Kamome's films are three types, and the film ends where the trip does |  |
+| 58 | `2026-09-02` | Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest | **amends `CLAUDE.md` rule 7 for Phase 4 only** |
+| 59 | `2026-09-02 (b)` | The staleness protocol could never be satisfied, and it is a check now | **corrects the diagnosis in 2026-09-02 §6** |

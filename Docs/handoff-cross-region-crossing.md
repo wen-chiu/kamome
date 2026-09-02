@@ -83,6 +83,33 @@ that is a bar move for Chiu (`Arch.md` §7.1). **Recorded so the gate's own
 comment stops being believed.** The cheap fix is probably to scan **both**
 configurations rather than to swap one for the other.
 
+#### ✅ CLOSED 2026-09-02 — the gate scans both, and the span claim above is now stale
+
+**Done, as this finding recommended:** `RecapCameraContinuityTests` runs every
+fixture through **both** configurations (`region` = the synthetic extent,
+`shipped` = `nil`), in the continuity scan and the safe-zone scan alike. Nothing
+was swapped or relaxed; a second pass was added.
+
+⚠️ **But the 18.6 km vs 274 km figure above no longer reproduces, and the reason
+matters.** Measured across all 7 fixtures on 2026-09-02, the two configurations
+now produce an **identical body span** — 6.6, 14.8, 86.3, 38.1, 122.7, 179.7 and
+20.0 km respectively, the same in both. ADR **2026-08-31** ("the LAST wide beat,
+not the first") is why: `establishedSpanM` returns the prologue's *final* beat,
+which the title-card cut freed from `establishing` entirely. `establishing` still
+shapes beat 1; it no longer sets the divisor.
+
+**This finding was re-confirmed "still true" on 2026-08-31 — the day before PR
+#26 merged the change that closed it.** A re-confirmation dated to the day of the
+fix is worth nothing, and this one outlived its subject by two days.
+
+**What the second pass actually caught is different, and it is real:** the
+shipped camera frames the subject consistently looser (p95 52–53% against
+43–49%; worst 58% against 44–46%), and on `ishigaki-crossing` it reaches
+**79.8% of the safe zone against an 80% limit** — a pass by 0.2 points, inside
+the assertion's 2-point tolerance. That was invisible for as long as only the
+synthetic configuration was scanned. Whether 79.8% is acceptable is Chiu's
+(`HANDOFF.md`).
+
 ### 3. ✅ THE P0's FALSIFICATION PAIR: the mechanism is CONFIRMED, end to end
 
 `HANDOFF.md` 2026-08-30 finding 1 was *mechanism VERIFIED, effect INFERRED* —

@@ -6,6 +6,14 @@ are in one place rather than scattered across ADRs, a closed gate and a handoff.
 
 Nothing here blocks Phase 4. Everything here blocks a submission.
 
+> ⚠️ **This file is no longer the gate — `Docs/release-readiness.md` is**
+> (ADR 2026-09-02). **Nothing here was deleted or waived.** This page keeps the
+> reasoning, the dated provider research, the three key exits and the accepted
+> risks, and the gate cites it row by row. What moved is the *question* "where
+> does the release stand?", which this page answered as prose and the gate
+> answers by who can settle each row. **Phase 4 item 3 was dissolved into that
+> gate** — it and this page were tracking the same work under two names.
+
 ---
 
 ## The order to ship in (Chiu 2026-08-20)
@@ -18,8 +26,8 @@ mandatory for a submission, and each is small.
 |---|---|---|
 | **1** | ✅ **DONE 2026-08-21 — Routing: Geoapify integration, then a real film** | Migrated (PR #16), and the Iceland film was rendered and **judged correct by Chiu** — `Docs/decisions.md` 2026-08-21. One thing still unobserved: the keyed path through the app's own config (no run log), folded into the next render. |
 | **1b** | **Cloudflare Worker, key out of the binary** — written (`556f828`), **deployed by Chiu 2026-08-27** to `https://kamome-routing.kamome-site.workers.dev`, answering a keyless `GET /v1/routing` with 200. Preview URLs turned off 2026-08-28 (see below). **Still open: the app is not pointed at it**, and abuse control (item 5) is undecided. | The URL is deliberately not a secret — it ships in every IPA by design; the *key* is what had to stop shipping. Until `matching.base_url` / `api_key_required` are flipped, builds still call Geoapify directly and **the key is in those IPAs today**, so exits 2 and 3 stay open in anything already on someone's phone. The flip is a separate session. |
-| **2** | **Cross-region: the flight/crossing beat** | `Docs/cross-region-journeys.md`. Every overseas trip hits it on device. |
-| **3** | 🔴 **Export survives: background, performance, and the film does not shake** | `ExportLifecycleGuard` is written and **never verified on a device**. ⬆️ **Gained the P0 on 2026-08-30**: outside feedback made camera shake / ghosting the highest-priority defect in the project and an explicit submission blocker (`Docs/decisions.md` 2026-08-30; mechanism in `Docs/handoff-audit-2026-08-30.md` finding 1). It rides with item 2's session for evidence; the fix is camera-arc Pass 1's crop-scaling. |
+| **2** | **Cross-region: the flight/crossing beat** — ✅ the beat and the contained arc are **built** (merged 2026-08-30). What remains is the **type-2 film form** (ADR 2026-09-01) and the mode classifier, session 2 of 2. | `Docs/cross-region-journeys.md`. Every overseas trip hits it on device. |
+| **3** | **Export survives: background and performance** | ✅ **The shake is closed** (ADR 2026-08-31 (b)) — crop-scaling: 2.1× fewer snapshots and 5.6× less desk wall clock, and the ghosting is gone. What is left is the part only a phone can answer: `ExportLifecycleGuard` is written and **never verified on a device**, and no per-trip export time has ever been recorded — item 5 needs it. |
 | **4** | *(optional)* **Lower-quality export option** | A real feature with real design questions. Genuinely optional. |
 | **5** | **Export time estimate** ⬆️ | **Promoted out of 4.** Not optional: a six-minute export with no estimate reads as broken. The loop already knows the frame count and the measured per-snapshot cost. |
 | **6** | **Attribution in the app** | **Mandatory on the Geoapify free plan.** One line in an About screen. Was missing from the list. |
@@ -298,10 +306,13 @@ Phase 3.5 closed on 2026-08-15 with §6a passed and §6b explicitly not
 
 ## 🟠 Export has to survive an ordinary phone
 
-Measured on device: **0.72–1.55 seconds per map snapshot**, one snapshot per
-`keyframe_interval_frames`, so a 3.5-minute film costs around six minutes and the
-phone gets warm enough that thermal throttling makes longer films worse than
-linear.
+Measured on device: **0.72–1.55 seconds per map snapshot**, and the phone gets
+warm enough that thermal throttling makes longer films worse than linear. **What
+changed on 2026-09-01 is the count, not the per-snapshot cost**: crop-scaling
+replaced the keyframe interval with `RecapSnapshotStations`, and the
+`ishigaki-crossing` film went **367 → 178 snapshots, 1216 → 219 s** of desk wall
+clock (ADR 2026-08-31 (b)). The per-device figure above has **not** been
+re-measured since — that is what the device session below owes.
 
 - `ExportLifecycleGuard` holds the idle timer and a background assertion, and is
   **implemented but never verified on a device** — a locked screen mid-export is
@@ -311,16 +322,16 @@ linear.
   2026-08-30 runs and item 5 needs it.
 - Resumable export is deliberately **not** built. `AVAssetWriter` cannot resume
   across process death; that is a project, not a fix.
-- The largest available saving — the opening's per-frame snapshotting, worth
-  roughly 3.3× — is **frozen pending a camera-transition design conversation**,
-  not forgotten.
-- ⚠️ **The shake fix and the export budget pull in opposite directions, and this
-  is the tension to hold** (2026-08-30). The naive fix for the shake —
-  fine-sampling the moving body — multiplies snapshots by roughly **15**, which
-  at 0.72–1.55 s each turns a six-minute export into an hour. **Crop-scaling
-  (`Docs/camera-arcs.md` §7) is the one move that improves both**: fewer
-  snapshots *and* no cross-fade. Anyone proposing a shake fix that raises the
-  snapshot count has not solved this item, they have traded it.
+- ✅ **The opening's per-frame snapshotting is spent** — it was the largest
+  available saving and crop-scaling took it, along with the shake. The tension
+  this list carried on 2026-08-30 ("the shake fix and the export budget pull in
+  opposite directions") **resolved in the good direction**: reprojecting instead
+  of cross-fading is fewer snapshots *and* no double image.
+- ⚠️ **The rule that survives that tension.** Anyone proposing a rendering change
+  that *raises* the snapshot count has not solved this item, they have traded it —
+  and the trade is now priced, in device seconds per snapshot. The one legitimate
+  exception is framing: the round above spent snapshots deliberately to stop the
+  destination rendering as a smudge, and said so.
 
 ## 🟡 The user is never told that importing contacts a third party
 

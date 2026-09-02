@@ -64,6 +64,31 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// briefly — this is the window either side of it that the scan forgives.
     private static let cutToleranceS = 0.10
 
+    /// **Both camera configurations, because scanning one was scanning the wrong
+    /// one** (2026-09-02).
+    ///
+    /// Until now every scan here passed a synthetic `establishing` extent, and
+    /// the comment justifying that said it was "the same code path, not a stub".
+    /// **It is not.** `establishing` decides whether the opening gets a region
+    /// beat, `establishedSpanM` returns the prologue's *last* beat, and
+    /// `bodySpanM` divides that — so a nil `establishing` yields a different
+    /// prologue, a different established span and a different body span. It also
+    /// switches the film off content-derived pacing onto `.fixed`.
+    ///
+    /// **The shipped app has passed nil since 2026-08-15** (`RecapModel`: the
+    /// extent comes from an installed `.pmtiles` region, and no region is ever
+    /// installed while MapLibre is parked). So the gate that exists to stop the
+    /// camera strobing had never once measured the camera that ships.
+    ///
+    /// Both are scanned rather than swapping to nil alone: `region` is the
+    /// configuration MapLibre would restore, and dropping it to test the shipped
+    /// one would trade one blind spot for another.
+    private static func configurations(
+        synthetic: RecapBounds
+    ) -> [(label: String, establishing: RecapBounds?)] {
+        [("region", synthetic), ("shipped", nil)]
+    }
+
     func testCameraNeverBreaksSpatialContinuity() async throws {
         // Landed green with the dead-zone camera on 2026-08-01: every fixture
         // retains ≥97% of its ground frame to frame, against a 50% floor. The
@@ -71,7 +96,7 @@ final class RecapCameraContinuityTests: XCTestCase {
         // gone — if this ever fails again, the camera regressed, not the gate.
         var report: [String] = []
         for fixture in Self.fixtures {
-            report.append(try await scan(fixture: fixture))
+            report.append(contentsOf: try await scan(fixture: fixture))
         }
         print("KAMOME_CONTINUITY\n" + report.joined(separator: "\n"))
     }
@@ -94,12 +119,27 @@ final class RecapCameraContinuityTests: XCTestCase {
                 named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
             )
             let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
-            let line = try XCTUnwrap(LinearTimeline(
-                trip: trip, config: config,
-                establishing: RecapBounds(
-                    minLat: bounds.minLat, minLon: bounds.minLon,
-                    maxLat: bounds.maxLat, maxLon: bounds.maxLon
+            let synthetic = RecapBounds(
+                minLat: bounds.minLat, minLon: bounds.minLon,
+                maxLat: bounds.maxLat, maxLon: bounds.maxLon
+            )
+            // Both cameras, for the same reason the continuity scan runs both:
+            // the shipped one passes nil and had never been measured here either.
+            for (label, establishing) in Self.configurations(synthetic: synthetic) {
+                try assertSubjectStaysFindable(
+                    fixture: fixture, label: label, trip: trip, config: config, establishing: establishing
                 )
+            }
+        }
+    }
+
+    /// One fixture, one camera configuration.
+    private func assertSubjectStaysFindable(
+        fixture: String, label: String, trip: RecapTrip,
+        config: TrackingConfig.Export, establishing: RecapBounds?
+    ) throws {
+            let line = try XCTUnwrap(LinearTimeline(
+                trip: trip, config: config, establishing: establishing
             ))
             // Only once the journey exists: through the opening the subject is
             // parked at the origin and deliberately not drawn at all.
@@ -127,18 +167,21 @@ final class RecapCameraContinuityTests: XCTestCase {
                 sorted.isEmpty ? 0 : sorted[min(Int(Double(sorted.count - 1) * fraction), sorted.count - 1)]
             }
             print(String(
-                format: "KAMOME_SAFEZONE %-16@ median %3.0f%% · p95 %3.0f%% · worst %3.0f%% at %5.1fs (limit %.0f%%)",
-                fixture as NSString, percentile(0.5) * 100, percentile(0.95) * 100,
+                // One decimal on `worst` deliberately: the shipped crossing camera
+                // sits within a point of the limit, and a rounded integer cannot
+                // tell "at the bar" from "over it".
+                format: "KAMOME_SAFEZONE %-16@ %-7@ median %3.0f%% · p95 %3.0f%% · worst %5.1f%% at %5.1fs "
+                    + "(limit %.0f%%)",
+                fixture as NSString, label as NSString, percentile(0.5) * 100, percentile(0.95) * 100,
                 worst * 100, worstAt, config.cameraSafeZoneFraction * 100))
             XCTAssertLessThanOrEqual(
                 worst, config.cameraSafeZoneFraction + 0.02,
                 String(
-                    format: "%@: the subject reached %.0f%% of the way to the frame edge at %.1fs "
+                    format: "%@ (%@): the subject reached %.0f%% of the way to the frame edge at %.1fs "
                         + "— the safe zone is %.0f%%",
-                    fixture, worst * 100, worstAt, config.cameraSafeZoneFraction * 100
+                    fixture, label, worst * 100, worstAt, config.cameraSafeZoneFraction * 100
                 )
             )
-        }
     }
 
     // MARK: - The scan
@@ -177,54 +220,35 @@ final class RecapCameraContinuityTests: XCTestCase {
         return Int((cut * Double(fps)).rounded(.up)) + 1
     }
 
-    /// **The flight beat may not move** (Chiu 2026-09-01: "the plane and its
-    /// trail move, the camera does not").
-    ///
-    /// Same shape as `assertTheCardBeatIsStill`, and the same reason: this is the
-    /// one beat in the film whose whole point is that the camera is parked, so it
-    /// is asserted rather than assumed. The continuity scan alone could not catch
-    /// a drift here — a slow pan keeps 99% overlap frame to frame and passes
-    /// everything, while being exactly the thing this beat must not do.
-    ///
-    /// It also pins the beat's *extent*: the camera must still be parked at the
-    /// instant the aircraft lands. An earlier build closed the camera while the
-    /// sprite was still crossing, and `CameraPath.confine` chased the subject 24 km
-    /// in a single snapshot step (31 violations). That is not a continuity bug
-    /// this catches by luck; it is the defect this assertion names.
-    private func assertTheFlightBeatIsStill(_ line: LinearTimeline, fixture: String, fps: Int) {
-        guard line.opensOnTheFlight, let arc = line.path.arcWindowsS.first else { return }
-        let step = 1.0 / Double(fps)
-        let parked = line.cameraFrame(atTime: 0)
-        // Up to the landing: the arc's own hold, which ends when the crossing beat
-        // does. Read off the beat rather than assumed to be the arc's midpoint.
-        let landing = line.path.crossingBeatWindowsS.first?.upperBound ?? arc.lowerBound
-        var moved = 0
-        for frame in 0...max(Int((landing * Double(fps)).rounded(.down)), 0)
-        where Self.groundOverlap(parked, line.cameraFrame(atTime: Double(frame) * step)) < 1 - 1e-9 {
-            moved += 1
-        }
-        XCTAssertEqual(
-            moved, 0,
-            "\(fixture): the flight beat moved on \(moved) frames before the aircraft landed at "
-                + "\(landing)s — a still camera is the whole of this beat, and a drift here is a "
-                + "violation, not a tolerance"
-        )
-    }
-
-    /// Builds `fixture`'s real timeline and walks every frame of it.
+    /// Builds `fixture`'s real timeline and walks every frame of it — once per
+    /// camera configuration, because they are different cameras. See
+    /// `configurations(synthetic:)`.
     @discardableResult
-    private func scan(fixture: String) async throws -> String {
+    private func scan(fixture: String) async throws -> [String] {
         let (trip, config) = try await RecapDemoFilmTests.importedRecap(
             named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
         )
-        // A synthetic establishing extent: the gate is about camera motion, not
-        // about which tiles happen to be installed, and pacing is gated on this
-        // being non-nil. Widening the trip's own bounds is what the prologue does
-        // when no region is available, so this is the same code path, not a stub.
+        // The synthetic extent stands in for an installed map region. Widening
+        // the trip's own bounds is what the prologue does when a region is
+        // available; `nil` beside it is what the app actually ships.
         let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
-        let establishing = RecapBounds(
+        let synthetic = RecapBounds(
             minLat: bounds.minLat, minLon: bounds.minLon, maxLat: bounds.maxLat, maxLon: bounds.maxLon
         )
+        var lines: [String] = []
+        for (label, establishing) in Self.configurations(synthetic: synthetic) {
+            lines.append(try scanOne(
+                fixture: fixture, label: label, trip: trip, config: config, establishing: establishing
+            ))
+        }
+        return lines
+    }
+
+    /// One fixture, one camera configuration, every frame.
+    private func scanOne(
+        fixture: String, label: String, trip: RecapTrip,
+        config: TrackingConfig.Export, establishing: RecapBounds?
+    ) throws -> String {
         let line = try XCTUnwrap(LinearTimeline(trip: trip, config: config, establishing: establishing))
 
         let permitted = line.path.permittedCutTimesS
@@ -288,7 +312,7 @@ final class RecapCameraContinuityTests: XCTestCase {
         }
 
         return Self.report(
-            fixture: fixture, line: line, violations: violations, filmType: trip.filmType,
+            fixture: fixture, label: label, line: line, violations: violations,
             worst: worst, cuts: (permitted: permitted.count, excused: excusedCount)
         )
     }
@@ -296,22 +320,23 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// One line per fixture, plus a failure per violation. Split out of `scan`
     /// so the scan itself stays a walk over frames.
     private static func report(
-        fixture: String, line: LinearTimeline, violations: [Violation], filmType: RecapFilmType,
+        fixture: String, label: String, line: LinearTimeline, violations: [Violation],
         worst: (overlap: Double, timeS: Double), cuts: (permitted: Int, excused: Int)
     ) -> String {
         let summary = String(
-            format: "  %-16@ %5.1fs · span %6.1f km · worst frame overlap %3.0f%% at %5.1fs · "
+            format: "  %-16@ %-7@ %5.1fs · span %6.1f km · worst frame overlap %3.0f%% at %5.1fs · "
                 + "%d violations · %d permitted cuts · %d excused · %d arcs · type %@%@",
-            fixture as NSString, line.durationS, line.path.bodySpanM / 1000,
+            fixture as NSString, label as NSString, line.durationS, line.path.bodySpanM / 1000,
             worst.overlap * 100, worst.timeS, violations.count, cuts.permitted, cuts.excused,
-            line.path.arcWindowsS.count, "\(filmType)" as NSString,
+            line.path.arcWindowsS.count, "\(line.filmType)" as NSString,
             (line.opensOnTheFlight ? " · opens on the flight" : "") as NSString
         )
         for violation in violations.prefix(3) {
             XCTFail(String(
-                format: "%@ · %@-to-%@ continuity broken at %.2fs: only %.0f%% of the frame's ground survives "
-                    + "(camera moved %.0f m across a %.0f m window). No route discontinuity permits a cut here.",
-                fixture, violation.kind, violation.kind, violation.timeS,
+                format: "%@ (%@) · %@-to-%@ continuity broken at %.2fs: only %.0f%% of the frame's ground "
+                    + "survives (camera moved %.0f m across a %.0f m window). "
+                    + "No route discontinuity permits a cut here.",
+                fixture, label, violation.kind, violation.kind, violation.timeS,
                 violation.overlap * 100, violation.movedM, violation.spanM
             ))
         }
@@ -337,7 +362,7 @@ final class RecapCameraContinuityTests: XCTestCase {
     ///
     /// Both axes count, and the frame is portrait, so a north-south jump is
     /// judged as harshly as an east-west one.
-    private static func groundOverlap(_ lhs: CameraFrame, _ rhs: CameraFrame) -> Double {
+    static func groundOverlap(_ lhs: CameraFrame, _ rhs: CameraFrame) -> Double {
         // Metres east/north of `lhs`'s centre — a local plane is exact enough for
         // two frames a thirtieth of a second apart.
         let dEast = meters(lhs.centerLat, lhs.centerLon, lhs.centerLat, rhs.centerLon)

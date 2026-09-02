@@ -1,8 +1,9 @@
 # HANDOFF — live findings
 
-**Updated 2026-09-01.** `main` carries PRs #16–#25. The cross-region crossing
-beat, **crop-scaling** and **the title-card opening** are built and measured;
-Chiu has judged crop-scaling (accepted) and has **not yet seen the opening.**
+**Updated 2026-09-02.** `main` carries PRs #16–#28. The crossing beat,
+**crop-scaling** and **the title-card opening** are built, measured and **judged
+by Chiu** (ADRs 2026-08-31, 2026-08-31 (b), 2026-09-01). The live line is the
+**type-2 film form**.
 
 This file holds **only what is live**: open blockers, unfinished questions,
 traps, and known bugs. Each entry is a summary and a pointer; the reasoning,
@@ -19,69 +20,80 @@ standing rules first.
 
 ---
 
+## Findings — PO/Architecture session (2026-09-02)
+
+**Chiu changed how this project is gated** (ADR 2026-09-02, read it before
+planning work). **Phase 4 has no hard gate** — it closes when he judges a film,
+and rule 7 is amended for that phase only. In exchange, **engineering owns that
+the code does not break and that a release carries no security, licence or
+privacy fault.** You may no longer answer "is this ready?" with a film.
+
+**Your half is `Docs/release-readiness.md`** — new, superseding
+`Docs/pre-launch.md` as the release gate (which keeps the reasoning). It sorts
+every obligation by who can settle it: what `check.sh` holds, what is claimed but
+enforced by nobody, and what only a device can answer. **Phase 4 item 3 is
+dissolved** into it — that overlap is why "is item 3 done?" had no single answer.
+
+Three findings VERIFIED there, none previously recorded:
+
+- 🔴 **The app has no attribution string at all** — zero hits for `Geoapify`,
+  `OpenStreetMap` or `Powered by` in either `.xcstrings`. Mandatory on the free
+  plan: a licence condition. **No privacy notice string either.** → S2, S3.
+- 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
+  known ones, and it is the dangerous one — **film duration is an open question
+  and this is the key anyone would reach for first.** → C1.
+- ✅ **`RecapBudgetAndDemoTests`' export-time estimate is fixed** (C2), priced
+  off `RecapRenderLoop.stations`: **0.79 s/snapshot → ~42 s for 53 stations**.
+  That number is the input to `pre-launch.md` item 5; the device figure is
+  still owed (`release-readiness.md` D2, D3).
+
+**No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
+pointer to a topic document.
+
+---
+
 ## 🔴 Blockers
 
-### The shake and the ghosting — FIXED and accepted; two dials still open
-`RecapRenderLoop` reprojects one station per run of frames instead of cross-fading
-two cameras; Chiu accepted it 2026-08-31 (travelling error 2.005 → 1.061, swing
-1.402 → 0.747, stop beats pixel-exact). ⏳ `snapshot_station_max_magnification` is
-**1.1**; 1.05 is sharper at ~3× the snapshots. And a **0.747 sharpness step at the
-hold boundaries**, whose remedy (cross-fade *at a station boundary*) costs no extra
-fetches and is **not built**.
-→ `Docs/handoff-crop-scaling.md` §1, §10.
+### ✅ CLOSED — the shake, and the opening that came with it
+Judged and accepted by Chiu; reasoning in ADRs **2026-08-31** and **2026-08-31 (b)**.
+Detail: `Docs/handoff-crop-scaling.md`. Live remainder, and only this:
 
-### ⏳ The local film's opening is built and unjudged
-Beat 1 is a **held country frame under the title card** that **cuts** to beat 2
-(Chiu 2026-08-31); beat 2 is one local journey; `bodySpanM` divides beat 2, breaking
-the chain that made "widen the country" and "smudge the destination" one knob.
-Snapshots 367 → 51 → 178 — the 51 was cheap *because* the destination was a smudge.
-⚠️ A **type-2** film takes a different opening entirely (below).
-→ `Docs/handoff-crop-scaling.md` §11, §12.
+- ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*, not
+  fixed. §7's remedy costs no extra fetches and is not built. Revisit only if
+  someone notices it in a film.
+- ⚠️ **`keyframe_interval_frames` is dead config, one of three** — now gated by
+  `check-dead-config.sh`. → `Docs/release-readiness.md` C1, C2.
 
 ### ⏳ The type-2 film is BUILT and judged — PR #31
 Chiu's three film types (2026-09-01, **not in `decisions.md`**): 1 local, 2 home →
-one destination abroad, 3 multi-region (deferred). Type 2 is built: title card over
-the flight frame → the aircraft crosses **camera still** → the arc closes into the
+one destination abroad, 3 multi-region (deferred). Type 2: title card over the
+flight frame → the aircraft crosses **camera still** → the arc closes into the
 destination → the destination's local trip. The origin's drive is dropped, making
-every type-2 film `Docs/camera-arcs.md` §4 **Case C** — predicted there, unbuilt
-until now. Films: `~/Kamome-films/type2-2026-09-02/`.
+every type-2 film `Docs/camera-arcs.md` §4 **Case C**. `ishigaki-crossing`:
+69.0 → **60.0 s**, span 20.0 → **13.3 km**, snapshots 178 → **135**, opening **1**.
+Films: `~/Kamome-films/type2-2026-09-02/`.
 
-`ishigaki-crossing`: 69.0 → **60.0 s**, body span 20.0 → **13.3 km**, snapshots
-178 → **135**, the **opening 1** — a still camera costs one snapshot at any span.
+The type is **derived, never stored**, and **monotonic**: an unrouted leg can only
+*add* a local journey, so a confirmed crossing means at least a type 2. ⚠️ `>= 2 ⇒
+the type-2 form` holds only while type 3 is deferred, and the same trip yields
+different films on different days — sharpening ADR 2026-08-15's unmet export record.
 
-✅ **`crossing_beat_s` stays 6.0** (Chiu, from the 4/6/9 sweep). ⭐ **His two picks
-are the same screen speed to within 5%** — Ishigaki 69% of frame ÷ 4 s = 17.25 %/s,
-Auckland 98% ÷ 6 s = 16.33 %/s — so `frameShare / target_screen_speed` is
-**validated by his eye** on two films 29× apart. **No new sweep is needed.**
+✅ **`crossing_beat_s` stays 6.0** (Chiu, 4/6/9 sweep). ⭐ His two picks are **the
+same screen speed to within 5%** (17.25 vs 16.33 %/s of frame width), so
+`frameShare / target_screen_speed` is validated by his eye on two films 29× apart —
+**no new sweep is needed** when this is revisited.
 
-🔴 **A long-haul frame often does not exist; the limit is degrees of longitude.**
-MapKit saturates at **~109°**, and a 9:16 frame runs off the poles first at low
-latitudes. **Taiwan→Iceland fails both at every padding**, so the frozen country
-card is a **main path**.
+🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
+not kilometres.** MapKit saturates at **~109°**; a 9:16 frame runs off the poles
+first at low latitudes. **Taiwan→Iceland fails at every padding**, so the frozen
+country card is a **main path**.
 
-🔴 **The wide flight frame loses the viewer** (Chiu, Auckland): 地圖放太遠 會失去焦點.
-Mirror of `Docs/handoff-P3.5.md` §"Map reference labels" (2026-08-02), whose remedy
-was **a recognisable country silhouette** — at Auckland's scale neither end is one.
-`crossing_flight_max_longitude_deg` stays 70 and is **probably wrong. Chiu is
-deciding; do not change it.**
-
-🔴 **A union-derived sweep is owed.** The end reveal was the **third** camera
-quantity found deriving from the whole route instead of a local journey, after the
-body span and beat 2 — each cost a render or a gate failure to find.
-
-🔴 **`subject_length_px` is absolute while the frame span moves 20×**, and the trail's
-dashes with it (~50 km per dash). **Not session 2's** — a plane sprite is still
-157.5 px on a Pacific-wide frame. Needs Chiu's eye, one decision for both.
+🔴 Three handed over: **the wide flight frame loses the viewer** at long haul
+(mirror of `handoff-P3.5.md` §"Map reference labels"; threshold stays 70 and is
+probably wrong — **Chiu is deciding**); **a union-derived sweep is owed** (the end
+reveal was the third such quantity, after the body span and beat 2); and
+**`subject_length_px` is absolute while the frame span moves 20×**.
 → `Docs/handoff-type2-films.md` closeout.
-
-### The film type is derived, and the reading is monotonic
-An unrouted leg can only *add* a local journey, so a confirmed crossing means **at
-least** a type 2. The first version returned `unknown` on any NULL leg, which sounded
-careful and would have left the new form with **no test coverage at all** — routing
-ships disabled, so every fixture was `unknown`. ⚠️ `>= 2 ⇒ the type-2 form` is sound
-only while type 3 is deferred. Recorded, not solved: the same trip yields different
-films on different days (sharpening ADR 2026-08-15's unmet export-record
-requirement), and nothing tells a user re-exporting later would give a better film.
 
 ---
 
@@ -148,12 +160,31 @@ proportion. `travel_max_s` names a thing that does not exist.
 → `Docs/handoff-pacing.md` for both, including the acceptance condition decided
 in advance.
 
-### The crossing beat — four things this session refused to default
-The film is built and measured but **unjudged**. Open, and Chiu's: whether the
-crossing seagull stays a choosable trip subject (it ships `selectable: true`
-against the `plane`/`boat` precedent); whether the apex wants a hold; whether
-`crossing_beat_s` 6.0 survives a judged film (it is reasoned, not measured); and
-Case C — a trip that *begins* with the crossing — is not built.
+### The shipped camera nearly touches the safe zone on the crossing
+`RecapCameraContinuityTests` now scans **both** cameras (2026-09-02) — the
+synthetic `establishing` extent and the `nil` the app actually ships. Two
+results, and the second is yours:
+
+- ✅ The old trap's premise is **gone** — body span is now identical in both.
+- ⏳ **New, and yours.** The shipped camera frames the subject looser, and on
+  `ishigaki-crossing` reaches **79.8% against the 80% limit** — a pass by 0.2
+  points. **Nothing was relaxed to get it.** Whether 79.8% is acceptable is a
+  bar question, not an engineering one.
+
+→ `Docs/handoff-cross-region-crossing.md` finding 2, which is corrected there.
+
+### The badge's size is provisional
+0.60× was chosen from a rendered sweep and draws at 94.5 px. ⏳ **Judged from a
+still; Chiu reserved the right to revisit it from a film.** Everything else
+about the badge is decided (`Docs/decisions.md` 2026-08-29).
+→ `Docs/handoff-marker-badge.md` finding 6.
+
+### The crossing beat — three things still defaulted
+Open, and Chiu's: whether the crossing seagull stays a choosable trip subject (it
+ships `selectable: true` against the `plane`/`boat` precedent); whether the apex
+wants a hold; and Case C — a trip that *begins* with the crossing — **is now built**
+(2026-09-02, every type-2 film). ✅ `crossing_beat_s` 6.0 **has** now survived a
+judged film.
 → `Docs/handoff-cross-region-crossing.md` finding 9.
 
 ### A staging rule for `Arch.md` — recommended, not in force
@@ -174,6 +205,12 @@ not cite "provably contained"**.
 
 ## ⚠️ Traps — read before you touch these
 
+**Two render traps moved to `Docs/_archive/handoff-2026-08.md` on 2026-09-02** and
+both still bite: a worktree renders a different film (`Config/Secrets.xcconfig` and
+`Tests/Fixtures/trips/local/` are gitignored), and there is **no** render length
+limit — the SIGKILLs were six `xcodebuild` processes on one simulator, so
+`pgrep -fl xcodebuild` first and render one at a time.
+
 ### A dead CI run looks like a passing one until you read the step count
 Actions failed account-wide 2026-08-29 → 2026-09-01 (spending limit) in ~3 s with
 **zero steps executed**, so `main` failed identically and no branch's check
@@ -181,15 +218,12 @@ carried information. CI is alive again (PR #26, 5m44s, green). **The tell is ~3 
 wall clock and `steps=0`** — anything with steps is a real signal.
 
 ### Continuity passing is not the film being right
-The gate measures **ground overlap between consecutive frames**. A camera that is
+The gate measures **ground overlap between consecutive frames**, so a camera that is
 wrong in a way that does not *move* passes it perfectly. Measured 2026-09-02: a
-type-2 film whose body span was derived from the flight frame came out at 177.3 km
-against the 13.3 km it should be, and scored **100% frame-to-frame overlap** — a
-flawless score, and a still film in which the destination was a smudge. Requirement
-5's failure is invisible to this gate by construction.
-
-**So when a change re-derives a span, a frame or a padding from a different beat,
-the gate is not the check.** Read `span` on the gate's own line, and render.
+body span derived from the wrong beat came out at 177.3 km against 13.3 km and
+scored **100% frame-to-frame overlap** — a flawless score, and a still film with the
+destination a smudge. **When a change re-derives a span, a frame or a padding from a
+different beat, the gate is not the check**: read `span` on its own line, and render.
 
 ### Do not restyle `VehicleMarker.seagull` in place
 It is **also the Kamome wordmark's bird on the end card**. The obvious badge
@@ -199,36 +233,11 @@ three consumers: the brand mark, the fault badge (its own case), and the
 cross-region narrator that has not been built.
 → `Docs/handoff-marker-badge.md` finding 5b.
 
-### The continuity gate has never measured the shipped camera
-It passes a synthetic `establishing` extent; the shipped app passes `nil`, which
-takes the other branch. Reported, not moved — `nil` is the *more forgiving*
-configuration, so scanning it instead would weaken the gate, and that is a bar move
-for Chiu. The cheap fix is to scan both.
-→ `Docs/handoff-cross-region-crossing.md` finding 2.
-
 ### `Docs/camera-arcs.md` §8 states an invariant no arc can satisfy
 "No exemption, none at all" cannot hold for an arc that re-frames across a
 discontinuity; the gate's `permittedCutTimesS` is the mechanism that does hold, and
 it has never needed to excuse anything (0 excused on all eight fixtures).
 → `Docs/handoff-cross-region-crossing.md`.
-
-### A worktree renders a different film — two gitignored paths decide it
-`git worktree add` carries no gitignored files, so a worktree has no
-`Config/Secrets.xcconfig` (no routing key → `drive/inferred`, straight lines not
-roads) and no `Tests/Fixtures/trips/local/`. A before/after across worktrees is
-then two different films and it looks plausible. Copy both, then count
-`drive/reconstructed` in each log. **A render comparison without a "these two
-must be identical" control row is not evidence.**
-→ `Docs/handoff-crop-scaling.md` §3.
-
-### ⚠️ CORRECTED — there is no render length limit; that was simulator contention
-A whole film renders here: 2,070 frames in 96 s through `RecapRenderLoop`, 99 s
-through `RecapExporter`. The earlier "70 s renders are SIGKILLed" claim was wrong
-— six `xcodebuild` processes were competing for one simulator inside a
-five-minute window, and the "control" run on `main` was confounded the same way.
-**A control that shares the confound manufactures confidence.** Run
-`pgrep -fl xcodebuild` before trusting any render result, and one at a time.
-→ `Docs/handoff-crop-scaling.md` §9.
 
 ### Read a style value off the preset the app selects, never off the defaults
 `RecapStyle`'s defaults are unrendered. This was got wrong twice from the same
@@ -267,17 +276,18 @@ anything older → `Docs/_archive/handoff-2026-08.md`.
 
 | document | what is in it |
 |---|---|
-| `Docs/handoff-audit-2026-08-30.md` | the render-loop P0, the country beat, the owed sweep, the §0 question |
-| `Docs/handoff-cross-region-crossing.md` | the crossing beat, the pan-floor correction, the snapshot bill |
-| `Docs/handoff-crop-scaling.md` | crop-scaling, the budget split, the opening measurement |
+| `Docs/handoff-audit-2026-08-30.md` | the render-loop P0, the country beat, the owed sweep |
+| `Docs/handoff-cross-region-crossing.md` | the crossing beat, the pan-floor correction |
+| `Docs/handoff-type2-films.md` | the type-2 film, what MapKit can frame, the closeout |
+| `Docs/handoff-crop-scaling.md` | crop-scaling, the budget split, the opening |
 | `Docs/handoff-type2-films.md` | the type-2 film: what MapKit can frame, the classifier, the open form |
-| `Docs/handoff-marker-badge.md` | the fallback badge: what was decided, and the four gaps it left |
-| `Docs/handoff-camera-arc-findings.md` | working analysis behind `Docs/camera-arcs.md` — **nothing settled** |
+| `Docs/handoff-marker-badge.md` | the fallback badge and the gaps it left |
+| `Docs/handoff-camera-arc-findings.md` | working analysis behind `camera-arcs.md` — **nothing settled** |
 | `Docs/handoff-pacing.md` | film duration and travel pacing |
 | `Docs/handoff-subject-lookup.md` | the silent subject fallback |
 | `Docs/handoff-stop-weighting.md` | the removal criterion |
 | `Docs/handoff-known-bugs.md` | the three items above, in full |
-| `Docs/environment-gotchas.md` | routing, simulators, fixture shadowing, what `docker ps` answers |
-| `Docs/phase4-reference.md` | Phase 4 scope, the snapshot freeze, the camera architecture |
+| `Docs/environment-gotchas.md` | routing, simulators, fixture shadowing |
+| `Docs/phase4-reference.md` | Phase 4 scope, the camera architecture |
 | `Docs/rule-rationale.md` | why each rule in `CLAUDE.md` exists |
 | `Docs/_archive/handoff-2026-08.md` | history — never a work instruction |

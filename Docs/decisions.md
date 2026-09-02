@@ -2298,3 +2298,515 @@ schedule beyond "after the crossing". The **badge's 0.60 size**, still reserved
 for a judgement from a film (ADR 2026-08-29). Whether the **grade, vignette and
 chrome** should differ by appearance (ADR 2026-08-27 left it open and it stays
 open). Nothing here reopens a locked decision.
+
+## 2026-08-31 — The opening cuts out of a title card, and the frame it cuts out of is the country
+
+**Context.** The opening had never once shown a country. `establishing` is only
+ever an installed `.pmtiles` region's extent, MapLibre was parked on 2026-08-15,
+and nothing has installed one since — so the "country" beat had always been *this
+trip's own bounds × `country_view_padding` (2.2)*, which on a compact trip inside
+a large country says nothing. That is the reported *"看不到整個澳洲… 不知道在哪裡"*.
+
+**And the opening was worse than merely mis-framed — MEASURED 2026-08-31.** The
+"country" beat and the "region" beat are **the same picture at two paddings, on
+every trip**: 685.0 → 467.1 km on `ishigaki-crossing` is a ratio of **1.4667×**,
+which is exactly `country_view_padding / wide_span_padding` = 2.2 / 1.5, and
+Miyakojima reproduces the identical figure (69.5 → 47.4 km). The film spent
+**2.5 seconds and 148 moving frames easing between two frames a viewer cannot
+tell apart.**
+
+**The structural fault underneath both faces.** `RecapDurationPlan.bodySpanM`
+divides the span of the opening's **first** beat. One number was doing two
+incompatible jobs — the "where in the world is this" establishing shot *and* the
+divisor that sets how tightly the destination is framed — chained by
+`target_zoom_ratio`. **You could not widen the country without smudging the
+destination.** The destination smudge and the missing country were one defect
+seen from two ends.
+
+### Decision (Chiu, 2026-08-31)
+
+1. **Beat 1 is a title card over a HELD country frame**, carrying the country
+   name and the place name as **text**, and it **cuts** to beat 2. A cut costs no
+   continuity here because the viewer reads a title card as *chrome*, not as
+   camera — the film convention, in Chiu's words: *"就像電影一樣不會有沒有連續的
+   問題."*
+2. ⚠️ **The cut lands as the title leaves.** Title on screen = chrome, and a cut
+   reads as convention. Title gone, then a jump a moment later = a bug.
+3. **Beat 2 onward is the film proper and obeys continuity in full** —
+   continuous zoom, no cuts, no gate exemptions.
+4. **Beat 2's frame is never a label.** The recognisable name was spent on the
+   title card.
+5. **The frame is the COUNTRY, not the smallest containing named unit.** The PO
+   session recommended the latter (Iceland → Iceland, Miyakojima → the island,
+   a Sydney trip → New South Wales) and **Chiu overruled it on recognisability**:
+   *"我不認為使用者或他的觀眾會認得出來 New South Wales 是哪裡."* The correction
+   is right and the PO recommendation had conflated two things — **what to frame**
+   and **what to call it**. Splitting them gives both: the country is recognisable
+   as a *name*, and beat 2 supplies the scale as a *picture*.
+6. **The same change applies to purely local trips**, because the 1.4667×
+   non-move is provable on every trip, so the ease was buying nothing anywhere.
+
+**This is why the cut is a fix and not a preference:** once beat 1 is cut out of,
+its span no longer has to be continuous with anything, so `bodySpanM` divides
+**beat 2's** span instead. That breaks the chain above. The product decision and
+the measurement arrived at the same place independently.
+
+### The country's extent comes from a built-in table — and §0 is the reason
+
+**Chiu chose a table over asking MapKit or `CLGeocoder`**, on a point the design
+had not foreseen and the implementing session raised:
+
+> A geocoded country lookup would send **a real coordinate off-device in order to
+> draw a wider opening** — a new §0 exception beyond routing and one share, and
+> therefore a product decision rather than an implementation detail.
+
+He declined to open one for framing. The table also happens to be the only option
+that satisfies *"a film must render with no network"* on its own; every Apple API
+that returns a country extent is a round trip. `Core/ExportEngine/CountryExtent.swift`
+is `import Foundation` only, the lookup is point-in-box against a constant, and
+`Locale.localizedString(forRegionCode:)` supplies the name in the viewer's
+language offline. **No persistence change was needed after all.**
+
+⚠️ **A country whose single bounding box would be a lie is left out, not
+approximated** — one box for the United States spans Alaska to Florida. That is
+honest provenance (spec §0) applied to geography: a frame Kamome cannot draw
+truthfully it does not draw.
+
+### Measured result
+
+`ishigaki-crossing`, shipped path: opening **9.0 → 6.5 s**; beat 1
+**685 km (trip × 2.2) → 285.6 km (Taiwan)**; beat 2 467.1 → 50.1 km; body span
+**274.0 → 20.0 km**, 13.7× tighter. The opening's moving frames **148 → 74** —
+exactly the ease that went. The two beats are now 5.7× apart on this trip and 44×
+on Miyakojima; the 1.4667× non-move is gone.
+
+**The continuity gate stays honest about the cut without an exemption.** It
+asserts the card beat is a *still frame* — ground overlap 1.0 to 1e-9 for every
+frame before the cut — and then scans everything after it with nothing forgiven.
+If the card beat ever moves, the gate **fails rather than skips**, which is the
+whole difference between this and an excused window. 0 violations, 0 excused, all
+seven fixtures.
+
+### Deferred, and one deviation recorded rather than overruled
+
+- **`CameraPath.openingRoute` frames the local journey the body camera *starts
+  in*, not the destination** — a deviation from Chiu's literal instruction,
+  reported under `Arch.md`'s deviation rule and **left standing on his ruling.**
+  Measured: framing the destination puts beat 2 275 km from where the body
+  starts, so the closing zoom would travel **273 km across a 33.3 km frame** —
+  8.2 frame-widths, 69 gate violations, and a film that shows the destination,
+  jumps back to the origin, drives, then flies to the destination it already
+  showed. The implementing session's reading is the correct one: *"the premise is
+  true of the film you want and not of the film that exists."* It **self-resolves**
+  — the 2026-09-01 type-2 form drops the origin's drive, and beat 2 then *is* the
+  destination.
+- **The title card still shows trip title + dates, not the country name.** The
+  name is available offline; wiring it in is composer plus chrome layout, and is
+  a DESIGNER question.
+
+## 2026-08-31 (b) — The P0 is closed: the loop reprojects one snapshot instead of cross-fading two
+
+*Closes the P0 opened by ADR 2026-08-30. A different subject from the opening
+entry above, on the same day.*
+
+**The fix is not a smaller interval — it is not cross-fading.** `RecapRenderLoop`
+no longer blends two snapshots taken at different positions. `RecapSnapshotStations`
+plans **stations** — one snapshot per run of frames — and every frame is produced
+by *reprojecting* that station onto its own camera. A reprojected frame is
+geometrically exact, so there is no mismatch to bound and nothing to fine-sample
+against.
+
+**Judged, not calculated.** Chiu watched the interval-15 / interval-1 pair and
+chose interval 1, which made *"the body must look like interval 1 and must not
+cost interval 1"* the acceptance bar rather than a theory. Measured against an
+interval-1 reference, `miyakojima` body 20–30 s:
+
+| | travelling | **frame-to-frame swing** | snapshots |
+|---|---:|---:|---:|
+| shipped cross-fade | 2.005 | **1.402** | 191 |
+| crop-scaling, `magnification` 1.10 + hold splits | 1.061 | **0.747** | 55 |
+
+**The swing is the column that answers 晃動** — shake is a *change* frame to
+frame, and reprojection error has no temporal structure.
+
+**Stop beats are pixel-exact again, for +10 snapshots.** Stations split at each
+hold's boundaries and at the frame the dolly settles inside it, so a parked camera
+gets its own station at magnification ~1.0 (0.585 → 0.046). Threshold-free: the
+holds are a fact the story layer already states.
+
+**Accepted as it stands (Chiu, adopting the PO recommendation): the residual
+0.747 is left alone.** It is half the cross-fade's figure, it is a sharpness
+*step* rather than a double image, and it is localised at exactly the two hold
+boundaries where a pixel-exact parked station abuts a magnified travelling one.
+`Docs/camera-arcs.md` §7's remedy — cross-fading *at a station boundary* — costs
+no extra fetches and can be added if anyone notices it in a film. **Not built.**
+
+**`snapshot_station_max_magnification` is 1.1, not §7's reasoned 1.5.** §7 priced
+it for an arc, a large zoom, and had never priced it against a body camera that
+pans; the value was chosen from a rendered cost/sharpness curve.
+
+### What the whole round cost, honestly
+
+| | shipped | + crop-scaling | + the opening |
+|---|---:|---:|---:|
+| `ishigaki-crossing` snapshots | 367 | 51 | **178** |
+| wall clock | 1216 s | — | **219 s** |
+
+⚠️ **The intermediate 51 was cheap because the destination was still a smudge** —
+a 274 km body span barely moves relative to its own window, so stations lasted.
+Framing the destination properly costs snapshots and no rendering cleverness
+changes that. Net against what ships: **2.1× fewer snapshots and 5.6× less wall
+clock**, with the ghosting gone, stop beats exact, a real country shot and a 13.7×
+tighter destination.
+
+### The process finding worth more than the fix
+
+The session first reported that a 70-second render was killed on this machine and
+that a control run on `main` reproduced it, concluding the fault was pre-existing.
+**Chiu rejected that from direct experience** — he has watched 3-, 5- and
+10-minute films rendered here — and the claim collapsed: all six failures fell
+inside one five-minute window in which **six `xcodebuild` processes were competing
+for one simulator.** In the session's own words:
+
+> It wasn't a control — it was confounded in precisely the same way. **A control
+> that shares the confound manufactures confidence instead of removing it**, which
+> is worse than having none.
+
+Two things follow, and both are cheap to remember: **run one render at a time**,
+and **a control run must be shown not to share the suspected confound** before it
+is allowed to close a question.
+
+## 2026-09-01 — Kamome's films are three types, and the film ends where the trip does
+
+**Context.** Chiu watched whole films of the crossing work and separated what had
+been one undifferentiated "cross-region" problem into three shapes.
+
+### Decision (Chiu, 2026-09-01)
+
+**Three types. Build 1 and 2; defer 3.**
+
+1. **Local only** — one region, no crossing. Ships today.
+2. **Home → one destination abroad** — fly out, then the trip at the destination.
+   *"假設這樣的行程只會有出發機場照片，從機場出發後到當地，再銜接到當地行程."*
+3. **Multi-region / multi-country** — several crossings. **Deferred to a later
+   phase.**
+
+**Why the deferral costs nothing.** Type 3 is a *loop over* type 2, not a new
+mechanism — `Docs/cross-region-journeys.md`'s own reframing is "N local journeys
+joined by discontinuities", so type 1 is N=1, type 2 is N=2, and type 3 is N>2.
+Building 2 properly is what makes 3 cheap. ~~⚠️ **`ishigaki-crossing` renders a
+type 3 today** (it contains the Taipei drive *and* the crossing *and* Ishigaki);
+Chiu keeps it deliberately as the type-3 reference film.~~ **Struck — this
+sentence was wrong. See the correction at the end of this entry.**
+
+**The film ends at the destination. There is no return flight.** The import
+carries the homeward leg and its photographs; the film does not. The trip's last
+stop at the destination is the ending, and the end card closes it. Reasoning
+adopted from the PO session: the film is about the journey, not the logistics,
+and flying home after the memories is an anticlimax.
+
+### How a film knows its type — the rule, and the two holes it avoids
+
+**Count distinct local journeys, folding a return to a region already visited.**
+Not crossings, and not countries. Both obvious signals have a real
+counter-example in this project's own material:
+
+| signal | breaks on |
+|---|---|
+| counting **crossings** | Taiwan → Japan → Taiwan is **two** crossings and **one** destination |
+| counting **countries** | Tokyo → Miyakojima is **one** country and is still a type 2 — *Chiu's own trip* |
+
+`SegmentRoutability.noRoad` already partitions a trip into local journeys, so the
+rule is nearly free. The verdict belongs with the **trip**, not the renderer —
+the same category as `stop.kind` and `segment.routability`, with the same
+discipline: stored, forward-only, and "unknown" meaning something explicit rather
+than defaulting to a type. `CountryExtent` may help *name* a region; **the country
+is not the identity**, per the Miyakojima row above.
+
+### ⏳ OPEN — does a type-2 film draw the flight? Gated on a measurement
+
+Chiu's two candidates, **not yet chosen**:
+
+- **Option 1 — the flight is not drawn.** The title card sits over a frozen frame
+  of the destination country with the trip title and dates, and cuts straight
+  into the local trip.
+- **Option 2 — the flight is drawn** over a frame containing **both** places, and
+  the film then arrives at the destination.
+
+Within option 2 the PO recommendation is to **hold the camera still and move the
+plane**, rather than following the plane with the camera: after crop-scaling a
+static camera costs **one snapshot at any span**, it passes both continuity gates
+trivially, and it is the universal airline-route-map language — whereas a camera
+translating ~10,000 km is either a very long shot or the 2026-08-02 strobing
+defect rebuilt. The arrival is then the contained arc's closing half, which
+already exists.
+
+⚠️ **The choice is blocked on a fact nobody has: can MapKit render a long-haul
+frame at all?** Every option-2 variant needs one frame holding two places, at
+spans up to ~9,800 km, where Mercator distorts badly between distant latitudes. A
+probe at four spans (Taipei → Ishigaki / Tokyo / Sydney / Paris) is the cheapest
+thing that settles it, and **the answer may be scale-dependent** — a near pair
+legible and pleasant, a far pair ten seconds of a plane crossing empty ocean. If
+so the boundary becomes a config threshold with the frozen card past it, and
+**Chiu picks the number.**
+
+**Not decided by this entry:** the flight question above; the title card's text
+(it still shows trip title + dates, not the country name); the badge's 0.60 size,
+still reserved for a judgement from a film (ADR 2026-08-29).
+
+### ⚠️ Correction, 2026-09-01 — `ishigaki-crossing` is a **type 2**, and this entry said otherwise
+
+**Written by the PO session, caught by the implementing session the same day, and
+corrected here rather than left to be rediscovered.**
+
+**Measured**, not argued: the fixture holds 16 photographs, **6 west of
+`UnroutableSeaProvider`'s 122.5°E meridian and 10 east** — longitudes 121.23–121.57
+and 124.09–124.31. That is **exactly one crossing**, therefore **two distinct local
+journeys**, therefore a **type 2** by this entry's own rule. Its own `_comment`
+describes the same shape: *"a short drive across Taipei to Taoyuan airport, an
+unroutable crossing of open sea, then four stops on Ishigaki."*
+
+**The error was a category confusion, and it is worth naming because it is easy to
+repeat:** the *film* `ishigaki-crossing` currently renders does show the origin's
+drive — that is true, and it is what the type-2 form removes. But *showing the
+origin's drive* is a property of **the film**, not of **the trip**. The
+classification rule this entry states runs on the trip. One sentence let a fact
+about the render decide a fact about the journey.
+
+⚠️ **This is `PO.md`'s own rule broken by the session that enforces it** — an
+inference written as though established, in a comparison the entry itself made at
+the same visual weight as its measured claims. It joins the snap-radius (2026-08-20
+(d)) and the trail-blue (2026-08-27) corrections as the third of its kind, and all
+three share one shape: **a claim about the system asserted from reasoning when the
+tree could have been asked.**
+
+**Two practical consequences:**
+
+1. **The tree already has a committed type-2 fixture**, and
+   `RecapCameraContinuityTests` already scans it. **No type-2 fixture needs
+   authoring** — an instruction to write one was issued on this mistake and is
+   withdrawn.
+2. **What the tree lacks is a type-3 fixture** — two or more crossings. Out of
+   scope while type 3 is deferred, but it is what the gate cannot currently see,
+   and it is the fixture to author on the day type 3 opens.
+
+## 2026-09-02 — Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest
+
+**Context.** A PO session reported that Phase 4 had been open 18 days with no exit
+gate and no demo artifact, against `CLAUDE.md` rule 7 (*"Phase gates are hard
+gates, each owing a demo artifact"*), and recommended writing one for Chiu to tick.
+**Chiu rejected the recommendation and replaced it with a different division of
+labour.** His words:
+
+> *「Phase 4 的出口我認為就是我自己判斷影片品質足夠釋出，我認為有時候 hard gate 不
+> 一定符合我後來一直改變的情況。」*
+>
+> *「你在程式端幫我把關，我就專心處理輸出影片品質…你保證程式不會壞，沒有安全性或
+> 其他問題，我確保影片輸出夠好使用者願意用。」*
+
+### 1. Phase 4's exit is Chiu's judgement of a film — this amends `CLAUDE.md` rule 7
+
+**Decision.** Phase 4 closes when Chiu judges a film good enough to release. There
+is no checklist, no demo artifact owed, and **no gate document is to be written for
+it.** Rule 7's "phase gates are hard gates" **does not apply to Phase 4.**
+
+**The reason is Chiu's and it is not a concession.** A hard gate fixes an
+acceptance bar in advance; Phase 4's subject is film quality, and the standard has
+moved every time a film was watched — *"不一定符合我後來一直改變的情況."* Writing a
+bar down would either be obsolete on the day it was judged, or freeze a judgement
+he is deliberately keeping open.
+
+⚠️ **Scope of the amendment, stated so it is not over-read.** This is Phase 4 only,
+and it holds because Phase 4's deliverable is an *aesthetic artefact*. It does not
+amend rule 7 for Phase 5, 6 or 7, and it does not touch rule 3 (never weaken a
+test) or §0. A phase whose deliverable can be stated as a test still owes a gate.
+
+**Not decided by this entry:** when Phase 4 ends. That is the point of it.
+
+### 2. The division of labour, recorded as the operating rule for every session
+
+| | owns | evidence they work from |
+|---|---|---|
+| **Chiu** | whether the film is good enough to release | watching films |
+| **engineering / PO sessions** | that the code does not break, and that a release carries no security, licence or privacy fault | `./check.sh`, and `Docs/release-readiness.md` |
+
+**The consequence that matters:** an engineering session may no longer answer "is
+this ready?" with a film. Film quality is not its question. It answers with the
+gates, and where a gate does not exist it says so rather than reasoning about the
+property.
+
+### 3. `Docs/release-readiness.md` is created, and it supersedes `pre-launch.md` as the gate
+
+**Decision.** `Docs/release-readiness.md` is the release gate and the engineering
+side's half of the bargain above. `Docs/pre-launch.md` is **not archived** — it
+keeps the reasoning, the dated provider research, the three key exits and the
+accepted risks, and is cited row by row — but it stops being the thing you read to
+find out where the release stands.
+
+The new file sorts every obligation by **who can settle it**: what the machine
+already holds, what is claimed but enforced by nobody, and what only a device or a
+person can answer. That ordering is the deliverable; a flat checklist was what
+Chiu declined.
+
+### 4. Phase 4 item 3 is dissolved, which is what made it unanswerable
+
+**Decision.** "Export that survives" ceases to be a Phase 4 item. It was always two
+things, and they have different owners:
+
+- its **film-quality** half — the camera shake — **closed** by ADR 2026-08-31 (b);
+- its **release-readiness** half — device lifecycle, export time, memory — moves to
+  `Docs/release-readiness.md` rows D1–D3, which is where `pre-launch.md` was
+  already tracking it.
+
+**Both documents were tracking the same work under two names**, which is why "is
+item 3 done?" had no answer for two weeks. It had two, and they disagreed. Phase 4
+is now exactly what its name says: films worth keeping.
+
+### 5. A claim about the code may not enter a document without a command behind it
+
+**Context — this is the fourth correction of one shape.** The snap-radius
+(2026-08-20 (d)), the trail-blue (2026-08-27) and `ishigaki-crossing`'s type
+(2026-09-01) were each *a claim about the system asserted from reasoning when the
+tree could have been asked*. #28 was a whole PR spent correcting a sentence written
+hours earlier in #27.
+
+**Decision.** A factual claim about the code entering `decisions.md`, `CLAUDE.md`,
+`HANDOFF.md`, `Docs/current-state.md` or a spec must be accompanied by the command
+that establishes it, and its output must have been read. Reasoning that reaches a
+claim a `grep` could settle is not evidence. This is `PO.md` §6 made operational
+rather than a new rule.
+
+**It is not hypothetical, and this session paid it twice while writing this entry.**
+A dead-config query counted **comments** as readers and returned "0 dead keys",
+contradicting a VERIFIED entry in `HANDOFF.md`; re-run excluding comments and
+decode plumbing it returned **three**, one of which
+(`export.total_duration_max_s`) was not previously named anywhere. And the same
+session described the subject-lookup miss to Chiu as something that might be
+"broken on other people's phones" — which the record does not support: it has never
+been observed on a shipped install.
+
+### 6. Governance overhead is a cost, and three measures are taken against it
+
+**Measured, 2026-09-02:** since 2026-08-08, **73 of 123 non-merge commits (59%)
+touched only documents**; markdown churn was **24,165 lines against 13,434 of
+Swift**; and the documentation corpus (16,044 lines) is now the size of the
+shipping code (17,167). Code output per day was flat across the same period — the
+slowdown Chiu reported is not lost throughput, it is throughput spent elsewhere.
+
+1. **The staleness protocol gets mechanised, not extended.**
+   `Docs/current-state.md`'s "Last synced" check gained a second half on
+   2026-08-30 *because the first half was not enough* — and it then failed again on
+   08-28, 08-30 and 09-01. **A protocol a human must remember is not a protocol.**
+   `check-staleness.sh` compares the line against `git log` and `gh pr list`.
+   Specified in `Docs/release-readiness.md`'s Tier 2 model; it is the cheapest
+   governance fix available.
+2. **No more `Docs/eng-session-*.md`.** Six exist, three carry no status line, and
+   they are a session's working notes rather than a source of truth. A session's
+   findings belong in `HANDOFF.md` with a pointer to a topic document, which is
+   already the rule.
+3. **A PO session does not open a PR to correct a sentence.** Ledger corrections
+   ride with the next substantive change unless the error would misdirect work
+   before then.
+
+**Not decided:** whether the 38 documents in `Docs/` should be consolidated
+further. Recorded as a pressure, not acted on — a consolidation pass is itself
+governance overhead, and this entry is about spending less of it.
+
+### Closing note, same day — §5's rule applied to §6, and three gates built
+
+Chiu lifted this session's no-code restriction for `Scripts/` only
+(*"你直接寫，把那三個變成 check.sh 會擋的"*), so three of the specifications above
+exist as gates rather than as instructions someone must remember:
+
+- `Scripts/check-dead-config.sh` + `dead-config.baseline` — static, in every run.
+  The three known-dead keys are baselined; a fourth fails the build. Both
+  directions are enforced: a key that loses its last consumer fails, and a
+  baselined key that gains one back also fails, so the list can only shrink
+  honestly.
+- `Scripts/release/check-archive.sh` — the artifact check that `pre-launch.md`
+  had carried as prose since 2026-08-20. It **refuses to run without the real
+  key** rather than degrading to a shape scan, because a shape scan would pass a
+  key of another shape.
+- `Scripts/release/check-attribution.sh` — the licence obligation, gated.
+
+`./check.sh` gains `--release <artifact>`; an ordinary run **prints that the
+release gates did not run**, because a gate nobody invokes is not a gate.
+
+**Each was positive-controlled before being committed** — a planted key in both
+an `.xcarchive` and an `.ipa`, a key stripped of its last consumer, a baselined
+key given one back, and the missing-key path. §5 of this entry says a claim about
+the code needs a command behind it; *"the gate works"* is such a claim, and
+`Docs/handoff-subject-lookup.md` already records the cost of a diagnostic nobody
+had shown could fire.
+
+**Application code is untouched**, so S2's and S3's strings still do not exist —
+what changed is that the app can no longer be shipped without them. That is the
+division of labour in §2 working as intended: the guarantee binds at the moment
+it matters, and it binds without anyone remembering it.
+
+## 2026-09-02 (b) — The staleness protocol could never be satisfied, and it is a check now
+
+**Context.** ADR 2026-09-02 §6.1 said the `Docs/current-state.md` staleness
+protocol would be mechanised rather than extended a third time. Writing the check
+found something first: **the rule as written cannot be satisfied.**
+
+### 1. The rule was unsatisfiable, which is why it kept "failing"
+
+"Last synced" must name the newest merged PR on `main`. But the line is written
+*inside* a PR, and that PR is not merged when the line is written — **so the line
+can never name the PR that contains it.** Every governance PR in the history
+shows the same shape:
+
+| the syncing PR | the PR its line named |
+|---|---|
+| #20 | #16 |
+| #27 | #26 |
+| #29 | #28 |
+
+Read on `main`, the line is **always exactly one PR behind, and that is correct**.
+The protocol had no way to say so, so every reader after every merge saw a rule
+being violated, and the honest response — bump the number — produces a line that
+is wrong again one merge later.
+
+⚠️ **This changes the diagnosis in ADR 2026-09-02 §6.** That entry called the
+2026-09-01 discovery "the third failure of a protocol strengthened twice." One
+PR behind was never a failure; it is the floor. **What actually happened was two
+behind** — PR #28 changed the ledger and did not re-sync the line — and that is a
+real violation which this check catches. The correction matters because the
+earlier framing would have justified a third strengthening of a rule whose
+problem was never strictness.
+
+### 2. The rule, corrected
+
+"Last synced" names the newest merged PR **at the time the sync was written**, and
+the check runs **on the branch, before the merge** — where `gh pr list --state
+merged` does not yet include the PR under review, so the newest merged PR is
+exactly what the line should name. **The rule is satisfiable there and only
+there.** Evaluated retroactively on `main` it is not, and a check that cannot pass
+gets switched off, which is how this would have failed a fourth time.
+
+### 3. `Scripts/check-staleness.sh`
+
+Both halves. The ledger half is offline and always enforced. The PR half needs an
+authenticated `gh`; where it cannot run it says so in the output rather than
+passing quietly — the same visible-gap pattern as the release gates, and the same
+reason (`check.sh`'s own rule: a check that silently does nothing is the worst
+kind).
+
+Its failure message refuses the obvious workaround by name: *"Bumping only the
+number is the failure this check exists to catch."* The line is a claim that
+someone re-read `HANDOFF.md` and the ledger and brought *Active work* and
+*Blockers* up to date — which is the half that rotted on 2026-08-28 and
+2026-08-30, while the number was right both times.
+
+⚠️ **Measured after merging, and it limits the guarantee:** on the CI runner `gh`
+is unauthenticated, so CI runs the ledger half and prints `PR HALF DID NOT RUN`
+(VERIFIED, run 33632648596). **The PR half therefore protects the desk, not the
+merge** — which is where the sync is written, but not where it was skipped on
+2026-09-01. Adding `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` to the workflow closes
+it; not done here, because the workflow was outside what this session was asked
+to touch.
+
+**Not decided:** whether `current-state.md` should stop naming a PR at all and
+name a commit instead. A commit is exact but unreadable in a document people scan;
+a PR number is legible and one-behind. Left as is, deliberately.

@@ -2210,3 +2210,20 @@ mark**; and the **no-reader token cluster is four**.
 still; Chiu reserved the right to revisit it from a film.** Everything else
 about the badge is decided (`Docs/decisions.md` 2026-08-29).
 → `Docs/handoff-marker-badge.md` finding 6.
+
+### A worktree renders a different film — two gitignored paths decide it
+`git worktree add` carries no gitignored files, so a worktree has no
+`Config/Secrets.xcconfig` (no routing key → `drive/inferred`, straight lines not
+roads) and no `Tests/Fixtures/trips/local/`. A before/after across worktrees is
+then two different films and it looks plausible. Copy both, then count
+`drive/reconstructed` in each log. **A render comparison without a "these two
+must be identical" control row is not evidence.**
+→ `Docs/handoff-crop-scaling.md` §3.
+
+### ⚠️ CORRECTED — there is no render length limit; that was simulator contention
+A whole film renders here: 2,070 frames in 96 s. The earlier "70 s renders are
+SIGKILLed" claim was wrong — six `xcodebuild` processes were competing for one
+simulator, and the "control" run on `main` was confounded the same way. **A control
+that shares the confound manufactures confidence.** `pgrep -fl xcodebuild` before
+trusting any render, and one at a time.
+→ `Docs/handoff-crop-scaling.md` §9.
