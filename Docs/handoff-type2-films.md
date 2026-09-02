@@ -284,6 +284,59 @@ Wall clock, one render at a time on this Mac: **type-2 87 s** (1800 frames, 36.4
 unchanged — it classifies `unknown`, renders the local film, and is the evidence
 that this round's change is confined to type-2 films.
 
+### 4. The beat length: rendered at 4 / 6 / 9, and at two scales
+
+Chiu's method, not one fixture. `crossing_beat_s` is 6.0 and **reasoned, never
+measured**, and `Docs/cross-region-journeys.md` warns in advance against a constant
+reverse-derived from one trip — how `body_span_padding` and `tier_skip_share` were
+both built and both removed.
+
+**The measurement that decides whether a constant is even the right shape** — the
+share of the *frame* the aircraft crosses, not the ground distance, because the
+frame is fitted to the crossing (`RecapOpeningFramingTests`):
+
+| fixture | crossing | frame | of the width | at 6.0 s |
+|---|---:|---:|---:|---:|
+| `ishigaki-crossing` | 306 km | 443 km | **69%** | 11.5% / s |
+| `auckland-crossing` | 8,755 km | 8,891 km | **98%** | 16.4% / s |
+
+**A constant is far closer to right than the distances suggest.** 8,755 km is 29×
+306 km, but the frame scales with it, so the perceived travel differs by **1.4×**,
+not 29×. The worry that one number makes the sprite crawl on one film and tear
+across the other is mostly answered by the framing itself.
+
+**The residual is real and has a cause.** The frame is fitted to the crossing's
+*bounding box* and padded on the dominant axis, so an axis-aligned crossing
+(Ishigaki, mostly east–west) leaves slack the diagonal one (Auckland) does not.
+
+So the two candidate rules are:
+
+- **a constant** — 6.0 s gives 11.5% / s and 16.4% / s;
+- **constant screen speed** — pick a % / s and derive the seconds. At Ishigaki's
+  current 11.5% / s, Auckland would want **8.5 s**.
+
+**Chiu picks from the films**, which is why all four were rendered:
+`ishigaki-beat{4,6,9}s.mp4` and `kamome-auckland-crossing.mp4`.
+
+⚠️ **Context, not to be solved here.** 13.4 s is 22% of a 60 s film, films cap at
+90 s, and **"duration must scale with trip size" is direction-decided and
+rule-undecided** (2026-08-14). Whether this beat is too long partly depends on a
+rule that does not exist.
+
+### 5. 🔴 The long-haul film found a bug the short one could not
+
+`auckland-crossing`'s first render **failed**, and correctly: the **end reveal** was
+fitted to the whole route including the flight, which asks for an 11,907 km frame —
+190.2° of latitude tall, refused by the guard built earlier this round.
+
+That is requirement 5's failure arriving in the *last* beat instead of the first,
+and `ishigaki-crossing` could never have found it: its union is 443 km and
+perfectly expressible. **The end reveal now opens out to the destination's local
+journey**, like the body span and beat 2 before it.
+
+This is the argument for the long-haul fixture existing at all, and it is now in
+the continuity gate's list — eight fixtures, `0 excused`.
+
 ### 🔴 The most visible thing left: a car drives across the sea
 
 The crossing subject is still the **car sprite**. The mode classifier
@@ -291,6 +344,10 @@ The crossing subject is still the **car sprite**. The mode classifier
 scope, so this is not a regression — but it is far more visible now, because the
 crossing is the *opening beat* of every type-2 film rather than something in the
 middle of one. Judge the camera from this film; the sprite is the next session's.
+
+⚠️ **And on a long-haul frame it is the size of Taiwan** — `subject_length_px` is
+fixed in pixels, so the sprite reads correctly at 443 km and absurdly at 8,891 km.
+A second argument for doing session 2 soon.
 
 ### 🔴 CONFLICT — `ishigaki-crossing` is a **type 2**, not a type 3
 

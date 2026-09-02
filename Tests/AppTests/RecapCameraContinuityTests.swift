@@ -31,13 +31,20 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// Committed photo-import fixtures spanning the scales the camera has to
     /// survive: a day trip, an island, two countries, and a multi-day road trip.
     private static let fixtures = [
-        "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real", crossingFixture
+        "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real",
+        crossingFixture, longHaulFixture
     ]
 
     /// The fixture with a leg that has no road under it. Named in one place —
     /// see `UnroutableSeaProvider`, which also holds the geography and why it is
     /// a meridian rather than a distance.
     static let crossingFixture = UnroutableSeaProvider.crossingFixture
+
+    /// The **long-haul** type-2 fixture. Added to the gate 2026-09-02: the
+    /// type-2 camera now has to hold a frame 53.2 degrees of longitude wide, and
+    /// a form that is only ever scanned at 2.6 degrees is a form scanned at one
+    /// scale.
+    static let longHaulFixture = UnroutableSeaProvider.longHaulFixture
 
     /// Fraction of the frame's ground that must still be on screen one frame
     /// later. Generous on purpose — this is a catastrophe detector, not a

@@ -67,6 +67,10 @@ extension CameraPath {
         /// The opening is a single held flight frame, and the crossing arc — not
         /// a closing zoom — is what leaves it.
         let opensOnTheFlight: Bool
+        /// The local journey the film is actually about: the whole route on a
+        /// local trip, and the stretch after the crossing on a type-2 one. Both
+        /// the body span and the end reveal are fitted to it.
+        let destinationJourney: [Point]
     }
 
     static func openingAndBodySpan(_ request: OpeningAssembly) -> AssembledOpening {
@@ -99,7 +103,8 @@ extension CameraPath {
             journeyEndsBeforeS: request.journeyEndsBeforeS, opensOnTheFlight: opensOnTheFlight
         ))
         return AssembledOpening(
-            crossings: crossings, bodySpanM: span, plan: plan, opensOnTheFlight: opensOnTheFlight
+            crossings: crossings, bodySpanM: span, plan: plan,
+            opensOnTheFlight: opensOnTheFlight, destinationJourney: destination
         )
     }
 }

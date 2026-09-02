@@ -185,6 +185,7 @@ schemes:
         - { variable: KAMOME_BUDGET_FIXTURE, value: "$(TEST_RUNNER_KAMOME_BUDGET_FIXTURE)", isEnabled: true }
         - { variable: KAMOME_DEMO_FILM, value: "$(TEST_RUNNER_KAMOME_DEMO_FILM)", isEnabled: true }
         - { variable: KAMOME_CROSSING_SUBJECT, value: "$(TEST_RUNNER_KAMOME_CROSSING_SUBJECT)", isEnabled: true }
+        - { variable: KAMOME_CROSSING_BEAT_S, value: "$(TEST_RUNNER_KAMOME_CROSSING_BEAT_S)", isEnabled: true }
         - { variable: KAMOME_DEMO_FILM_IMPORT, value: "$(TEST_RUNNER_KAMOME_DEMO_FILM_IMPORT)", isEnabled: true }
         - { variable: KAMOME_DEMO_OUT, value: "$(TEST_RUNNER_KAMOME_DEMO_OUT)", isEnabled: true }
         - { variable: KAMOME_DEMO_RENDER, value: "$(TEST_RUNNER_KAMOME_DEMO_RENDER)", isEnabled: true }

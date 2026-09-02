@@ -184,4 +184,47 @@ final class RecapOpeningFramingTests: XCTestCase {
             )
         }
     }
+
+    /// **How far the aircraft visibly travels, as a fraction of the frame it
+    /// crosses** — the measurement that decides whether `crossing_beat_s` can be
+    /// a constant at all.
+    ///
+    /// The worry is obvious and correct: Ishigaki is 272 km and Auckland is
+    /// 8,732 km, so one number of seconds should make the sprite crawl on one and
+    /// tear across the other. What that reasoning leaves out is that the frame is
+    /// **fitted to the crossing** — a longer flight is drawn in a proportionally
+    /// wider frame — so the quantity a viewer actually perceives is not ground
+    /// distance but the share of the screen the sprite covers, and that is what
+    /// this prints.
+    ///
+    /// Printed rather than asserted: the answer is a look, and Chiu picks the
+    /// number from the films. This exists so the pick is made against the
+    /// quantity that matters instead of against kilometres.
+    func testHowFarTheAircraftTravelsAcrossItsOwnFrame() async throws {
+        for fixture in [UnroutableSeaProvider.crossingFixture, UnroutableSeaProvider.longHaulFixture] {
+            let (trip, config) = try await RecapDemoFilmTests.importedRecap(
+                named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
+            )
+            for beatS in [4.0, 6.0, 9.0] {
+                let line = try XCTUnwrap(
+                    LinearTimeline(trip: trip, config: config.withCrossingBeatS(beatS), establishing: nil)
+                )
+                guard let beat = line.path.crossingBeatWindowsS.first else { continue }
+                let camera = line.cameraFrame(atTime: beat.lowerBound)
+                let from = line.subjectState(atTime: beat.lowerBound)
+                let to = line.subjectState(atTime: beat.upperBound)
+                let travelledM = Geo.distanceM(
+                    latA: from.lat, lonA: from.lon, latB: to.lat, lonB: to.lon
+                )
+                let frames = travelledM / camera.spanM
+                print(String(
+                    format: "KAMOME_CROSSING_TRAVEL %-18@ beat %.1fs · %6.0f km across a %6.0f km frame "
+                        + "· %.0f%% of the width · %.1f%% of the width per second",
+                    fixture as NSString, beat.upperBound - beat.lowerBound,
+                    travelledM / 1000, camera.spanM / 1000, frames * 100,
+                    frames / max(beat.upperBound - beat.lowerBound, 1e-6) * 100
+                ))
+            }
+        }
+    }
 }

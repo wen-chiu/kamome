@@ -216,6 +216,66 @@ extension TrackingConfig.Export {
     ///
     /// Not a product switch. What a coarser interval buys in seconds it spends
     /// on cross-fade quality, which is Chiu's call, made against renders.
+    /// How long a crossing beat plays, for a review render.
+    ///
+    /// **A desk knob, not a tuning result.** `crossing_beat_s` is 6.0 and is
+    /// reasoned rather than measured (`Docs/handoff-cross-region-crossing.md`
+    /// finding 9), and it must not be set from one fixture: Ishigaki is 272 km
+    /// and Auckland is 8,732 km, so a constant that suits one makes the aircraft
+    /// crawl or tear across the other. This exists so the same film can be
+    /// rendered at several values and judged — the method
+    /// `Docs/cross-region-journeys.md` insists on after `body_span_padding` and
+    /// `tier_skip_share` were both reverse-derived from one trip and both removed.
+    public func withCrossingBeatS(_ seconds: Double) -> TrackingConfig.Export {
+        TrackingConfig.Export(
+            targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
+            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
+            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
+            targetZoomRatio: targetZoomRatio,
+            zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm,
+            crossingBeatS: seconds, crossingApexPadding: crossingApexPadding, followHeadingUp: followHeadingUp,
+            cameraPanWindowFractionPerS: cameraPanWindowFractionPerS,
+            cameraDeadZoneFraction: cameraDeadZoneFraction,
+            cameraSafeZoneFraction: cameraSafeZoneFraction,
+            cameraResponsiveness: cameraResponsiveness, endRevealS: endRevealS,
+            endRevealPadding: endRevealPadding, endCardStyle: endCardStyle,
+            deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
+            deckZoomS: deckZoomS, deckLabelLeadS: deckLabelLeadS, subjectParkS: subjectParkS,
+            openingCountryS: openingCountryS, openingRegionalS: openingRegionalS,
+            countryViewPadding: countryViewPadding, firstStopDwellScale: firstStopDwellScale,
+            openingCollapseZoomRatio: openingCollapseZoomRatio,
+            openingCollapseDriftFraction: openingCollapseDriftFraction,
+            stopDwellMinS: stopDwellMinS, stopDwellMaxS: stopDwellMaxS,
+            totalDurationMinS: totalDurationMinS, totalDurationMaxS: totalDurationMaxS,
+            keyframeIntervalFrames: keyframeIntervalFrames,
+            snapshotStationMaxMagnification: snapshotStationMaxMagnification,
+            snapshotStationPadding: snapshotStationPadding,
+            crossingFlightMaxLongitudeDeg: crossingFlightMaxLongitudeDeg,
+            subjectLengthPx: subjectLengthPx, titleCardS: titleCardS,
+            endCardS: endCardS, videoBitrateMbps: videoBitrateMbps,
+            stopWeightingEnabled: stopWeightingEnabled, waypointMaxPhotos: waypointMaxPhotos,
+            waypointMaxDwellS: waypointMaxDwellS, waypointHoldS: waypointHoldS,
+            uncappedPhotoHoldS: uncappedPhotoHoldS,
+            allocationZeroShare: allocationZeroShare,
+            allocationOneShare: allocationOneShare, allocationTwoShare: allocationTwoShare,
+            allocationMaxPhotos: allocationMaxPhotos, favoriteWeight: favoriteWeight,
+            tierTopShare: tierTopShare,
+            tierStandardPhotos: tierStandardPhotos, tierTopPhotos: tierTopPhotos,
+            earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
+            earnedStopsPerDoubling: earnedStopsPerDoubling,
+            earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            recapMode: recapMode
+        )
+    }
+
+    /// A copy with the crop-scaling station budget replaced.
+    ///
+    /// Review-only, and it exists for one measurement: the interval-1 reference
+    /// the P0 is judged against (`Docs/camera-arcs.md` §7). At magnification 1.0
+    /// and padding 1.0 a station can hold exactly one camera value and its
+    /// transform is the identity — which *is* interval 1, produced by the shipped
+    /// loop rather than by a second code path kept alive to be compared with.
     public func withKeyframeIntervalFrames(_ frames: Int) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,

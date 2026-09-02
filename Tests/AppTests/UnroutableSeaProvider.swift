@@ -30,16 +30,32 @@ struct UnroutableSeaProvider: RouteReconstructing {
     /// gated or judged.
     static let crossingFixture = "ishigaki-crossing"
 
-    /// Where the sea is, for `crossingFixture` only: between Taiwan and the
-    /// Yaeyama islands. Every other committed fixture sits entirely on one side
-    /// of it, so they are untouched whether or not this provider is used.
+    /// The **long-haul** type-2 fixture (authored 2026-09-02): Taipei → Auckland,
+    /// 8,732 km and 53.2 degrees of longitude against Ishigaki's 272 km and 2.6.
+    ///
+    /// Two of them, deliberately. `crossing_beat_s` is one number for every
+    /// crossing, and a beat that suits a 272 km hop makes the aircraft tear across
+    /// an 8,732 km frame — so the film that judges it has to exist at both scales
+    /// or the constant is reverse-derived from one trip, which is how
+    /// `body_span_padding` and `tier_skip_share` were both built and both removed.
+    static let longHaulFixture = "auckland-crossing"
+
+    /// Where the sea is, per fixture: between Taiwan and the Yaeyama islands for
+    /// one, and out in the Pacific for the other. Every other committed fixture
+    /// sits entirely on one side of whichever meridian it would be given, so they
+    /// are untouched whether or not this provider is used.
     static let seaMeridian = 122.5
+    static let pacificMeridian = 150.0
 
     /// The provider a fixture should be routed with **offline**. Named here so
     /// the continuity gate and the review-render harness cannot answer the
     /// question differently — the mistake `ReviewSubstrate` was created to stop.
     static func forFixture(_ fixture: String) -> UnroutableSeaProvider? {
-        fixture == crossingFixture ? UnroutableSeaProvider(meridian: seaMeridian) : nil
+        switch fixture {
+        case crossingFixture: return UnroutableSeaProvider(meridian: seaMeridian)
+        case longHaulFixture: return UnroutableSeaProvider(meridian: pacificMeridian)
+        default: return nil
+        }
     }
 
     /// The longitude the water runs along. A leg with ends either side of it is

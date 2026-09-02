@@ -265,13 +265,11 @@ extension CameraPath {
         let config: TrackingConfig.Export
         /// The span the body divides when the opening is a **flight frame**.
         ///
-        /// That beat holds both countries and is a title card's backdrop, not the
-        /// film's framing of its subject. Left to the default rule it would set
-        /// the body span through `target_zoom_ratio` and undo the 2026-08-31
-        /// chain-break: measured at **177.3 km** on `ishigaki-crossing` against
-        /// the 13.3 km it should be, the camera so wide that frame-to-frame
-        /// overlap read 100% — a still film. So a type-2 film keeps beat 2's
-        /// meaning without having a beat 2 on screen.
+        /// That beat holds both countries and is a card's backdrop, not the film's
+        /// framing of its subject. Left to the default rule it would undo the
+        /// 2026-08-31 chain-break: measured at **177.3 km** on `ishigaki-crossing`
+        /// against 13.3 km, so wide that frame-to-frame overlap read 100% — a
+        /// still film that passed the gate perfectly.
         let establishedSpanOverrideM: Double?
     }
 
@@ -359,6 +357,12 @@ extension CameraPath {
     /// the whole journey with room around it rather than merely stopping. With
     /// a wide body span the two would otherwise be the same picture and the
     /// reveal would have nothing to reveal (Chiu 2026-08-02).
+    /// - Parameter route: the stretch the reveal opens out to — the
+    ///   **destination's** local journey on a type-2 film, not the whole route. A
+    ///   reveal fitted to the union flies back out over the flight (requirement 5,
+    ///   in the last beat instead of the first), and on a long-haul trip that frame
+    ///   does not exist: `auckland-crossing` asks for 190.2 degrees of latitude.
+    ///   The short fixture's union is 443 km and could never have found it.
     static func endRevealFrame(
         route: [Point], establishing: RecapBounds?, config: TrackingConfig.Export
     ) -> CameraFrame {

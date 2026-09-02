@@ -185,9 +185,7 @@ public struct CameraPath {
             journeyEndsBeforeS: journeyEndsBeforeS, openingFlightFrame: openingFlightFrame,
             config: config
         ))
-        let crossings = opening.crossings
-        let span = opening.bodySpanM
-        let plan = opening.plan
+        let crossings = opening.crossings, span = opening.bodySpanM, plan = opening.plan
         let opensOnTheFlight = opening.opensOnTheFlight
         bodySpanM = span; wideEndS = plan.wideEndS
         let journeyTimeline = Self.buildTimeline(
@@ -207,7 +205,13 @@ public struct CameraPath {
             frameCount: frames, fps: config.fps, durationS: total, spanM: span, config: config
         ))
         endRevealStartS = plan.revealS > 0 ? plan.journeyEndS : nil
-        endRevealFrame = Self.endRevealFrame(route: route, establishing: establishing, config: config)
+        // The reveal opens out to the **destination** on a type-2 film — a reveal
+        // fitted to the union would fly back out over the flight, and on a
+        // long-haul trip that frame does not exist (see `endRevealFrame`).
+        endRevealFrame = Self.endRevealFrame(
+            route: opensOnTheFlight ? opening.destinationJourney : route,
+            establishing: establishing, config: config
+        )
 
         // Built last, from the simulated track: an arc leaves and rejoins the
         // body camera at the value the dolly already had, so the handoff at both

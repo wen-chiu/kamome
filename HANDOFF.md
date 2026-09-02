@@ -43,21 +43,19 @@ was a smudge. ⚠️ A type-2 film now takes a different opening entirely (below
 entry is the **local** film's opening, still unjudged.
 → `Docs/handoff-crop-scaling.md` §11, §12.
 
-### ⏳ The type-2 film is BUILT and unjudged — one whole film exists
+### ⏳ The type-2 film is BUILT and unjudged — four films exist
 Chiu's three film types (2026-09-01, **not in `decisions.md`**): 1 local, 2 home →
 one destination abroad, 3 multi-region (deferred). Type 2 is built: title card over
 the flight frame → the aircraft crosses with the **camera still** → the arc closes
 into the destination → the destination's local trip. The origin's drive is dropped
 (`RecapTypeTwoFilm`), making every type-2 film `Docs/camera-arcs.md` §4 **Case C** —
-predicted there, unbuilt until now.
-
-    ~/Kamome-films/type2-2026-09-02/kamome-ishigaki-crossing.mp4   60.0s · 87s
-    ~/Kamome-films/type2-2026-09-02/kamome-miyakojima.mp4          88.0s · 109s
+predicted there, unbuilt until now. Films in `~/Kamome-films/type2-2026-09-02/`:
+`ishigaki-beat{4,6,9}s.mp4`, `kamome-auckland-crossing.mp4`, and the type-1 control
+`kamome-miyakojima.mp4`.
 
 `ishigaki-crossing`: 69.0 → **60.0 s**, body span 20.0 → **13.3 km**, snapshots
 178 → **135**, of which the **opening is 1** — a still camera costs one snapshot at
-any span, which is what makes the flight drawable. `miyakojima` is unchanged, which
-is the evidence the change is confined to type-2 films.
+any span, which is what makes the flight drawable at all.
 
 🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
 not kilometres.** MapKit saturates at **~109°**; a 9:16 frame is 1.778× taller than
@@ -66,12 +64,13 @@ every padding** — and Iceland is the acceptance film — so the frozen country
 a **main path**. `crossing_flight_max_longitude_deg` is **70**, **interpolated**:
 Auckland 53.2° frames well, Moscow 83.9° does not, nothing between was rendered.
 
-🔴 **A car still drives across the sea** — the mode classifier is session 2 and was
-out of scope. Not a regression, far more visible now the crossing opens the film.
+🔴 **A car still drives across the sea, and on a long-haul frame it is the size of
+Taiwan** — the sprite is fixed in pixels. Mode classifier is session 2.
 
-⚠️ **Three defects the gate caught, one of which PASSED it**: framing the body from
-the flight frame gave a 177.3 km body span and 100% overlap — perfect continuity,
-and a still film. **Continuity passing is not the film being right.**
+⚠️ **`crossing_beat_s` must not be set from one fixture.** The frame is fitted to
+the crossing, so a constant is far closer to right than distance suggests — 306 km
+across a 443 km frame (69%) against 8,755 km across an 8,891 km one (98%) — but the
+residual is real: at 6.0 s that is 11.5%/s and 16.4%/s of frame width.
 → `Docs/handoff-type2-films.md` §3.
 
 ### The film type is derived, and the reading is monotonic
@@ -79,8 +78,8 @@ An unrouted leg can only *add* a local journey, so a confirmed crossing means **
 least** a type 2. The first version returned `unknown` on any NULL leg, which
 sounded careful and would have left the new form with **no test coverage at all** —
 routing ships disabled, so every fixture was `unknown`. ⚠️ `>= 2 ⇒ the type-2 form`
-is sound only while type 3 is deferred. Recorded: the same trip yields different
-films on different days (sharpening ADR 2026-08-15's unmet export-record
+is sound only while type 3 is deferred. Recorded, not solved: the same trip yields
+different films on different days (sharpening ADR 2026-08-15's unmet export-record
 requirement), and nothing tells a user re-exporting later would give a better film.
 
 ---
@@ -88,11 +87,9 @@ requirement), and nothing tells a user re-exporting later would give a better fi
 ## 🟠 Open — nobody is on these
 
 ### Content-derived pacing may be implemented but permanently dead
-A shipping-path comment in `RecapModel.swift:201–203` is wrong on its first clause
-("no region means … no prologue" — every film gets one, VERIFIED). If its *second*
-clause is true, content-derived pacing sits behind a tile condition that can never
-be satisfied, and the film-duration question becomes an unlocking job rather than
-a design job. **UNKNOWN, worth an hour**; the settling test is in the doc.
+A shipping-path comment in `RecapModel.swift` is wrong on its first clause. If its
+*second* clause is true, content-derived pacing sits behind a tile condition that
+can never be satisfied. **UNKNOWN, worth an hour.**
 → `Docs/handoff-audit-2026-08-30.md` finding 3.
 
 ### The subject lookup still misses; it no longer crashes
@@ -119,11 +116,10 @@ done. → `Docs/handoff-crop-scaling.md` §11, §14.
 
 ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
 `Docs/camera-arcs.md` §5 and `Docs/handoff-camera-arc-findings.md` finding 5 both
-say the pan floor is the mechanism. **It is false**: `bodySpanM` returns
-`established / target_zoom_ratio` (~274 km) against a floor of ~16 km, and across
-six `establishing` configurations the ratio is `target_zoom_ratio` in every one —
-so the floor binds **nowhere**. **Two documents still state the superseded
-premise.** → `Docs/handoff-cross-region-crossing.md` finding 1.
+say the pan floor is the mechanism. **It is false**: across six `establishing`
+configurations the ratio is `target_zoom_ratio` in every one, so the floor binds
+**nowhere**. **Two documents still state the superseded premise.**
+→ `Docs/handoff-cross-region-crossing.md` finding 1.
 
 ---
 
@@ -183,6 +179,17 @@ Actions failed account-wide 2026-08-29 → 2026-09-01 (spending limit) in ~3 s w
 carried information. CI is alive again (PR #26, 5m44s, green). **The tell is ~3 s
 wall clock and `steps=0`** — anything with steps is a real signal.
 
+### Continuity passing is not the film being right
+The gate measures **ground overlap between consecutive frames**. A camera that is
+wrong in a way that does not *move* passes it perfectly. Measured 2026-09-02: a
+type-2 film whose body span was derived from the flight frame came out at 177.3 km
+against the 13.3 km it should be, and scored **100% frame-to-frame overlap** — a
+flawless score, and a still film in which the destination was a smudge. Requirement
+5's failure is invisible to this gate by construction.
+
+**So when a change re-derives a span, a frame or a padding from a different beat,
+the gate is not the check.** Read `span` on the gate's own line, and render.
+
 ### Do not restyle `VehicleMarker.seagull` in place
 It is **also the Kamome wordmark's bird on the end card**. The obvious badge
 implementation would have silently turned the brand mark on every end card into
@@ -192,19 +199,17 @@ cross-region narrator that has not been built.
 → `Docs/handoff-marker-badge.md` finding 5b.
 
 ### The continuity gate has never measured the shipped camera
-It passes a synthetic `establishing` extent; the shipped app has passed `nil`
-since 2026-08-15, which takes the other branch — **18.6 km vs 274 km of body
-span** on one fixture. Not changed, deliberately: `nil` is the more forgiving
-configuration, so swapping would weaken the gate, and that is a bar move for
-Chiu. Re-confirmed still true 2026-08-31. The cheap fix is to scan **both**.
+It passes a synthetic `establishing` extent; the shipped app passes `nil`, which
+takes the other branch. Reported, not moved — `nil` is the *more forgiving*
+configuration, so scanning it instead would weaken the gate, and that is a bar move
+for Chiu. The cheap fix is to scan both.
 → `Docs/handoff-cross-region-crossing.md` finding 2.
 
 ### `Docs/camera-arcs.md` §8 states an invariant no arc can satisfy
-"The tighter must lie entirely inside the looser" fails across the apex by
-construction — an arc opens out and closes back in. The property survives in two
-halves and `RecapCrossingArcTests` asserts it that way. **§8 should be
-reworded**; not done, because that is a design document.
-→ `Docs/handoff-cross-region-crossing.md` finding 4.
+"No exemption, none at all" cannot hold for an arc that re-frames across a
+discontinuity; the gate's `permittedCutTimesS` is the mechanism that does hold, and
+it has never needed to excuse anything (0 excused on all eight fixtures).
+→ `Docs/handoff-cross-region-crossing.md`.
 
 ### A worktree renders a different film — two gitignored paths decide it
 `git worktree add` carries no gitignored files, so a worktree has no
