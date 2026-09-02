@@ -1,0 +1,102 @@
+{
+  "_comment": "THE LONG-HAUL CROSSING FIXTURE (authored 2026-09-02). The type-2 film's beat length must not be set from one distance: ishigaki-crossing is 272 km and 2.6 degrees of longitude, this is 8,732 km and 53.2 degrees, and a constant that suits one makes the aircraft crawl or tear across the other (Docs/cross-region-journeys.md: do not reverse-derive a constant from one trip). Shape: the same short drive across Taipei to Taoyuan airport, an unroutable crossing of the Pacific, then four stops around Auckland and Rotorua. 53.2 degrees is inside crossing_flight_max_longitude_deg (70) and was measured to frame with wide_span_padding intact, both ends at 25% and 75% of the width (LongHaulFrameProbeTests, 2026-09-02). Hand-written plausible coordinates of public places, like every committed fixture \u2014 never a real trip (CLAUDE.md \u00a70). The crossing is established by ROUTABILITY, not by its length: UnroutableSeaProvider answers 'no suitable edges' for a leg straddling 150E.",
+  "title": "Auckland",
+  "photos": [
+    {
+      "id": "taipei-1",
+      "t": 0,
+      "lat": 25.034,
+      "lon": 121.5645
+    },
+    {
+      "id": "taipei-2",
+      "t": 600,
+      "lat": 25.0365,
+      "lon": 121.561
+    },
+    {
+      "id": "taipei-3",
+      "t": 1200,
+      "lat": 25.0312,
+      "lon": 121.5668
+    },
+    {
+      "id": "taoyuan-1",
+      "t": 5400,
+      "lat": 25.0777,
+      "lon": 121.2328
+    },
+    {
+      "id": "taoyuan-2",
+      "t": 5700,
+      "lat": 25.0801,
+      "lon": 121.2355
+    },
+    {
+      "id": "taoyuan-3",
+      "t": 6000,
+      "lat": 25.0755,
+      "lon": 121.2301
+    },
+    {
+      "id": "auckland-1",
+      "t": 46800,
+      "lat": -36.8485,
+      "lon": 174.7633
+    },
+    {
+      "id": "auckland-2",
+      "t": 47400,
+      "lat": -36.8445,
+      "lon": 174.768
+    },
+    {
+      "id": "auckland-3",
+      "t": 48000,
+      "lat": -36.852,
+      "lon": 174.759
+    },
+    {
+      "id": "piha-1",
+      "t": 90000,
+      "lat": -36.955,
+      "lon": 174.468
+    },
+    {
+      "id": "piha-2",
+      "t": 90600,
+      "lat": -36.9585,
+      "lon": 174.4712
+    },
+    {
+      "id": "waiheke-1",
+      "t": 140000,
+      "lat": -36.79,
+      "lon": 175.09
+    },
+    {
+      "id": "waiheke-2",
+      "t": 140600,
+      "lat": -36.7862,
+      "lon": 175.0955
+    },
+    {
+      "id": "waiheke-3",
+      "t": 141200,
+      "lat": -36.7935,
+      "lon": 175.0848
+    },
+    {
+      "id": "rotorua-1",
+      "t": 190000,
+      "lat": -38.1368,
+      "lon": 176.2497
+    },
+    {
+      "id": "rotorua-2",
+      "t": 190600,
+      "lat": -38.1402,
+      "lon": 176.2455
+    }
+  ]
+}

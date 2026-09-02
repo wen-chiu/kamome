@@ -1,6 +1,7 @@
 #if canImport(MapKit)
 import CoreGraphics
 import Foundation
+import KamomeTrackingEngine
 import MapKit
 
 /// Shipping base-map source (§4.5 step 2): one MKMapSnapshotter render per
@@ -68,7 +69,94 @@ public struct MapKitSnapshotProvider: MapRenderer {
     /// It *can* render either appearance, so `fixedAppearance` stays nil and the
     /// device's choice reaches the map unchanged.
     public var capabilities: MapRendererCapabilities {
-        MapRendererCapabilities(supportsBearing: false, supportsHeadingUp: false, fixedAppearance: nil)
+        MapRendererCapabilities(
+            supportsBearing: false, supportsHeadingUp: false, fixedAppearance: nil,
+            maxFramableLongitudeDeg: Self.maxLongitudeSpanDeg
+        )
+    }
+
+    /// The camera asked for a frame this substrate cannot draw.
+    ///
+    /// Its own case, separate from both `SnapshotError` and `ScaleError`,
+    /// because it is the only one of the three that is **not about what came
+    /// back** — nothing was requested. It is the substrate declining, and a
+    /// caller can act on it by choosing a different film form.
+    public struct UnframableError: Error, CustomStringConvertible {
+        public let spanM: Double
+        public let centerLat: Double
+        public let detail: String
+
+        public var description: String {
+            String(
+                format: "a %.0f km frame at latitude %.2f cannot be drawn: %@",
+                spanM / 1000, centerLat, detail
+            )
+        }
+    }
+
+    /// The widest picture MapKit's snapshotter will draw, in degrees of
+    /// longitude. **Measured, not documented** — see `maxFramableLongitudeDeg`.
+    ///
+    /// ⚠️ Measured at latitude 36.94 only. That it is latitude-independent is
+    /// INFERRED from it being a zoom floor (a fixed fraction of the Mercator
+    /// world width is a fixed longitude span); the cheapest thing that would
+    /// settle it is the same sweep at a second latitude.
+    public static let maxLongitudeSpanDeg: Double = 109
+
+    /// The region to ask MapKit for — **or a refusal**.
+    ///
+    /// This is a guard against a *crash*, not against a bad picture.
+    /// `MKCoordinateRegion(center:latitudinalMeters:longitudinalMeters:)` raises
+    /// an **Objective-C** exception when the span it computes is larger than the
+    /// planet:
+    ///
+    ///     Invalid Region <center:+36.94, +61.96 span:+254.86, +178.60>
+    ///     (NSInvalidArgumentException)
+    ///
+    /// An ObjC exception is not a Swift error. No `catch` anywhere up the stack
+    /// can see it and no `try?` softens it — it terminates the process, taking
+    /// the export with it. So the arithmetic is checked here, before MapKit is
+    /// handed anything, and answers with a `throw` the caller can actually
+    /// handle.
+    ///
+    /// **A portrait frame reaches this sooner than its width suggests**: the
+    /// latitudinal span is `spanM × heightPx/widthPx`, which is 1.778× on 9:16,
+    /// so a longitudinal span past ~11,250 km makes the latitudinal one exceed
+    /// 180°. Found 2026-09-01 while asking whether a Taiwan→Iceland frame exists.
+    public static func region(
+        centerLat: Double, centerLon: Double, spanM: Double, widthPx: Int, heightPx: Int
+    ) throws -> MKCoordinateRegion {
+        let latitudinalM = spanM * Double(heightPx) / Double(widthPx)
+        let latitudeDelta = latitudinalM / Geo.metersPerDegreeLatitude
+        guard latitudeDelta <= 180 else {
+            throw UnframableError(
+                spanM: spanM, centerLat: centerLat,
+                detail: String(
+                    format: "it is %.1f degrees of latitude tall and the planet has 180 "
+                        + "(a %d:%d frame is %.3fx taller than it is wide)",
+                    latitudeDelta, widthPx, heightPx, Double(heightPx) / Double(widthPx)
+                )
+            )
+        }
+        // Longitude degrees at this latitude, by the same equirectangular
+        // approximation `Geo.distanceM` uses, so the two agree.
+        let metersPerDegreeLon = Geo.metersPerDegreeLatitude * cos(centerLat * .pi / 180)
+        let longitudeDelta = metersPerDegreeLon > 0 ? spanM / metersPerDegreeLon : .infinity
+        guard longitudeDelta <= maxLongitudeSpanDeg else {
+            throw UnframableError(
+                spanM: spanM, centerLat: centerLat,
+                detail: String(
+                    format: "it is %.1f degrees of longitude wide and MapKit draws at most %.0f "
+                        + "— past that it returns the same picture however far out it is asked",
+                    longitudeDelta, maxLongitudeSpanDeg
+                )
+            )
+        }
+        return MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            latitudinalMeters: latitudinalM,
+            longitudinalMeters: spanM
+        )
     }
 
     // MARK: - The points/pixels seam
@@ -159,11 +247,9 @@ public struct MapKitSnapshotProvider: MapRenderer {
     public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
         let size = try Self.pointSize(widthPx: widthPx, heightPx: heightPx, displayScale: displayScale)
         let options = MKMapSnapshotter.Options()
-        let center = CLLocationCoordinate2D(latitude: frame.centerLat, longitude: frame.centerLon)
-        options.region = MKCoordinateRegion(
-            center: center,
-            latitudinalMeters: frame.spanM * Double(heightPx) / Double(widthPx),
-            longitudinalMeters: frame.spanM
+        options.region = try Self.region(
+            centerLat: frame.centerLat, centerLon: frame.centerLon,
+            spanM: frame.spanM, widthPx: widthPx, heightPx: heightPx
         )
         options.size = size
         #if canImport(UIKit)

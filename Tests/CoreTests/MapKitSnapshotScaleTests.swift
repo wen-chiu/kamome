@@ -1,6 +1,7 @@
 #if canImport(MapKit)
 import CoreGraphics
 import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// **The points/pixels seam in `MapKitSnapshotProvider`** (2026-08-22).
@@ -141,6 +142,108 @@ final class MapKitSnapshotScaleTests: XCTestCase {
         XCTAssertEqual(
             MapKitSnapshotProvider.pixel(point, displayScale: provider.displayScale), point,
             "at scale 1 the correction must be exactly the identity"
+        )
+    }
+
+    // MARK: - The frames that cannot be drawn (2026-09-01)
+
+    /// **The crash.** `MKCoordinateRegion(center:latitudinalMeters:longitudinalMeters:)`
+    /// raises an Objective-C exception — process death, invisible to every Swift
+    /// `catch` — when the span it computes is taller than the planet. A 9:16
+    /// frame gets there at ~11,250 km of *width*, because its height is 1.778x
+    /// that. Taiwan → Iceland is exactly that frame.
+    ///
+    /// Pinned as arithmetic for the same reason the seam above is: no live
+    /// substrate test can assert this, because reaching the bug is the crash.
+    func testAFrameTallerThanThePlanetIsRefusedRatherThanHandedToMapKit() throws {
+        // Isolated at the equator, where a degree of longitude is at its widest
+        // and the zoom floor therefore does NOT bind: 12,000 km is 107.8 degrees
+        // of longitude (inside 109) and 191.7 of latitude (outside 180). Which
+        // limit binds first is a function of latitude — see the test below.
+        XCTAssertThrowsError(try MapKitSnapshotProvider.region(
+            centerLat: 0, centerLon: 0, spanM: 12_000_000, widthPx: widthPx, heightPx: heightPx
+        ), "191.7 degrees of latitude must be refused even though the longitude is legal") { error in
+            XCTAssertTrue(
+                (error as? MapKitSnapshotProvider.UnframableError)?
+                    .description.contains("the planet has 180") == true,
+                "the height limit must be the one reported here: \(error)"
+            )
+        }
+        XCTAssertNoThrow(try MapKitSnapshotProvider.region(
+            centerLat: 0, centerLon: 0, spanM: 11_000_000, widthPx: widthPx, heightPx: heightPx
+        ), "11,000 km at the equator is inside both limits and must still be framed")
+
+        XCTAssertThrowsError(try MapKitSnapshotProvider.region(
+            centerLat: 36.94, centerLon: 61.96, spanM: 15_909_000, widthPx: widthPx, heightPx: heightPx
+        ), "the Taipei-Paris frame is 254 degrees of latitude tall and must be refused") { error in
+            let unframable = error as? MapKitSnapshotProvider.UnframableError
+            XCTAssertNotNil(unframable, "the refusal must be typed, so a caller can choose another form")
+            XCTAssertTrue(
+                unframable?.description.contains("the planet has 180") == true,
+                "the refusal must say which limit was hit: \(String(describing: unframable))"
+            )
+        }
+    }
+
+    /// **The zoom floor.** Past ~109 degrees of longitude MapKit returns the same
+    /// picture however far out it is asked, so a wider frame is not a wider
+    /// picture — it is the same one with both subjects outside it. Measured
+    /// 2026-09-01; refused rather than clamped, because a clamp is the silent
+    /// fallback that produced the finding in the first place.
+    func testAFrameWiderThanMapKitWillDrawIsRefusedRatherThanClamped() throws {
+        // At the equator a degree of longitude is at its widest, so this is the
+        // most forgiving latitude for the check — and 109 degrees is 12,133 km.
+        XCTAssertThrowsError(try MapKitSnapshotProvider.region(
+            centerLat: 0, centerLon: 0, spanM: 13_000_000, widthPx: widthPx, heightPx: heightPx
+        )) { error in
+            XCTAssertNotNil(error as? MapKitSnapshotProvider.UnframableError)
+        }
+
+        // **Which limit binds first is a function of latitude**, and that is the
+        // whole reason the threshold is in degrees. The same 9,000 km span is
+        // 80.8 degrees of longitude at the equator and 161.7 at 60 north — legal
+        // there, refused here — while its height, 143.7 degrees, never moves.
+        let span = 9_000_000.0
+        XCTAssertNoThrow(try MapKitSnapshotProvider.region(
+            centerLat: 0, centerLon: 0, spanM: span, widthPx: widthPx, heightPx: heightPx
+        ), "80.8 degrees of longitude is inside the floor")
+        XCTAssertThrowsError(try MapKitSnapshotProvider.region(
+            centerLat: 60, centerLon: 0, spanM: span, widthPx: widthPx, heightPx: heightPx
+        ), "the identical span is 161.7 degrees of longitude at 60 north") { error in
+            XCTAssertTrue(
+                (error as? MapKitSnapshotProvider.UnframableError)?
+                    .description.contains("MapKit draws at most") == true,
+                "the zoom floor must be the one reported here: \(error)"
+            )
+        }
+    }
+
+    /// Every frame the shipping film actually asks for must still be drawable —
+    /// otherwise this guard is a regression rather than a guard. The widest
+    /// measured country beat is Japan at 2,111 km (`miyakojima`); the widest
+    /// establishing extent any test uses is 2,818 km.
+    func testEveryFrameTheShippedFilmAsksForIsStillFramable() throws {
+        for (label, spanM, lat) in [
+            ("a body span", 20_000.0, 24.4), ("Taiwan, the country beat", 285_600.0, 23.6),
+            ("Japan, the country beat", 2_111_600.0, 34.8), ("the widest test extent", 2_817_800.0, 36.0)
+        ] {
+            XCTAssertNoThrow(
+                try MapKitSnapshotProvider.region(
+                    centerLat: lat, centerLon: 121, spanM: spanM, widthPx: widthPx, heightPx: heightPx
+                ),
+                "\(label) is a frame the film renders today and must not start throwing"
+            )
+        }
+    }
+
+    /// The substrate declares the limit it enforces, so a caller can choose the
+    /// film's form *before* taking a snapshot rather than discovering it per
+    /// frame. Same rule as `fixedAppearance`.
+    func testTheProviderDeclaresTheLimitItEnforces() {
+        let declared = MapKitSnapshotProvider(appearance: .light).capabilities.maxFramableLongitudeDeg
+        XCTAssertEqual(
+            declared, MapKitSnapshotProvider.maxLongitudeSpanDeg,
+            "a declaration that disagrees with the refusal is worse than no declaration"
         )
     }
 }

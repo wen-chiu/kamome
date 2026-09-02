@@ -41,7 +41,9 @@ public struct LinearTimeline {
     /// tells about itself. The camera works on the concatenated polyline (one
     /// speed-warped distance axis for the whole trip); the *reveal* is cut back
     /// apart along these ranges so each leg can be stroked for what it is.
-    private struct LegRange {
+    /// Internal rather than private since 2026-09-02: `LinearTimelinePacing`
+    /// builds these, and Swift scopes `private` to the file.
+    struct LegRange {
         let range: Range<Int>
         let mode: TransportMode
         let provenance: RouteProvenance
@@ -78,6 +80,12 @@ public struct LinearTimeline {
     private let callToAction: String
     private let shareURL: String?
 
+    /// Which of the three films this is (`RecapFilmType`), and whether its
+    /// opening is the still flight frame rather than a country card. Exposed so
+    /// the continuity gate can report both and assert the second.
+    public let filmType: RecapFilmType
+    public let opensOnTheFlight: Bool
+
     /// Fails on the same degenerate input as `CameraPath` (no usable route).
     ///
     /// **`establishing` and `pacing` are two different facts** (Chiu 2026-08-08).
@@ -98,11 +106,32 @@ public struct LinearTimeline {
     /// installed region come out 30 s long with no opening, for reasons that had
     /// nothing to do with its content. Harnesses now say `.fixed` and mean it.
     public init?(
-        trip: RecapTrip,
+        trip untrimmedTrip: RecapTrip,
         config: TrackingConfig.Export,
         establishing: RecapBounds? = nil,
-        pacing: RecapPacing = .contentDerived
+        pacing: RecapPacing = .contentDerived,
+        /// The base map's declared ceiling
+        /// (`MapRendererCapabilities.maxFramableLongitudeDeg`). Only the type-2
+        /// opening reads it, and only to choose between its two forms.
+        substrateMaxLongitudeDeg: Double? = nil
     ) {
+        // **A type-2 film is a film about the destination**, so the origin's drive
+        // comes out before anything is measured (`RecapTypeTwoFilm`). Every other
+        // film passes through untouched.
+        let trip = untrimmedTrip.filmType.hasDestinationAbroad
+            ? RecapTypeTwoFilm.trimmedToTheDestination(untrimmedTrip)
+            : untrimmedTrip
+
+        // Which of the type-2 opening's two forms this film takes — both are main
+        // paths (`CrossingFraming`).
+        // ⚠️ **Classified from the UNTRIMMED trip.** The trim leaves one local
+        // journey, which `RecapFilmType` honestly reads as a local trip — so
+        // asking the trimmed trip turns every type-2 film back into a type-1 one.
+        // Measured when it did: 71 gate violations.
+        let flightFrame = CrossingFraming.openingFrame(
+            trip: untrimmedTrip, config: config, substrateMaxLongitudeDeg: substrateMaxLongitudeDeg
+        )
+
         let route = trip.route
         let routePoints = route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
@@ -131,7 +160,8 @@ public struct LinearTimeline {
             // photo card. Without this the last hold ran to the final frame and
             // the two overlapped.
             journeyEndsBeforeS: plan.map { _ in config.endCardS } ?? 0,
-            crossingVertexRanges: crossingRanges
+            crossingVertexRanges: crossingRanges,
+            openingFlightFrame: flightFrame
         ) else { return nil }
 
         self.path = path
@@ -143,14 +173,7 @@ public struct LinearTimeline {
         stops = trip.stops
         holds = path.holds
         routeCoordinates = route
-        var offset = 0
-        legRanges = trip.legs.map { leg in
-            let range = offset..<(offset + leg.coordinates.count)
-            offset = range.upperBound
-            return LegRange(
-                range: range, mode: leg.mode, provenance: leg.provenance, isCrossing: leg.isCrossing
-            )
-        }
+        legRanges = Self.legWindows(of: trip.legs)
         deck = RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
             labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
@@ -173,85 +196,18 @@ public struct LinearTimeline {
         statsLines = trip.statsLines
         callToAction = trip.callToAction
         shareURL = trip.shareURL
+        filmType = untrimmedTrip.filmType
+        // Both halves of the camera's own condition, not just the frame. The
+        // camera opens on the flight when it has a frame **and** an opening to
+        // put it in; deriving this from the frame alone would let the two
+        // disagree on any path with `openingS == 0` (fixed pacing, golden
+        // frames) — a reporter contradicting the thing it reports on, which is
+        // the shape of defect this project keeps finding one film at a time.
+        opensOnTheFlight = flightFrame != nil && path.openingS > 0
     }
 
     /// When the subject first appears, and the two sequences that decide it
     /// (Chiu 2026-07-31) — see `subjectArrivalStartS`.
-    private static func subjectArrival(
-        plan: RecapDurationPlan?, openingS: Double, holds: [CameraPath.Hold],
-        stops: [RecapTrip.Stop], config: TrackingConfig.Export
-    ) -> (startS: Double, endS: Double) {
-        guard plan != nil, openingS > 0 else { return (0, 0) }
-
-        // Does the journey open *on* a stop worth presenting? That is a stop
-        // whose hold begins the moment the prologue ends (so it sits at the
-        // trip's origin) and which actually has photos to show.
-        let opensOnStop = holds.first.flatMap { hold -> CameraPath.Hold? in
-            guard hold.startS <= openingS + 0.01,
-                  stops.indices.contains(hold.stopIndex),
-                  !stops[hold.stopIndex].photos.isEmpty
-            else { return nil }
-            return hold
-        }
-        guard let opensOnStop else {
-            // Sequence B: nothing to present, so the car arrives with the route
-            // and starts driving. Anchored to the prologue's **real** end, not to
-            // the configured beat times — the opening collapses beats that do not
-            // move the camera, so those two numbers are not the same.
-            return (max(openingS - config.zoomTransitionS, 0), openingS)
-        }
-        // Sequence A: the stop tells itself first, with no vehicle on screen at
-        // all, and the car arrives as that scene closes — the same pull-away ramp
-        // every other stop ends on.
-        let park = min(config.subjectParkS, (opensOnStop.endS - opensOnStop.startS) * 0.25)
-        return (max(opensOnStop.endS - park, openingS), opensOnStop.endS)
-    }
-
-    /// How long the film runs and how its time is shared out.
-    ///
-    /// A **story** decision, so it reads only the trip and the config — never the
-    /// map. `.contentDerived` sizes the film from its own content
-    /// (`RecapDurationPlan`); `.fixed` is the deterministic harness path, which
-    /// wants a known length and no prologue so a golden frame means something.
-    ///
-    /// Either way the returned holds already carry the park beats, which are
-    /// *added* around each deck rather than taken out of it.
-    private static func pacing(
-        for trip: RecapTrip, config: TrackingConfig.Export, pacing: RecapPacing
-    ) -> (plan: RecapDurationPlan?, holds: [Double]) {
-        let deckPacing = RecapDeck(
-            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
-        )
-        switch pacing {
-        case .fixed:
-            // No plan means `CameraPath` runs at its own `totalDurationS` with
-            // `openingS` 0 — no prologue, so `zoom_transition_s` never enters the
-            // opening and the subject-arrival ramp collapses to (0, 0). The stops
-            // keep the dwells the trip itself carries.
-            return (nil, trip.stops.map { $0.dwellS + 2 * config.subjectParkS })
-        case .contentDerived:
-            let plan = RecapDurationPlan.plan(
-                photoCounts: trip.stops.map(\.photos.count), config: config, deck: deckPacing
-            )
-            let holds = trip.stops.indices.map { index in
-                (index < plan.stopDwellS.count ? plan.stopDwellS[index] : trip.stops[index].dwellS)
-                    + 2 * config.subjectParkS
-            }
-            return (plan, holds)
-        }
-    }
-
-    // MARK: - The four state streams
-
-    /// Subject motion (the route tangent) — straight from the reused CameraPath —
-    /// plus the stop's **park / pull-away** presence (Chiu 2026-07-26).
-    ///
-    /// The car arrives at the stop, parks, and is gone while the stop tells its
-    /// own story; it returns as the next leg begins. Before this, the car sat
-    /// parked on the map for the whole hold and the stop's pin had to be shoved
-    /// aside to avoid printing text across it — which put the pin kilometres from
-    /// the place it was marking. Removing the car during the stop is what lets the
-    /// pin sit exactly where the journey actually paused.
     public func subjectState(atTime time: Double) -> SubjectState {
         let position = path.position(atTime: time)
         let presence = subjectPresence(atTime: time)

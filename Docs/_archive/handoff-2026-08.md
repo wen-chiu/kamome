@@ -2187,3 +2187,43 @@ deliberate:
 
 ---
 
+
+
+---
+
+## Moved from HANDOFF.md on 2026-09-01 (closed)
+
+### CI outage 2026-08-29 → 2026-09-01
+
+### ✅ CI is alive again as of 2026-09-01 — a red check means something now
+Actions failed account-wide from 2026-08-29 (spending limit) in ~3 s with **zero
+steps executed**; PR #26 then ran `./check.sh` green on a runner in 5m44s.
+**Treat a red check as real.** The dead-CI tell is ~3 s wall clock and `steps=0`.
+
+### Three gaps the badge work left on record
+Nothing measures **post-grade** output; nothing asserts the end card's **brand
+mark**; and the **no-reader token cluster is four**.
+→ `Docs/handoff-marker-badge.md` findings 6c, 6d, 7.
+
+### The badge's size is provisional
+0.60× was chosen from a rendered sweep and draws at 94.5 px. ⏳ **Judged from a
+still; Chiu reserved the right to revisit it from a film.** Everything else
+about the badge is decided (`Docs/decisions.md` 2026-08-29).
+→ `Docs/handoff-marker-badge.md` finding 6.
+
+### A worktree renders a different film — two gitignored paths decide it
+`git worktree add` carries no gitignored files, so a worktree has no
+`Config/Secrets.xcconfig` (no routing key → `drive/inferred`, straight lines not
+roads) and no `Tests/Fixtures/trips/local/`. A before/after across worktrees is
+then two different films and it looks plausible. Copy both, then count
+`drive/reconstructed` in each log. **A render comparison without a "these two
+must be identical" control row is not evidence.**
+→ `Docs/handoff-crop-scaling.md` §3.
+
+### ⚠️ CORRECTED — there is no render length limit; that was simulator contention
+A whole film renders here: 2,070 frames in 96 s. The earlier "70 s renders are
+SIGKILLed" claim was wrong — six `xcodebuild` processes were competing for one
+simulator, and the "control" run on `main` was confounded the same way. **A control
+that shares the confound manufactures confidence.** `pgrep -fl xcodebuild` before
+trusting any render, and one at a time.
+→ `Docs/handoff-crop-scaling.md` §9.

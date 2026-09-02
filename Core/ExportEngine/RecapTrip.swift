@@ -183,6 +183,27 @@ public struct RecapTrip {
     /// unchanged the day the share URL exists (spec P6/P7).
     public let shareURL: String?
 
+    /// Whether routing answered — with any of its three verdicts — for **every**
+    /// leg of this trip.
+    ///
+    /// The one input `RecapFilmType` needs that the legs cannot supply
+    /// themselves: `Leg.isCrossing` is a Bool, and it reads NULL as `false`
+    /// deliberately, so a trip whose crossing was never routed is indexed from
+    /// its legs as though it had none. This is what separates "no crossings" from
+    /// "no answers".
+    ///
+    /// **Defaults to false**, which is the honest reading for every caller that
+    /// does not know — synthetic fixtures, benchmarks, golden frames. They then
+    /// classify `.unknown` and render the local film, which is exactly what they
+    /// render today.
+    public let everyLegRoutabilityEstablished: Bool
+
+    /// Which of the three films this is (`RecapFilmType`). Derived, never stored
+    /// — see that type for why the `stop.kind` pattern does not apply here.
+    public var filmType: RecapFilmType {
+        RecapFilmType.classify(legs: legs, everyLegEstablished: everyLegRoutabilityEstablished)
+    }
+
     public init(
         legs: [Leg],
         stops: [Stop],
@@ -190,7 +211,8 @@ public struct RecapTrip {
         subtitle: String,
         statsLines: [String],
         callToAction: String,
-        shareURL: String? = nil
+        shareURL: String? = nil,
+        everyLegRoutabilityEstablished: Bool = false
     ) {
         self.legs = legs
         self.stops = stops
@@ -199,6 +221,7 @@ public struct RecapTrip {
         self.statsLines = statsLines
         self.callToAction = callToAction
         self.shareURL = shareURL
+        self.everyLegRoutabilityEstablished = everyLegRoutabilityEstablished
     }
 
     /// A trip that is one recorded drive end to end — synthetic geometry in

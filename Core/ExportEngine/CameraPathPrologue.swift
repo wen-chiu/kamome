@@ -103,9 +103,17 @@ extension CameraPath {
     /// is the part that matters.
     static func wideOpening(
         openingS: Double, route: [Point], crossings: [Range<Int>],
-        establishing: RecapBounds?, config: TrackingConfig.Export
+        establishing: RecapBounds?, config: TrackingConfig.Export,
+        flightFrame: CameraFrame? = nil
     ) -> Prologue? {
         guard openingS > 0 else { return nil }
+        // **One beat, and no cut** (Chiu 2026-09-01): the card sits over the frame
+        // the flight is about to cross, and the aircraft then moves on the *same*
+        // frame. `cutTimeS` is nil for a single beat — there is nothing to cut out
+        // of — and a still camera costs one snapshot at any span.
+        if let flightFrame {
+            return Prologue(beats: [Beat(frame: flightFrame, holdS: config.titleCardS)], transitionS: 0)
+        }
         return buildWideOpening(
             route: route,
             openingRoute: openingRoute(route: route, crossings: crossings),
@@ -282,30 +290,6 @@ extension CameraPath {
         )
     }
 
-    /// What `openingPlan` needs from the initializer — grouped so the call
-    /// reads as one value instead of seven positional arguments.
-    struct OpeningRequest {
-        /// Built before this call, because the body span is derived from it.
-        let prologue: Prologue?
-        let route: [Point]
-        let establishing: RecapBounds?
-        let config: TrackingConfig.Export
-        let bodySpanM: Double
-        let totalDurationS: Double
-        let journeyEndsBeforeS: Double
-    }
-
-    /// Where the opening ends and the journey begins — everything `CameraPath.init`
-    /// used to compute as six separate `let`s between the body span and the
-    /// journey timeline.
-    struct OpeningPlan {
-        let prologue: Prologue?
-        let wideEndS: Double
-        let openingEndsS: Double
-        let revealS: Double
-        let journeyEndS: Double
-    }
-
     /// Lays out the opening and the handoff into the journey, in the order each
     /// value depends on the last: the wide beats first (they need the body span
     /// to know whether they'd collapse against it), then whether the closing
@@ -319,6 +303,19 @@ extension CameraPath {
         let bodySpanM = request.bodySpanM, total = request.totalDurationS
         let builtPrologue = request.prologue
         let wideEnd = max(min(builtPrologue?.totalS ?? 0, total), 0)
+
+        // **Case C: the opening hands straight to the crossing arc** (§4, "one
+        // move, not two"). The closing zoom below eases into the *body* camera —
+        // a ~13 km frame on the departure airport — which would be the 2026-08-08
+        // pre-pan defect at continental scale. The arc closes this opening.
+        if request.opensOnTheFlight {
+            let reveal = builtPrologue == nil ? 0 : config.endRevealS
+            return OpeningPlan(
+                prologue: builtPrologue, wideEndS: wideEnd, openingEndsS: wideEnd,
+                revealS: reveal,
+                journeyEndS: max(total - request.journeyEndsBeforeS - reveal, wideEnd)
+            )
+        }
         // **The closing zoom is skipped when it would not go anywhere** (Chiu
         // 2026-08-02). Once the body span is wide enough to bind on the route's
         // own extent, the body frame *is* the regional beat — same centre, same

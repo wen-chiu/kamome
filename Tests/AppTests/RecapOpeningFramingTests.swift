@@ -39,15 +39,28 @@ final class RecapOpeningFramingTests: XCTestCase {
         return trip.legs[..<crossingIndex].flatMap(\.coordinates)
     }
 
-    /// Where the film's body camera actually starts, against where beat 2 frames.
+    /// Where the film's body camera actually starts, against where the opening's
+    /// **last** wide framing sits.
+    ///
+    /// ⚠️ **Restated 2026-09-02, not deleted** (`Arch.md` §4). It used to unwrap
+    /// `titleCutS` and read the frame just after the cut, which was the only way
+    /// to name beat 2 while every opening had two beats. A type-2 film's opening
+    /// is a **single** held frame — the flight — so it has no cut at all, and the
+    /// unwrap became unreachable on the one fixture this harness runs on.
+    ///
+    /// The measurement it was making is unchanged and is now expressed directly:
+    /// the last wide framing is `openingS` minus a frame, whether the opening got
+    /// there through a cut, a transition, or by never moving.
     func testWhereTheOpeningFramesVersusWhereTheBodyStarts() async throws {
         let (trip, config) = try await RecapDemoFilmTests.importedRecap(
             named: UnroutableSeaProvider.crossingFixture, baseURL: "",
             reconstructor: UnroutableSeaProvider.forFixture(UnroutableSeaProvider.crossingFixture)
         )
         let line = try XCTUnwrap(LinearTimeline(trip: trip, config: config, establishing: nil))
-        let cut = try XCTUnwrap(line.titleCutS)
-        let beat2 = line.cameraFrame(atTime: cut + 0.1)
+        print("KAMOME_OPENING_ANCHOR film type \(line.filmType) · "
+            + "opens on the flight: \(line.opensOnTheFlight) · title cut: "
+            + "\(line.titleCutS.map { String(format: "%.2fs", $0) } ?? "none — one beat, nothing to cut")")
+        let beat2 = line.cameraFrame(atTime: max(line.openingS - 1.0 / Double(config.fps), 0))
         let body = line.cameraFrame(atTime: line.openingS + 0.5)
         let origin = try XCTUnwrap(trip.route.first)
         let destination = try XCTUnwrap(destinationCoordinates(trip).first)
@@ -169,6 +182,49 @@ final class RecapOpeningFramingTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(
                 held.count, 1, "an opening with no held beat has nothing for a viewer to read"
             )
+        }
+    }
+
+    /// **How far the aircraft visibly travels, as a fraction of the frame it
+    /// crosses** — the measurement that decides whether `crossing_beat_s` can be
+    /// a constant at all.
+    ///
+    /// The worry is obvious and correct: Ishigaki is 272 km and Auckland is
+    /// 8,732 km, so one number of seconds should make the sprite crawl on one and
+    /// tear across the other. What that reasoning leaves out is that the frame is
+    /// **fitted to the crossing** — a longer flight is drawn in a proportionally
+    /// wider frame — so the quantity a viewer actually perceives is not ground
+    /// distance but the share of the screen the sprite covers, and that is what
+    /// this prints.
+    ///
+    /// Printed rather than asserted: the answer is a look, and Chiu picks the
+    /// number from the films. This exists so the pick is made against the
+    /// quantity that matters instead of against kilometres.
+    func testHowFarTheAircraftTravelsAcrossItsOwnFrame() async throws {
+        for fixture in [UnroutableSeaProvider.crossingFixture, UnroutableSeaProvider.longHaulFixture] {
+            let (trip, config) = try await RecapDemoFilmTests.importedRecap(
+                named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
+            )
+            for beatS in [4.0, 6.0, 9.0] {
+                let line = try XCTUnwrap(
+                    LinearTimeline(trip: trip, config: config.withCrossingBeatS(beatS), establishing: nil)
+                )
+                guard let beat = line.path.crossingBeatWindowsS.first else { continue }
+                let camera = line.cameraFrame(atTime: beat.lowerBound)
+                let from = line.subjectState(atTime: beat.lowerBound)
+                let to = line.subjectState(atTime: beat.upperBound)
+                let travelledM = Geo.distanceM(
+                    latA: from.lat, lonA: from.lon, latB: to.lat, lonB: to.lon
+                )
+                let frames = travelledM / camera.spanM
+                print(String(
+                    format: "KAMOME_CROSSING_TRAVEL %-18@ beat %.1fs · %6.0f km across a %6.0f km frame "
+                        + "· %.0f%% of the width · %.1f%% of the width per second",
+                    fixture as NSString, beat.upperBound - beat.lowerBound,
+                    travelledM / 1000, camera.spanM / 1000, frames * 100,
+                    frames / max(beat.upperBound - beat.lowerBound, 1e-6) * 100
+                ))
+            }
         }
     }
 }

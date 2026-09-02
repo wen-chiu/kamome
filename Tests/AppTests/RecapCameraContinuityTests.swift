@@ -31,13 +31,20 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// Committed photo-import fixtures spanning the scales the camera has to
     /// survive: a day trip, an island, two countries, and a multi-day road trip.
     private static let fixtures = [
-        "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real", crossingFixture
+        "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real",
+        crossingFixture, longHaulFixture
     ]
 
     /// The fixture with a leg that has no road under it. Named in one place —
     /// see `UnroutableSeaProvider`, which also holds the geography and why it is
     /// a meridian rather than a distance.
     static let crossingFixture = UnroutableSeaProvider.crossingFixture
+
+    /// The **long-haul** type-2 fixture. Added to the gate 2026-09-02: the
+    /// type-2 camera now has to hold a frame 53.2 degrees of longitude wide, and
+    /// a form that is only ever scanned at 2.6 degrees is a form scanned at one
+    /// scale.
+    static let longHaulFixture = UnroutableSeaProvider.longHaulFixture
 
     /// Fraction of the frame's ground that must still be on screen one frame
     /// later. Generous on purpose — this is a catastrophe detector, not a
@@ -264,6 +271,7 @@ final class RecapCameraContinuityTests: XCTestCase {
         // card beat is one frame, held — and then scans everything after it. If
         // the card beat ever moved, the loop below would fail rather than skip,
         // which is the whole difference.
+        assertTheFlightBeatIsStill(line, fixture: fixture, fps: config.fps)
         let scanFrom = try assertTheCardBeatIsStill(line, fixture: fixture, fps: config.fps)
         for frame in scanFrom..<line.frameCount {
             let timeS = Double(frame) * step
@@ -317,10 +325,11 @@ final class RecapCameraContinuityTests: XCTestCase {
     ) -> String {
         let summary = String(
             format: "  %-16@ %-7@ %5.1fs · span %6.1f km · worst frame overlap %3.0f%% at %5.1fs · "
-                + "%d violations · %d permitted cuts · %d excused · %d arcs",
+                + "%d violations · %d permitted cuts · %d excused · %d arcs · type %@%@",
             fixture as NSString, label as NSString, line.durationS, line.path.bodySpanM / 1000,
             worst.overlap * 100, worst.timeS, violations.count, cuts.permitted, cuts.excused,
-            line.path.arcWindowsS.count
+            line.path.arcWindowsS.count, "\(line.filmType)" as NSString,
+            (line.opensOnTheFlight ? " · opens on the flight" : "") as NSString
         )
         for violation in violations.prefix(3) {
             XCTFail(String(
@@ -353,7 +362,7 @@ final class RecapCameraContinuityTests: XCTestCase {
     ///
     /// Both axes count, and the frame is portrait, so a north-south jump is
     /// judged as harshly as an east-west one.
-    private static func groundOverlap(_ lhs: CameraFrame, _ rhs: CameraFrame) -> Double {
+    static func groundOverlap(_ lhs: CameraFrame, _ rhs: CameraFrame) -> Double {
         // Metres east/north of `lhs`'s centre — a local plane is exact enough for
         // two frames a thirtieth of a second apart.
         let dEast = meters(lhs.centerLat, lhs.centerLon, lhs.centerLat, rhs.centerLon)

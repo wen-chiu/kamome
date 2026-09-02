@@ -77,12 +77,18 @@ public struct MotionActivity: Equatable {
 }
 
 public enum Geo {
+    /// Metres in one degree of latitude. Exposed rather than inlined because a
+    /// second caller now needs the *inverse* — turning a ground span back into
+    /// degrees, to find out whether a camera frame is even expressible as a map
+    /// region (`MapKitSnapshotProvider.region`). Two copies of this number in
+    /// two modules is how they drift.
+    public static let metersPerDegreeLatitude = 111_320.0
+
     /// Equirectangular approximation — exact enough at trip scale, cheap
     /// enough to run per sample.
     public static func distanceM(latA: Double, lonA: Double, latB: Double, lonB: Double) -> Double {
-        let mPerDegLat = 111_320.0
-        let dLat = (latB - latA) * mPerDegLat
-        let dLon = (lonB - lonA) * mPerDegLat * cos(latA * .pi / 180)
+        let dLat = (latB - latA) * metersPerDegreeLatitude
+        let dLon = (lonB - lonA) * metersPerDegreeLatitude * cos(latA * .pi / 180)
         return (dLat * dLat + dLon * dLon).squareRoot()
     }
 }

@@ -34,14 +34,43 @@ public struct MapRendererCapabilities: Equatable {
     /// film. It costs one `??` at the composition boundary to make impossible.
     public let fixedAppearance: RecapAppearance?
 
+    /// The widest frame this substrate can actually draw, in **degrees of
+    /// longitude**, or nil when it has no such limit.
+    ///
+    /// Third field, same rule as the two above: a renderer says what it cannot
+    /// do rather than silently doing something else. This one exists because
+    /// MapKit's snapshotter has a zoom floor — measured 2026-09-01
+    /// (`LongHaulFrameProbeTests`), not documented by Apple — past which it
+    /// returns the *same picture* however far out you ask it to go. Asking for
+    /// 8,000, 10,000 and 11,200 km of width at one centre returned 108°, 109°
+    /// and 109°.
+    ///
+    /// **Why a capability and not a clamp.** A clamp is the silent fallback
+    /// `Arch.md` §6 forbids: the film would be framed to something nobody chose,
+    /// and the only symptom is that the two places the shot exists to show are
+    /// both outside it — 53 px past opposite edges, in the case that found this.
+    /// Declared instead, the film form can be **chosen** before any snapshot is
+    /// taken, and the provider still refuses at snapshot time so the declaration
+    /// cannot be bypassed.
+    ///
+    /// **In degrees, not metres, deliberately.** The limit is a zoom level, which
+    /// in Mercator is a fixed fraction of the world's width — so it is a fixed
+    /// longitude span, and the same ground distance is a different fraction of it
+    /// at every latitude. A metre threshold would refuse a north–south pair that
+    /// frames beautifully (Taipei→Sydney, 7,206 km, 29.6°) and accept an
+    /// east–west one that cannot be framed at all.
+    public let maxFramableLongitudeDeg: Double?
+
     public init(
         supportsBearing: Bool,
         supportsHeadingUp: Bool,
-        fixedAppearance: RecapAppearance? = nil
+        fixedAppearance: RecapAppearance? = nil,
+        maxFramableLongitudeDeg: Double? = nil
     ) {
         self.supportsBearing = supportsBearing
         self.supportsHeadingUp = supportsHeadingUp
         self.fixedAppearance = fixedAppearance
+        self.maxFramableLongitudeDeg = maxFramableLongitudeDeg
     }
 
     /// The appearance a film will actually be rendered in on this substrate.
