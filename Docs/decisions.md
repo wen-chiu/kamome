@@ -2711,3 +2711,35 @@ slowdown Chiu reported is not lost throughput, it is throughput spent elsewhere.
 **Not decided:** whether the 38 documents in `Docs/` should be consolidated
 further. Recorded as a pressure, not acted on — a consolidation pass is itself
 governance overhead, and this entry is about spending less of it.
+
+### Closing note, same day — §5's rule applied to §6, and three gates built
+
+Chiu lifted this session's no-code restriction for `Scripts/` only
+(*"你直接寫，把那三個變成 check.sh 會擋的"*), so three of the specifications above
+exist as gates rather than as instructions someone must remember:
+
+- `Scripts/check-dead-config.sh` + `dead-config.baseline` — static, in every run.
+  The three known-dead keys are baselined; a fourth fails the build. Both
+  directions are enforced: a key that loses its last consumer fails, and a
+  baselined key that gains one back also fails, so the list can only shrink
+  honestly.
+- `Scripts/release/check-archive.sh` — the artifact check that `pre-launch.md`
+  had carried as prose since 2026-08-20. It **refuses to run without the real
+  key** rather than degrading to a shape scan, because a shape scan would pass a
+  key of another shape.
+- `Scripts/release/check-attribution.sh` — the licence obligation, gated.
+
+`./check.sh` gains `--release <artifact>`; an ordinary run **prints that the
+release gates did not run**, because a gate nobody invokes is not a gate.
+
+**Each was positive-controlled before being committed** — a planted key in both
+an `.xcarchive` and an `.ipa`, a key stripped of its last consumer, a baselined
+key given one back, and the missing-key path. §5 of this entry says a claim about
+the code needs a command behind it; *"the gate works"* is such a claim, and
+`Docs/handoff-subject-lookup.md` already records the cost of a diagnostic nobody
+had shown could fire.
+
+**Application code is untouched**, so S2's and S3's strings still do not exist —
+what changed is that the app can no longer be shipped without them. That is the
+division of labour in §2 working as intended: the guarantee binds at the moment
+it matters, and it binds without anyone remembering it.
