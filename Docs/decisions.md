@@ -2799,6 +2799,14 @@ someone re-read `HANDOFF.md` and the ledger and brought *Active work* and
 *Blockers* up to date — which is the half that rotted on 2026-08-28 and
 2026-08-30, while the number was right both times.
 
+⚠️ **Measured after merging, and it limits the guarantee:** on the CI runner `gh`
+is unauthenticated, so CI runs the ledger half and prints `PR HALF DID NOT RUN`
+(VERIFIED, run 33632648596). **The PR half therefore protects the desk, not the
+merge** — which is where the sync is written, but not where it was skipped on
+2026-09-01. Adding `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` to the workflow closes
+it; not done here, because the workflow was outside what this session was asked
+to touch.
+
 **Not decided:** whether `current-state.md` should stop naming a PR at all and
 name a commit instead. A commit is exact but unreadable in a document people scan;
 a PR number is legible and one-behind. Left as is, deliberately.
