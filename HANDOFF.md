@@ -42,8 +42,10 @@ Three findings VERIFIED there, none previously recorded:
 - 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
   known ones, and it is the dangerous one — **film duration is an open question
   and this is the key anyone would reach for first.** → C1.
-- 🟠 **`RecapBudgetAndDemoTests` derives an export-time estimate from a dead
-  quantity**, and that estimate is a mandatory submission item. → C2.
+- ✅ **`RecapBudgetAndDemoTests`' export-time estimate is fixed** (C2), priced
+  off `RecapRenderLoop.stations`: **0.79 s/snapshot → ~42 s for 53 stations**.
+  That number is the input to `pre-launch.md` item 5; the device figure is
+  still owed (`release-readiness.md` D2, D3).
 
 **No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
 pointer to a topic document.
@@ -68,10 +70,9 @@ What survives here as **live**, and only this:
 - ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*,
   not fixed. §7's remedy (cross-fade at a station boundary) costs no extra
   fetches and is not built. Revisit only if someone notices it in a film.
-- ⚠️ **`keyframe_interval_frames` is dead config, and it is one of three.** The
-  test that still divides by it *was* checked (2026-09-02) and is measuring a
-  quantity the render path no longer has. Detail and the check that would end the
-  class: `Docs/release-readiness.md` C1, C2.
+- ⚠️ **`keyframe_interval_frames` is dead config, one of three** — now gated by
+  `check-dead-config.sh`. The test that divided by it was fixed 2026-09-02.
+  → `Docs/release-readiness.md` C1, C2.
 
 ---
 
@@ -148,6 +149,19 @@ proportion. `travel_max_s` names a thing that does not exist.
 → `Docs/handoff-pacing.md` for both, including the acceptance condition decided
 in advance.
 
+### The shipped camera nearly touches the safe zone on the crossing
+`RecapCameraContinuityTests` now scans **both** cameras (2026-09-02) — the
+synthetic `establishing` extent and the `nil` the app actually ships. Two
+results, and the second is yours:
+
+- ✅ The old trap's premise is **gone** — body span is now identical in both.
+- ⏳ **New, and yours.** The shipped camera frames the subject looser, and on
+  `ishigaki-crossing` reaches **79.8% against the 80% limit** — a pass by 0.2
+  points. **Nothing was relaxed to get it.** Whether 79.8% is acceptable is a
+  bar question, not an engineering one.
+
+→ `Docs/handoff-cross-region-crossing.md` finding 2, which is corrected there.
+
 ### The badge's size is provisional
 0.60× was chosen from a rendered sweep and draws at 94.5 px. ⏳ **Judged from a
 still; Chiu reserved the right to revisit it from a film.** Everything else
@@ -187,14 +201,6 @@ a blue disc, and no test asserts the end card's mark shape. The bare gull now ha
 three consumers: the brand mark, the fault badge (its own case), and the
 cross-region narrator that has not been built.
 → `Docs/handoff-marker-badge.md` finding 5b.
-
-### The continuity gate has never measured the shipped camera
-It passes a synthetic `establishing` extent; the shipped app has passed `nil`
-since 2026-08-15, which takes the other branch — **18.6 km vs 274 km of body
-span** on one fixture. Not changed, deliberately: `nil` is the more forgiving
-configuration, so swapping would weaken the gate, and that is a bar move for
-Chiu. Re-confirmed still true 2026-08-31. The cheap fix is to scan **both**.
-→ `Docs/handoff-cross-region-crossing.md` finding 2.
 
 ### `Docs/camera-arcs.md` §8 states an invariant no arc can satisfy
 "The tighter must lie entirely inside the looser" fails across the apex by

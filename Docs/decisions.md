@@ -2743,3 +2743,70 @@ had shown could fire.
 what changed is that the app can no longer be shipped without them. That is the
 division of labour in §2 working as intended: the guarantee binds at the moment
 it matters, and it binds without anyone remembering it.
+
+## 2026-09-02 (b) — The staleness protocol could never be satisfied, and it is a check now
+
+**Context.** ADR 2026-09-02 §6.1 said the `Docs/current-state.md` staleness
+protocol would be mechanised rather than extended a third time. Writing the check
+found something first: **the rule as written cannot be satisfied.**
+
+### 1. The rule was unsatisfiable, which is why it kept "failing"
+
+"Last synced" must name the newest merged PR on `main`. But the line is written
+*inside* a PR, and that PR is not merged when the line is written — **so the line
+can never name the PR that contains it.** Every governance PR in the history
+shows the same shape:
+
+| the syncing PR | the PR its line named |
+|---|---|
+| #20 | #16 |
+| #27 | #26 |
+| #29 | #28 |
+
+Read on `main`, the line is **always exactly one PR behind, and that is correct**.
+The protocol had no way to say so, so every reader after every merge saw a rule
+being violated, and the honest response — bump the number — produces a line that
+is wrong again one merge later.
+
+⚠️ **This changes the diagnosis in ADR 2026-09-02 §6.** That entry called the
+2026-09-01 discovery "the third failure of a protocol strengthened twice." One
+PR behind was never a failure; it is the floor. **What actually happened was two
+behind** — PR #28 changed the ledger and did not re-sync the line — and that is a
+real violation which this check catches. The correction matters because the
+earlier framing would have justified a third strengthening of a rule whose
+problem was never strictness.
+
+### 2. The rule, corrected
+
+"Last synced" names the newest merged PR **at the time the sync was written**, and
+the check runs **on the branch, before the merge** — where `gh pr list --state
+merged` does not yet include the PR under review, so the newest merged PR is
+exactly what the line should name. **The rule is satisfiable there and only
+there.** Evaluated retroactively on `main` it is not, and a check that cannot pass
+gets switched off, which is how this would have failed a fourth time.
+
+### 3. `Scripts/check-staleness.sh`
+
+Both halves. The ledger half is offline and always enforced. The PR half needs an
+authenticated `gh`; where it cannot run it says so in the output rather than
+passing quietly — the same visible-gap pattern as the release gates, and the same
+reason (`check.sh`'s own rule: a check that silently does nothing is the worst
+kind).
+
+Its failure message refuses the obvious workaround by name: *"Bumping only the
+number is the failure this check exists to catch."* The line is a claim that
+someone re-read `HANDOFF.md` and the ledger and brought *Active work* and
+*Blockers* up to date — which is the half that rotted on 2026-08-28 and
+2026-08-30, while the number was right both times.
+
+⚠️ **Measured after merging, and it limits the guarantee:** on the CI runner `gh`
+is unauthenticated, so CI runs the ledger half and prints `PR HALF DID NOT RUN`
+(VERIFIED, run 33632648596). **The PR half therefore protects the desk, not the
+merge** — which is where the sync is written, but not where it was skipped on
+2026-09-01. Adding `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` to the workflow closes
+it; not done here, because the workflow was outside what this session was asked
+to touch.
+
+**Not decided:** whether `current-state.md` should stop naming a PR at all and
+name a commit instead. A commit is exact but unreadable in a document people scan;
+a PR number is legible and one-behind. Left as is, deliberately.

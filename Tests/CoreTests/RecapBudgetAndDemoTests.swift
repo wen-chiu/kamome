@@ -135,11 +135,39 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             )
         }
         let perSnapshot = Date.now.timeIntervalSince(started) / Double(count)
-        let keyframes = Double(try XCTUnwrap(CameraPath(
-            route: syntheticLongTrip().route, stops: [], config: config
-        )).frameCount) / Double(config.keyframeIntervalFrames)
-        print(String(format: "KAMOME_BENCH MapKit snapshot: %.2f s each → ~%.0f s for %.0f keyframes",
-                     perSnapshot, perSnapshot * keyframes, keyframes))
+        // **Priced off the stations the loop will actually fetch** (2026-09-02).
+        //
+        // This used to divide `frameCount` by `keyframe_interval_frames`. Crop-
+        // scaling left that key with no reader at all (ADR 2026-08-31 (b)) —
+        // snapshots are planned by `RecapSnapshotStations` now — so the estimate
+        // was derived from a quantity the render path no longer has. It printed a
+        // plausible number, which is exactly why nobody noticed, and
+        // `Docs/pre-launch.md` item 5 (the export-time estimate) is a **mandatory**
+        // submission item that would have been built from it.
+        //
+        // `stations` is documented as pure for this purpose: it prices an export
+        // without taking a snapshot.
+        let (route, stops) = syntheticLongTrip()
+        let trip = routeTrip(
+            route: route, stops: stops, names: stops.indices.map { "Stop \($0 + 1)" },
+            chrome: Chrome(
+                title: "Benchmark Trip", subtitle: "8 days · 1,200 km",
+                statsLines: ["1,200 km · 24 stops"], shareURL: "kamome://route/bench"
+            ),
+            config: config
+        )
+        let timeline = try XCTUnwrap(LinearTimeline(
+            trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)
+        ))
+        let stations = RecapRenderLoop(
+            timeline: timeline, compositor: routeCompositor(timeline, config: config),
+            provider: FlatSnapshotProvider(), config: config
+        ).stations.count
+        print(String(
+            format: "KAMOME_BENCH MapKit snapshot: %.2f s each → ~%.0f s for %d stations "
+                + "(%.0f s film, %d frames)",
+            perSnapshot, perSnapshot * Double(stations), stations,
+            timeline.durationS, timeline.frameCount))
     }
 
     /// Phase 3 demo artifact: the perth fixture rendered over real Apple
