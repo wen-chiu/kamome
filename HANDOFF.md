@@ -42,8 +42,10 @@ Three findings VERIFIED there, none previously recorded:
 - 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
   known ones, and it is the dangerous one — **film duration is an open question
   and this is the key anyone would reach for first.** → C1.
-- 🟠 **`RecapBudgetAndDemoTests` derives an export-time estimate from a dead
-  quantity**, and that estimate is a mandatory submission item. → C2.
+- ✅ **`RecapBudgetAndDemoTests`' export-time estimate is fixed** (C2), priced
+  off `RecapRenderLoop.stations`: **0.79 s/snapshot → ~42 s for 53 stations**.
+  That number is the input to `pre-launch.md` item 5; the device figure is
+  still owed (`release-readiness.md` D2, D3).
 
 **No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
 pointer to a topic document.
@@ -68,10 +70,9 @@ What survives here as **live**, and only this:
 - ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*,
   not fixed. §7's remedy (cross-fade at a station boundary) costs no extra
   fetches and is not built. Revisit only if someone notices it in a film.
-- ⚠️ **`keyframe_interval_frames` is dead config, and it is one of three.** The
-  test that still divides by it *was* checked (2026-09-02) and is measuring a
-  quantity the render path no longer has. Detail and the check that would end the
-  class: `Docs/release-readiness.md` C1, C2.
+- ⚠️ **`keyframe_interval_frames` is dead config, one of three** — now gated by
+  `check-dead-config.sh`. The test that divided by it was fixed 2026-09-02.
+  → `Docs/release-readiness.md` C1, C2.
 
 ---
 
