@@ -197,7 +197,13 @@ public struct LinearTimeline {
         callToAction = trip.callToAction
         shareURL = trip.shareURL
         filmType = untrimmedTrip.filmType
-        opensOnTheFlight = flightFrame != nil
+        // Both halves of the camera's own condition, not just the frame. The
+        // camera opens on the flight when it has a frame **and** an opening to
+        // put it in; deriving this from the frame alone would let the two
+        // disagree on any path with `openingS == 0` (fixed pacing, golden
+        // frames) — a reporter contradicting the thing it reports on, which is
+        // the shape of defect this project keeps finding one film at a time.
+        opensOnTheFlight = flightFrame != nil && path.openingS > 0
     }
 
     /// When the subject first appears, and the two sequences that decide it

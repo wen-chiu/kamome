@@ -154,10 +154,9 @@ public struct CameraPath {
         /// **The still frame a type-2 film opens on** — both ends of the flight,
         /// the title card over it, the aircraft crossing it (Chiu 2026-09-01).
         /// nil for every other film, and for a type-2 one too wide to frame,
-        /// which takes the country card instead — the *other* main path, not a
-        /// degraded one. A frame rather than a flag, because deciding it needs
-        /// the substrate's ceiling and the camera never learns about renderers
-        /// (`CrossingFraming`).
+        /// which takes the country card — the *other* main path, not a degraded
+        /// one. A frame rather than a flag: deciding it needs the substrate's
+        /// ceiling and the camera never learns about renderers (`CrossingFraming`).
         openingFlightFrame: CameraFrame? = nil
     ) {
         guard route.count >= 2 else { return nil }
@@ -230,10 +229,11 @@ public struct CameraPath {
     ///
     /// Note this is *later* than the journey's start: the last stretch of the
     /// opening is a zoom played over an already-moving car (Chiu 2026-08-01).
+    /// ⚠️ Neither this nor `journeyStartS` says which beat owns the frame: on a
+    /// type-2 film the crossing arc owns it for ~10 s past both (`arcWindowsS`).
     public var openingS: Double { openingEndsS }
 
-    /// When the trail and the vehicle start moving: once the opening has fully
-    /// resolved onto the body camera, never during its zoom.
+    /// When the trail and the vehicle start moving.
     public var journeyStartS: Double { openingEndsS }
 
     /// Film times at which the camera is **allowed** to break spatial continuity

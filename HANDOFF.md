@@ -22,64 +22,65 @@ standing rules first.
 ## 🔴 Blockers
 
 ### The shake and the ghosting — FIXED and accepted; two dials still open
-Chiu's P0 (`Docs/decisions.md` 2026-08-30). `RecapRenderLoop` reprojects one
-station per run of frames instead of cross-fading two cameras. Chiu watched the
-before/after on 2026-08-31 and **accepted it**: travelling error 2.005 → 1.061,
-frame-to-frame swing 1.402 → 0.747, stop beats pixel-exact again.
-
-⏳ **Two for Chiu.** `snapshot_station_max_magnification` is **1.1**; 1.05 is
-sharper at ~3× the snapshots. And a **new** artifact: a 0.747 sharpness step
-exactly at the hold boundaries, where a pixel-exact parked station abuts a
-magnified travelling one. §7's remedy (cross-fade *at a station boundary*) costs
-no extra fetches and is **not built**, pending a judged render.
+`RecapRenderLoop` reprojects one station per run of frames instead of cross-fading
+two cameras; Chiu accepted it 2026-08-31 (travelling error 2.005 → 1.061, swing
+1.402 → 0.747, stop beats pixel-exact). ⏳ `snapshot_station_max_magnification` is
+**1.1**; 1.05 is sharper at ~3× the snapshots. And a **0.747 sharpness step at the
+hold boundaries**, whose remedy (cross-fade *at a station boundary*) costs no extra
+fetches and is **not built**.
 → `Docs/handoff-crop-scaling.md` §1, §10.
 
-### ⏳ The opening is built and unjudged — and the cost went UP
+### ⏳ The local film's opening is built and unjudged
 Beat 1 is a **held country frame under the title card** that **cuts** to beat 2
-(Chiu 2026-08-31); beat 2 is one local journey; `bodySpanM` divides **beat 2**,
-breaking the chain that made "widen the country" and "smudge the destination" one
-knob. Snapshots went 367 → 51 → 178 — the 51 was cheap *because* the destination
-was a smudge. ⚠️ A type-2 film now takes a different opening entirely (below); this
-entry is the **local** film's opening, still unjudged.
+(Chiu 2026-08-31); beat 2 is one local journey; `bodySpanM` divides beat 2, breaking
+the chain that made "widen the country" and "smudge the destination" one knob.
+Snapshots 367 → 51 → 178 — the 51 was cheap *because* the destination was a smudge.
+⚠️ A **type-2** film takes a different opening entirely (below).
 → `Docs/handoff-crop-scaling.md` §11, §12.
 
-### ⏳ The type-2 film is BUILT and unjudged — four films exist
+### ⏳ The type-2 film is BUILT and judged — PR #31
 Chiu's three film types (2026-09-01, **not in `decisions.md`**): 1 local, 2 home →
 one destination abroad, 3 multi-region (deferred). Type 2 is built: title card over
-the flight frame → the aircraft crosses with the **camera still** → the arc closes
-into the destination → the destination's local trip. The origin's drive is dropped
-(`RecapTypeTwoFilm`), making every type-2 film `Docs/camera-arcs.md` §4 **Case C** —
-predicted there, unbuilt until now. Films in `~/Kamome-films/type2-2026-09-02/`:
-`ishigaki-beat{4,6,9}s.mp4`, `kamome-auckland-crossing.mp4`, and the type-1 control
-`kamome-miyakojima.mp4`.
+the flight frame → the aircraft crosses **camera still** → the arc closes into the
+destination → the destination's local trip. The origin's drive is dropped, making
+every type-2 film `Docs/camera-arcs.md` §4 **Case C** — predicted there, unbuilt
+until now. Films: `~/Kamome-films/type2-2026-09-02/`.
 
 `ishigaki-crossing`: 69.0 → **60.0 s**, body span 20.0 → **13.3 km**, snapshots
-178 → **135**, of which the **opening is 1** — a still camera costs one snapshot at
-any span, which is what makes the flight drawable at all.
+178 → **135**, the **opening 1** — a still camera costs one snapshot at any span.
 
-🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
-not kilometres.** MapKit saturates at **~109°**; a 9:16 frame is 1.778× taller than
-wide and runs off the poles first at low latitudes. **Taiwan→Iceland fails both at
-every padding** — and Iceland is the acceptance film — so the frozen country card is
-a **main path**. `crossing_flight_max_longitude_deg` is **70**, **interpolated**:
-Auckland 53.2° frames well, Moscow 83.9° does not, nothing between was rendered.
+✅ **`crossing_beat_s` stays 6.0** (Chiu, from the 4/6/9 sweep). ⭐ **His two picks
+are the same screen speed to within 5%** — Ishigaki 69% of frame ÷ 4 s = 17.25 %/s,
+Auckland 98% ÷ 6 s = 16.33 %/s — so `frameShare / target_screen_speed` is
+**validated by his eye** on two films 29× apart. **No new sweep is needed.**
 
-🔴 **A car still drives across the sea, and on a long-haul frame it is the size of
-Taiwan** — the sprite is fixed in pixels. Mode classifier is session 2.
+🔴 **A long-haul frame often does not exist; the limit is degrees of longitude.**
+MapKit saturates at **~109°**, and a 9:16 frame runs off the poles first at low
+latitudes. **Taiwan→Iceland fails both at every padding**, so the frozen country
+card is a **main path**.
 
-⚠️ **`crossing_beat_s` must not be set from one fixture.** The frame is fitted to
-the crossing, so a constant is far closer to right than distance suggests — 306 km
-across a 443 km frame (69%) against 8,755 km across an 8,891 km one (98%) — but the
-residual is real: at 6.0 s that is 11.5%/s and 16.4%/s of frame width.
-→ `Docs/handoff-type2-films.md` §3.
+🔴 **The wide flight frame loses the viewer** (Chiu, Auckland): 地圖放太遠 會失去焦點.
+Mirror of `Docs/handoff-P3.5.md` §"Map reference labels" (2026-08-02), whose remedy
+was **a recognisable country silhouette** — at Auckland's scale neither end is one.
+`crossing_flight_max_longitude_deg` stays 70 and is **probably wrong. Chiu is
+deciding; do not change it.**
+
+🔴 **A union-derived sweep is owed.** The end reveal was the **third** camera
+quantity found deriving from the whole route instead of a local journey, after the
+body span and beat 2 — each cost a render or a gate failure to find.
+
+🔴 **`subject_length_px` is absolute while the frame span moves 20×**, and the trail's
+dashes with it (~50 km per dash). **Not session 2's** — a plane sprite is still
+157.5 px on a Pacific-wide frame. Needs Chiu's eye, one decision for both.
+→ `Docs/handoff-type2-films.md` closeout.
 
 ### The film type is derived, and the reading is monotonic
 An unrouted leg can only *add* a local journey, so a confirmed crossing means **at
-least** a type 2. The first version returned `unknown` on any NULL leg, which
-sounded careful and would have left the new form with **no test coverage at all** —
-routing ships disabled, so every fixture was `unknown`. ⚠️ `>= 2 ⇒ the type-2 form`
-is sound only while type 3 is deferred. Recorded, not solved: the same trip yields
-different films on different days (sharpening ADR 2026-08-15's unmet export-record
+least** a type 2. The first version returned `unknown` on any NULL leg, which sounded
+careful and would have left the new form with **no test coverage at all** — routing
+ships disabled, so every fixture was `unknown`. ⚠️ `>= 2 ⇒ the type-2 form` is sound
+only while type 3 is deferred. Recorded, not solved: the same trip yields different
+films on different days (sharpening ADR 2026-08-15's unmet export-record
 requirement), and nothing tells a user re-exporting later would give a better film.
 
 ---
