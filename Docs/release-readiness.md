@@ -39,6 +39,7 @@ needs a machine with Xcode).
 | no routing key is committed, by either path | `check-secrets.sh` |
 | the suite has not silently shrunk (baseline 371) | `check-test-count.sh` |
 | **no config key loses its last consumer** — 3 known-dead are baselined, a 4th fails the build | `check-dead-config.sh` **(new 2026-09-02)** |
+| **`Docs/current-state.md` is synced** to the newest ADR and the newest merged PR — checked on the branch, where the rule is satisfiable | `check-staleness.sh` **(new 2026-09-02)** |
 | style, and the build, and the tests | `swiftlint --strict`, `xcodebuild test` |
 
 **These need no attention from anyone.** That is the point of them, and it is the

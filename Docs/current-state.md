@@ -7,15 +7,21 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-09-02 against decisions.md **2026-09-02** and `main` at
-**PR #28**. Synced by the PO/governance pass of that day.
+Last synced: 2026-09-02 against decisions.md **2026-09-02 (b)** and `main` at
+**PR #29**. Synced by the PO/governance pass of that day.
 
-⚠️ **The protocol is being mechanised, because it has now failed a third time.**
-On 2026-09-02 this line still read "PR #26" while `main` carried #27 and #28 —
-the second half, added on 2026-08-30 precisely to catch this, was itself
-forgotten within two days. `check-staleness.sh` is specified in
-`Docs/release-readiness.md` (ADR 2026-09-02 §6): a protocol a human must remember
-is not a protocol.
+✅ **This is checked now, not remembered** — `Scripts/check-staleness.sh`, in
+every `./check.sh` run (ADR 2026-09-02 (b)).
+
+⚠️ **On `main` this line reads exactly one PR behind, and that is correct.** The
+line is written inside a PR that is not yet merged, so it can never name the PR
+containing it — #20 named #16, #27 named #26, #29 named #28. **The check
+therefore runs on the branch, before the merge**, which is the only place the
+rule is satisfiable. **Two behind is a real failure**, and that is what happened
+on 2026-09-01. Do not "fix" a failure by bumping the number: the line claims
+someone re-read the ledger and `HANDOFF.md` and brought *Active work* and
+*Blockers* up to date, and that is the half that rotted twice while the number
+was right.
 
 ⚠️ **The protocol gained a second half on 2026-08-30, because the first half was
 not enough.** It used to key on the ADR ledger alone, so this file could pass its
