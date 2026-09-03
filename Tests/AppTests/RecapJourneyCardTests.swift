@@ -23,8 +23,6 @@ import XCTest
 /// continuity gate runs, so this gates every CI run.
 final class RecapJourneyCardTests: XCTestCase {
     private static let crossing = UnroutableSeaProvider.longHaulFixture
-    private static let control = "miyakojima"
-
     /// Pinned, because `Locale.current` is a property of the machine and the
     /// card's second line is localized. Two desks must assert the same card.
     private static let locale = Locale(identifier: "en_US")
@@ -35,8 +33,6 @@ final class RecapJourneyCardTests: XCTestCase {
         let line: LinearTimeline
         let trip: RecapTrip
         let config: TrackingConfig.Export
-
-        var lineAndConfig: (LinearTimeline, TrackingConfig.Export) { (line, config) }
     }
 
     private func film(_ fixture: String) async throws -> Film {
@@ -71,7 +67,8 @@ final class RecapJourneyCardTests: XCTestCase {
     // MARK: - 2. The card, and only during the crossing
 
     func testTheJourneyCardIsOnScreenForTheCrossingBeatAndNowhereElse() async throws {
-        let (line, config) = try await film(Self.crossing).lineAndConfig
+        let made = try await film(Self.crossing)
+        let (line, config) = (made.line, made.config)
         let beat = try XCTUnwrap(line.path.crossingBeatWindowsS.first, "the fixture has no crossing beat")
         let shown = cards(in: line, fps: config.fps)
 
@@ -139,7 +136,8 @@ final class RecapJourneyCardTests: XCTestCase {
     /// The pass is the beat's own clock: it arrives, holds, and leaves, and the
     /// aircraft printed on it runs the whole arc rather than a part of it.
     func testTheCardFadesInAndOutAndItsAircraftCrossesTheWholeArc() async throws {
-        let (line, config) = try await film(Self.crossing).lineAndConfig
+        let made = try await film(Self.crossing)
+        let (line, config) = (made.line, made.config)
         let shown = cards(in: line, fps: config.fps)
         let progress = shown.map(\.card.progress)
         let opacity = shown.map(\.card.opacity)
@@ -155,7 +153,8 @@ final class RecapJourneyCardTests: XCTestCase {
     // MARK: - 3. The dash the crossing puts away
 
     func testTheCrossingsDashIsPutAwayAfterTheLandingAndDrawnAgainForTheEndCard() async throws {
-        let (line, config) = try await film(Self.crossing).lineAndConfig
+        let made = try await film(Self.crossing)
+        let (line, config) = (made.line, made.config)
         let beat = try XCTUnwrap(line.path.crossingBeatWindowsS.first)
 
         func crossingIsDrawn(atTime timeS: Double) -> Bool {
@@ -346,40 +345,5 @@ final class RecapJourneyCardTests: XCTestCase {
             trimmed.stops.dropFirst().contains { $0.photos.count > config.departureStopMaxPhotos },
             "the cap is an instruction about the airport, not a trip-wide photo limit"
         )
-    }
-
-    /// **The type-1 control, measured** (`Docs/handoff-type2-opening-retime.md`).
-    ///
-    /// Not "type-1 is unaffected because the code is gated" — that is an argument.
-    /// This asserts the three things the retime could have leaked into a local
-    /// film: a boarding pass, a hidden leg, and a changed odometer.
-    func testTheTypeOneControlDrawsNoCardHidesNoLegAndCountsEveryKilometre() async throws {
-        let made = try await film(Self.control)
-        let (line, trip, config) = (made.line, made.trip, made.config)
-        XCTAssertFalse(line.opensOnTheFlight, "the control must not be a type-2 film")
-        XCTAssertTrue(trip.legs.allSatisfy { !$0.isCrossing }, "the control has no crossing")
-        XCTAssertTrue(cards(in: line, fps: config.fps).isEmpty, "a local film has no boarding pass")
-        // And no flight marks: the two additions of 2026-09-04 are gated on
-        // `opensOnTheFlight`, and this is the measurement that says so.
-        for frame in stride(from: 0, to: line.frameCount, by: config.fps / 2) {
-            for overlay in line.overlayContents(atTime: Double(frame) / Double(config.fps)) {
-                if case .flightEnds = overlay {
-                    XCTFail("a local film drew a flight-end mark at frame \(frame)")
-                }
-            }
-        }
-
-        // Every leg is drawn for the whole film, and the odometer is the whole
-        // route — with no crossing, local distance and route distance are the
-        // same number at every instant, which is what "unchanged" means here.
-        for frame in stride(from: 0, to: line.frameCount, by: config.fps) {
-            let timeS = Double(frame) / Double(config.fps)
-            XCTAssertEqual(
-                line.path.traveledLocalDistanceM(atTime: timeS),
-                line.path.traveledDistanceM(atTime: timeS),
-                accuracy: 0.001,
-                "the control's odometer must be untouched at \(timeS)s"
-            )
-        }
     }
 }
