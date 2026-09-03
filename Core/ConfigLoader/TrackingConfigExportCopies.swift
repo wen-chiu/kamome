@@ -218,14 +218,19 @@ extension TrackingConfig.Export {
     /// on cross-fade quality, which is Chiu's call, made against renders.
     /// How long a crossing beat plays, for a review render.
     ///
-    /// **A desk knob, not a tuning result.** `crossing_beat_s` is 6.0 and is
-    /// reasoned rather than measured (`Docs/handoff-cross-region-crossing.md`
-    /// finding 9), and it must not be set from one fixture: Ishigaki is 272 km
-    /// and Auckland is 8,732 km, so a constant that suits one makes the aircraft
-    /// crawl or tear across the other. This exists so the same film can be
-    /// rendered at several values and judged — the method
-    /// `Docs/cross-region-journeys.md` insists on after `body_span_padding` and
-    /// `tier_skip_share` were both reverse-derived from one trip and both removed.
+    /// **A desk knob, not a tuning result.** `crossing_beat_s` ships at 4.0 —
+    /// the length the Journey Card needs to be read (ADR 2026-09-03) — and it
+    /// must not be set from one fixture: Ishigaki is 272 km and Auckland is
+    /// 8,732 km, so a constant that suits one makes the aircraft crawl or tear
+    /// across the other. This exists so the same film can be rendered at several
+    /// values and judged — the method `Docs/cross-region-journeys.md` insists on
+    /// after `body_span_padding` and `tier_skip_share` were both reverse-derived
+    /// from one trip and both removed.
+    ///
+    /// ⚠️ **The 4/6/9 sweep this was built for is closed** (Chiu 2026-09-02) and
+    /// the screen-speed rule it validated is not to be re-run. What the knob is
+    /// for now is judging the *card's* legibility at a length, which is what the
+    /// beat measures since the retime.
     public func withCrossingBeatS(_ seconds: Double) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,

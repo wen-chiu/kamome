@@ -55,15 +55,13 @@ pointer to a topic document.
 
 ## 🔴 Blockers
 
-### ✅ CLOSED — the shake, and the opening that came with it
-Judged and accepted by Chiu; reasoning in ADRs **2026-08-31** and **2026-08-31 (b)**.
-Detail: `Docs/handoff-crop-scaling.md`. Live remainder, and only this:
+### The shake is CLOSED; two things it left are not
+ADRs **2026-08-31**, **2026-08-31 (b)**; detail `Docs/handoff-crop-scaling.md`.
 
-- ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*, not
-  fixed. §7's remedy costs no extra fetches and is not built. Revisit only if
-  someone notices it in a film.
-- ⚠️ **`keyframe_interval_frames` is dead config, one of three** — now gated by
-  `check-dead-config.sh`. → `Docs/release-readiness.md` C1, C2.
+- ⏳ The **0.747 sharpness step at hold boundaries** is accepted as it stands, not
+  fixed. §7's remedy is not built. Revisit only if someone notices it in a film.
+- ⚠️ **`keyframe_interval_frames` is dead config, one of three.**
+  → `Docs/release-readiness.md` C1, C2.
 
 ### ⏳ The type-2 film is BUILT and judged — PR #31
 Chiu's three film types (2026-09-01, **not in `decisions.md`**): 1 local, 2 home →
@@ -79,10 +77,12 @@ The type is **derived, never stored**, and **monotonic**: an unrouted leg can on
 the type-2 form` holds only while type 3 is deferred, and the same trip yields
 different films on different days — sharpening ADR 2026-08-15's unmet export record.
 
-✅ **`crossing_beat_s` stays 6.0** (Chiu, 4/6/9 sweep). ⭐ His two picks are **the
-same screen speed to within 5%** (17.25 vs 16.33 %/s of frame width), so
-`frameShare / target_screen_speed` is validated by his eye on two films 29× apart —
-**no new sweep is needed** when this is revisited.
+🔴 **`crossing_beat_s` is 4.0, not 6.0** (**ADR 2026-09-03**, which wins over the
+closeout). The 4/6/9 sweep is closed and the ⭐ screen-speed rule it validated
+(~16.5–17 %/s, two films 29× apart) still stands — it simply stopped being what the
+constant chooses. The beat is now **as long as the Journey Card takes to read**;
+the sprite's 24.5 %/s is the consequence. **If it reads rushed, de-emphasise the
+sprite, never re-lengthen the beat.**
 
 🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
 not kilometres.** MapKit saturates at **~109°**; a 9:16 frame runs off the poles
@@ -184,8 +184,8 @@ about the badge is decided (`Docs/decisions.md` 2026-08-29).
 Open, and Chiu's: whether the crossing seagull stays a choosable trip subject (it
 ships `selectable: true` against the `plane`/`boat` precedent); whether the apex
 wants a hold; and Case C — a trip that *begins* with the crossing — **is now built**
-(2026-09-02, every type-2 film). ✅ `crossing_beat_s` 6.0 **has** now survived a
-judged film.
+(2026-09-02, every type-2 film). ✅ `crossing_beat_s` is **4.0** and no longer a
+screen-speed choice (ADR 2026-09-03).
 → `Docs/handoff-cross-region-crossing.md` finding 9.
 
 ### A staging rule for `Arch.md` — recommended, not in force

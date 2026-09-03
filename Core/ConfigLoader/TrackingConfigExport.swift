@@ -54,10 +54,23 @@ public extension TrackingConfig {
         /// for no story reason — the audience is being told "you flew", once,
         /// however far.
         ///
-        /// Sized as two `zoom_transition_s` eases plus a beat at the apex where
-        /// both places are on screen together. The crossing's arc may be long
-        /// where the opening's must be short, because a crossing has a subject to
-        /// follow and the opening does not (`Docs/camera-arcs.md` §6).
+        /// **4.0 since 2026-09-03, and it is no longer a screen-speed choice**
+        /// (ADR 2026-09-03). It was 6.0, picked from a rendered 4/6/9 sweep whose
+        /// two accepted films reproduced ~16.5–17 %/s of frame width. That rule
+        /// is not wrong and is not being re-derived: the *quantity being chosen*
+        /// changed. The crossing now carries a **Journey Card** — a boarding pass
+        /// naming both ends — and the beat is as long as that card needs to be
+        /// read. The sprite's speed is a **consequence** of the beat, not its
+        /// input, and at 4.0 s it is 24.5 %/s on `auckland-crossing`.
+        ///
+        /// ⚠️ **If that reads rushed, de-emphasise the sprite; never re-lengthen
+        /// the beat** (Chiu, via the 2026-09-02 review). That lever is
+        /// `subject_length_px`, which is a separate open item and not this key.
+        ///
+        /// Originally sized as two `zoom_transition_s` eases plus a beat at the
+        /// apex where both places are on screen together. The crossing's arc may
+        /// be long where the opening's must be short, because a crossing has a
+        /// subject to follow and the opening does not (`Docs/camera-arcs.md` §6).
         public let crossingBeatS: Double
         /// How far past the two ends a crossing's **apex** opens out.
         ///

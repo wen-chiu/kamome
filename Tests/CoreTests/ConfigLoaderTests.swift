@@ -124,7 +124,14 @@ final class ConfigLoaderTests: XCTestCase {
         // `crossing_apex_padding` in particular is not a taste value: below 1.25
         // the subject leaves `camera_safe_zone_fraction` at the widest point of
         // an arc and `CameraPath.confine` starts fighting the move.
-        XCTAssertEqual(config.export.crossingBeatS, 6.0)
+        //
+        // **4.0 since ADR 2026-09-03, and the bar moved with the rule**
+        // (`Arch.md` §4). It was 6.0, from a rendered sweep. The beat is no
+        // longer a screen-speed choice: it is how long the Journey Card needs to
+        // be read, and the sprite's speed follows from it. Changing this back
+        // without changing that decision would put a screen-speed number and a
+        // card-legibility number in the same key again.
+        XCTAssertEqual(config.export.crossingBeatS, 4.0)
         XCTAssertEqual(config.export.crossingApexPadding, 1.5)
         XCTAssertGreaterThanOrEqual(
             config.export.crossingApexPadding, 1 / config.export.cameraSafeZoneFraction,

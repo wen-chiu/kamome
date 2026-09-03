@@ -277,8 +277,8 @@ in a tiles build regardless.
   other two have a safe legacy meaning and this one does not. Stored rather than
   carried in the report because routing is a detached background step since
   2026-08-15 and the recap may run days later.
-- **The beat.** `CameraPath.Phase.crossing`, priced at `crossing_beat_s` (6.0,
-  new config key) out of the travel budget rather than per metre, capped by
+- **The beat.** `CameraPath.Phase.crossing`, priced at `crossing_beat_s` (6.0 when
+  this was written, **4.0 since ADR 2026-09-03**; new config key) out of the travel budget rather than per metre, capped by
   `max_hold_fraction` — reused deliberately rather than adding a second constant
   for "time not spent covering ground".
 - **The arc.** `CameraPathCrossing.swift`. Apex = smallest frame containing both
@@ -304,8 +304,10 @@ in a tiles build regardless.
 - **Does the apex want a hold?** The arc is two smoothstepped halves with no
   pause at the widest point, where both places are on screen together. A hold
   there is a story judgement from the film.
-- **`crossing_beat_s` = 6.0 s** is reasoned (two `zoom_transition_s` eases plus a
-  beat at the apex), not measured against a judged film.
+- ✅ **CLOSED — `crossing_beat_s`.** Reasoned at 6.0 here, then *measured* by a
+  rendered 4/6/9 sweep Chiu judged (2026-09-02), then **re-decided to 4.0** when
+  the crossing gained a Journey Card to read (**ADR 2026-09-03**, which wins).
+  The beat is no longer a screen-speed choice; do not reopen the sweep.
 - **Case C is not built.** A trip that *begins* with the crossing
   (`camera-arcs.md` §4) still gets an opening and then an arc; merging them is
   named in the code and deferred.

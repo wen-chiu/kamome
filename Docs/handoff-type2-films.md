@@ -286,7 +286,15 @@ that this round's change is confined to type-2 films.
 
 ### 4. The beat length: rendered at 4 / 6 / 9, and at two scales
 
-Chiu's method, not one fixture. `crossing_beat_s` is 6.0 and **reasoned, never
+⚠️ **SUPERSEDED ON THE NUMBER, NOT ON THE METHOD — read ADR 2026-09-03 first.**
+Everything below was written while the beat's job was *"give the sprite a legible
+traverse"*. Since the 2026-09-02 review the crossing carries a **Journey Card**,
+and the beat is **4.0 s** because that is how long the card takes to read. The
+screen-speed finding is still true and is still not to be re-swept; it simply
+stopped being the quantity the constant chooses. Read `6.0` below as *what was
+shipped on 2026-09-02*.
+
+Chiu's method, not one fixture. `crossing_beat_s` was 6.0 and **reasoned, never
 measured**, and `Docs/cross-region-journeys.md` warns in advance against a constant
 reverse-derived from one trip — how `body_span_padding` and `tier_skip_share` were
 both built and both removed.
@@ -401,10 +409,23 @@ the honest default is the measured ceiling with room under it.
 
 # Closeout — 2026-09-02. Read this first if you are picking up cross-region.
 
-`crossing_beat_s` **stays 6.0** (Chiu, from the rendered sweep). The PO session
-records it; it is not in `Docs/decisions.md` yet.
+🔴 **CORRECTED 2026-09-03. `crossing_beat_s` is 4.0, and the ADR is written**
+(`Docs/decisions.md` 2026-09-03, which wins over this closeout). This section said
+it *stays 6.0*; that held for one day. The 2026-09-02 visual review retimed the
+type-2 opening and gave the crossing a **Journey Card** to read, so the beat stopped
+being a screen-speed choice and became *as long as the boarding pass needs*. At 4.0 s
+the sprite runs **24.5 %/s** on Auckland, knowingly.
+
+⚠️ **If that reads rushed, de-emphasise the sprite — do not re-lengthen the beat.**
+That lever is handed-over item 3 below (`subject_length_px`), and it is one decision
+with the sprite's size, not two.
 
 ## ⭐ The beat's derivation is already validated — do not run another sweep
+
+**Still true, and still the answer to the question it answers.** What follows
+derives the *screen-speed* rule. Since 2026-09-03 the constant is not chosen from
+screen speed, so this is the standing answer to *"how fast does the sprite cross?"*
+rather than to *"how long is the beat?"* — and it is why no sweep is owed either way.
 
 Chiu judged **Ishigaki best at 4 s and Auckland best at 6 s**, then accepted 6.0 for
 both as a working constant. His two picks are **the same screen speed to within 5%**:
@@ -415,8 +436,8 @@ both as a working constant. His two picks are **the same screen speed to within 
 That is `frameShare / target_screen_speed` — the rule proposed from the arithmetic —
 **confirmed independently by his eye**, on two films 29× apart in distance. So when
 this is revisited, the answer is already derived and already measured: a target of
-**~16.5–17 %/s** reproduces both picks. **No new sweep is needed.** The only open
-question is whether a constant 6.0 s is good enough to keep, not what the rule is.
+**~16.5–17 %/s** reproduces both picks. **No new sweep is needed** — and since ADR
+2026-09-03 none is *owed*, because the constant is no longer picked from this rule.
 
 Measure the frame share with `RecapOpeningFramingTests.testHowFarTheAircraftTravelsAcrossItsOwnFrame`.
 

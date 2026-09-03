@@ -812,6 +812,22 @@ so nothing is visibly missing — but a wider terrain build is the honest follow
 
 ---
 
+## ✅ CLOSED — the shake, and the opening that came with it (moved 2026-09-03)
+
+Moved from `HANDOFF.md` for budget; the live remainder stayed there as
+"The shake is CLOSED; two things it left are not". Verbatim as it stood:
+
+> ### ✅ CLOSED — the shake, and the opening that came with it
+> Judged and accepted by Chiu; reasoning in ADRs **2026-08-31** and **2026-08-31 (b)**.
+> Detail: `Docs/handoff-crop-scaling.md`. Live remainder, and only this:
+>
+> - ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*, not
+>   fixed. §7's remedy costs no extra fetches and is not built. Revisit only if
+>   someone notices it in a film.
+> - ⚠️ **`keyframe_interval_frames` is dead config, one of three** — now gated by
+>   `check-dead-config.sh`. → `Docs/release-readiness.md` C1, C2.
+
+
 # Part 2 — sections moved from `CLAUDE.md`
 
 ## Replay MVP repositioning (spec v1.7, 2026-07-20, Chiu) — READ FIRST

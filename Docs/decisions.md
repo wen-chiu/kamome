@@ -2810,3 +2810,70 @@ to touch.
 **Not decided:** whether `current-state.md` should stop naming a PR at all and
 name a commit instead. A commit is exact but unreadable in a document people scan;
 a PR number is legible and one-behind. Left as is, deliberately.
+
+---
+
+## 2026-09-03 — The crossing beat is 4.0 s because that is how long a boarding pass takes to read
+
+**Context.** `crossing_beat_s` has been 6.0 since 2026-09-02, and it was **not**
+a guess: Chiu rendered `ishigaki-beat{4,6,9}s.mp4` and
+`kamome-auckland-crossing.mp4`, judged Ishigaki best at 4 s and Auckland best at
+6 s, and accepted 6.0 for both. The closeout in `Docs/handoff-type2-films.md`
+recorded ⭐ that his two picks reproduce **~16.5–17 %/s of frame width** on two
+films 29× apart in distance, and said in terms that **no new sweep is needed**.
+
+The 2026-09-02 visual review then retimed the type-2 opening and put a **Journey
+Card** — a boarding pass naming both ends — into the crossing. Chiu decided 4.0 s
+the same day. Read against the closeout that is a contradiction, and `CLAUDE.md`
+forbids leaving both numbers in the tree without saying which is which.
+
+### 1. What changed is the quantity being chosen, not the answer to the old question
+
+The screen-speed rule is **not withdrawn and not to be re-derived.**
+`frameShare / target_screen_speed` reproduced both of Chiu's picks to within 5%,
+and that finding stands as the answer to *"how fast should the sprite cross?"*
+
+That is no longer the question the constant answers. Before the review the beat
+had one job: give the sprite a legible traverse. It now has a different one —
+**hold the crossing long enough for the boarding pass to be read.** The sprite's
+speed is a **consequence** of that length, not an input to it.
+
+So the beat is:
+
+> **as long as the Journey Card needs to be read.**
+
+At 4.0 s the sprite runs at **24.5 %/s** on `auckland-crossing` against the old
+rule's ~16.5 %/s. That is a deliberate trade, made with the number known, because
+the card now carries the beat's meaning.
+
+### 2. The tie-break, decided in advance
+
+⚠️ **If 24.5 %/s reads rushed, the answer is to de-emphasise the sprite — never to
+re-lengthen the beat** (Chiu, via the review). Re-lengthening would put a
+screen-speed number and a card-legibility number back in one key, which is the
+contradiction this entry exists to close.
+
+That lever is `subject_length_px`, and it is **not this round's**: it is absolute
+while the type-2 frame span moves 20× (443 km → 8,891 km), it changes every film,
+and it is handed-over item 3 in the `Docs/handoff-type2-films.md` closeout. **One
+decision, not two** — and it needs Chiu's eye on a film, not an edit here.
+
+### 3. What this does not reopen
+
+- **`crossing_flight_max_longitude_deg` stays 70**, interpolated, and its own
+  open question (closeout item 1).
+- **`zoom_transition_s` stays 2.5** and is shared with every film's opening
+  closing zoom. Because the opening crossing closes at `entry.endS +
+  zoom_transition_s`, the retimed opening is **12.5 s, not the review's 11.5 s**.
+  11.5 needs a separate key and a separate decision; changing the shared knob
+  would retime every type-1 film.
+- The 4/6/9 sweep is **closed**. `withCrossingBeatS` survives as a desk knob, and
+  what it is for now is judging the *card's* legibility at a length.
+
+### 4. Amended by this entry
+
+`Docs/handoff-type2-films.md` §4 and its closeout, `Docs/handoff-cross-region-crossing.md`,
+and `HANDOFF.md` all recorded 6.0 as settled. Each is corrected in the same PR
+rather than left to contradict this entry — the failure mode `CLAUDE.md`'s
+append-only rule exists to prevent is a reader finding "16.5 %/s validated"
+beside "4.0 s" and reopening a sweep Chiu has already closed.
