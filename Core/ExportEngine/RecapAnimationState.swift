@@ -144,6 +144,82 @@ public struct RecapPhotoDeck: Equatable {
     }
 }
 
+/// **The boarding pass the crossing carries** (Chiu 2026-09-02) — a Journey Card
+/// in boarding-pass form, on screen for the crossing beat and nowhere else.
+///
+/// Pure data, like every other `OverlayContent` payload: no CoreGraphics, no
+/// geo→pixel. The card is frame chrome, not a map annotation — it is drawn in the
+/// band the title card has just vacated and never projected — so unlike
+/// `RecapPhotoDeck` it carries no coordinate.
+///
+/// ## Everything on it is something Kamome actually knows, offline
+///
+/// The region names come from `CountryExtent` (a built-in table — no geocode, no
+/// coordinate leaving the process, `CLAUDE.md` §0); the distance is the crossing
+/// leg's own length; the dates are the app's formatting of two photograph
+/// timestamps.
+///
+/// 🔴 **`FLIGHT TIME` is deliberately absent** (Chiu 2026-09-02). Kamome does not
+/// know when the aircraft left or landed, so it cannot compute one, and printing a
+/// number it does not have is a fabricated record — `CLAUDE.md` rule 5, the same
+/// rule that forbids "Verified Trip".
+public struct RecapJourneyCard: Equatable {
+    /// **The flight number, and it is a constant.**
+    ///
+    /// 🔴 **Never compute this, never vary it, never move it into
+    /// `TrackingConfig.json`.** `THX-9527` is a joke, and it reads as one only
+    /// while it is the same on every film. Derived per trip — from the route, the
+    /// date, anything — it stops being a joke and becomes a claim about a real
+    /// flight, which is exactly the fault `FLIGHT TIME` was removed for. Config is
+    /// for tunables (`CLAUDE.md` rule 7); this must not vary, so it is not one.
+    public static let flightNumber = "THX-9527"
+
+    /// One end of the flight, named twice.
+    ///
+    /// **English over the local name** (TAIWAN / 台灣): a boarding pass is an
+    /// English artefact, and the second line is the traveller's own language.
+    /// `local` is nil when the system returns the same string for both — one name
+    /// printed twice reads as a bug, not as a bilingual card.
+    public struct Region: Equatable {
+        public let english: String
+        public let local: String?
+
+        public init(english: String, local: String?) {
+            self.english = english
+            self.local = local == english ? nil : local
+        }
+    }
+
+    public let from: Region
+    public let to: Region
+    /// The **flight's** length, and the only place in the film a flown kilometre
+    /// appears (Chiu 2026-09-02). Every other surface — HUD, title subtitle, end
+    /// card — counts the local journey only. Labelled as the flight on the card so
+    /// the two numbers can never be read as the same quantity.
+    public let distanceM: Double
+    /// The last photograph before the flight and the first after it, formatted by
+    /// the app. nil prints the distance row without dates rather than inventing
+    /// them — see `RecapTrip.crossingDates`.
+    public let dates: RecapTrip.CrossingDates?
+    /// 0…1 across the crossing beat: how far along its dotted arc the aircraft
+    /// printed on the card has travelled. The card is the beat's own clock.
+    public let progress: Double
+    /// 0…1 fade, so the pass arrives and leaves rather than cutting in.
+    public let opacity: Double
+
+    public init(
+        from: Region, to: Region, distanceM: Double,
+        dates: RecapTrip.CrossingDates?, progress: Double, opacity: Double
+    ) {
+        self.from = from
+        self.to = to
+        self.distanceM = distanceM
+        self.dates = dates
+        self.progress = progress
+        self.opacity = opacity
+    }
+}
+
 /// A revealed stretch of trail: the part of one `RecapTrip.Leg` the subject has
 /// already covered, carrying that leg's mode and provenance so the renderer can
 /// stroke it honestly. Pure data — the renderer projects and styles it.
@@ -177,6 +253,10 @@ public enum OverlayContent: Equatable {
     case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?, opacity: Double)
     /// The enlarged photo deck at a stop.
     case photoDeck(RecapPhotoDeck)
+    /// **The boarding pass, during the crossing beat and nowhere else** (Chiu
+    /// 2026-09-02). See `RecapJourneyCard` for what is on it and what is
+    /// deliberately not.
+    case journeyCard(RecapJourneyCard)
     /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
     /// and how far the journey has come, in the frame's top corners, for the whole
     /// body of the film — driving as well as stopped.

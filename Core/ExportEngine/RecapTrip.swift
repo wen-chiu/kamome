@@ -183,6 +183,34 @@ public struct RecapTrip {
     /// unchanged the day the share URL exists (spec P6/P7).
     public let shareURL: String?
 
+    /// **The two dates the Journey Card prints** — the last photograph taken
+    /// before the crossing and the first taken after it (Chiu 2026-09-02).
+    ///
+    /// **Formatted copy, not `Date`s**, which is the convention every other
+    /// string here follows (`subtitle`, `statsLines`, `Stop.dayLabel`):
+    /// localization lives in the app layer and never enters `KamomeExportEngine`.
+    /// A `Date` would drag date formatting — and a locale — into the renderer.
+    ///
+    /// **nil is a real answer and the card honours it.** Kamome has no departure
+    /// or arrival *time* and never prints one (`CLAUDE.md` rule 5); when it does
+    /// not have the dates either — no crossing, or photographs with no `taken_at`
+    /// — the pass prints its distance row without them rather than inventing a
+    /// date to fill the space.
+    public let crossingDates: CrossingDates?
+
+    /// The two dates, as the app formatted them.
+    public struct CrossingDates: Equatable {
+        /// The last photograph before the flight.
+        public let departure: String
+        /// The first photograph after it.
+        public let arrival: String
+
+        public init(departure: String, arrival: String) {
+            self.departure = departure
+            self.arrival = arrival
+        }
+    }
+
     /// Whether routing answered — with any of its three verdicts — for **every**
     /// leg of this trip.
     ///
@@ -212,6 +240,7 @@ public struct RecapTrip {
         statsLines: [String],
         callToAction: String,
         shareURL: String? = nil,
+        crossingDates: CrossingDates? = nil,
         everyLegRoutabilityEstablished: Bool = false
     ) {
         self.legs = legs
@@ -221,6 +250,7 @@ public struct RecapTrip {
         self.statsLines = statsLines
         self.callToAction = callToAction
         self.shareURL = shareURL
+        self.crossingDates = crossingDates
         self.everyLegRoutabilityEstablished = everyLegRoutabilityEstablished
     }
 

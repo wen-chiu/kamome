@@ -253,6 +253,7 @@ final class RecapDemoFilmTests: XCTestCase {
             rawPhotoCounts: selections.rawPhotoCounts,
             favoriteCounts: selections.favoriteCounts,
             weighting: config,
+            photos: detail.photos,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(detail.segments)
         ))

@@ -375,6 +375,12 @@ public struct RecapStyle {
     /// Pin → name, and name group → card, inside the stop group.
     public var labelPinGapPx: CGFloat = 16
 
+    /// **The Journey Card's own tokens** — the boarding pass the crossing carries
+    /// (Chiu 2026-09-02). A nested value rather than twenty more properties here:
+    /// this file was at its 400-line budget, and the pass is one object with one
+    /// look. See `RecapJourneyCardStyle`.
+    public var journeyCard = RecapJourneyCardStyle()
+
     /// `--route: #FF8A5B` — the prototype's single warm accent, shared by the
     /// trail's brand colour, the active progress dot and the stop's strap line,
     /// so the film has one accent rather than three near-misses.

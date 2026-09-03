@@ -302,6 +302,8 @@ final class LinearTimelineTests: LinearTimelineTestCase {
                 case let .stopLabel(_, _, _, opacity): return String(format: "label(o%.2f)", opacity)
                 case let .photoDeck(deck):
                     return String(format: "deck(f%d,r%.2f,o%.2f)", deck.focusIndex, deck.reveal, deck.opacity)
+                case let .journeyCard(card):
+                    return String(format: "pass(p%.2f,o%.2f)", card.progress, card.opacity)
                 case .titleChrome: return "title"
                 case .endChrome: return "end"
                 case let .hud(day, place, travelledM):
