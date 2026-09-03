@@ -2810,3 +2810,26 @@ to touch.
 **Not decided:** whether `current-state.md` should stop naming a PR at all and
 name a commit instead. A commit is exact but unreadable in a document people scan;
 a PR number is legible and one-behind. Left as is, deliberately.
+
+### Correction, 2026-09-03 — the check demanded equality, which is the defect this entry describes
+
+**The check shipped with the bug its own entry documents.** §1 above establishes
+that the line can never name the PR containing it, and then
+`check-staleness.sh` was written to require `claimed == newest`. It went red on
+`main` the moment PR #32 merged, and would have stayed red **permanently**: any
+PR bumping the number becomes a newer PR and re-breaks it.
+
+That is not a strictness preference, it is a broken gate. `CLAUDE.md` says done
+means `./check.sh` is green — so a check that cannot be green on `main` makes the
+definition of done unsatisfiable, and a permanently red gate is the thing that
+teaches everyone to ignore red. It also forced every concurrent branch to edit
+the same line, which is precisely the single conflict PR #32 hit.
+
+**Corrected:** one merged PR after the named one is the floor and passes; **two
+or more is drift and fails.** That still catches the only real violation in the
+history — PR #28 changed the ledger and left the line at #26 while `main` carried
+#28. Counted rather than subtracted, because PR numbers skip when a PR is closed
+unmerged, so "#31 vs #32" says nothing on its own.
+
+**The residual, stated rather than hidden:** drift can reach two before it
+fails, and it self-corrects on the next PR.
