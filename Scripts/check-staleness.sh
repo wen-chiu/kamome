@@ -13,15 +13,24 @@
 # and that is correct, not stale. Every governance PR in the history shows it:
 # #20 named #16, #27 named #26, #29 named #28.
 #
-# That is why this runs on the BRANCH, before the merge, where the rule is
-# exactly satisfiable: `gh pr list --state merged` does not yet include the PR
-# being checked, so the newest merged PR is precisely what the line should name.
-# Evaluated retroactively on `main` it would be unsatisfiable, and a check that
-# cannot pass gets disabled — which is how this rule would have failed a fourth
-# time.
+# So ONE merged PR after the named one is allowed, and two or more is a failure.
 #
-# Two behind is a real failure, and it is the one that actually happened: PR #28
-# changed the ledger without re-syncing the line.
+# ⚠️ **The first version of this check demanded equality, and that was a defect
+# — mine, and the same one this file documents.** It went red on `main` the
+# moment it merged, and would have stayed red forever: any PR bumping the number
+# becomes a newer PR and re-breaks it. `CLAUDE.md` says done means `./check.sh`
+# is green, so a check that cannot be green on `main` makes the definition of
+# done unsatisfiable and teaches everyone to ignore red. It also forced every
+# concurrent branch to edit the same line, which is exactly the conflict PR #32
+# hit.
+#
+# Two behind is the real failure, and it is the one that actually happened: PR
+# #28 changed the ledger without re-syncing the line, leaving the line at #26
+# while `main` carried #28.
+#
+# Counted, not subtracted: PR numbers skip (a PR can be closed unmerged), so
+# "#31 vs #32" says nothing on its own. What matters is how many PRs merged
+# after the one named.
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 cd "$(dirname "$0")/.."
@@ -56,21 +65,25 @@ if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
   exit $((failures > 0 ? 1 : 0))
 fi
 
-newest_pr=$(gh pr list --state merged --limit 1 --json number --jq '.[0].number' 2>/dev/null)
-if [ -z "$newest_pr" ]; then
+merged=$(gh pr list --state merged --limit 50 --json number --jq '.[].number' 2>/dev/null)
+if [ -z "$merged" ]; then
   kamome_info "PR HALF DID NOT RUN — gh could not list merged pull requests."
   exit $((failures > 0 ? 1 : 0))
 fi
 
-if [ "$claimed_pr" -eq "$newest_pr" ]; then
-  kamome_ok "current-state is synced to the newest merged PR (#$newest_pr)"
-elif [ "$claimed_pr" -gt "$newest_pr" ]; then
+newest_pr=$(printf '%s\n' "$merged" | head -1)
+since=$(printf '%s\n' "$merged" | awk -v c="$claimed_pr" '$1 > c' | wc -l | tr -d '[:space:]')
+
+if [ "$claimed_pr" -gt "$newest_pr" ]; then
   # Naming an unmerged PR is a different mistake, and a worse one: it reads as
   # synced while pointing at something that may never land.
   kamome_fail "current-state names PR #$claimed_pr, which is not merged (newest is #$newest_pr)"
   failures=$((failures + 1))
+elif [ "$since" -le 1 ]; then
+  kamome_ok "current-state is synced to PR #$claimed_pr ($since merged since; 1 is the floor)"
 else
-  kamome_fail "current-state names PR #$claimed_pr; #$newest_pr has merged since"
+  kamome_fail "current-state names PR #$claimed_pr; $since PRs have merged since (newest #$newest_pr)"
+  kamome_info "One behind is expected. $since is drift."
   kamome_info "Re-read HANDOFF.md and Docs/decisions.md, update Active work and"
   kamome_info "Blockers to match, THEN set the line to #$newest_pr. Bumping only the"
   kamome_info "number is the failure this check exists to catch."

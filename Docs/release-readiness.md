@@ -40,7 +40,7 @@ needs a machine with Xcode).
 | the suite has not silently shrunk (baseline 404) | `check-test-count.sh` |
 | **`current-state.md`'s "Last synced" line names the newest ADR and the newest merged PR** — on the branch, where the rule is satisfiable | `check-staleness.sh` **(new 2026-09-02, PR #30)** |
 | **no config key loses its last consumer** — 3 known-dead are baselined, a 4th fails the build | `check-dead-config.sh` **(new 2026-09-02)** |
-| **`Docs/current-state.md` is synced** to the newest ADR — offline, everywhere. ⚠️ Its **PR half runs locally only**: `gh` is unauthenticated on the CI runner, so CI prints `PR HALF DID NOT RUN` (VERIFIED on run 33632648596). One `GH_TOKEN` line in the workflow would close it. | `check-staleness.sh` **(new 2026-09-02)** |
+| **`Docs/current-state.md` is synced** to the newest ADR — offline, everywhere — and is **at most one merged PR behind**, one being the structural floor. ⚠️ Its **PR half runs locally only**: `gh` is unauthenticated on the CI runner, so CI prints `PR HALF DID NOT RUN` (VERIFIED on run 33632648596). One `GH_TOKEN` line in the workflow would close it. | `check-staleness.sh` **(new 2026-09-02)** |
 | style, and the build, and the tests | `swiftlint --strict`, `xcodebuild test` |
 
 **These need no attention from anyone.** That is the point of them, and it is the
