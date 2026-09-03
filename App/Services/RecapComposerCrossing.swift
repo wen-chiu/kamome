@@ -33,15 +33,26 @@ extension RecapComposer {
     /// re-deriving the whole figure from display geometry would quietly change
     /// what the number *is* — simplified, snapped display polyline rather than
     /// what was travelled — while looking like the same fix.
+    ///
+    /// 🔴 **`Geo.distanceM`, and it must stay `Geo.distanceM`** — the
+    /// equirectangular one, even though the Journey Card prints the flight with
+    /// `Geo.greatCircleM`. `TripStats.compute` builds `distanceM` by summing
+    /// `Geo.distanceM` over the trackpoints, so **that is the measure this total
+    /// is in**, and subtracting a great-circle flight from an equirectangular
+    /// total mixes two rulers. Measured 2026-09-03 on `auckland-crossing`: doing
+    /// so puts **148 km** on both cards where the journey is **269 km**.
+    ///
+    /// The pass is a different question and gets the other answer, deliberately:
+    /// it *prints a distance*, so it owes the true geodesic (`greatCircleM`,
+    /// 8,876 km here); this *removes a contribution from a total*, so it owes the
+    /// measure that total was built with (8,755 km here). Same flight, two rulers,
+    /// each used where it is correct. **Nothing in the film shows both**, so a
+    /// viewer is never handed two numbers that fail to add up.
     static func localDistanceM(stats: TripStats?, legs: [RecapTrip.Leg]) -> Double? {
         guard let stats else { return nil }
         let flown = legs.filter(\.isCrossing).reduce(0.0) { total, leg in
             total + zip(leg.coordinates, leg.coordinates.dropFirst()).reduce(0.0) { run, pair in
-                // The **same** function the Journey Card measures the flight with
-                // (`LinearTimeline.crossingDistanceM`). These are two halves of
-                // one figure — what comes off the odometer and what the pass
-                // prints — and computing them two ways is how they drift.
-                run + Geo.greatCircleM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
+                run + Geo.distanceM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
             }
         }
         return max(stats.distanceM - flown, 0)

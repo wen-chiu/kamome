@@ -192,6 +192,14 @@ final class RecapJourneyCardTests: XCTestCase {
         let (line, trip, config) = (made.line, made.trip, made.config)
         let flownM = try XCTUnwrap(cards(in: line, fps: config.fps).last?.card.distanceM)
 
+        func flown(_ measure: (Double, Double, Double, Double) -> Double) -> Double {
+            trip.legs.filter(\.isCrossing).reduce(0.0) { total, leg in
+                total + zip(leg.coordinates, leg.coordinates.dropFirst()).reduce(0.0) { run, pair in
+                    run + measure(pair.0.lat, pair.0.lon, pair.1.lat, pair.1.lon)
+                }
+            }
+        }
+
         func odometer(atTime timeS: Double) -> Double? {
             for overlay in line.overlayContents(atTime: timeS) {
                 if case let .hud(_, _, travelledM) = overlay { return travelledM }
@@ -212,21 +220,21 @@ final class RecapJourneyCardTests: XCTestCase {
             ending, flownM / 10,
             "the end of the film must read the local journey, not 97% flight"
         )
-        // **And the two cards subtract exactly what the pass prints.** These are
-        // two halves of one figure — what comes off the recorded distance and
-        // what the boarding pass claims the flight was — and they are computed in
-        // two modules. 🔴 They were 121 km apart until 2026-09-03, because the
-        // card measured with the camera's equirectangular `Geo.distanceM` over an
-        // 8,755 km diagonal. Both are `Geo.greatCircleM` now, and this is the
-        // assertion that stops them parting again.
-        let recorded = flownM + 269_000
-        let localM = try XCTUnwrap(RecapComposer.localDistanceM(
-            stats: TripStats(distanceM: recorded, driveS: 0, walkS: 0, stopCount: 0, topSpeedKmh: 0),
-            legs: trip.legs
-        ))
+        // **The two cards subtract on the ruler their own total was built with.**
+        // 🔴 The subtlety that cost a measurement on 2026-09-03: `TripStats`
+        // sums `Geo.distanceM`, the equirectangular one, so the flight has to come
+        // off it the same way. Subtracting the *pass's* great-circle figure
+        // instead — which is 121 km longer over this diagonal, and is the right
+        // number to print — puts 148 km on both cards where the journey is 269.
+        // Same flight, two rulers, each where it is correct.
+        let stats = TripStats(
+            distanceM: flown { Geo.distanceM(latA: $0, lonA: $1, latB: $2, lonB: $3) } + 269_000,
+            driveS: 0, walkS: 0, stopCount: 0, topSpeedKmh: 0
+        )
+        let localM = try XCTUnwrap(RecapComposer.localDistanceM(stats: stats, legs: trip.legs))
         XCTAssertEqual(
             localM, 269_000, accuracy: 1,
-            "the flight the cards remove must be the flight the pass prints, to the metre"
+            "the cards must report the local journey, not a figure two rulers wide of it"
         )
     }
 
