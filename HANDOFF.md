@@ -83,7 +83,7 @@ first at low latitudes. **Taiwan→Iceland fails at every padding**, so the froz
 country card is a **main path**.
 
 🔴 Three handed over: **the wide flight frame loses the viewer** at long haul
-(mirror of `handoff-P3.5.md` §"Map reference labels"; threshold stays 70 and is
+(mirror of `_archive/handoff-P3.5.md` §"Map reference labels"; threshold stays 70 and is
 probably wrong — **Chiu is deciding**); **a union-derived sweep is owed** (the end
 reveal was the third such quantity, after the body span and beat 2); and
 **`subject_length_px` is absolute while the frame span moves 20×**.
@@ -134,10 +134,10 @@ loudly. The name is available offline via `Locale.localizedString(forRegionCode:
 done. → `Docs/handoff-crop-scaling.md` §11, §14.
 
 ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
-`Docs/camera-arcs.md` §5 and `Docs/handoff-camera-arc-findings.md` finding 5 both
-say the pan floor is the mechanism. **It is false**: across six `establishing`
-configurations the ratio is `target_zoom_ratio` in every one, so the floor binds
-**nowhere**. **Two documents still state the superseded premise.**
+`Docs/camera-arcs.md` §5 and `_archive/handoff-camera-arc-findings.md` finding 5
+both say the pan floor is the mechanism. **It is false**: across six
+`establishing` configurations the ratio is `target_zoom_ratio` in every one, so
+the floor binds **nowhere**. **Two documents still state the superseded premise.**
 → `Docs/handoff-cross-region-crossing.md` finding 1.
 
 ---
@@ -211,8 +211,8 @@ not cite "provably contained"**.
 
 ## ⚠️ Traps — read before you touch these
 
-**Two render traps moved to `Docs/_archive/handoff-2026-08.md` on 2026-09-02** and
-both still bite: a worktree renders a different film (`Config/Secrets.xcconfig` and
+**Two render traps are in `Docs/_archive/handoff-2026-08.md`** and both still
+bite: a worktree renders a different film (`Config/Secrets.xcconfig` and
 `Tests/Fixtures/trips/local/` are gitignored), and there is **no** render length
 limit — the SIGKILLs were six `xcodebuild` processes on one simulator, so
 `pgrep -fl xcodebuild` first and render one at a time.
@@ -284,7 +284,7 @@ it is in `Docs/_archive/handoff-2026-08.md`, "Resolving older citations".
 | `Docs/handoff-type2-films.md` | the type-2 film, what MapKit can frame, the closeout |
 | `Docs/handoff-type2-opening-retime.md` | the retime, the boarding pass, the measured numbers |
 | `Docs/handoff-marker-badge.md` | the fallback badge and the gaps it left |
-| `Docs/handoff-camera-arc-findings.md` | working analysis behind `camera-arcs.md` — **nothing settled** |
+| `_archive/handoff-camera-arc-findings.md` | working analysis behind `camera-arcs.md` — **nothing settled** |
 | `Docs/handoff-pacing.md` | film duration and travel pacing |
 | `Docs/handoff-subject-lookup.md` | the silent subject fallback |
 | `Docs/handoff-stop-weighting.md` | the removal criterion |

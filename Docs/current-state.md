@@ -3,14 +3,15 @@
 A compact snapshot of the project TODAY. This is an **index**, not a fourth
 source of truth: every claim carries a pointer, and the pointed-at document wins
 on detail. Created 2026-08-21 by the documentation-governance pass
-(`Docs/_audit/audit-2026-08-21.md`).
+(`Docs/_archive/audit-2026-08-21.md`).
 
 ## Staleness protocol
 
 Last synced: 2026-09-03 against decisions.md **2026-09-03** and `main` at
-**PR #33**. Re-synced by the S2/S3 engineering session, which re-read the ledger
-and `HANDOFF.md` and rewrote *Active work* — the type-2 line and the pre-launch
-line — to match what #30 and #31 landed.
+**PR #35**. Re-synced by the type-2 opening-retime session, which re-read the
+ledger tail, every `HANDOFF.md` line and every *Blockers* line: *Active work*
+gains the retime, *Blockers* gains the `Geo.distanceM` finding, and the
+`crossing_beat_s` 6.0 claim was corrected wherever it appeared.
 
 ✅ **This is checked now, not remembered** — `Scripts/check-staleness.sh`, in
 every `./check.sh` run (ADR 2026-09-02 (b)).
@@ -272,7 +273,7 @@ history. Trimmed 2026-09-01.*
 - The duration rule's candidate formula; the travel-pacing tunable
   (`Docs/handoff-pacing.md` — experiments, nothing decided).
 - Per-act / per-segment camera framing (rejected 2026-08-02; see
-  `Docs/handoff-camera-arc-findings.md` finding 5 for the one sanctioned
+  `Docs/_archive/handoff-camera-arc-findings.md` finding 5 for the one sanctioned
   derivation change).
 - iCloud original fetching (option B); "Place names as narrative rhythm"
   (`Docs/icebox.md`).
