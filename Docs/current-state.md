@@ -7,10 +7,11 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-09-02 against decisions.md **2026-09-02 (b)** and `main` at
-**PR #31**. Re-synced by the S2/S3 engineering session, which re-read the ledger
-and `HANDOFF.md` and rewrote *Active work* — the type-2 line and the pre-launch
-line — to match what #30 and #31 landed.
+Last synced: 2026-09-03 against decisions.md **2026-09-02 (b)** and `main` at
+**PR #33**. Re-read for this sync: `HANDOFF.md`, the ledger tail, and every
+*Blockers* line — *Active work* was already current from PR #32's sync, and all
+six blockers were re-confirmed true (the two-sessions one first-hand, during
+PR #33's own check run).
 
 ✅ **This is checked now, not remembered** — `Scripts/check-staleness.sh`, in
 every `./check.sh` run (ADR 2026-09-02 (b)).
