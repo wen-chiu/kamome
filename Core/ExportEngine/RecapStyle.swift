@@ -375,6 +375,15 @@ public struct RecapStyle {
     /// Pin → name, and name group → card, inside the stop group.
     public var labelPinGapPx: CGFloat = 16
 
+    /// **The mark on each end of the flight**, drawn over the opening's still
+    /// frame (Chiu 2026-09-04) — its drawn length at the 1080 reference width.
+    ///
+    /// Identity, so it is a style token and not a `TrackingConfig` key. Larger
+    /// than the stop pin it stands beside in the film's other beats, because at
+    /// 8,891 km it is the only thing on the frame saying *here* — and smaller
+    /// than the subject, which is the thing that moves.
+    public var flightEndMarkLengthPx: CGFloat = 92
+
     /// **The Journey Card's own tokens** — the boarding pass the crossing carries
     /// (Chiu 2026-09-02). A nested value rather than twenty more properties here:
     /// this file was at its 400-line budget, and the pass is one object with one

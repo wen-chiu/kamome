@@ -81,6 +81,10 @@ public struct LinearTimeline {
     /// not a type-2 opening, and nil when `CountryExtent` cannot name both ends —
     /// see `journeyCard(trip:locale:)`.
     let journeyCard: RecapJourneyCard?
+    /// The flight's two ends, for the marks drawn over the opening. **Kept apart
+    /// from `journeyCard`**: a mark needs no country name, so an end the table
+    /// cannot name still gets one (`flightEnds(atTime:)`).
+    let flightEndCoordinates: (origin: RecapCoordinate, destination: RecapCoordinate)?
     /// How long the card takes to arrive and to leave, each. **`deck_zoom_s`
     /// deliberately reused**: it is the film's one "a card arrives" ramp, and a
     /// second tunable saying the same thing is a number nobody could reason about
@@ -220,14 +224,14 @@ public struct LinearTimeline {
         // disagree on any path with `openingS == 0` (fixed pacing, golden
         // frames) — a reporter contradicting the thing it reports on, which is
         // the shape of defect this project keeps finding one film at a time.
-        let onTheFlight = flightFrame != nil && path.openingS > 0
-        opensOnTheFlight = onTheFlight
+        opensOnTheFlight = flightFrame != nil && path.openingS > 0
         cardFadeS = config.deckZoomS
         // **Only a type-2 opening carries a pass.** Gated on the camera's own
         // condition rather than on "has a crossing": a body crossing in some later
         // film would otherwise get a boarding pass in the middle of a road trip,
         // and this round is type-2 only.
-        journeyCard = onTheFlight ? Self.journeyCard(trip: trip, locale: locale) : nil
+        flightEndCoordinates = opensOnTheFlight ? RecapTypeTwoFilm.crossingEnds(trip) : nil
+        journeyCard = flightEndCoordinates == nil ? nil : Self.journeyCard(trip: trip, locale: locale)
     }
 
     /// When the subject first appears, and the two sequences that decide it
@@ -310,6 +314,9 @@ public struct LinearTimeline {
                 opacity: quietLabelOpacity(atTime: time, hold: quiet.hold)
             ))
         }
+        // Under the card and under everything else: the two ends are the ground
+        // the opening is read against, not chrome over it.
+        if let ends = flightEnds(atTime: time) { contents.insert(ends, at: 1) }
         if let card = journeyCardContent(atTime: time) {
             contents.append(.journeyCard(card))
         }

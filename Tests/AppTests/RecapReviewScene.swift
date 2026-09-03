@@ -148,10 +148,14 @@ struct RecapReviewScene {
     /// and `plane` is already `selectable: false` in `vehicles.json` — reserved
     /// for exactly this and never offered to a user as a trip subject.
     ///
-    /// Env rather than a config key, for the reason every other review override
-    /// here is: the question *which* sprite is still open (session 2 builds the
-    /// classifier), and a config key would ship an answer to a question still
-    /// being asked.
+    /// ⚠️ **Stale since ADR 2026-09-04, and corrected here rather than left.**
+    /// This used to say *"the question which sprite is still open"*. It is not,
+    /// for the crossing that carries a boarding pass: that one flies a
+    /// `VehicleCatalog.planeSubjectId`, decided by the same condition that draws
+    /// the card. What is still open is every *other* crossing — the seagull is
+    /// the answer to "we could not classify this", and the classifier is still
+    /// session 2's. The env override stays because a still sweep wants to vary
+    /// the sprite without a config edit, not because the answer is unknown.
     private static func crossingRenderer(
         style: RecapStyle, config: TrackingConfig.Export
     ) -> VehicleSubjectRenderer {

@@ -101,6 +101,15 @@ final class RecapJourneyCardTests: XCTestCase {
         // boarding pass prints (Chiu 2026-09-02).
         XCTAssertEqual(card.from.english, "TAIWAN")
         XCTAssertEqual(card.to.english, "NEW ZEALAND")
+        // 🔴 The second line is the viewer's own language, and it is **absent**
+        // when that is English — the card would otherwise print TAIWAN over
+        // Taiwan, one name twice. Caught in a render, not by reasoning.
+        XCTAssertNil(card.from.local, "an en_US viewer must not be shown the same name twice")
+        XCTAssertNil(card.to.local)
+        XCTAssertEqual(
+            RecapJourneyCard.Region(english: "JAPAN", local: "日本").local, "日本",
+            "a genuinely different local name is still carried"
+        )
         XCTAssertEqual(RecapJourneyCard.flightNumber, "THX-9527", "the flight number is a constant")
 
         // The card's distance is the **flight**, and it is the one flown figure in
@@ -238,6 +247,84 @@ final class RecapJourneyCardTests: XCTestCase {
         )
     }
 
+    // MARK: - 5/6. The plane, and the two marks on the ends
+
+    /// **One condition decides the pass and the airframe** (ADR 2026-09-04).
+    ///
+    /// Asserted as the *pairing* rather than as "a plane is drawn": the film
+    /// prints FROM/TO/THX-9527 and a distance labelled as the flight, so the
+    /// frame that carries a boarding pass must not carry a seagull. What flies
+    /// every *other* crossing is unchanged and still the seagull.
+    func testTheCrossingThatCarriesAPassIsTheCrossingThatFliesAPlane() async throws {
+        let made = try await film(Self.crossing)
+        let (line, config) = (made.line, made.config)
+        let beat = try XCTUnwrap(line.path.crossingBeatWindowsS.first)
+
+        XCTAssertEqual(VehicleCatalog.planeSubjectId, "plane", "plane, not plane-3d (Chiu 2026-09-04)")
+        XCTAssertEqual(
+            VehicleCatalog.crossingSubjectId, "seagull",
+            "the seagull is still the answer to an unclassified crossing — requirement 4 stands"
+        )
+        // Both sets are crossing art, never a trip subject a user may pick.
+        for id in [VehicleCatalog.planeSubjectId, VehicleCatalog.crossingSubjectId] {
+            XCTAssertNotNil(VehicleCatalog.resolve(id: id), "\(id) must resolve — the sprite set ships")
+        }
+        XCTAssertFalse(
+            VehicleCatalog.selectableSubjects.contains { $0.id == VehicleCatalog.planeSubjectId },
+            "the plane is crossing art, never offered as a trip subject"
+        )
+
+        // The pairing, frame by frame: pass on screen ⟺ the subject is crossing.
+        for frame in 0..<line.frameCount {
+            let timeS = Double(frame) / Double(config.fps)
+            let hasPass = line.journeyCardContent(atTime: timeS) != nil
+            guard hasPass else { continue }
+            XCTAssertEqual(
+                line.subjectState(atTime: timeS).role, .crossing,
+                "at \(timeS)s the film shows a boarding pass over a subject that is not crossing"
+            )
+        }
+        XCTAssertNotNil(line.journeyCardContent(atTime: (beat.lowerBound + beat.upperBound) / 2))
+    }
+
+    /// **Here, and there** — two marks over the opening's still frame, and the
+    /// origin never drawn on top of the departure stop's own pin.
+    func testTheFlightsTwoEndsAreMarkedOverTheOpeningAndNowhereElse() async throws {
+        let made = try await film(Self.crossing)
+        let (line, config) = (made.line, made.config)
+        let beat = try XCTUnwrap(line.path.crossingBeatWindowsS.first)
+
+        func ends(atTime timeS: Double) -> (origin: RecapCoordinate?, destination: RecapCoordinate)? {
+            for overlay in line.overlayContents(atTime: timeS) {
+                if case let .flightEnds(origin, destination, opacity) = overlay, opacity > 0.001 {
+                    return (origin, destination)
+                }
+            }
+            return nil
+        }
+
+        // From the very first frame — the marks are what the title card is held
+        // over, and step 1 of the storyboard is "出發地畫面".
+        XCTAssertNotNil(ends(atTime: 0), "the opening's first frame must already say here and there")
+        XCTAssertNotNil(ends(atTime: (beat.lowerBound + beat.upperBound) / 2))
+        // Gone once the aircraft has landed and the camera has closed in: these
+        // belong to the flight frame, never to the destination's local trip.
+        XCTAssertNil(
+            ends(atTime: beat.upperBound + config.zoomTransitionS + 1),
+            "the marks must not survive into the local journey"
+        )
+        XCTAssertNil(ends(atTime: line.durationS - 0.1), "nor reappear for the end card")
+
+        // 🔴 Exactly one mark on the departure point, ever. The stop's own pin and
+        // this mark are the same place, so the origin yields while the stop holds.
+        let duringDeparture = try XCTUnwrap(ends(atTime: config.titleCardS + 0.5))
+        XCTAssertNil(
+            duringDeparture.origin,
+            "the departure stop's pin and the origin mark are the same point — only one may be drawn"
+        )
+        XCTAssertNotNil(duringDeparture.destination, "the destination still says 'there' throughout")
+    }
+
     // MARK: - 1. The departure airport, and the type-1 control
 
     func testTheDepartureAirportShowsAtMostTheConfiguredPhotographs() async throws {
@@ -272,6 +359,15 @@ final class RecapJourneyCardTests: XCTestCase {
         XCTAssertFalse(line.opensOnTheFlight, "the control must not be a type-2 film")
         XCTAssertTrue(trip.legs.allSatisfy { !$0.isCrossing }, "the control has no crossing")
         XCTAssertTrue(cards(in: line, fps: config.fps).isEmpty, "a local film has no boarding pass")
+        // And no flight marks: the two additions of 2026-09-04 are gated on
+        // `opensOnTheFlight`, and this is the measurement that says so.
+        for frame in stride(from: 0, to: line.frameCount, by: config.fps / 2) {
+            for overlay in line.overlayContents(atTime: Double(frame) / Double(config.fps)) {
+                if case .flightEnds = overlay {
+                    XCTFail("a local film drew a flight-end mark at frame \(frame)")
+                }
+            }
+        }
 
         // Every leg is drawn for the whole film, and the odometer is the whole
         // route — with no crossing, local distance and route distance are the

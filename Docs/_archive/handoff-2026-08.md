@@ -862,6 +862,66 @@ Moved from `HANDOFF.md` for budget once every item had a row in
 > pointer to a topic document.
 >
 
+## ✅ CLOSED — the shake's two remainders, in full (moved 2026-09-04)
+
+Compressed to three lines in `HANDOFF.md` for budget. As they stood:
+
+> - ⏳ The **0.747 sharpness step at hold boundaries** is accepted as it stands, not
+>   fixed. §7's remedy is not built. Revisit only if someone notices it in a film.
+> - ⚠️ **`keyframe_interval_frames` is dead config, one of three.**
+>   → `Docs/release-readiness.md` C1, C2.
+
+## ✅ CLOSED — the 2026-09-02 PO/architecture findings, in full (moved 2026-09-04)
+
+All four live in `Docs/release-readiness.md`, which is the gate; `HANDOFF.md`
+keeps a pointer. As they stood:
+
+> The 2026-09-02 session's four findings live there in full — S2/S3 (attribution
+> and the privacy notice, **built**, wording still Chiu's), S3b (the recorded-leg
+> payload row is stale and now gated), C1 (**three** dead config keys, and
+> `total_duration_max_s` is the dangerous one) and C2 (the export estimate,
+> 0.79 s/snapshot).
+
+
+## ✅ The type-2 form's mechanics and its handover list (moved 2026-09-04)
+
+Compressed in `HANDOFF.md`; `Docs/handoff-type2-films.md` is the topic document
+and remains authoritative. As they stood:
+
+> The type is **derived, never stored**, and **monotonic**: an unrouted leg can
+> only *add* a local journey, so a confirmed crossing means at least a type 2.
+> ⚠️ `>= 2 ⇒ the type-2 form` holds only while type 3 is deferred, and the same
+> trip yields different films on different days — sharpening ADR 2026-08-15's
+> unmet export record.
+>
+> 🔴 Three handed over: **the wide flight frame loses the viewer** at long haul
+> (mirror of `handoff-P3.5.md` §"Map reference labels"; threshold stays 70 and is
+> probably wrong — Chiu is deciding); **a union-derived sweep is owed** (the end
+> reveal was the third such quantity, after the body span and beat 2); and
+> **`subject_length_px` is absolute while the frame span moves 20×**.
+>
+> A 9:16 frame runs off the poles first at low latitudes.
+
+
+## The pan-floor conflict and the country table, in full (moved 2026-09-04)
+
+Both still live; compressed in `HANDOFF.md` for budget. As they stood:
+
+> ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
+> `Docs/camera-arcs.md` §5 and `handoff-camera-arc-findings.md` finding 5 both
+> say the pan floor is the mechanism. **It is false**: across six `establishing`
+> configurations the ratio is `target_zoom_ratio` in every one, so the floor
+> binds **nowhere**.
+>
+> ### The country table has six rows; the title card has no country name yet
+> `CountryExtent` is a built-in table — Chiu chose it over MapKit/`CLGeocoder`,
+> so **no new §0 exception**. **A country whose single box would be a lie is left
+> out, not approximated** (the US spans Alaska to Florida); unknown countries
+> fall back loudly. The name is available offline via
+> `Locale.localizedString(forRegionCode:)` — **so no persistence change was
+> needed** — but wiring it into the card is not done.
+
+
 # Part 2 — sections moved from `CLAUDE.md`
 
 ## Replay MVP repositioning (spec v1.7, 2026-07-20, Chiu) — READ FIRST

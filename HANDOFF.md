@@ -29,12 +29,9 @@ fault.** Never answer "is this ready?" with a film. **Your half is
 `Docs/release-readiness.md`**, which supersedes `Docs/pre-launch.md` as the gate
 and sorts every obligation by who can settle it.
 
-The 2026-09-02 session's four findings live there in full — S2/S3 (attribution
-and the privacy notice, **built**, wording still Chiu's), S3b (the recorded-leg
-payload row is stale and now gated), C1 (**three** dead config keys, and
-`total_duration_max_s` is the dangerous one) and C2 (the export estimate,
-0.79 s/snapshot). ⚠️ **One is open on purpose:** whether the import flow warns
-*at the point of import* — a screen a user may never open is not a warning.
+The 2026-09-02 session's four findings live there in full: S2/S3, S3b, C1 and C2.
+⚠️ **One is open on purpose:** whether the import flow warns *at the point of
+import* — a screen a user may never open is not a warning.
 
 **No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
 pointer to a topic document.
@@ -44,21 +41,16 @@ pointer to a topic document.
 ## 🔴 Blockers
 
 ### The shake is CLOSED; two things it left are not
-ADRs **2026-08-31**, **2026-08-31 (b)**; detail `Docs/handoff-crop-scaling.md`.
-
-- ⏳ The **0.747 sharpness step at hold boundaries** is accepted as it stands, not
-  fixed. §7's remedy is not built. Revisit only if someone notices it in a film.
-- ⚠️ **`keyframe_interval_frames` is dead config, one of three.**
-  → `Docs/release-readiness.md` C1, C2.
+ADRs **2026-08-31**, **2026-08-31 (b)**. The 0.747 sharpness step at hold
+boundaries is accepted as it stands, and `keyframe_interval_frames` is dead
+config, one of three. → `Docs/handoff-crop-scaling.md`, `release-readiness.md` C1.
 
 ### ⏳ The type-2 film is BUILT and judged — PR #31
 Title card over the flight frame → the aircraft crosses **camera still** → the
 arc closes into the destination → the destination's local trip. The origin's
 drive is dropped, making every type-2 film `Docs/camera-arcs.md` §4 **Case C**.
-The type is **derived, never stored**, and **monotonic**: an unrouted leg can
-only *add* a local journey. ⚠️ `>= 2 ⇒ the type-2 form` holds only while type 3
-is deferred, and the same trip yields different films on different days —
-sharpening ADR 2026-08-15's unmet export record.
+⚠️ The type is derived and **monotonic**, so `>= 2 ⇒ the type-2 form` holds only
+while type 3 is deferred.
 
 ### ⏳ The type-2 opening is RETIMED and the crossing carries a boarding pass
 **ADR 2026-09-03.** `crossing_beat_s` is **4.0, not 6.0** — the 4/6/9 sweep is
@@ -72,21 +64,32 @@ brief's 12.5, which derived from a 3.0 s departure it also forbade hard-coding),
 departure **3.59 s / 2 photographs**, sprite **24.6 %/s**, odometer **269 km**
 where it read 9,024. Films `~/Kamome-films/type2-2026-09-03/`.
 
-🔴 **The boarding pass's layout is engineering's, not the reviewed target** —
-Chiu's 登機證樣式（完整）mockup was never saved beside the film. Content is
-exactly as decided; the arrangement wants his eye.
+**ADR 2026-09-04** then laid the pass out to Chiu's own mockup, gave the crossing
+a **plane** — one condition decides the pass and the airframe; every other
+crossing keeps the seagull — and put two wordless `VehicleMarker.seagull` marks on
+the flight's ends from t=0 to the landing. Those marks answer the closeout's *"the
+wide flight frame loses the viewer"* **with no place name**, so
+`crossing_flight_max_longitude_deg` stays 70 and the icebox stays frozen.
+🔴 **No classifier: a ferry gets the pass and the plane too** — session 2's line,
+unmoved. ⏳ `subject_length_px` untouched on purpose; the plane is as oversized as
+the car was. ⚠️ The mockup's `FLIGHT TIME` is **not** restored (removed by
+decision), and its `#FF6A3D` is knowingly a second accent — flagged, not decided.
+
+🔴 **The review film harness drew a different film for a round.**
+`RecapDemoFilmTests` passed no `crossingSubject:`, which `FrameCompositor` reads
+as "draw the trip's own vehicle" — so `auckland-crossing` drove a **car** across
+the Pacific while the app drew a gull. **`VehicleCatalog` never failed**: the
+subject-lookup miss below is untouched and still unmeasured.
 → `Docs/handoff-type2-opening-retime.md`, `Docs/design-reviews/2026-09-02-cross-region-opening.md`.
 
 🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
-not kilometres.** MapKit saturates at **~109°**; a 9:16 frame runs off the poles
-first at low latitudes. **Taiwan→Iceland fails at every padding**, so the frozen
-country card is a **main path**.
+not kilometres.** MapKit saturates at **~109°**; **Taiwan→Iceland fails at every
+padding**, so the frozen country card is a **main path**.
 
-🔴 Three handed over: **the wide flight frame loses the viewer** at long haul
-(mirror of `_archive/handoff-P3.5.md` §"Map reference labels"; threshold stays 70 and is
-probably wrong — **Chiu is deciding**); **a union-derived sweep is owed** (the end
-reveal was the third such quantity, after the body span and beat 2); and
-**`subject_length_px` is absolute while the frame span moves 20×**.
+🔴 Of the closeout's five handed over, **two are answered** (the wide frame
+2026-09-04, the beat 2026-09-03). Live: a **union-derived sweep is owed**,
+**`subject_length_px` is absolute while the frame span moves 20×**, the **mode
+classifier**, and **the card sums every crossing** (harmless until type 3).
 → `Docs/handoff-type2-films.md` closeout.
 
 ---
@@ -126,18 +129,14 @@ value good?" but **"what was this value tuned against?"**
 → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
 ### The country table has six rows; the title card has no country name yet
-`CountryExtent` is a built-in table — Chiu chose it over MapKit/`CLGeocoder`, so
-**no new §0 exception**. **A country whose single box would be a lie is left out,
-not approximated** (the US spans Alaska to Florida); unknown countries fall back
-loudly. The name is available offline via `Locale.localizedString(forRegionCode:)`
-— **so no persistence change was needed** — but wiring it into the card is not
-done. → `Docs/handoff-crop-scaling.md` §11, §14.
+`CountryExtent` is a built-in table, so **no new §0 exception**, and a country
+whose single box would be a lie is left out rather than approximated. The name is
+available offline — the **boarding pass** now uses it (ADR 2026-09-03) — but the
+*title card* still shows trip title + dates. → `Docs/handoff-crop-scaling.md` §11.
 
 ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
-`Docs/camera-arcs.md` §5 and `_archive/handoff-camera-arc-findings.md` finding 5
-both say the pan floor is the mechanism. **It is false**: across six
-`establishing` configurations the ratio is `target_zoom_ratio` in every one, so
-the floor binds **nowhere**. **Two documents still state the superseded premise.**
+**Two documents still state the superseded premise**; measured, the ratio is
+`target_zoom_ratio` in every configuration and the floor binds nowhere.
 → `Docs/handoff-cross-region-crossing.md` finding 1.
 
 ---

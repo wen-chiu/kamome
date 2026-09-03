@@ -184,9 +184,14 @@ public struct RecapJourneyCard: Equatable {
         public let english: String
         public let local: String?
 
+        /// ⚠️ **Compared case-insensitively**, because `english` arrives
+        /// uppercased for the card and `Locale` returns "Taiwan". The first pass
+        /// compared them raw and printed `TAIWAN` over `Taiwan` on an
+        /// English-locale render — one name twice, which reads as a bug rather
+        /// than as a bilingual card.
         public init(english: String, local: String?) {
             self.english = english
-            self.local = local == english ? nil : local
+            self.local = local?.caseInsensitiveCompare(english) == .orderedSame ? nil : local
         }
     }
 
@@ -257,6 +262,23 @@ public enum OverlayContent: Equatable {
     /// 2026-09-02). See `RecapJourneyCard` for what is on it and what is
     /// deliberately not.
     case journeyCard(RecapJourneyCard)
+    /// **Here, and there** — a Kamome mark on each end of the flight, drawn over
+    /// the opening's still frame only (Chiu 2026-09-04).
+    ///
+    /// The answer to *"地圖放太遠會失去焦點，一開始的畫面會無法明確知道出發地跟
+    /// 目的地"* — at 8,891 km MapKit labels neither city and neither coastline is
+    /// a recognisable silhouette, so the frame is a texture rather than a place
+    /// (`Docs/handoff-type2-films.md` closeout item 1). Two marks say *here* and
+    /// *there* without the base map naming anything.
+    ///
+    /// 🔴 **This does not thaw the map place-names icebox.** What is drawn is a
+    /// wordless Kamome-owned mark, not a label: *where* is answered by the
+    /// boarding pass, *here and there* by these. The icebox stays frozen.
+    ///
+    /// `origin` is nil while the departure stop is presenting itself — its pin
+    /// and this mark are the same point, and exactly one of them is ever drawn
+    /// (see `LinearTimeline.flightEnds`).
+    case flightEnds(origin: RecapCoordinate?, destination: RecapCoordinate, opacity: Double)
     /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
     /// and how far the journey has come, in the frame's top corners, for the whole
     /// body of the film — driving as well as stopped.

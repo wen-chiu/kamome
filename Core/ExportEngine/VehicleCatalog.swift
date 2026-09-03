@@ -82,14 +82,27 @@ public enum VehicleCatalog {
     /// named subject cannot be loaded. A car is a better failure than a dot.
     public static let defaultSubjectId = "car-red"
 
-    /// **What crosses a leg with no road**, when nothing has classified it —
+    /// **What crosses a leg with no road, when nothing has classified it** —
     /// `Docs/cross-region-journeys.md` requirement 4, *"the load-bearing one"*.
     ///
     /// The seagull, because the honest answer to an unmodelled crossing is *we
     /// know you went from here to there; we do not know how*, and that answer has
-    /// to be **cheap and good-looking rather than a failure state**. A plane drawn
-    /// over a ferry route would be a fabrication of exactly the kind PD-1/PD-2
-    /// exist to prevent.
+    /// to be **cheap and good-looking rather than a failure state**.
+    ///
+    /// ⭐ **Requirement 2 came back on 2026-09-04, and this is still the answer
+    /// to requirement 4** (ADR 2026-09-04). A crossing that can draw a **Journey
+    /// Card** is flown by `planeSubjectId` — the card and the airframe are *one
+    /// claim*, made in one place, appearing together and withdrawn together. This
+    /// constant is what everything else gets, and "unmodelled" is exactly what it
+    /// still means.
+    ///
+    /// ⚠️ The sentence that used to stand here — *"a plane drawn over a ferry
+    /// route would be a fabrication"* — was written before the card existed, and
+    /// it read as though a plane could never be drawn. What it was protecting is
+    /// intact and is now stated where it belongs, on `planeSubjectId`: the pass
+    /// and the plane are the same claim, so a route that cannot honestly carry
+    /// the pass does not get the plane either. 🔴 **Today that guarantee is not a
+    /// classifier**, and the boundary is written on `planeSubjectId`. Read it.
     ///
     /// ⚠️ **Three gull objects exist and this is only one of them.** This is the
     /// `seagull` folder in `vehicles.json` — an **omni PNG sprite**, a choosable
@@ -109,6 +122,39 @@ public enum VehicleCatalog {
     /// the brand or dilute it?" is an open question in
     /// `Docs/cross-region-journeys.md` and a brand decision, not an implementer's.
     public static let crossingSubjectId = "seagull"
+
+    /// **What flies a crossing the film has issued a boarding pass for** (Chiu
+    /// 2026-09-04, ADR 2026-09-04).
+    ///
+    /// `Docs/cross-region-journeys.md` **requirement 2** — *a flight leg is flown
+    /// by a plane* — reclaimed, not requirement 4 overturned. The film already
+    /// prints `FROM` / `TO` / `THX-9527` and a distance **labelled as the
+    /// flight**: it has said this is a flight. A seagull crossing under a boarding
+    /// pass is the film contradicting itself in one frame, and the cheapest way
+    /// to keep it honest is to let **one** condition decide both — the crossing
+    /// that can draw the card is the crossing that flies a plane.
+    ///
+    /// `plane` rather than `plane-3d` (Chiu 2026-09-04, from the two stills).
+    /// Both ship 8-direction sets and both are `selectable: false` in
+    /// `vehicles.json` — reserved for exactly this, never offered as a trip
+    /// subject. **The seagull is omni and this is directional**, so the nose now
+    /// points along the route: an expected change, and the reason a render is
+    /// owed rather than a diff.
+    ///
+    /// 🔴 **The honest boundary, and it is not solved: there is no classifier.**
+    /// A **ferry** crossing gets the pass and therefore the plane, because
+    /// nothing today can tell a ferry from a flight — `SegmentRoutability` says
+    /// only *"no road here"*. That is crossing session 2's line, and this entry
+    /// does not move it. Do not read the pairing above as a guarantee that a
+    /// plane is only drawn over a flight; it guarantees only that the plane and
+    /// the pass never disagree with each other.
+    ///
+    /// ⚠️ **Not a size decision.** `export.subject_length_px` is unchanged and a
+    /// plane is as oversized on an 8,891 km frame as the car was — deliberate
+    /// this round (Chiu 2026-09-04: look at the form first). That lever is the
+    /// `Docs/handoff-type2-films.md` closeout's handover item 3 and shares a
+    /// tie-break with `crossing_beat_s`; moving it moves every film.
+    public static let planeSubjectId = "plane"
 
     private static let store = Store()
 

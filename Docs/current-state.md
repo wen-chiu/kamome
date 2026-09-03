@@ -7,11 +7,12 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-09-03 against decisions.md **2026-09-03** and `main` at
-**PR #35**. Re-synced by the type-2 opening-retime session, which re-read the
-ledger tail, every `HANDOFF.md` line and every *Blockers* line: *Active work*
-gains the retime, *Blockers* gains the `Geo.distanceM` finding, and the
-`crossing_beat_s` 6.0 claim was corrected wherever it appeared.
+Last synced: 2026-09-04 against decisions.md **2026-09-04** and `main` at
+**PR #35**. Re-synced by the type-2 opening-retime session across its PO review:
+the ledger tail, every `HANDOFF.md` line and every *Blockers* line were re-read.
+*Active work* gains the retime and the plane; *Blockers* gains the
+`Geo.distanceM` finding; the `crossing_beat_s` 6.0 claim was corrected wherever
+it appeared.
 
 ✅ **This is checked now, not remembered** — `Scripts/check-staleness.sh`, in
 every `./check.sh` run (ADR 2026-09-02 (b)).
@@ -202,9 +203,17 @@ is closed.
   takes to read. Measured: the trip starts at **13.09 s** (was ~16), the
   departure airport shows **2 photographs for 3.59 s**, the sprite runs
   **24.6 %/s**, and the odometer reads **269 km** where it read 9,024. ⏳ **Chiu
-  judges the films**; the boarding pass's layout is engineering's first pass
-  because his mockup was never saved beside the film.
+  judges the films**.
   → `Docs/handoff-type2-opening-retime.md`, `Docs/design-reviews/2026-09-02-cross-region-opening.md`.
+- ✅ **The pass is laid out to Chiu's own mockup, the crossing flies a plane, and
+  the flight's two ends are marked** (2026-09-04, ADR **2026-09-04**). One
+  condition decides the pass and the airframe; every other crossing keeps the
+  seagull. The two end marks answer the closeout's *"the wide flight frame loses
+  the viewer"* — `crossing_flight_max_longitude_deg` **stays 70** and the map
+  place-names icebox **stays frozen**, because the marks carry no text.
+  🔴 **Known boundary: there is no classifier, so a ferry gets the pass and the
+  plane too.** ⏳ `subject_length_px` is deliberately unchanged — the plane is as
+  oversized as the car was, and Chiu is judging the form first.
 - ⏳ **Open and Chiu's, all waiting on a film rather than a session**: the
   long-haul flight frame's 70 threshold (above); the title card's text, which still shows
   trip title + dates rather than the country name (a DESIGNER question); the

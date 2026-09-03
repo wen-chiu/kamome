@@ -114,6 +114,45 @@ extension LinearTimeline {
         )
     }
 
+    // MARK: - Here, and there
+
+    /// **A Kamome mark on each end of the flight**, over the opening's still
+    /// frame only (Chiu 2026-09-04).
+    ///
+    /// The closeout's handover item 1 — *"the wide flight frame loses the
+    /// viewer"* — taking its **second** candidate answer: draw Kamome's own marks
+    /// at the two ends rather than lowering `crossing_flight_max_longitude_deg`.
+    /// The threshold stays 70.
+    ///
+    /// **From t=0 until the aircraft lands**, which is the Journey Card's window
+    /// extended forward to the head of the film. No beat is added and no second
+    /// is spent: the opening's first 6.59 s is already one held frame, and what
+    /// was missing was something on it, not time.
+    ///
+    /// Gated on `opensOnTheFlight` and having two ends — deliberately **not** on
+    /// the card's `CountryExtent` condition. A mark needs no country name, so a
+    /// trip whose ends fall outside the table draws no pass and still draws its
+    /// marks.
+    ///
+    /// ⚠️ **The origin yields to the departure stop's pin.** They are the same
+    /// point — the airport the flight leaves from — so drawing both would put two
+    /// marks on one place. Exactly one is ever returned: while any stop is
+    /// holding, the stop's own pin is the mark, and this one is nil.
+    func flightEnds(atTime time: Double) -> OverlayContent? {
+        guard opensOnTheFlight, let ends = flightEndCoordinates,
+              let beat = path.crossingBeatWindowsS.first, time <= beat.upperBound else { return nil }
+        // Full strength for the whole opening, easing out as the arc begins to
+        // close — the same ramp the pass leaves on, so the two go together.
+        let fade = max(min(cardFadeS, beat.upperBound - beat.lowerBound), 1e-6)
+        let opacity = Self.smoothstep((beat.upperBound - time) / fade)
+        guard opacity > 0.001 else { return nil }
+        return .flightEnds(
+            origin: holdingStop(atTime: time) == nil ? ends.origin : nil,
+            destination: ends.destination,
+            opacity: opacity
+        )
+    }
+
     // MARK: - The trail, and the dash the crossing puts away
 
     /// The revealed trail, cut back into legs (typed-leg pass 2026-07-26). The

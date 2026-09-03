@@ -279,13 +279,58 @@ built their total that way. Subtracting one from the other puts **148 km** on th
 cards where the journey is 269. Nothing in the film shows both, so no viewer is
 handed two numbers that fail to add up. Asserted in `RecapJourneyCardTests`.
 
+## The PO review — 2026-09-04
+
+Three blockers, all closed: ADR 2026-09-03 §3 said 12.5 s where the measurement is
+13.09 (corrected in the ledger); `HANDOFF.md` had 12 bytes of headroom (four
+closed restatements moved to `Docs/_archive/handoff-2026-08.md`, 15,954 now); and
+the type-3 footnote below is written into the closeout as handover item 5.
+
+**The mockup arrived**, so the pass is no longer engineering's layout. It is
+rebuilt to 登機證樣式（完整）: stub **left** at 0.173 of the width with the gull,
+flight number under an orange rule, and the dates; a **0.312** ticket rather than
+the 0.46 panel of the first pass; ends named large over their local names; a
+dashed arc bowing between a filled origin dot and an open destination ring with
+the aircraft riding it; a hairline over a labelled bottom row.
+
+Two departures from the picture, both deliberate:
+
+- 🔴 **`FLIGHT TIME 04:00` is not drawn.** The mockup predates its removal (Chiu
+  2026-09-02, `CLAUDE.md` rule 5 — Kamome does not know it). The row keeps the
+  mockup's rhythm with two fields instead of three. **Do not restore it from the
+  picture.** Same for `KM-523`: the constant is `THX-9527`.
+- ⚠️ **The card's orange is the mockup's `#FF6A3D`, not the film's `#FF8A5B`.**
+  `RecapStyle` warns against near-misses of one accent and this is knowingly a
+  second. Chiu supplied the hex as part of the target; one edit collapses them.
+
+## What was on screen, and why two true statements disagreed
+
+🔴 **The car across the Pacific was a harness gap, not the subject-lookup bug.**
+VERIFIED 2026-09-04, and it is worth the paragraph because the obvious diagnosis
+was wrong:
+
+- `KAMOME_REVIEW crossing subject` is printed by **`RecapReviewScene`**, a
+  *stills* harness. **No film log has ever carried that line** — every occurrence
+  in `~/Kamome-wt/logs/` is a stills run, and all read `seagull`.
+- `RecapDemoFilmTests.renderFilm` built its `FrameCompositor` **without
+  `crossingSubject:`**, which defaults to nil, and `FrameCompositor` documents nil
+  as *"a film whose caller supplied none draws its own vehicle across the
+  crossing."* `RecapModel` passes it.
+
+So the app drew a gull and the review film drew a car, and both statements were
+true of **different renderers**. `VehicleCatalog.resolve` never failed and
+`HANDOFF.md`'s subject-lookup miss is **untouched and still unmeasured**. Fixed by
+passing the renderers; the harness now prints `KAMOME_DEMO_FILM crossing subject`
+and `flight subject` so a film log can never be silent about this again.
+
 ## Still open, and each is Chiu's
 
-- 🔴 **The mockup was never saved** (§0 item 1). It is not in
-  `~/Kamome-films/type2-2026-09-02/` and was never supplied, so **the boarding
-  pass's layout is engineering's**, not the reviewed target. The *content* is
-  exactly what the review decided. Judge the layout from the render, or supply
-  the ticket and it gets rebuilt.
+- ✅ **The mockup arrived and the pass is rebuilt to it** (2026-09-04) — see
+  above for the two deliberate departures.
+- ⏳ **The plane is as oversized as the car was.** `subject_length_px` is
+  deliberately unchanged this round (Chiu: judge the form first); on an 8,891 km
+  frame the aircraft is about the size of Taiwan, and that is expected in this
+  render rather than something to fix in passing.
 - ⏳ **The redrawn end-card dash runs off the frame edge**, exactly as §4 said it
   would. Implemented as decided; **do not re-widen the end reveal** — that is the
   bug (`Docs/handoff-type2-films.md` §5). In front of the designer now.

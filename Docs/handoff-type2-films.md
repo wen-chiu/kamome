@@ -449,9 +449,15 @@ this is revisited, the answer is already derived and already measured: a target 
 
 Measure the frame share with `RecapOpeningFramingTests.testHowFarTheAircraftTravelsAcrossItsOwnFrame`.
 
-## 🔴 Four items handed over, not solved
+## 🔴 Five items handed over, not solved
 
-**1. The wide flight frame loses the viewer.** Chiu on the Auckland film: 地圖放太遠
+**1. ✅ ANSWERED 2026-09-04 — the wide flight frame loses the viewer.** Chiu took
+the **second** candidate below: Kamome draws its own wordless mark on each end of
+the flight, from t=0 until the aircraft lands (ADR 2026-09-04). The threshold
+**stays 70** and the map place-names icebox **stays frozen** — the marks carry no
+text. What follows is the finding as it stood.
+
+Chiu on the Auckland film: 地圖放太遠
 會失去焦點, 一開始的畫面會無法明確知道出發地跟目的地. This is the **mirror of a defect
 already recorded**: `Docs/handoff-P3.5.md` §"Map reference labels" (2026-08-02),
 *"once zoomed in I lose all sense of geographic orientation"*, whose remedy was **a
@@ -487,6 +493,24 @@ trail**: the dash pattern is fixed in pixels, so each dash is ~50 km of ground o
 Ishigaki flight frame. Sprite and dashes are one decision, not two.
 
 **4. The mode classifier** — crossing session 2, unchanged, still not this round's.
+⚠️ **Sharper since ADR 2026-09-04**: a crossing that carries a boarding pass now
+also flies a **plane**, and with no classifier a **ferry** gets both. The card and
+the airframe never disagree with each other; neither is a claim about the world.
+
+**5. ⚠️ The Journey Card reads ONE beat and sums ALL crossings** (added 2026-09-03,
+with the boarding pass). `LinearTimeline.journeyCardContent` takes
+`path.crossingBeatWindowsS.**first**` — the beat the pass is drawn over — while
+`journeyCard(trip:locale:)`'s `crossingDistanceM` totals **every** leg with
+`isCrossing`. On a type-2 film those are the same crossing, so the two are exactly
+equivalent today and nothing is wrong.
+
+**On a type 3 they are not.** A multi-region trip has two or more crossings, and
+the first card would print the sum of all of them — a Taipei→Auckland pass
+claiming the length of Taipei→Auckland→Sydney. **This is the same footnote as
+"`>= 2 ⇒ the type-2 form` holds only while type 3 is deferred"** (§2), and it is
+written here so type 3 inherits it rather than rediscovering it in a render: when
+the multi-region film is built, the card's distance has to be scoped to the beat
+it is drawn over, and there has to be one card per crossing.
 
 ## What I fixed in the closeout, and what I deliberately did not
 

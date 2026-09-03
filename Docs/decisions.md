@@ -2886,10 +2886,13 @@ decision, not two** — and it needs Chiu's eye on a film, not an edit here.
 - **`crossing_flight_max_longitude_deg` stays 70**, interpolated, and its own
   open question (closeout item 1).
 - **`zoom_transition_s` stays 2.5** and is shared with every film's opening
-  closing zoom. Because the opening crossing closes at `entry.endS +
-  zoom_transition_s`, the retimed opening is **12.5 s, not the review's 11.5 s**.
-  11.5 needs a separate key and a separate decision; changing the shared knob
-  would retime every type-1 film.
+  closing zoom, so the review's **11.5 s was not reachable without retiming
+  every type-1 film**. Measured on `auckland-crossing`, the retimed opening is
+  **13.09 s** — 3.00 title + 3.59 departure + 4.00 crossing + 2.50 close — and
+  13.09 is the figure to quote. ⚠️ The brief's ≈12.5 s was an *estimate* built
+  on a 3.0 s departure beat the same brief forbade hard-coding; the beat is
+  priced from content, so the estimate came in low. 11.5 needs a separate key
+  and a separate decision.
 - The 4/6/9 sweep is **closed**. `withCrossingBeatS` survives as a desk knob, and
   what it is for now is judging the *card's* legibility at a length.
 
@@ -2900,3 +2903,107 @@ and `HANDOFF.md` all recorded 6.0 as settled. Each is corrected in the same PR
 rather than left to contradict this entry — the failure mode `CLAUDE.md`'s
 append-only rule exists to prevent is a reader finding "16.5 %/s validated"
 beside "4.0 s" and reopening a sweep Chiu has already closed.
+
+---
+
+## 2026-09-04 — The crossing that carries a boarding pass flies a plane, and its two ends are marked
+
+**Context.** ADR 2026-09-03 gave the type-2 crossing a **Journey Card**: a
+boarding pass printing `FROM` / `TO`, the constant flight number `THX-9527`, and
+a distance **labelled as the flight**. Two things followed from it that the
+retime did not address, and Chiu decided both on 2026-09-04.
+
+### 0. First, what was actually on screen — the premise was wrong
+
+The review and the `Docs/handoff-type2-films.md` closeout both say the Auckland
+film shows a **car** crossing the Pacific, while `VehicleCatalog.crossingSubjectId`
+has been `"seagull"` since the crossing shipped. Those cannot both be true of one
+renderer, and the suspicion was that the seagull was failing to resolve and
+falling back — `HANDOFF.md`'s unmeasured "subject lookup still misses".
+
+**It is not that.** VERIFIED 2026-09-04:
+
+- `KAMOME_REVIEW crossing subject` is printed by **`RecapReviewScene`**, a
+  *stills* harness. The film harness never printed it, so **no film log has ever
+  carried that line**. Every occurrence in `~/Kamome-wt/logs/` is a stills run,
+  and every one reads `seagull`.
+- `RecapDemoFilmTests.renderFilm` built its `FrameCompositor` **without the
+  `crossingSubject:` argument.** It defaults to nil, and `FrameCompositor`
+  documents nil as a real answer: *"a film whose caller supplied none draws its
+  own vehicle across the crossing."* `RecapModel` — the shipping path — does pass
+  it.
+
+So both statements were true, **of different renderers**: the app drew a gull and
+the review film drew a car. `VehicleCatalog.resolve` never failed. This is the
+class `ReviewSubstrate` exists to prevent — a review harness quietly rendering a
+different film from the one that ships — and it is fixed by passing the renderers,
+not by changing a constant. ⚠️ **The subject-lookup miss remains unmeasured and
+open**; nothing here bears on it.
+
+### 1. Requirement 2 comes back, and requirement 4 is not overturned
+
+`Docs/cross-region-journeys.md` **requirement 2** is *a flight leg is flown by a
+plane*. It was set aside because there is no classifier, and requirement 4 — the
+load-bearing one — put a **seagull** on every crossing as the honest answer to
+*we know you went from here to there; we do not know how.*
+
+**The card changes what the film has already said.** A frame printing FROM, TO, a
+flight number and a distance labelled as the flight has claimed this is a flight.
+A seagull under that pass is the film contradicting itself in one frame.
+
+So: **the crossing that can draw a Journey Card flies a plane; every other
+crossing keeps the seagull.** One condition, two expressions, decided in one place
+(`FrameCompositor.drawing(for:atTime:)` asks the timeline whether the pass is on
+screen). **No classifier is built and no config key is added** — when the
+classifier arrives it inherits one gate rather than two.
+
+`plane`, not `plane-3d` (Chiu, from the two stills). Both are 8-direction sets and
+both are `selectable: false` — crossing art, never a trip subject. **The seagull
+is omni and the plane is directional**, so the nose now points along the route.
+
+### 2. 🔴 The boundary, written rather than papered over
+
+**There is no classifier, so a ferry crossing gets the pass and therefore the
+plane.** `SegmentRoutability` says only *"no road here"*; nothing distinguishes a
+ferry from a flight. The pairing above guarantees the card and the airframe never
+disagree with **each other** — it does not guarantee either is right about the
+world. That line is crossing session 2's and this entry does not move it.
+
+`VehicleCatalog.crossingSubjectId`'s doc comment used to read *"a plane drawn over
+a ferry route would be a fabrication."* Written before the card existed, it read as
+though a plane could never be drawn. What it was protecting is intact and now sits
+on `planeSubjectId`, along with the boundary above.
+
+### 3. Two marks on the ends of the flight
+
+The closeout's handover item 1 — **the wide flight frame loses the viewer**
+(*地圖放太遠會失去焦點*) — takes its **second** candidate answer: draw Kamome's own
+marks at the two ends. `crossing_flight_max_longitude_deg` **stays 70**.
+
+- **`VehicleMarker.seagull`**, the vector that is also the end card's wordmark,
+  sized and coloured at the call site and **never reshaped** (`HANDOFF.md`
+  2026-08-29 finding 5b). Not `seagull/logo.png` (must not reach the renderer),
+  not `omni.png` (the *subject* sprite — it would say a seagull flies this leg now
+  that a plane does), not `.seagullBadge` (which means the artwork failed to load,
+  the collision PR #23 closed).
+- **From t=0 until the aircraft lands**, easing out as the arc closes. **No beat
+  is added and no second is spent**: the opening's first 6.59 s was already one
+  held frame, and what was missing was something on it, not time. The opening
+  stays **13.09 s**.
+- Gated on `opensOnTheFlight` and having two ends — deliberately **not** on the
+  card's `CountryExtent` condition. A mark needs no country name, so a trip whose
+  ends fall outside the six-row table draws no pass and still draws its marks.
+- ⚠️ **The origin yields to the departure stop's pin.** They are the same point,
+  so exactly one is ever drawn: while any stop is holding, the stop's own pin is
+  the mark.
+
+🔴 **This does not thaw the map place-names icebox.** What is drawn is a wordless
+Kamome-owned mark, not a label. *Where* is answered by the boarding pass; *here
+and there* by the marks. The icebox stays frozen on Chiu's 2026-08-02 ruling.
+
+### 4. Not decided here
+
+**`export.subject_length_px` is unchanged**, deliberately (Chiu: look at the form
+first). A plane is as oversized on an 8,891 km frame as the car was, and the
+render is expected to show that. It is the closeout's handover item 3, it shares a
+tie-break with `crossing_beat_s` (ADR 2026-09-03), and moving it moves every film.

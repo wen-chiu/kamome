@@ -75,7 +75,22 @@ public struct FrameCompositor {
     /// caller supplied none draws its own vehicle across the crossing, which is
     /// exactly the behaviour every film had before crossings existed, rather
     /// than nothing at all.
+    ///
+    /// ⚠️ That fallback is *silent*, and it cost a round: the review film harness
+    /// never passed one, so `auckland-crossing` drew a **car** across the Pacific
+    /// while the shipped app drew the seagull, and both readings of "what crosses
+    /// a crossing?" looked true at once (2026-09-04).
     private let crossingSubject: SubjectRenderer?
+    /// What crosses a leg the film has issued a **boarding pass** for (ADR
+    /// 2026-09-04). nil falls back to `crossingSubject`.
+    ///
+    /// **One condition decides both**, which is the whole point: the crossing
+    /// that can draw a Journey Card is the crossing that flies a plane. The film
+    /// has already printed `FROM` / `TO` / a flight number / a distance labelled
+    /// as the flight — a seagull under that is the film contradicting itself in
+    /// one frame. Asked of the timeline rather than stored, so the two can never
+    /// answer differently.
+    private let flightSubject: SubjectRenderer?
     private let overlay: OverlayRenderer
     private let style: RecapStyle
     private let widthPx: Int
@@ -93,11 +108,13 @@ public struct FrameCompositor {
         style: RecapStyle = RecapStyle(),
         widthPx: Int,
         heightPx: Int,
-        crossingSubject: SubjectRenderer? = nil
+        crossingSubject: SubjectRenderer? = nil,
+        flightSubject: SubjectRenderer? = nil
     ) {
         self.timeline = timeline
         self.subject = subject
         self.crossingSubject = crossingSubject
+        self.flightSubject = flightSubject
         self.overlay = overlay
         self.style = style
         self.widthPx = widthPx
@@ -153,8 +170,7 @@ public struct FrameCompositor {
         // rendering decision, while *that* this stretch is being crossed is a
         // fact about the journey the timeline already established.
         let subjectState = timeline.subjectState(atTime: time)
-        let drawing = subjectState.role == .crossing ? (crossingSubject ?? subject) : subject
-        drawing.render(subjectState, camera: camera, into: surface)
+        drawing(for: subjectState, atTime: time).render(subjectState, camera: camera, into: surface)
         for content in contents where !Self.drawsBelowSubject(content) {
             overlay.render(content, camera: camera, into: surface)
         }
@@ -162,6 +178,24 @@ public struct FrameCompositor {
 
         guard let image = context.makeImage() else { throw RenderError() }
         return image
+    }
+
+    /// **Which art the crossing role resolves to** — the question
+    /// `SubjectState.SubjectRole` deliberately leaves to this layer, answered
+    /// here rather than by a third enum case.
+    ///
+    /// A crossing the film has issued a boarding pass for flies a plane; every
+    /// other crossing keeps the seagull, which is still the honest answer to
+    /// *"we do not know how you got across"* (`VehicleCatalog.crossingSubjectId`).
+    /// 🔴 **This is not a classifier and does not pretend to be one**: a ferry
+    /// gets a pass and therefore a plane, because nothing today can tell a ferry
+    /// from a flight. Crossing session 2's line, unmoved.
+    private func drawing(for state: SubjectState, atTime time: Double) -> SubjectRenderer {
+        guard state.role == .crossing else { return subject }
+        if timeline.journeyCardContent(atTime: time) != nil, let flightSubject {
+            return flightSubject
+        }
+        return crossingSubject ?? subject
     }
 
     /// Grade then vignette, over the finished frame — so map, trail, subject and

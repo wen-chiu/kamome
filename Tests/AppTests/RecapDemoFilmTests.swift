@@ -76,12 +76,21 @@ final class RecapDemoFilmTests: XCTestCase {
             honouring: try ReviewSubstrate.experiment().appearance
         )
         let style = try ReviewPalette.style(appearance)
+        // 🔴 **The crossing renderers were missing here until 2026-09-04**, and
+        // `FrameCompositor` treats nil as a real answer — so every review film
+        // drew the trip's own **car** across the crossing while the shipped app
+        // drew the seagull. Both readings of "what crosses a crossing?" were
+        // true at once, of different renderers, and the Auckland judgement film
+        // was rendered through this one. The same class `ReviewSubstrate` exists
+        // to stop: a review harness that quietly renders a different film.
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: Self.subjectRenderer(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: DeckResolver(images: images)),
             style: style,
-            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+            crossingSubject: Self.crossingRenderer(style: style, config: config),
+            flightSubject: Self.flightRenderer(style: style, config: config)
         )
         let exporter = RecapExporter(
             timeline: timeline, compositor: compositor, provider: provider, config: config
