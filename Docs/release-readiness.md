@@ -37,7 +37,8 @@ needs a machine with Xcode).
 | **§0** — no real trip fixture is tracked; no `KamomeLog` call carries coordinates | `check-location-data.sh` |
 | `matching.base_url` is `""` or https — never a LAN address | `check-routing-endpoint.sh` |
 | no routing key is committed, by either path | `check-secrets.sh` |
-| the suite has not silently shrunk (baseline 371) | `check-test-count.sh` |
+| the suite has not silently shrunk (baseline 404) | `check-test-count.sh` |
+| **`current-state.md`'s "Last synced" line names the newest ADR and the newest merged PR** — on the branch, where the rule is satisfiable | `check-staleness.sh` **(new 2026-09-02, PR #30)** |
 | **no config key loses its last consumer** — 3 known-dead are baselined, a 4th fails the build | `check-dead-config.sh` **(new 2026-09-02)** |
 | **`Docs/current-state.md` is synced** to the newest ADR — offline, everywhere. ⚠️ Its **PR half runs locally only**: `gh` is unauthenticated on the CI runner, so CI prints `PR HALF DID NOT RUN` (VERIFIED on run 33632648596). One `GH_TOKEN` line in the workflow would close it. | `check-staleness.sh` **(new 2026-09-02)** |
 | style, and the build, and the tests | `swiftlint --strict`, `xcodebuild test` |
@@ -47,14 +48,18 @@ model every row in Tier 2 should be moved into.
 
 ### Release-only gates — `./check.sh --release <artifact>`
 
-Two more gates exist and are **not** in the run above, because they fail today on
-work that is scheduled rather than broken, and a permanently red `main` teaches
-everyone to ignore it (`HANDOFF.md`, *"a red check means something now"*).
+Two more gates exist and are **not** in the run above. They were separated because
+they failed on work that was scheduled rather than broken, and a permanently red
+`main` teaches everyone to ignore it (`HANDOFF.md`, *"a red check means something
+now"*). **`check-attribution.sh` no longer fails** — S2 and S3 are built — but it
+stays here rather than moving up: it is a release obligation, it belongs beside
+the artifact scan, and moving a gate because it went green is how a gate stops
+being read.
 
 | what is guaranteed | gate |
 |---|---|
 | the routing key is not in the built artifact — exact match across every file, binaries included; `KamomeRoutingAPIKey` absent or empty; the **shipped** `TrackingConfig.json` is distributable; no 32-hex string in any bundled text resource | `release/check-archive.sh` |
-| the app carries Geoapify + OpenStreetMap attribution and a privacy notice string | `release/check-attribution.sh` |
+| the app carries Geoapify + OpenStreetMap attribution and a privacy notice string — **passing since 2026-09-02**, and the only one of the two that can be run without an artifact | `release/check-attribution.sh` |
 
 An ordinary `./check.sh` **prints that these did not run**, so a release gate
 cannot be silently forgotten. Both are runnable on their own for a quick check
@@ -78,18 +83,25 @@ one nobody should trust.
 document already asserts, which no gate checks, so it stays true only while
 someone remembers it. Each names the check that would end that.
 
-**Four of these are now gates, not prose** (Chiu authorised this session to write
-them, 2026-09-02, lifting `PO.md`'s no-code rule for `Scripts/` only — application
-code is untouched). Rows that were closed this way are struck through and name
-their gate. The rest remain specifications for an engineering session.
+**Four of these are now gates, not prose** (Chiu authorised the 2026-09-02 PO
+session to write them, lifting `PO.md`'s no-code rule for `Scripts/` only). Rows
+closed that way are struck through and name their gate.
+
+**S2 and S3 closed differently, later the same day, and the difference matters:**
+their gate already existed and *failed* — what closed them is application code
+that makes it pass. A struck row therefore means one of two things, and it says
+which: the property is now checked by a machine (S1, C1), or the obligation is
+now met and the machine confirms it (S2, S3). The rest remain specifications for
+an engineering session.
 
 ### Security and release
 
 | # | what is unguarded | evidence | the check that ends it |
 |---|---|---|---|
 | ~~**S1**~~ | ✅ **CLOSED 2026-09-02 — `release/check-archive.sh`.** The paragraph below is why it exists; it is now a command, not an instruction to remember. ~~**The built artifact is never checked for the key.**~~ `check-secrets.sh` greps *tracked source*. The submission checklist's "unzip the `.ipa`, grep for a key-shaped string" is prose, run by hand, at the moment of highest pressure. | **VERIFIED 2026-08-20** (`pre-launch.md`): two built bundles carried a **plaintext 32-hex key** in `Kamome.app/Info.plist`, read out with stock `PlistBuddy`. FairPlay covers the executable, not resources. | `check-archive.sh <path>` — walk every file in an `.xcarchive`/`.ipa`, fail on a 32-hex match; assert `Info.plist` carries the Worker URL and no key field. Must run **on the artifact**, never the source. |
-| **S2** | 🔴 **Attribution does not exist in the app** — now *gated* by `release/check-attribution.sh`, which fails today. The string itself is still missing; the gate makes shipping without it impossible rather than unlikely. Geoapify attribution is **mandatory on the free plan**; OSM attribution is always required. Chiu decided 2026-08-17 it lives in the interface. | **VERIFIED 2026-09-02, this session:** zero occurrences of `Geoapify`, `OpenStreetMap` or `Powered by` in `App/Resources/Localizable.xcstrings` or `InfoPlist.xcstrings`. The only hits in the tree are Swift type names. | assert the strings catalog contains the attribution key. One line, and it is a licence condition, not a nicety. |
-| **S3** | 🔴 **Gated by the same script.** **The privacy notice does not exist**, and it gates Apple's App Privacy questionnaire. Decided 2026-08-20 (c); never built. Must describe **two different payloads** (`pre-launch.md`) — "start and end coordinates" is untrue of both. | **VERIFIED 2026-09-02:** no privacy/about string in either catalog. | same catalog assertion; the wording is a writing job, and the album control must ship with it or the notice may not mention it. |
+| ~~**S2**~~ | ✅ **CLOSED 2026-09-02 — the app now carries the attribution, and a user can reach it.** `Powered by Geoapify` (the format the free plan requires, untranslated in both languages) and `Map data © OpenStreetMap contributors`, each with its link, on `UI/About/AboutView.swift`, reached from an `info.circle` button in Home's toolbar. **In the interface, never in the film** (Chiu 2026-08-17). ~~Attribution does not exist in the app.~~ | **VERIFIED 2026-09-02:** `release/check-attribution.sh` exits 0; `LocalizationTests.testAttributionCarriesBothLicenceObligations` asserts the Geoapify format is byte-identical in `en` and `zh-Hant`, because a translation pass would break the obligation while looking like an improvement. **And visible to a user** — `Docs/demos/release/` holds the simulator captures in both languages, because the gate proves the strings are in the catalogue and cannot prove anyone can see them. | `release/check-attribution.sh` (the catalogue) + the localization test (the format). ⏳ **The placement is still Chiu's**: the toolbar button is the anchor that already existed, not a chosen design, and visual craft is `DESIGNER.md`'s. |
+| ~~**S3**~~ | ✅ **CLOSED 2026-09-02 as a shipping draft — the notice exists and describes both payloads.** Imported legs: stop centres **plus photo positions**, thinned and capped, in the request's URL — and the two numbers are read from `TrackingConfig` rather than typed into the copy, so tuning cannot make the notice untrue. Recorded legs: **nothing is sent**, which is what the code does (see the correction in the row below). "Start and end coordinates" appears nowhere and a test forbids its return. The album control it names **ships** (`ImportSheet.albumSection`). ~~The privacy notice does not exist.~~ | **VERIFIED 2026-09-02:** gate green; three localization tests hold the payload split, the ≤24 h retention *with* its failures exception, and the promise-only-what-ships rule, in both languages. | ⏳ **The wording is Chiu's and is not ruled on** — this ships so the obligation is met rather than deferred. ⚠️ **Still open and deliberately untouched:** whether the import flow warns *at the point of import* (`pre-launch.md`, 🟡, explicitly §0 and explicitly Chiu's). An About screen is not that decision. |
+| **S3b** | 🟡 **`pre-launch.md`'s payload table is STALE about recorded trips — it describes a state that never arrived, and on the current endpoint cannot.** Its own shape row says "POST — in the body **(after migration)**": the migration was to Geoapify, and **Geoapify has no map-matching endpoint**, so no matcher can be constructed and the recorded column has never described a live payload. The code says exactly this itself at `RouteMatchService.swift:325-327`. **The underlying question — whether a recorded trace is ever sent — is still OPEN and deferred to Capture Beta** (ADR 2026-08-20 (d)'s addendum: *"Deferred to Capture Beta, not decided now"*, *"Nothing to build now"* — it records Chiu's lean, it does **not** decide). | **VERIFIED 2026-09-02:** `provider:` defaults to `nil` and none of the three shipping call sites passes one — `TrackingSession.swift:113`, `ImportFlowModel.swift:155`, `RecapModel.swift:142`; `RouteMatchService.swift:331` is `case .gpsHifi, .gpsPassive: return matcher != nil`. A recorded leg is therefore never offered to routing. | ✅ **Now gated — `RouteMatchRecordedLegTests` (2026-09-02).** The notice promises that if a future version sends the recorded path it will say so, and nothing enforced that: the day Capture Beta wires a matcher on a shipping path, `shouldReconstruct` flips and the notice becomes a lie with no test failing. The test fails on that day and names the notice. **The table itself is Chiu's** — relabel or delete, but it is not an equal claim in conflict with the code. |
 | **S4** | 🟠 **The Worker's no-log property is asserted nowhere**, and it is load-bearing rather than tidy: `/v1/routing` is GET-only, so real coordinates travel **in the URL**, the most-logged part of an HTTP request. | `pre-launch.md`, `Deploy/worker/README.md`. Deployed 2026-08-27. | a deploy-time assertion in the Worker's own repo path. A proxy that logs makes §0 worse while appearing to make it better. |
 | **S5** | 🟠 **No per-day budget counter exists in the Worker**, and it was decided mandatory *before* the app-side wiring. | **VERIFIED from Geoapify's own pages, 2026-08-29:** limits are **soft on every tier**, there is no customer-settable cap, and escalation ends in **account blocking**. There is no provider-side ceiling to fall back on. | the counter itself (`Deploy/worker/README.md` costs it). Until it exists, `matching.base_url` must not be flipped. |
 | **S6** | 🟡 **Build logs echo the key in clear text** — it is a build setting, and `xcodebuild` prints every one. | `pre-launch.md` exit 2. | closes **by construction** when S5's wiring lands. Until then: no build log leaves the machine unscrubbed. |
@@ -130,9 +142,15 @@ sanctioned exception is framing.
 
 Two cases only. Everything else is this file's problem.
 
-1. **A licence, privacy or §0 obligation that needs a product decision** — S2's
-   placement, S3's wording, and whether the user is told that importing contacts
-   a third party (`pre-launch.md`, still 🟡 undecided and explicitly §0's).
+1. **A licence, privacy or §0 obligation that needs a product decision.** Three
+   are open right now, and none of them blocks the obligation being *met*:
+   **S2's placement** and **S3's wording** — both now ship as a working draft, so
+   what reaches Chiu is a revision, not a blank page; **S3b**, what to do with a
+   payload table that describes a state that never arrived; and
+   whether the user is told that importing contacts a third party
+   (`pre-launch.md`, still 🟡 undecided and explicitly §0's) — **untouched by the
+   About screen on purpose**, because a notice a user may never open is not a
+   warning at the point of import.
 2. **A gate that would have to be weakened** to ship. `CLAUDE.md` rule 3 makes
    that a stop-and-ask, always.
 

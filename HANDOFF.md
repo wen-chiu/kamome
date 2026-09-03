@@ -1,6 +1,6 @@
 # HANDOFF — live findings
 
-**Updated 2026-09-02.** `main` carries PRs #16–#28. The crossing beat,
+**Updated 2026-09-02.** `main` carries PRs #16–#31. The crossing beat,
 **crop-scaling** and **the title-card opening** are built, measured and **judged
 by Chiu** (ADRs 2026-08-31, 2026-08-31 (b), 2026-09-01). The live line is the
 **type-2 film form**.
@@ -22,23 +22,24 @@ standing rules first.
 
 ## Findings — PO/Architecture session (2026-09-02)
 
-**Chiu changed how this project is gated** (ADR 2026-09-02, read it before
-planning work). **Phase 4 has no hard gate** — it closes when he judges a film,
-and rule 7 is amended for that phase only. In exchange, **engineering owns that
-the code does not break and that a release carries no security, licence or
-privacy fault.** You may no longer answer "is this ready?" with a film.
+**Chiu changed how this project is gated** (ADR 2026-09-02, read it first).
+**Phase 4 has no hard gate** — he judges the film; **engineering owns that the
+code does not break and that a release carries no security, licence or privacy
+fault.** Never answer "is this ready?" with a film. **Your half is
+`Docs/release-readiness.md`**, which supersedes `Docs/pre-launch.md` as the gate
+and sorts every obligation by who can settle it. Phase 4 item 3 dissolved in.
 
-**Your half is `Docs/release-readiness.md`** — new, superseding
-`Docs/pre-launch.md` as the release gate (which keeps the reasoning). It sorts
-every obligation by who can settle it: what `check.sh` holds, what is claimed but
-enforced by nobody, and what only a device can answer. **Phase 4 item 3 is
-dissolved** into it — that overlap is why "is item 3 done?" had no single answer.
-
-Three findings VERIFIED there, none previously recorded:
-
-- 🔴 **The app has no attribution string at all** — zero hits for `Geoapify`,
-  `OpenStreetMap` or `Powered by` in either `.xcstrings`. Mandatory on the free
-  plan: a licence condition. **No privacy notice string either.** → S2, S3.
+- ✅ **S2 and S3 are built** — attribution and the privacy notice ship on
+  `UI/About/AboutView.swift`, behind Home's `info.circle`;
+  `release/check-attribution.sh` passes. ⏳ **Wording and placement stay Chiu's**,
+  a draft not a ruling. ⚠️ **Left open on purpose:** whether the import flow warns
+  *at the point of import* (`pre-launch.md` 🟡, §0). A screen a user may never open
+  is not a warning. → S2, S3.
+- 🟡 **`pre-launch.md`'s recorded-leg payload row is STALE** — Geoapify has no
+  map-matching endpoint, so no matcher can exist and a recorded leg is never sent.
+  **Technical, not a privacy decision**, and ADR 2026-08-20 (d)'s addendum
+  *deferred* rather than decided — do not cite it as one. Now gated by
+  `RouteMatchRecordedLegTests`. → S3b.
 - 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
   known ones, and it is the dangerous one — **film duration is an open question
   and this is the key anyone would reach for first.** → C1.
@@ -266,11 +267,8 @@ source and cost a correction in the ledger both times. The app selects
 ## Older citations
 
 `Docs/decisions.md` cites findings as **"`HANDOFF.md` <date> finding N"**. Those
-sections moved on 2026-08-31: 2026-08-30 → `Docs/handoff-audit-2026-08-30.md`
-(PO audit) or `Docs/handoff-cross-region-crossing.md` (the crossing session);
-2026-08-29 → `Docs/handoff-marker-badge.md`; 2026-08-21 →
-`Docs/handoff-camera-arc-findings.md`; travel pacing → `Docs/handoff-pacing.md`;
-anything older → `Docs/_archive/handoff-2026-08.md`.
+sections moved on 2026-08-31; the map from each date to the file that now holds
+it is in `Docs/_archive/handoff-2026-08.md`, "Resolving older citations".
 
 ## Where the detail lives
 
