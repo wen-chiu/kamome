@@ -303,10 +303,18 @@ both built and both removed.
 share of the *frame* the aircraft crosses, not the ground distance, because the
 frame is fitted to the crossing (`RecapOpeningFramingTests`):
 
-| fixture | crossing | frame | of the width | at 6.0 s |
-|---|---:|---:|---:|---:|
-| `ishigaki-crossing` | 306 km | 443 km | **69%** | 11.5% / s |
-| `auckland-crossing` | 8,755 km | 8,891 km | **98%** | 16.4% / s |
+| fixture | crossing | frame | of the width | at 6.0 s | at 4.0 s (ships) |
+|---|---:|---:|---:|---:|---:|
+| `ishigaki-crossing` | 306 km | 443 km | **69%** | 11.5% / s | **17.3% / s** |
+| `auckland-crossing` | 8,755 km | 8,891 km | **98%** | 16.4% / s | **24.6% / s** |
+
+⚠️ **The 8,755 km is the *equirectangular* length and is 121 km short** (VERIFIED
+2026-09-03). `Geo.distanceM` scales longitude by the cosine of the first
+latitude alone, which degrades over a Taipei → Auckland diagonal; the great
+circle is **8,876 km**. Harmless here — this table is about the *share of the
+frame*, and both numerator and denominator ride the same axis — and **not**
+harmless on the Journey Card, which prints the figure. The card uses
+`Geo.greatCircleM`; see `HANDOFF.md`.
 
 **A constant is far closer to right than the distances suggest.** 8,755 km is 29×
 306 km, but the frame scales with it, so the perceived travel differs by **1.4×**,

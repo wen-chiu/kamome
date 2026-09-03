@@ -20,8 +20,8 @@ import Foundation
 /// The flight's own distance is not deleted. It appears exactly once, on the
 /// Journey Card, labelled as the flight.
 extension CameraPath {
-    /// The reveal's head: along-route metres, ⚠️ crossings included — the
-    /// odometer is `CameraPathDistance` and deliberately is not this.
+    /// The reveal's head: along-route metres, ⚠️ **crossings included**. The
+    /// odometer is `traveledLocalDistanceM` below and deliberately is not this.
     public func traveledDistanceM(atTime time: Double) -> Double {
         state(atTime: time).distanceM
     }

@@ -828,6 +828,40 @@ Moved from `HANDOFF.md` for budget; the live remainder stayed there as
 >   `check-dead-config.sh`. → `Docs/release-readiness.md` C1, C2.
 
 
+## Findings — PO/Architecture session (2026-09-02) (moved 2026-09-03)
+
+Moved from `HANDOFF.md` for budget once every item had a row in
+`Docs/release-readiness.md`; the live summary stayed there. Verbatim:
+
+> ## Findings — PO/Architecture session (2026-09-02)
+>> **Chiu changed how this project is gated** (ADR 2026-09-02, read it first).
+> **Phase 4 has no hard gate** — he judges the film; **engineering owns that the
+> code does not break and that a release carries no security, licence or privacy
+> fault.** Never answer "is this ready?" with a film. **Your half is
+> `Docs/release-readiness.md`**, which supersedes `Docs/pre-launch.md` as the gate
+> and sorts every obligation by who can settle it. Phase 4 item 3 dissolved in.
+>> - ✅ **S2 and S3 are built** — attribution and the privacy notice ship on
+>   `UI/About/AboutView.swift`, behind Home's `info.circle`;
+>   `release/check-attribution.sh` passes. ⏳ **Wording and placement stay Chiu's**,
+>   a draft not a ruling. ⚠️ **Left open on purpose:** whether the import flow warns
+>   *at the point of import* (`pre-launch.md` 🟡, §0). A screen a user may never open
+>   is not a warning. → S2, S3.
+> - 🟡 **`pre-launch.md`'s recorded-leg payload row is STALE** — Geoapify has no
+>   map-matching endpoint, so no matcher can exist and a recorded leg is never sent.
+>   **Technical, not a privacy decision**, and ADR 2026-08-20 (d)'s addendum
+>   *deferred* rather than decided — do not cite it as one. Now gated by
+>   `RouteMatchRecordedLegTests`. → S3b.
+> - 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
+>   known ones, and it is the dangerous one — **film duration is an open question
+>   and this is the key anyone would reach for first.** → C1.
+> - ✅ **`RecapBudgetAndDemoTests`' export-time estimate is fixed** (C2), priced
+>   off `RecapRenderLoop.stations`: **0.79 s/snapshot → ~42 s for 53 stations**.
+>   That number is the input to `pre-launch.md` item 5; the device figure is
+>   still owed (`release-readiness.md` D2, D3).
+>> **No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
+> pointer to a topic document.
+>
+
 # Part 2 — sections moved from `CLAUDE.md`
 
 ## Replay MVP repositioning (spec v1.7, 2026-07-20, Chiu) — READ FIRST

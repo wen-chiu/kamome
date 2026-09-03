@@ -121,9 +121,14 @@ final class RecapTimelineReportTests: XCTestCase {
                 format: "  KAMOME_OPENING_RETIME title card 0.00–%.2fs · departure stop %.2f–%.2fs",
                 config.titleCardS, config.titleCardS, beat.lowerBound
             ))
+            // ⚠️ **The window is the measurement; the plan's figure is the ask.**
+            // `CameraPath` trims holds against `max_hold_fraction`, so the priced
+            // dwell and what is actually on screen are not the same number, and
+            // quoting the ask as the result is how a pacing report lies.
             print(String(
-                format: "    departure dwell %.2fs priced · %.2fs held · %d photo(s)",
-                dwell, dwell + 2 * config.subjectParkS, trimmed.stops.first?.photos.count ?? 0
+                format: "    departure dwell %.2fs ON SCREEN · %.2fs asked (%.2fs priced + 2×park) · %d photo(s)",
+                beat.lowerBound - config.titleCardS, dwell + 2 * config.subjectParkS, dwell,
+                trimmed.stops.first?.photos.count ?? 0
             ))
             print(String(
                 format: "    crossing beat %.2f–%.2fs (%.2fs) · closing zoom %.2f–%.2fs",

@@ -7,8 +7,8 @@ on detail. Created 2026-08-21 by the documentation-governance pass
 
 ## Staleness protocol
 
-Last synced: 2026-09-02 against decisions.md **2026-09-02 (b)** and `main` at
-**PR #31**. Re-synced by the S2/S3 engineering session, which re-read the ledger
+Last synced: 2026-09-03 against decisions.md **2026-09-03** and `main` at
+**PR #33**. Re-synced by the S2/S3 engineering session, which re-read the ledger
 and `HANDOFF.md` and rewrote *Active work* — the type-2 line and the pre-launch
 line — to match what #30 and #31 landed.
 
@@ -189,12 +189,21 @@ P7 backend deferred.
 is closed.
 
 - ✅ **Type 2 — home → one destination abroad — is BUILT and judged** (PR #31).
-  The type is **derived, never stored**; `crossing_beat_s` stays 6.0 (Chiu).
-  The measurement it was gated on came back: **MapKit saturates at ~109° of
-  longitude**, so a long-haul frame often does not exist and Taiwan→Iceland fails
-  at every padding — the frozen country card is a **main path**, not a fallback.
-  ⏳ Three things were handed over rather than defaulted, and the 70 threshold is
-  **Chiu's to decide**. → `Docs/handoff-type2-films.md` closeout, `HANDOFF.md`.
+  The type is **derived, never stored**. The measurement it was gated on came
+  back: **MapKit saturates at ~109° of longitude**, so a long-haul frame often
+  does not exist and Taiwan→Iceland fails at every padding — the frozen country
+  card is a **main path**, not a fallback. ⏳ Three things were handed over rather
+  than defaulted, and the 70 threshold is **Chiu's to decide**.
+  → `Docs/handoff-type2-films.md` closeout, `HANDOFF.md`.
+- ✅ **The type-2 opening is RETIMED and the crossing carries a boarding pass**
+  (2026-09-03, ADR **2026-09-03**). `crossing_beat_s` is **4.0, not 6.0** — the
+  beat is no longer a screen-speed choice, it is how long the **Journey Card**
+  takes to read. Measured: the trip starts at **13.09 s** (was ~16), the
+  departure airport shows **2 photographs for 3.59 s**, the sprite runs
+  **24.6 %/s**, and the odometer reads **269 km** where it read 9,024. ⏳ **Chiu
+  judges the films**; the boarding pass's layout is engineering's first pass
+  because his mockup was never saved beside the film.
+  → `Docs/handoff-type2-opening-retime.md`, `Docs/design-reviews/2026-09-02-cross-region-opening.md`.
 - ⏳ **Open and Chiu's, all waiting on a film rather than a session**: the
   long-haul flight frame's 70 threshold (above); the title card's text, which still shows
   trip title + dates rather than the country name (a DESIGNER question); the
@@ -239,6 +248,13 @@ history. Trimmed 2026-09-01.*
   **with or before** the app-side wiring (`Docs/pre-launch.md` item 5).
 - 🐛 **The import date range clips at timezone edges** — known, deliberately not
   fixed; workaround in `Docs/handoff-known-bugs.md`.
+- 🟠 **`Geo.distanceM` is equirectangular and every camera quantity rides on it**
+  (VERIFIED 2026-09-03). Over Taipei → Auckland it is **121 km short**, which is
+  where the 8,755 km in `Docs/handoff-type2-films.md` came from. Harmless for the
+  camera — one consistent axis — and **not** harmless for a printed figure, so
+  `Geo.greatCircleM` was added beside it and the Journey Card uses that. ⚠️ No
+  sweep has been done for other places a `Geo.distanceM` result reaches a
+  viewer. → `HANDOFF.md`.
 - ⚙️ **Two sessions sharing one checkout contaminate each other's test and lint
   counts**, and **six concurrent `xcodebuild` processes against one simulator
   killed six renders and were nearly recorded as a machine fault**
