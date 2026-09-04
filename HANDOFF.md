@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-04.** `main` carries PRs #16–#39. Everything closed has been
+**Updated 2026-09-04.** `main` carries PRs #16–#40. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -21,11 +21,20 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 Everything else on this page can wait behind these two. **`Docs/release-readiness.md`
 is the gate**; these are the only rows on it that nobody has started.
 
-1. ✅ **S5 CLOSED 2026-09-04 — the Worker's spend ceiling is live in production**
-   (Version ID `5b33922c`, 2000/day, fails closed at 503). ⚠️ **What is still
-   open is the config flip, and it is Chiu's, not a session's**:
-   `matching.base_url` is still `""`, so no build calls the Worker and **every
-   build still carries the routing key**. → `Docs/release-readiness.md` S5, S6.
+1. **The config flip — two values, no code, and it is Chiu's** (`CLAUDE.md`
+   rule 2). `matching.base_url` is still `""` and `api_key_required` still
+   `true`, so no build calls the Worker and **every build still carries the
+   routing key**. The Worker that ends that is deployed and capped (S5 closed
+   2026-09-04). Flipping it closes **S6 by construction**.
+   → `Docs/release-readiness.md` S5, S6.
+
+   ⚠️ **A precondition, found after S5 closed: the ceiling's real bound is one
+   KV cache window, not 2,000.** The ADR's ~2,030 is *legitimate* traffic; the
+   Worker has no auth, so an adversarial burst inside one window can reach the
+   3,000 soft limit. **Zero risk today — no IPA carries the URL, and the flip is
+   what publishes it.** RECOMMENDATION: a per-IP burst limit above ~30/min lands
+   **with** the flip, or the overshoot is recorded as accepted. Reasoning,
+   evidence grades and the settling test: `Deploy/worker/README.md` §"Not built".
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
@@ -37,15 +46,6 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
 
 ---
 
-## Findings — engineering session (2026-09-04)
-
-- **The spend ceiling is built, deployed and measured.** Nothing here is open.
-  → `Docs/decisions.md` 2026-09-04 (the decision and the two accepted trade-offs);
-  `Deploy/worker/README.md` §"The spend ceiling" (the runbook, the positive
-  control, and the after-probe's pass conditions).
-
----
-
 ## ⏳ Awaiting Chiu — a film or a judgement, not a session
 
 - **The long-haul 70 threshold is untouched and still probably wrong.** Its
@@ -54,8 +54,11 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
 - **Five questions from the retimed type-2 opening** — four visual, one semantic
   (its DATE row is the **trip's** range, not the flight's).
   → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
-- **The title card still shows trip title + dates, not the country name.** The
-  name is available offline; wiring it is not done. A DESIGNER question.
+- **The title card still shows trip title + dates, not the country name.**
+  ⚠️ **Still true after the type-2 opening round** — VERIFIED 2026-09-04,
+  `LinearTimeline.swift:215` is `title = trip.title`, `subtitle = trip.subtitle`.
+  The countries a type-2 film now shows are on *other* surfaces: the boarding
+  pass's FROM/TO and the two flight-end marks. A DESIGNER question.
   → `Docs/handoff-crop-scaling.md` §11, §14.
 - **The badge's 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
@@ -105,9 +108,6 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
   is empirical and untested on a flat distribution. The removal criterion was
   decided in advance, and **a removal PR must not cite "provably contained"**.
   → `Docs/handoff-stop-weighting.md`.
-- **The 0.747 sharpness step at hold boundaries** is accepted as it stands, not
-  fixed. Revisit only if someone notices it in a film.
-  → `Docs/handoff-crop-scaling.md`.
 - **C4 — nothing asserts the end card's brand mark**, and the badge work proved
   this failure mode is silent. → `Docs/release-readiness.md` C4.
 - 🔴 **Two left by the type-2 opening round**: `Geo.distanceM` is **121 km short**
@@ -147,7 +147,9 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
 
 The import date range clips at timezone edges; `RecapMode` may be two axes, not
 one; the glacier renders flat. All three, in full, with workarounds:
-→ `Docs/handoff-known-bugs.md`.
+→ `Docs/handoff-known-bugs.md`. And the **0.747 sharpness step at hold
+boundaries**, accepted as it stands — revisit only if someone notices it in a
+film (`Docs/handoff-crop-scaling.md`).
 
 ---
 

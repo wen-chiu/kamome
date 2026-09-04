@@ -324,7 +324,22 @@ limit is Geoapify's 3,000 credits a day underneath, not this.
 - ~~**A per-day budget counter.**~~ ✅ **BUILT 2026-09-04** — see "The spend
   ceiling" above. This bullet is kept as a stub because the reasoning that made it
   mandatory is now in that section and in `Docs/decisions.md` 2026-09-04.
-- **A burst rate limit — a speed bump, not the answer.** Cloudflare's rate-limiting
+- **A burst rate limit — 🔴 re-rated 2026-09-04: it is the other half, not a
+  speed bump.** The daily ceiling now exists, and measuring it changed what this
+  bullet is worth. KV's *read* cache means the ceiling cannot bound the traffic
+  arriving inside one cache window (production: a write still read stale at 2 s,
+  fresh at 30 s). The daily ceiling cannot express a burst; a burst limit cannot
+  express a daily total. **The two gaps are complementary, and only the pair
+  closes both.** The ADR's ~2,030 worst case is *legitimate* traffic at ~29
+  requests/minute — this Worker has no auth, so an adversarial burst inside one
+  window can reach the 3,000-credit soft limit. That risk is **zero while
+  `matching.base_url` is `""`** and nobody has the URL, and it becomes real on
+  the day the config flip ships the hostname in every IPA. **RECOMMENDATION: a
+  per-IP limit above ~30/min — so a genuine Iceland import is never throttled —
+  lands with the flip, or the overshoot is recorded as accepted.** INFERRED, not
+  measured: the adversarial arithmetic. The cheapest test that settles it is a
+  concurrent burst against `wrangler dev` at ceiling 1, counting how many get
+  through. The original reasoning, still true on its own terms: Cloudflare's rate-limiting
   binding caps requests per 10 or 60 seconds; **60 seconds is its maximum period**,
   so it cannot express a daily total, which is the thing actually at risk. Kamome's
   own legitimate burst is ~29 requests/minute (Iceland's 58 legs inside
