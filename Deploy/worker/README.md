@@ -227,6 +227,21 @@ Retry-After: 65312
 `wrangler dev` binds KV **locally** (its startup banner says `local`), so this
 touches no namespace in Chiu's account.
 
+**In production, the cheap check is the 200.** Every KV fault fails closed at
+503, so a successful `/v1/routing` proves the binding is attached, the ceiling
+parsed and the counter read and wrote. Read the day's key directly with:
+
+```bash
+npx wrangler kv key get "routing-requests-$(date -u +%Y-%m-%d)" \
+  --namespace-id d533d7ee1b7d4a3c8ffcf51fe8701b33 --remote
+```
+
+⚠️ **Expect a stale read for tens of seconds.** Measured 2026-09-04: a read 2 s
+after a write still returned the pre-write value; the same key 30 s later
+returned the new one. That is KV's read cache, it is the mechanism behind the
+accepted overshoot, and **it means a counter that "did not increment" is usually
+a cache, not a bug — wait a minute before concluding anything.**
+
 ## Why `preview_urls = false`
 
 **Measured 2026-08-27, not assumed.** With preview URLs on, Cloudflare gives every
@@ -266,6 +281,21 @@ Worker's own `refuse(404)` returns nothing at all.
 Production staying an empty-bodied 404 on `/` is the positive control in the same
 run: the Worker is still there, and the preview hostnames are no longer it. The new
 version opened no door of its own.
+
+### Re-measured 2026-09-04 — the ceiling's deploy opened no door
+
+Version `5b33922c` (from merged `main` `07fdd14`). Same discriminator, same
+result: production unchanged, both new preview hostnames are Cloudflare misses.
+
+| host | result |
+|---|---|
+| `kamome-routing` `/v1/routing` | **200, 9,842 B** — byte-identical to 2026-08-29 |
+| `kamome-routing` `/` | **404, empty** — still the Worker |
+| `5b33922c-…` `/` and `/v1/routing` | **404, 17 B `error code: 1042`** |
+| control, never deployed | **404, 17 B** — unchanged |
+
+That first row does double duty now: **it is also the proof the spend counter is
+live**, because every KV fault fails closed at 503. See "The spend ceiling".
 
 **These are the pass conditions for every future deploy.** Re-run
 `~/Kamome-wt/probe.sh <first-8-of-Version-ID>` — public landmark coordinates only

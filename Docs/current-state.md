@@ -7,10 +7,10 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-04 against decisions.md **2026-09-04** and `main` at
-**PR #37**. Re-read for this sync: the 2026-09-04 ledger entry, `HANDOFF.md`'s
-critical path, and `Docs/release-readiness.md` rows S5/S6 — S5's blocker moved
-from "no counter exists" to "the counter is not deployed", which is a smaller
-gap and **not a closed one**.
+**PR #39**. Re-read for this sync: the 2026-09-04 ledger entry *and its
+addendum*, `HANDOFF.md`'s critical path, and `Docs/release-readiness.md` S5/S6.
+**S5 is now closed** — the Worker's ceiling is deployed and probed — and the
+blocker that outlived it is the config flip, which is Chiu's.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -57,10 +57,11 @@ items are Chiu's judgements and one unstarted release path — both in `HANDOFF.
 which is the live index and wins on findings and blockers.
 
 The two things between Kamome and a submission:
-**S5** — the Worker's per-day ceiling is **built and tested but not deployed**, so
-production is still uncapped, `matching.base_url` cannot be flipped and **every
-build still carries the routing key** — and **D1–D5** (one device session, never
-run, which no Claude session can do).
+**the config flip** — `matching.base_url` is still `""` and `api_key_required`
+still `true`, so **every build carries the routing key**; the Worker that ends
+that is deployed and capped (S5 closed 2026-09-04), and the flip itself is two
+values and **Chiu's decision** — and **D1–D5** (one device session, never run,
+which no Claude session can do).
 → `Docs/release-readiness.md`.
 
 ## Architecture
@@ -105,7 +106,7 @@ run, which no Claude session can do).
 | **Camera shake / ghosting closed** — the loop reprojects one snapshot instead of cross-fading two. | 2026-08-31 (b) |
 | **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
 | **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
-| **The Worker carries a per-day spend ceiling and fails closed.** 2000/day in `wrangler.toml`, never in the app's config. KV's overshoot is accepted; **do not switch to a Durable Object.** | 2026-09-04 |
+| **The Worker carries a per-day spend ceiling and fails closed.** 2000/day in `wrangler.toml`, never in the app's config. Live since 2026-09-04. KV's overshoot is accepted and its window is measured in tens of seconds; **do not switch to a Durable Object.** | 2026-09-04 |
 | **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
 
 Two standing constraints that are **not** decisions and must not be implemented
