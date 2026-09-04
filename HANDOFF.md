@@ -21,15 +21,11 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 Everything else on this page can wait behind these two. **`Docs/release-readiness.md`
 is the gate**; these are the only rows on it that nobody has started.
 
-1. **S5 — the counter is built and tested; it is NOT deployed, so the ceiling
-   does not exist in production yet.** `Deploy/worker/src/index.js` refuses above
-   `DAILY_REQUEST_CEILING` (2000/day) with 429 + `Retry-After` to UTC midnight,
-   and fails closed at 503 when it cannot count. **Blocked on merge** — a deploy
-   comes only from merged `main` or a branch Chiu names, and neither this work
-   nor its provisioning (PR #38) is merged. Until the deploy and its after-probe,
-   production is still the uncapped 2026-08-27 version, **`matching.base_url`
-   must not be flipped, and every build still carries the routing key.**
-   → `Docs/decisions.md` 2026-09-04, `Docs/release-readiness.md` S5, S6.
+1. ✅ **S5 CLOSED 2026-09-04 — the Worker's spend ceiling is live in production**
+   (Version ID `5b33922c`, 2000/day, fails closed at 503). ⚠️ **What is still
+   open is the config flip, and it is Chiu's, not a session's**:
+   `matching.base_url` is still `""`, so no build calls the Worker and **every
+   build still carries the routing key**. → `Docs/release-readiness.md` S5, S6.
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
@@ -43,18 +39,10 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
 
 ## Findings — engineering session (2026-09-04)
 
-- **The spend ceiling exists in code and was shown to fire twice** — neutering it
-  fails four tests, and a `wrangler dev` control at ceiling 1 answers the second
-  request 429. The overshoot under concurrency is **accepted, not overlooked**: a
-  Durable Object was considered and rejected as heavier than a ceiling needs.
-  → `Docs/decisions.md` 2026-09-04; `Deploy/worker/README.md` §"The spend ceiling"
-  holds the runbook and the control to re-run after any change there.
-- **The Worker suite is 19/19 and still not part of `xcodebuild test`** — a deploy
-  artifact does not get to invent a second CI. `cd Deploy/worker && npm test`,
-  Node ≥ 22, after `npm ci`. **`./check.sh` cannot see this Worker**; do not read
-  a green check as evidence about it.
-- ⏳ **The config flip is proposed and STOPS for Chiu** (`CLAUDE.md` rule 2). Two
-  values, no code, and it closes **S6 by construction**. Not before the deploy.
+- **The spend ceiling is built, deployed and measured.** Nothing here is open.
+  → `Docs/decisions.md` 2026-09-04 (the decision and the two accepted trade-offs);
+  `Deploy/worker/README.md` §"The spend ceiling" (the runbook, the positive
+  control, and the after-probe's pass conditions).
 
 ---
 
