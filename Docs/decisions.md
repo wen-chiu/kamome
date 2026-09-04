@@ -3050,17 +3050,65 @@ should instead persist and stack with the airport's own name — TAOYUAN over
 TAIWAN — is a question about which name wins, which is a designer's call. Shipped
 as "the name follows the mark" and put in front of him as a render.
 
-### 6. Not decided here
+### 8. The pass is redrawn from the film, and one decided field changes
+
+Chiu judged the render on 2026-09-04 and accepted the rest of the film. Five
+changes to the card, from two new reference images
+(`~/Kamome-films/type2-2026-09-04/pass-{light,dark}.png`):
+
+1. **The stub carries only the flight number**, with a **decorative barcode**
+   where its DATE field was. 🔴 The barcode's widths come from a fixed sequence in
+   `drawBarcode` and it **encodes nothing** — the same refusal PD-4 makes about
+   the end card's QR, and a code that *did* carry a payload would put trip data on
+   a shareable frame, which is a §0 decision nobody has made.
+2. 🔴 **The card's DATE is now the whole trip's range, not the crossing's two
+   dates.** This **changes a decided field**: 2026-09-02 settled it as the last
+   photograph before the flight and the first after it, and that pipeline —
+   `RecapComposer.crossingDates`, its `nearestStop` helper, the `photos:`
+   parameter it needed, and `RecapTrip.CrossingDates` — is **deleted**, not left
+   dormant. The value comes from `trip.startedAt`/`endedAt`, which
+   `titleSubtitle` has always used, and the row takes the wider half of the bottom
+   row because a range is two dates and a rule.
+   ⚠️ **Honest, with a semantic shift worth naming:** a boarding pass is an object
+   about a flight, and this row is now about the trip the flight is part of. If a
+   render reads as though the card claims *flight* dates, the answer is a label
+   change and it is Chiu's, not an implementer's.
+3. **The notches move to the card's outer edges.** On the tear line they read as
+   *discs* — whatever the map showed filled each circle, which is exactly what
+   Chiu saw ("下半藍上半白色各半圓形"). The dashed tear line stays, uninterrupted.
+4. **Both ends are set at one size on one baseline.** They were fitted
+   independently, so `TAIWAN` stayed at 47 px while `NEW ZEALAND` shrank — and
+   the baseline was derived from each end's *own* fitted size, so the two names
+   sat at different heights. Two ends of one journey, set alike.
+5. **The dark ticket follows the appearance** (ADR 2026-08-27), which the pass was
+   the last surface to ignore. ⚠️ **Palette only.** The dark reference has no left
+   stub; building it would be a *second drawing path* for one object, which is how
+   two treatments drift and how a fix to one stops reaching the other.
+
+### 9. Two bugs the reference exposed, and one that was not a bug
+
+- 🔴 **Right-aligned tracked type was a space short.** CoreText's kern adds
+  advance after *every* glyph including the last, so `textWidth` of a tracked
+  string is wider than its ink and right-aligning against it pushed `TO` a full
+  letter-space in from the edge. The trailing tracking now comes off.
+- 🔴 **The Chinese names were never missing.** `Region` correctly suppresses a
+  local name identical to the English one, and the desk renders in an English
+  locale, so both came back English and the second line was dropped. **The fix is
+  the harness's locale, pinned to `zh-Hant`** — the same reason `boardingPassDate`
+  pins `en_US_POSIX`: one desk must draw one film. `Region`'s rule is untouched,
+  because a single line **is** correct for an English-locale viewer.
+
+### 10. Not decided here
 
 **`export.subject_length_px` is unchanged**, deliberately (Chiu: look at the form
 first). A plane is as oversized on an 8,891 km frame as the car was, and the
 render is expected to show that. It is the closeout's handover item 3, it shares a
 tie-break with `crossing_beat_s` (ADR 2026-09-03), and moving it moves every film.
 
-**The card's `#FF6A3D`** — knowingly a second accent beside the film's `#FF8A5B`,
-and `RecapStylePresets` warns in its own words against near-misses of one accent.
-Chiu supplied the hex as part of the mockup; whether the two collapse is a visual
-decision and is **with the designer**, not settled here.
+**The card's `#FF6A3D`** and **the dart that marks `DISTANCE`** are both with the
+designer and unanswered
+(`Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`). The same dart
+draws the aircraft on the card's arc, so a decision about one settles both.
 
 ### 7. `FrameCompositor`'s two crossing renderers lose their defaults
 

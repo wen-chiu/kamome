@@ -51,15 +51,19 @@ final class RecapDemoFilmTests: XCTestCase {
     private func renderFilm(trip: RecapTrip, config: TrackingConfig.Export, named: String) async throws {
         let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
         let region = RecapMapRegionResolver.resolve(covering: bounds)
-        let establishing = region.map {
-            RecapBounds(
-                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
-                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
-            )
-        }
-        let timeline = try XCTUnwrap(
-            LinearTimeline(trip: trip, config: config, establishing: establishing)
-        )
+        let establishing = Self.establishing(region)
+        // **Pinned to zh-Hant** (Chiu 2026-09-04), for exactly the reason
+        // `boardingPassDate` pins `en_US_POSIX`: one machine must draw the same
+        // frame every run. The Journey Card's second line is the *viewer's* name
+        // for a region, and `Region` correctly suppresses it when it equals the
+        // English one — so a desk running an English locale renders one line and
+        // the 台灣 / 紐西蘭 the reference shows never appears. That is right for an
+        // English-locale viewer and wrong for a review render, and the fix is the
+        // harness's locale, never `Region`'s rule.
+        let timeline = try XCTUnwrap(LinearTimeline(
+            trip: trip, config: config, establishing: establishing,
+            locale: Locale(identifier: "zh-Hant")
+        ))
         // Stand-in photos: the simulator has no real library, and the deck beats
         // are the thing under review. One tile per selected photo.
         var images: [String: CGImage] = [:]
@@ -116,6 +120,17 @@ final class RecapDemoFilmTests: XCTestCase {
             videoURL.path, trip.stops.count, trip.legs.count, timeline.frameCount, duration, sizeMB, seconds
         ))
         reportPacing(timeline, trip: trip)
+    }
+
+    /// An installed region's extent as the timeline wants it, or nil — which is
+    /// the shipped path, since no region is installed while MapLibre is parked.
+    private static func establishing(_ region: RecapMapRegion?) -> RecapBounds? {
+        region.map {
+            RecapBounds(
+                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
+                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
+            )
+        }
     }
 
     /// Measures what the film actually does — dwell per stop read off the
@@ -262,7 +277,6 @@ final class RecapDemoFilmTests: XCTestCase {
             rawPhotoCounts: selections.rawPhotoCounts,
             favoriteCounts: selections.favoriteCounts,
             weighting: config,
-            photos: detail.photos,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(detail.segments)
         ))

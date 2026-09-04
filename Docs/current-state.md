@@ -212,7 +212,11 @@ is closed.
   the viewer"* — `crossing_flight_max_longitude_deg` **stays 70** and the map
   place-names icebox **stays frozen**, because the marks carry no text.
   Each mark carries **its country's name**, from the value the pass already
-  resolved. 🔴 **Neither place-name lock is thawed** — the base map still draws
+  resolved. The pass itself was **redrawn from Chiu's post-film references**
+  (outer-edge notches, a decorative barcode, one type size across both ends, and a
+  **dark ticket** that follows the appearance — palette only). 🔴 Its DATE row is
+  now the **trip's** range, replacing the crossing's two dates decided
+  2026-09-02. 🔴 **Neither place-name lock is thawed** — the base map still draws
   nothing, and the icebox entry is a whole-film narrative system, not two
   endpoints. 🔴 **Known boundary: no classifier, so a ferry gets the pass and the
   plane too.** ⏳ `subject_length_px` deliberately unchanged; Chiu judges the form

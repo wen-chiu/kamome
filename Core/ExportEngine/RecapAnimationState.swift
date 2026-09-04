@@ -202,10 +202,10 @@ public struct RecapJourneyCard: Equatable {
     /// card — counts the local journey only. Labelled as the flight on the card so
     /// the two numbers can never be read as the same quantity.
     public let distanceM: Double
-    /// The last photograph before the flight and the first after it, formatted by
-    /// the app. nil prints the distance row without dates rather than inventing
-    /// them — see `RecapTrip.crossingDates`.
-    public let dates: RecapTrip.CrossingDates?
+    /// The **trip's** date range, formatted by the app (Chiu 2026-09-04 — it was
+    /// the crossing's own two dates until then). nil prints the distance row
+    /// without a date rather than inventing one — see `RecapTrip.journeyDates`.
+    public let dates: String?
     /// 0…1 across the crossing beat: how far along its dotted arc the aircraft
     /// printed on the card has travelled. The card is the beat's own clock.
     public let progress: Double
@@ -214,7 +214,7 @@ public struct RecapJourneyCard: Equatable {
 
     public init(
         from: Region, to: Region, distanceM: Double,
-        dates: RecapTrip.CrossingDates?, progress: Double, opacity: Double
+        dates: String?, progress: Double, opacity: Double
     ) {
         self.from = from
         self.to = to

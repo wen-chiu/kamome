@@ -323,6 +323,37 @@ true of **different renderers**. `VehicleCatalog.resolve` never failed and
 passing the renderers; the harness now prints `KAMOME_DEMO_FILM crossing subject`
 and `flight subject` so a film log can never be silent about this again.
 
+## The pass, redrawn from the film — 2026-09-04
+
+Chiu accepted the rest of the film and revised the card twice: a mockup, then two
+reference tickets after watching it (`~/Kamome-films/type2-2026-09-04/pass-*.png`).
+The second pass is what ships. Detail in ADR 2026-09-04 §8–§9; what matters when
+picking this up:
+
+- 🔴 **Both references print `FLIGHT TIME 04:00` and `KM-523`, and neither is
+  drawn.** The field was removed on 2026-09-02 under rule 5 and the flight number
+  is the constant `THX-9527`. This has now been declined twice, from progressively
+  better-looking pictures. **Do not restore either from a reference.**
+- 🔴 **The DATE row is the trip's range**, and the crossing-dates pipeline is
+  deleted rather than parked. Semantically the row moved from the *flight* to the
+  *journey* — honest, and named in the ADR as a shift somebody should look at.
+- The notches are on the **outer edges**. On the tear line a hole reads as a disc,
+  because whatever the map shows fills it.
+- **One type size across both ends.** They were fitted independently and even sat
+  at different baselines.
+- The **dark ticket is palette-only**. The dark reference has no stub; building
+  that would be a second drawing path for one object.
+
+### Two bugs, and one thing that was never broken
+
+- Right-aligned tracked type was a letter-space short: CoreText's kern adds
+  advance after the last glyph too, so `textWidth` is wider than the ink.
+- **The Chinese names were never missing.** `Region` suppresses a local name equal
+  to the English one, and the desks render in an English locale. Fixed by pinning
+  the review harnesses to `zh-Hant` — `Region`'s rule is correct and untouched.
+  ⚠️ Both review harnesses now pin the same locale; two desks on two locales is
+  the drift that keeps costing rounds.
+
 ## Still open, and each is Chiu's
 
 - ✅ **The mockup arrived and the pass is rebuilt to it** (2026-09-04) — see

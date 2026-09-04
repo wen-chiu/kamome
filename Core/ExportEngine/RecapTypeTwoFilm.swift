@@ -67,7 +67,7 @@ public enum RecapTypeTwoFilm {
             statsLines: trip.statsLines,
             callToAction: trip.callToAction,
             shareURL: trip.shareURL,
-            crossingDates: trip.crossingDates,
+            journeyDates: trip.journeyDates,
             everyLegRoutabilityEstablished: trip.everyLegRoutabilityEstablished
         )
     }

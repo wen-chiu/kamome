@@ -53,15 +53,21 @@ extension RecapOverlayRenderer {
     }
 
     /// The card stock: rounded, shadowed, opaque enough to be a printed object
-    /// rather than a translucent panel, with the two tear notches **punched out
-    /// of it**.
+    /// rather than a translucent panel, with a notch bitten out of each **outer
+    /// edge**.
     ///
-    /// 🔴 The notches are holes in a single even-odd path, not a second pass with
-    /// `.destinationOut`. That was the first attempt and it rendered as two black
-    /// discs: `destinationOut` erases whatever is already in the context, and by
-    /// this point that is the map — so it cut through the frame rather than
-    /// through the ticket. One compound path can only remove the stock, which is
-    /// the whole of what a notch is.
+    /// 🔴 **Outer edges, not the tear line** (Chiu 2026-09-04, from the film).
+    /// They were on the tear line, top and bottom, and a hole in the middle of a
+    /// card reads as a *disc* — Chiu saw exactly that, "下半藍上半白色各半圓形",
+    /// because whatever the map happened to be showing filled each circle. On the
+    /// outer edge the same hole reads as a ticket, which is what the reference
+    /// draws.
+    ///
+    /// 🔴 They are holes in a single even-odd path, not a second pass with
+    /// `.destinationOut`. That was the first attempt and it cut through the *map*:
+    /// `destinationOut` erases whatever is already in the context, and by this
+    /// point that is the frame. One compound path can only remove the stock,
+    /// which is the whole of what a notch is.
     private func drawStock(_ rect: CGRect, tearX: CGFloat, in surface: RenderSurface) {
         let tokens = style.journeyCard
         let context = surface.context
@@ -70,9 +76,9 @@ extension RecapOverlayRenderer {
 
         let stock = CGMutablePath()
         stock.addRoundedRect(in: rect, cornerWidth: corner, cornerHeight: corner)
-        for centerY in [rect.minY, rect.maxY] {
+        for centerX in [rect.minX, rect.maxX] {
             stock.addEllipse(in: CGRect(
-                x: tearX - radius, y: centerY - radius, width: radius * 2, height: radius * 2
+                x: centerX - radius, y: rect.midY - radius, width: radius * 2, height: radius * 2
             ))
         }
 
@@ -87,12 +93,13 @@ extension RecapOverlayRenderer {
         context.restoreGState()
     }
 
-    /// The tear line between the notches `drawStock` has already punched.
+    /// The tear line — dashed, full height, and uninterrupted since the notches
+    /// moved to the outer edges (Chiu 2026-09-04: he likes the dashes).
     private func drawPerforation(atX tearX: CGFloat, in rect: CGRect, surface: RenderSurface) {
         let tokens = style.journeyCard
         let context = surface.context
         let scale = surface.scale
-        let radius = tokens.notchRadiusPx * scale
+        let inset = tokens.cornerPx * scale * 0.5
 
         context.saveGState()
         context.setStrokeColor(tokens.ruleColor)
@@ -100,39 +107,45 @@ extension RecapOverlayRenderer {
         context.setLineDash(phase: 0, lengths: [
             tokens.perforationDashPx * scale, tokens.perforationGapPx * scale
         ])
-        context.move(to: CGPoint(x: tearX, y: rect.minY + radius))
-        context.addLine(to: CGPoint(x: tearX, y: rect.maxY - radius))
+        context.move(to: CGPoint(x: tearX, y: rect.minY + inset))
+        context.addLine(to: CGPoint(x: tearX, y: rect.maxY - inset))
         context.strokePath()
         context.restoreGState()
     }
 
     // MARK: - The stub
 
-    /// Left of the tear: the gull, the flight number under its rule, and the
-    /// dates — the three things a torn-off half still has to carry.
+    /// Left of the tear: the gull, the flight number under its rule, and a
+    /// decorative barcode.
+    ///
+    /// 🔴 **The DATE field left the stub on 2026-09-04** (Chiu, from the film) and
+    /// the date now appears once, in the bottom row. A ticket that prints the same
+    /// value twice is what the change removes.
     private func drawStub(_ card: RecapJourneyCard, in rect: CGRect, surface: RenderSurface) {
         let tokens = style.journeyCard
         let scale = surface.scale
         let left = rect.minX + tokens.paddingPx * scale
         let top = rect.maxY
 
-        // The gull is the wordmark's bird, sized and coloured here and never
-        // reshaped (`HANDOFF.md` 2026-08-29 finding 5b).
+        // The gull is the wordmark's bird, **sized and coloured here and never
+        // reshaped** (`HANDOFF.md` 2026-08-29 finding 5b). Its palette is the
+        // card's own `markColor` so the dark ticket can invert it without a
+        // second drawing.
         let mark = tokens.stubMarkLengthPx * scale
         VehicleMarker.seagull.draw(
             in: surface.context,
             at: CGPoint(x: left + mark * 0.4, y: top - tokens.paddingPx * scale - mark / 2),
             lengthPx: mark, rotationDegrees: 0,
             colors: VehicleMarker.Palette(
-                fill: tokens.mutedColor, accent: tokens.mutedColor, outline: tokens.mutedColor
+                fill: tokens.markColor, accent: tokens.markColor, outline: tokens.markColor
             )
         )
 
-        var cursorY = top - rect.height * 0.30
+        var cursorY = top - rect.height * 0.34
         drawStubField(label: "FLIGHT", value: RecapJourneyCard.flightNumber,
                       left: left, labelY: cursorY, in: surface)
 
-        cursorY -= rect.height * 0.16
+        cursorY -= rect.height * 0.15
         surface.context.saveGState()
         surface.context.setStrokeColor(tokens.accentColor)
         surface.context.setLineWidth(tokens.arcWidthPx * scale)
@@ -141,18 +154,18 @@ extension RecapOverlayRenderer {
         surface.context.strokePath()
         surface.context.restoreGState()
 
-        cursorY -= rect.height * 0.14
-        drawStubField(label: "DATE", value: Self.dateRange(card.dates) ?? "—",
-                      left: left, labelY: cursorY, in: surface)
-
-        drawWatermark(
-            at: CGPoint(x: left + tokens.stubWatermarkRadiusPx * scale,
-                        y: rect.minY + tokens.paddingPx * scale + tokens.stubWatermarkRadiusPx * scale),
-            in: surface
-        )
+        // Sized to the stub's lower third rather than to everything under the
+        // rule: at full height it ran up against the tear line and read as a
+        // second column rather than as ticket furniture.
+        let barcodeHeight = rect.height * tokens.stubBarcodeHeightFraction
+        drawBarcode(in: CGRect(
+            x: left, y: rect.minY + tokens.paddingPx * scale,
+            width: rect.maxX - tokens.paddingPx * scale * 1.6 - left,
+            height: min(barcodeHeight, cursorY - rect.minY - tokens.paddingPx * scale * 2)
+        ), in: surface)
     }
 
-    /// A left-aligned label over its value — the stub's one repeated shape.
+    /// A left-aligned label over its value — the stub's one type shape.
     private func drawStubField(
         label: String, value: String, left: CGFloat, labelY: CGFloat, in surface: RenderSurface
     ) {
@@ -167,23 +180,6 @@ extension RecapOverlayRenderer {
             value, at: CGPoint(x: left, y: labelY - tokens.valueFontPx * scale * 1.15),
             fontPx: tokens.valueFontPx, color: tokens.inkColor, in: surface
         )
-    }
-
-    /// The dotted disc at the foot of the stub. Ticket furniture, drawn from the
-    /// same dot field as the ground behind the arc so the card has one texture.
-    private func drawWatermark(at center: CGPoint, in surface: RenderSurface) {
-        let tokens = style.journeyCard
-        let context = surface.context
-        let radius = tokens.stubWatermarkRadiusPx * surface.scale
-        context.saveGState()
-        context.addEllipse(in: CGRect(
-            x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2
-        ))
-        context.clip()
-        drawGroundDots(in: CGRect(
-            x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2
-        ), in: surface)
-        context.restoreGState()
     }
 
     // MARK: - The panel
@@ -211,6 +207,16 @@ extension RecapOverlayRenderer {
     }
 
     /// `FROM` and `TO`, each named twice, with the dotted arc between them.
+    ///
+    /// 🔴 **Both ends are set at one size, on one baseline** (Chiu 2026-09-04).
+    /// They were fitted independently, so `TAIWAN` stayed at the full 47 px while
+    /// `NEW ZEALAND` shrank to fit its column — and because the baseline was
+    /// derived from each end's *own* fitted size, the two names did not even sit
+    /// at the same height. A boarding pass has two ends of one journey; setting
+    /// them differently makes one look more important than the other.
+    ///
+    /// The shared size is the **smaller** of the two fits: the larger one would
+    /// overflow the column it was measured against.
     private func drawEnds(
         _ card: RecapJourneyCard, in body: CGRect, arcBaseY: CGFloat, surface: RenderSurface
     ) {
@@ -228,44 +234,49 @@ extension RecapOverlayRenderer {
             let edgeX: CGFloat
             let alignRight: Bool
         }
-        for end in [
+        let ends = [
             End(region: card.from, label: "FROM", edgeX: body.minX, alignRight: false),
             End(region: card.to, label: "TO", edgeX: body.maxX, alignRight: true)
-        ] {
+        ]
+        // One size for both names, and one for both local lines. Measured across
+        // every end before anything is drawn, which is the whole fix.
+        let nameFontPx = ends.map {
+            fittedFontPx($0.region.english, preferred: tokens.regionFontPx, maxWidth: columnW, in: surface)
+        }.min() ?? tokens.regionFontPx
+        let localFontPx = ends.compactMap(\.region.local).map {
+            fittedFontPx($0, preferred: tokens.localFontPx, maxWidth: columnW, in: surface)
+        }.min() ?? tokens.localFontPx
+
+        let labelY = top - tokens.labelFontPx * scale
+        let nameY = labelY - nameFontPx * scale * 1.25
+        let localY = nameY - localFontPx * scale * 1.5
+
+        for end in ends {
             drawAligned(
                 CardType(
                     text: end.label, fontPx: tokens.labelFontPx, color: tokens.accentColor,
                     tracking: tokens.labelFontPx * tokens.labelTrackingEm * scale
                 ),
-                edgeX: end.edgeX, alignRight: end.alignRight,
-                baselineY: top - tokens.labelFontPx * scale, in: surface
+                edgeX: end.edgeX, alignRight: end.alignRight, baselineY: labelY, in: surface
             )
-            // A place name is user data of any length, so it shrinks to its
-            // column rather than running into the arc — the rule the stop label
-            // and the title already follow.
-            let fitted = fittedFontPx(
-                end.region.english, preferred: tokens.regionFontPx, maxWidth: columnW, in: surface
-            )
-            let nameY = top - tokens.labelFontPx * scale - fitted * scale * 1.25
             drawAligned(
-                CardType(text: end.region.english, fontPx: fitted, color: tokens.inkColor),
+                CardType(text: end.region.english, fontPx: nameFontPx, color: tokens.inkColor),
                 edgeX: end.edgeX, alignRight: end.alignRight, baselineY: nameY, in: surface
             )
             guard let local = end.region.local else { continue }
             drawAligned(
-                CardType(
-                    text: local,
-                    fontPx: fittedFontPx(local, preferred: tokens.localFontPx, maxWidth: columnW, in: surface),
-                    color: tokens.mutedColor
-                ),
-                edgeX: end.edgeX, alignRight: end.alignRight,
-                baselineY: nameY - tokens.localFontPx * scale * 1.5, in: surface
+                CardType(text: local, fontPx: localFontPx, color: tokens.mutedColor),
+                edgeX: end.edgeX, alignRight: end.alignRight, baselineY: localY, in: surface
             )
         }
+        // The chord runs nearly the whole gap between the two columns. It was
+        // inset by 0.92 of a column and came out as a short flat curve low in the
+        // panel; the reference bows it high across the middle, and the rise is a
+        // fraction of the chord, so widening fixes both at once.
         drawArc(
             progress: CGFloat(card.progress),
-            from: CGPoint(x: body.minX + columnW * 0.92, y: arcBaseY),
-            to: CGPoint(x: body.maxX - columnW * 0.92, y: arcBaseY + scale * 6),
+            from: CGPoint(x: body.minX + columnW * 0.70, y: arcBaseY),
+            to: CGPoint(x: body.maxX - columnW * 0.70, y: arcBaseY + scale * 6),
             in: surface
         )
     }
@@ -284,7 +295,14 @@ extension RecapOverlayRenderer {
     private func drawAligned(
         _ type: CardType, edgeX: CGFloat, alignRight: Bool, baselineY: CGFloat, in surface: RenderSurface
     ) {
-        let width = textWidth(type.text, fontPx: type.fontPx, tracking: type.tracking, in: surface)
+        // 🔴 **The trailing letter-space comes off a right-aligned run.**
+        // CoreText's kern attribute adds advance after *every* glyph including
+        // the last, so `textWidth` of a tracked string is one space wider than
+        // the ink — and right-aligning against it pushed `TO` a full space in
+        // from the edge while the untracked names sat flush. Visible as `FROM`
+        // and `TO` not lining up with the names under them (Chiu 2026-09-04).
+        let measured = textWidth(type.text, fontPx: type.fontPx, tracking: type.tracking, in: surface)
+        let width = measured - (alignRight ? type.tracking : 0)
         drawText(
             type.text, at: CGPoint(x: alignRight ? edgeX - width : edgeX, y: baselineY),
             fontPx: type.fontPx, color: type.color, tracking: type.tracking, in: surface
@@ -314,11 +332,14 @@ extension RecapOverlayRenderer {
             icon: .plane, label: "DISTANCE", value: distance,
             left: rect.minX, rows: FieldRows(labelY: labelY, valueY: valueY), in: surface
         )
-        // No dates is a real state, not a hole to fill: a trip whose photographs
-        // carry no `taken_at` has none, and the pass prints what it knows.
-        guard let range = Self.dateRange(card.dates) else { return }
+        // No date is a real state, not a hole to fill.
+        guard let range = card.dates else { return }
 
-        let separatorX = rect.minX + rect.width * 0.5
+        // **The date takes the wider half** (Chiu 2026-09-04). A trip's range is
+        // two dates and a rule — `16 JUL 2025 – 18 JUL 2025` — against a distance
+        // that is never more than a few characters, so an even split would fit the
+        // short value and shrink the long one.
+        let separatorX = rect.minX + rect.width * tokens.bottomRowSplitFraction
         surface.context.saveGState()
         surface.context.setStrokeColor(tokens.ruleColor)
         surface.context.setLineWidth(scale)
@@ -332,15 +353,6 @@ extension RecapOverlayRenderer {
             left: separatorX + tokens.paddingPx * scale,
             rows: FieldRows(labelY: labelY, valueY: valueY), in: surface
         )
-    }
-
-    /// The two dates as one range, the way a ticket prints them. Both facts, one
-    /// field — the arrangement is the mockup's, the content is unchanged.
-    static func dateRange(_ dates: RecapTrip.CrossingDates?) -> String? {
-        guard let dates else { return nil }
-        return dates.departure == dates.arrival
-            ? dates.departure
-            : "\(dates.departure) – \(dates.arrival)"
     }
 
     /// The two baselines a bottom-row field is set on.

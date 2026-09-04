@@ -128,10 +128,6 @@ enum RecapComposer {
         rawPhotoCounts: [String: Int] = [:],
         favoriteCounts: [String: Int] = [:],
         weighting: TrackingConfig.Export? = nil,
-        /// Every photo row of the trip, for the Journey Card's two dates. Defaults
-        /// to empty, which yields no dates — and a boarding pass that prints its
-        /// distance row without them, rather than inventing one.
-        photos: [PhotoRefRecord] = [],
         everyLegRoutabilityEstablished: Bool = false
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
@@ -181,7 +177,7 @@ enum RecapComposer {
             statsLines: statsLines(stats: stats, distanceM: localM, stopCount: stops.count),
             callToAction: String(localized: "recap_end_cta"),
             shareURL: nil,
-            crossingDates: crossingDates(legs: legs, stops: stops, photos: photos),
+            journeyDates: journeyDates(trip),
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
         )
     }

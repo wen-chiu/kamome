@@ -77,7 +77,16 @@ struct RecapReviewScene {
                 maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
             )
         }
-        guard let timeline = LinearTimeline(trip: trip, config: config, establishing: establishing) else {
+        // **zh-Hant, the same pin `RecapDemoFilmTests` uses** (2026-09-04): the
+        // Journey Card's second line is the viewer's own name for a region, and
+        // `Region` suppresses it when it equals the English one — so an
+        // English-locale desk renders one line and the 台灣 / 紐西蘭 the reference
+        // shows never appears. Two review harnesses on two locales would draw two
+        // different cards from one film.
+        guard let timeline = LinearTimeline(
+            trip: trip, config: config, establishing: establishing,
+            locale: Locale(identifier: "zh-Hant")
+        ) else {
             throw SetupError.noTimeline
         }
 

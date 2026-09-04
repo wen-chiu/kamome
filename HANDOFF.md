@@ -46,11 +46,10 @@ boundaries is accepted as it stands, and `keyframe_interval_frames` is dead
 config, one of three. → `Docs/handoff-crop-scaling.md`, `release-readiness.md` C1.
 
 ### ⏳ The type-2 film is BUILT and judged — PR #31
-Title card over the flight frame → the aircraft crosses **camera still** → the
-arc closes into the destination → the destination's local trip. The origin's
-drive is dropped, making every type-2 film `Docs/camera-arcs.md` §4 **Case C**.
-⚠️ The type is derived and **monotonic**, so `>= 2 ⇒ the type-2 form` holds only
-while type 3 is deferred.
+Title card over the flight frame → the aircraft crosses **camera still** → the arc
+closes into the destination → the destination's local trip; the origin's drive is
+dropped (`camera-arcs.md` §4 **Case C**). ⚠️ The type is derived and **monotonic**,
+so `>= 2 ⇒ the type-2 form` holds only while type 3 is deferred.
 
 ### ⏳ The type-2 opening is RETIMED and the crossing carries a boarding pass
 **ADR 2026-09-03.** `crossing_beat_s` is **4.0, not 6.0** — the 4/6/9 sweep is
@@ -62,18 +61,22 @@ rushed, de-emphasise the sprite, never re-lengthen the beat.**
 Measured: **trip starts 13.09 s** (not the brief's 12.5), departure **3.59 s / 2
 photographs**, sprite **24.6 %/s**, odometer **269 km** where it read 9,024.
 
-**ADR 2026-09-04** laid the pass out to Chiu's mockup, gave the crossing a
-**plane** (one condition decides the pass and the airframe; every other crossing
-keeps the seagull), and put a mark **and its country's name** on each end of the
-flight from t=0 to the landing — the closeout's *"the wide flight frame loses the
-viewer"*, answered. The mark's artwork is `Resources/Landmarks/`, a
-**placeholder**, with a logged vector fallback.
+**ADR 2026-09-04** redrew the pass from Chiu's references (a mockup, then a
+post-film revision), gave the crossing a **plane** (one condition decides the pass
+and the airframe; every other crossing keeps the seagull), and marked **and
+named** each end of the flight from t=0 to the landing — the closeout's *"the wide
+flight frame loses the viewer"*, answered. The mark's artwork is
+`Resources/Landmarks/`, a **placeholder**, with a logged fallback.
+🔴 **The pass's DATE row changed meaning** — the **trip's** range, not the
+crossing's two dates, and the old pipeline is deleted. If a render reads it as a
+*flight* date, the label is Chiu's call. ⚠️ Both references print `FLIGHT TIME`
+and `KM-523`; **neither is restored** (rule 5; the constant is `THX-9527`).
+✅ The **dark ticket** follows the appearance — palette only, one layout.
 🔴 **Neither place-name lock is thawed**: the base map still draws nothing
 (blocked on a fontstack), and the icebox entry is a whole-film narrative system
 rather than two endpoints. `crossing_flight_max_longitude_deg` stays 70.
 🔴 **No classifier: a ferry gets the pass and the plane too** — session 2's line,
-unmoved. ⏳ `subject_length_px` untouched on purpose. ⚠️ The mockup's `FLIGHT TIME`
-is **not** restored — removed by decision.
+unmoved. ⏳ `subject_length_px` untouched on purpose.
 
 ⏳ **Four visual questions are with the designer** (the card's second accent, the
 `DISTANCE` icon, the origin mark's 3.59 s cut, and which name wins at the
@@ -82,10 +85,9 @@ airport). → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
 🔴 **The review film harness drew a different film for a round.**
 `RecapDemoFilmTests` passed no `crossingSubject:`, which `FrameCompositor` reads
 as "draw the trip's own vehicle" — so `auckland-crossing` drove a **car** across
-the Pacific while the app drew a gull. **`VehicleCatalog` never failed**: the
-subject-lookup miss below is untouched and still unmeasured. **Both crossing
-renderers lost their defaults** — a defaulted nil is the silent fallback, and 12
-call sites now say which they want.
+the Pacific while the app drew a gull. **`VehicleCatalog` never failed**; the
+subject-lookup miss below is untouched. **Both crossing renderers lost their
+defaults**: a defaulted nil *is* the silent fallback, and 12 call sites now speak.
 → `Docs/handoff-type2-opening-retime.md`, `Docs/design-reviews/2026-09-02-cross-region-opening.md`.
 
 🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
@@ -103,14 +105,11 @@ classifier**, and **the card sums every crossing** (harmless until type 3).
 ## 🟠 Open — nobody is on these
 
 ### 🔴 `Geo.distanceM` is equirectangular, and nobody has swept who reads it
-It scales longitude by the cosine of the **first** latitude alone, so it degrades
-over a long diagonal: **121 km short** over Taipei → Auckland (VERIFIED
-2026-09-03), which is the 8,755 km quoted throughout `handoff-type2-films.md`.
-Harmless for the camera — `cumulativeM`, the dead zone, stop anchoring and the
-body span are **one consistent axis** — and not harmless the moment a figure
-reaches a viewer. `Geo.greatCircleM` sits beside it and the Journey Card uses it;
-`distanceM` was deliberately **not** changed, which would move every film to fix
-a printing defect. ⚠️ **The sweep is owed and cheap**: which other
+It scales longitude by the cosine of the **first** latitude alone: **121 km short**
+over Taipei → Auckland (VERIFIED 2026-09-03). Harmless for the camera — one
+consistent axis — and not harmless the moment a figure reaches a viewer.
+`Geo.greatCircleM` sits beside it and the card uses it; `distanceM` was
+deliberately **not** changed. ⚠️ **The sweep is owed and cheap**: which other
 `Geo.distanceM` results are shown to someone?
 → `Docs/handoff-type2-opening-retime.md`.
 

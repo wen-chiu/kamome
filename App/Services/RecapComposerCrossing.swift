@@ -1,6 +1,5 @@
 import Foundation
 import KamomeExportEngine
-import KamomeImportKit
 import KamomePersistence
 import KamomeTrackingEngine
 import KamomeTripComposer
@@ -9,12 +8,12 @@ import KamomeTripComposer
 /// 2026-09-03 for file length, and because these three are one decision rather
 /// than three helpers.
 ///
-/// The 2026-09-02 review settled two things about a type-2 film's text:
+/// Two rules about a type-2 film's text:
 ///
-/// - **every kilometre a viewer reads is the local journey**, so the flight comes
-///   off `stats.distanceM` before either card prints it;
-/// - the **Journey Card** prints the last photograph's date before the flight and
-///   the first after it.
+/// - **every kilometre a viewer reads is the local journey** (2026-09-02), so the
+///   flight comes off `stats.distanceM` before either card prints it;
+/// - the **Journey Card** prints the **trip's** date range (2026-09-04, replacing
+///   the crossing's own two dates — see `journeyDates`).
 ///
 /// Both live in the app layer for the same reason all the other copy does: this
 /// is the only place with both the stored records and a formatter, and
@@ -58,41 +57,28 @@ extension RecapComposer {
         return max(stats.distanceM - flown, 0)
     }
 
-    /// The two dates the Journey Card prints: **the last photograph taken before
-    /// the flight and the first taken after it** (Chiu 2026-09-02).
+    /// **The date range the boarding pass prints: the whole trip's** (Chiu
+    /// 2026-09-04, from the film).
     ///
-    /// Composed here because this is the only layer that has both `taken_at` and a
-    /// formatter — `PhotoRef` is a pointer and `RecapTrip.Stop` carries only a
-    /// `dayLabel` string, and neither the timeline nor the renderer may go looking
-    /// for a date.
+    /// 🔴 **This replaced a decided field, and the semantics moved with it.**
+    /// Until 2026-09-04 the pass printed the *crossing's* two dates — the last
+    /// photograph before the flight and the first after it (Chiu 2026-09-02) —
+    /// and that pipeline is deleted rather than left dormant. A ticket's DATE row
+    /// now reads the **journey's** start and end, from `trip.startedAt` /
+    /// `endedAt`, which is what `titleSubtitle` has always used.
     ///
-    /// **Split by the crossing's own ends, using the same "nearest stop" rule
-    /// `RecapTypeTwoFilm` uses to pick the departure**, so the card and the film
-    /// cannot disagree about which stop the flight leaves from. nil whenever
-    /// either side has no dated photograph — a real answer the card honours.
-    static func crossingDates(
-        legs: [RecapTrip.Leg], stops: [StopRecord], photos: [PhotoRefRecord]
-    ) -> RecapTrip.CrossingDates? {
-        guard let crossing = legs.first(where: \.isCrossing),
-              let origin = crossing.coordinates.first, let arrival = crossing.coordinates.last,
-              let departureStop = nearestStop(to: origin, in: stops),
-              let arrivalStop = nearestStop(to: arrival, in: stops) else { return nil }
-        let taken = { (stopId: String) in
-            photos.filter { $0.stopId == stopId }.compactMap(\.takenAt)
-        }
-        guard let left = taken(departureStop.id).max(), let landed = taken(arrivalStop.id).min() else {
-            return nil
-        }
-        return RecapTrip.CrossingDates(
-            departure: boardingPassDate(left), arrival: boardingPassDate(landed)
-        )
-    }
-
-    private static func nearestStop(to point: RecapCoordinate, in stops: [StopRecord]) -> StopRecord? {
-        stops.min {
-            PhotoImportClusterer.haversineMeters(point.lat, point.lon, $0.lat, $0.lon)
-                < PhotoImportClusterer.haversineMeters(point.lat, point.lon, $1.lat, $1.lon)
-        }
+    /// ⚠️ **Honest, and a semantic shift worth naming.** A boarding pass is an
+    /// object about a flight, and this row is now about the trip the flight is
+    /// part of. That was the instruction; if a render reads as though the card is
+    /// claiming *flight* dates, the answer is a label change and it is Chiu's,
+    /// not an implementer's.
+    ///
+    /// Collapses to one date when the trip begins and ends on the same day: a
+    /// range with the same value twice reads as a bug.
+    static func journeyDates(_ trip: TripRecord) -> String {
+        let started = boardingPassDate(trip.startedAt)
+        let ended = boardingPassDate(trip.endedAt ?? trip.startedAt)
+        return started == ended ? started : "\(started) – \(ended)"
     }
 
     /// `15 JUL 2025` — a ticket date.

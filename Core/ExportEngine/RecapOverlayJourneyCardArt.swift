@@ -74,6 +74,36 @@ extension RecapOverlayRenderer {
         )
     }
 
+    /// **A decorative barcode on the stub** (Chiu 2026-09-04).
+    ///
+    /// 🔴 **It encodes nothing, and it must never encode anything.** The bar
+    /// widths come from a fixed integer sequence in this function, not from the
+    /// trip, the share URL or any other payload. Same reasoning as PD-4's refusal
+    /// to draw a QR on the end card: a code that invites a scan and resolves to
+    /// nothing is worse than no code — and one that *did* carry a real payload
+    /// would put trip data on a shareable frame, which is a §0 decision nobody has
+    /// made. This is ticket furniture, the visual equivalent of the perforation.
+    func drawBarcode(in rect: CGRect, in surface: RenderSurface) {
+        let tokens = style.journeyCard
+        guard rect.width > 0, rect.height > 0 else { return }
+        let context = surface.context
+        context.saveGState()
+        defer { context.restoreGState() }
+        context.setFillColor(tokens.barcodeColor)
+        // A fixed pattern: deliberately not derived, so no future reader can
+        // mistake it for data and no future edit can make it carry any.
+        let widths: [CGFloat] = [1, 2, 1, 3, 1, 1, 2, 1, 1, 3, 2, 1, 1, 2, 3, 1, 1, 1, 2, 1]
+        let unit = rect.width / widths.reduce(0, +) / 2
+        var barX = rect.minX
+        for (index, weight) in widths.enumerated() {
+            let barWidth = weight * unit
+            if index % 2 == 0 {
+                context.fill(CGRect(x: barX, y: rect.minY, width: barWidth, height: rect.height))
+            }
+            barX += barWidth * 2
+        }
+    }
+
     /// The faint regular dot field the arc sits on. **Not a world map**: a drawn
     /// coastline would be a second claim about where places are, and this card's
     /// job is to name two of them, not to draw the planet.

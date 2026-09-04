@@ -50,7 +50,7 @@ extension LinearTimeline {
         }
         return RecapJourneyCard(
             from: from, to: to, distanceM: crossingDistanceM(trip),
-            dates: trip.crossingDates, progress: 0, opacity: 0
+            dates: trip.journeyDates, progress: 0, opacity: 0
         )
     }
 

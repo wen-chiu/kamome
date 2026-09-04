@@ -172,10 +172,6 @@ final class RecapModel {
             rawPhotoCounts: rawPhotoCounts(detail: detail),
             favoriteCounts: favoriteCounts(detail: detail),
             weighting: config.export,
-            // For the Journey Card's two dates — `taken_at` lives only on these
-            // rows, and neither the timeline nor the renderer may go looking for
-            // a date (`RecapTrip.crossingDates`).
-            photos: detail.photos,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(detail.segments)
         ) else {

@@ -51,10 +51,12 @@ final class RecapTimelineReportTests: XCTestCase {
                 maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
             )
         }
-        // Pinned so the Journey Card's second region name — and therefore this
-        // report — is the same on any desk (`LinearTimeline.init`'s `locale`).
+        // Pinned to the same locale the review renders use, so one desk measures
+        // the film it draws. Nothing this report prints depends on it — but two
+        // desk harnesses on two locales is the drift that keeps costing rounds.
         let line = try XCTUnwrap(LinearTimeline(
-            trip: recap, config: config, establishing: establishing, locale: Locale(identifier: "en_US")
+            trip: recap, config: config, establishing: establishing,
+            locale: Locale(identifier: "zh-Hant")
         ))
         let report = Self.scan(line, fps: config.fps)
 

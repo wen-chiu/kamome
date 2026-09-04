@@ -76,11 +76,17 @@ public struct RecapJourneyCardStyle {
     /// coloured at the call site and never restyled** — it is the same bird as
     /// the end card's wordmark (`HANDOFF.md` 2026-08-29 finding 5b).
     public var stubMarkLengthPx: CGFloat = 46
-    /// The faint dotted disc at the foot of the stub — ticket furniture, and the
-    /// only ornament on the card.
-    public var stubWatermarkRadiusPx: CGFloat = 26
+    /// The gull's colour. Its own token rather than `mutedColor` so the dark
+    /// ticket inverts it to a light silhouette without a second drawing — and so
+    /// changing the field labels' grey can never restyle the bird.
+    public var markColor = CGColor(srgbRed: 0.62, green: 0.64, blue: 0.67, alpha: 1)
     /// The short rule under the flight number.
     public var stubRuleWidthPx: CGFloat = 34
+    /// How much of the stub's height the barcode occupies.
+    public var stubBarcodeHeightFraction: CGFloat = 0.30
+    /// The decorative barcode where the stub's DATE field used to be. 🔴 It
+    /// encodes nothing — see `drawBarcode`.
+    public var barcodeColor = CGColor(srgbRed: 0.20, green: 0.22, blue: 0.25, alpha: 0.85)
 
     // MARK: - Type
 
@@ -97,6 +103,10 @@ public struct RecapJourneyCardStyle {
     /// `.16em`, the same strap tracking the stop label uses — one letter-spacing
     /// idiom in the film, not two.
     public var labelTrackingEm: CGFloat = 0.16
+    /// Where the bottom row divides, as a fraction of its width. **The date takes
+    /// the wider half** (Chiu 2026-09-04): a trip's range is two dates and a rule,
+    /// against a distance of a few characters.
+    public var bottomRowSplitFraction: CGFloat = 0.42
 
     // MARK: - The arc
 
@@ -123,4 +133,30 @@ public struct RecapJourneyCardStyle {
     public var groundDotAlpha: CGFloat = 0.5
 
     public init() {}
+
+    /// **The dark ticket** (Chiu 2026-09-04) — the film already follows the
+    /// device's appearance (ADR 2026-08-27), and the pass is the one surface that
+    /// was light in both.
+    ///
+    /// 🔴 **The same layout, and only the palette moves.** The dark reference has
+    /// no left stub; building that would be a *second* drawing path for one
+    /// object, which is how two treatments drift apart and how a fix to one stops
+    /// reaching the other. The stub stays, and the accent stays the same orange —
+    /// it reads on both grounds, and a second accent per appearance is the
+    /// near-miss `RecapStyle` warns about.
+    public static func dark() -> RecapJourneyCardStyle {
+        var style = RecapJourneyCardStyle()
+        style.stockColor = CGColor(srgbRed: 0.086, green: 0.098, blue: 0.118, alpha: 0.97)
+        style.inkColor = CGColor(srgbRed: 0.965, green: 0.969, blue: 0.976, alpha: 1)
+        style.mutedColor = CGColor(srgbRed: 0.514, green: 0.545, blue: 0.588, alpha: 1)
+        style.ruleColor = CGColor(srgbRed: 0.180, green: 0.204, blue: 0.239, alpha: 1)
+        // A light silhouette, as the reference draws it — the same bird, a
+        // different palette, and no change to its shape.
+        style.markColor = CGColor(srgbRed: 0.878, green: 0.894, blue: 0.914, alpha: 1)
+        style.barcodeColor = CGColor(srgbRed: 0.784, green: 0.808, blue: 0.839, alpha: 0.85)
+        // Deeper than the light card's: a dark shadow under a dark object needs
+        // the extra weight to separate the ticket from the map behind it.
+        style.shadowColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.7)
+        return style
+    }
 }
