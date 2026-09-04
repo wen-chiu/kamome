@@ -175,17 +175,26 @@ extension RecapOverlayRenderer {
         context.saveGState()
         defer { context.restoreGState() }
         context.setFillColor(tokens.barcodeColor)
-        // A fixed pattern: deliberately not derived, so no future reader can
-        // mistake it for data and no future edit can make it carry any.
-        let widths: [CGFloat] = [1, 2, 1, 3, 1, 1, 2, 1, 1, 3, 2, 1, 1, 2, 3, 1, 1, 1, 2, 1]
-        let unit = rect.width / widths.reduce(0, +) / 2
+        // **A fixed sequence of module widths, bar and gap alternating** — 1 to 4
+        // modules each, which is what makes it read as a barcode rather than as
+        // hatching. Even indices are bars, odd are gaps, and each advances by its
+        // *own* width: the first version advanced by twice the bar's width
+        // whatever came next, so the sequence never actually described the gaps.
+        //
+        // 🔴 Fixed and not derived, so no future reader can mistake it for data
+        // and no future edit can make it carry any.
+        let modules: [CGFloat] = [
+            3, 1, 1, 2, 4, 1, 2, 1, 1, 3, 2, 2, 1, 1, 4, 2, 1, 1, 3, 1,
+            2, 3, 1, 1, 2, 1, 4, 2, 1, 1, 3, 2, 1, 3, 1, 1, 2, 1, 4, 1
+        ]
+        let unit = rect.width / modules.reduce(0, +)
         var barX = rect.minX
-        for (index, weight) in widths.enumerated() {
-            let barWidth = weight * unit
-            if index % 2 == 0 {
-                context.fill(CGRect(x: barX, y: rect.minY, width: barWidth, height: rect.height))
+        for (index, weight) in modules.enumerated() {
+            let width = weight * unit
+            if index.isMultiple(of: 2) {
+                context.fill(CGRect(x: barX, y: rect.minY, width: width, height: rect.height))
             }
-            barX += barWidth * 2
+            barX += width
         }
     }
 

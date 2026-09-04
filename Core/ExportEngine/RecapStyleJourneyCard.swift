@@ -82,8 +82,9 @@ public struct RecapJourneyCardStyle {
     public var markColor = CGColor(srgbRed: 0.62, green: 0.64, blue: 0.67, alpha: 1)
     /// The short rule under the flight number.
     public var stubRuleWidthPx: CGFloat = 34
-    /// How much of the stub's height the barcode occupies.
-    public var stubBarcodeHeightFraction: CGFloat = 0.30
+    /// How much of the stub's height the barcode occupies. Halved on 2026-09-04:
+    /// at 0.30, over the full inner width, it read as a block rather than a code.
+    public var stubBarcodeHeightFraction: CGFloat = 0.15
     /// The decorative barcode where the stub's DATE field used to be. 🔴 It
     /// encodes nothing — see `drawBarcode`.
     public var barcodeColor = CGColor(srgbRed: 0.20, green: 0.22, blue: 0.25, alpha: 0.85)

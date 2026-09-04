@@ -97,9 +97,13 @@ extension RecapOverlayRenderer {
         // rule: at full height it ran up against the tear line and read as a
         // second column rather than as ticket furniture.
         let barcodeHeight = rect.height * tokens.stubBarcodeHeightFraction
+        // **The stub's full inner width, with a symmetric quiet zone.** The right
+        // margin used to be `padding * 1.6` against a left margin of `padding`,
+        // so the code was both short and off-centre; with the height also taking
+        // everything available it came out a brick rather than a barcode.
         drawBarcode(in: CGRect(
             x: left, y: rect.minY + tokens.paddingPx * scale,
-            width: rect.maxX - tokens.paddingPx * scale * 1.6 - left,
+            width: rect.maxX - tokens.paddingPx * scale - left,
             height: min(barcodeHeight, cursorY - rect.minY - tokens.paddingPx * scale * 2)
         ), in: surface)
     }
@@ -145,6 +149,15 @@ extension RecapOverlayRenderer {
         ), surface: surface)
     }
 
+    /// One printed end of the flight: what the field above it says, and the
+    /// **left edge its three lines all hang off**. A named shape rather than a
+    /// tuple — the lint bar is two members, and this is three facts.
+    struct End {
+        let region: RecapJourneyCard.Region
+        let label: String
+        let leftX: CGFloat
+    }
+
     /// `FROM` and `TO`, each named twice, with the dotted arc between them.
     ///
     /// 🔴 **Both ends are set at one size, on one baseline** (Chiu 2026-09-04).
@@ -164,18 +177,18 @@ extension RecapOverlayRenderer {
         let columnW = body.width * 0.36
         let top = body.maxY
 
-        /// One printed end of the flight: which column it sits in, what the field
-        /// above it says, and which way its type is aligned. A named shape rather
-        /// than a tuple — the lint bar is two members, and this is three facts.
-        struct End {
-            let region: RecapJourneyCard.Region
-            let label: String
-            let edgeX: CGFloat
-            let alignRight: Bool
-        }
+        // 🔴 **Both ends are left-aligned** (Chiu 2026-09-04, correcting his
+        // earlier "right-align the second"). The right column had its three lines
+        // hung off `body.maxX`, so their right edges lined up and their left edges
+        // did not — `TO`, the name and the local line each started somewhere
+        // different. A column has one left edge; both columns now have one.
+        //
+        // Nothing needs clamping to keep the name inside the card: each is already
+        // `fittedFontPx`-ed to `columnW`, and the column starts `columnW` from the
+        // right edge, so it cannot overflow by construction.
         let ends = [
-            End(region: card.from, label: "FROM", edgeX: body.minX, alignRight: false),
-            End(region: card.to, label: "TO", edgeX: body.maxX, alignRight: true)
+            End(region: card.from, label: "FROM", leftX: body.minX),
+            End(region: card.to, label: "TO", leftX: body.maxX - columnW)
         ]
         // One size for both names, and one for both local lines. Measured across
         // every end before anything is drawn, which is the whole fix.
@@ -191,31 +204,41 @@ extension RecapOverlayRenderer {
         let localY = nameY - localFontPx * scale * 1.5
 
         for end in ends {
-            drawAligned(
+            drawCardText(
                 CardType(
                     text: end.label, fontPx: tokens.labelFontPx, color: tokens.accentColor,
                     tracking: tokens.labelFontPx * tokens.labelTrackingEm * scale
                 ),
-                edgeX: end.edgeX, alignRight: end.alignRight, baselineY: labelY, in: surface
+                leftX: end.leftX, baselineY: labelY, in: surface
             )
-            drawAligned(
+            drawCardText(
                 CardType(text: end.region.english, fontPx: nameFontPx, color: tokens.inkColor),
-                edgeX: end.edgeX, alignRight: end.alignRight, baselineY: nameY, in: surface
+                leftX: end.leftX, baselineY: nameY, in: surface
             )
             guard let local = end.region.local else { continue }
-            drawAligned(
+            drawCardText(
                 CardType(text: local, fontPx: localFontPx, color: tokens.mutedColor),
-                edgeX: end.edgeX, alignRight: end.alignRight, baselineY: localY, in: surface
+                leftX: end.leftX, baselineY: localY, in: surface
             )
         }
-        // The chord runs nearly the whole gap between the two columns. It was
-        // inset by 0.92 of a column and came out as a short flat curve low in the
-        // panel; the reference bows it high across the middle, and the rise is a
-        // fraction of the chord, so widening fixes both at once.
+        // **Recomputed for the left-aligned columns, and measured rather than
+        // assumed.** The old chord ended at `body.maxX - columnW * 0.70`, which
+        // sat in the *right-aligned* column's empty left margin; once the column
+        // starts at `body.maxX - columnW`, that same point lands on the type.
+        //
+        // A fixed fraction of `columnW` would only trade one guess for another —
+        // the columns are `columnW` *wide* but their type is only as wide as the
+        // names happen to be, so on TAIWAN → JAPAN the chord would leave a large
+        // gap on the left and almost none on the right. The chord starts after
+        // the left column's widest line and stops before the right column begins.
+        let breath = tokens.paddingPx * scale
+        let leftInk = columnInk(
+            ends[0], label: tokens.labelFontPx, name: nameFontPx, local: localFontPx, in: surface
+        )
         drawArc(
             progress: CGFloat(card.progress),
-            from: CGPoint(x: body.minX + columnW * 0.70, y: arcBaseY),
-            to: CGPoint(x: body.maxX - columnW * 0.70, y: arcBaseY + scale * 6),
+            from: CGPoint(x: body.minX + leftInk + breath, y: arcBaseY),
+            to: CGPoint(x: body.maxX - columnW - breath, y: arcBaseY + scale * 6),
             in: surface
         )
     }
@@ -231,19 +254,33 @@ extension RecapOverlayRenderer {
 
     /// Left- or right-aligned type, so `FROM` hangs off one edge of the panel and
     /// `TO` off the other exactly as the mockup sets them.
-    private func drawAligned(
-        _ type: CardType, edgeX: CGFloat, alignRight: Bool, baselineY: CGFloat, in surface: RenderSurface
+    /// How wide a column's type actually is — its widest of label, name and local
+    /// line. What the arc's chord starts after, so the gap between the two ends is
+    /// the gap a viewer sees rather than a fraction of a nominal column.
+    private func columnInk(
+        _ end: End, label: CGFloat, name: CGFloat, local: CGFloat, in surface: RenderSurface
+    ) -> CGFloat {
+        let tokens = style.journeyCard
+        return [
+            textWidth(end.label, fontPx: label,
+                      tracking: label * tokens.labelTrackingEm * surface.scale, in: surface),
+            textWidth(end.region.english, fontPx: name, in: surface),
+            end.region.local.map { textWidth($0, fontPx: local, in: surface) } ?? 0
+        ].max() ?? 0
+    }
+
+    /// One run of the card's type, hung off a column's left edge.
+    ///
+    /// ⚠️ **There is no right-aligned path any more.** There was, with a
+    /// correction that took the trailing letter-space off the measured width —
+    /// CoreText's kern adds advance after the last glyph too. Both columns are
+    /// left-aligned since 2026-09-04, so that correction had no caller left and
+    /// went with it rather than sitting here as dead code.
+    private func drawCardText(
+        _ type: CardType, leftX: CGFloat, baselineY: CGFloat, in surface: RenderSurface
     ) {
-        // 🔴 **The trailing letter-space comes off a right-aligned run.**
-        // CoreText's kern attribute adds advance after *every* glyph including
-        // the last, so `textWidth` of a tracked string is one space wider than
-        // the ink — and right-aligning against it pushed `TO` a full space in
-        // from the edge while the untracked names sat flush. Visible as `FROM`
-        // and `TO` not lining up with the names under them (Chiu 2026-09-04).
-        let measured = textWidth(type.text, fontPx: type.fontPx, tracking: type.tracking, in: surface)
-        let width = measured - (alignRight ? type.tracking : 0)
         drawText(
-            type.text, at: CGPoint(x: alignRight ? edgeX - width : edgeX, y: baselineY),
+            type.text, at: CGPoint(x: leftX, y: baselineY),
             fontPx: type.fontPx, color: type.color, tracking: type.tracking, in: surface
         )
     }
