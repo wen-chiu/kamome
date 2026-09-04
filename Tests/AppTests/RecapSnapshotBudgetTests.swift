@@ -224,7 +224,18 @@ final class RecapSnapshotBudgetTests: XCTestCase {
                 subject: VehicleSubjectRenderer.make(style: style, config: config),
                 overlay: RecapOverlayRenderer(style: style, resolver: NoPhotoResolver()),
                 style: style,
-                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+                // **This harness prices the crossing fixtures**, and it claims
+                // above to be the composition `RecapModel` performs — so it
+                // builds the same two renderers. They cost two sprite decodes and
+                // change no snapshot count; leaving them nil would have been the
+                // gap that made the review film a different film (2026-09-04).
+                crossingSubject: VehicleSubjectRenderer.make(
+                    style: style, config: config, subjectId: VehicleCatalog.crossingSubjectId
+                ),
+                flightSubject: VehicleSubjectRenderer.make(
+                    style: style, config: config, subjectId: VehicleCatalog.planeSubjectId
+                )
             ),
             config: config
         )

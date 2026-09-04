@@ -16,7 +16,11 @@ final class RecapAtmosphereTests: RecapRenderTestCase {
             subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: StubResolver { _ in nil }),
             style: style,
-            widthPx: widthPx, heightPx: heightPx
+            widthPx: widthPx, heightPx: heightPx,
+            // No crossing in this fixture, so neither is ever asked for.
+            // Written out because `FrameCompositor` has no defaults: a silent nil
+            // is what drew a car across the Pacific for a round (2026-09-04).
+            crossingSubject: nil, flightSubject: nil
         )
         return try await renderFrame(timeline, compositor, at: config.targetDurationS / 2, config: config)
     }

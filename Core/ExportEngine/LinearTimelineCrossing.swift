@@ -130,14 +130,18 @@ extension LinearTimeline {
     /// was missing was something on it, not time.
     ///
     /// Gated on `opensOnTheFlight` and having two ends — deliberately **not** on
-    /// the card's `CountryExtent` condition. A mark needs no country name, so a
-    /// trip whose ends fall outside the table draws no pass and still draws its
-    /// marks.
+    /// the card's `CountryExtent` condition. A **mark** needs no country name, so
+    /// a trip whose ends fall outside the six-row table draws no pass, draws no
+    /// names, and still draws its two marks.
     ///
     /// ⚠️ **The origin yields to the departure stop's pin.** They are the same
     /// point — the airport the flight leaves from — so drawing both would put two
     /// marks on one place. Exactly one is ever returned: while any stop is
-    /// holding, the stop's own pin is the mark, and this one is nil.
+    /// holding, the stop's own pin is the mark, and this one is nil. **The name
+    /// follows the mark**, so the origin's country name is absent for the same
+    /// window; whether it should instead persist and stack with the airport's own
+    /// name (TAOYUAN over TAIWAN) is a designer's call about which name wins, and
+    /// is deliberately not made here.
     func flightEnds(atTime time: Double) -> OverlayContent? {
         guard opensOnTheFlight, let ends = flightEndCoordinates,
               let beat = path.crossingBeatWindowsS.first, time <= beat.upperBound else { return nil }
@@ -146,9 +150,16 @@ extension LinearTimeline {
         let fade = max(min(cardFadeS, beat.upperBound - beat.lowerBound), 1e-6)
         let opacity = Self.smoothstep((beat.upperBound - time) / fade)
         guard opacity > 0.001 else { return nil }
+        // **The names come from the card**, which resolved `CountryExtent` once
+        // when the timeline was built. Looking them up again here is how the two
+        // surfaces would come to disagree about one place.
         return .flightEnds(
-            origin: holdingStop(atTime: time) == nil ? ends.origin : nil,
-            destination: ends.destination,
+            origin: holdingStop(atTime: time) == nil
+                ? RecapFlightEnd(coordinate: ends.origin, name: journeyCard?.from.english)
+                : nil,
+            destination: RecapFlightEnd(
+                coordinate: ends.destination, name: journeyCard?.to.english
+            ),
             opacity: opacity
         )
     }

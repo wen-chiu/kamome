@@ -46,7 +46,11 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
                 timeline: timeline,
                 subject: VehicleSubjectRenderer.make(style: style, config: config),
                 overlay: RecapOverlayRenderer(style: style, resolver: resolver),
-                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+                // No crossing in this fixture, so neither is ever asked for.
+                // Written out because `FrameCompositor` has no defaults: a silent nil
+                // is what drew a car across the Pacific for a round (2026-09-04).
+                crossingSubject: nil, flightSubject: nil
             )
         }
 

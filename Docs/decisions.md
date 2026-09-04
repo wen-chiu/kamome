@@ -2906,7 +2906,7 @@ beside "4.0 s" and reopening a sweep Chiu has already closed.
 
 ---
 
-## 2026-09-04 — The crossing that carries a boarding pass flies a plane, and its two ends are marked
+## 2026-09-04 — The crossing flies a plane, and its two ends are marked and named
 
 **Context.** ADR 2026-09-03 gave the type-2 crossing a **Journey Card**: a
 boarding pass printing `FROM` / `TO`, the constant flight number `THX-9527`, and
@@ -3001,9 +3001,76 @@ marks at the two ends. `crossing_flight_max_longitude_deg` **stays 70**.
 Kamome-owned mark, not a label. *Where* is answered by the boarding pass; *here
 and there* by the marks. The icebox stays frozen on Chiu's 2026-08-02 ruling.
 
-### 4. Not decided here
+### 4. The marks get their own artwork, and their own resource
+
+`Landmarks/flight-end.png` (Chiu 2026-09-04), a **copy** of the seagull sprite and
+explicitly a placeholder — *先用這個圖，之後會再改*. A copy rather than a symlink or
+a path back into `Vehicles/`, because the point of the separate directory is that
+either can be replaced without silently restyling the other. It is the **fourth**
+distinct gull object in the project and is not a subject: absent from
+`vehicles.json`, not selectable, never drawn as the moving subject.
+`Resources/Landmarks/README.md` carries the four-gull table.
+
+**On a load failure it falls back to the vector `VehicleMarker.seagull` and
+logs.** Never nothing, never silence: a mark that vanishes takes *here and there*
+off the frame and leaves the texture the marks exist to fix.
+
+### 5. Each mark carries its end's country name
+
+**From the value the Journey Card already resolved**, passed down — never a second
+`CountryExtent` lookup. Two lookups is how the card and the map come to print
+different names for one place.
+
+🔴 **The boundary, and it is not to be widened:**
+
+- **only the crossing's two endpoints** — not stops, not cities, not any other
+  place;
+- **only on the opening's flight frame**, the same window as the marks, and never
+  once the local journey starts;
+- **only the country or region name.**
+
+No row in `CountryExtent` for an end means **no name and the mark still drawn** —
+the same honesty rule that makes the card decline to print at all.
+
+🔴 **Neither lock is thawed, and the two reasons are different.**
+
+- **The base map still draws nothing.** `handoff-P3.5.md` §"Map reference labels"
+  is blocked on a fontstack and is untouched; not one label comes from MapKit.
+- **The `Docs/icebox.md` place-name entry is not thawed either.** That entry is a
+  *narrative system* — landmark title cards with their own timing, inserted
+  between travel and stop beats across the whole film. This is one slice of one
+  beat. What is drawn is precisely the shape that entry names as the correct one:
+  **a Kamome-owned overlay, not annotation the map carries**. It was parked for
+  effort, and the effort here is **zero**, because the boarding pass has already
+  resolved both names.
+
+⚠️ **The name follows the mark**, so the origin's name is absent while the
+departure stop presents itself (3.00–6.59 s on `auckland-crossing`). Whether it
+should instead persist and stack with the airport's own name — TAOYUAN over
+TAIWAN — is a question about which name wins, which is a designer's call. Shipped
+as "the name follows the mark" and put in front of him as a render.
+
+### 6. Not decided here
 
 **`export.subject_length_px` is unchanged**, deliberately (Chiu: look at the form
 first). A plane is as oversized on an 8,891 km frame as the car was, and the
 render is expected to show that. It is the closeout's handover item 3, it shares a
 tie-break with `crossing_beat_s` (ADR 2026-09-03), and moving it moves every film.
+
+**The card's `#FF6A3D`** — knowingly a second accent beside the film's `#FF8A5B`,
+and `RecapStylePresets` warns in its own words against near-misses of one accent.
+Chiu supplied the hex as part of the mockup; whether the two collapse is a visual
+decision and is **with the designer**, not settled here.
+
+### 7. `FrameCompositor`'s two crossing renderers lose their defaults
+
+Found in review, and it is the same defect twice: this entry's own §0 described a
+silent defaulted `nil` costing a round, and the fix introduced a **second**
+defaulted `nil` directly beneath it.
+
+Both `crossingSubject` and `flightSubject` are now **required arguments**. nil
+stays a legal answer — it must be *written*. A defaulted nil is a silent fallback
+(`Arch.md` §6, cited as §5 in older entries), and the remedy for a silent fallback
+is not an extra log line, because logs work only when somebody reads one. Twelve
+call sites now state their answer, and a thirteenth cannot be added without
+choosing.

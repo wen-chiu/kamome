@@ -76,10 +76,15 @@ public struct FrameCompositor {
     /// exactly the behaviour every film had before crossings existed, rather
     /// than nothing at all.
     ///
-    /// ⚠️ That fallback is *silent*, and it cost a round: the review film harness
-    /// never passed one, so `auckland-crossing` drew a **car** across the Pacific
-    /// while the shipped app drew the seagull, and both readings of "what crosses
-    /// a crossing?" looked true at once (2026-09-04).
+    /// 🔴 **It has no default, and neither does `flightSubject`.** They did until
+    /// 2026-09-04, and it cost a round: the review film harness never passed one,
+    /// so `auckland-crossing` drew a **car** across the Pacific while the shipped
+    /// app drew the seagull, and both readings of "what crosses a crossing?"
+    /// looked true at once. A defaulted nil is a silent fallback (`Arch.md` §6,
+    /// cited as §5 in older documents) and the fix for a silent fallback is not a
+    /// log line — logs work only when somebody reads them. **Every call site must
+    /// say which renderer it wants, or write `nil` and mean it.** Do not restore
+    /// the defaults to make a new call site shorter.
     private let crossingSubject: SubjectRenderer?
     /// What crosses a leg the film has issued a **boarding pass** for (ADR
     /// 2026-09-04). nil falls back to `crossingSubject`.
@@ -108,8 +113,8 @@ public struct FrameCompositor {
         style: RecapStyle = RecapStyle(),
         widthPx: Int,
         heightPx: Int,
-        crossingSubject: SubjectRenderer? = nil,
-        flightSubject: SubjectRenderer? = nil
+        crossingSubject: SubjectRenderer?,
+        flightSubject: SubjectRenderer?
     ) {
         self.timeline = timeline
         self.subject = subject

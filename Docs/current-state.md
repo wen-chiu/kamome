@@ -211,9 +211,13 @@ is closed.
   seagull. The two end marks answer the closeout's *"the wide flight frame loses
   the viewer"* — `crossing_flight_max_longitude_deg` **stays 70** and the map
   place-names icebox **stays frozen**, because the marks carry no text.
-  🔴 **Known boundary: there is no classifier, so a ferry gets the pass and the
-  plane too.** ⏳ `subject_length_px` is deliberately unchanged — the plane is as
-  oversized as the car was, and Chiu is judging the form first.
+  Each mark carries **its country's name**, from the value the pass already
+  resolved. 🔴 **Neither place-name lock is thawed** — the base map still draws
+  nothing, and the icebox entry is a whole-film narrative system, not two
+  endpoints. 🔴 **Known boundary: no classifier, so a ferry gets the pass and the
+  plane too.** ⏳ `subject_length_px` deliberately unchanged; Chiu judges the form
+  first. ⏳ **Four visual questions are with the designer**
+  (`Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`).
 - ⏳ **Open and Chiu's, all waiting on a film rather than a session**: the
   long-haul flight frame's 70 threshold (above); the title card's text, which still shows
   trip title + dates rather than the country name (a DESIGNER question); the

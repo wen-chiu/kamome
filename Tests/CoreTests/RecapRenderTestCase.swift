@@ -195,7 +195,11 @@ class RecapRenderTestCase: XCTestCase {
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style, lengthPx: 300),
             overlay: RecapOverlayRenderer(style: style, resolver: resolver ?? StubResolver { _ in nil }),
-            widthPx: widthPx, heightPx: heightPx
+            widthPx: widthPx, heightPx: heightPx,
+            // No crossing in this fixture, so neither is ever asked for.
+            // Written out because `FrameCompositor` has no defaults: a silent nil
+            // is what drew a car across the Pacific for a round (2026-09-04).
+            crossingSubject: nil, flightSubject: nil
         )
     }
 

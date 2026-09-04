@@ -293,7 +293,7 @@ final class RecapJourneyCardTests: XCTestCase {
         let (line, config) = (made.line, made.config)
         let beat = try XCTUnwrap(line.path.crossingBeatWindowsS.first)
 
-        func ends(atTime timeS: Double) -> (origin: RecapCoordinate?, destination: RecapCoordinate)? {
+        func ends(atTime timeS: Double) -> (origin: RecapFlightEnd?, destination: RecapFlightEnd)? {
             for overlay in line.overlayContents(atTime: timeS) {
                 if case let .flightEnds(origin, destination, opacity) = overlay, opacity > 0.001 {
                     return (origin, destination)
@@ -322,6 +322,18 @@ final class RecapJourneyCardTests: XCTestCase {
             "the departure stop's pin and the origin mark are the same point — only one may be drawn"
         )
         XCTAssertNotNil(duringDeparture.destination, "the destination still says 'there' throughout")
+
+        // 🔴 **The name is the card's own**, not a second lookup — the two
+        // surfaces resolving `CountryExtent` independently is how they would come
+        // to print different names for one place.
+        let card = try XCTUnwrap(cards(in: line, fps: config.fps).last?.card)
+        let crossing = try XCTUnwrap(ends(atTime: (beat.lowerBound + beat.upperBound) / 2))
+        XCTAssertEqual(try XCTUnwrap(crossing.origin).name, card.from.english)
+        XCTAssertEqual(crossing.destination.name, card.to.english)
+        XCTAssertEqual(crossing.destination.name, "NEW ZEALAND")
+        // The name follows the mark, so it is absent for exactly the window the
+        // origin mark is. Reported to the designer rather than decided here.
+        XCTAssertNil(duringDeparture.origin, "no origin mark, and therefore no origin name")
     }
 
     // MARK: - 1. The departure airport, and the type-1 control

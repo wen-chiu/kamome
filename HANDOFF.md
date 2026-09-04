@@ -59,27 +59,33 @@ stopped being what the constant *chooses*. The beat is **as long as the Journey
 Card takes to read**, and the sprite's speed is the consequence. **If it reads
 rushed, de-emphasise the sprite, never re-lengthen the beat.**
 
-Measured offline on both fixtures — **the trip starts at 13.09 s** (not the
-brief's 12.5, which derived from a 3.0 s departure it also forbade hard-coding),
-departure **3.59 s / 2 photographs**, sprite **24.6 %/s**, odometer **269 km**
-where it read 9,024. Films `~/Kamome-films/type2-2026-09-03/`.
+Measured: **trip starts 13.09 s** (not the brief's 12.5), departure **3.59 s / 2
+photographs**, sprite **24.6 %/s**, odometer **269 km** where it read 9,024.
 
-**ADR 2026-09-04** then laid the pass out to Chiu's own mockup, gave the crossing
-a **plane** — one condition decides the pass and the airframe; every other
-crossing keeps the seagull — and put two wordless `VehicleMarker.seagull` marks on
-the flight's ends from t=0 to the landing. Those marks answer the closeout's *"the
-wide flight frame loses the viewer"* **with no place name**, so
-`crossing_flight_max_longitude_deg` stays 70 and the icebox stays frozen.
+**ADR 2026-09-04** laid the pass out to Chiu's mockup, gave the crossing a
+**plane** (one condition decides the pass and the airframe; every other crossing
+keeps the seagull), and put a mark **and its country's name** on each end of the
+flight from t=0 to the landing — the closeout's *"the wide flight frame loses the
+viewer"*, answered. The mark's artwork is `Resources/Landmarks/`, a
+**placeholder**, with a logged vector fallback.
+🔴 **Neither place-name lock is thawed**: the base map still draws nothing
+(blocked on a fontstack), and the icebox entry is a whole-film narrative system
+rather than two endpoints. `crossing_flight_max_longitude_deg` stays 70.
 🔴 **No classifier: a ferry gets the pass and the plane too** — session 2's line,
-unmoved. ⏳ `subject_length_px` untouched on purpose; the plane is as oversized as
-the car was. ⚠️ The mockup's `FLIGHT TIME` is **not** restored (removed by
-decision), and its `#FF6A3D` is knowingly a second accent — flagged, not decided.
+unmoved. ⏳ `subject_length_px` untouched on purpose. ⚠️ The mockup's `FLIGHT TIME`
+is **not** restored — removed by decision.
+
+⏳ **Four visual questions are with the designer** (the card's second accent, the
+`DISTANCE` icon, the origin mark's 3.59 s cut, and which name wins at the
+airport). → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
 
 🔴 **The review film harness drew a different film for a round.**
 `RecapDemoFilmTests` passed no `crossingSubject:`, which `FrameCompositor` reads
 as "draw the trip's own vehicle" — so `auckland-crossing` drove a **car** across
 the Pacific while the app drew a gull. **`VehicleCatalog` never failed**: the
-subject-lookup miss below is untouched and still unmeasured.
+subject-lookup miss below is untouched and still unmeasured. **Both crossing
+renderers lost their defaults** — a defaulted nil is the silent fallback, and 12
+call sites now say which they want.
 → `Docs/handoff-type2-opening-retime.md`, `Docs/design-reviews/2026-09-02-cross-region-opening.md`.
 
 🔴 **A long-haul frame often does not exist, and the limit is degrees of longitude,
@@ -109,22 +115,19 @@ a printing defect. ⚠️ **The sweep is owed and cheap**: which other
 → `Docs/handoff-type2-opening-retime.md`.
 
 ### Content-derived pacing may be implemented but permanently dead
-A shipping-path comment in `RecapModel.swift` is wrong on its first clause. If its
-*second* clause is true, content-derived pacing sits behind a tile condition that
-can never be satisfied. **UNKNOWN, worth an hour.**
+If the second clause of a `RecapModel.swift` comment is true, it sits behind a
+tile condition that can never be satisfied. **UNKNOWN, worth an hour.**
 → `Docs/handoff-audit-2026-08-30.md` finding 3.
 
 ### The subject lookup still misses; it no longer crashes
-`VehicleCatalog.resolve` returns nil and the film silently draws the vector
-seagull instead of the car. **The rate and the trigger are still unmeasured**;
-two log lines ship to name the next occurrence.
-→ `Docs/handoff-subject-lookup.md`.
+`VehicleCatalog.resolve` returns nil and the film silently draws the vector gull.
+**Rate and trigger still unmeasured** — and **not** what drew the car across the
+Pacific (2026-09-04). → `Docs/handoff-subject-lookup.md`.
 
 ### A sweep is owed: which values were tuned against MapLibre?
-Five defects share one shape — a value chosen while MapLibre was the substrate
-that silently degraded when Apple Maps became what ships. Each was found **one
-film at a time, by accident**. The question that catches the class is not "is this
-value good?" but **"what was this value tuned against?"**
+Five defects share one shape — a value chosen while MapLibre was the substrate,
+silently degraded when Apple Maps became what ships, each found **one film at a
+time, by accident**. The question is **"what was this value tuned against?"**
 **RECOMMENDATION, needs Chiu. Not scheduled.**
 → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
@@ -192,12 +195,10 @@ apex wants a hold. ✅ Case C is built and ✅ `crossing_beat_s` is 4.0.
 
 ### A staging rule for `Arch.md` — recommended, not in force
 A branch ref has silently picked up another session's commits three times, and a
-`git add -A` swept an unrelated file into an unrelated commit **twice** — again on
-2026-09-03, when it took an unrelated MapLibre `Package.resolved` churn into a
-recap commit (caught and amended out before the PR).
-**Recommendation: confirm the current branch before committing, and stage explicit
-paths only — never `-A` or `.`** Per `PO.md` this is a recommendation until Chiu
-says otherwise.
+`git add -A` swept an unrelated file into an unrelated commit **twice** (latest
+2026-09-03, a MapLibre `Package.resolved` churn, amended out before the PR).
+**Confirm the branch before committing; stage explicit paths, never `-A`.**
+A recommendation until Chiu says otherwise (`PO.md`).
 
 ### `stop_weighting_enabled` — measure before removing
 Reachable in **both** modes; the containment argument is empirical and has never
@@ -222,12 +223,11 @@ Actions failed account-wide 2026-08-29 → 2026-09-01 (spending limit) in ~3 s w
 ~3 s wall clock and `steps=0`.**
 
 ### Continuity passing is not the film being right
-The gate measures **ground overlap between consecutive frames**, so a camera that is
-wrong in a way that does not *move* passes it perfectly. Measured 2026-09-02: a
-body span derived from the wrong beat came out at 177.3 km against 13.3 km and
-scored **100% frame-to-frame overlap** — a flawless score, and a still film with the
-destination a smudge. **When a change re-derives a span, a frame or a padding from a
-different beat, the gate is not the check**: read `span` on its own line, and render.
+The gate measures **ground overlap between consecutive frames**, so a camera that
+is wrong without *moving* passes perfectly. Measured 2026-09-02: a body span
+derived from the wrong beat came out at 177.3 km against 13.3 km and scored
+**100%** — a still film with the destination a smudge. **When a change re-derives
+a span, a frame or a padding, the gate is not the check**: read `span`, and render.
 
 ### Do not restyle `VehicleMarker.seagull` in place
 It is **also the Kamome wordmark's bird on the end card**. The obvious badge

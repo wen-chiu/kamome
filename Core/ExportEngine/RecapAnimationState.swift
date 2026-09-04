@@ -225,6 +225,29 @@ public struct RecapJourneyCard: Equatable {
     }
 }
 
+/// **One end of the flight: where it is, and what it is called** (Chiu
+/// 2026-09-04).
+///
+/// 🔴 **`name` is the value the Journey Card already resolved** — passed down
+/// from the same `RecapJourneyCard.Region`, never looked up again. Two lookups is
+/// how the card and the map come to print different names for one place, and the
+/// timeline resolves `CountryExtent` exactly once per film.
+///
+/// nil when `CountryExtent` has no row for this end: **the mark is still drawn
+/// and the name is simply absent**, the same honesty rule the card follows when
+/// it declines to print a pass at all.
+public struct RecapFlightEnd: Equatable {
+    public let coordinate: RecapCoordinate
+    /// The country or region, in English — nothing else. Not the stop, not a
+    /// city, not a place name of any other kind (ADR 2026-09-04 §3).
+    public let name: String?
+
+    public init(coordinate: RecapCoordinate, name: String?) {
+        self.coordinate = coordinate
+        self.name = name
+    }
+}
+
 /// A revealed stretch of trail: the part of one `RecapTrip.Leg` the subject has
 /// already covered, carrying that leg's mode and provenance so the renderer can
 /// stroke it honestly. Pure data — the renderer projects and styles it.
@@ -271,14 +294,26 @@ public enum OverlayContent: Equatable {
     /// (`Docs/handoff-type2-films.md` closeout item 1). Two marks say *here* and
     /// *there* without the base map naming anything.
     ///
-    /// 🔴 **This does not thaw the map place-names icebox.** What is drawn is a
-    /// wordless Kamome-owned mark, not a label: *where* is answered by the
-    /// boarding pass, *here and there* by these. The icebox stays frozen.
+    /// Since 2026-09-04 each mark carries **the country's name beneath it** —
+    /// nothing else, and only here.
     ///
-    /// `origin` is nil while the departure stop is presenting itself — its pin
-    /// and this mark are the same point, and exactly one of them is ever drawn
-    /// (see `LinearTimeline.flightEnds`).
-    case flightEnds(origin: RecapCoordinate?, destination: RecapCoordinate, opacity: Double)
+    /// 🔴 **Neither lock is thawed, and the reasons differ.** The **base map**
+    /// still draws no label of its own: that is `handoff-P3.5.md` §"Map reference
+    /// labels", blocked on a fontstack, and untouched. The
+    /// **`Docs/icebox.md` place-name entry** is a *narrative system* — landmark
+    /// title cards timed between beats, across the whole film — and this is one
+    /// slice of one beat. What is drawn is a Kamome-owned overlay at two
+    /// endpoints, which is the shape that entry itself names as the correct one;
+    /// it was parked for effort, and the effort here is zero because the boarding
+    /// pass has already resolved both names.
+    ///
+    /// Each end carries **the name the boarding pass already resolved**, never a
+    /// second lookup — see `RecapFlightEnd`.
+    ///
+    /// `origin` is nil while the departure stop is presenting itself: its pin and
+    /// this mark are the same point, and exactly one of them is ever drawn (see
+    /// `LinearTimeline.flightEnds`).
+    case flightEnds(origin: RecapFlightEnd?, destination: RecapFlightEnd, opacity: Double)
     /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
     /// and how far the journey has come, in the frame's top corners, for the whole
     /// body of the film — driving as well as stopped.

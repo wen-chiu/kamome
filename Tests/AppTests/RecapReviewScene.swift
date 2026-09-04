@@ -98,7 +98,8 @@ struct RecapReviewScene {
                 overlay: RecapOverlayRenderer(style: style, resolver: try Self.resolver(for: trip)),
                 style: style,
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
-                crossingSubject: Self.crossingRenderer(style: style, config: config)
+                crossingSubject: Self.crossingRenderer(style: style, config: config),
+                flightSubject: Self.flightRenderer(style: style, config: config)
             ),
             provider: provider,
             appearance: appearance,
@@ -156,6 +157,19 @@ struct RecapReviewScene {
     /// the answer to "we could not classify this", and the classifier is still
     /// session 2's. The env override stays because a still sweep wants to vary
     /// the sprite without a config edit, not because the answer is unknown.
+    /// **What flies a crossing carrying a boarding pass** (ADR 2026-09-04) —
+    /// `plane`, overridable by `KAMOME_CROSSING_FLIGHT_SUBJECT` for a still
+    /// sweep. Its own override rather than reusing the one above, because the
+    /// two answer different questions and a sweep of one must not silently move
+    /// the other.
+    private static func flightRenderer(
+        style: RecapStyle, config: TrackingConfig.Export
+    ) -> VehicleSubjectRenderer {
+        let subjectId = HarnessEnv.value("KAMOME_CROSSING_FLIGHT_SUBJECT") ?? VehicleCatalog.planeSubjectId
+        print("KAMOME_REVIEW flight subject \(subjectId)")
+        return VehicleSubjectRenderer.make(style: style, config: config, subjectId: subjectId)
+    }
+
     private static func crossingRenderer(
         style: RecapStyle, config: TrackingConfig.Export
     ) -> VehicleSubjectRenderer {
