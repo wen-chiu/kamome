@@ -78,3 +78,4 @@ does not.
 | 58 | `2026-09-02` | Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest | **amends `CLAUDE.md` rule 7 for Phase 4 only** |
 | 59 | `2026-09-02 (b)` | The staleness protocol could never be satisfied, and it is a check now | **corrects the diagnosis in 2026-09-02 §6** |
 | 60 | `2026-09-03` | The corpus is cut in half: closed work is archived, and the live set has a ceiling |  |
+| 61 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
