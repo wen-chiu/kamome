@@ -255,6 +255,15 @@ limit is Geoapify's 3,000 credits a day underneath, not this.
   wiring.** `matching.base_url` is still empty and no IPA carries the Worker URL
   today, so the endpoint carries no real traffic yet. It must not start doing so
   without a ceiling.
+
+  ✅ **Provisioned 2026-09-04, so the implementing session provisions nothing.**
+  The KV namespace exists (`KAMOME_BUDGET`, id `d533d7ee1b7d4a3c8ffcf51fe8701b33`)
+  and the ceiling is bound as `DAILY_REQUEST_CEILING = "2000"` — **Chiu's number**,
+  arithmetic in `wrangler.toml` beside it, *"之後有需要再改"*. Both are visible to
+  the runtime now (`npx wrangler deploy --dry-run` lists them) and **inert until
+  something reads them**. What is left is the ~20 lines in `src/index.js` and its
+  tests. ⚠️ **Read the ceiling from `env`, never as a literal**, and note it
+  arrives as a **string** — `Number()` it once, at the top.
 - **A burst rate limit — a speed bump, not the answer.** Cloudflare's rate-limiting
   binding caps requests per 10 or 60 seconds; **60 seconds is its maximum period**,
   so it cannot express a daily total, which is the thing actually at risk. Kamome's
