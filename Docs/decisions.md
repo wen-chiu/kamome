@@ -2947,3 +2947,83 @@ the most-read design document for a day.
 **Not decided:** whether `Docs/kamome-poc-spec.md` (71 KB, 20% of the live
 corpus by itself) should be split. It is product reference, rarely read whole,
 and splitting it is a product-documentation decision rather than a governance one.
+
+---
+
+## 2026-09-04 — The Worker gets a spend ceiling, and it fails closed
+
+**Status:** approved (implementation of Chiu's 2026-08-29 sequencing and his
+2026-09-04 number). **Scope:** `Deploy/worker/` only — no app code, no
+`Config/TrackingConfig.json` key.
+
+### The problem, stated once
+
+`matching.base_url` is `""` and `api_key_required` is `true`, so every build
+calls Geoapify directly and **every IPA that has reached another person's phone
+contains the routing key**. The Worker that fixes that has been deployed since
+2026-08-27 and carries no traffic, because pointing the app at an *uncapped*
+proxy trades a key leak for an open quota.
+
+⚠️ **VERIFIED from Geoapify's own pricing pages, 2026-08-29:** their limits are
+*soft on every tier*, there is **no customer-settable cap**, and escalation ends
+in **account blocking**. So the worst case is not a daily outage that clears at
+midnight — it is every user losing routing until Chiu resolves it with the
+provider by hand. **This Worker is the only place a ceiling can exist.**
+
+### Decision
+
+A KV counter keyed by UTC date, in `src/index.js` after the secret check and
+before the upstream fetch. Above `DAILY_REQUEST_CEILING` (a `[vars]` value,
+**2000/day, Chiu's number**, 2026-09-04): **429, `Retry-After` = seconds to UTC
+midnight, empty body, upstream never called.**
+
+Three things this entry fixes so they are not re-litigated:
+
+1. **The overshoot is accepted.** KV is eventually consistent, so concurrent
+   requests can read the same value and the count can drift slightly over. That
+   is fine for a ceiling and it is a deliberate choice over a **Durable Object**,
+   which is exact and costs a class, a migration and a round trip to one object
+   on every request. A ceiling set well below the provider's soft limit does not
+   need to be exact; it needs to exist. **Do not silently switch to a DO.**
+2. **The Worker fails closed.** No KV binding, no usable ceiling, or a KV error
+   is **503** — never a forwarded request. A Worker that cannot count is a Worker
+   with no ceiling, and forwarding anyway is exactly the silent fallback
+   (`Arch.md` §6) that would make the proxy only *look* capped. 503 rather than
+   400 for the reason the missing-secret branch already gives: the app reads 400
+   as "no road joins these places" and draws that leg dashed forever.
+3. **The request is counted before the fetch.** The only ordering in which the
+   stored number bounds what is forwarded. It over-counts the requests that end
+   at 502, which never reached Geoapify and cost no credit — and over-counting is
+   the safe direction for a ceiling.
+
+**The number is configuration, not a constant.** It lives in `wrangler.toml`
+with its arithmetic beside it, arrives from `env` as a **string**, and is
+`Number()`-ed once at the top. It is **not** in `Config/TrackingConfig.json`:
+that file is the app's config and the app never sees this value. Chiu's words on
+2000: *"2000 可以，之後有需要再改"*.
+
+### Evidence
+
+- `npm test` in `Deploy/worker/` — **19/19**, Node 24.3.0 after `npm ci`. The
+  nine pre-existing assertions are unchanged; the harness gained a KV stub and an
+  injectable clock because the runtime now requires a binding it did not before.
+- **The gate was shown to fire twice.** Neutering the comparison fails four of
+  the new tests. And a `wrangler dev` positive control at ceiling 1 answers the
+  second request `429` with `Retry-After: 65312`, matching seconds-to-UTC-midnight
+  at the time of the run. Public landmark coordinates only (§0), local KV, no
+  account touched.
+
+### ⏳ NOT done, and deliberately
+
+- **The Worker is not deployed.** A deploy may come only from merged `main` or a
+  branch Chiu names, and neither this work nor its provisioning (PR #38) is
+  merged. **Until it is deployed, production is still the uncapped 2026-08-27
+  version**, so S5 is not closed and `matching.base_url` must not be flipped.
+- **The config flip is proposed, not made** (`CLAUDE.md` rule 2): it changes
+  shipped behaviour. `matching.base_url` → the Worker URL and `api_key_required`
+  → `false` is two values and no code, and it closes **S6 by construction** —
+  the key stops being a build setting, so `xcodebuild` stops echoing it. It waits
+  for Chiu.
+- **Not touched:** App Attest; a burst rate limit (Cloudflare's maximum period is
+  60 s, so it cannot express a daily total — never mistake it for the ceiling);
+  `/v1/mapmatching`; **S4**, the no-log property, still asserted nowhere.
