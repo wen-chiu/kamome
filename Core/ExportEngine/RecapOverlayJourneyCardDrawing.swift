@@ -52,67 +52,6 @@ extension RecapOverlayRenderer {
         ), surface: surface)
     }
 
-    /// The card stock: rounded, shadowed, opaque enough to be a printed object
-    /// rather than a translucent panel, with a notch bitten out of each **outer
-    /// edge**.
-    ///
-    /// 🔴 **Outer edges, not the tear line** (Chiu 2026-09-04, from the film).
-    /// They were on the tear line, top and bottom, and a hole in the middle of a
-    /// card reads as a *disc* — Chiu saw exactly that, "下半藍上半白色各半圓形",
-    /// because whatever the map happened to be showing filled each circle. On the
-    /// outer edge the same hole reads as a ticket, which is what the reference
-    /// draws.
-    ///
-    /// 🔴 They are holes in a single even-odd path, not a second pass with
-    /// `.destinationOut`. That was the first attempt and it cut through the *map*:
-    /// `destinationOut` erases whatever is already in the context, and by this
-    /// point that is the frame. One compound path can only remove the stock,
-    /// which is the whole of what a notch is.
-    private func drawStock(_ rect: CGRect, tearX: CGFloat, in surface: RenderSurface) {
-        let tokens = style.journeyCard
-        let context = surface.context
-        let corner = tokens.cornerPx * surface.scale
-        let radius = tokens.notchRadiusPx * surface.scale
-
-        let stock = CGMutablePath()
-        stock.addRoundedRect(in: rect, cornerWidth: corner, cornerHeight: corner)
-        for centerX in [rect.minX, rect.maxX] {
-            stock.addEllipse(in: CGRect(
-                x: centerX - radius, y: rect.midY - radius, width: radius * 2, height: radius * 2
-            ))
-        }
-
-        context.saveGState()
-        context.setShadow(
-            offset: CGSize(width: 0, height: -tokens.shadowOffsetPx * surface.scale),
-            blur: tokens.shadowBlurPx * surface.scale, color: tokens.shadowColor
-        )
-        context.setFillColor(tokens.stockColor)
-        context.addPath(stock)
-        context.fillPath(using: .evenOdd)
-        context.restoreGState()
-    }
-
-    /// The tear line — dashed, full height, and uninterrupted since the notches
-    /// moved to the outer edges (Chiu 2026-09-04: he likes the dashes).
-    private func drawPerforation(atX tearX: CGFloat, in rect: CGRect, surface: RenderSurface) {
-        let tokens = style.journeyCard
-        let context = surface.context
-        let scale = surface.scale
-        let inset = tokens.cornerPx * scale * 0.5
-
-        context.saveGState()
-        context.setStrokeColor(tokens.ruleColor)
-        context.setLineWidth(tokens.arcWidthPx * scale * 0.8)
-        context.setLineDash(phase: 0, lengths: [
-            tokens.perforationDashPx * scale, tokens.perforationGapPx * scale
-        ])
-        context.move(to: CGPoint(x: tearX, y: rect.minY + inset))
-        context.addLine(to: CGPoint(x: tearX, y: rect.maxY - inset))
-        context.strokePath()
-        context.restoreGState()
-    }
-
     // MARK: - The stub
 
     /// Left of the tear: the gull, the flight number under its rule, and a

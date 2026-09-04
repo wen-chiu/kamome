@@ -117,6 +117,11 @@ Arithmetic over `CameraPathCore.confine` and the config.
 
 ### 5. ⚠️ The body span is where per-act framing could come back
 
+> ⚠️ **CORRECTED 2026-09-02 — the mechanism stated below was measured and is
+> false.** The pan floor binds nowhere; the destination's scale comes from the
+> opening. `Docs/handoff-cross-region-crossing.md` finding 1. The decision —
+> one span per trip, never per segment — is unaffected.
+
 **Decision.** **One span per trip still — but derived from the largest local
 journey, not from the union.** Do not build a span per segment.
 

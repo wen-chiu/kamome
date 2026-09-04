@@ -160,10 +160,72 @@ around it by deleting `.npmrc`. wrangler 4.127.1 genuinely requires Node ≥ 22.
   upstream connection failure is 502, because the app reads 400 as "no road
   joins these places" and would draw that leg dashed permanently. Broken
   plumbing has to arrive as "nobody answered", which is retryable.
+- **Refuses above a per-day ceiling.** A KV counter keyed by UTC date; above
+  `DAILY_REQUEST_CEILING` the Worker answers **429 with `Retry-After` set to the
+  seconds until UTC midnight**, and does not call Geoapify. See "The spend
+  ceiling" below.
+- **Fails closed when it cannot count.** No KV binding, no usable ceiling, or a
+  KV error is **503**, not a forwarded request. A Worker that cannot count is a
+  Worker with no ceiling, and forwarding anyway is the silent fallback that would
+  make the proxy only *look* capped.
 - **Passes `Retry-After` through.** Geoapify itself never sends 429 — it sheds
   load as a TCP reset — so this hop is the only one that can distinguish "busy"
   from "unreachable". It is why `RouteProviderFailure.rateLimited` is still in
   the app (`HANDOFF.md` item 2).
+
+## The spend ceiling
+
+**Built 2026-09-04.** The counter sits in `src/index.js` after the secret check
+and before the upstream fetch — 🔴 **the only place a ceiling can exist for
+Kamome.** VERIFIED from Geoapify's own pricing pages, 2026-08-29: their limits
+are *soft on every tier*, there is **no customer-settable cap**, and escalation
+ends in **account blocking**. The failure it guards is not a daily outage that
+clears at midnight; it is every user losing routing until Chiu resolves it with
+the provider by hand.
+
+| what | where |
+|---|---|
+| the number | `DAILY_REQUEST_CEILING` in `wrangler.toml` — **2000/day, Chiu's number**, arithmetic beside it. Never a literal in the source, and **never** in `Config/TrackingConfig.json`: that is the app's config and the app never sees this value. |
+| the storage | `KAMOME_BUDGET`, one key per UTC day, `routing-requests-YYYY-MM-DD`, expiring an hour after its day. |
+| over the ceiling | **429**, `Retry-After` = seconds to UTC midnight, empty body, upstream never called. |
+| cannot count | **503** — fail closed. |
+
+Two choices worth knowing before you change anything here:
+
+- ⚠️ **The count can overshoot slightly under concurrency, and that is
+  accepted.** KV is eventually consistent, so simultaneous requests can read the
+  same value. A Durable Object would be exact, and it costs a class, a migration
+  and a round trip to one object on every request. A ceiling set well below the
+  provider's soft limit does not need to be exact; it needs to exist. **Do not
+  silently switch to a DO.**
+- **The request is counted before the fetch, not after.** That is the only
+  ordering in which the stored number bounds what is actually forwarded. It
+  over-counts requests that end at 502 — those never reached Geoapify and cost no
+  credit — and over-counting is the safe direction for a ceiling.
+
+**Positive control, and re-run it after any change here**, because a gate nobody
+has seen fire is a gate nobody should trust:
+
+```bash
+cd Deploy/worker && npx wrangler dev --port 8799 --var DAILY_REQUEST_CEILING:1
+```
+
+Then two requests to `/v1/routing` with **public landmark coordinates only** (§0
+— never a real trip). The second must be `429` with a positive integer
+`Retry-After`. Measured 2026-09-04 with a placeholder key in `.dev.vars`, which
+is why the first line is Geoapify's own 401 rather than a 200 — the point is that
+it reached the provider and was counted, and the second never did:
+
+```
+=== request 1 ===
+HTTP/1.1 401 Unauthorized
+=== request 2 ===
+HTTP/1.1 429 Too Many Requests
+Retry-After: 65312
+```
+
+`wrangler dev` binds KV **locally** (its startup banner says `local`), so this
+touches no namespace in Chiu's account.
 
 ## Why `preview_urls = false`
 
@@ -215,7 +277,7 @@ version opened no door of its own.
 cd Deploy/worker && npm test
 ```
 
-Nine assertions against a stubbed upstream — no Cloudflare, no key, no network.
+Nineteen assertions against a stubbed upstream — no Cloudflare, no key, no network.
 Needs Node 22+ to match `package.json`'s `engines` (run on v24.3.0); the globals
 it actually uses — `fetch`/`Request`/`Response` — have been there since 18. It
 is **not** part of `xcodebuild test`: this repository's CI is the Xcode suite,
@@ -229,32 +291,9 @@ limit is Geoapify's 3,000 credits a day underneath, not this.
 
 ## Not built, and deliberately
 
-- **A per-day budget counter — the next thing to build here, and the one that
-  matters.** ⚠️ **Geoapify offers no hard spend cap on any tier.** VERIFIED from
-  their own pages, 2026-08-29: *"Our limits are 'soft'. If your usage constantly
-  goes over the quota we contact you and ask for an upgrade"*; *"we won't block
-  your API keys immediately if you exceed the usage limit"*; *"We reserve the right
-  to block your account if you ignore our emails."* Neither
-  <https://www.geoapify.com/pricing/> nor <https://www.geoapify.com/pricing-details/>
-  documents any customer-settable budget control.
-
-  **That inverts the comfortable reading.** The worst case is not a self-healing
-  daily outage that clears at midnight — it is escalation ending in **account
-  blocking**, which takes routing away from every user until Chiu resolves it with
-  the provider by hand. And on a paid tier, soft limits plus no cap means an
-  abuser's burn has no automatic ceiling at all. **So this Worker is the only place
-  a ceiling can exist.**
-
-  Shape: a KV counter keyed by UTC date; above a configured ceiling set below the
-  plan's, answer 429 with `Retry-After` until midnight. Roughly 20 lines. KV is
-  eventually consistent so the count can overshoot slightly under concurrency —
-  acceptable for a ceiling; a Durable Object is exact and heavier. Both are on
-  Cloudflare's free plan.
-
-  **Sequencing (Chiu, 2026-08-29): the counter lands with, or before, the app-side
-  wiring.** `matching.base_url` is still empty and no IPA carries the Worker URL
-  today, so the endpoint carries no real traffic yet. It must not start doing so
-  without a ceiling.
+- ~~**A per-day budget counter.**~~ ✅ **BUILT 2026-09-04** — see "The spend
+  ceiling" above. This bullet is kept as a stub because the reasoning that made it
+  mandatory is now in that section and in `Docs/decisions.md` 2026-09-04.
 - **A burst rate limit — a speed bump, not the answer.** Cloudflare's rate-limiting
   binding caps requests per 10 or 60 seconds; **60 seconds is its maximum period**,
   so it cannot express a daily total, which is the thing actually at risk. Kamome's

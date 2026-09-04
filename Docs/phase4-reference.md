@@ -1,6 +1,6 @@
 # Reference — Phase 4 scope, the snapshot freeze, and the camera
 
-Current, load-bearing reference. `Docs/eng-session-camera-arc.md` cites the
+Current, load-bearing reference. `Docs/_archive/eng-session-camera-arc.md` cites the
 freeze recorded here, and this carries reasoning `Docs/current-state.md` does not.
 **Do not delete it into current-state without absorbing the reasoning first.**
 
@@ -12,7 +12,7 @@ carries the live summary and points here.*
 
 
 *Current, load-bearing reference, moved here when `CLAUDE.md` became a boot
-file. `Docs/eng-session-camera-arc.md` cites the freeze recorded below.*
+file. `Docs/_archive/eng-session-camera-arc.md` cites the freeze recorded below.*
 
 ### Phase 4 scope (Chiu 2026-08-15)
 
@@ -24,7 +24,7 @@ was to change the vehicle.**
 
 1. **Vehicle sprites** — the top community request, and the prerequisite for the
    cross-region plane/ship/seagull. The 8-direction technique and its art
-   constraints are in `Docs/handoff-recap-visuals.md` §3; swapping a set is
+   constraints are in `Docs/_archive/handoff-recap-visuals.md` §3; swapping a set is
    already a pure asset swap.
 2. **Cross-region flight display** — `Docs/cross-region-journeys.md`. Every
    overseas trip hits this on device, because the app imports a date range from
@@ -65,7 +65,7 @@ was to change the vehicle.**
 
    ➡️ **That conversation happened on 2026-08-21. The design is
    `Docs/camera-arcs.md`** (the *contained arc*; findings above; first
-   engineering session `Docs/eng-session-camera-arc.md`). **The freeze still
+   engineering session `Docs/_archive/eng-session-camera-arc.md`). **The freeze still
    stands** — the design makes both numbers *irrelevant to an arc* rather than
    tuning them, so neither gets a new value, and nothing changes until Chiu has
    judged the Pass 1 render.
@@ -76,7 +76,7 @@ names" is a **Kamome-drawn overlay** — iceboxed as "Place names as narrative
 rhythm", substrate-independent, and the app already geocodes every stop.
 
 **Routing is Geoapify — CLOSED 2026-08-20** (`Docs/decisions.md` 2026-08-20
-(a)–(d); `Docs/routing-provider-selection.md` is the record of what was asked,
+(a)–(d); `Docs/_archive/routing-provider-selection.md` is the record of what was asked,
 not an open question). §0's cost was accepted 2026-08-16 and stands. The scaling
 trap that forced it: a self-hosted OSRM only routes the regions it preloaded — a
 friend's Tokyo trip had no routable legs at all, because the Japan extract is

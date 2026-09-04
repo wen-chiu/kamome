@@ -53,8 +53,8 @@ On the app UI, *"reduce before adding"* means designing from nothing. On the
 film it means **overriding decisions that were paid for with measurements** —
 which §0 does not permit. Open every session by naming which one you are in.
 
-The film's material: `Docs/kamome-animation-vision.md` (direction),
-`Docs/handoff-recap-visuals.md` §3 (sprite constraints, authoritative),
+The film's material: `Docs/_archive/kamome-animation-vision.md` (direction),
+`Docs/_archive/handoff-recap-visuals.md` §3 (sprite constraints, authoritative),
 `Docs/camera-arcs.md`, and the real tokens in `Config/RecapThemes/` and
 `Core/ExportEngine/RecapStylePresets.swift`.
 

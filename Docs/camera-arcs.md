@@ -64,7 +64,7 @@ failure vocabulary fixes. Three cases, and they must not be collapsed:
 
 **`act_split_km` (25) therefore keeps its existing job** — camera-discontinuity
 detection for the continuity gate — and does **not** become the crossing trigger.
-`Docs/handoff-camera-arc-findings.md` finding 3 anticipated exactly this ("`act_split_km` may be
+`Docs/_archive/handoff-camera-arc-findings.md` finding 3 anticipated exactly this ("`act_split_km` may be
 right for 'insert an arc' and wrong for 'send a bird'"); this is the measurement
 that settles it, and the answer is that they are different questions, not
 different values.
@@ -80,7 +80,7 @@ and it is a prerequisite for everything below.
 **On display scale, read §7's own 2026-08-28 note instead** — it is more precise
 than a summary here, and it is where the projection arithmetic lives.
 
-**Second thing this measurement settles:** `Docs/handoff-camera-arc-findings.md` finding 3
+**Second thing this measurement settles:** `Docs/_archive/handoff-camera-arc-findings.md` finding 3
 listed as UNKNOWN whether any committed fixture exercises `permittedCutTimesS`.
 It does — heavily. Every fixture but `margaret-river` and the real Miyakojima dump
 carries at least one permitted cut today.
@@ -251,6 +251,15 @@ routable leg". Recommend deriving it from extent against `camera_span_m` rather
 than adding a tunable. Not decided.
 
 ## 5 · Body span, and the per-act-framing line
+
+> ⚠️ **CORRECTED 2026-09-02 — the premise below was measured and is false.**
+> The pan floor **binds nowhere**: across six `establishing` configurations the
+> ratio came out `target_zoom_ratio` in every one, so `bodySpanM`'s floor is not
+> what makes the destination a smudge. The actual cause is the **opening**.
+> `Docs/handoff-cross-region-crossing.md` finding 1 carries the measurement.
+> The **recommendation** below — one span per trip, derived from the largest
+> local journey, never a span per segment — **still stands**; only its stated
+> mechanism was wrong.
 
 **This is the sharpest risk in the design and it must not be blurred.**
 

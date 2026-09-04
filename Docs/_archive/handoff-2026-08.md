@@ -2351,3 +2351,25 @@ sections moved on 2026-08-31: 2026-08-30 → `Docs/handoff-audit-2026-08-30.md`
 2026-08-29 → `Docs/handoff-marker-badge.md`; 2026-08-21 →
 `Docs/handoff-camera-arc-findings.md`; travel pacing → `Docs/handoff-pacing.md`;
 anything older → this file.
+
+---
+
+## Moved from `HANDOFF.md` on 2026-09-03 (closed) — a record, not a second account
+
+The 2026-09-03 consolidation (ADR of that date) took these off the live index.
+Each was **closed**, and each already has an authoritative record elsewhere —
+so what follows is a pointer list, deliberately not a retelling. `PO.md`: a
+second, weaker account of a decision is worse than none.
+
+| what closed | where the record is |
+|---|---|
+| The camera-shake P0 — the loop reprojects one snapshot instead of cross-fading two (swing 1.402 → 0.747, stop beats pixel-exact) | ADR **2026-08-31 (b)**; `Docs/handoff-crop-scaling.md` |
+| The opening cuts out of a title card held over the country | ADR **2026-08-31**; `Docs/handoff-crop-scaling.md` §11, §14 |
+| The type-2 film built and judged; `crossing_beat_s` stays 6.0; the type is derived, never stored | ADR **2026-09-01**; `Docs/handoff-type2-films.md`; PR #31 |
+| S2 attribution and S3 the privacy notice — built and shipping | `Docs/release-readiness.md` S2/S3; PR #32 |
+| C1 dead config keys (three) — now a gate | `Scripts/check-dead-config.sh`; `Docs/release-readiness.md` C1 |
+| C2 the export-time estimate — re-derived, 0.79 s/snapshot | `Docs/release-readiness.md` C2; PR #30 |
+| C3 the continuity gates now scan the shipped camera as well as the synthetic one | `Docs/release-readiness.md` C3; PR #30 |
+| S3b's mechanism: Geoapify has no map-matching endpoint, so a recorded leg is never sent — now gated | `RouteMatchRecordedLegTests`; `Docs/release-readiness.md` S3b (**the row itself is still open — it is Chiu's**) |
+| The CONFLICT over the pan floor — two documents stated a premise measured false | corrected in place 2026-09-03: banners in `Docs/camera-arcs.md` §5 and `_archive/handoff-camera-arc-findings.md` finding 5; measurement in `Docs/handoff-cross-region-crossing.md` finding 1 |
+| The staleness protocol — three failures, then mechanised | ADR **2026-09-02 (b)**; `Scripts/check-staleness.sh` |

@@ -74,6 +74,91 @@ extension RecapOverlayRenderer {
         )
     }
 
+    /// The card stock: rounded, shadowed, opaque enough to be a printed object
+    /// rather than a translucent panel, with a notch bitten out of each **outer
+    /// edge**.
+    ///
+    /// 🔴 **Outer edges, not the tear line** (Chiu 2026-09-04, from the film).
+    /// They were on the tear line, top and bottom, and a hole in the middle of a
+    /// card reads as a *disc* — Chiu saw exactly that, "下半藍上半白色各半圓形",
+    /// because whatever the map happened to be showing filled each circle. On the
+    /// outer edge the same hole reads as a ticket, which is what the reference
+    /// draws.
+    ///
+    /// 🔴 They are holes in a single even-odd path, not a second pass with
+    /// `.destinationOut`. That was the first attempt and it cut through the *map*:
+    /// `destinationOut` erases whatever is already in the context, and by this
+    /// point that is the frame. One compound path can only remove the stock,
+    /// which is the whole of what a notch is.
+    func drawStock(_ rect: CGRect, tearX: CGFloat, in surface: RenderSurface) {
+        let tokens = style.journeyCard
+        let context = surface.context
+        let corner = tokens.cornerPx * surface.scale
+        let radius = tokens.notchRadiusPx * surface.scale
+        let outline = CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil)
+
+        // **The shadow is its own pass, and it is clipped to OUTSIDE the card.**
+        // Drawn with the stock, it fell *under the notches* and showed through
+        // them as a dark half-disc — half of the "半深半白" Chiu saw. Clipping a
+        // huge rect against the outline with even-odd leaves only the region
+        // beyond the card, so the shadow can reach the map and never the holes.
+        context.saveGState()
+        let beyond = CGMutablePath()
+        beyond.addRect(rect.insetBy(dx: -rect.width, dy: -rect.height))
+        beyond.addPath(outline)
+        context.addPath(beyond)
+        context.clip(using: .evenOdd)
+        context.setShadow(
+            offset: CGSize(width: 0, height: -tokens.shadowOffsetPx * surface.scale),
+            blur: tokens.shadowBlurPx * surface.scale, color: tokens.shadowColor
+        )
+        context.setFillColor(tokens.stockColor)
+        context.addPath(outline)
+        context.fillPath()
+        context.restoreGState()
+
+        // **The stock is clipped to the card before it is filled.** Each notch's
+        // centre sits *on* an edge, so half its circle lies outside the outline —
+        // and out there the even-odd rule counts one crossing, calls it inside,
+        // and fills it. That was the white half-disc bulging past the card, the
+        // other half of what Chiu saw. Clipped, only the inner half can paint,
+        // and the even-odd rule turns it into the hole it is meant to be.
+        let stock = CGMutablePath()
+        stock.addPath(outline)
+        for centerX in [rect.minX, rect.maxX] {
+            stock.addEllipse(in: CGRect(
+                x: centerX - radius, y: rect.midY - radius, width: radius * 2, height: radius * 2
+            ))
+        }
+        context.saveGState()
+        context.addPath(outline)
+        context.clip()
+        context.setFillColor(tokens.stockColor)
+        context.addPath(stock)
+        context.fillPath(using: .evenOdd)
+        context.restoreGState()
+    }
+
+    /// The tear line — dashed, full height, and uninterrupted since the notches
+    /// moved to the outer edges (Chiu 2026-09-04: he likes the dashes).
+    func drawPerforation(atX tearX: CGFloat, in rect: CGRect, surface: RenderSurface) {
+        let tokens = style.journeyCard
+        let context = surface.context
+        let scale = surface.scale
+        let inset = tokens.cornerPx * scale * 0.5
+
+        context.saveGState()
+        context.setStrokeColor(tokens.ruleColor)
+        context.setLineWidth(tokens.arcWidthPx * scale * 0.8)
+        context.setLineDash(phase: 0, lengths: [
+            tokens.perforationDashPx * scale, tokens.perforationGapPx * scale
+        ])
+        context.move(to: CGPoint(x: tearX, y: rect.minY + inset))
+        context.addLine(to: CGPoint(x: tearX, y: rect.maxY - inset))
+        context.strokePath()
+        context.restoreGState()
+    }
+
     /// **A decorative barcode on the stub** (Chiu 2026-09-04).
     ///
     /// 🔴 **It encodes nothing, and it must never encode anything.** The bar

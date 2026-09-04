@@ -2836,7 +2836,125 @@ fails, and it self-corrects on the next PR.
 
 ---
 
-## 2026-09-03 — The crossing beat is 4.0 s because that is how long a boarding pass takes to read
+## 2026-09-03 — The corpus is cut in half: closed work is archived, and the live set has a ceiling
+
+**Context.** ADR 2026-09-02 §6 measured the governance overhead and left one
+question open — *"whether the 38 documents in `Docs/` should be consolidated
+further. Recorded as a pressure, not acted on."* A PO audit the next day
+re-measured it and recommended a gate that would stop future growth without
+removing anything. **Chiu rejected that as the same mistake in a new costume:**
+
+> *「我覺得我們現在又有一堆文件債…之前我都有要你們整理，但每次你們好像都只是給我
+> 更多問題跟不著邊際的解決方式，你們每次整理設了更多規範，但沒有清掉之前的。」*
+>
+> *「把之前做過的已完成事項整理封存，現有該讀的文件精簡他，不要留太多廢話，讓你
+> 自己或下一個 AI 看的時候都能不浪費 token 跟時間。」*
+
+He is right on the record. **Both previous documentation-governance passes made
+the corpus bigger:** the 2026-08-21 audit added 11 files, and PR #25 on 2026-08-31
+added 17 files and 5,383 lines of markdown against 0 lines of Swift. Measured
+2026-09-03: `Docs/` went **13 → 53 documents** between 2026-07-19 and today,
+1,894 → 17,836 lines, and **not one document had ever been deleted or archived**
+in the project's history.
+
+### 1. The mechanism, named — a per-file cap displaces text, it does not retire it
+
+`HANDOFF.md`'s 16 KB budget is satisfied by moving detail into a new
+`Docs/handoff-*.md`. That is what the rule literally says to do, and on
+2026-08-31 it produced **12 new documents in one day**. The corpus was never the
+thing being measured, so it grew while every individual budget stayed green —
+and on 2026-09-03 `HANDOFF.md` sat at 15,847 of 16,000 bytes, meaning the next
+finding would have spawned another file.
+
+**`Docs/current-state.md` was the same failure from the other side:** `CLAUDE.md`
+rule 1 makes it the first file of every session, and it was **the only boot
+document with no budget at all**. It had reached 17,531 bytes — larger than
+`HANDOFF.md`'s cap — while its own header claimed to be "an index, not a source
+of truth". A PO session's boot cost was **49,470 bytes before reading anything
+about the task.**
+
+### 2. Decision — closed work is archived, and archiving is part of closing
+
+**Eighteen documents moved to `Docs/_archive/`**: six `eng-session-*.md` (all
+executed), the two Phase 3.5 documents (phase closed 2026-08-15), the two
+2026-08-21 audit artifacts, `handoff-recap-visuals.md`, `handoff-render-layers.md`,
+`handoff-camera-arc-findings.md` (its own header said to archive it once Pass 1
+was judged — PR #26), `routing-provider-selection.md` (closed 2026-08-20), and
+the four parked/fallback infrastructure guides (`kamome-animation-vision.md`,
+`vector-tile-pipeline.md`, `osrm-setup.md`, `dogfood-infrastructure.md`).
+
+**Live `Docs/*.md`: 40 → 24. Boot cost: 49,470 → 34,588 bytes (−30%).**
+`HANDOFF.md` 15,847 → 9,505; `Docs/current-state.md` 17,531 → 8,903.
+
+**The rule that follows, and it is the whole point:** *closing a finding archives
+its document in the same PR.* Until now, closing removed a line from `HANDOFF.md`
+and left the file, which is why the corpus only ever grew.
+
+**Nothing was deleted.** `Docs/_archive/README.md` maps every moved path to its
+new one, and names the **three** things still load-bearing inside archived files
+(`handoff-P3.5.md` §6 gate definitions, `handoff-recap-visuals.md` §3 sprite
+constraints, and the dormant substrate guides the MapLibre lock requires stay
+accurate).
+
+### 3. Two budgets change, and one new number replaces a rule nobody could enforce
+
+- `HANDOFF.md` **16,000 → 11,000**. The 2026-08-31 comment in
+  `check-doc-budget.sh` said that the next time the budget bound, the answer was
+  to archive a closed item rather than raise it again. That is what happened, so
+  the ceiling comes down with it. **A budget that only ever goes up is not a
+  budget.**
+- `Docs/current-state.md` **enters the gate at 10,000 bytes** (§1).
+- **The live `Docs/` corpus gets one ceiling: 355,000 bytes**, excluding
+  `Docs/decisions.md` (append-only by design, never read whole, already indexed)
+  and `Docs/_archive/`. Over budget means **archive one**, not raise the number.
+  Positive-controlled: a planted 12 KB file fails the gate and its removal passes
+  it.
+
+This is deliberately **one number, not a new process.** §6 of the previous entry
+warned that a consolidation pass is itself governance overhead; the answer is
+that the pass happens once and the ceiling keeps it from being needed again.
+
+### 4. A false premise that two documents were still asserting is corrected
+
+`HANDOFF.md` recorded a CONFLICT on 2026-09-02: the pan floor is **not** what
+makes the destination render as a smudge — measured across six `establishing`
+configurations, the ratio is `target_zoom_ratio` in every one, so the floor binds
+nowhere. **Both documents were still stating the superseded premise unmarked**,
+and one of them — `Docs/camera-arcs.md` §5 — is the most-cited task document in
+the repository. Both now carry a correction banner naming the measurement. The
+recommendation in that section (one span per trip, never per segment) is
+unaffected; only its stated mechanism was wrong.
+
+**This is what document debt costs**, and it is why the archive is a correction
+pass and not a filing exercise: the wrong premise was reachable, unmarked, from
+the most-read design document for a day.
+
+### 5. What this entry does NOT do
+
+- **No application code was touched** (`PO.md`). **Twelve source files cite an
+  archived document by its old path in a comment** — `RecapMapStyle.swift`,
+  `RecapMapTiles.swift`, `TrackingConfigMatching.swift`, `RecapAnimationState.swift`,
+  `RecapAppearance.swift`, `RecapStylePresets.swift`, `OSRMMatchProvider.swift`,
+  `RecapModel.swift`, `project.yml`, `Deploy/bin/build-tiles.sh`,
+  `Tests/Fixtures/tiles/generate_tiles.sh`, `OSRMRecordedFixtureTests.swift`. The
+  archive map resolves them and `git log --follow` carries the history; **the
+  one-line path fix rides the next engineering PR that touches each file.**
+- **`Docs/decisions.md`'s own older entries were not rewritten.** Editing an
+  append-only ledger's history to fix a path is worse than the path. The map
+  resolves them.
+- **No charter was changed**, and no new rule was added to `CLAUDE.md`. The count
+  of things a session must remember went **down**, not up: two prose rules became
+  one number in an existing gate.
+
+**Not decided:** whether `Docs/kamome-poc-spec.md` (71 KB, 20% of the live
+corpus by itself) should be split. It is product reference, rarely read whole,
+and splitting it is a product-documentation decision rather than a governance one.
+
+---
+
+---
+
+## 2026-09-03 (b) — The crossing beat is 4.0 s because that is how long a boarding pass takes to read
 
 **Context.** `crossing_beat_s` has been 6.0 since 2026-09-02, and it was **not**
 a guess: Chiu rendered `ishigaki-beat{4,6,9}s.mp4` and
@@ -2898,7 +3016,8 @@ decision, not two** — and it needs Chiu's eye on a film, not an edit here.
 
 ### 4. Amended by this entry
 
-`Docs/handoff-type2-films.md` §4 and its closeout, `Docs/handoff-cross-region-crossing.md`,
+`Docs/handoff-type2-films.md`'s closeout (its §4 archived 2026-09-04 to
+`Docs/_archive/handoff-type2-films-tasks.md`), `Docs/handoff-cross-region-crossing.md`,
 and `HANDOFF.md` all recorded 6.0 as settled. Each is corrected in the same PR
 rather than left to contradict this entry — the failure mode `CLAUDE.md`'s
 append-only rule exists to prevent is a reader finding "16.5 %/s validated"
@@ -2906,7 +3025,89 @@ beside "4.0 s" and reopening a sweep Chiu has already closed.
 
 ---
 
-## 2026-09-04 — The crossing flies a plane, and its two ends are marked and named
+---
+
+## 2026-09-04 — The Worker gets a spend ceiling, and it fails closed
+
+**Status:** approved (implementation of Chiu's 2026-08-29 sequencing and his
+2026-09-04 number). **Scope:** `Deploy/worker/` only — no app code, no
+`Config/TrackingConfig.json` key.
+
+### The problem, stated once
+
+`matching.base_url` is `""` and `api_key_required` is `true`, so every build
+calls Geoapify directly and **every IPA that has reached another person's phone
+contains the routing key**. The Worker that fixes that has been deployed since
+2026-08-27 and carries no traffic, because pointing the app at an *uncapped*
+proxy trades a key leak for an open quota.
+
+⚠️ **VERIFIED from Geoapify's own pricing pages, 2026-08-29:** their limits are
+*soft on every tier*, there is **no customer-settable cap**, and escalation ends
+in **account blocking**. So the worst case is not a daily outage that clears at
+midnight — it is every user losing routing until Chiu resolves it with the
+provider by hand. **This Worker is the only place a ceiling can exist.**
+
+### Decision
+
+A KV counter keyed by UTC date, in `src/index.js` after the secret check and
+before the upstream fetch. Above `DAILY_REQUEST_CEILING` (a `[vars]` value,
+**2000/day, Chiu's number**, 2026-09-04): **429, `Retry-After` = seconds to UTC
+midnight, empty body, upstream never called.**
+
+Three things this entry fixes so they are not re-litigated:
+
+1. **The overshoot is accepted.** KV is eventually consistent, so concurrent
+   requests can read the same value and the count can drift slightly over. That
+   is fine for a ceiling and it is a deliberate choice over a **Durable Object**,
+   which is exact and costs a class, a migration and a round trip to one object
+   on every request. A ceiling set well below the provider's soft limit does not
+   need to be exact; it needs to exist. **Do not silently switch to a DO.**
+2. **The Worker fails closed.** No KV binding, no usable ceiling, or a KV error
+   is **503** — never a forwarded request. A Worker that cannot count is a Worker
+   with no ceiling, and forwarding anyway is exactly the silent fallback
+   (`Arch.md` §6) that would make the proxy only *look* capped. 503 rather than
+   400 for the reason the missing-secret branch already gives: the app reads 400
+   as "no road joins these places" and draws that leg dashed forever.
+3. **The request is counted before the fetch.** The only ordering in which the
+   stored number bounds what is forwarded. It over-counts the requests that end
+   at 502, which never reached Geoapify and cost no credit — and over-counting is
+   the safe direction for a ceiling.
+
+**The number is configuration, not a constant.** It lives in `wrangler.toml`
+with its arithmetic beside it, arrives from `env` as a **string**, and is
+`Number()`-ed once at the top. It is **not** in `Config/TrackingConfig.json`:
+that file is the app's config and the app never sees this value. Chiu's words on
+2000: *"2000 可以，之後有需要再改"*.
+
+### Evidence
+
+- `npm test` in `Deploy/worker/` — **19/19**, Node 24.3.0 after `npm ci`. The
+  nine pre-existing assertions are unchanged; the harness gained a KV stub and an
+  injectable clock because the runtime now requires a binding it did not before.
+- **The gate was shown to fire twice.** Neutering the comparison fails four of
+  the new tests. And a `wrangler dev` positive control at ceiling 1 answers the
+  second request `429` with `Retry-After: 65312`, matching seconds-to-UTC-midnight
+  at the time of the run. Public landmark coordinates only (§0), local KV, no
+  account touched.
+
+### ⏳ NOT done, and deliberately
+
+- **The Worker is not deployed.** A deploy may come only from merged `main` or a
+  branch Chiu names, and neither this work nor its provisioning (PR #38) is
+  merged. **Until it is deployed, production is still the uncapped 2026-08-27
+  version**, so S5 is not closed and `matching.base_url` must not be flipped.
+- **The config flip is proposed, not made** (`CLAUDE.md` rule 2): it changes
+  shipped behaviour. `matching.base_url` → the Worker URL and `api_key_required`
+  → `false` is two values and no code, and it closes **S6 by construction** —
+  the key stops being a build setting, so `xcodebuild` stops echoing it. It waits
+  for Chiu.
+- **Not touched:** App Attest; a burst rate limit (Cloudflare's maximum period is
+  60 s, so it cannot express a daily total — never mistake it for the ceiling);
+  `/v1/mapmatching`; **S4**, the no-log property, still asserted nowhere.
+
+---
+
+## 2026-09-04 (b) — The crossing flies a plane, and its two ends are marked and named
 
 **Context.** ADR 2026-09-03 gave the type-2 crossing a **Journey Card**: a
 boarding pass printing `FROM` / `TO`, the constant flight number `THX-9527`, and

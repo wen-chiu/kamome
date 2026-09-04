@@ -148,8 +148,8 @@ synced index and its neighbouring sections are being rewritten on
 that re-syncs it, not to this change: the blockers entry "🔴 intermittent …
 bundle crash", and "worktrees fix it but silently skip half the secrets guard
 (`HANDOFF.md` 3e)" — struck above, closed by `2d221e0`.
-`Docs/gate-P3.5-checklist.md`
-and `Docs/handoff-P3.5.md` describe a closed phase and are history.
+`Docs/_archive/gate-P3.5-checklist.md`
+and `Docs/_archive/handoff-P3.5.md` describe a closed phase and are history.
 `Docs/decisions.md` 2026-08-15 records the `Bundle.module` mechanism as it stood
 and is append-only — it is not wrong, it is superseded.
 
