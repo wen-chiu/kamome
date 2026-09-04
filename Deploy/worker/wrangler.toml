@@ -38,3 +38,30 @@ enabled = false
 # The key is a secret, never a var:
 #   wrangler secret put GEOAPIFY_API_KEY
 # `vars` would put it in this file, which is committed.
+
+# The spend ceiling's storage. Created 2026-09-04 on Chiu's instruction; the id
+# is an identifier, not a secret — Cloudflare's own snippet puts it in this file.
+#
+# ⚠️ **Bound before its reader exists, deliberately.** The counter itself is not
+# built (`README.md`, "Not built, and deliberately"); this binding and the
+# ceiling below are here so the session that writes it has nothing to provision
+# and no account of Chiu's to touch. A binding with no reader is inert.
+[[kv_namespaces]]
+binding = "KAMOME_BUDGET"
+id = "d533d7ee1b7d4a3c8ffcf51fe8701b33"
+
+# 🔴 **The only ceiling that can exist anywhere.** VERIFIED from Geoapify's own
+# pages, 2026-08-29: their limits are *soft on every tier*, there is no
+# customer-settable cap, and escalation ends in **account blocking** — so the
+# worst case is not a daily outage that clears at midnight, it is every user
+# losing routing until Chiu resolves it with the provider by hand.
+#
+# 2000 is Chiu's number (2026-09-04), and the arithmetic behind it: Geoapify's
+# free tier is 3,000 credits a day and Kamome spends one request per drive leg —
+# 9 on Miyakojima, 17 on New Zealand, 58 on Iceland. 2000 is ~34 Iceland-sized
+# imports a day, far above any dogfooding load, and it stops *below* the
+# provider's soft limit so a burst never reaches the thing that triggers their
+# emails. His words: *"2000 可以，之後有需要再改"* — a value to revisit, not a
+# constant to reason from.
+[vars]
+DAILY_REQUEST_CEILING = "2000"
