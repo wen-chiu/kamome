@@ -7,16 +7,17 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-03 against decisions.md **2026-09-03** and `main` at
-**PR #32** — the corpus consolidation. Re-read the ledger and `HANDOFF.md`, and
-rewrote this whole file. Checked, not remembered: `Scripts/check-staleness.sh`
-runs in every `./check.sh`.
+**PR #35**. Re-read for this sync: the ledger tail (both 2026-09-03 entries),
+`HANDOFF.md`, and every *Blockers* line — this file was rewritten whole by the
+corpus consolidation, and the six blockers were carried across individually
+rather than copied.
 
-⚠️ **On `main` this line reads exactly one PR behind, and that is correct**: it is
-written inside a PR that is not yet merged, so it can never name the PR containing
-it. The check therefore runs on the branch. **Two behind is a real failure.** Do
-not "fix" a failure by bumping the number — the line claims someone re-read the
-ledger and `HANDOFF.md` and brought this file up to date, and that is the half
-that rotted while the number stayed right (ADR 2026-09-02 (b)).
+⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
+corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
+it can never name the PR containing it — demanding equality made the gate
+permanently red on `main`. Do not "fix" a failure by bumping the number: the line
+claims someone re-read the ledger and `HANDOFF.md` and brought this file up to
+date, and that is the half that rotted twice while the number stayed right.
 
 Update this file when an ADR is appended, a PR merges, the phase changes, or Chiu
 decides something that changes anything below.

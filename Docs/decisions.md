@@ -2811,6 +2811,29 @@ to touch.
 name a commit instead. A commit is exact but unreadable in a document people scan;
 a PR number is legible and one-behind. Left as is, deliberately.
 
+### Correction, 2026-09-03 — the check demanded equality, which is the defect this entry describes
+
+**The check shipped with the bug its own entry documents.** §1 above establishes
+that the line can never name the PR containing it, and then
+`check-staleness.sh` was written to require `claimed == newest`. It went red on
+`main` the moment PR #32 merged, and would have stayed red **permanently**: any
+PR bumping the number becomes a newer PR and re-breaks it.
+
+That is not a strictness preference, it is a broken gate. `CLAUDE.md` says done
+means `./check.sh` is green — so a check that cannot be green on `main` makes the
+definition of done unsatisfiable, and a permanently red gate is the thing that
+teaches everyone to ignore red. It also forced every concurrent branch to edit
+the same line, which is precisely the single conflict PR #32 hit.
+
+**Corrected:** one merged PR after the named one is the floor and passes; **two
+or more is drift and fails.** That still catches the only real violation in the
+history — PR #28 changed the ledger and left the line at #26 while `main` carried
+#28. Counted rather than subtracted, because PR numbers skip when a PR is closed
+unmerged, so "#31 vs #32" says nothing on its own.
+
+**The residual, stated rather than hidden:** drift can reach two before it
+fails, and it self-corrects on the next PR.
+
 ## 2026-09-03 — The corpus is cut in half: closed work is archived, and the live set has a ceiling
 
 **Context.** ADR 2026-09-02 §6 measured the governance overhead and left one
@@ -2858,7 +2881,7 @@ was judged — PR #26), `routing-provider-selection.md` (closed 2026-08-20), and
 the four parked/fallback infrastructure guides (`kamome-animation-vision.md`,
 `vector-tile-pipeline.md`, `osrm-setup.md`, `dogfood-infrastructure.md`).
 
-**Live `Docs/*.md`: 44 → 24. Boot cost: 49,470 → 34,500 bytes (−30%).**
+**Live `Docs/*.md`: 40 → 24. Boot cost: 49,470 → 34,588 bytes (−30%).**
 `HANDOFF.md` 15,847 → 9,505; `Docs/current-state.md` 17,531 → 8,903.
 
 **The rule that follows, and it is the whole point:** *closing a finding archives
