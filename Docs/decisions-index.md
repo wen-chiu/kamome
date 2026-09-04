@@ -4,13 +4,13 @@ One row per ADR, newest last, in ledger order. **This is a finding aid, not a
 summary**: the ledger is the decision, and the newest entry on a subject wins
 over any older entry, any handoff, and `CLAUDE.md`.
 
-Use it to find the entry to read. `Docs/decisions.md` is ~2,300 lines and is
+Use it to find the entry to read. `Docs/decisions.md` is ~2,900 lines and is
 never read whole; grep the title from the row you want.
 
 **The "superseded / amended" column is not a currency claim.** A cell is filled
 only where the repository states the relationship explicitly, and it carries the
 citation. An empty cell means *this pass found no supersession statement* — it
-does **not** mean the entry is current. Establishing that for all 54 entries was
+does **not** mean the entry is current. Establishing that for every entry was
 not done here.
 
 `Scripts/check-decisions-index.sh` fails if the ledger gains an entry this file
@@ -77,3 +77,4 @@ does not.
 | 57 | `2026-09-01` | Kamome's films are three types, and the film ends where the trip does |  |
 | 58 | `2026-09-02` | Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest | **amends `CLAUDE.md` rule 7 for Phase 4 only** |
 | 59 | `2026-09-02 (b)` | The staleness protocol could never be satisfied, and it is a check now | **corrects the diagnosis in 2026-09-02 §6** |
+| 60 | `2026-09-03` | The corpus is cut in half: closed work is archived, and the live set has a ceiling |  |

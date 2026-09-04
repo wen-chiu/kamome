@@ -26,12 +26,12 @@ or resolution throws.
 
 The `pmtiles://` **scheme** lives in the JSON, not the code — so switching the
 ingestion path (native `pmtiles://` vs. an `mbtiles://` fallback; see
-`Docs/vector-tile-pipeline.md` §5) is a one-line theme edit, verified on device.
+`Docs/_archive/vector-tile-pipeline.md` §5) is a one-line theme edit, verified on device.
 
 ## Authoring workflow
 
 1. Generate local tiles (see `Tests/Fixtures/tiles/README.md` for the fixture, or
-   `Docs/vector-tile-pipeline.md` §4 for a full region).
+   `Docs/_archive/vector-tile-pipeline.md` §4 for a full region).
 2. Point [Maputnik](https://maputnik.github.io) at those tiles, edit, and commit
    the resulting JSON here.
 3. Start from a deliberately empty style and **add** layers (subtractive by

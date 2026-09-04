@@ -14,7 +14,7 @@ anything; every constraint here exists because something looked wrong once.
 correctly at the angle it was drawn; spinning one breaks the perspective at every
 intermediate angle. That is why there are eight, and why nothing is ever rotated
 in code. This was tried the other way and rejected — see
-`Docs/handoff-recap-visuals.md` §3.
+`Docs/_archive/handoff-recap-visuals.md` §3.
 
 **An omni mark is not a one-frame vehicle.** It never turns, so it must read the
 same travelling in any direction. A bird facing left looks like it is flying

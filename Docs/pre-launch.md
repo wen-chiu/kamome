@@ -37,7 +37,7 @@ mandatory for a submission, and each is small.
 was committed as `4ed8774` / `6cc6543` (re-centred sets, the 46 modified files) and
 `c0d4583` (the two reindeer sets, with manifest entries — "choosable subjects");
 `git status` is clean of PNGs. What remains from that closeout brief is the **key
-verification**, whose outcome is not recorded (`Docs/eng-session-closeout.md`).
+verification**, whose outcome is not recorded (`Docs/_archive/eng-session-closeout.md`).
 
 **Of the §6b six, two actually bite:** Limited Photo Library on hardware, and a
 crash-free export across three trips. The souvenir-map item is moot while MapLibre is
