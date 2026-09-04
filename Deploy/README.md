@@ -83,7 +83,7 @@ from the app anyway.
 commented out; the app half does not exist — both OSRM providers send bare
 requests. Enabling one without the other makes every request 403, and because a
 routing failure means "keep raw geometry", **every leg would silently render
-dashed** with nothing saying why. Tracked in `Docs/handoff-P3.5.md` under "VPS
+dashed** with nothing saying why. Tracked in `Docs/_archive/handoff-P3.5.md` under "VPS
 migration — deferred security work". Ship both halves together.
 
 ## Disk

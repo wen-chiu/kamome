@@ -3,7 +3,7 @@
 A **small** Perth-corridor PMTiles crop for exercising `MapLibreSnapshotProvider`
 locally and on a sim/device. Regenerate with `./generate_tiles.sh` (needs Docker;
 the Planetiler image bundles Java 21). The extract vintage is pinned in the
-filename — never `latest` in a fixture (`Docs/vector-tile-pipeline.md` §3).
+filename — never `latest` in a fixture (`Docs/_archive/vector-tile-pipeline.md` §3).
 
 ## What is / isn't checked in
 
@@ -20,7 +20,7 @@ filename — never `latest` in a fixture (`Docs/vector-tile-pipeline.md` §3).
 ## Not wired into golden-frame CI
 
 Golden-frame tests stay on `FlatSnapshotProvider` — bit-stable, no tiles, no
-Metal (`Docs/vector-tile-pipeline.md` §8). MapLibre rendering is a Metal path
+Metal (`Docs/_archive/vector-tile-pipeline.md` §8). MapLibre rendering is a Metal path
 that is **not** deterministic across machines and is verified on sim/device, not
 in CI. These tiles back that manual verification and any future
 MapLibre-specific golden test added after Chiu's §3 sign-off.
@@ -28,4 +28,4 @@ MapLibre-specific golden test added after Chiu's §3 sign-off.
 ## Provenance
 
 © OpenStreetMap contributors (ODbL). OSM data via Geofabrik
-(`western-australia-latest.osm.pbf`), same extract as `Docs/osrm-setup.md`.
+(`western-australia-latest.osm.pbf`), same extract as `Docs/_archive/osrm-setup.md`.

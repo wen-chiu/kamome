@@ -201,14 +201,14 @@ Listed so the fixes are auditable rather than silent. All were on `main`.
 
 | what | was | now |
 |---|---|---|
-| `Docs/eng-session-P4-visual.md` | "Status: NOT YET RUN (2026-08-21)" — three days after it merged as PR #18, while `current-state.md` said the opposite | banner: EXECUTED AND MERGED; original line kept as the record of what was asked |
+| `Docs/_archive/eng-session-P4-visual.md` | "Status: NOT YET RUN (2026-08-21)" — three days after it merged as PR #18, while `current-state.md` said the opposite | banner: EXECUTED AND MERGED; original line kept as the record of what was asked |
 | `current-state.md` blockers | "🔴 intermittent bundle **crash**" — `HANDOFF.md` retitled it on 2026-08-28 ("it no longer crashes") | corrected to the silent-miss form |
 | `current-state.md` blockers | "worktrees silently skip half the secrets guard" — closed by `2d221e0` | marked closed; the surviving half kept |
 | `current-state.md` active work | two tokens "awaiting a colour judgement" — decided, then superseded by the badge | rewritten; the whole section now names one live line |
 | `current-state.md` staleness | one-half check (ADR only) that passed twice over stale blockers | two halves: newest ADR **and** newest merged PR; propagated to `CLAUDE.md` and `PO.md` |
 | `Docs/decisions.md` | the 2026-08-29 badge decisions existed **only in `HANDOFF.md`**, one trim from being archived out of the ledger | written up as an ADR, dated to the day of the decision |
 | `PO.md` | "the implementing session writes the ADR" was only half a rule — nobody was named to write it if they didn't | second half added: the next PO session writes it, back-dated, saying why it is late |
-| `Docs/_audit/inventory.md` | a 247 KB file inventory from 2026-08-21, unbannered and nine days stale | bannered as history |
+| `Docs/_archive/inventory-2026-08-21.md` | a 247 KB file inventory from 2026-08-21, unbannered and nine days stale | bannered as history |
 
 ### 7. ⏳ One §0 question for Chiu, raised not answered
 
@@ -235,7 +235,7 @@ than only one.
 **Left alone, deliberately:** `HANDOFF.md`'s "Reference — Phase 4 scope…" section
 still restates `current-state.md` at greater length. It is genuine duplication and
 two of the contradictions above came from exactly that split — but
-`Docs/eng-session-camera-arc.md` cites the freeze it records, and it carries
+`Docs/_archive/eng-session-camera-arc.md` cites the freeze it records, and it carries
 reasoning the index does not. **If it moves, `current-state.md` must absorb the
 reasoning first.** Same for the 2026-08-21 PO findings section, which should be
 archived once camera-arc Pass 1 has run and been judged.

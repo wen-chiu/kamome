@@ -424,7 +424,7 @@ Measure the frame share with `RecapOpeningFramingTests.testHowFarTheAircraftTrav
 
 **1. The wide flight frame loses the viewer.** Chiu on the Auckland film: 地圖放太遠
 會失去焦點, 一開始的畫面會無法明確知道出發地跟目的地. This is the **mirror of a defect
-already recorded**: `Docs/handoff-P3.5.md` §"Map reference labels" (2026-08-02),
+already recorded**: `Docs/_archive/handoff-P3.5.md` §"Map reference labels" (2026-08-02),
 *"once zoomed in I lose all sense of geographic orientation"*, whose remedy was **a
 recognisable country silhouette**. At Auckland's scale neither end is a silhouette,
 so the flight frame violates a principle this project had already written down.

@@ -2,11 +2,11 @@
 
 **Status: requirements decided by Chiu (2026-08-14), design NOT decided, nothing
 built.** This is a scoped implementer guide in the shape of
-`Docs/vector-tile-pipeline.md`, not an ADR. No entry goes into `Docs/decisions.md`
+`Docs/_archive/vector-tile-pipeline.md`, not an ADR. No entry goes into `Docs/decisions.md`
 until something has been rendered and judged — the standing rule that unverified
 work is never written as settled architecture.
 
-Supersedes the two deferred stubs in `Docs/handoff-P3.5.md`: "Trips that span two
+Supersedes the two deferred stubs in `Docs/_archive/handoff-P3.5.md`: "Trips that span two
 map regions" and the airport-departure animation noted beside it. Both are folded
 in here.
 

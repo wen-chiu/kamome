@@ -2810,3 +2810,117 @@ to touch.
 **Not decided:** whether `current-state.md` should stop naming a PR at all and
 name a commit instead. A commit is exact but unreadable in a document people scan;
 a PR number is legible and one-behind. Left as is, deliberately.
+
+## 2026-09-03 — The corpus is cut in half: closed work is archived, and the live set has a ceiling
+
+**Context.** ADR 2026-09-02 §6 measured the governance overhead and left one
+question open — *"whether the 38 documents in `Docs/` should be consolidated
+further. Recorded as a pressure, not acted on."* A PO audit the next day
+re-measured it and recommended a gate that would stop future growth without
+removing anything. **Chiu rejected that as the same mistake in a new costume:**
+
+> *「我覺得我們現在又有一堆文件債…之前我都有要你們整理，但每次你們好像都只是給我
+> 更多問題跟不著邊際的解決方式，你們每次整理設了更多規範，但沒有清掉之前的。」*
+>
+> *「把之前做過的已完成事項整理封存，現有該讀的文件精簡他，不要留太多廢話，讓你
+> 自己或下一個 AI 看的時候都能不浪費 token 跟時間。」*
+
+He is right on the record. **Both previous documentation-governance passes made
+the corpus bigger:** the 2026-08-21 audit added 11 files, and PR #25 on 2026-08-31
+added 17 files and 5,383 lines of markdown against 0 lines of Swift. Measured
+2026-09-03: `Docs/` went **13 → 53 documents** between 2026-07-19 and today,
+1,894 → 17,836 lines, and **not one document had ever been deleted or archived**
+in the project's history.
+
+### 1. The mechanism, named — a per-file cap displaces text, it does not retire it
+
+`HANDOFF.md`'s 16 KB budget is satisfied by moving detail into a new
+`Docs/handoff-*.md`. That is what the rule literally says to do, and on
+2026-08-31 it produced **12 new documents in one day**. The corpus was never the
+thing being measured, so it grew while every individual budget stayed green —
+and on 2026-09-03 `HANDOFF.md` sat at 15,847 of 16,000 bytes, meaning the next
+finding would have spawned another file.
+
+**`Docs/current-state.md` was the same failure from the other side:** `CLAUDE.md`
+rule 1 makes it the first file of every session, and it was **the only boot
+document with no budget at all**. It had reached 17,531 bytes — larger than
+`HANDOFF.md`'s cap — while its own header claimed to be "an index, not a source
+of truth". A PO session's boot cost was **49,470 bytes before reading anything
+about the task.**
+
+### 2. Decision — closed work is archived, and archiving is part of closing
+
+**Eighteen documents moved to `Docs/_archive/`**: six `eng-session-*.md` (all
+executed), the two Phase 3.5 documents (phase closed 2026-08-15), the two
+2026-08-21 audit artifacts, `handoff-recap-visuals.md`, `handoff-render-layers.md`,
+`handoff-camera-arc-findings.md` (its own header said to archive it once Pass 1
+was judged — PR #26), `routing-provider-selection.md` (closed 2026-08-20), and
+the four parked/fallback infrastructure guides (`kamome-animation-vision.md`,
+`vector-tile-pipeline.md`, `osrm-setup.md`, `dogfood-infrastructure.md`).
+
+**Live `Docs/*.md`: 44 → 24. Boot cost: 49,470 → 34,500 bytes (−30%).**
+`HANDOFF.md` 15,847 → 9,505; `Docs/current-state.md` 17,531 → 8,903.
+
+**The rule that follows, and it is the whole point:** *closing a finding archives
+its document in the same PR.* Until now, closing removed a line from `HANDOFF.md`
+and left the file, which is why the corpus only ever grew.
+
+**Nothing was deleted.** `Docs/_archive/README.md` maps every moved path to its
+new one, and names the **three** things still load-bearing inside archived files
+(`handoff-P3.5.md` §6 gate definitions, `handoff-recap-visuals.md` §3 sprite
+constraints, and the dormant substrate guides the MapLibre lock requires stay
+accurate).
+
+### 3. Two budgets change, and one new number replaces a rule nobody could enforce
+
+- `HANDOFF.md` **16,000 → 11,000**. The 2026-08-31 comment in
+  `check-doc-budget.sh` said that the next time the budget bound, the answer was
+  to archive a closed item rather than raise it again. That is what happened, so
+  the ceiling comes down with it. **A budget that only ever goes up is not a
+  budget.**
+- `Docs/current-state.md` **enters the gate at 10,000 bytes** (§1).
+- **The live `Docs/` corpus gets one ceiling: 355,000 bytes**, excluding
+  `Docs/decisions.md` (append-only by design, never read whole, already indexed)
+  and `Docs/_archive/`. Over budget means **archive one**, not raise the number.
+  Positive-controlled: a planted 12 KB file fails the gate and its removal passes
+  it.
+
+This is deliberately **one number, not a new process.** §6 of the previous entry
+warned that a consolidation pass is itself governance overhead; the answer is
+that the pass happens once and the ceiling keeps it from being needed again.
+
+### 4. A false premise that two documents were still asserting is corrected
+
+`HANDOFF.md` recorded a CONFLICT on 2026-09-02: the pan floor is **not** what
+makes the destination render as a smudge — measured across six `establishing`
+configurations, the ratio is `target_zoom_ratio` in every one, so the floor binds
+nowhere. **Both documents were still stating the superseded premise unmarked**,
+and one of them — `Docs/camera-arcs.md` §5 — is the most-cited task document in
+the repository. Both now carry a correction banner naming the measurement. The
+recommendation in that section (one span per trip, never per segment) is
+unaffected; only its stated mechanism was wrong.
+
+**This is what document debt costs**, and it is why the archive is a correction
+pass and not a filing exercise: the wrong premise was reachable, unmarked, from
+the most-read design document for a day.
+
+### 5. What this entry does NOT do
+
+- **No application code was touched** (`PO.md`). **Twelve source files cite an
+  archived document by its old path in a comment** — `RecapMapStyle.swift`,
+  `RecapMapTiles.swift`, `TrackingConfigMatching.swift`, `RecapAnimationState.swift`,
+  `RecapAppearance.swift`, `RecapStylePresets.swift`, `OSRMMatchProvider.swift`,
+  `RecapModel.swift`, `project.yml`, `Deploy/bin/build-tiles.sh`,
+  `Tests/Fixtures/tiles/generate_tiles.sh`, `OSRMRecordedFixtureTests.swift`. The
+  archive map resolves them and `git log --follow` carries the history; **the
+  one-line path fix rides the next engineering PR that touches each file.**
+- **`Docs/decisions.md`'s own older entries were not rewritten.** Editing an
+  append-only ledger's history to fix a path is worse than the path. The map
+  resolves them.
+- **No charter was changed**, and no new rule was added to `CLAUDE.md`. The count
+  of things a session must remember went **down**, not up: two prose rules became
+  one number in an existing gate.
+
+**Not decided:** whether `Docs/kamome-poc-spec.md` (71 KB, 20% of the live
+corpus by itself) should be split. It is product reference, rarely read whole,
+and splitting it is a product-documentation decision rather than a governance one.

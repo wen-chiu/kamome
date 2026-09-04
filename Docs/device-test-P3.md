@@ -20,7 +20,7 @@ this section only records *which gate each item now belongs to*.
 
 Do not fake a pass on either side. Capture Beta items get executed when the
 passive tier is built; Replay MVP items get executed on the three-real-trip
-dogfood day (see `Docs/handoff-P3.5.md` §6).
+dogfood day (see `Docs/_archive/handoff-P3.5.md` §6).
 
 ## A. Park → walk ~20 min loop → return → drive  · **→ Capture Beta**
 - [ ] Walking trace preserved (walk segment visible, no gap)
@@ -64,7 +64,7 @@ dogfood day (see `Docs/handoff-P3.5.md` §6).
 
 **Reframed:** no longer a single "< 90 s" pass/fail. Now *per-trip export time
 recorded (S5 readout) and judged product-acceptable* across the three dogfood
-trips (`handoff-P3.5.md` §6). The simulator baselines below stay as a rough
+trips (`Docs/_archive/handoff-P3.5.md` §6). The simulator baselines below stay as a rough
 sanity reference only.
 Simulator baselines (2026-07-19, M-series Mac — treat as optimistic):
 frame+encode pipeline 22.8 s (900 frames @ 1080×1920, 5k-vertex route,
