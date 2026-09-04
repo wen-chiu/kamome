@@ -3027,3 +3027,37 @@ that file is the app's config and the app never sees this value. Chiu's words on
 - **Not touched:** App Attest; a burst rate limit (Cloudflare's maximum period is
   60 s, so it cannot express a daily total — never mistake it for the ceiling);
   `/v1/mapmatching`; **S4**, the no-log property, still asserted nowhere.
+
+### Addendum, same day — deployed, probed, and the overshoot bound is now measured
+
+**Deployed from merged `main` (`07fdd14`), Version ID
+`5b33922c-0f4e-4d2a-986d-59e8eb7332b4`.** The deploy output lists both bindings —
+`env.KAMOME_BUDGET (d533d7ee…)` and `env.DAILY_REQUEST_CEILING ("2000")`.
+
+The after-probe's four pass conditions (`Deploy/worker/README.md` §"Why
+`preview_urls = false`") all hold, and the new version opened no door of its own:
+production `/v1/routing` is **200 with 9,842 bytes**, byte-identical to the
+2026-08-29 baseline; production `/` is **404 with an empty body** (this Worker's
+own `refuse()`); and both `5b33922c-…` preview hostnames are **404, 17 B `error
+code: 1042`** — a Cloudflare miss, not a Worker.
+
+**Production returning 200 is itself the proof the counter is live**, and it is
+the cheap proof: every KV fault — no binding, an unparseable ceiling, a read or
+write error — fails closed at **503**. A 200 therefore says the binding is
+attached, the ceiling parsed as a number, and the counter was read and written.
+`routing-requests-2026-09-04` went **0 → 2** across the probe's two requests. No
+attempt was made to reach 2,000; the 429 already has its evidence (19/19, four of
+which fail when the comparison is neutered, plus a `wrangler dev` control at
+ceiling 1).
+
+⚠️ **One number in the entry above is now measured rather than estimated.** That
+entry called the overshoot "slight". KV's *read* cache is what produces it, and
+its window is tens of seconds, not milliseconds: a read taken 2 s after a write
+still returned the pre-write value, and the same key read 30 s later returned the
+new one. So the bound is not "a couple of requests" — it is **roughly the traffic
+arriving inside one cache window**. For Kamome that is still comfortable:
+the legitimate burst is ~29 requests/minute (Iceland's 58 legs inside
+`matching.trip_budget_s` 120), so the realistic worst case is ~2,030 against a
+3,000-credit soft limit. **The decision is unchanged and the reasoning is now
+honest about its size** — but anyone raising the ceiling toward 3,000 must price
+this window in, because that is where it stops being free.
