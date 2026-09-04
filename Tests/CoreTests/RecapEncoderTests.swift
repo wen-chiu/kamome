@@ -18,7 +18,7 @@ final class RecapEncoderTests: XCTestCase {
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25,
-            crossingBeatS: 6.0, crossingApexPadding: 1.5, followHeadingUp: false,
+            crossingBeatS: 4.0, crossingApexPadding: 1.5, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
             deckPhotoHoldS: 0.8, deckPhotoMinHoldS: 0.2, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,
@@ -58,7 +58,11 @@ final class RecapEncoderTests: XCTestCase {
             subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: NoPhotoResolver()),
             widthPx: config.frameWidthPx,
-            heightPx: config.frameHeightPx
+            heightPx: config.frameHeightPx,
+            // No crossing in this fixture, so neither is ever asked for.
+            // Written out because `FrameCompositor` has no defaults: a silent nil
+            // is what drew a car across the Pacific for a round (2026-09-04).
+            crossingSubject: nil, flightSubject: nil
         )
         let exporter = RecapExporter(
             timeline: timeline, compositor: compositor, provider: FlatSnapshotProvider(), config: config

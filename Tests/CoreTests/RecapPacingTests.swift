@@ -21,7 +21,7 @@ final class RecapPacingTests: XCTestCase {
             targetDurationS: 30, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.6,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 2.5,
-            actSplitKm: 25, crossingBeatS: 6.0, crossingApexPadding: 1.5, followHeadingUp: false,
+            actSplitKm: 25, crossingBeatS: 4.0, crossingApexPadding: 1.5, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
             deckPhotoHoldS: 2.5, deckPhotoMinHoldS: 0.2, deckZoomS: 0.5, deckLabelLeadS: 0.6, subjectParkS: 0.4,

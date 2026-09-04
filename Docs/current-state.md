@@ -6,11 +6,13 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-04 against decisions.md **2026-09-04** and `main` at
-**PR #39**. Re-read for this sync: the 2026-09-04 ledger entry *and its
-addendum*, `HANDOFF.md`'s critical path, and `Docs/release-readiness.md` S5/S6.
-**S5 is now closed** — the Worker's ceiling is deployed and probed — and the
-blocker that outlived it is the config flip, which is Chiu's.
+Last synced: 2026-09-04 against decisions.md **2026-09-04 (b)** and `main` at
+**PR #40**. Re-read for this sync: both 2026-09-04 ledger entries *and the
+Worker's addendum*, every line of `HANDOFF.md`, and `Docs/release-readiness.md`
+S5/S6. Two things moved: **S5 is closed** (deployed and probed; the blocker that
+outlived it is the config flip, which is Chiu's), and the **type-2 opening round
+answered the closeout's *"the wide frame loses the viewer"*** while leaving the
+70 threshold untouched. Both are reflected below, not only in this line.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -52,9 +54,13 @@ P7 backend deferred.
 
 ## Where the work actually stands
 
-**Everything in Phase 4 that was in flight has landed and been judged.** The open
-items are Chiu's judgements and one unstarted release path — both in `HANDOFF.md`,
-which is the live index and wins on findings and blockers.
+**Everything in Phase 4 that was in flight has landed and been judged**, the
+type-2 opening included: it is retimed (the trip starts at 13.09 s), the crossing
+carries a **boarding pass** and flies a **plane**, both ends of the flight are
+**marked and named**, and every kilometre the film reports is the local journey
+(ADRs 2026-09-03 (b), 2026-09-04 (b)). The open items are Chiu's judgements —
+five of them from that round, four with the designer — and one unstarted release
+path. Both live in `HANDOFF.md`, which wins on findings and blockers.
 
 The two things between Kamome and a submission:
 **the config flip** — `matching.base_url` is still `""` and `api_key_required`

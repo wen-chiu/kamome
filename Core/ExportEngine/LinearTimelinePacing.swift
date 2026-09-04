@@ -10,6 +10,18 @@ import KamomeConfig
 /// and cost the type no encapsulation. `private` became `static` only because
 /// Swift scopes `private` to the file.
 extension LinearTimeline {
+    /// The film's one deck-pacing value, built from config in one place.
+    ///
+    /// Two callers had the same four-line construction: the timeline's own
+    /// `deck` and `pacing` below. One definition rather than two, so a fifth
+    /// `deck_*` tunable cannot reach one of them and miss the other.
+    static func deck(config: TrackingConfig.Export) -> RecapDeck {
+        RecapDeck(
+            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
+            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
+        )
+    }
+
     static func subjectArrival(
         plan: RecapDurationPlan?, openingS: Double, holds: [CameraPath.Hold],
         stops: [RecapTrip.Stop], config: TrackingConfig.Export
@@ -52,9 +64,7 @@ extension LinearTimeline {
     static func pacing(
         for trip: RecapTrip, config: TrackingConfig.Export, pacing: RecapPacing
     ) -> (plan: RecapDurationPlan?, holds: [Double]) {
-        let deckPacing = RecapDeck(
-            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS, labelLeadS: config.deckLabelLeadS
-        )
+        let deckPacing = deck(config: config)
         switch pacing {
         case .fixed:
             // No plan means `CameraPath` runs at its own `totalDurationS` with

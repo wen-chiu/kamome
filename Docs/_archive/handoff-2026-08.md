@@ -812,6 +812,116 @@ so nothing is visibly missing — but a wider terrain build is the honest follow
 
 ---
 
+## ✅ CLOSED — the shake, and the opening that came with it (moved 2026-09-03)
+
+Moved from `HANDOFF.md` for budget; the live remainder stayed there as
+"The shake is CLOSED; two things it left are not". Verbatim as it stood:
+
+> ### ✅ CLOSED — the shake, and the opening that came with it
+> Judged and accepted by Chiu; reasoning in ADRs **2026-08-31** and **2026-08-31 (b)**.
+> Detail: `Docs/handoff-crop-scaling.md`. Live remainder, and only this:
+>
+> - ⏳ The **0.747 sharpness step at hold boundaries** is *accepted as it stands*, not
+>   fixed. §7's remedy costs no extra fetches and is not built. Revisit only if
+>   someone notices it in a film.
+> - ⚠️ **`keyframe_interval_frames` is dead config, one of three** — now gated by
+>   `check-dead-config.sh`. → `Docs/release-readiness.md` C1, C2.
+
+
+## Findings — PO/Architecture session (2026-09-02) (moved 2026-09-03)
+
+Moved from `HANDOFF.md` for budget once every item had a row in
+`Docs/release-readiness.md`; the live summary stayed there. Verbatim:
+
+> ## Findings — PO/Architecture session (2026-09-02)
+>> **Chiu changed how this project is gated** (ADR 2026-09-02, read it first).
+> **Phase 4 has no hard gate** — he judges the film; **engineering owns that the
+> code does not break and that a release carries no security, licence or privacy
+> fault.** Never answer "is this ready?" with a film. **Your half is
+> `Docs/release-readiness.md`**, which supersedes `Docs/pre-launch.md` as the gate
+> and sorts every obligation by who can settle it. Phase 4 item 3 dissolved in.
+>> - ✅ **S2 and S3 are built** — attribution and the privacy notice ship on
+>   `UI/About/AboutView.swift`, behind Home's `info.circle`;
+>   `release/check-attribution.sh` passes. ⏳ **Wording and placement stay Chiu's**,
+>   a draft not a ruling. ⚠️ **Left open on purpose:** whether the import flow warns
+>   *at the point of import* (`pre-launch.md` 🟡, §0). A screen a user may never open
+>   is not a warning. → S2, S3.
+> - 🟡 **`pre-launch.md`'s recorded-leg payload row is STALE** — Geoapify has no
+>   map-matching endpoint, so no matcher can exist and a recorded leg is never sent.
+>   **Technical, not a privacy decision**, and ADR 2026-08-20 (d)'s addendum
+>   *deferred* rather than decided — do not cite it as one. Now gated by
+>   `RouteMatchRecordedLegTests`. → S3b.
+> - 🟠 **Dead config keys are three.** `export.total_duration_max_s` joins the two
+>   known ones, and it is the dangerous one — **film duration is an open question
+>   and this is the key anyone would reach for first.** → C1.
+> - ✅ **`RecapBudgetAndDemoTests`' export-time estimate is fixed** (C2), priced
+>   off `RecapRenderLoop.stations`: **0.79 s/snapshot → ~42 s for 53 stations**.
+>   That number is the input to `pre-launch.md` item 5; the device figure is
+>   still owed (`release-readiness.md` D2, D3).
+>> **No new `Docs/eng-session-*.md`** (ADR 2026-09-02 §6): findings come here with a
+> pointer to a topic document.
+>
+
+## ✅ CLOSED — the shake's two remainders, in full (moved 2026-09-04)
+
+Compressed to three lines in `HANDOFF.md` for budget. As they stood:
+
+> - ⏳ The **0.747 sharpness step at hold boundaries** is accepted as it stands, not
+>   fixed. §7's remedy is not built. Revisit only if someone notices it in a film.
+> - ⚠️ **`keyframe_interval_frames` is dead config, one of three.**
+>   → `Docs/release-readiness.md` C1, C2.
+
+## ✅ CLOSED — the 2026-09-02 PO/architecture findings, in full (moved 2026-09-04)
+
+All four live in `Docs/release-readiness.md`, which is the gate; `HANDOFF.md`
+keeps a pointer. As they stood:
+
+> The 2026-09-02 session's four findings live there in full — S2/S3 (attribution
+> and the privacy notice, **built**, wording still Chiu's), S3b (the recorded-leg
+> payload row is stale and now gated), C1 (**three** dead config keys, and
+> `total_duration_max_s` is the dangerous one) and C2 (the export estimate,
+> 0.79 s/snapshot).
+
+
+## ✅ The type-2 form's mechanics and its handover list (moved 2026-09-04)
+
+Compressed in `HANDOFF.md`; `Docs/handoff-type2-films.md` is the topic document
+and remains authoritative. As they stood:
+
+> The type is **derived, never stored**, and **monotonic**: an unrouted leg can
+> only *add* a local journey, so a confirmed crossing means at least a type 2.
+> ⚠️ `>= 2 ⇒ the type-2 form` holds only while type 3 is deferred, and the same
+> trip yields different films on different days — sharpening ADR 2026-08-15's
+> unmet export record.
+>
+> 🔴 Three handed over: **the wide flight frame loses the viewer** at long haul
+> (mirror of `handoff-P3.5.md` §"Map reference labels"; threshold stays 70 and is
+> probably wrong — Chiu is deciding); **a union-derived sweep is owed** (the end
+> reveal was the third such quantity, after the body span and beat 2); and
+> **`subject_length_px` is absolute while the frame span moves 20×**.
+>
+> A 9:16 frame runs off the poles first at low latitudes.
+
+
+## The pan-floor conflict and the country table, in full (moved 2026-09-04)
+
+Both still live; compressed in `HANDOFF.md` for budget. As they stood:
+
+> ### 🔴 CONFLICT — the pan floor is *not* what makes the destination a smudge
+> `Docs/camera-arcs.md` §5 and `handoff-camera-arc-findings.md` finding 5 both
+> say the pan floor is the mechanism. **It is false**: across six `establishing`
+> configurations the ratio is `target_zoom_ratio` in every one, so the floor
+> binds **nowhere**.
+>
+> ### The country table has six rows; the title card has no country name yet
+> `CountryExtent` is a built-in table — Chiu chose it over MapKit/`CLGeocoder`,
+> so **no new §0 exception**. **A country whose single box would be a lie is left
+> out, not approximated** (the US spans Alaska to Florida); unknown countries
+> fall back loudly. The name is available offline via
+> `Locale.localizedString(forRegionCode:)` — **so no persistence change was
+> needed** — but wiring it into the card is not done.
+
+
 # Part 2 — sections moved from `CLAUDE.md`
 
 ## Replay MVP repositioning (spec v1.7, 2026-07-20, Chiu) — READ FIRST

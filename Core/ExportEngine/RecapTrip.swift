@@ -183,6 +183,24 @@ public struct RecapTrip {
     /// unchanged the day the share URL exists (spec P6/P7).
     public let shareURL: String?
 
+    /// **The date range the Journey Card prints — the whole trip's** (Chiu
+    /// 2026-09-04), already formatted, e.g. `16 JUL 2025 – 18 JUL 2025`.
+    ///
+    /// 🔴 **Replaced the crossing's own two dates** (the last photograph before
+    /// the flight and the first after it, Chiu 2026-09-02). The card's DATE row
+    /// is now about the *journey*, not the flight — see
+    /// `RecapComposer.journeyDates` for the semantic shift that carries.
+    ///
+    /// **Formatted copy, not `Date`s**, the convention every other string here
+    /// follows (`subtitle`, `statsLines`, `Stop.dayLabel`): localization lives in
+    /// the app layer and never enters `KamomeExportEngine`. A `Date` would drag
+    /// date formatting — and a locale — into the renderer.
+    ///
+    /// **nil is a real answer and the card honours it**, printing its distance
+    /// row without a date rather than inventing one. Kamome has no departure or
+    /// arrival *time* and never prints one either (`CLAUDE.md` rule 5).
+    public let journeyDates: String?
+
     /// Whether routing answered — with any of its three verdicts — for **every**
     /// leg of this trip.
     ///
@@ -212,6 +230,7 @@ public struct RecapTrip {
         statsLines: [String],
         callToAction: String,
         shareURL: String? = nil,
+        journeyDates: String? = nil,
         everyLegRoutabilityEstablished: Bool = false
     ) {
         self.legs = legs
@@ -221,6 +240,7 @@ public struct RecapTrip {
         self.statsLines = statsLines
         self.callToAction = callToAction
         self.shareURL = shareURL
+        self.journeyDates = journeyDates
         self.everyLegRoutabilityEstablished = everyLegRoutabilityEstablished
     }
 

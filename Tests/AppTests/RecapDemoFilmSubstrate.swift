@@ -23,6 +23,34 @@ extension RecapDemoFilmTests {
         return VehicleSubjectRenderer.make(style: style, config: config, subjectId: subjectId)
     }
 
+    /// **What crosses a leg with no road, for a review film** — the seagull, the
+    /// shipped answer (`VehicleCatalog.crossingSubjectId`), overridable per run
+    /// by `KAMOME_CROSSING_SUBJECT`.
+    ///
+    /// 🔴 **This harness passed no crossing renderer at all until 2026-09-04**,
+    /// and `FrameCompositor` reads nil as "draw the trip's own vehicle" — so the
+    /// Auckland judgement film drove a **car** across the Pacific while the app
+    /// drew a gull. Nothing was broken and nothing said so: the same shape as the
+    /// substrate fallback `ReviewSubstrate` was built to make loud.
+    static func crossingRenderer(
+        style: RecapStyle, config: TrackingConfig.Export
+    ) -> VehicleSubjectRenderer {
+        let subjectId = HarnessEnv.value("KAMOME_CROSSING_SUBJECT") ?? VehicleCatalog.crossingSubjectId
+        print("KAMOME_DEMO_FILM crossing subject \(subjectId)")
+        return VehicleSubjectRenderer.make(style: style, config: config, subjectId: subjectId)
+    }
+
+    /// **What flies a crossing carrying a boarding pass** (ADR 2026-09-04) —
+    /// `plane`, overridable by `KAMOME_FLIGHT_SUBJECT` so the two 8-direction
+    /// sets can be judged against each other without a config edit.
+    static func flightRenderer(
+        style: RecapStyle, config: TrackingConfig.Export
+    ) -> VehicleSubjectRenderer {
+        let subjectId = HarnessEnv.value("KAMOME_FLIGHT_SUBJECT") ?? VehicleCatalog.planeSubjectId
+        print("KAMOME_DEMO_FILM flight subject \(subjectId)")
+        return VehicleSubjectRenderer.make(style: style, config: config, subjectId: subjectId)
+    }
+
     /// The base map this render will use — **and falling back is not a failure**.
     /// The rule and the two overrides live in `ReviewSubstrate`, which is shared
     /// with `RecapReviewScene`; this only names the log prefix.

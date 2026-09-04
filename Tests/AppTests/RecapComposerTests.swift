@@ -160,13 +160,68 @@ final class RecapComposerTests: XCTestCase {
     /// photo's EXIF times. A one-day fixture reads as one date because the trip
     /// is one day, not because anything is hardcoded to look that way.
     func testTitleSubtitleShowsTheTripsRealDateRange() {
-        let oneDay = RecapComposer.titleSubtitle(trip: trip(daysLong: 0), stats: nil)
-        let nineDays = RecapComposer.titleSubtitle(trip: trip(daysLong: 9), stats: nil)
+        let oneDay = RecapComposer.titleSubtitle(trip: trip(daysLong: 0), distanceM: nil)
+        let nineDays = RecapComposer.titleSubtitle(trip: trip(daysLong: 9), distanceM: nil)
         XCTAssertNotEqual(oneDay, nineDays, "a nine-day trip must not print like a one-day one")
         // A multi-day trip prints a range; a same-day trip collapses to one date.
         XCTAssertTrue(nineDays.contains("–") || nineDays.contains("-") || nineDays.contains("—"),
                       "expected a range, got: \(nineDays)")
         XCTAssertFalse(oneDay.contains("–"), "expected a single date, got: \(oneDay)")
+    }
+
+    /// **Every kilometre a viewer reads is the local journey** (Chiu 2026-09-02):
+    /// the HUD odometer, the title card's subtitle, and the end card's stats.
+    ///
+    /// Two of the three are here because they come from the same `stats.distanceM`
+    /// and were the ones left at 9,024 km when only the odometer was corrected.
+    /// The flight is not deleted — it appears once, on the Journey Card, labelled
+    /// as the flight (`RecapJourneyCardTests`).
+    func testTheCardsCountTheLocalJourneyAndNotTheFlight() throws {
+        // One short drive, then a leg routing answered "no road" for: ~1,100 km of
+        // it, against a trip whose recorded distance is 1,203 km.
+        let drive = segment(points: [(-32.0, 115.75), (-32.1, 115.90)])
+        let flight = segment(
+            id: "seg-2", source: "exif", points: [(-32.1, 115.90), (-22.0, 115.90)]
+        )
+        let crossing = (
+            segment: SegmentRecord(
+                id: "seg-2", tripId: "trip-1", mode: "drive", startedAt: tripStart,
+                endedAt: tripStart + 3600, matchedPolyline: nil, source: "exif",
+                routability: SegmentRoutability.noRoad.rawValue
+            ),
+            points: flight.points
+        )
+        let legs = RecapComposer.legs(from: [drive, crossing], epsilonM: 15, matchedEpsilonM: 5)
+        XCTAssertEqual(legs.filter(\.isCrossing).count, 1, "the fixture must contain one crossing")
+
+        let stats = try XCTUnwrap(TripStats.from(jsonString: trip().statsJson))
+        let localM = try XCTUnwrap(RecapComposer.localDistanceM(stats: stats, legs: legs))
+        XCTAssertLessThan(localM, stats.distanceM, "the flight must come off the reported distance")
+        XCTAssertGreaterThan(localM, 0, "and it must never take the figure negative")
+
+        // Both card surfaces print the local figure, and neither prints the whole
+        // trip's. Structure, not wording — the copy is localized.
+        let subtitle = RecapComposer.titleSubtitle(trip: trip(), distanceM: localM)
+        let stat = try XCTUnwrap(
+            RecapComposer.statsLines(stats: stats, distanceM: localM, stopCount: 2).first
+        )
+        let whole = "\(Int((stats.distanceM / 1000).rounded()))"
+        let local = "\(Int((localM / 1000).rounded()))"
+        XCTAssertTrue(subtitle.contains(local), "the title card prints the local journey")
+        XCTAssertFalse(subtitle.contains(whole), "and never the whole trip: \(subtitle)")
+        XCTAssertTrue(stat.contains(local), "the end card prints the local journey")
+        XCTAssertFalse(stat.contains(whole), "and never the whole trip: \(stat)")
+    }
+
+    /// **A local trip's kilometres are unchanged**, which is the type-1 control's
+    /// half of the same rule: with no crossing there is nothing to subtract, so
+    /// the figure is exactly `stats.distanceM` and no film moved.
+    func testALocalTripsDistanceIsUntouched() throws {
+        let legs = RecapComposer.legs(
+            from: [segment(points: [(-32.0, 115.75), (-32.1, 115.90)])], epsilonM: 15, matchedEpsilonM: 5
+        )
+        let stats = try XCTUnwrap(TripStats.from(jsonString: trip().statsJson))
+        XCTAssertEqual(RecapComposer.localDistanceM(stats: stats, legs: legs), stats.distanceM)
     }
 
     func testDayLabelsUseS3DayMath() {

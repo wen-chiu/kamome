@@ -28,7 +28,7 @@ class LinearTimelineTestCase: XCTestCase {
             targetDurationS: targetDurationS, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25,
-            crossingBeatS: 6.0, crossingApexPadding: 1.5, followHeadingUp: false,
+            crossingBeatS: 4.0, crossingApexPadding: 1.5, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
             deckPhotoHoldS: deckPhotoHoldS, deckPhotoMinHoldS: deckPhotoMinHoldS,
@@ -296,24 +296,34 @@ final class LinearTimelineTests: LinearTimelineTestCase {
             let camera = timeline.cameraFrame(atTime: time)
             let contents = timeline.overlayContents(atTime: time)
             let deck = activePhotoDeck(contents)
-            let kinds = contents.map { content -> String in
-                switch content {
-                case let .routeReveal(points): return "route(\(points.count))"
-                case let .stopLabel(_, _, _, opacity): return String(format: "label(o%.2f)", opacity)
-                case let .photoDeck(deck):
-                    return String(format: "deck(f%d,r%.2f,o%.2f)", deck.focusIndex, deck.reveal, deck.opacity)
-                case .titleChrome: return "title"
-                case .endChrome: return "end"
-                case let .hud(day, place, travelledM):
-                    return String(format: "hud(%@/%@,%.0fm)", day, place ?? "-", travelledM)
-                }
-            }
+            let kinds = contents.map(Self.name)
             // reveal (card size) and span (map dolly) are separate curves — this
             // dump is how you eyeball that they stay in step without merging.
             print(String(format: "t=%5.2f  span=%6.0f  bear=%3.0f  reveal=%.2f  f=%@  [%@]",
                          time, camera.spanM, camera.bearing,
                          deck?.reveal ?? 0, deck.map { "\($0.focusIndex)" } ?? "-", kinds.joined(separator: ", ")))
             time += 0.1
+        }
+    }
+
+    /// One overlay, named for the trace above. Its own function since 2026-09-04:
+    /// the walk that prints the trace and the switch that names a case are two
+    /// concerns, and every new `OverlayContent` was pushing the walk's cyclomatic
+    /// complexity past the lint bar.
+    private static func name(_ content: OverlayContent) -> String {
+        switch content {
+        case let .routeReveal(points): return "route(\(points.count))"
+        case let .stopLabel(_, _, _, opacity): return String(format: "label(o%.2f)", opacity)
+        case let .photoDeck(deck):
+            return String(format: "deck(f%d,r%.2f,o%.2f)", deck.focusIndex, deck.reveal, deck.opacity)
+        case let .journeyCard(card):
+            return String(format: "pass(p%.2f,o%.2f)", card.progress, card.opacity)
+        case let .flightEnds(origin, _, opacity):
+            return String(format: "ends(%@,o%.2f)", origin == nil ? "1" : "2", opacity)
+        case .titleChrome: return "title"
+        case .endChrome: return "end"
+        case let .hud(day, place, travelledM):
+            return String(format: "hud(%@/%@,%.0fm)", day, place ?? "-", travelledM)
         }
     }
 }
@@ -377,4 +387,5 @@ final class DeckPhotoFloorTests: LinearTimelineTestCase {
             "a photo was on screen for \(shortest)s — the floor is \(export.deckPhotoMinHoldS)s"
         )
     }
+
 }

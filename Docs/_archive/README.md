@@ -5,7 +5,7 @@ document disagrees with `Docs/decisions.md`, `Docs/current-state.md` or
 `HANDOFF.md`, **it is wrong and they are right** — that is what being archived
 means.
 
-Archived 2026-09-03 (ADR of that date, Chiu's instruction). The corpus had grown
+Archived 2026-09-03 (ADR of that date, Chiu's instruction), and added to on 2026-09-04 as the type-2 opening round closed. The corpus had grown
 13 → 53 documents in seven weeks with **nothing ever retired**, and the cost was
 paid by every session at boot. What moved here is work that is **finished,
 superseded, or parked** — not work that was abandoned.
@@ -40,6 +40,8 @@ its move.
 | `Docs/_audit/inventory.md` | `_archive/inventory-2026-08-21.md` | a point-in-time listing of a tree that no longer exists |
 | `Docs/_audit/audit-2026-08-21.md` | `_archive/audit-2026-08-21.md` | that audit ran; `Docs/_audit/` no longer exists |
 | older `HANDOFF.md` sections | `_archive/handoff-2026-08.md` | closed findings, 2026-08 and 2026-09 |
+| `Docs/handoff-type2-films.md` §1–§3 | `_archive/handoff-type2-films-tasks.md` | the three tasks are built and judged; the **closeout stays live** in the original file (2026-09-04) |
+| `Docs/handoff-type2-opening-retime.md`'s brief | `_archive/handoff-type2-opening-brief.md` | implemented in full; ADRs 2026-09-03 (b) and 2026-09-04 (b) carry the decisions (2026-09-04) |
 
 ## What is still load-bearing inside an archived file
 

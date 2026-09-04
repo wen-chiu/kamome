@@ -33,6 +33,7 @@ extension TrackingConfig.Export {
         case actSplitKm = "act_split_km"
         case crossingBeatS = "crossing_beat_s"
         case crossingApexPadding = "crossing_apex_padding"
+        case departureStopMaxPhotos = "departure_stop_max_photos"
         case followHeadingUp = "follow_heading_up"
         case deckPhotoHoldS = "deck_photo_hold_s"
         case deckPhotoMinHoldS = "deck_photo_min_hold_s"

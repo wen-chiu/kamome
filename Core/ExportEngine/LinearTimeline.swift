@@ -55,8 +55,11 @@ public struct LinearTimeline {
     let path: CameraPath
     let stops: [RecapTrip.Stop]
     let holds: [CameraPath.Hold]
-    private let routeCoordinates: [RecapCoordinate]
-    private let legRanges: [LegRange]
+    /// Internal, not private, since 2026-09-03: `LinearTimelineCrossing` owns
+    /// the trail reveal, and Swift scopes `private` to the file. Same widening,
+    /// same reason, as `LegRange` itself.
+    let routeCoordinates: [RecapCoordinate]
+    let legRanges: [LegRange]
     let deck: RecapDeck
     let subjectParkS: Double
     /// When the subject first appears. Zero when there is no prologue.
@@ -73,7 +76,20 @@ public struct LinearTimeline {
     let subjectArrivalStartS: Double
     let subjectArrivalEndS: Double
     private let titleCardS: Double
-    private let endCardS: Double
+    let endCardS: Double
+    /// The boarding pass, resolved once at build time. nil on every film that is
+    /// not a type-2 opening, and nil when `CountryExtent` cannot name both ends —
+    /// see `journeyCard(trip:locale:)`.
+    let journeyCard: RecapJourneyCard?
+    /// The flight's two ends, for the marks drawn over the opening. **Kept apart
+    /// from `journeyCard`**: a mark needs no country name, so an end the table
+    /// cannot name still gets one (`flightEnds(atTime:)`).
+    let flightEndCoordinates: (origin: RecapCoordinate, destination: RecapCoordinate)?
+    /// How long the card takes to arrive and to leave, each. **`deck_zoom_s`
+    /// deliberately reused**: it is the film's one "a card arrives" ramp, and a
+    /// second tunable saying the same thing is a number nobody could reason about
+    /// (`CLAUDE.md` rule 7's spirit — the tunable exists, so no new one is added).
+    let cardFadeS: Double
     private let title: String
     private let subtitle: String
     private let statsLines: [String]
@@ -113,13 +129,21 @@ public struct LinearTimeline {
         /// The base map's declared ceiling
         /// (`MapRendererCapabilities.maxFramableLongitudeDeg`). Only the type-2
         /// opening reads it, and only to choose between its two forms.
-        substrateMaxLongitudeDeg: Double? = nil
+        substrateMaxLongitudeDeg: Double? = nil,
+        /// The viewer's language, for the **second** line of each region name on
+        /// the Journey Card (TAIWAN / 台灣). The first line is always English —
+        /// a boarding pass is an English artefact.
+        ///
+        /// ⚠️ Injectable because `Locale.current` makes a rendered frame
+        /// device-dependent, exactly as `CountryExtent.localizedName` already is.
+        /// Pin it in a desk harness or two machines render different films.
+        locale: Locale = .current
     ) {
         // **A type-2 film is a film about the destination**, so the origin's drive
         // comes out before anything is measured (`RecapTypeTwoFilm`). Every other
         // film passes through untouched.
         let trip = untrimmedTrip.filmType.hasDestinationAbroad
-            ? RecapTypeTwoFilm.trimmedToTheDestination(untrimmedTrip)
+            ? RecapTypeTwoFilm.trimmedToTheDestination(untrimmedTrip, config: config)
             : untrimmedTrip
 
         // Which of the type-2 opening's two forms this film takes — both are main
@@ -174,10 +198,7 @@ public struct LinearTimeline {
         holds = path.holds
         routeCoordinates = route
         legRanges = Self.legWindows(of: trip.legs)
-        deck = RecapDeck(
-            photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
-            labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
-        )
+        deck = Self.deck(config: config)
         subjectParkS = config.subjectParkS
         // The car does not exist until the journey does. Through the country and
         // regional beats there is no vehicle on screen — it would be a sprite the
@@ -204,6 +225,13 @@ public struct LinearTimeline {
         // frames) — a reporter contradicting the thing it reports on, which is
         // the shape of defect this project keeps finding one film at a time.
         opensOnTheFlight = flightFrame != nil && path.openingS > 0
+        cardFadeS = config.deckZoomS
+        // **Only a type-2 opening carries a pass.** Gated on the camera's own
+        // condition rather than on "has a crossing": a body crossing in some later
+        // film would otherwise get a boarding pass in the middle of a road trip,
+        // and this round is type-2 only.
+        flightEndCoordinates = opensOnTheFlight ? RecapTypeTwoFilm.crossingEnds(trip) : nil
+        journeyCard = flightEndCoordinates == nil ? nil : Self.journeyCard(trip: trip, locale: locale)
     }
 
     /// When the subject first appears, and the two sequences that decide it
@@ -286,6 +314,12 @@ public struct LinearTimeline {
                 opacity: quietLabelOpacity(atTime: time, hold: quiet.hold)
             ))
         }
+        // Under the card and under everything else: the two ends are the ground
+        // the opening is read against, not chrome over it.
+        if let ends = flightEnds(atTime: time) { contents.insert(ends, at: 1) }
+        if let card = journeyCardContent(atTime: time) {
+            contents.append(.journeyCard(card))
+        }
         if let active = activeScene(atTime: time) {
             let stop = active.stop
             let window = deckWindow(active.hold)
@@ -315,36 +349,14 @@ public struct LinearTimeline {
             contents.append(.hud(
                 dayLabel: dayLabel(atTime: time),
                 place: holdingStop(atTime: time)?.name,
-                travelledM: path.traveledDistanceM(atTime: time)
+                // **The local journey, never the flight** (Chiu 2026-09-02). The
+                // trail reveal still uses the whole route — the dashed leg has to
+                // be drawn while the sprite crosses it — so the two readers of
+                // this axis deliberately ask different questions of it.
+                travelledM: path.traveledLocalDistanceM(atTime: time)
             ))
         }
         return contents
-    }
-
-    /// The revealed trail, cut back into legs (typed-leg pass 2026-07-26). The
-    /// camera reveals along one continuous distance axis; this maps the cut back
-    /// onto the leg ranges so a reconstructed motorway and an inferred straight
-    /// line reach the renderer as separate strokes with separate stories.
-    ///
-    /// The leg the head is inside gets the interpolated head point appended, so
-    /// the trail still ends exactly under the vehicle rather than at the last
-    /// whole vertex.
-    private func revealedLegs(atTime time: Double) -> [RecapRouteLeg] {
-        let cut = path.revealCut(atTime: time)
-        let head = RecapCoordinate(lat: cut.head.lat, lon: cut.head.lon)
-        var revealed: [RecapRouteLeg] = []
-
-        for leg in legRanges {
-            guard cut.vertexCount > leg.range.lowerBound else { break }
-            let end = min(cut.vertexCount, leg.range.upperBound)
-            var coordinates = Array(routeCoordinates[leg.range.lowerBound..<end])
-            if cut.vertexCount < leg.range.upperBound { coordinates.append(head) }
-            guard coordinates.count >= 2 else { continue }
-            revealed.append(RecapRouteLeg(
-                coordinates: coordinates, mode: leg.mode, provenance: leg.provenance
-            ))
-        }
-        return revealed
     }
 
     static func smoothstep(_ fraction: Double) -> Double {

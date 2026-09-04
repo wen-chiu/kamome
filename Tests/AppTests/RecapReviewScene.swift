@@ -77,7 +77,16 @@ struct RecapReviewScene {
                 maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
             )
         }
-        guard let timeline = LinearTimeline(trip: trip, config: config, establishing: establishing) else {
+        // **zh-Hant, the same pin `RecapDemoFilmTests` uses** (2026-09-04): the
+        // Journey Card's second line is the viewer's own name for a region, and
+        // `Region` suppresses it when it equals the English one — so an
+        // English-locale desk renders one line and the 台灣 / 紐西蘭 the reference
+        // shows never appears. Two review harnesses on two locales would draw two
+        // different cards from one film.
+        guard let timeline = LinearTimeline(
+            trip: trip, config: config, establishing: establishing,
+            locale: Locale(identifier: "zh-Hant")
+        ) else {
             throw SetupError.noTimeline
         }
 
@@ -98,7 +107,8 @@ struct RecapReviewScene {
                 overlay: RecapOverlayRenderer(style: style, resolver: try Self.resolver(for: trip)),
                 style: style,
                 widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
-                crossingSubject: Self.crossingRenderer(style: style, config: config)
+                crossingSubject: Self.crossingRenderer(style: style, config: config),
+                flightSubject: Self.flightRenderer(style: style, config: config)
             ),
             provider: provider,
             appearance: appearance,
@@ -148,10 +158,27 @@ struct RecapReviewScene {
     /// and `plane` is already `selectable: false` in `vehicles.json` — reserved
     /// for exactly this and never offered to a user as a trip subject.
     ///
-    /// Env rather than a config key, for the reason every other review override
-    /// here is: the question *which* sprite is still open (session 2 builds the
-    /// classifier), and a config key would ship an answer to a question still
-    /// being asked.
+    /// ⚠️ **Stale since ADR 2026-09-04, and corrected here rather than left.**
+    /// This used to say *"the question which sprite is still open"*. It is not,
+    /// for the crossing that carries a boarding pass: that one flies a
+    /// `VehicleCatalog.planeSubjectId`, decided by the same condition that draws
+    /// the card. What is still open is every *other* crossing — the seagull is
+    /// the answer to "we could not classify this", and the classifier is still
+    /// session 2's. The env override stays because a still sweep wants to vary
+    /// the sprite without a config edit, not because the answer is unknown.
+    /// **What flies a crossing carrying a boarding pass** (ADR 2026-09-04) —
+    /// `plane`, overridable by `KAMOME_CROSSING_FLIGHT_SUBJECT` for a still
+    /// sweep. Its own override rather than reusing the one above, because the
+    /// two answer different questions and a sweep of one must not silently move
+    /// the other.
+    private static func flightRenderer(
+        style: RecapStyle, config: TrackingConfig.Export
+    ) -> VehicleSubjectRenderer {
+        let subjectId = HarnessEnv.value("KAMOME_CROSSING_FLIGHT_SUBJECT") ?? VehicleCatalog.planeSubjectId
+        print("KAMOME_REVIEW flight subject \(subjectId)")
+        return VehicleSubjectRenderer.make(style: style, config: config, subjectId: subjectId)
+    }
+
     private static func crossingRenderer(
         style: RecapStyle, config: TrackingConfig.Export
     ) -> VehicleSubjectRenderer {

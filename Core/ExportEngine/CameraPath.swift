@@ -71,9 +71,11 @@ public struct CameraPath {
     }
 
     private let fps: Int
-    private let route: [Point]
-    private let cumulativeM: [Double]
-    private let timeline: [TimelineEntry]
+    // Internal, not private, since 2026-09-03: `CameraPathDistance` owns the
+    // route's distance axis, and Swift scopes `private` to the file.
+    let route: [Point]
+    let cumulativeM: [Double]
+    let timeline: [TimelineEntry]
 
     /// The body camera, pre-simulated once per frame (Chiu 2026-08-01). A
     /// dead-zone dolly at a span fixed for the whole trip — see `FollowCamera`.
@@ -85,9 +87,11 @@ public struct CameraPath {
     /// every trip with a road under all of it, which is why a local trip's camera
     /// does not change at all (§4 Case A).
     let arcs: [Arc]
-    /// When each crossing **beat** plays. Wider than `arcs`: a crossing that
-    /// earns no zoom still earns its sprite (`isCrossing(atTime:)`).
+    /// When each crossing **beat** plays, and the stretches themselves (the
+    /// latter for `CameraPathDistance`). Wider than `arcs`: a crossing that earns
+    /// no zoom still earns its sprite (`isCrossing(atTime:)`).
     let crossingBeatsS: [ClosedRange<Double>]
+    let crossings: [Crossing]
     /// Kept whole so the discontinuity detector and the dead-zone camera read the
     /// same tunables the path was built with, rather than a copied subset that
     /// can drift out of step with it.
@@ -186,7 +190,7 @@ public struct CameraPath {
         ))
         let crossings = opening.crossings, span = opening.bodySpanM, plan = opening.plan
         let opensOnTheFlight = opening.opensOnTheFlight
-        bodySpanM = span; wideEndS = plan.wideEndS
+        bodySpanM = span; wideEndS = plan.wideEndS; self.crossings = crossings
         let journeyTimeline = Self.buildTimeline(
             anchors: anchors, totalM: totalM, config: config,
             stopHoldsS: stopHoldsS, crossings: crossings,
@@ -330,68 +334,6 @@ public struct CameraPath {
         guard !track.isEmpty else { return CameraFrame(centerLat: 0, centerLon: 0, spanM: 1, bearing: 0) }
         let index = Int((min(max(time, 0), durationS) * Double(fps)).rounded())
         return track[min(max(index, 0), track.count - 1)]
-    }
-
-    /// Along-route distance covered at `time` — the frame renderer's traveled
-    /// polyline ends here.
-    public func traveledDistanceM(atTime time: Double) -> Double {
-        state(atTime: time).distanceM
-    }
-
-    /// Where the trail reveal has reached at `time`: how many route vertices lie
-    /// fully behind the subject, plus the interpolated head point it stops at.
-    ///
-    /// Exposed as an index rather than only as points (typed-leg pass
-    /// 2026-07-26) so a caller holding the route's leg boundaries can split the
-    /// reveal per leg. `CameraPath` stays the single owner of the speed-warp
-    /// math; the timeline just asks it where the cut fell.
-    public func revealCut(atTime time: Double) -> (vertexCount: Int, head: Point) {
-        let distanceM = traveledDistanceM(atTime: time)
-        var vertexCount = 0
-        for vertexM in cumulativeM where vertexM < distanceM { vertexCount += 1 }
-        return (vertexCount, coordinate(atDistance: distanceM))
-    }
-
-    /// Route vertices already passed at `time`, closed with the interpolated
-    /// head point, ready for the traveled-polyline stroke (§4.5 step 2).
-    public func routePrefix(atTime time: Double) -> [Point] {
-        let cut = revealCut(atTime: time)
-        return Array(route[0..<cut.vertexCount]) + [cut.head]
-    }
-
-    private func state(atTime time: Double) -> (distanceM: Double, holdIndex: Int?) {
-        let clamped = min(max(time, 0), durationS)
-        // The timeline is a handful of entries per stop — linear scan is fine.
-        let entry = timeline.last(where: { $0.startS <= clamped }) ?? timeline[0]
-        switch entry.phase {
-        case let .hold(stopIndex, atM):
-            return (atM, stopIndex)
-        // A crossing moves the subject exactly as travel does — eased from one
-        // end to the other — and only the *camera* treats it differently. The
-        // sprite still crosses the water, which is what makes the discontinuity
-        // narrated rather than excused (`Docs/camera-arcs.md` §8).
-        case let .travel(fromM, toM), let .crossing(fromM, toM):
-            let span = entry.endS - entry.startS
-            let progress = span > 0 ? (clamped - entry.startS) / span : 1
-            let eased = Self.smoothstep(min(max(progress, 0), 1))
-            return (fromM + (toM - fromM) * eased, nil)
-        }
-    }
-
-    private func coordinate(atDistance distanceM: Double) -> Point {
-        Self.coordinate(atDistance: distanceM, route: route, cumulativeM: cumulativeM)
-    }
-
-    /// Heading (deg) of the route segment bracketing `distanceM` — the vehicle
-    /// faces the way it is travelling. Binary search mirrors `coordinate`.
-    private func heading(atDistance distanceM: Double) -> Double {
-        var low = 0
-        var high = cumulativeM.count - 1
-        while low + 1 < high {
-            let mid = (low + high) / 2
-            if cumulativeM[mid] <= distanceM { low = mid } else { high = mid }
-        }
-        return Self.bearingDeg(from: route[low], to: route[high])
     }
 
     /// Same easing, reachable from the prologue extension so the opening moves

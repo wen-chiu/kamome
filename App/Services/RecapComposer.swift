@@ -163,14 +163,21 @@ enum RecapComposer {
             )
         }
 
+        // **Every kilometre the film shows a viewer is the local journey**
+        // (Chiu 2026-09-02). One number, computed once, feeding both surfaces —
+        // the title card's subtitle and the end card's stats — because fixing one
+        // of the three and not the others is exactly how 9,024 km survived on two
+        // cards after the odometer was corrected.
+        let localM = localDistanceM(stats: stats, legs: legs)
         return RecapTrip(
             legs: legs,
             stops: tripStops,
             title: trip.title,
-            subtitle: titleSubtitle(trip: trip, stats: stats),
-            statsLines: statsLines(stats: stats, stopCount: stops.count),
+            subtitle: titleSubtitle(trip: trip, distanceM: localM),
+            statsLines: statsLines(stats: stats, distanceM: localM, stopCount: stops.count),
             callToAction: String(localized: "recap_end_cta"),
             shareURL: nil,
+            journeyDates: journeyDates(trip),
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
         )
     }
@@ -291,22 +298,28 @@ enum RecapComposer {
         return String.localizedStringWithFormat(String(localized: "recap_walk_detail"), max(minutes, 1))
     }
 
-    static func titleSubtitle(trip: TripRecord, stats: TripStats?) -> String {
+    /// The title card's second line. **`distanceM` is the local journey**, never
+    /// the whole trip — see `localDistanceM`. On screen at 0–3 s, which is why
+    /// leaving the flight in it put 9,024 km in front of a viewer before the film
+    /// had started.
+    static func titleSubtitle(trip: TripRecord, distanceM: Double?) -> String {
         let formatter = DateIntervalFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         let start = Date(timeIntervalSince1970: trip.startedAt)
         let end = Date(timeIntervalSince1970: trip.endedAt ?? trip.startedAt)
         let dates = formatter.string(from: start, to: end)
-        guard let stats else { return dates }
-        return "\(dates) · \(Int((stats.distanceM / 1000).rounded())) km"
+        guard let distanceM else { return dates }
+        return "\(dates) · \(Int((distanceM / 1000).rounded())) km"
     }
 
-    static func statsLines(stats: TripStats?, stopCount: Int) -> [String] {
-        guard let stats else { return [] }
+    /// The end card's stats. **`distanceM` is the local journey**, for the same
+    /// reason and from the same source as the subtitle above.
+    static func statsLines(stats: TripStats?, distanceM: Double?, stopCount: Int) -> [String] {
+        guard let stats, let distanceM else { return [] }
         let distanceStops = String.localizedStringWithFormat(
             String(localized: "recap_stat_distance_stops"),
-            Int((stats.distanceM / 1000).rounded()),
+            Int((distanceM / 1000).rounded()),
             stopCount
         )
         let drive = String.localizedStringWithFormat(

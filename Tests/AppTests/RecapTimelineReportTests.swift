@@ -34,7 +34,16 @@ final class RecapTimelineReportTests: XCTestCase {
             !requested.isEmpty,
             "Manual measurement — set KAMOME_TIMELINE_REPORT to a fixture name (e.g. iceland)."
         )
-        let (recap, config) = try await RecapDemoFilmTests.importedRecap(named: requested)
+        // **A crossing fixture is routed by the offline sea provider, never by the
+        // live endpoint** — the rule `RecapDemoFilmTests`, `RecapReviewScene` and
+        // `RecapSnapshotBudgetTests` already follow, and which this harness did
+        // not. Routed live, `auckland-crossing`'s flight is a road, no arc is
+        // built, and this reports a type-1 film's beats while looking like it
+        // measured a type-2 one (`Arch.md` §6: no silent fallbacks).
+        let sea = UnroutableSeaProvider.forFixture(requested)
+        let (recap, config) = try await RecapDemoFilmTests.importedRecap(
+            named: requested, baseURL: sea == nil ? nil : "", reconstructor: sea
+        )
         let bounds = try XCTUnwrap(GeoBox.enclosing(recap.route.map { (lat: $0.lat, lon: $0.lon) }))
         let establishing = RecapMapRegionResolver.resolve(covering: bounds).map {
             RecapBounds(
@@ -42,7 +51,13 @@ final class RecapTimelineReportTests: XCTestCase {
                 maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
             )
         }
-        let line = try XCTUnwrap(LinearTimeline(trip: recap, config: config, establishing: establishing))
+        // Pinned to the same locale the review renders use, so one desk measures
+        // the film it draws. Nothing this report prints depends on it — but two
+        // desk harnesses on two locales is the drift that keeps costing rounds.
+        let line = try XCTUnwrap(LinearTimeline(
+            trip: recap, config: config, establishing: establishing,
+            locale: Locale(identifier: "zh-Hant")
+        ))
         let report = Self.scan(line, fps: config.fps)
 
         func fmt(_ value: Double?) -> String { value.map { String(format: "%.2fs", $0) } ?? "never" }
@@ -55,6 +70,8 @@ final class RecapTimelineReportTests: XCTestCase {
           first photo    \(fmt(report.firstDeckAt))
           longest still  \(fmt(report.longestStill.length)) starting \(fmt(report.longestStill.start))
         """)
+
+        Self.reportTheRetime(line, recap: recap, config: config)
 
         // The camera's two spans and the zoom between them, which nothing else
         // prints — the figures in HANDOFF.md were derived when a region was
@@ -81,6 +98,61 @@ final class RecapTimelineReportTests: XCTestCase {
             print("  dashed leg \(index) \(leg.mode.rawValue): "
                 + "\(Self.nearestStopName(to: start, in: recap)) → \(Self.nearestStopName(to: end, in: recap))")
         }
+    }
+
+    /// **Where the type-2 opening's beats land, and what the film says it
+    /// travelled** — the numbers the 2026-09-02 retime is judged on, printed
+    /// rather than counted off a screen.
+    ///
+    /// Its own function because `testReportTimeline` is at its length budget, and
+    /// because these lines answer one question the rest of the report does not:
+    /// *when does the trip actually start, and what does the odometer read?*
+    ///
+    /// Silent about the beats on a local film, which has no crossing to report.
+    private static func reportTheRetime(
+        _ line: LinearTimeline, recap: RecapTrip, config: TrackingConfig.Export
+    ) {
+        let trimmed = RecapTypeTwoFilm.trimmedToTheDestination(recap, config: config)
+        if let beat = line.path.crossingBeatWindowsS.first {
+            let plan = RecapDurationPlan.plan(
+                photoCounts: trimmed.stops.map(\.photos.count),
+                config: config, deck: LinearTimeline.deck(config: config)
+            )
+            let dwell = plan.stopDwellS.first ?? 0
+            print(String(
+                format: "  KAMOME_OPENING_RETIME title card 0.00–%.2fs · departure stop %.2f–%.2fs",
+                config.titleCardS, config.titleCardS, beat.lowerBound
+            ))
+            // ⚠️ **The window is the measurement; the plan's figure is the ask.**
+            // `CameraPath` trims holds against `max_hold_fraction`, so the priced
+            // dwell and what is actually on screen are not the same number, and
+            // quoting the ask as the result is how a pacing report lies.
+            print(String(
+                format: "    departure dwell %.2fs ON SCREEN · %.2fs asked (%.2fs priced + 2×park) · %d photo(s)",
+                beat.lowerBound - config.titleCardS, dwell + 2 * config.subjectParkS, dwell,
+                trimmed.stops.first?.photos.count ?? 0
+            ))
+            print(String(
+                format: "    crossing beat %.2f–%.2fs (%.2fs) · closing zoom %.2f–%.2fs",
+                beat.lowerBound, beat.upperBound, beat.upperBound - beat.lowerBound,
+                beat.upperBound, beat.upperBound + config.zoomTransitionS
+            ))
+            print(String(
+                format: "    THE TRIP STARTS AT %.2fs (zoom_transition_s is shared — not this round's)",
+                beat.upperBound + config.zoomTransitionS
+            ))
+        }
+        // **What the film tells a viewer it measured** — the odometer at the last
+        // frame before the end card, beside the flown figure it no longer counts.
+        // One rule, three surfaces (Chiu 2026-09-02), so a divergence is the bug.
+        let odometerM = line.path.traveledLocalDistanceM(atTime: line.durationS - config.endCardS)
+        let flownM = line.path.traveledDistanceM(atTime: line.durationS - config.endCardS) - odometerM
+        print(String(
+            format: "  KAMOME_LOCAL_KM odometer %.0f km local · %.0f km flown (the card only) · "
+                + "end card %@",
+            odometerM / 1000, flownM / 1000,
+            (recap.statsLines.first ?? "no stats — this harness composes with stats: nil") as NSString
+        ))
     }
 
     /// Names a point by the stop it sits closest to. Equirectangular on purpose:

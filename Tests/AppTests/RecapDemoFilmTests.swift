@@ -51,15 +51,19 @@ final class RecapDemoFilmTests: XCTestCase {
     private func renderFilm(trip: RecapTrip, config: TrackingConfig.Export, named: String) async throws {
         let bounds = try XCTUnwrap(GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) }))
         let region = RecapMapRegionResolver.resolve(covering: bounds)
-        let establishing = region.map {
-            RecapBounds(
-                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
-                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
-            )
-        }
-        let timeline = try XCTUnwrap(
-            LinearTimeline(trip: trip, config: config, establishing: establishing)
-        )
+        let establishing = Self.establishing(region)
+        // **Pinned to zh-Hant** (Chiu 2026-09-04), for exactly the reason
+        // `boardingPassDate` pins `en_US_POSIX`: one machine must draw the same
+        // frame every run. The Journey Card's second line is the *viewer's* name
+        // for a region, and `Region` correctly suppresses it when it equals the
+        // English one — so a desk running an English locale renders one line and
+        // the 台灣 / 紐西蘭 the reference shows never appears. That is right for an
+        // English-locale viewer and wrong for a review render, and the fix is the
+        // harness's locale, never `Region`'s rule.
+        let timeline = try XCTUnwrap(LinearTimeline(
+            trip: trip, config: config, establishing: establishing,
+            locale: Locale(identifier: "zh-Hant")
+        ))
         // Stand-in photos: the simulator has no real library, and the deck beats
         // are the thing under review. One tile per selected photo.
         var images: [String: CGImage] = [:]
@@ -76,12 +80,21 @@ final class RecapDemoFilmTests: XCTestCase {
             honouring: try ReviewSubstrate.experiment().appearance
         )
         let style = try ReviewPalette.style(appearance)
+        // 🔴 **The crossing renderers were missing here until 2026-09-04**, and
+        // `FrameCompositor` treats nil as a real answer — so every review film
+        // drew the trip's own **car** across the crossing while the shipped app
+        // drew the seagull. Both readings of "what crosses a crossing?" were
+        // true at once, of different renderers, and the Auckland judgement film
+        // was rendered through this one. The same class `ReviewSubstrate` exists
+        // to stop: a review harness that quietly renders a different film.
         let compositor = FrameCompositor(
             timeline: timeline,
             subject: Self.subjectRenderer(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: DeckResolver(images: images)),
             style: style,
-            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+            crossingSubject: Self.crossingRenderer(style: style, config: config),
+            flightSubject: Self.flightRenderer(style: style, config: config)
         )
         let exporter = RecapExporter(
             timeline: timeline, compositor: compositor, provider: provider, config: config
@@ -107,6 +120,17 @@ final class RecapDemoFilmTests: XCTestCase {
             videoURL.path, trip.stops.count, trip.legs.count, timeline.frameCount, duration, sizeMB, seconds
         ))
         reportPacing(timeline, trip: trip)
+    }
+
+    /// An installed region's extent as the timeline wants it, or nil — which is
+    /// the shipped path, since no region is installed while MapLibre is parked.
+    private static func establishing(_ region: RecapMapRegion?) -> RecapBounds? {
+        region.map {
+            RecapBounds(
+                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
+                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
+            )
+        }
     }
 
     /// Measures what the film actually does — dwell per stop read off the

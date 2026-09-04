@@ -86,9 +86,40 @@ public enum Geo {
 
     /// Equirectangular approximation — exact enough at trip scale, cheap
     /// enough to run per sample.
+    ///
+    /// ⚠️ **Flat-earth, and it scales longitude by the cosine of `latA` alone**,
+    /// so it degrades over a long diagonal: measured 2026-09-03 on
+    /// `auckland-crossing`, Taipei (25°N) → Auckland (37°S) comes out **121 km
+    /// short of the great circle**, 1.4%.
+    ///
+    /// That is harmless for everything this powers — the camera's `cumulativeM`,
+    /// the dead zone, stop anchoring — because those are *one consistent axis*
+    /// and a 1.4% scale error on it is invisible. It is **not** harmless for a
+    /// number a viewer reads. Use `greatCircleM` for those.
     public static func distanceM(latA: Double, lonA: Double, latB: Double, lonB: Double) -> Double {
         let dLat = (latB - latA) * metersPerDegreeLatitude
         let dLon = (lonB - lonA) * metersPerDegreeLatitude * cos(latA * .pi / 180)
         return (dLat * dLat + dLon * dLon).squareRoot()
+    }
+
+    /// **Haversine — for a distance that gets printed** (2026-09-03).
+    ///
+    /// Its own function rather than a better `distanceM`, deliberately: swapping
+    /// the implementation under the camera would move every `cumulativeM`, every
+    /// stop anchor and every body span on every film, to fix a defect that only
+    /// exists where a figure is shown to someone. Two names, two jobs, and the
+    /// doc on each says which.
+    ///
+    /// The caller that needed it is the Journey Card, which prints the flight's
+    /// length on something shaped like a document — where being 121 km out is a
+    /// claim about a journey, not a rounding (`CLAUDE.md` rule 5).
+    public static func greatCircleM(latA: Double, lonA: Double, latB: Double, lonB: Double) -> Double {
+        let radius = 6_371_000.0
+        let phiA = latA * .pi / 180, phiB = latB * .pi / 180
+        let deltaPhi = (latB - latA) * .pi / 180
+        let deltaLambda = (lonB - lonA) * .pi / 180
+        let haversine = sin(deltaPhi / 2) * sin(deltaPhi / 2)
+            + cos(phiA) * cos(phiB) * sin(deltaLambda / 2) * sin(deltaLambda / 2)
+        return 2 * radius * asin(min(1, haversine.squareRoot()))
     }
 }

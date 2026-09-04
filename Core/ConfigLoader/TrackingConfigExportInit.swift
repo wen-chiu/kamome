@@ -10,7 +10,13 @@ extension TrackingConfig.Export {
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, targetZoomRatio: Double = 2.5,
             zoomTransitionS: Double,
-            actSplitKm: Double, crossingBeatS: Double, crossingApexPadding: Double, followHeadingUp: Bool,
+            actSplitKm: Double, crossingBeatS: Double, crossingApexPadding: Double,
+            // Defaulted for the same reason `targetZoomRatio` is: the synthesized
+            // `Decodable` still REQUIRES the JSON key, so a config file missing it
+            // fails loudly. The default only serves hand-built test configs, which
+            // have no departure airport to cap.
+            departureStopMaxPhotos: Int = 2,
+            followHeadingUp: Bool,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
             deckPhotoHoldS: Double, deckPhotoMinHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
@@ -40,7 +46,7 @@ extension TrackingConfig.Export {
             self.targetZoomRatio = targetZoomRatio
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
-            self.followHeadingUp = followHeadingUp
+            self.departureStopMaxPhotos = departureStopMaxPhotos; self.followHeadingUp = followHeadingUp
             self.cameraPanWindowFractionPerS = cameraPanWindowFractionPerS
             self.cameraDeadZoneFraction = cameraDeadZoneFraction
             self.cameraSafeZoneFraction = cameraSafeZoneFraction

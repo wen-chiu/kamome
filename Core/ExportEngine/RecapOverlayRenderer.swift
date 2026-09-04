@@ -59,6 +59,10 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             surface.context.restoreGState()
         case let .photoDeck(deck):
             drawPhotoDeck(deck, into: surface)
+        case let .journeyCard(card):
+            drawJourneyCard(card, into: surface)
+        case let .flightEnds(origin, destination, opacity):
+            drawFlightEnds(origin: origin, destination: destination, opacity: opacity, into: surface)
         case let .hud(dayLabel, place, travelledM):
             drawHUD(dayLabel: dayLabel, place: place, travelledM: travelledM, into: surface)
         case let .titleChrome(title, subtitle):

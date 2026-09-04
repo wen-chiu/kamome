@@ -283,6 +283,12 @@ final class RecapModel {
             // for the answer to be wrong. Unused films pay one sprite decode.
             crossingSubject: VehicleSubjectRenderer.make(
                 style: style, config: exportConfig, subjectId: VehicleCatalog.crossingSubjectId
+            ),
+            // What flies a crossing the film has issued a boarding pass for
+            // (ADR 2026-09-04). Built for every film for the same reason the
+            // seagull is: whether one is needed is the timeline's discovery.
+            flightSubject: VehicleSubjectRenderer.make(
+                style: style, config: exportConfig, subjectId: VehicleCatalog.planeSubjectId
             )
         )
         let exporter = RecapExporter(

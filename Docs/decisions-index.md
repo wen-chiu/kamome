@@ -78,4 +78,6 @@ does not.
 | 58 | `2026-09-02` | Phase 4 has no hard gate: Chiu judges the film, engineering guarantees the rest | **amends `CLAUDE.md` rule 7 for Phase 4 only** |
 | 59 | `2026-09-02 (b)` | The staleness protocol could never be satisfied, and it is a check now | **corrects the diagnosis in 2026-09-02 §6** |
 | 60 | `2026-09-03` | The corpus is cut in half: closed work is archived, and the live set has a ceiling |  |
-| 61 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
+| 61 | `2026-09-03 (b)` | The crossing beat is 4.0 s because that is how long a boarding pass takes to read | **re-decides `crossing_beat_s` 6.0 from 2026-09-02; amends `Docs/handoff-type2-films.md`'s closeout** |
+| 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
+| 63 | `2026-09-04 (b)` | The crossing flies a plane, and its two ends are marked and named | **reclaims `cross-region-journeys.md` requirement 2; answers the closeout's handover item 1; thaws neither place-name lock** |

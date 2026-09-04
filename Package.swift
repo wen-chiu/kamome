@@ -61,7 +61,11 @@ let package = Package(
             // `.copy` is verbatim, and excluded paths inside a copied directory
             // still reach the bundle (measured 2026-08-17). The strip happens
             // after the build instead; see `postBuildScripts` in `project.yml`.
-            resources: [.copy("Resources/Vehicles")]
+            // Two entries, and they stay two: `Landmarks` is what Kamome draws
+            // *on* the map (the flight's two ends) and `Vehicles` is what it
+            // draws *moving across* it. Sharing a directory is what would let a
+            // vehicle sprite silently restyle a landmark, and the reverse.
+            resources: [.copy("Resources/Vehicles"), .copy("Resources/Landmarks")]
         ),
         .target(
             name: "KamomeRouteMatching",

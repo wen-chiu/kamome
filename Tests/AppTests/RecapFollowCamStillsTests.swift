@@ -116,7 +116,11 @@ final class RecapFollowCamStillsTests: XCTestCase {
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: MapResolver(images: images)),
-            widthPx: width, heightPx: height
+            widthPx: width, heightPx: height,
+            // Synthetic route, no crossing — neither renderer is ever asked
+            // for. Written out because `FrameCompositor` has no defaults: a
+            // silent nil is what drew a car across the Pacific (2026-09-04).
+            crossingSubject: nil, flightSubject: nil
         )
         guard let beats = stopSceneTimes(timeline) else { return }
         for (name, time) in [("stop-label-lead", beats.lead), ("stop-deck-open", beats.grow), ("stop-deck-full", beats.peak)] {
@@ -218,7 +222,11 @@ final class RecapFollowCamStillsTests: XCTestCase {
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: FollowCamNoPhotoResolver()),
-            widthPx: width, heightPx: height
+            widthPx: width, heightPx: height,
+            // Synthetic route, no crossing — neither renderer is ever asked
+            // for. Written out because `FrameCompositor` has no defaults: a
+            // silent nil is what drew a car across the Pacific (2026-09-04).
+            crossingSubject: nil, flightSubject: nil
         )
         for time in [3.0, 5.0, 7.0, 9.0] {
             let frame = timeline.cameraFrame(atTime: time)
@@ -325,7 +333,11 @@ private extension RecapFollowCamStillsTests {
             timeline: timeline,
             subject: VehicleSubjectRenderer.make(style: style, config: config),
             overlay: RecapOverlayRenderer(style: style, resolver: FollowCamNoPhotoResolver()),
-            widthPx: width, heightPx: height
+            widthPx: width, heightPx: height,
+            // Synthetic route, no crossing — neither renderer is ever asked
+            // for. Written out because `FrameCompositor` has no defaults: a
+            // silent nil is what drew a car across the Pacific (2026-09-04).
+            crossingSubject: nil, flightSubject: nil
         )
 
         for target in SpriteDirection.allCases.map(\.degrees) {

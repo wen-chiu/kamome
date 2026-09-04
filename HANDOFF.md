@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-03.** `main` carries PRs #16–#32. Everything closed has been
+**Updated 2026-09-04.** `main` carries PRs #16–#39. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -48,8 +48,12 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
 
 ## ⏳ Awaiting Chiu — a film or a judgement, not a session
 
-- **The long-haul flight frame's 70 threshold.** The wide frame loses the viewer;
-  the threshold is probably wrong. → `Docs/handoff-type2-films.md` closeout.
+- **The long-haul 70 threshold is untouched and still probably wrong.** Its
+  *"the wide frame loses the viewer"* half is answered (ADR 2026-09-04 (b)).
+  → `Docs/handoff-type2-films.md` closeout.
+- **Five questions from the retimed type-2 opening** — four visual, one semantic
+  (its DATE row is the **trip's** range, not the flight's).
+  → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
 - **The title card still shows trip title + dates, not the country name.** The
   name is available offline; wiring it is not done. A DESIGNER question.
   → `Docs/handoff-crop-scaling.md` §11, §14.
@@ -98,46 +102,44 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
   holds, the feature sits behind a tile condition that can never be satisfied.
   **UNKNOWN, worth an hour.** → `Docs/handoff-audit-2026-08-30.md` finding 3.
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
-  is empirical and untested on a flat photograph distribution. The removal
-  criterion was decided in advance, so it is not re-litigated, and **a removal PR
-  must not cite "provably contained"**. → `Docs/handoff-stop-weighting.md`.
-- **The 0.747 sharpness step at hold boundaries** is *accepted as it stands*, not
-  fixed. The remedy costs no extra fetches and is not built. Revisit only if
-  someone notices it in a film. → `Docs/handoff-crop-scaling.md`.
+  is empirical and untested on a flat distribution. The removal criterion was
+  decided in advance, and **a removal PR must not cite "provably contained"**.
+  → `Docs/handoff-stop-weighting.md`.
+- **The 0.747 sharpness step at hold boundaries** is accepted as it stands, not
+  fixed. Revisit only if someone notices it in a film.
+  → `Docs/handoff-crop-scaling.md`.
 - **C4 — nothing asserts the end card's brand mark**, and the badge work proved
   this failure mode is silent. → `Docs/release-readiness.md` C4.
+- 🔴 **Two left by the type-2 opening round**: `Geo.distanceM` is **121 km short**
+  over Taipei → Auckland with no sweep of who reads it, and a **ferry gets a
+  boarding pass and a plane**. → `Docs/handoff-type2-opening-retime.md`.
 
 ---
 
 ## ⚠️ Traps — read before you touch these
 
 - **A worktree renders a different film.** `Config/Secrets.xcconfig` and
-  `Tests/Fixtures/trips/local/` are gitignored, so a worktree routes on straight
-  lines and reads different geometry. Copy both, then count `drive/reconstructed`
-  in each log before comparing two renders.
+  `Tests/Fixtures/trips/local/` are gitignored, so it routes on straight lines and
+  reads different geometry. Copy both, then compare `drive/reconstructed` counts.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
-- **A dead CI run looks like a passing one.** The tell is ~3 s wall clock and
-  `steps=0`. Anything with steps is a real signal.
-- **Continuity passing is not the film being right.** The gate measures ground
-  overlap between consecutive frames, so a camera wrong in a way that does not
-  *move* scores 100%: a body span from the wrong beat measured 177.3 km against
-  13.3 km and scored perfectly. When a change re-derives a span, a frame or a
-  padding, **read `span` on its own line, and render.**
-- **Do not restyle `VehicleMarker.seagull` in place.** It is also the wordmark's
-  bird on the end card. Three consumers: brand mark, fault badge, and the
-  unbuilt cross-region narrator. → `Docs/handoff-marker-badge.md` 5b.
-- **`Docs/camera-arcs.md` §8 states an invariant no arc can satisfy.** The gate's
-  `permittedCutTimesS` is the mechanism that does hold (0 excused on all eight
-  fixtures). → `Docs/handoff-cross-region-crossing.md`.
+- **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.
+- **Continuity passing is not the film being right.** A camera wrong in a way that
+  does not *move* scores 100%: a body span from the wrong beat measured 177.3 km
+  against 13.3 km and scored perfectly. When a change re-derives a span, a frame
+  or a padding, **read `span` on its own line, and render.**
+- **Do not restyle `VehicleMarker.seagull` in place** — it is also the wordmark's
+  bird. **Four** gull objects now; the table naming them is in
+  `Core/ExportEngine/Resources/Landmarks/README.md`.
+- **`Docs/camera-arcs.md` §8 states an invariant no arc can satisfy.**
+  `permittedCutTimesS` is what does hold — 0 excused on all eight fixtures.
 - **Read a style value off the preset the app selects, never off the defaults.**
   `RecapStyle`'s defaults are unrendered; the app selects `modernMinimal`. Got
   wrong twice, cost a ledger correction both times.
-- **Two sessions sharing one checkout contaminate each other's test and lint
-  counts.** Confirm your branch and your distance from `origin/main` first.
-- **MapKit saturates at ~109° of longitude**, so a long-haul frame often does not
-  exist — Taiwan→Iceland fails at every padding. The frozen country card is a
-  **main path**, not a fallback. → `Docs/handoff-type2-films.md`.
+- **Two sessions sharing one checkout contaminate each other's counts.** Confirm
+  your branch and your distance from `origin/main` first.
+- **MapKit saturates at ~109° of longitude** — Taiwan→Iceland has no frame at any
+  padding, so the frozen country card is a **main path**, not a fallback.
 
 ---
 
@@ -155,6 +157,7 @@ one; the glacier renders flat. All three, in full, with workarounds:
 |---|---|
 | `Docs/release-readiness.md` | **the release gate** — every obligation, sorted by who can settle it |
 | `Docs/handoff-type2-films.md` | the type-2 film: what MapKit can frame, the classifier, the closeout |
+| `Docs/handoff-type2-opening-retime.md` | the retimed opening, the pass, the plane, the two marks |
 | `Docs/handoff-cross-region-crossing.md` | the crossing beat, the pan-floor correction, the safe-zone margin |
 | `Docs/handoff-crop-scaling.md` | crop-scaling, the budget split, the opening and the country card |
 | `Docs/handoff-audit-2026-08-30.md` | the owed MapLibre sweep, dead pacing, the §0 films question |

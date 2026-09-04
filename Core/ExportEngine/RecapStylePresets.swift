@@ -108,6 +108,11 @@ public extension RecapStyle {
             // future A/B still has alpha as its only variable.
             style.routeGlowColor = retiredGlowColor.copy(alpha: 0) ?? retiredGlowColor
             style.routeGlowWidthMultiple = 3.0
+            // **The boarding pass follows the appearance too** (Chiu 2026-09-04).
+            // It was light in both until then, which made it the one surface that
+            // ignored ADR 2026-08-27. Palette only — the layout is shared, and
+            // `RecapJourneyCardStyle.dark()` says why.
+            style.journeyCard = .dark()
         case .light:
             style.routeColor = trailOnLight
             // No glow on a light base, and this one *is* settled: a wide

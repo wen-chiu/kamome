@@ -144,6 +144,110 @@ public struct RecapPhotoDeck: Equatable {
     }
 }
 
+/// **The boarding pass the crossing carries** (Chiu 2026-09-02) — a Journey Card
+/// in boarding-pass form, on screen for the crossing beat and nowhere else.
+///
+/// Pure data, like every other `OverlayContent` payload: no CoreGraphics, no
+/// geo→pixel. The card is frame chrome, not a map annotation — it is drawn in the
+/// band the title card has just vacated and never projected — so unlike
+/// `RecapPhotoDeck` it carries no coordinate.
+///
+/// ## Everything on it is something Kamome actually knows, offline
+///
+/// The region names come from `CountryExtent` (a built-in table — no geocode, no
+/// coordinate leaving the process, `CLAUDE.md` §0); the distance is the crossing
+/// leg's own length; the dates are the app's formatting of two photograph
+/// timestamps.
+///
+/// 🔴 **`FLIGHT TIME` is deliberately absent** (Chiu 2026-09-02). Kamome does not
+/// know when the aircraft left or landed, so it cannot compute one, and printing a
+/// number it does not have is a fabricated record — `CLAUDE.md` rule 5, the same
+/// rule that forbids "Verified Trip".
+public struct RecapJourneyCard: Equatable {
+    /// **The flight number, and it is a constant.**
+    ///
+    /// 🔴 **Never compute this, never vary it, never move it into
+    /// `TrackingConfig.json`.** `THX-9527` is a joke, and it reads as one only
+    /// while it is the same on every film. Derived per trip — from the route, the
+    /// date, anything — it stops being a joke and becomes a claim about a real
+    /// flight, which is exactly the fault `FLIGHT TIME` was removed for. Config is
+    /// for tunables (`CLAUDE.md` rule 7); this must not vary, so it is not one.
+    public static let flightNumber = "THX-9527"
+
+    /// One end of the flight, named twice.
+    ///
+    /// **English over the local name** (TAIWAN / 台灣): a boarding pass is an
+    /// English artefact, and the second line is the traveller's own language.
+    /// `local` is nil when the system returns the same string for both — one name
+    /// printed twice reads as a bug, not as a bilingual card.
+    public struct Region: Equatable {
+        public let english: String
+        public let local: String?
+
+        /// ⚠️ **Compared case-insensitively**, because `english` arrives
+        /// uppercased for the card and `Locale` returns "Taiwan". The first pass
+        /// compared them raw and printed `TAIWAN` over `Taiwan` on an
+        /// English-locale render — one name twice, which reads as a bug rather
+        /// than as a bilingual card.
+        public init(english: String, local: String?) {
+            self.english = english
+            self.local = local?.caseInsensitiveCompare(english) == .orderedSame ? nil : local
+        }
+    }
+
+    public let from: Region
+    public let to: Region
+    /// The **flight's** length, and the only place in the film a flown kilometre
+    /// appears (Chiu 2026-09-02). Every other surface — HUD, title subtitle, end
+    /// card — counts the local journey only. Labelled as the flight on the card so
+    /// the two numbers can never be read as the same quantity.
+    public let distanceM: Double
+    /// The **trip's** date range, formatted by the app (Chiu 2026-09-04 — it was
+    /// the crossing's own two dates until then). nil prints the distance row
+    /// without a date rather than inventing one — see `RecapTrip.journeyDates`.
+    public let dates: String?
+    /// 0…1 across the crossing beat: how far along its dotted arc the aircraft
+    /// printed on the card has travelled. The card is the beat's own clock.
+    public let progress: Double
+    /// 0…1 fade, so the pass arrives and leaves rather than cutting in.
+    public let opacity: Double
+
+    public init(
+        from: Region, to: Region, distanceM: Double,
+        dates: String?, progress: Double, opacity: Double
+    ) {
+        self.from = from
+        self.to = to
+        self.distanceM = distanceM
+        self.dates = dates
+        self.progress = progress
+        self.opacity = opacity
+    }
+}
+
+/// **One end of the flight: where it is, and what it is called** (Chiu
+/// 2026-09-04).
+///
+/// 🔴 **`name` is the value the Journey Card already resolved** — passed down
+/// from the same `RecapJourneyCard.Region`, never looked up again. Two lookups is
+/// how the card and the map come to print different names for one place, and the
+/// timeline resolves `CountryExtent` exactly once per film.
+///
+/// nil when `CountryExtent` has no row for this end: **the mark is still drawn
+/// and the name is simply absent**, the same honesty rule the card follows when
+/// it declines to print a pass at all.
+public struct RecapFlightEnd: Equatable {
+    public let coordinate: RecapCoordinate
+    /// The country or region, in English — nothing else. Not the stop, not a
+    /// city, not a place name of any other kind (ADR 2026-09-04 §3).
+    public let name: String?
+
+    public init(coordinate: RecapCoordinate, name: String?) {
+        self.coordinate = coordinate
+        self.name = name
+    }
+}
+
 /// A revealed stretch of trail: the part of one `RecapTrip.Leg` the subject has
 /// already covered, carrying that leg's mode and provenance so the renderer can
 /// stroke it honestly. Pure data — the renderer projects and styles it.
@@ -177,6 +281,39 @@ public enum OverlayContent: Equatable {
     case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?, opacity: Double)
     /// The enlarged photo deck at a stop.
     case photoDeck(RecapPhotoDeck)
+    /// **The boarding pass, during the crossing beat and nowhere else** (Chiu
+    /// 2026-09-02). See `RecapJourneyCard` for what is on it and what is
+    /// deliberately not.
+    case journeyCard(RecapJourneyCard)
+    /// **Here, and there** — a Kamome mark on each end of the flight, drawn over
+    /// the opening's still frame only (Chiu 2026-09-04).
+    ///
+    /// The answer to *"地圖放太遠會失去焦點，一開始的畫面會無法明確知道出發地跟
+    /// 目的地"* — at 8,891 km MapKit labels neither city and neither coastline is
+    /// a recognisable silhouette, so the frame is a texture rather than a place
+    /// (`Docs/handoff-type2-films.md` closeout item 1). Two marks say *here* and
+    /// *there* without the base map naming anything.
+    ///
+    /// Since 2026-09-04 each mark carries **the country's name beneath it** —
+    /// nothing else, and only here.
+    ///
+    /// 🔴 **Neither lock is thawed, and the reasons differ.** The **base map**
+    /// still draws no label of its own: that is `handoff-P3.5.md` §"Map reference
+    /// labels", blocked on a fontstack, and untouched. The
+    /// **`Docs/icebox.md` place-name entry** is a *narrative system* — landmark
+    /// title cards timed between beats, across the whole film — and this is one
+    /// slice of one beat. What is drawn is a Kamome-owned overlay at two
+    /// endpoints, which is the shape that entry itself names as the correct one;
+    /// it was parked for effort, and the effort here is zero because the boarding
+    /// pass has already resolved both names.
+    ///
+    /// Each end carries **the name the boarding pass already resolved**, never a
+    /// second lookup — see `RecapFlightEnd`.
+    ///
+    /// `origin` is nil while the departure stop is presenting itself: its pin and
+    /// this mark are the same point, and exactly one of them is ever drawn (see
+    /// `LinearTimeline.flightEnds`).
+    case flightEnds(origin: RecapFlightEnd?, destination: RecapFlightEnd, opacity: Double)
     /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
     /// and how far the journey has come, in the frame's top corners, for the whole
     /// body of the film — driving as well as stopped.
