@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-05.** `main` carries PRs #16–#41. Everything closed has been
+**Updated 2026-09-06.** `main` carries PRs #16–#42. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -25,11 +25,10 @@ is the gate**; these are the only rows on it that nobody has started.
    rule 2). `matching.base_url` is still `""` and `api_key_required` still
    `true`, so no build calls the Worker and **every build still carries the
    routing key**. Flipping it closes **S6 by construction**.
-   ⚠️ **One precondition is met in the repo and NOT in production**: the
-   **60/min per-IP burst limit** is written, tested and merged-pending, but
-   **the Worker has not been redeployed** — production is still `5b33922c`, the
-   ceiling alone. **Deploy before flipping.** → `Docs/release-readiness.md`
-   S4–S6; ADR 2026-09-05 §"NOT done".
+   ✅ **Every precondition is met in production**: the Worker is capped per day,
+   carries a **60/min per-IP burst limit**, and its no-log property is a gate
+   `npm run deploy` runs — deployed and probed 2026-09-06, Version `09e248ee`.
+   → `Docs/release-readiness.md` S4–S6; ADR 2026-09-05 + its addendum.
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
@@ -38,19 +37,13 @@ is the gate**; these are the only rows on it that nobody has started.
 
 ---
 
-## Findings — engineering session (2026-09-05)
+## Findings — engineering session (2026-09-06)
 
-- **One judgement is Chiu's, and it is small.** The burst limiter **fails
-  closed** — a missing binding or a limiter fault is 503, so routing degrades to
-  dashed legs. It buys an after-probe 200 that proves *both* guards; it costs
-  availability on a Cloudflare-side fault. Three lines to reverse.
-- ⚠️ **The overshoot arithmetic stays INFERRED, and the settling test the
-  2026-09-04 re-rating named is retired.** `wrangler dev` at ceiling 1 shows
-  **zero** overshoot, N = 2/5/10/20, 20 genuinely in flight — miniflare's KV has
-  no read cache (VERIFIED 2026-09-05 in the pinned dependency — it accepts
-  `cacheTtl` and ignores it), so the harness lacks the mechanism. Do not re-run.
-
-Both: → `Docs/decisions.md` 2026-09-05.
+- ⚠️ **The ceiling's overshoot stays INFERRED, and the settling test the
+  2026-09-04 re-rating named is retired — do not re-run it.** `wrangler dev` at
+  ceiling 1 gives **zero** overshoot because miniflare's KV has no read cache, so
+  the harness lacks the mechanism. The burst limit bounds the overshoot instead
+  of measuring it. → `Docs/decisions.md` 2026-09-05.
 
 ---
 

@@ -3549,3 +3549,59 @@ not worth buying below a real incident.
 - **The npm suite is still not in `./check.sh`.** The default shell on this
   machine is Node 17 and the suite needs 22+, so a `check.sh` gate would fail on
   the very machine it protects. `npm run deploy` is where it binds instead.
+
+### Addendum, 2026-09-06 — deployed and probed; the deploy's 200 now proves three things
+
+**Deployed from merged `main` (`430d48c`, PR #42), Version ID
+`09e248ee-ad78-4457-b42c-7daef2815cb3`.** ⚠️ **Dates split here and it is worth
+naming once:** the deploy landed 2026-09-06 01:08 local (+0800), which is
+2026-09-05 17:08 **UTC** — so the counter's day key that evening is still
+`routing-requests-2026-09-05`. The ledger is in Chiu's local frame; the key space
+is UTC, by design (the entry above).
+
+`npm run deploy` ran the suites first, as it now must: **30 + 13 green**, then
+the upload. The deploy output lists all four bindings, both of the new ones
+included:
+
+```
+env.KAMOME_BUDGET (d533d7ee…)          KV Namespace
+env.KAMOME_BURST (60 requests/60s)     Rate Limit
+env.DAILY_REQUEST_CEILING ("2000")     Environment Variable
+env.BURST_RETRY_AFTER_S ("60")         Environment Variable
+```
+
+**The after-probe's pass conditions all hold, and the new version opened no door
+of its own.** Same discriminator as 2026-08-29 and 2026-09-04 — body length: a
+Cloudflare miss is 17 bytes of `error code: 1042`, this Worker's own `refuse()`
+is empty.
+
+| host | result |
+|---|---|
+| `kamome-routing` `/v1/routing` | **200, 9,842 B** — byte-identical to both earlier baselines |
+| `kamome-routing` `/` | **404, empty** — still the Worker |
+| `09e248ee-…` `/` and `/v1/routing` | **404, 17 B `error code: 1042`** |
+| `75c481ad-…` (the 2026-08-27 preview) | **404, 17 B** — still shut |
+| control, never deployed | **404, 17 B** — the discriminator is valid |
+
+🔴 **That first row is now the only production evidence the burst limit exists at
+all, and it is real evidence rather than a formality.** Every fault in *either*
+guard fails closed at 503 — no KV binding, an unparseable ceiling, a KV error, a
+missing rate-limit binding, an unusable `BURST_RETRY_AFTER_S`, or a limiter
+error. So a 200 says three things, where on 2026-09-04 it said two: the KV
+binding is attached and the ceiling parsed, **and the rate-limit binding was
+consulted and answered cleanly.** `routing-requests-2026-09-05` read **1**
+afterwards — the probe's single forwarded request — fresh about a minute after
+the write, consistent with the cache window measured on 2026-09-04.
+
+⚠️ **What production has NOT shown is the burst limit actually refusing.** The
+429 has its evidence elsewhere: 13 + 30 assertions, seven of which fail when the
+refusal is neutered, and a `wrangler dev` control against **miniflare's own rate
+limiter** — 75 concurrent → 60 through, 15 refused, `Retry-After: 60`.
+Demonstrating it in production means deliberately exceeding 60/min against the
+live Worker, which spends ~60 Geoapify credits of a 3,000-credit day and 60 of
+the 2,000 ceiling to re-confirm a binding Cloudflare reports as attached. **Not
+done, and not recommended without a reason** — but it is the one gap, so it is
+written down rather than left implied.
+
+**S4 now guards the running Worker and not only the repository**, because
+`npm run deploy` ran the gate and this is the artifact it passed.
