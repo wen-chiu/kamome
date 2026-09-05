@@ -6,13 +6,15 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-05 against decisions.md **2026-09-05** and `main` at
-**PR #41**. Re-read for this sync: the 2026-09-04 and 2026-09-05 ledger entries,
+Last synced: 2026-09-06 against decisions.md **2026-09-05** and `main` at
+**PR #42**. Re-read for this sync: that entry *and its 2026-09-06 deploy
+addendum*, the 2026-09-04 entries,
 every line of `HANDOFF.md`, and `Docs/release-readiness.md` S4/S5/S6. One thing
-moved: **the Worker's hardening is written and gated** — a 60/min per-IP burst
-limit beside the day's ceiling, and **S4 closed** (no-log is a gate
-`npm run deploy` runs). 🔴 **Not deployed: production is still `5b33922c`.**
-Deploy, then the flip is Chiu's. Reflected below, not only here.
+moved: **the Worker is hardened and it is live** — a 60/min per-IP burst limit
+beside the day's ceiling, **S4 closed** (no-log is a gate `npm run deploy` runs),
+deployed and probed as Version `09e248ee`. **Every precondition to the config
+flip is now met in production, and the flip is Chiu's.** Reflected below, not
+only here.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -62,9 +64,8 @@ judgement, in `HANDOFF.md`, which wins on findings and blockers.
 The two things between Kamome and a submission:
 **the config flip** — `matching.base_url` is still `""` and `api_key_required`
 still `true`, so **every build carries the routing key**; the Worker that ends
-that is deployed and capped, its burst limit and no-log gate **written but not
-deployed** (S4/S5 closed), and the flip itself is two values and
-**Chiu's decision** — and **D1–D5** (one device
+that is deployed, capped, burst-limited and gated no-log (S4/S5 closed, live as
+Version `09e248ee`), and the flip itself is two values and **Chiu's decision** — and **D1–D5** (one device
 session, never run, which no Claude session can do).
 → `Docs/release-readiness.md`.
 
@@ -110,7 +111,7 @@ session, never run, which no Claude session can do).
 | **Camera shake / ghosting closed** — the loop reprojects one snapshot instead of cross-fading two. | 2026-08-31 (b) |
 | **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
 | **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
-| **The Worker carries two guards and fails closed on either.** 2000/day (live) plus **60/min per IP** (⚠️ built, **not yet deployed**), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
+| **The Worker carries two guards and fails closed on either.** 2000/day plus **60/min per IP**, both live (Version `09e248ee`), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
 | **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
 
 Two standing constraints that are **not** decisions and must not be implemented
