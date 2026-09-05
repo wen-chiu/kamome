@@ -3459,3 +3459,40 @@ repository cannot see. And the shape underneath all of it is unchanged —
 **`/v1/routing` is GET-only, so real coordinates travel in the URL**, which is
 the most-logged part of an HTTP request. Moving them into a POST body is a
 provider-shaped change, not a Worker-shaped one, and it is not made here.
+
+### Addendum 2026-09-06 — Chiu ruled on the wording: the card is two sentences
+
+The first version of the card was the **whole** privacy notice: the lead, the
+hop, the payload with its two config numbers, Geoapify's retention, and the
+control. Chiu, on the render: *「告知內容的廢話太多了，使用者根本不會看，簡單說
+重點就好。」*
+
+**He is right, and the failure is worse than cosmetic.** A first-run card is
+read once, in the two seconds before someone taps the button. A notice nobody
+reads discloses nothing, so a wall of text does not over-deliver on §0's honest
+disclosure — it silently under-delivers while looking thorough. Length is a
+property of the disclosure here, not styling.
+
+**What the card is now:** the lead (photos, trips and films stay; the positions
+along the route leave), the hop (Kamome's relay, then Geoapify), and a line
+saying it is shown once and lives under About & Privacy. Three lines.
+
+**Nothing was deleted from the app.** The payload with its numbers, the recorded
+paragraph, retention, the control and sharing stay on `AboutView`, and what the
+hop sentence stopped carrying — Cloudflare, the no-log property, forwarding
+nothing that identifies the device — moved to `privacy_relay_detail`, which
+`AboutView` shows and the card does not. `LocalizationTests` follows it there:
+the assertion did not weaken, the string carrying the rule changed
+(`Arch.md` §4 — a rule is restated on the thing that now holds it).
+
+**The one-source rule survives, in its exact form:** each fact still exists as
+exactly one string. The card shows a subset; `AboutView` shows all of it. Nothing
+is written twice, so the two surfaces still cannot say the same thing
+differently.
+
+⚠️ **A length ceiling is now a test**, because this decision is the kind that
+erodes: `testTheFirstRunCardStaysShortEnoughToBeRead` fails if the card's three
+strings grow past the shipped copy plus roughly half again. It exists to stop the
+`AboutView` paragraphs migrating back one well-meaning edit at a time.
+
+⏳ Still not ruled on: **S2's placement**, and the wording of `AboutView` itself.

@@ -231,23 +231,25 @@ final class LocalizationTests: XCTestCase {
 
     /// **The hop sentence names every party that handles a coordinate** (Chiu
     /// 2026-09-04). The relay is not an implementation detail once it is in the
-    /// path: it is an extra party, on someone else's infrastructure, and a
-    /// notice that says "sent to Geoapify" while the request goes somewhere else
-    /// first is the same class of understatement as "start and end coordinates".
+    /// path: it is an extra party, and a notice that says "sent to Geoapify"
+    /// while the request goes somewhere else first is the same class of
+    /// understatement as "start and end coordinates".
     ///
     /// The direct sentence is held to *not* naming a relay, because the two keys
     /// exist to describe two different topologies and a copy edit that made them
     /// interchangeable would silently make one of them false.
+    ///
+    /// ⚠️ **Whose infrastructure the relay runs on is asserted on
+    /// `privacy_relay_detail`, not here** (Chiu 2026-09-06 cut the card to two
+    /// sentences). The rule did not move — the string carrying it did.
     func testTheHopSentencesNameEveryPartyThatHandlesACoordinate() throws {
         let relayEN = try localizedValue("privacy_hop_relay", locale: "en")
         XCTAssertTrue(relayEN.contains("Geoapify"), relayEN)
         XCTAssertTrue(relayEN.contains("relay"), "the extra party must be named: \(relayEN)")
-        XCTAssertTrue(relayEN.contains("Cloudflare"), "whose infrastructure it runs on: \(relayEN)")
 
         let relayZH = try localizedValue("privacy_hop_relay", locale: "zh-Hant")
         XCTAssertTrue(relayZH.contains("Geoapify"), relayZH)
         XCTAssertTrue(relayZH.contains("中繼"), "the extra party must be named: \(relayZH)")
-        XCTAssertTrue(relayZH.contains("Cloudflare"), "whose infrastructure it runs on: \(relayZH)")
 
         for locale in ["en", "zh-Hant"] {
             let direct = try localizedValue("privacy_hop_direct", locale: locale)
@@ -255,6 +257,43 @@ final class LocalizationTests: XCTestCase {
             XCTAssertFalse(
                 direct.lowercased().contains("relay") || direct.contains("中繼"),
                 "[\(locale)] this sentence describes the build that has no relay: \(direct)"
+            )
+        }
+    }
+
+    /// **What the short hop sentence stopped saying, `AboutView` still says.**
+    /// Cutting the first-run card was a decision about *where* the detail lives,
+    /// not about dropping it: the third party running the relay, what it keeps,
+    /// and that it forwards nothing identifying the device are all facts a
+    /// privacy notice may not quietly lose.
+    func testTheRelayDetailKeepsWhatTheShortSentenceDropped() throws {
+        let english = try localizedValue("privacy_relay_detail", locale: "en")
+        XCTAssertTrue(english.contains("Cloudflare"), "whose infrastructure it runs on: \(english)")
+        XCTAssertTrue(english.lowercased().contains("no record"), "what it keeps: \(english)")
+        XCTAssertTrue(english.lowercased().contains("identifies"), "what it forwards: \(english)")
+
+        let chinese = try localizedValue("privacy_relay_detail", locale: "zh-Hant")
+        XCTAssertTrue(chinese.contains("Cloudflare"), "whose infrastructure it runs on: \(chinese)")
+        XCTAssertTrue(chinese.contains("紀錄"), "what it keeps: \(chinese)")
+        XCTAssertTrue(chinese.contains("識別"), "what it forwards: \(chinese)")
+    }
+
+    /// **The first-run card is short, and stays short** (Chiu 2026-09-06: the
+    /// first version was a wall of text, and *「使用者根本不會看」*). A notice
+    /// nobody reads discloses nothing, so length here is a property of the
+    /// disclosure, not styling.
+    ///
+    /// The ceilings are the shipped copy plus roughly half again — loose enough
+    /// that a rewording is free, tight enough that the paragraphs `AboutView`
+    /// carries cannot migrate back onto the card one well-meaning edit at a time.
+    func testTheFirstRunCardStaysShortEnoughToBeRead() throws {
+        for (locale, limit) in [("en", 400), ("zh-Hant", 180)] {
+            let card = try ["privacy_intro", "privacy_hop_relay", "first_run_where"]
+                .map { try localizedValue($0, locale: locale) }
+                .joined()
+            XCTAssertLessThanOrEqual(
+                card.count, limit,
+                "[\(locale)] the card is \(card.count) characters; the detail belongs on AboutView"
             )
         }
     }

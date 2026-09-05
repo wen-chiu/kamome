@@ -11,11 +11,16 @@ import SwiftUI
 /// question. That omission is **deliberately deferred**, in the ADR, rather than
 /// half-built here.
 ///
-/// **Every sentence is `AboutView`'s sentence** (`PrivacyNoticeCopy`), in the
-/// same order, so the one-time telling and the screen a user can go back to
-/// cannot say different things. ⏳ The wording is still Chiu's and is not ruled
-/// on (`Docs/release-readiness.md` S2/S3); this ships so the obligation is met
-/// rather than deferred.
+/// **Two sentences and a pointer, and that is the whole card** (Chiu
+/// 2026-09-06). It was the full privacy notice first; a wall of text at first
+/// launch is not read, and a notice nobody reads discloses nothing. The detail
+/// it dropped — the payload, retention, the control, what the relay is — is on
+/// `AboutView`, which is where someone goes when they want it, and the last line
+/// says so.
+///
+/// **Every sentence is still `AboutView`'s sentence** (`PrivacyNoticeCopy`):
+/// the card shows the lead, `AboutView` shows the lead *and* the rest. Nothing
+/// is written twice, so the two cannot drift.
 struct FirstRunNoticeView: View {
     let matching: TrackingConfig.Matching
     /// Supplied by the presenter, so this view stores nothing and the fact
@@ -30,9 +35,6 @@ struct FirstRunNoticeView: View {
                     // The load-bearing sentence: which parties handle a
                     // journey's coordinates on the way to the roads.
                     Text(LocalizedStringKey(PrivacyNoticeCopy.hopKey(for: matching)))
-                    Text(PrivacyNoticeCopy.importedBody(for: matching))
-                    Text("privacy_retention")
-                    Text("privacy_control")
                     Text("first_run_where")
                         .font(.footnote)
                         .foregroundStyle(.secondary)

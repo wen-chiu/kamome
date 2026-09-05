@@ -109,7 +109,7 @@ which no Claude session can do).
 | **Camera shake / ghosting closed** — the loop reprojects one snapshot instead of cross-fading two. | 2026-08-31 (b) |
 | **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
 | **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
-| **The user is told once, on first run, that coordinates leave this device — and the notice informs rather than asks.** Refusal is deferred until a mechanism exists; wording not ruled on. | 2026-09-05 |
+| **The user is told once, on first run, that coordinates leave this device — and the notice informs rather than asks.** Refusal is deferred until a mechanism exists; the card is three lines. | 2026-09-05 |
 | **The Worker carries a per-day spend ceiling and fails closed.** 2000/day in `wrangler.toml`, never in the app's config. Live since 2026-09-04. KV's overshoot is accepted and its window is measured in tens of seconds; **do not switch to a Durable Object.** | 2026-09-04 |
 | **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
 

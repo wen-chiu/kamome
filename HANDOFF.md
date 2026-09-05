@@ -41,11 +41,10 @@ is the gate**; these are the only rows on it that nobody has started.
    D2 feeds a mandatory submission item. → `Docs/release-readiness.md` Tier 3,
    `Docs/device-test-P3.md`.
 
-**S4 is half gated** (`check-worker-privacy.sh`, 2026-09-05): the deploy config's
-no-log settings are asserted. What is not, and cannot be from here: **Logpush,
-Cloudflare's retention, and whether anyone ran `wrangler tail`** — an account this
-repo cannot see — and `/v1/routing` is still GET-only, so real coordinates ride in
-the URL. → `Docs/release-readiness.md` S4.
+**S4 is half gated** (`check-worker-privacy.sh`, 2026-09-05): the Worker's deploy
+config is asserted no-log. **The account side — Logpush, retention, `wrangler
+tail` — cannot be asserted from here**, and `/v1/routing` is still GET.
+→ `Docs/release-readiness.md` S4.
 
 ---
 
@@ -79,10 +78,11 @@ the URL. → `Docs/release-readiness.md` S4.
   they are not in §0's decided-exceptions list. Either a recorded exception or
   they move out. **Deliberately not gated** — a gate would pre-empt your call.
   → `Docs/handoff-audit-2026-08-30.md` finding 7.
-- **S2's placement and S3's wording** ship as a working draft, not a ruling — and
-  the first-run notice now shows the same strings, so a rewording moves both. Its
-  own open half is **whether a user may refuse**, deferred until a mechanism
-  exists (ADR 2026-09-05). → `Docs/release-readiness.md` S2/S3.
+- **S2's placement and `AboutView`'s wording** ship as a working draft, not a
+  ruling. The first-run card's wording **is** ruled — three lines, 2026-09-06 —
+  and shares About's strings, so a rewording moves both. Its own open half is
+  **whether a user may refuse**, deferred until a mechanism exists
+  (ADR 2026-09-05). → `Docs/release-readiness.md` S2/S3.
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.
@@ -139,8 +139,11 @@ the URL. → `Docs/release-readiness.md` S4.
 - **Read a style value off the preset the app selects, never off the defaults.**
   `RecapStyle`'s defaults are unrendered; the app selects `modernMinimal`. Got
   wrong twice, cost a ledger correction both times.
-- **Two sessions sharing one checkout contaminate each other's counts.** Confirm
-  your branch and your distance from `origin/main` first.
+- **Two sessions contaminate each other's counts** (one checkout) **and each
+  other's simulator** (one bundle id): `xcodebuild test` installs the other
+  session's build over yours, so a capture can show the wrong wording
+  convincingly. Confirm your branch; read the *installed* bundle's strings before
+  believing a screenshot (`Docs/demos/release/README.md`).
 - **MapKit saturates at ~109° of longitude** — Taiwan→Iceland has no frame at any
   padding, so the frozen country card is a **main path**, not a fallback.
 

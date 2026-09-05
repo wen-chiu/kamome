@@ -85,6 +85,12 @@ struct AboutView: View {
             // roads — read off the config, so the config flip changes the
             // sentence with it (`PrivacyNoticeCopy`).
             Text(LocalizedStringKey(PrivacyNoticeCopy.hopKey(for: matching)))
+            // The rest of the relay's story. The first-run card carries only the
+            // sentence above, so this is where the detail lives rather than
+            // being cut from the app entirely (Chiu 2026-09-06).
+            if let detail = PrivacyNoticeCopy.relayDetailKey(for: matching) {
+                Text(LocalizedStringKey(detail))
+            }
             payload("privacy_imported_title", body: importedBody)
             payload("privacy_recorded_title", body: Text("privacy_recorded_body"))
             Text("privacy_retention")

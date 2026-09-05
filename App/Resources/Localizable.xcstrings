@@ -230,13 +230,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This is shown once. You can read it again at any time under About & Privacy."
+            "value": "Shown once. The full notice is under About & Privacy."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這則說明只會顯示一次；你隨時可以在「關於與隱私」裡再讀一遍。"
+            "value": "只顯示一次；完整說明在「關於與隱私」裡。"
           }
         }
       }
@@ -791,13 +791,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Those positions go straight from this device to Geoapify, which answers with the roads."
+            "value": "They go straight from this device to Geoapify."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些座標會從這台裝置直接送到 Geoapify，由它回覆道路的位置。"
+            "value": "它們會從這台裝置直接送到 Geoapify。"
           }
         }
       }
@@ -808,13 +808,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Those positions do not go straight to Geoapify. They go first to Kamome's own routing relay — a small service on Cloudflare that holds the Geoapify key, so that no copy of the key travels inside this app — and the relay forwards the request. The relay keeps no record of what it forwards; it counts requests, and nothing more. It also forwards nothing that identifies your device, so Geoapify sees the relay rather than your phone."
+            "value": "They go to Kamome's relay, which holds the map key, and on to Geoapify."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些座標不會直接送到 Geoapify。它們會先送到卡摸咩自己的路線中繼——一個放在 Cloudflare 上的小服務，替 App 保管 Geoapify 金鑰，讓這個 App 裡不必夾帶任何一份金鑰——再由中繼把請求轉送出去。中繼不會保留任何一筆轉送內容的紀錄，只會計算請求次數。中繼也不會轉送任何足以識別你裝置的資料，因此 Geoapify 看到的是中繼，不是你的手機。"
+            "value": "它們會先送到卡摸咩的中繼（地圖金鑰放在那裡），再送到 Geoapify。"
           }
         }
       }
@@ -859,13 +859,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, your trips and the films Kamome makes stay on this device. Kamome has no account, sends nothing to analytics, and reports nowhere you have been. One thing does leave: to draw a journey along real roads, Kamome has to ask Geoapify where those roads are."
+            "value": "Your photos, trips and films stay on this device. One thing leaves it: to draw your route along real roads, Kamome sends the positions along that route."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的相片、旅程，以及卡摸咩製作的影片，都留在這台裝置上。卡摸咩沒有帳號、不傳送任何分析資料，也不會回報你去過哪裡。只有一件事會送出去：為了讓旅程沿著真實道路繪製，卡摸咩必須向 Geoapify 詢問那些道路的位置。"
+            "value": "你的相片、旅程與影片都留在這台裝置上。只有一件事會離開：為了沿著真實道路繪製路線，卡摸咩會送出這條路線上的位置。"
           }
         }
       }
@@ -900,6 +900,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "卡摸咩記錄的旅程"
+          }
+        }
+      }
+    },
+    "privacy_relay_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The relay is a small service on Cloudflare. It keeps no record of what it forwards — it counts requests, nothing more — and it forwards nothing that identifies your device, so Geoapify sees the relay rather than your phone."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中繼是放在 Cloudflare 上的小服務。它不保留任何一筆轉送內容的紀錄，只計算請求次數；也不會轉送任何足以識別你裝置的資料，因此 Geoapify 看到的是中繼，不是你的手機。"
           }
         }
       }
