@@ -3514,8 +3514,16 @@ ceiling's job, and its bound there remains INFERRED. The cheapest thing that
 would settle it now is a production measurement, which costs real credits and is
 not worth buying below a real incident.
 
-### ⏳ NOT done, and deliberately
+### ⏳ NOT done
 
+- 🔴 **The Worker is NOT deployed. Production still runs version `5b33922c`
+  (2026-09-04), which has the day's ceiling and no burst limit.** A deploy may
+  come only from merged `main`, and merging is not a session's action — this
+  session's attempt was refused, correctly. **Until it is deployed, S4's gate
+  guards the repository rather than the running Worker, and the burst limit does
+  not exist in production**, so `matching.base_url` must not be flipped. The
+  after-probe (`Deploy/worker/README.md` §"Why `preview_urls = false`") is owed
+  by whoever deploys, and its 200 will now prove three things rather than two.
 - **The config flip is not made** (`CLAUDE.md` rule 2) — it changes shipped
   behaviour, it is two values and no code, and it is Chiu's. It is now the only
   thing between the Worker and carrying traffic.

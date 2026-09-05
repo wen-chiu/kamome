@@ -257,7 +257,9 @@ a cache, not a bug — wait a minute before concluding anything.**
 
 ## The burst limit
 
-**Built 2026-09-05.** Cloudflare's rate-limiting binding, in `src/index.js`
+**Built 2026-09-05. ⚠️ NOT YET DEPLOYED — production still runs version
+`5b33922c` (2026-09-04), which has the ceiling and no burst limit.** Cloudflare's
+rate-limiting binding, in `src/index.js`
 **before** the per-day counter. It exists because the ceiling provably cannot see
 a burst: KV's read cache is tens of seconds wide (measured 2026-09-04), so one
 client could spend the whole 2000 inside a single window while the stored number
@@ -320,7 +322,10 @@ the stubbed suite predicts.
 
 ## The no-log gate
 
-**Built 2026-09-05, and it closes S4.** `/v1/routing` is GET-only, so a real
+**Built 2026-09-05, and it closes S4 for the repository.** ⚠️ It asserts the
+artifact about to be deployed, not the Worker running now — those match only
+after the next deploy.
+ `/v1/routing` is GET-only, so a real
 trip's coordinates travel **in the URL** — the most-logged part of an HTTP
 request. Until now "no `console.log`" and "`[observability] enabled = false`"
 were true only while someone remembered them.

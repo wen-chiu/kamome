@@ -24,10 +24,12 @@ is the gate**; these are the only rows on it that nobody has started.
 1. **The config flip — two values, no code, and it is Chiu's** (`CLAUDE.md`
    rule 2). `matching.base_url` is still `""` and `api_key_required` still
    `true`, so no build calls the Worker and **every build still carries the
-   routing key**. Flipping it closes **S6 by construction**. ✅ **Every
-   precondition is now met**: the Worker is capped per day (S5), carries a
-   **60/min per-IP burst limit**, and its no-log property is a gate (S4 closed
-   2026-09-05). → `Docs/release-readiness.md` S4–S6; ADR 2026-09-05.
+   routing key**. Flipping it closes **S6 by construction**.
+   ⚠️ **One precondition is met in the repo and NOT in production**: the
+   **60/min per-IP burst limit** is written, tested and merged-pending, but
+   **the Worker has not been redeployed** — production is still `5b33922c`, the
+   ceiling alone. **Deploy before flipping.** → `Docs/release-readiness.md`
+   S4–S6; ADR 2026-09-05 §"NOT done".
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
