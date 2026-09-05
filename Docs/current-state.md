@@ -55,12 +55,9 @@ P7 backend deferred.
 ## Where the work actually stands
 
 **Everything in Phase 4 that was in flight has landed and been judged**, the
-type-2 opening included: it is retimed (the trip starts at 13.09 s), the crossing
-carries a **boarding pass** and flies a **plane**, both ends of the flight are
-**marked and named**, and every kilometre the film reports is the local journey
-(ADRs 2026-09-03 (b), 2026-09-04 (b)). The open items are Chiu's judgements —
-five of them from that round, four with the designer — and one unstarted release
-path. Both live in `HANDOFF.md`, which wins on findings and blockers.
+type-2 opening included — retimed, with a boarding pass, a plane and two marked
+flight ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's
+judgement, in `HANDOFF.md`, which wins on findings and blockers.
 
 The two things between Kamome and a submission:
 **the config flip** — `matching.base_url` is still `""` and `api_key_required`
