@@ -10,9 +10,9 @@ Last synced: 2026-09-05 against decisions.md **2026-09-05** and `main` at
 **PR #41**. Re-read for this sync: the 2026-09-04 and 2026-09-05 ledger entries,
 every line of `HANDOFF.md`, and `Docs/release-readiness.md` S4/S5/S6. One thing
 moved: **the Worker's hardening is written and gated** — a 60/min per-IP burst
-limit beside the day's ceiling, and **S4 closed**, its no-log property now a gate
-`npm run deploy` runs. 🔴 **Not yet deployed: production is still `5b33922c`.**
-Deploy, then the flip is Chiu's. Reflected below, not only in this line.
+limit beside the day's ceiling, and **S4 closed** (no-log is a gate
+`npm run deploy` runs). 🔴 **Not deployed: production is still `5b33922c`.**
+Deploy, then the flip is Chiu's. Reflected below, not only here.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -40,9 +40,9 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 **Phase 4 — films worth keeping** (opened 2026-08-15):
 
 1. ✅ Vehicle sprites — PR #15.
-2. ✅ Cross-region crossing — built and judged, PRs #24/#31.
-3. ~~Export that survives~~ — **dissolved 2026-09-02**: film-quality half closed
-   by ADR 2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
+2. ✅ Cross-region crossing — PRs #24/#31.
+3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half closed by ADR
+   2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
@@ -62,8 +62,8 @@ judgement, in `HANDOFF.md`, which wins on findings and blockers.
 The two things between Kamome and a submission:
 **the config flip** — `matching.base_url` is still `""` and `api_key_required`
 still `true`, so **every build carries the routing key**; the Worker that ends
-that is deployed and capped, with a burst limit and a no-log gate **written but
-not yet deployed** (S4/S5 closed), and the flip itself is two values and
+that is deployed and capped, its burst limit and no-log gate **written but not
+deployed** (S4/S5 closed), and the flip itself is two values and
 **Chiu's decision** — and **D1–D5** (one device
 session, never run, which no Claude session can do).
 → `Docs/release-readiness.md`.
