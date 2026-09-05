@@ -3359,3 +3359,103 @@ stays a legal answer — it must be *written*. A defaulted nil is a silent fallb
 is not an extra log line, because logs work only when somebody reads one. Twelve
 call sites now state their answer, and a thirteenth cannot be added without
 choosing.
+
+## 2026-09-05 — The user is told once, before any coordinate leaves, and the telling is not a question
+
+**Status:** approved (implementation of Chiu's 2026-09-04 answer). **Scope:**
+`App/`, `UI/`, `App/Resources/Localizable.xcstrings`, one new gate in `Scripts/`.
+**Explicitly not in scope: `Config/TrackingConfig.json`'s `matching` block.**
+That is the config flip, it is Chiu's (`CLAUDE.md` rule 2), and this entry is its
+precondition, not the thing itself.
+
+### The question this closes
+
+`Docs/release-readiness.md` S3 left one line open on purpose: **does the import
+flow warn at the point of import?** The reason it stayed open is still true — *an
+About screen a user may never open is not a warning*, and S2's placement put the
+notice behind an `info.circle` button in a toolbar.
+
+**Chiu answered it 2026-09-04:** *「使用者第一次執行時告知一次，記住，之後不再
+出現。」* Tell the user once, on first run; remember it; never show it again.
+
+### Decision
+
+`FirstRunNoticeView`, raised from `HomeView` on appearance, acknowledged by one
+button, and remembered in `UserDefaults` by `FirstRunNotice`.
+
+**1. It informs and is acknowledged. It does not ask.** One button, "Got it".
+No accept, no decline, no toggle — and `LocalizationTests` fails on a button that
+reads like consent in either language.
+
+⚠️ **The ability to refuse is DEFERRED, deliberately, and is not half-built.** A
+real refusal needs two things this app does not have: a path that actually
+switches route matching off for that user, and somewhere in the app to change the
+answer back. Without both, a "Decline" is a button that changes nothing while
+implying it changed something — worse than not asking, because it manufactures
+consent that was never obtained. **The control that does exist is the one
+`privacy_control` already names**: you decide what is sent by deciding what to
+import, and the album path that sentence points at ships. If refusal is wanted,
+it is a product decision with a mechanism attached, and it is Chiu's.
+
+**2. One string source, not two.** Every sentence in the notice is `AboutView`'s
+sentence, in `AboutView`'s order, through `PrivacyNoticeCopy`. Two copies of a
+legal statement about what leaves a user's device drift, and the drifted one is
+still a statement someone relied on.
+
+⏳ **The wording and S2's placement remain Chiu's and are NOT ruled on by this
+entry.** They ship as the working draft S2/S3 already ship as. What this entry
+adds is that a rewording now moves both surfaces at once.
+
+**3. The notice names every party that handles a coordinate**, and the sentence
+is read off the config rather than typed into the copy — the rule S3 already set
+for the two numbers in `privacy_imported_body`. `api_key_required` *is* the
+topology: `true` means this build carries the Geoapify key and calls the provider
+itself (`privacy_hop_direct`), `false` means the key lives in Kamome's relay and
+the app calls that (`privacy_hop_relay`, which names the relay, Cloudflare that
+runs it, and Geoapify beyond it). The flip changes the flag; the sentence follows.
+
+**4. It is silent until this build can actually send.** `shouldPresent` requires
+a non-empty `matching.base_url` — the *effective* one, after
+`AppConfig.applyingRoutingKey` has emptied it for a build carrying no key. Today
+that is `""`, so the notice does not appear, because a notice shown now would
+describe a state that has not arrived. **That mistake already has a row on the
+gate: S3b**, a payload table describing a state that never came. **The config
+flip is therefore what publishes the notice**, on the first launch after it
+ships, for new and existing users alike — which is exactly what makes this a
+precondition rather than a parallel change.
+
+⚠️ **This is a reading of Chiu's answer, and it is the one place this entry
+departs from its literal words.** "First run" here means the first run that can
+send something, not the first run of the app. If he meant the notice should
+appear even while routing is off, it is a one-line change to `shouldPresent` —
+and then the copy has to stop saying coordinates leave, because they do not.
+
+**5. What is remembered is a version, not a Bool.**
+`kamome.privacyNoticeAcknowledgedVersion`, raised **only when what is sent or
+where it goes materially changes** — never for a typo or a translation pass.
+This exists because the wording is openly still Chiu's: a Bool would silence the
+next notice for everyone who saw this one. **`UserDefaults` goes with the app**,
+so a reinstall is told again; over-telling is the safe direction and a test pins
+which direction was chosen.
+
+### S4, in the same pass: half of it is a gate now
+
+`Scripts/check-worker-privacy.sh` asserts what the repository can see, on every
+`./check.sh`, and it was positive-controlled five ways before being trusted
+(observability on, observability absent, preview URLs on, a planted
+`console.log`, and a *commented-out* setting, which must not satisfy it):
+
+- `[observability] enabled = false` — Cloudflare's default is ON, so its absence
+  is not a neutral omission. Workers Logs record request URLs, and here a
+  request URL is a trip.
+- `preview_urls = false` — otherwise every versioned deploy gets a permanent
+  public hostname on the same key binding.
+- no `console.*` anywhere in `Deploy/worker/src/`.
+
+⚠️ **What no repository gate can establish, and what S4 therefore keeps:**
+account-level Logpush, Cloudflare's own analytics retention, and whether anyone
+has run `wrangler tail` against production. All three live in an account this
+repository cannot see. And the shape underneath all of it is unchanged —
+**`/v1/routing` is GET-only, so real coordinates travel in the URL**, which is
+the most-logged part of an HTTP request. Moving them into a POST body is a
+provider-shaped change, not a Worker-shaped one, and it is not made here.

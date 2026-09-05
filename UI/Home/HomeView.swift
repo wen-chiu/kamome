@@ -11,6 +11,7 @@ struct HomeView: View {
     @State private var path: [String] = []
     @State private var showingImport = false
     @State private var showingAbout = false
+    @State private var showingFirstRunNotice = false
     #if DEBUG
     @State private var debugShareFile: DebugShareFile?
     #endif
@@ -45,6 +46,12 @@ struct HomeView: View {
             .sheet(isPresented: $showingAbout) {
                 AboutView(matching: session.config.matching)
             }
+            .sheet(isPresented: $showingFirstRunNotice) {
+                FirstRunNoticeView(matching: session.config.matching) {
+                    FirstRunNotice.acknowledge()
+                    showingFirstRunNotice = false
+                }
+            }
             #if DEBUG
             .sheet(item: $debugShareFile) { file in
                 ActivityShareSheet(url: file.url)
@@ -64,6 +71,15 @@ struct HomeView: View {
                 showingImport = true
             }
             #endif
+            // Told once, before this build can send a real coordinate anywhere
+            // (Chiu 2026-09-04; ADR 2026-09-05). `showingImport` is checked
+            // because the DEBUG demo automation above opens a sheet from this
+            // same `onAppear`, and two sheets raised in one pass is a race
+            // rather than a stack. Nothing is remembered on the launch that
+            // loses it, so the notice comes back on the next one.
+            if !showingImport, FirstRunNotice.shouldPresent(matching: session.config.matching) {
+                showingFirstRunNotice = true
+            }
         }
     }
 

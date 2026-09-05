@@ -32,3 +32,36 @@ a stale screenshot.
 
 **No location data is in these images** (§0): the device holds no trips, so the
 sheet is the only thing on screen.
+
+## `first-run-notice-*.png` — the S3 answer, 2026-09-05
+
+ADR 2026-09-05: the user is **told once, on first run**, that real trip
+coordinates leave the device. The unit tests prove the gating and the
+remembering; they cannot prove anyone can read the screen, which is the same gap
+the About captures exist to close.
+
+| file | what it shows |
+|---|---|
+| `first-run-notice-en.png` | the notice as it opens in `en`: what stays, then the relay hop |
+| `first-run-notice-en-2.png` | the rest of `en`: the payload, retention, the control, and where to read it again |
+| `first-run-notice-zh-Hant.png` | the whole notice in `zh-Hant`, the development language |
+| `first-run-notice-relaunch-en.png` | **after "Got it", terminate, relaunch** — Home, no notice. The `info.circle` is how it is read again |
+
+⚠️ **Captured against a *simulated* post-flip build, and the repository's config
+was not touched.** The notice is silent while `matching.base_url` is `""`, so the
+copy of the built `.app` used for these had its **bundled** `TrackingConfig.json`
+set to `base_url = https://kamome-routing.invalid` and `api_key_required = false`
+— the state the config flip will create. `Config/TrackingConfig.json` is
+unchanged and the gate still reads `""`. Reproduce:
+
+    cp -R <DerivedData>/Build/Products/Debug-iphonesimulator/Kamome.app /tmp/cap/
+    # edit /tmp/cap/Kamome.app/TrackingConfig.json: base_url, api_key_required
+    xcrun simctl install <udid> /tmp/cap/Kamome.app
+    xcrun simctl launch  <udid> com.chiu.kamome.dev -AppleLanguages '(en)' -AppleLocale en_US
+
+⚠️ **`api_key_required = false` is what selects the sentence naming the relay**
+(`privacy_hop_relay`). A capture made with it `true` would show
+`privacy_hop_direct` instead — that is the copy following the config, not a
+stale screenshot.
+
+**No location data is in these images** (§0): the device holds no trips.

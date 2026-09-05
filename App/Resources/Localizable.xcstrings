@@ -207,6 +207,40 @@
         }
       }
     },
+    "first_run_acknowledge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got it"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我知道了"
+          }
+        }
+      }
+    },
+    "first_run_where": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is shown once. You can read it again at any time under About & Privacy."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這則說明只會顯示一次；你隨時可以在「關於與隱私」裡再讀一遍。"
+          }
+        }
+      }
+    },
     "home_title": {
       "extractionState": "manual",
       "localizations": {
@@ -747,6 +781,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "哪些資料會離開這台裝置"
+          }
+        }
+      }
+    },
+    "privacy_hop_direct": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Those positions go straight from this device to Geoapify, which answers with the roads."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些座標會從這台裝置直接送到 Geoapify，由它回覆道路的位置。"
+          }
+        }
+      }
+    },
+    "privacy_hop_relay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Those positions do not go straight to Geoapify. They go first to Kamome's own routing relay — a small service on Cloudflare that holds the Geoapify key, so that no copy of the key travels inside this app — and the relay forwards the request. The relay keeps no record of what it forwards; it counts requests, and nothing more. It also forwards nothing that identifies your device, so Geoapify sees the relay rather than your phone."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些座標不會直接送到 Geoapify。它們會先送到卡摸咩自己的路線中繼——一個放在 Cloudflare 上的小服務，替 App 保管 Geoapify 金鑰，讓這個 App 裡不必夾帶任何一份金鑰——再由中繼把請求轉送出去。中繼不會保留任何一筆轉送內容的紀錄，只會計算請求次數。中繼也不會轉送任何足以識別你裝置的資料，因此 Geoapify 看到的是中繼，不是你的手機。"
           }
         }
       }

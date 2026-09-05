@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-04.** `main` carries PRs #16–#40. Everything closed has been
+**Updated 2026-09-05.** `main` carries PRs #16–#41. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -41,8 +41,11 @@ is the gate**; these are the only rows on it that nobody has started.
    D2 feeds a mandatory submission item. → `Docs/release-readiness.md` Tier 3,
    `Docs/device-test-P3.md`.
 
-Also unguarded and nobody's: **S4** — the Worker's no-log property is asserted
-nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
+**S4 is half gated** (`check-worker-privacy.sh`, 2026-09-05): the deploy config's
+no-log settings are asserted. What is not, and cannot be from here: **Logpush,
+Cloudflare's retention, and whether anyone ran `wrangler tail`** — an account this
+repo cannot see — and `/v1/routing` is still GET-only, so real coordinates ride in
+the URL. → `Docs/release-readiness.md` S4.
 
 ---
 
@@ -76,10 +79,10 @@ nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
   they are not in §0's decided-exceptions list. Either a recorded exception or
   they move out. **Deliberately not gated** — a gate would pre-empt your call.
   → `Docs/handoff-audit-2026-08-30.md` finding 7.
-- **S2's placement and S3's wording** ship as a working draft, not a ruling. And
-  still open on purpose: **whether the import flow warns at the point of import**
-  — an About screen a user may never open is not a warning.
-  → `Docs/release-readiness.md`.
+- **S2's placement and S3's wording** ship as a working draft, not a ruling — and
+  the first-run notice now shows the same strings, so a rewording moves both. Its
+  own open half is **whether a user may refuse**, deferred until a mechanism
+  exists (ADR 2026-09-05). → `Docs/release-readiness.md` S2/S3.
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.

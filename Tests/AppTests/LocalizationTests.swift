@@ -228,4 +228,57 @@ final class LocalizationTests: XCTestCase {
             XCTAssertFalse(rendered.contains("%"), "[\(locale)] an unfilled specifier: \(rendered)")
         }
     }
+
+    /// **The hop sentence names every party that handles a coordinate** (Chiu
+    /// 2026-09-04). The relay is not an implementation detail once it is in the
+    /// path: it is an extra party, on someone else's infrastructure, and a
+    /// notice that says "sent to Geoapify" while the request goes somewhere else
+    /// first is the same class of understatement as "start and end coordinates".
+    ///
+    /// The direct sentence is held to *not* naming a relay, because the two keys
+    /// exist to describe two different topologies and a copy edit that made them
+    /// interchangeable would silently make one of them false.
+    func testTheHopSentencesNameEveryPartyThatHandlesACoordinate() throws {
+        let relayEN = try localizedValue("privacy_hop_relay", locale: "en")
+        XCTAssertTrue(relayEN.contains("Geoapify"), relayEN)
+        XCTAssertTrue(relayEN.contains("relay"), "the extra party must be named: \(relayEN)")
+        XCTAssertTrue(relayEN.contains("Cloudflare"), "whose infrastructure it runs on: \(relayEN)")
+
+        let relayZH = try localizedValue("privacy_hop_relay", locale: "zh-Hant")
+        XCTAssertTrue(relayZH.contains("Geoapify"), relayZH)
+        XCTAssertTrue(relayZH.contains("中繼"), "the extra party must be named: \(relayZH)")
+        XCTAssertTrue(relayZH.contains("Cloudflare"), "whose infrastructure it runs on: \(relayZH)")
+
+        for locale in ["en", "zh-Hant"] {
+            let direct = try localizedValue("privacy_hop_direct", locale: locale)
+            XCTAssertTrue(direct.contains("Geoapify"), "[\(locale)] \(direct)")
+            XCTAssertFalse(
+                direct.lowercased().contains("relay") || direct.contains("中繼"),
+                "[\(locale)] this sentence describes the build that has no relay: \(direct)"
+            )
+        }
+    }
+
+    /// **The first-run notice tells; it does not ask** (ADR 2026-09-05). The
+    /// button may not read as consent in either language, because consent that
+    /// cannot be withheld is not consent — and a "Decline" this app cannot
+    /// honour is worse than never offering one.
+    ///
+    /// Matched loosely on purpose: the wording is still Chiu's to rule on, and
+    /// the rule has to survive the rewording.
+    func testTheFirstRunNoticeTellsRatherThanAsks() throws {
+        let english = try localizedValue("first_run_acknowledge", locale: "en").lowercased()
+        for consent in ["agree", "accept", "allow", "consent"] {
+            XCTAssertFalse(english.contains(consent), "[en] this button acknowledges, it does not consent: \(english)")
+        }
+        let chinese = try localizedValue("first_run_acknowledge", locale: "zh-Hant")
+        for consent in ["同意", "接受", "允許"] {
+            XCTAssertFalse(chinese.contains(consent), "[zh-Hant] this button acknowledges, it does not consent: \(chinese)")
+        }
+
+        // Shown once means a user has to be told where it lives afterwards, and
+        // the place named has to be the screen that actually exists.
+        XCTAssertTrue(try localizedValue("first_run_where", locale: "en").contains("About"))
+        XCTAssertTrue(try localizedValue("first_run_where", locale: "zh-Hant").contains("關於"))
+    }
 }
