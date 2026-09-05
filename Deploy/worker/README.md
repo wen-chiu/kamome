@@ -51,6 +51,8 @@ That permission comes with conditions, each of which exists for a reason:
 - **`wrangler tail` remains forbidden**, and delegation does not soften it. It
   streams request URLs; `/v1/routing` is GET-only, so a tailed line carries a real
   trip's coordinates. §0 does not have a convenience exception.
+- **`npm test` must be green before a deploy**, and `npm run deploy` now enforces
+  that rather than trusting it. Both suites, both positive controls.
 - **Every deploy reports its Version ID and runs the probe.** A deploy without an
   after-probe is not a verified deploy — it is a deploy someone feels good about.
   The pass conditions are in "Why `preview_urls = false`" below.
@@ -138,9 +140,12 @@ around it by deleting `.npmrc`. wrangler 4.127.1 genuinely requires Node ≥ 22.
   is absent on purpose: recorded traces are not sent anywhere today
   (`Docs/decisions.md` 2026-08-20 (d)), and an open proxy is somebody else's
   bill. Capture Beta adds it deliberately or not at all.
-- **Never logs.** No `console.log`, and `[observability] enabled = false` in
-  `wrangler.toml`. Two things stay off after deploy, and they are easy to switch
-  on by accident:
+- **Never logs — and it is a check now, not a promise** (S4, closed 2026-09-05).
+  `npm test` scans `src/` and `wrangler.toml` and fails on `console.*`, on
+  observability being on or absent, on `logpush`, on a tail consumer, on an
+  analytics dataset, and on `preview_urls` drifting off `false`. See "The no-log
+  gate" below. Two things stay off after deploy, and they are easy to switch on
+  by accident:
   - **Logpush** — records request URLs, which here means coordinates.
   - **`wrangler tail`** — streams live requests to your terminal, and here a
     request line *is* a trip's coordinates. Do not run it against production.
@@ -160,14 +165,22 @@ around it by deleting `.npmrc`. wrangler 4.127.1 genuinely requires Node ≥ 22.
   upstream connection failure is 502, because the app reads 400 as "no road
   joins these places" and would draw that leg dashed permanently. Broken
   plumbing has to arrive as "nobody answered", which is retryable.
+- **Refuses above a per-IP burst limit.** Cloudflare's rate-limiting binding,
+  **60 requests/minute per connecting address**, keyed by `CF-Connecting-IP`.
+  Above it the Worker answers **429 with `Retry-After: 60`**, never reaches KV
+  and never reaches Geoapify. ⚠️ **It does not replace the per-day ceiling and
+  the ceiling does not replace it** — 60 s is Cloudflare's longest period, so a
+  burst limit cannot express a day. See "The burst limit" below.
 - **Refuses above a per-day ceiling.** A KV counter keyed by UTC date; above
   `DAILY_REQUEST_CEILING` the Worker answers **429 with `Retry-After` set to the
   seconds until UTC midnight**, and does not call Geoapify. See "The spend
   ceiling" below.
-- **Fails closed when it cannot count.** No KV binding, no usable ceiling, or a
-  KV error is **503**, not a forwarded request. A Worker that cannot count is a
-  Worker with no ceiling, and forwarding anyway is the silent fallback that would
-  make the proxy only *look* capped.
+- **Fails closed when it cannot count or cannot limit.** No KV binding, no
+  usable ceiling, a KV error, **no rate-limit binding, no usable
+  `BURST_RETRY_AFTER_S`, or a limiter error** — all **503**, never a forwarded
+  request. A Worker that cannot count is a Worker with no ceiling, and one whose
+  limiter is missing *looks* hardened without being it; forwarding anyway is the
+  silent fallback that would make the proxy only *look* capped.
 - **Passes `Retry-After` through.** Geoapify itself never sends 429 — it sheds
   load as a TCP reset — so this hop is the only one that can distinguish "busy"
   from "unreachable". It is why `RouteProviderFailure.rateLimited` is still in
@@ -242,6 +255,107 @@ returned the new one. That is KV's read cache, it is the mechanism behind the
 accepted overshoot, and **it means a counter that "did not increment" is usually
 a cache, not a bug — wait a minute before concluding anything.**
 
+## The burst limit
+
+**Built 2026-09-05. ⚠️ NOT YET DEPLOYED — production still runs version
+`5b33922c` (2026-09-04), which has the ceiling and no burst limit.** Cloudflare's
+rate-limiting binding, in `src/index.js`
+**before** the per-day counter. It exists because the ceiling provably cannot see
+a burst: KV's read cache is tens of seconds wide (measured 2026-09-04), so one
+client could spend the whole 2000 inside a single window while the stored number
+still read low.
+
+🔴 **The two are complements, and neither is a substitute for the other.**
+Cloudflare's maximum `period` is **60 seconds**, so a burst limit cannot express
+a daily total; a daily total cannot express a burst. Do not remove one because
+the other exists.
+
+| what | where |
+|---|---|
+| the number | `simple = { limit = 60, period = 60 }` on the `[[ratelimits]]` binding in `wrangler.toml`. **Never a literal in the source** — the binding exposes `.limit()` and nothing else, so there is no number in `src/index.js` to drift from the deployed one. |
+| the bucket | `CF-Connecting-IP`. A request without one shares a single `no-connecting-ip` bucket rather than skipping the limit. |
+| over the limit | **429**, `Retry-After` = `BURST_RETRY_AFTER_S`, empty body, KV never read, upstream never called, **not counted against the day**. |
+| cannot limit | **503** — fail closed, exactly as the ceiling does. |
+
+**Why 60 and not less.** Kamome's own legitimate burst is **~29 requests/minute**
+— Iceland's 58 legs inside `matching.trip_budget_s` 120 — so anything at or below
+~30/min throttles a genuine import, which is a worse failure than the one this
+guards. 60 leaves room for two such imports at once. A test asserts the floor, so
+"tightening" it into real traffic fails before it deploys.
+
+Three things worth knowing before changing anything here:
+
+- ⚠️ **The limit is per Cloudflare location, not global.** VERIFIED from
+  Cloudflare's own docs, 2026-09-05: *"For each unique key you pass to your rate
+  limiting binding, there is a unique limit per Cloudflare location."* A client
+  spread across locations gets 60/min in each — so this half bounds one address in
+  one place, and **the per-day ceiling is what bounds the total.** That is the
+  complementarity, not a demotion: neither half is the other's substitute
+  (re-rated 2026-09-04, built 2026-09-05).
+- ⚠️ **Everyone behind one carrier NAT shares a bucket.** At 60/min that is two
+  concurrent Iceland-sized imports per address per location. If it ever bites,
+  raise the value — it is configuration.
+- **`namespace_id` provisions nothing.** Cloudflare defines it as *"a string
+  containing a positive integer that uniquely defines this rate limiting
+  namespace within your Cloudflare account"*. It is a name chosen in
+  `wrangler.toml`, not a resource created in an account, so this needed nothing
+  of Chiu's.
+
+**Positive control, and re-run it after any change here.** Unlike the ceiling's,
+this one runs against the **real binding** — `wrangler dev` gives miniflare's own
+rate limiter, so the stub in the suite is not the only evidence:
+
+```bash
+cd Deploy/worker && npx wrangler dev --port 8799 --persist-to /tmp/kamome-dev
+# then fire 75 concurrent GET /v1/routing — public landmark coordinates only (§0)
+```
+
+Measured 2026-09-05, with a placeholder key in `.dev.vars` (which is why the
+through-traffic is Geoapify's own 401 — the point is that it reached the provider):
+
+```
+burst @ limit 60: 75 concurrent → {"401":60,"429":15}  Retry-After seen: ["60"]
+```
+
+Exactly the threshold through, everything above it refused, and the same 60/15
+the stubbed suite predicts.
+
+## The no-log gate
+
+**Built 2026-09-05, and it closes S4 for the repository.** ⚠️ It asserts the
+artifact about to be deployed, not the Worker running now — those match only
+after the next deploy.
+ `/v1/routing` is GET-only, so a real
+trip's coordinates travel **in the URL** — the most-logged part of an HTTP
+request. Until now "no `console.log`" and "`[observability] enabled = false`"
+were true only while someone remembered them.
+
+`test/deploy-config.test.mjs` scans `src/` and `wrangler.toml` and fails on:
+
+| rule | why it is here |
+|---|---|
+| `console.*` anywhere in `src/` | the direct sink. Forbidden as a **string**, comments included — deciding what is "really" a call needs a parser, and a parser is a dependency in the directory that holds the API key. |
+| `[observability]` absent, or `enabled` not `false` | the platform default is **on**. Absent is not off. |
+| `enabled = true` anywhere in the file | so a named environment cannot switch it back on. |
+| `logpush = true` | Logpush records request URLs. |
+| `tail_consumers` | a tail consumer receives every request line. |
+| `analytics_engine_datasets` | a dataset is a place to write one. |
+| `preview_urls` not `false` | not a logging rule, and included anyway: it is the *other* property here kept true only by memory, and it is a second public door onto the same key. |
+| a second `wrangler.json`/`.jsonc` | it would take precedence over the file this gate reads, and the gate would go on measuring a file nobody deploys. |
+| an empty `src/` | a scanner that scans nothing reports success and measures nothing (`Arch.md` §6). |
+
+🔴 **Every rule is exercised in both directions on every run.** The scan runs
+against this Worker and must find nothing, *and* against a synthetic tree that
+breaks each rule and must find it by name. A gate nobody has watched go red is a
+gate nobody should trust, so this one goes red on every run, against a fixture.
+
+It was also shown red against the real file once, by hand — `console.log` added
+back to `src/index.js` produced
+`index.js:73: console.log — this hop must not log` and `npm test` exited 1.
+
+**`npm run deploy` runs `npm test` first**, which is what makes this a
+deploy-time assertion rather than a file someone may remember to run.
+
 ## Why `preview_urls = false`
 
 **Measured 2026-08-27, not assumed.** With preview URLs on, Cloudflare gives every
@@ -307,11 +421,14 @@ live**, because every KV fault fails closed at 503. See "The spend ceiling".
 cd Deploy/worker && npm test
 ```
 
-Nineteen assertions against a stubbed upstream — no Cloudflare, no key, no network.
-Needs Node 22+ to match `package.json`'s `engines` (run on v24.3.0); the globals
-it actually uses — `fetch`/`Request`/`Response` — have been there since 18. It
-is **not** part of `xcodebuild test`: this repository's CI is the Xcode suite,
-and a deploy artifact should not invent a second one.
+Two suites, **30 + 13 assertions**, no Cloudflare, no key, no network:
+`test/worker.test.mjs` drives the handler against a stubbed upstream, stubbed KV
+and a stubbed rate limiter; `test/deploy-config.test.mjs` is the no-log gate
+above. Needs Node 22+ to match `package.json`'s `engines` (run on v24.3.0); the
+globals it actually uses — `fetch`/`Request`/`Response` — have been there since
+18. It is **not** part of `xcodebuild test`: this repository's CI is the Xcode
+suite, and a deploy artifact should not invent a second one. `npm run deploy`
+runs it, so a deploy cannot skip it by forgetting.
 
 ## Capacity
 
@@ -324,29 +441,13 @@ limit is Geoapify's 3,000 credits a day underneath, not this.
 - ~~**A per-day budget counter.**~~ ✅ **BUILT 2026-09-04** — see "The spend
   ceiling" above. This bullet is kept as a stub because the reasoning that made it
   mandatory is now in that section and in `Docs/decisions.md` 2026-09-04.
-- **A burst rate limit — 🔴 re-rated 2026-09-04: it is the other half, not a
-  speed bump.** The daily ceiling now exists, and measuring it changed what this
-  bullet is worth. KV's *read* cache means the ceiling cannot bound the traffic
-  arriving inside one cache window (production: a write still read stale at 2 s,
-  fresh at 30 s). The daily ceiling cannot express a burst; a burst limit cannot
-  express a daily total. **The two gaps are complementary, and only the pair
-  closes both.** The ADR's ~2,030 worst case is *legitimate* traffic at ~29
-  requests/minute — this Worker has no auth, so an adversarial burst inside one
-  window can reach the 3,000-credit soft limit. That risk is **zero while
-  `matching.base_url` is `""`** and nobody has the URL, and it becomes real on
-  the day the config flip ships the hostname in every IPA. **RECOMMENDATION: a
-  per-IP limit above ~30/min — so a genuine Iceland import is never throttled —
-  lands with the flip, or the overshoot is recorded as accepted.** INFERRED, not
-  measured: the adversarial arithmetic. The cheapest test that settles it is a
-  concurrent burst against `wrangler dev` at ceiling 1, counting how many get
-  through. The original reasoning, still true on its own terms: Cloudflare's rate-limiting
-  binding caps requests per 10 or 60 seconds; **60 seconds is its maximum period**,
-  so it cannot express a daily total, which is the thing actually at risk. Kamome's
-  own legitimate burst is ~29 requests/minute (Iceland's 58 legs inside
-  `matching.trip_budget_s` 120), so any per-IP limit must sit above ~30/min or it
-  throttles a genuine import — at which point a single-IP attacker still exhausts a
-  3,000-credit day in under an hour. Worth having eventually; never worth mistaking
-  for the ceiling.
+- ~~**A burst rate limit.**~~ ✅ **BUILT 2026-09-05** — see "The burst limit"
+  above, and `Docs/decisions.md` 2026-09-05. Kept as a stub because the re-rating
+  that made it mandatory is the half worth carrying forward: **2026-09-04 struck
+  out "a speed bump, not the answer" and called it the other half.** The daily
+  ceiling cannot express a burst; a burst limit cannot express a day; **only the
+  pair closes both.** The recommendation that re-rating carried — a per-IP limit
+  above ~30/min, landing with the config flip — is what shipped, at 60/min.
 - **App Attest.** `Docs/pre-launch.md` lists it as optional afterwards, so that
   only requests from a genuine install are served. Until then the Worker is open
   to anyone who finds its URL. **That was described here as "a bill risk, not a

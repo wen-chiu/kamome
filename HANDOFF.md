@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-04.** `main` carries PRs #16–#40. Everything closed has been
+**Updated 2026-09-05.** `main` carries PRs #16–#41. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -24,25 +24,33 @@ is the gate**; these are the only rows on it that nobody has started.
 1. **The config flip — two values, no code, and it is Chiu's** (`CLAUDE.md`
    rule 2). `matching.base_url` is still `""` and `api_key_required` still
    `true`, so no build calls the Worker and **every build still carries the
-   routing key**. The Worker that ends that is deployed and capped (S5 closed
-   2026-09-04). Flipping it closes **S6 by construction**.
-   → `Docs/release-readiness.md` S5, S6.
-
-   ⚠️ **A precondition, found after S5 closed: the ceiling's real bound is one
-   KV cache window, not 2,000.** The ADR's ~2,030 is *legitimate* traffic; the
-   Worker has no auth, so an adversarial burst inside one window can reach the
-   3,000 soft limit. **Zero risk today — no IPA carries the URL, and the flip is
-   what publishes it.** RECOMMENDATION: a per-IP burst limit above ~30/min lands
-   **with** the flip, or the overshoot is recorded as accepted. Reasoning,
-   evidence grades and the settling test: `Deploy/worker/README.md` §"Not built".
+   routing key**. Flipping it closes **S6 by construction**.
+   ⚠️ **One precondition is met in the repo and NOT in production**: the
+   **60/min per-IP burst limit** is written, tested and merged-pending, but
+   **the Worker has not been redeployed** — production is still `5b33922c`, the
+   ceiling alone. **Deploy before flipping.** → `Docs/release-readiness.md`
+   S4–S6; ADR 2026-09-05 §"NOT done".
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
    D2 feeds a mandatory submission item. → `Docs/release-readiness.md` Tier 3,
    `Docs/device-test-P3.md`.
 
-Also unguarded and nobody's: **S4** — the Worker's no-log property is asserted
-nowhere, and `/v1/routing` is GET-only, so real coordinates ride in the URL.
+---
+
+## Findings — engineering session (2026-09-05)
+
+- **One judgement is Chiu's, and it is small.** The burst limiter **fails
+  closed** — a missing binding or a limiter fault is 503, so routing degrades to
+  dashed legs. It buys an after-probe 200 that proves *both* guards; it costs
+  availability on a Cloudflare-side fault. Three lines to reverse.
+- ⚠️ **The overshoot arithmetic stays INFERRED, and the settling test the
+  2026-09-04 re-rating named is retired.** `wrangler dev` at ceiling 1 shows
+  **zero** overshoot, N = 2/5/10/20, 20 genuinely in flight — miniflare's KV has
+  no read cache (VERIFIED 2026-09-05 in the pinned dependency — it accepts
+  `cacheTtl` and ignores it), so the harness lacks the mechanism. Do not re-run.
+
+Both: → `Docs/decisions.md` 2026-09-05.
 
 ---
 

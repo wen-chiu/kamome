@@ -81,3 +81,4 @@ does not.
 | 61 | `2026-09-03 (b)` | The crossing beat is 4.0 s because that is how long a boarding pass takes to read | **re-decides `crossing_beat_s` 6.0 from 2026-09-02; amends `Docs/handoff-type2-films.md`'s closeout** |
 | 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
 | 63 | `2026-09-04 (b)` | The crossing flies a plane, and its two ends are marked and named | **reclaims `cross-region-journeys.md` requirement 2; answers the closeout's handover item 1; thaws neither place-name lock** |
+| 64 | `2026-09-05` | The Worker gets a burst limit, and its no-log property becomes a gate | closes `Docs/release-readiness.md` **S4**; implements the 2026-09-04 re-rating; **retires** that re-rating's named settling test as a null result |

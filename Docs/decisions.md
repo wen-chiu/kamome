@@ -3359,3 +3359,193 @@ stays a legal answer — it must be *written*. A defaulted nil is a silent fallb
 is not an extra log line, because logs work only when somebody reads one. Twelve
 call sites now state their answer, and a thirteenth cannot be added without
 choosing.
+
+---
+
+---
+
+## 2026-09-05 — The Worker gets a burst limit, and its no-log property becomes a gate
+
+**Status:** approved (implementation of the 2026-09-04 re-rating in
+`Deploy/worker/README.md`, and of `Docs/release-readiness.md` **S4**).
+**Scope:** `Deploy/worker/` only — no app code, no `Config/TrackingConfig.json`
+key, and **not** the config flip.
+
+### The problem, stated once
+
+`matching.base_url` is `""`, so the Worker's hostname is in nobody's hands. **The
+config flip is the change that puts that hostname inside every IPA**, and two
+properties have to hold before it does.
+
+1. **The per-day ceiling has a blind spot it cannot see.** Re-rated 2026-09-04
+   after S5 was measured: KV's *read* cache is tens of seconds wide (a write read
+   stale at 2 s, fresh at 30 s), so the counter cannot bound the traffic arriving
+   inside one window. The ADR 2026-09-04 figure of ~2,030 is *legitimate* traffic
+   at ~29 requests/minute; the Worker has no authentication, so an adversarial
+   burst inside one window can reach Geoapify's 3,000-credit soft limit — and
+   that limit is soft, with no customer-settable cap, ending in account blocking.
+   **The daily ceiling cannot express a burst; a burst limit cannot express a
+   day. Only the pair closes both.**
+2. **The no-log property is asserted nowhere** (S4). `/v1/routing` is GET-only,
+   so a real trip's coordinates travel **in the URL** — the most-logged part of
+   an HTTP request — and "no `console.log`" plus `[observability] enabled = false`
+   were true only while someone remembered them.
+
+### Decision 1 — a per-IP burst limit, in front of the day's counter
+
+Cloudflare's rate-limiting binding, **60 requests/minute keyed by
+`CF-Connecting-IP`**, in `src/index.js` after the secret check and **before** the
+KV counter. Above it: **429, `Retry-After` = the binding's period, empty body,
+KV never read, upstream never called, and not counted against the day.**
+
+- **The threshold is `simple = { limit = 60, period = 60 }` on the
+  `[[ratelimits]]` binding in `wrangler.toml`, and it appears nowhere in the
+  source.** The binding exposes `.limit()` and nothing else, so unlike the
+  ceiling there is not even a `Number(env.…)` to drift — there is no number in
+  `src/index.js` to compare against the deployed one.
+- **60, and the floor under it is real traffic rather than taste.** Kamome's own
+  legitimate burst is ~29 requests/minute (Iceland's 58 legs inside
+  `matching.trip_budget_s` 120), so anything at or below ~30/min throttles a
+  genuine import — a worse failure than the one this guards. A test asserts the
+  floor, so tightening it into real traffic fails before it can deploy.
+- ⚠️ **VERIFIED from Cloudflare's own docs, 2026-09-05:** *"For each unique key
+  you pass to your rate limiting binding, there is a unique limit per Cloudflare
+  location."* The limit is **per colo, not global**. This half therefore bounds
+  one address in one place; the per-day ceiling bounds the total. That is the
+  complementarity — it is not a reason to call either one sufficient.
+- ⚠️ **One carrier NAT is one bucket.** At 60/min that is two concurrent
+  Iceland-sized imports per address per location. It is configuration; raise it
+  if it ever bites.
+- **A request with no `CF-Connecting-IP` shares one bucket** rather than skipping
+  the limit. An unattributable request is the one most worth limiting, and a
+  per-request fallback key would hand any caller unlimited empty buckets.
+- **`namespace_id` provisions nothing** — Cloudflare defines it as *"a string
+  containing a positive integer that uniquely defines this rate limiting
+  namespace within your Cloudflare account"*. It is a name chosen in
+  `wrangler.toml`, so this needed no account of Chiu's and no `wrangler secret`.
+- **No Durable Object.** ADR 2026-09-04 ruled on that and it is not reopened.
+
+### Decision 2 — S4 becomes a gate that runs at deploy time
+
+`test/deploy-config.test.mjs` scans `src/` and `wrangler.toml` and fails on
+`console.*` anywhere in the source, on `[observability]` being absent or not
+`false`, on `enabled = true` anywhere in the file (so a named environment cannot
+switch it back on), on `logpush`, on a tail consumer, on an analytics dataset, on
+`preview_urls` drifting off `false`, on a second `wrangler.json`/`.jsonc` that
+would take precedence over the file being scanned, and on an empty `src/` that
+would let the scan pass while measuring nothing (`Arch.md` §6).
+
+Three choices worth knowing:
+
+- **It is a line scanner, not a TOML parser, deliberately.** The alternative is a
+  dependency in the one directory that holds an API key. The cost is that it is
+  conservative — the forbidden strings are forbidden in comments too, and a `#`
+  inside a quoted value would truncate that line. Both err toward failing.
+- **`preview_urls` is not a logging property and is in here anyway.** It is the
+  *other* thing in this file kept true only by memory, and it is a second public
+  door onto the same key (measured 2026-08-27).
+- **`npm run deploy` runs `npm test` first.** S4 asked for *"a deploy-time
+  assertion"*; a suite someone may remember to run is not one.
+
+### One judgement, made and worth naming
+
+**A missing rate-limit binding, an unusable `BURST_RETRY_AFTER_S`, or a limiter
+error is 503 — fail closed**, exactly as the ceiling does. It buys two things: a
+Worker whose limiter is missing can never *look* hardened while being open, and
+because every fault here is a 503, **a production 200 in the after-probe now
+proves both guards are wired rather than one.** It costs one thing: a
+Cloudflare-side limiter fault takes routing down, where routing degrades to
+dashed legs rather than crashing. Consistency with the ceiling and `Arch.md` §6
+decided it. **It is three lines to reverse** if Chiu prefers the other trade.
+
+### Evidence
+
+- **`npm test` — 30 + 13, Node 24.3.0 after `npm ci`.** The nine original
+  behaviour assertions and the ten ceiling assertions are unchanged.
+- **The S4 gate is a positive control on every run**, not once: every rule is
+  scanned against this Worker (must find nothing) *and* against a synthetic tree
+  that breaks it (must find it by name). It was also shown red against the real
+  file by hand — `console.log` restored to `src/index.js` produced
+  `index.js:73: console.log — this hop must not log`, and `npm test` exited 1.
+- **The burst gate was shown to fire twice.** Removing the refusal fails **7**
+  tests; removing the fail-closed branch fails 1. ⚠️ **Honest about the second
+  number:** the other fail-closed tests survive that neutering because calling
+  `.limit()` on `undefined` throws into the same `catch`, which also fails closed.
+  The explicit guard is not redundant — it is what catches an unusable
+  `BURST_RETRY_AFTER_S` before any work — but the 503 has two independent causes.
+- **An integration control the stub cannot give.** `wrangler dev` binds
+  miniflare's own rate limiter, so the real binding was exercised: 75 concurrent
+  `GET /v1/routing` → **`{"401":60,"429":15}`, `Retry-After: 60`** — exactly the
+  threshold through, everything above refused, matching the stubbed suite's
+  prediction. Public landmark coordinates only (§0); the 401 is Geoapify's own
+  answer to the placeholder key in `.dev.vars`, which is the proof those 60
+  reached the provider.
+- **`wrangler deploy --dry-run` lists the binding:**
+  `env.KAMOME_BURST (60 requests/60s)  Rate Limit`.
+
+### ⚠️ The measurement that did not convert, and why
+
+The 2026-09-04 re-rating named the test that would settle its INFERRED
+arithmetic: *a concurrent burst against `wrangler dev` at ceiling 1, counting how
+many get through.* **It was run, and it does not settle it.**
+
+| N concurrent, ceiling 1 | through | refused |
+|---|---|---|
+| 2 | 1 | 1 |
+| 5 | 1 | 4 |
+| 10 | 1 | 9 |
+| 20 | 1 | 19 |
+
+Zero overshoot at every size — and the requests genuinely overlapped, which was
+checked rather than assumed: **peak in flight 20**, batch 423 ms against a 58 ms
+mean per request. The null result is real, and it is about the harness:
+**miniflare's local KV has no read cache**, so the mechanism that produces the
+production overshoot does not exist there. A local zero says nothing about
+production.
+
+⚠️ **That claim is load-bearing and it is now marked, because the asymmetry was
+the tell: the per-colo sentence beside it carried VERIFIED and a quote while this
+one was stated flat.** It matters which one it is — if miniflare *did* cache
+reads, the zero would be evidence *against* the overshoot hypothesis rather than
+no information, and retiring the test would be discarding a real signal.
+**VERIFIED 2026-09-05 by reading the pinned dependency**,
+`node_modules/miniflare/dist/src/workers/kv/namespace.worker.js:244-246`: the
+`get` handler parses `cacheTtl` from the query, passes it to
+`validateGetOptions`, which (lines 77-85) only range-checks it and throws 400
+when it is invalid — and the read then goes straight to
+`await this.storage.get(key)`. The value never serves a cached result; a grep for
+`cacheTtl`, `caches.` and `CacheStorage` across that file finds the parse and the
+validation and nothing else. **Miniflare accepts `cacheTtl` and ignores it.**
+Second, independent line: the measurement itself: at ceiling 1 with 20 requests
+genuinely in flight, exactly one passed — every read observed the preceding write
+immediately, which is what no cache looks like from the outside.
+
+So the arithmetic **stays INFERRED**, and that test is retired rather than
+passed — the next person should not re-run it expecting an answer. What changed
+instead is that the overshoot is now *bounded* where it was open-ended: one
+address in one Cloudflare location can put at most 60 requests into a 60-second
+window, so the overshoot **one address** can contribute inside a ~30 s cache
+window is on the order of 60 rather than "whatever arrives". Breadth across many
+addresses and locations is still unbounded by this mechanism; that is the daily
+ceiling's job, and its bound there remains INFERRED. The cheapest thing that
+would settle it now is a production measurement, which costs real credits and is
+not worth buying below a real incident.
+
+### ⏳ NOT done
+
+- 🔴 **The Worker is NOT deployed. Production still runs version `5b33922c`
+  (2026-09-04), which has the day's ceiling and no burst limit.** A deploy may
+  come only from merged `main`, and merging is not a session's action — this
+  session's attempt was refused, correctly. **Until it is deployed, S4's gate
+  guards the repository rather than the running Worker, and the burst limit does
+  not exist in production**, so `matching.base_url` must not be flipped. The
+  after-probe (`Deploy/worker/README.md` §"Why `preview_urls = false`") is owed
+  by whoever deploys, and its 200 will now prove three things rather than two.
+- **The config flip is not made** (`CLAUDE.md` rule 2) — it changes shipped
+  behaviour, it is two values and no code, and it is Chiu's. It is now the only
+  thing between the Worker and carrying traffic.
+- **App Attest** and **`/v1/mapmatching`** are untouched. The Worker is still
+  open to anyone who finds its URL; what changed is what that buys them.
+- **The npm suite is still not in `./check.sh`.** The default shell on this
+  machine is Node 17 and the suite needs 22+, so a `check.sh` gate would fail on
+  the very machine it protects. `npm run deploy` is where it binds instead.
