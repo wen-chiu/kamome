@@ -47,7 +47,8 @@ is the gate**; these are the only rows on it that nobody has started.
 - ⚠️ **The overshoot arithmetic stays INFERRED, and the settling test the
   2026-09-04 re-rating named is retired.** `wrangler dev` at ceiling 1 shows
   **zero** overshoot, N = 2/5/10/20, 20 genuinely in flight — miniflare's KV has
-  no read cache, so the harness lacks the mechanism. Do not re-run it.
+  no read cache (VERIFIED 2026-09-05 in the pinned dependency — it accepts
+  `cacheTtl` and ignores it), so the harness lacks the mechanism. Do not re-run.
 
 Both: → `Docs/decisions.md` 2026-09-05.
 

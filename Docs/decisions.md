@@ -3503,6 +3503,23 @@ mean per request. The null result is real, and it is about the harness:
 production overshoot does not exist there. A local zero says nothing about
 production.
 
+⚠️ **That claim is load-bearing and it is now marked, because the asymmetry was
+the tell: the per-colo sentence beside it carried VERIFIED and a quote while this
+one was stated flat.** It matters which one it is — if miniflare *did* cache
+reads, the zero would be evidence *against* the overshoot hypothesis rather than
+no information, and retiring the test would be discarding a real signal.
+**VERIFIED 2026-09-05 by reading the pinned dependency**,
+`node_modules/miniflare/dist/src/workers/kv/namespace.worker.js:244-246`: the
+`get` handler parses `cacheTtl` from the query, passes it to
+`validateGetOptions`, which (lines 77-85) only range-checks it and throws 400
+when it is invalid — and the read then goes straight to
+`await this.storage.get(key)`. The value never serves a cached result; a grep for
+`cacheTtl`, `caches.` and `CacheStorage` across that file finds the parse and the
+validation and nothing else. **Miniflare accepts `cacheTtl` and ignores it.**
+Second, independent line: the measurement itself: at ceiling 1 with 20 requests
+genuinely in flight, exactly one passed — every read observed the preceding write
+immediately, which is what no cache looks like from the outside.
+
 So the arithmetic **stays INFERRED**, and that test is retired rather than
 passed — the next person should not re-run it expecting an answer. What changed
 instead is that the overshoot is now *bounded* where it was open-ended: one
