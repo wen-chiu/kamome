@@ -76,6 +76,22 @@ and is not one. Check `xcrun simctl list devices` for what is already booted and
 use a second device; `xcrun simctl spawn <udid> log show --predicate 'process ==
 "Kamome"'` names the real terminator.
 
+⚠️ **NEW 2026-09-05 — the quiet version of the same collision, and it is worse.**
+The install-over does not always kill your app. It can simply succeed: the other
+session's build is then what is installed under your bundle id, your next
+`simctl launch` runs *theirs*, and the screenshot you take is a convincing,
+correct-looking capture of **their** wording. It cost a set of privacy-notice
+captures on 2026-09-05, and nothing about the image said so.
+
+**A screenshot is evidence about the installed bundle, so check that, not your
+source**, before believing one:
+
+    APP=$(xcrun simctl get_app_container <udid> com.chiu.kamome.dev app)
+    plutil -extract <a key you just changed> raw -o - "$APP/en.lproj/Localizable.strings"
+
+A second device avoids the collision; this check catches it when it happens
+anyway, and it is the only thing that does.
+
 ## Capture the whole run, or a flake is unattributable
 
 **2026-09-02.** A `./check.sh` run reported `** TEST FAILED **` while the suite

@@ -3362,8 +3362,6 @@ choosing.
 
 ---
 
----
-
 ## 2026-09-05 — The Worker gets a burst limit, and its no-log property becomes a gate
 
 **Status:** approved (implementation of the 2026-09-04 re-rating in
@@ -3552,6 +3550,146 @@ not worth buying below a real incident.
 
 ---
 
+## 2026-09-05 (b) — The user is told once, before any coordinate leaves, and the telling is not a question
+
+**Status:** approved (implementation of Chiu's 2026-09-04 answer). **Scope:**
+`App/`, `UI/`, `App/Resources/Localizable.xcstrings`. **Explicitly not in scope:
+`Config/TrackingConfig.json`'s `matching` block.**
+That is the config flip, it is Chiu's (`CLAUDE.md` rule 2), and this entry is its
+precondition, not the thing itself.
+
+### The question this closes
+
+`Docs/release-readiness.md` S3 left one line open on purpose: **does the import
+flow warn at the point of import?** The reason it stayed open is still true — *an
+About screen a user may never open is not a warning*, and S2's placement put the
+notice behind an `info.circle` button in a toolbar.
+
+**Chiu answered it 2026-09-04:** *「使用者第一次執行時告知一次，記住，之後不再
+出現。」* Tell the user once, on first run; remember it; never show it again.
+
+### Decision
+
+`FirstRunNoticeView`, raised from `HomeView` on appearance, acknowledged by one
+button, and remembered in `UserDefaults` by `FirstRunNotice`.
+
+**1. It informs and is acknowledged. It does not ask.** One button, "Got it".
+No accept, no decline, no toggle — and `LocalizationTests` fails on a button that
+reads like consent in either language.
+
+⚠️ **The ability to refuse is DEFERRED, deliberately, and is not half-built.** A
+real refusal needs two things this app does not have: a path that actually
+switches route matching off for that user, and somewhere in the app to change the
+answer back. Without both, a "Decline" is a button that changes nothing while
+implying it changed something — worse than not asking, because it manufactures
+consent that was never obtained. **The control that does exist is the one
+`privacy_control` already names**: you decide what is sent by deciding what to
+import, and the album path that sentence points at ships. If refusal is wanted,
+it is a product decision with a mechanism attached, and it is Chiu's.
+
+**2. One string source, not two.** Every sentence in the notice is `AboutView`'s
+sentence, in `AboutView`'s order, through `PrivacyNoticeCopy`. Two copies of a
+legal statement about what leaves a user's device drift, and the drifted one is
+still a statement someone relied on.
+
+⏳ **The wording and S2's placement remain Chiu's and are NOT ruled on by this
+entry.** They ship as the working draft S2/S3 already ship as. What this entry
+adds is that a rewording now moves both surfaces at once.
+
+**3. The notice names every party that handles a coordinate**, and the sentence
+is read off the config rather than typed into the copy — the rule S3 already set
+for the two numbers in `privacy_imported_body`. `api_key_required` *is* the
+topology: `true` means this build carries the Geoapify key and calls the provider
+itself (`privacy_hop_direct`), `false` means the key lives in Kamome's relay and
+the app calls that (`privacy_hop_relay`, which names the relay, Cloudflare that
+runs it, and Geoapify beyond it). The flip changes the flag; the sentence follows.
+
+**4. It is silent until this build can actually send.** `shouldPresent` requires
+a non-empty `matching.base_url` — the *effective* one, after
+`AppConfig.applyingRoutingKey` has emptied it for a build carrying no key. Today
+that is `""`, so the notice does not appear, because a notice shown now would
+describe a state that has not arrived. **That mistake already has a row on the
+gate: S3b**, a payload table describing a state that never came. **The config
+flip is therefore what publishes the notice**, on the first launch after it
+ships, for new and existing users alike — which is exactly what makes this a
+precondition rather than a parallel change.
+
+⚠️ **This is a reading of Chiu's answer, and it is the one place this entry
+departs from its literal words.** "First run" here means the first run that can
+send something, not the first run of the app. If he meant the notice should
+appear even while routing is off, it is a one-line change to `shouldPresent` —
+and then the copy has to stop saying coordinates leave, because they do not.
+
+**5. What is remembered is a version, not a Bool.**
+`kamome.privacyNoticeAcknowledgedVersion`, raised **only when what is sent or
+where it goes materially changes** — never for a typo or a translation pass.
+This exists because the wording is openly still Chiu's: a Bool would silence the
+next notice for everyone who saw this one. **`UserDefaults` goes with the app**,
+so a reinstall is told again; over-telling is the safe direction and a test pins
+which direction was chosen.
+
+### S4 was mine too, for about an hour — and it is not
+
+This entry originally carried a `Scripts/check-worker-privacy.sh`: three static
+assertions over `Deploy/worker/` (`[observability] enabled = false`,
+`preview_urls = false`, no `console.*`), positive-controlled five ways, bound to
+`./check.sh`.
+
+**It is deleted, and the entry above — 2026-09-05, merged first — is the S4
+decision.** That one asserts everything mine did and more (`enabled = true`
+anywhere in the file, `logpush`, a tail consumer, an analytics dataset, a second
+`wrangler.json` that would take precedence, an empty `src/` that would let a scan
+pass while measuring nothing), and it binds where S4 actually asked for it:
+`npm run deploy` runs it. Every rule of mine is a strict subset of its rules, so
+removing mine loses no coverage — which is the proof this needed, not an argument
+that it was redundant.
+
+⚠️ **The one thing that went with it, recorded rather than quietly fixed:** a
+plain `./check.sh` does not see the Worker's config, because the npm suite needs
+Node 22+ and this machine's default shell is Node 17 — a `check.sh` gate would
+fail on the very machine it protects. That is **that entry's decision, with its
+reason**, not a gap this one should have patched by adding a second, weaker gate
+beside it.
+
+### Addendum 2026-09-06 — Chiu ruled on the wording: the card is two sentences
+
+The first version of the card was the **whole** privacy notice: the lead, the
+hop, the payload with its two config numbers, Geoapify's retention, and the
+control. Chiu, on the render: *「告知內容的廢話太多了，使用者根本不會看，簡單說
+重點就好。」*
+
+**He is right, and the failure is worse than cosmetic.** A first-run card is
+read once, in the two seconds before someone taps the button. A notice nobody
+reads discloses nothing, so a wall of text does not over-deliver on §0's honest
+disclosure — it silently under-delivers while looking thorough. Length is a
+property of the disclosure here, not styling.
+
+**What the card is now:** the lead (photos, trips and films stay; the positions
+along the route leave), the hop (Kamome's relay, then Geoapify), and a line
+saying it is shown once and lives under About & Privacy. Three lines.
+
+**Nothing was deleted from the app.** The payload with its numbers, the recorded
+paragraph, retention, the control and sharing stay on `AboutView`, and what the
+hop sentence stopped carrying — Cloudflare, the no-log property, forwarding
+nothing that identifies the device — moved to `privacy_relay_detail`, which
+`AboutView` shows and the card does not. `LocalizationTests` follows it there:
+the assertion did not weaken, the string carrying the rule changed
+(`Arch.md` §4 — a rule is restated on the thing that now holds it).
+
+**The one-source rule survives, in its exact form:** each fact still exists as
+exactly one string. The card shows a subset; `AboutView` shows all of it. Nothing
+is written twice, so the two surfaces still cannot say the same thing
+differently.
+
+⚠️ **A length ceiling is now a test**, because this decision is the kind that
+erodes: `testTheFirstRunCardStaysShortEnoughToBeRead` fails if the card's three
+strings grow past the shipped copy plus roughly half again. It exists to stop the
+`AboutView` paragraphs migrating back one well-meaning edit at a time.
+
+⏳ Still not ruled on: **S2's placement**, and the wording of `AboutView` itself.
+
+---
+
 ## 2026-09-08 — A finished film becomes a thing that exists
 
 Phase 4 closeout, step 1 of 4 (Chiu 2026-09-05).
@@ -3561,8 +3699,9 @@ Phase 4 closeout, step 1 of 4 (Chiu 2026-09-05).
 A rendered recap film lives in `tmp/` and disappears the moment the export
 sheet closes. There is no record that a film was ever made, no way to replay it,
 and no path to the trip-detail surface where a user would expect to find their
-films. This is the first of four steps that close Phase 4; the others are music,
-the share extension, and the release gate.
+films. This is step 1 of 4 in the Phase 4 closeout (Chiu 2026-09-05): (1) film
+record, (2) export service outliving the sheet, (3) device session D1–D5, (4)
+performance against the number step 3 measures.
 
 ### Decisions
 
@@ -3609,9 +3748,11 @@ Migration v5 adds a `film` table with columns: `id`, `trip_id` (FK → trip),
 
 ### What this does NOT settle
 
-- **D1 (seed column)** — deferred until the render pipeline uses one.
-- **D5 (background export service)** — out of scope for this step.
+- **D1** (`ExportLifecycleGuard` — start an export, lock the screen, see
+  whether it survives) and **D5** (the S5 UX pass) both remain owed on
+  `Docs/release-readiness.md` Tier 3. The seed column stays deferred per ADR
+  2026-08-15.
 - **ExportEngine** — no pixel changes. This PR moves zero files in
   `ExportEngine/`.
-- **Music, share extension, release gate** — the remaining three Phase 4
-  closeout steps.
+- **Steps 2–4** of the Phase 4 closeout: export service outliving the sheet,
+  device session D1–D5, performance.

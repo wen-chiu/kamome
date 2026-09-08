@@ -7,10 +7,10 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-08 against decisions.md **2026-09-08** and `main` at
-**PR #42**. Re-read: ADR 2026-09-08 (film persistence — Phase 4 closeout step
-1/4). One thing moved: **a finished film persists** — `film` table v5, files in
-App Support/Films/, inline playback, trip-detail listing, Save to Photos as
-explicit user tap (§0). Worker: 🔴 **not deployed, still `5b33922c`.**
+**PR #45**. Re-read: ADR 2026-09-05 (b) (first-run notice, PR #45), ADR
+2026-09-08 (film persistence — closeout step 1/4). Two things moved:
+**first-run notice built**, **film persists** — `film` table v5, Save to
+Photos as explicit user tap (§0). Worker: 🔴 **still `5b33922c`.**
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -41,8 +41,8 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 2. ✅ Cross-region crossing — PRs #24/#31.
 3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half closed by ADR
    2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
-4. **Closeout** (Chiu 2026-09-05, 4 steps): ✅ step 1 film persistence (ADR
-   2026-09-08); remaining: music, share extension, release gate.
+4. **Closeout** (Chiu 2026-09-05, 4 steps): ✅ step 1 film record (ADR
+   2026-09-08); remaining: export service, device session D1–D5, performance.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
@@ -61,11 +61,10 @@ judgement, in `HANDOFF.md`, which wins on findings and blockers.
 
 The two things between Kamome and a submission:
 **the config flip** — `matching.base_url` is still `""` and `api_key_required`
-still `true`, so **every build carries the routing key**; the Worker that ends
-that is deployed and capped, its burst limit and no-log gate **written but not
-deployed** (S4/S5 closed), and the flip itself is two values and
-**Chiu's decision** — and **D1–D5** (one device
-session, never run, which no Claude session can do).
+still `true`, so **every build carries the routing key**; the Worker is capped,
+burst limit and no-log gate **written but not deployed** (S4/S5 closed),
+first-run notice built, the flip itself two values and **Chiu's decision** —
+and **D1–D5** (one device session, never run, no Claude session can do).
 → `Docs/release-readiness.md`.
 
 ## Architecture
@@ -110,6 +109,7 @@ session, never run, which no Claude session can do).
 | **Camera shake / ghosting closed** — the loop reprojects one snapshot instead of cross-fading two. | 2026-08-31 (b) |
 | **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
 | **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
+| **The user is told once, on first run, that coordinates leave; the notice informs, it does not ask.** | 2026-09-05 (b) |
 | **The Worker carries two guards and fails closed on either.** 2000/day (live) plus **60/min per IP** (⚠️ built, **not yet deployed**), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
 | **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
 

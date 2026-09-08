@@ -224,6 +224,40 @@
         }
       }
     },
+    "first_run_acknowledge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got it"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我知道了"
+          }
+        }
+      }
+    },
+    "first_run_where": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shown once. The full notice is under About & Privacy."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只顯示一次；完整說明在「關於與隱私」裡。"
+          }
+        }
+      }
+    },
     "home_title": {
       "extractionState": "manual",
       "localizations": {
@@ -768,6 +802,40 @@
         }
       }
     },
+    "privacy_hop_direct": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They go straight from this device to Geoapify."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它們會從這台裝置直接送到 Geoapify。"
+          }
+        }
+      }
+    },
+    "privacy_hop_relay": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They go to Kamome's relay, which holds the map key, and on to Geoapify."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它們會先送到卡摸咩的中繼（地圖金鑰放在那裡），再送到 Geoapify。"
+          }
+        }
+      }
+    },
     "privacy_imported_body": {
       "extractionState": "manual",
       "localizations": {
@@ -808,13 +876,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, your trips and the films Kamome makes stay on this device. Kamome has no account, sends nothing to analytics, and reports nowhere you have been. One thing does leave: to draw a journey along real roads, Kamome has to ask Geoapify where those roads are."
+            "value": "Your photos, trips and films stay on this device. One thing leaves it: to draw your route along real roads, Kamome sends the positions along that route."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的相片、旅程，以及卡摸咩製作的影片，都留在這台裝置上。卡摸咩沒有帳號、不傳送任何分析資料，也不會回報你去過哪裡。只有一件事會送出去：為了讓旅程沿著真實道路繪製，卡摸咩必須向 Geoapify 詢問那些道路的位置。"
+            "value": "你的相片、旅程與影片都留在這台裝置上。只有一件事會離開：為了沿著真實道路繪製路線，卡摸咩會送出這條路線上的位置。"
           }
         }
       }
@@ -849,6 +917,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "卡摸咩記錄的旅程"
+          }
+        }
+      }
+    },
+    "privacy_relay_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The relay is a small service on Cloudflare. It keeps no record of what it forwards — it counts requests, nothing more — and it forwards nothing that identifies your device, so Geoapify sees the relay rather than your phone."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中繼是放在 Cloudflare 上的小服務。它不保留任何一筆轉送內容的紀錄，只計算請求次數；也不會轉送任何足以識別你裝置的資料，因此 Geoapify 看到的是中繼，不是你的手機。"
           }
         }
       }
