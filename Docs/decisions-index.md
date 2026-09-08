@@ -82,3 +82,4 @@ does not.
 | 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
 | 63 | `2026-09-04 (b)` | The crossing flies a plane, and its two ends are marked and named | **reclaims `cross-region-journeys.md` requirement 2; answers the closeout's handover item 1; thaws neither place-name lock** |
 | 64 | `2026-09-05` | The Worker gets a burst limit, and its no-log property becomes a gate | closes `Docs/release-readiness.md` **S4**; implements the 2026-09-04 re-rating; **retires** that re-rating's named settling test as a null result |
+| 65 | `2026-09-05 (b)` | The user is told once, before any coordinate leaves, and the telling is not a question | **answers the question `Docs/release-readiness.md` S3 left open** |

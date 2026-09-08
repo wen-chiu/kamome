@@ -22,6 +22,10 @@ import SwiftUI
 ///   says. See `HANDOFF.md` — that conflict is Chiu's to settle, and until he
 ///   does, the sentence that matches the code is the honest one to ship.
 ///
+/// **The same strings are the first-run notice's strings** (`FirstRunNoticeView`,
+/// ADR 2026-09-05 (b)) — one source, so the screen a user can always come back to
+/// and the one-time telling cannot drift apart.
+///
 /// ⏳ **The wording and the placement are Chiu's and are not ruled on yet.**
 /// This ships so the obligation is met rather than deferred; the open half is
 /// carried in `Docs/release-readiness.md` S2/S3. Visual craft is `DESIGNER.md`'s.
@@ -77,6 +81,16 @@ struct AboutView: View {
     private var privacySection: some View {
         Section {
             Text("privacy_intro")
+            // Which parties handle a journey's coordinates on the way to the
+            // roads — read off the config, so the config flip changes the
+            // sentence with it (`PrivacyNoticeCopy`).
+            Text(LocalizedStringKey(PrivacyNoticeCopy.hopKey(for: matching)))
+            // The rest of the relay's story. The first-run card carries only the
+            // sentence above, so this is where the detail lives rather than
+            // being cut from the app entirely (Chiu 2026-09-06).
+            if let detail = PrivacyNoticeCopy.relayDetailKey(for: matching) {
+                Text(LocalizedStringKey(detail))
+            }
             payload("privacy_imported_title", body: importedBody)
             payload("privacy_recorded_title", body: Text("privacy_recorded_body"))
             Text("privacy_retention")
@@ -89,13 +103,11 @@ struct AboutView: View {
     }
 
     /// The imported payload is the only sentence carrying numbers, and both come
-    /// from config so the copy cannot outlive a tuning change.
+    /// from config so the copy cannot outlive a tuning change. Formatted in
+    /// `PrivacyNoticeCopy` because the first-run notice states the same fact and
+    /// the two must not be able to state it differently.
     private var importedBody: Text {
-        Text(String.localizedStringWithFormat(
-            String(localized: "privacy_imported_body"),
-            matching.routeWaypointMinSpacingM,
-            matching.chunkSize
-        ))
+        Text(PrivacyNoticeCopy.importedBody(for: matching))
     }
 
     private func payload(_ title: LocalizedStringKey, body: Text) -> some View {
