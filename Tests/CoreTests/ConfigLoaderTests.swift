@@ -68,8 +68,11 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.dwell.visitMinS, 300)
         XCTAssertEqual(config.dwell.visitReturnRadiusM, 300)
         XCTAssertEqual(config.simplify.epsilonM, 15)
-        // Map matching (§4.4, P3.5): disabled until the OSRM server exists.
-        XCTAssertEqual(config.matching.baseURL, "")
+        // Routing (§4.4). Empty until 2026-09-08, when the config flip pointed the
+        // app at the Cloudflare Worker that holds the key (ADR 2026-09-08). This
+        // asserts a **shipped value that changed by decision**, not a rule — the
+        // rules about keyless builds live in `RoutingKeyTests`.
+        XCTAssertEqual(config.matching.baseURL, "https://kamome-routing.kamome-site.workers.dev")
         XCTAssertEqual(config.matching.chunkSize, 100)
         XCTAssertEqual(config.matching.confidenceMin, 0.5)
         XCTAssertEqual(config.matching.radiusM, 25)

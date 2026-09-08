@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-06.** `main` carries PRs #16–#45. Everything closed has been
+**Updated 2026-09-08.** `main` carries PRs #16–#45. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -18,34 +18,34 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 
 ## 🔴 The critical path to a release — neither item is a document
 
-Everything else on this page can wait behind these two. **`Docs/release-readiness.md`
-is the gate**; these are the only rows on it that nobody has started.
+Everything else on this page can wait behind these two, and **no Claude session
+can do either**. ✅ **The config flip is made** (2026-09-08): builds carry no key,
+the Worker carries the traffic, S6 is closed and the first-run notice is now
+published. → ADR 2026-09-08.
 
-1. **The config flip — two values, no code, and it is Chiu's** (`CLAUDE.md`
-   rule 2). `matching.base_url` is still `""` and `api_key_required` still
-   `true`, so no build calls the Worker and **every build still carries the
-   routing key**. Flipping it closes **S6 by construction**.
-   ✅ **Every precondition is met**: the Worker is capped per day, carries a
-   **60/min per-IP burst limit**, and its no-log property is a gate
-   `npm run deploy` runs — deployed and probed 2026-09-06, Version `09e248ee`.
-   The **first-run notice is built** (ADR 2026-09-05 (b)), and the flip is what
-   publishes it. → `Docs/release-readiness.md` S3–S6; ADR 2026-09-05 + its
-   2026-09-06 addendum.
-2. **D1–D5 — one device session, never run.** Export survives a screen lock;
+1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
-   Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
-   D2 feeds a mandatory submission item. → `Docs/release-readiness.md` Tier 3,
-   `Docs/device-test-P3.md`.
+   Limited Photo Library; the S5 UX pass. D2 feeds a mandatory submission item.
+   → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
+2. **The submission sequence, and it is Chiu's in both halves.** ① Run
+   `./check.sh --release <.xcarchive>` — the **only** proof the built bundle
+   carries no key; `check-archive.sh` needs the real key and refuses to degrade
+   into a shape scan, so a session can build the archive but never run the gate.
+   ② **Then rotate the Geoapify key** — S7. Every IPA already on someone's phone
+   still holds the current one, and the flip cannot reach those.
+   **Order matters**: rotating first would leave the check validating a bundle
+   nobody ships. → `Docs/release-readiness.md` S6, S7, Tier 1.
 
 ---
 
-## Findings — engineering session (2026-09-06)
+## Findings — engineering session (2026-09-08)
 
-- ⚠️ **The ceiling's overshoot stays INFERRED, and the settling test the
-  2026-09-04 re-rating named is retired — do not re-run it.** `wrangler dev` at
-  ceiling 1 gives **zero** overshoot because miniflare's KV has no read cache, so
-  the harness lacks the mechanism. The burst limit bounds the overshoot instead
-  of measuring it. → `Docs/decisions.md` 2026-09-05.
+- 🟠 **No desk render can validate `matching.base_url`.**
+  `RecapDemoFilmTests.importedRecap` resolves its endpoint as
+  `requestedBaseURL ?? KAMOME_ROUTING_BASE_URL ?? "https://api.geoapify.com"` and
+  never reads the shipped config. Not changed here — making it follow the config
+  would point every desk render at the Worker and spend real quota.
+  → `Docs/decisions.md` 2026-09-08.
 
 ---
 
@@ -126,6 +126,11 @@ is the gate**; these are the only rows on it that nobody has started.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.
+- **The production KV counter lies to your first read.** A day's key returned
+  **404 while holding 4**, and a read straight after a render shows the pre-render
+  value. Read twice, tens of seconds apart, believe the second. Same cache is why
+  `wrangler dev` at ceiling 1 measures **zero** overshoot — miniflare's KV has no
+  read cache, so that test is **retired, not pending** (ADRs 2026-09-05, -09-08).
 - **Continuity passing is not the film being right.** A camera wrong in a way that
   does not *move* scores 100%: a body span from the wrong beat measured 177.3 km
   against 13.3 km and scored perfectly. When a change re-derives a span, a frame

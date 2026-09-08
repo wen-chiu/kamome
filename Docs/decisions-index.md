@@ -83,3 +83,4 @@ does not.
 | 63 | `2026-09-04 (b)` | The crossing flies a plane, and its two ends are marked and named | **reclaims `cross-region-journeys.md` requirement 2; answers the closeout's handover item 1; thaws neither place-name lock** |
 | 64 | `2026-09-05` | The Worker gets a burst limit, and its no-log property becomes a gate | closes `Docs/release-readiness.md` **S4**; implements the 2026-09-04 re-rating; **retires** that re-rating's named settling test as a null result; **addendum 2026-09-06: deployed and probed, Version `09e248ee`** |
 | 65 | `2026-09-05 (b)` | The user is told once, before any coordinate leaves, and the telling is not a question | **answers the question `Docs/release-readiness.md` S3 left open** |
+| 66 | `2026-09-08` | The config flip: the key stops shipping, and the counter is the proof | **Chiu 2026-09-05.** Closes **S6**; opens **S7** (key rotation, which the flip does not do); artifact check owed to Chiu |

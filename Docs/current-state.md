@@ -6,12 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-06 against decisions.md **2026-09-05 (b)** and `main` at
-**PR #45**. Re-read: the 2026-09-04/05 entries *and the 2026-09-06 deploy
-addendum*, every line of `HANDOFF.md`, and `Docs/release-readiness.md` S2–S6.
-Two moved: **the Worker is hardened and live** (60/min per-IP burst limit beside
-the ceiling, **S4 closed**, Version `09e248ee`) and **the first-run notice
-exists**. **Every precondition to the flip is met; the flip is Chiu's.**
+Last synced: 2026-09-08 against decisions.md **2026-09-08** and `main` at
+**PR #45**. Re-read: the 2026-09-05/06/08 entries, every line of `HANDOFF.md`,
+and `Docs/release-readiness.md` S2–S7. 🔴 **The config flip is made** (Chiu,
+ADR 2026-09-08): builds carry no key, the Worker carries the traffic, **S6 is
+closed**, and the first-run notice is now published. **S7 is new** — the flip does
+not retire the key already inside other people's IPAs; only rotation does.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -58,13 +58,10 @@ type-2 opening included — retimed, with a boarding pass, a plane and two marke
 flight ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's
 judgement, in `HANDOFF.md`, which wins on findings and blockers.
 
-The two things between Kamome and a submission:
-**the config flip** — `matching.base_url` is still `""` and `api_key_required`
-still `true`, so **every build carries the routing key**; the Worker that ends
-that is deployed, capped, burst-limited and gated no-log (S4/S5 closed, live as
-Version `09e248ee`), its first-run notice built, and the flip itself two values
-and **Chiu's decision** — and **D1–D5** (one device session, never run, which no
-Claude session can do).
+What is between Kamome and a submission is **neither a document nor a session**:
+**D1–D5**, one device run nobody has done — and then Chiu's submission sequence,
+the artifact check (`./check.sh --release`, which needs the real key) and **then**
+the key rotation, in that order.
 → `Docs/release-readiness.md`.
 
 ## Architecture
