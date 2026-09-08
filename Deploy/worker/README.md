@@ -6,20 +6,22 @@ from Chiu's own Cloudflare account and his authenticated shell, never from an
 agent session. That hostname is **not a secret**: it ships in every IPA by design.
 Preview URLs were turned off on 2026-08-28 — see "Why `preview_urls = false`".
 
-**The app is not pointed at it yet.** Everything below is still a runbook for the
-step that remains: until `matching.base_url` and `api_key_required` are flipped in
-`Config/TrackingConfig.json`, builds call Geoapify directly and the key is inside
-every one of them.
+✅ **The app is pointed at it as of 2026-09-08** (ADR 2026-09-08): `base_url` is
+this hostname, `api_key_required` is `false`, and a build carries no key at all.
+Everything below is now a runbook for operating it rather than for a step that
+remains.
 
 ```
 iOS app ──(no key)──▶ Cloudflare Worker ──(+ key)──▶ Geoapify ──▶ back
 ```
 
-Why this exists at all is in `Docs/pre-launch.md`: the key reaches the app today
-through a gitignored `.xcconfig` and lands in `Info.plist`, so it is **inside
-every IPA that has ever reached another person's phone**. Provider-side key
-restriction cannot fix that for a native app — Geoapify's restrictions (IP
-allowlist, HTTP referrer, CORS origin) are all browser mechanisms.
+Why this exists at all is in `Docs/pre-launch.md`: the key used to reach the app
+through a gitignored `.xcconfig` and land in `Info.plist`, so it is **inside every
+IPA that has ever reached another person's phone**. Provider-side key restriction
+cannot fix that for a native app — Geoapify's restrictions (IP allowlist, HTTP
+referrer, CORS origin) are all browser mechanisms. 🔴 **The flip fixed what is
+built from here; it did not reach the builds already out.** Only rotating the key
+does that, and it is owed — `Docs/release-readiness.md` **S7**.
 
 ## Deploy
 
@@ -77,12 +79,14 @@ That permission comes with conditions, each of which exists for a reason:
   anyone choosing to. That distinction is the whole point, and it is why the
   integration was removed on 2026-08-27 rather than configured.
 
-Then point the app at it, which is **two config values** and no code:
+Pointing the app at it was **two config values** and no code. ✅ Done 2026-09-08;
+this is what `Config/TrackingConfig.json` now says, kept here because it is the
+shape, not an instruction:
 
 ```jsonc
 // Config/TrackingConfig.json
 "matching": {
-  "base_url": "https://kamome-routing.<your-subdomain>.workers.dev",
+  "base_url": "https://kamome-routing.kamome-site.workers.dev",
   "api_key_required": false,   // the Worker holds the key; the app carries none
   …
 }
