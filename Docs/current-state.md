@@ -6,13 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-05 against decisions.md **2026-09-05** and `main` at
-**PR #41**. Re-read for this sync: the 2026-09-04 and 2026-09-05 ledger entries,
-every line of `HANDOFF.md`, and `Docs/release-readiness.md` S4/S5/S6. One thing
-moved: **the Worker's hardening is written and gated** — a 60/min per-IP burst
-limit beside the day's ceiling, and **S4 closed** (no-log is a gate
-`npm run deploy` runs). 🔴 **Not deployed: production is still `5b33922c`.**
-Deploy, then the flip is Chiu's. Reflected below, not only here.
+Last synced: 2026-09-08 against decisions.md **2026-09-08** and `main` at
+**PR #42**. Re-read: ADR 2026-09-08 (film persistence — Phase 4 closeout step
+1/4). One thing moved: **a finished film persists** — `film` table v5, files in
+App Support/Films/, inline playback, trip-detail listing, Save to Photos as
+explicit user tap (§0). Worker: 🔴 **not deployed, still `5b33922c`.**
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -43,6 +41,8 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 2. ✅ Cross-region crossing — PRs #24/#31.
 3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half closed by ADR
    2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
+4. **Closeout** (Chiu 2026-09-05, 4 steps): ✅ step 1 film persistence (ADR
+   2026-09-08); remaining: music, share extension, release gate.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a

@@ -3549,3 +3549,69 @@ not worth buying below a real incident.
 - **The npm suite is still not in `./check.sh`.** The default shell on this
   machine is Node 17 and the suite needs 22+, so a `check.sh` gate would fail on
   the very machine it protects. `npm run deploy` is where it binds instead.
+
+---
+
+## 2026-09-08 — A finished film becomes a thing that exists
+
+Phase 4 closeout, step 1 of 4 (Chiu 2026-09-05).
+
+### Context
+
+A rendered recap film lives in `tmp/` and disappears the moment the export
+sheet closes. There is no record that a film was ever made, no way to replay it,
+and no path to the trip-detail surface where a user would expect to find their
+films. This is the first of four steps that close Phase 4; the others are music,
+the share extension, and the release gate.
+
+### Decisions
+
+1. **Film stored in app by default; Photos is an explicit user action.** A
+   finished film is moved from `tmp/` to `Application Support/Films/` and a
+   `film` row is inserted into the GRDB database via `TripRepository`. Saving to
+   the iOS photo library is a separate, explicit tap — never automatic — because
+   iCloud Photos uploads off-device and that crosses the §0 boundary.
+
+2. **Relative paths, not absolute.** The `film.relative_path` column stores
+   `Films/<filename>`, resolved against the Application Support container at
+   read time. The iOS container UUID changes across app updates and restores; a
+   stored absolute URL silently stops resolving.
+
+3. **The film record persists appearance and mode.** `film.appearance` (light /
+   dark) and `film.recap_mode` (highlight / full) capture what was previously
+   recoverable only from a log line. `film.render_seconds` records how long the
+   render took. No seed column (deferred until the render pipeline uses one).
+
+4. **PHPhotoLibrary.requestAuthorization(for: .addOnly), not .readWrite.** The
+   app already holds read access for photo import. Conflating the two muddies D4
+   (Limited Photo Library Access) and asks for a broader permission than the
+   action requires.
+
+5. **Film files are included in backup.** `isExcludedFromBackupKey` is NOT set.
+   A film the user made is user data, not a regenerable cache.
+
+6. **Deleting a trip cascades to its films.** `TripRepository.deleteTrip`
+   removes all child rows (trackpoints, segments, photos, stops, films) and
+   returns the deleted `FilmRecord`s so the caller can clean up the files outside
+   the database transaction.
+
+7. **Phase.finished carries the record, not a bare URL.** `RecapModel.Phase`
+   changes from `.finished(shareURL:renderSeconds:)` to
+   `.finished(film:fileURL:renderSeconds:)`. This is what makes the film "a
+   thing that exists" rather than a temp-file reference.
+
+### Schema
+
+Migration v5 adds a `film` table with columns: `id`, `trip_id` (FK → trip),
+`relative_path`, `format`, `created_at`, `duration_s`, `render_seconds`,
+`appearance`, `recap_mode`, `file_bytes`, plus index `idx_film_trip` on
+`trip_id`.
+
+### What this does NOT settle
+
+- **D1 (seed column)** — deferred until the render pipeline uses one.
+- **D5 (background export service)** — out of scope for this step.
+- **ExportEngine** — no pixel changes. This PR moves zero files in
+  `ExportEngine/`.
+- **Music, share extension, release gate** — the remaining three Phase 4
+  closeout steps.
