@@ -1,6 +1,7 @@
 # The routing proxy — how the key stops shipping in the binary
 
-**Status: deployed 2026-08-27** — `https://kamome-routing.kamome-site.workers.dev`,
+**Status: deployed; current version `09e248ee`, 2026-09-06** —
+`https://kamome-routing.kamome-site.workers.dev`,
 from Chiu's own Cloudflare account and his authenticated shell, never from an
 agent session. That hostname is **not a secret**: it ships in every IPA by design.
 Preview URLs were turned off on 2026-08-28 — see "Why `preview_urls = false`".
@@ -257,9 +258,9 @@ a cache, not a bug — wait a minute before concluding anything.**
 
 ## The burst limit
 
-**Built 2026-09-05. ⚠️ NOT YET DEPLOYED — production still runs version
-`5b33922c` (2026-09-04), which has the ceiling and no burst limit.** Cloudflare's
-rate-limiting binding, in `src/index.js`
+**Built 2026-09-05, live in production since 2026-09-06** (Version ID
+`09e248ee`, from merged `main` `430d48c`). Cloudflare's rate-limiting binding,
+in `src/index.js`
 **before** the per-day counter. It exists because the ceiling provably cannot see
 a burst: KV's read cache is tens of seconds wide (measured 2026-09-04), so one
 client could spend the whole 2000 inside a single window while the stored number
@@ -322,9 +323,9 @@ the stubbed suite predicts.
 
 ## The no-log gate
 
-**Built 2026-09-05, and it closes S4 for the repository.** ⚠️ It asserts the
-artifact about to be deployed, not the Worker running now — those match only
-after the next deploy.
+**Built 2026-09-05, and it closes S4.** It asserts the artifact about to be
+deployed; `npm run deploy` runs it, and the 2026-09-06 deploy is an artifact that
+passed it — so it guards the running Worker, not only the repository.
  `/v1/routing` is GET-only, so a real
 trip's coordinates travel **in the URL** — the most-logged part of an HTTP
 request. Until now "no `console.log`" and "`[observability] enabled = false`"
@@ -410,6 +411,33 @@ result: production unchanged, both new preview hostnames are Cloudflare misses.
 
 That first row does double duty now: **it is also the proof the spend counter is
 live**, because every KV fault fails closed at 503. See "The spend ceiling".
+
+### Re-measured 2026-09-06 — the burst limit's deploy opened no door either
+
+Version `09e248ee` (from merged `main` `430d48c`, PR #42). Same discriminator,
+same result, and one row now carries more weight than it did.
+
+| host | result |
+|---|---|
+| `kamome-routing` `/v1/routing` | **200, 9,842 B** — byte-identical to 2026-08-29 and 2026-09-04 |
+| `kamome-routing` `/` | **404, empty** — still the Worker |
+| `09e248ee-…` `/` and `/v1/routing` | **404, 17 B `error code: 1042`** |
+| `75c481ad-…` (the 2026-08-27 preview) | **404, 17 B** — still shut |
+| control, never deployed | **404, 17 B** — unchanged |
+
+🔴 **That first row is now the only production evidence the burst limit exists**,
+and it is real evidence: *every* fault in either guard fails closed at 503 — a
+missing rate-limit binding and an unusable `BURST_RETRY_AFTER_S` included — so a
+200 says the KV binding is attached, the ceiling parsed, **and the rate limiter
+was consulted and answered cleanly.** Three things, where in 2026-09-04 it said
+two. `routing-requests-2026-09-05` read **1** afterwards (UTC day; the deploy was
+2026-09-06 local), fresh about a minute after the write.
+
+⚠️ **Production has not been shown the burst limit *refusing*.** That evidence is
+the suite and the `wrangler dev` control above. Forcing a 429 in production means
+deliberately exceeding 60/min against the live Worker — ~60 Geoapify credits and
+60 of the day's 2,000, to re-confirm a binding the deploy output already lists.
+Not done, and not recommended without a reason.
 
 **These are the pass conditions for every future deploy.** Re-run
 `~/Kamome-wt/probe.sh <first-8-of-Version-ID>` — public landmark coordinates only
