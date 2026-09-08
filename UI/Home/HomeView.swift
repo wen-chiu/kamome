@@ -72,7 +72,7 @@ struct HomeView: View {
             }
             #endif
             // Told once, before this build can send a real coordinate anywhere
-            // (Chiu 2026-09-04; ADR 2026-09-05). `showingImport` is checked
+            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). `showingImport` is checked
             // because the DEBUG demo automation above opens a sheet from this
             // same `onAppear`, and two sheets raised in one pass is a race
             // rather than a stack. Nothing is remembered on the launch that

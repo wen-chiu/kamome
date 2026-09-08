@@ -298,7 +298,7 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
-    /// **The first-run notice tells; it does not ask** (ADR 2026-09-05). The
+    /// **The first-run notice tells; it does not ask** (ADR 2026-09-05 (b)). The
     /// button may not read as consent in either language, because consent that
     /// cannot be withheld is not consent — and a "Decline" this app cannot
     /// honour is worse than never offering one.

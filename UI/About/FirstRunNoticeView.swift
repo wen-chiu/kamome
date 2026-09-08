@@ -2,7 +2,7 @@ import KamomeConfig
 import SwiftUI
 
 /// **The first-run notice** — shown once, before this build can send a real
-/// coordinate anywhere, then remembered (Chiu 2026-09-04; ADR 2026-09-05).
+/// coordinate anywhere, then remembered (Chiu 2026-09-04; ADR 2026-09-05 (b)).
 ///
 /// It **informs and is acknowledged; it does not ask.** There is one button and
 /// it says "Got it": no accept, no decline, no toggle. A refusal would have to

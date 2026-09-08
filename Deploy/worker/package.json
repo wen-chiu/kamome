@@ -7,8 +7,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "test": "node test/worker.test.mjs",
-    "deploy": "wrangler deploy"
+    "test": "node test/worker.test.mjs && node test/deploy-config.test.mjs",
+    "deploy": "npm test && wrangler deploy"
   },
   "devDependencies": {
     "wrangler": "4.127.1"

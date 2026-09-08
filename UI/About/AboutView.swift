@@ -23,7 +23,7 @@ import SwiftUI
 ///   does, the sentence that matches the code is the honest one to ship.
 ///
 /// **The same strings are the first-run notice's strings** (`FirstRunNoticeView`,
-/// ADR 2026-09-05) — one source, so the screen a user can always come back to
+/// ADR 2026-09-05 (b)) — one source, so the screen a user can always come back to
 /// and the one-time telling cannot drift apart.
 ///
 /// ⏳ **The wording and the placement are Chiu's and are not ruled on yet.**

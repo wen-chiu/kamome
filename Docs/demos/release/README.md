@@ -47,7 +47,7 @@ a stale screenshot.
 
 ## `first-run-notice-*.png` — the S3 answer
 
-ADR 2026-09-05: the user is **told once, on first run**, that real trip
+ADR 2026-09-05 (b): the user is **told once, on first run**, that real trip
 coordinates leave the device. The unit tests prove the gating and the
 remembering; they cannot prove anyone can read the screen.
 

@@ -8,7 +8,7 @@ import KamomeConfig
 /// remember it, and never show it again.**
 ///
 /// **This informs; it does not ask.** There is deliberately no "decline"
-/// (ADR 2026-09-05): a refusal that switches nothing off is a worse lie than no
+/// (ADR 2026-09-05 (b)): a refusal that switches nothing off is a worse lie than no
 /// question at all, and the control the app really offers is the one
 /// `privacy_control` already names — you decide what is sent by deciding what to
 /// import.

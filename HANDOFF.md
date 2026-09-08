@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-05.** `main` carries PRs #16–#41. Everything closed has been
+**Updated 2026-09-05.** `main` carries PRs #16–#42. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -24,27 +24,34 @@ is the gate**; these are the only rows on it that nobody has started.
 1. **The config flip — two values, no code, and it is Chiu's** (`CLAUDE.md`
    rule 2). `matching.base_url` is still `""` and `api_key_required` still
    `true`, so no build calls the Worker and **every build still carries the
-   routing key**. The Worker that ends that is deployed and capped (S5 closed
-   2026-09-04). Flipping it closes **S6 by construction**.
-   → `Docs/release-readiness.md` S5, S6.
-
-   ⚠️ **A precondition, found after S5 closed: the ceiling's real bound is one
-   KV cache window, not 2,000.** The ADR's ~2,030 is *legitimate* traffic; the
-   Worker has no auth, so an adversarial burst inside one window can reach the
-   3,000 soft limit. **Zero risk today — no IPA carries the URL, and the flip is
-   what publishes it.** RECOMMENDATION: a per-IP burst limit above ~30/min lands
-   **with** the flip, or the overshoot is recorded as accepted. Reasoning,
-   evidence grades and the settling test: `Deploy/worker/README.md` §"Not built".
+   routing key**. Flipping it closes **S6 by construction**.
+   ⚠️ **One precondition is met in the repo and NOT in production**: the
+   **60/min per-IP burst limit** is written, tested and merged-pending, but
+   **the Worker has not been redeployed** — production is still `5b33922c`, the
+   ceiling alone. **Deploy before flipping.** The other precondition, the
+   **first-run notice, is built** (ADR 2026-09-05 (b)) — the flip is what
+   publishes it. → `Docs/release-readiness.md` S3–S6; ADR 2026-09-05 §"NOT done".
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
    D2 feeds a mandatory submission item. → `Docs/release-readiness.md` Tier 3,
    `Docs/device-test-P3.md`.
 
-**S4 is half gated** (`check-worker-privacy.sh`, 2026-09-05): the Worker's deploy
-config is asserted no-log. **The account side — Logpush, retention, `wrangler
-tail` — cannot be asserted from here**, and `/v1/routing` is still GET.
-→ `Docs/release-readiness.md` S4.
+---
+
+## Findings — engineering session (2026-09-05)
+
+- **One judgement is Chiu's, and it is small.** The burst limiter **fails
+  closed** — a missing binding or a limiter fault is 503, so routing degrades to
+  dashed legs. It buys an after-probe 200 that proves *both* guards; it costs
+  availability on a Cloudflare-side fault. Three lines to reverse.
+- ⚠️ **The overshoot arithmetic stays INFERRED, and the settling test the
+  2026-09-04 re-rating named is retired.** `wrangler dev` at ceiling 1 shows
+  **zero** overshoot, N = 2/5/10/20, 20 genuinely in flight — miniflare's KV has
+  no read cache (VERIFIED 2026-09-05 in the pinned dependency — it accepts
+  `cacheTtl` and ignores it), so the harness lacks the mechanism. Do not re-run.
+
+Both: → `Docs/decisions.md` 2026-09-05.
 
 ---
 
@@ -78,11 +85,9 @@ tail` — cannot be asserted from here**, and `/v1/routing` is still GET.
   they are not in §0's decided-exceptions list. Either a recorded exception or
   they move out. **Deliberately not gated** — a gate would pre-empt your call.
   → `Docs/handoff-audit-2026-08-30.md` finding 7.
-- **S2's placement and `AboutView`'s wording** ship as a working draft, not a
-  ruling. The first-run card's wording **is** ruled — three lines, 2026-09-06 —
-  and shares About's strings, so a rewording moves both. Its own open half is
-  **whether a user may refuse**, deferred until a mechanism exists
-  (ADR 2026-09-05). → `Docs/release-readiness.md` S2/S3.
+- **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
+  the first-run card's wording is ruled. **Whether a user may refuse** stays
+  deferred. → `Docs/release-readiness.md` S2/S3.
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.
@@ -140,10 +145,8 @@ tail` — cannot be asserted from here**, and `/v1/routing` is still GET.
   `RecapStyle`'s defaults are unrendered; the app selects `modernMinimal`. Got
   wrong twice, cost a ledger correction both times.
 - **Two sessions contaminate each other's counts** (one checkout) **and each
-  other's simulator** (one bundle id): `xcodebuild test` installs the other
-  session's build over yours, so a capture can show the wrong wording
-  convincingly. Confirm your branch; read the *installed* bundle's strings before
-  believing a screenshot (`Docs/demos/release/README.md`).
+  other's simulator** (one bundle id — a screenshot can show *their* build's
+  wording). Confirm your branch. → `Docs/environment-gotchas.md`.
 - **MapKit saturates at ~109° of longitude** — Taiwan→Iceland has no frame at any
   padding, so the frozen country card is a **main path**, not a fallback.
 

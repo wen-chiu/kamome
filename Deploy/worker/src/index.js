@@ -19,6 +19,13 @@
  *     not a daily outage. The per-day counter below is the only place a ceiling
  *     can exist.
  *
+ *  4. **A day's ceiling cannot see a burst.** KV's read cache is tens of seconds
+ *     wide, so the counter can still read low while one client spends the whole
+ *     day. The per-IP burst limit below closes that window. It is the ceiling's
+ *     complement and never its replacement: 60 s is Cloudflare's longest period,
+ *     so a burst limit cannot express a daily total, and a daily total cannot
+ *     express a burst.
+ *
  * A side effect worth knowing for the privacy notice: Geoapify sees Cloudflare's
  * egress address, not the device's, because this builds a fresh upstream request
  * and forwards no client headers.
@@ -50,6 +57,16 @@ const BUDGET_KEY_PREFIX = "routing-requests-";
  */
 const COUNTER_TTL_SLACK_S = 3600;
 
+/**
+ * The bucket a request with no `CF-Connecting-IP` falls into. Cloudflare always
+ * sets that header in production, so this is reached only by something that is
+ * not Cloudflare — `wrangler dev`, or a future path nobody has thought about.
+ * Those share **one** bucket rather than skipping the limit: an unattributable
+ * request is the one most worth rate-limiting, and a per-request fallback key
+ * would hand any caller an unlimited supply of empty buckets.
+ */
+const NO_CONNECTING_IP = "no-connecting-ip";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -67,6 +84,52 @@ export default {
       // retryable. Answering 400 here would make the leg draw dashed *forever*
       // as though no road existed — the one mistake this proxy must not make.
       return refuse(503);
+    }
+
+    // ── The per-IP burst limit ──────────────────────────────────────────────
+    //
+    // Checked **before** the per-day counter, because it is the cheaper guard
+    // and because the burst it stops is the one the counter provably cannot see:
+    // KV's read cache is tens of seconds wide (measured 2026-09-04), so a client
+    // could spend the whole day inside a single window while the stored number
+    // still read low. A refusal here never reaches KV and never reaches
+    // Geoapify, so it costs no credit and is not counted against the day.
+    //
+    // The threshold is `simple.limit` on the `[[ratelimits]]` binding in
+    // `wrangler.toml` — 60/min — and it is not visible from here at all: the
+    // binding exposes `.limit()` and nothing else. That is deliberate. There is
+    // no number in this file to drift from the deployed one.
+    //
+    // ⚠️ The limit is **per Cloudflare location**, VERIFIED from their docs
+    // 2026-09-05, so this half bounds one address in one place and the per-day
+    // ceiling below bounds the total. Complements, not substitutes — the daily
+    // ceiling cannot express a burst and this cannot express a day.
+    const burstRetryAfterS = Number(env.BURST_RETRY_AFTER_S);
+    if (typeof env.KAMOME_BURST?.limit !== "function"
+      || !Number.isFinite(burstRetryAfterS) || burstRetryAfterS <= 0) {
+      // Fail closed, exactly as the ceiling does, and for a sharper reason: a
+      // Worker whose burst limiter is missing looks hardened and is not, and
+      // this is the deploy whose whole purpose is to make the URL safe to ship.
+      // It also makes the after-probe worth more — every fault here is a 503,
+      // so a production 200 now proves *both* guards are wired, not just one.
+      return refuse(503);
+    }
+
+    let withinBurst;
+    try {
+      // Keyed by the connecting address. That address never reaches a log, a
+      // body or a header — `refuse()` answers empty — and Cloudflare already
+      // holds it by virtue of terminating the connection, so this moves nothing
+      // that was not already there.
+      ({ success: withinBurst } = await env.KAMOME_BURST.limit({ key: burstKey(request) }));
+    } catch {
+      return refuse(503); // Fail closed, for the reason above.
+    }
+    if (withinBurst !== true) {
+      // Strict `!== true`: a limiter that answers anything other than a clean
+      // success refuses. `Retry-After` is one whole period, which is an upper
+      // bound on the wall-clock-aligned window rather than a guess at it.
+      return refuse(429, { "retry-after": String(Math.ceil(burstRetryAfterS)) });
     }
 
     // ── The spend ceiling ───────────────────────────────────────────────────
@@ -183,6 +246,15 @@ export default {
  */
 function refuse(status, headers) {
   return new Response(null, { status, headers });
+}
+
+/**
+ * The burst limit's bucket for one request: the connecting address, or the
+ * shared fallback when Cloudflare did not set one. `||` rather than `??` on
+ * purpose — an empty header is as absent as a missing one.
+ */
+function burstKey(request) {
+  return request.headers.get("CF-Connecting-IP") || NO_CONNECTING_IP;
 }
 
 /** `YYYY-MM-DD` in UTC — the counter's day, and the only timezone in this file. */

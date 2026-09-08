@@ -6,12 +6,13 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-05 against decisions.md **2026-09-05** and `main` at
-**PR #41**. Re-read for this sync: the 2026-09-04 and 2026-09-05 ledger entries,
+Last synced: 2026-09-05 against decisions.md **2026-09-05 (b)** and `main` at
+**PR #42**. Re-read for this sync: the 2026-09-04 and 2026-09-05 ledger entries,
 every line of `HANDOFF.md`, and `Docs/release-readiness.md` S2–S6. Two things
-moved: the **first-run notice exists**, the config flip's last precondition that
-was not Chiu's own (ADR 2026-09-05), and **S4 is half gated** — the Worker's
-deploy config is asserted no-log, the Cloudflare account's side cannot be.
+moved: **the Worker's hardening is written and gated** — a 60/min per-IP burst
+limit beside the day's ceiling, **S4 closed** — and **the first-run notice
+exists**. 🔴 **Not deployed: production is still
+`5b33922c`.** Deploy, then the flip is Chiu's.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -39,9 +40,9 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 **Phase 4 — films worth keeping** (opened 2026-08-15):
 
 1. ✅ Vehicle sprites — PR #15.
-2. ✅ Cross-region crossing — built and judged, PRs #24/#31.
-3. ~~Export that survives~~ — **dissolved 2026-09-02**: film-quality half closed
-   by ADR 2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
+2. ✅ Cross-region crossing — PRs #24/#31.
+3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half closed by ADR
+   2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
@@ -61,10 +62,10 @@ judgement, in `HANDOFF.md`, which wins on findings and blockers.
 The two things between Kamome and a submission:
 **the config flip** — `matching.base_url` is still `""` and `api_key_required`
 still `true`, so **every build carries the routing key**; the Worker that ends
-that is deployed and capped (S5 closed 2026-09-04), the first-run notice that has
-to precede it is built (ADR 2026-09-05), and the flip itself is two values and
-**Chiu's decision** — and **D1–D5** (one device session, never run,
-which no Claude session can do).
+that is capped, its burst limit and no-log gate **written but not deployed**
+(S4/S5 closed), its first-run notice built, and the flip itself two values and
+**Chiu's decision** — and **D1–D5** (one device session, never run, which no
+Claude session can do).
 → `Docs/release-readiness.md`.
 
 ## Architecture
@@ -109,8 +110,8 @@ which no Claude session can do).
 | **Camera shake / ghosting closed** — the loop reprojects one snapshot instead of cross-fading two. | 2026-08-31 (b) |
 | **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
 | **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
-| **The user is told once, on first run, that coordinates leave this device — and the notice informs rather than asks.** Refusal is deferred until a mechanism exists; the card is three lines. | 2026-09-05 |
-| **The Worker carries a per-day spend ceiling and fails closed.** 2000/day in `wrangler.toml`, never in the app's config. Live since 2026-09-04. KV's overshoot is accepted and its window is measured in tens of seconds; **do not switch to a Durable Object.** | 2026-09-04 |
+| **The user is told once, on first run, that coordinates leave; the notice informs, it does not ask.** | 2026-09-05 (b) |
+| **The Worker carries two guards and fails closed on either.** 2000/day (live) plus **60/min per IP** (⚠️ built, **not yet deployed**), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
 | **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
 
 Two standing constraints that are **not** decisions and must not be implemented

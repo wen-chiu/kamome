@@ -2,7 +2,7 @@
 import KamomeConfig
 import XCTest
 
-/// **The one-time telling** (Chiu 2026-09-04; ADR 2026-09-05): the user is told
+/// **The one-time telling** (Chiu 2026-09-04; ADR 2026-09-05 (b)): the user is told
 /// once, on first run, that real trip coordinates leave this device — and is not
 /// told again.
 ///
