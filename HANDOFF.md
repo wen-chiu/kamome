@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-06.** `main` carries PRs #16–#42. Everything closed has been
+**Updated 2026-09-06.** `main` carries PRs #16–#45. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -25,10 +25,12 @@ is the gate**; these are the only rows on it that nobody has started.
    rule 2). `matching.base_url` is still `""` and `api_key_required` still
    `true`, so no build calls the Worker and **every build still carries the
    routing key**. Flipping it closes **S6 by construction**.
-   ✅ **Every precondition is met in production**: the Worker is capped per day,
-   carries a **60/min per-IP burst limit**, and its no-log property is a gate
+   ✅ **Every precondition is met**: the Worker is capped per day, carries a
+   **60/min per-IP burst limit**, and its no-log property is a gate
    `npm run deploy` runs — deployed and probed 2026-09-06, Version `09e248ee`.
-   → `Docs/release-readiness.md` S4–S6; ADR 2026-09-05 + its addendum.
+   The **first-run notice is built** (ADR 2026-09-05 (b)), and the flip is what
+   publishes it. → `Docs/release-readiness.md` S3–S6; ADR 2026-09-05 + its
+   2026-09-06 addendum.
 2. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
@@ -77,10 +79,9 @@ is the gate**; these are the only rows on it that nobody has started.
   they are not in §0's decided-exceptions list. Either a recorded exception or
   they move out. **Deliberately not gated** — a gate would pre-empt your call.
   → `Docs/handoff-audit-2026-08-30.md` finding 7.
-- **S2's placement and S3's wording** ship as a working draft, not a ruling. And
-  still open on purpose: **whether the import flow warns at the point of import**
-  — an About screen a user may never open is not a warning.
-  → `Docs/release-readiness.md`.
+- **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
+  the first-run card's wording is ruled. **Whether a user may refuse** stays
+  deferred. → `Docs/release-readiness.md` S2/S3.
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.
@@ -137,8 +138,9 @@ is the gate**; these are the only rows on it that nobody has started.
 - **Read a style value off the preset the app selects, never off the defaults.**
   `RecapStyle`'s defaults are unrendered; the app selects `modernMinimal`. Got
   wrong twice, cost a ledger correction both times.
-- **Two sessions sharing one checkout contaminate each other's counts.** Confirm
-  your branch and your distance from `origin/main` first.
+- **Two sessions contaminate each other's counts** (one checkout) **and each
+  other's simulator** (one bundle id — a screenshot can show *their* build's
+  wording). Confirm your branch. → `Docs/environment-gotchas.md`.
 - **MapKit saturates at ~109° of longitude** — Taiwan→Iceland has no frame at any
   padding, so the frozen country card is a **main path**, not a fallback.
 
