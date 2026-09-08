@@ -95,9 +95,14 @@ Geoapify, and is why the flag exists rather than the rule simply being deleted:
 a keyless build must not fire coordinate-bearing requests that can only be
 refused (§0 — exposure for nothing).
 
-`Config/Secrets.xcconfig` becomes unnecessary at that point. Leaving a key in it
-is harmless — the app just stops sending one — but delete it from any machine
-that builds for distribution.
+🔴 **`Config/Secrets.xcconfig` is unnecessary as of the flip (2026-09-08), and
+deleting it from every machine that builds for distribution is what actually
+closes S6.** Leaving a key in it is harmless to the app — it just stops sending
+one — but the file is what puts the key into `Info.plist` and into the build log,
+so a distribution machine that still has it is a machine that can still ship one.
+The archive built on 2026-09-08 was produced on a checkout that had no such file:
+its build log holds no `KAMOME_ROUTING_API_KEY`, and the shipped `Info.plist`
+key field is empty.
 
 ## The Node version trap
 
