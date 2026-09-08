@@ -3745,3 +3745,129 @@ strings grow past the shipped copy plus roughly half again. It exists to stop th
 `AboutView` paragraphs migrating back one well-meaning edit at a time.
 
 ⏳ Still not ruled on: **S2's placement**, and the wording of `AboutView` itself.
+
+---
+
+---
+
+## 2026-09-08 — The config flip: the key stops shipping, and the counter is the proof
+
+**Status:** approved — **Chiu's decision, 2026-09-05**, taken because it changes
+shipped behaviour (`CLAUDE.md` rule 2). **Scope:** two values in
+`Config/TrackingConfig.json`, four tests restated around them, and the documents
+that said the flip was still owed. **No code changed.**
+
+### The decision
+
+```jsonc
+"matching": {
+  "base_url": "https://kamome-routing.kamome-site.workers.dev",  // was ""
+  "api_key_required": false                                       // was true
+}
+```
+
+**The pair only works as a pair**, and each half alone is a different bug.
+`base_url` without `api_key_required: false` resolves to routing **silently off**
+in the shipped build — the app would drop the endpoint for want of a key it is no
+longer supposed to have. `api_key_required: false` without the URL leaves routing
+off because there is nothing to call. This is now a test, and it was watched red
+on each half separately.
+
+⚠️ **The hostname is not a secret.** It ships in every IPA by design; that is what
+a proxy is for. What stops being shipped is the **key**.
+
+### What this closes, and what it conspicuously does not
+
+**Closes S6 by construction.** The key was a build setting, and `xcodebuild`
+prints every build setting, so build logs echoed it in clear text. It is not a
+build setting any more, so there is nothing left to echo.
+
+**It also publishes the first-run notice.** `FirstRunNoticeView` stays silent
+while `matching.base_url` is empty (ADR 2026-09-05 (b)), so the first build after
+this flip is the first build that tells the user, before any coordinate leaves,
+that coordinates leave. That is a **user-visible change made by a config edit**,
+which is exactly why the flip was Chiu's and not a session's.
+
+🔴 **It does not retire the key, and that gap now has a row of its own — S7.**
+Every IPA that has ever reached another person's phone contains the current key
+(**VERIFIED 2026-08-20:** two built bundles carried a plaintext 32-hex key in
+`Kamome.app/Info.plist`, read out with stock `PlistBuddy`), and so does every
+build log ever taken. The flip changes what is built from now on; it cannot reach
+the builds already out. Only **rotation** kills those, and rotation was written
+down in exactly one place — `Docs/pre-launch.md` item 7 — which is no longer the
+gate. It is now a row on the gate that is. **Rotation is Chiu's**, at submission,
+*after* the artifact check passes.
+
+### The evidence, and which link each piece actually proves
+
+The two-value edit is trivial. Proving the app reaches the Worker **without a
+key** is the work, and it splits into two links that no single run covers.
+
+**Link 1 — the config is what points the app at the Worker.** A test, because
+this half is pure and needs no network:
+`RoutingKeyTests.testTheShippedConfigPointsAtTheWorkerAndNeedsNoKey` reads the
+committed `TrackingConfig.json` and asserts both values plus
+`applyingRoutingKey(config, key: nil) == config` — a keyless build reaching the
+Worker unchanged. **Watched red on each half**: reverting `api_key_required`
+fails with the resolved config showing `baseURL: ""`, which is routing off;
+reverting `base_url` fails on the URL.
+
+**Link 2 — the Worker answers a keyless app, and Geoapify answers the Worker.**
+Three desk renders, in a checkout with **no `Config/Secrets.xcconfig` at all**,
+against the URL read out of the committed config by the shell. Committed
+synthetic fixtures only — never `Tests/Fixtures/trips/local/`, which is real trip
+dumps and §0.
+
+| render | fixture | legs | production counter |
+|---|---|---|---|
+| 1 | `miyakojima` | 3 reconstructed | → 7 |
+| 2 | `miyakojima` | 3 reconstructed | 7 → **10** |
+| 3 | `margaret-river` | 2 reconstructed | 10 → **12** |
+
+Every leg came back `drive/reconstructed`, never `inferred`; the service report
+reads `0 unreachable, 0 rate-limited, 0 implausible`. **A counter that moves is
+worth more than any of that**: it is simultaneously proof that the app called the
+Worker, that the Worker received it, and that it succeeded with no key on the
+device — because a leg that had gone straight to Geoapify keyless would have come
+back 401 and drawn dashed.
+
+⚠️ **Render 2 repeated render 1's coordinates exactly and still made three fresh
+requests**, which rules out `URLSession.shared`'s heuristic caching as an
+explanation for anything here.
+
+### ⚠️ Two things about the evidence, stated because they nearly misled
+
+**The KV read lag is worse than "tens of seconds" in practice, and it fooled this
+session twice.** The first read of the day's key returned **404 — a stale
+miss** for a key that already held 4. Every read taken *immediately* after a
+render showed the pre-render value; the next read, tens of seconds later, showed
+the new one. The arithmetic only closes once you stop trusting the first read:
+4 already there, plus 3 + 3 + 2 = **12**, which is what the settled reads say.
+**The rule for anyone reading this counter: read it twice, tens of seconds apart,
+and believe the second.** This confirms 2026-09-04's finding on a second occasion
+rather than replacing it.
+
+**The four requests already on the counter are not attributed.** They were there
+before render 1 and the stale miss hid them. Other worktrees and other people can
+reach a live public Worker; this session cannot say which, and does not guess.
+
+### 🟠 A gap found on the way, not fixed here
+
+**No desk render can validate the flip end to end, because the harness does not
+read `matching.base_url`.** `RecapDemoFilmTests.importedRecap` resolves its
+endpoint as `requestedBaseURL ?? KAMOME_ROUTING_BASE_URL ?? "https://api.geoapify.com"`
+— the shipped config is never consulted. That is why link 2 above had to pass the
+URL in through the harness variable, and why link 1 has to be a separate test.
+**Deliberately not changed:** making the harness follow the config would silently
+point every desk render at the Worker and spend real quota, which is a behaviour
+change to shared tooling and not this session's to make.
+
+### ⏳ Owed, and whose
+
+**The artifact check — `./check.sh --release <.xcarchive>`.** It walks every file
+in the archive for a 32-hex string and asserts `Info.plist` carries the Worker URL
+and no key field. **It is the only proof that the built bundle carries no key**;
+everything above proves the source and the network path. 🔴 **`check-archive.sh`
+requires the real key and refuses to degrade into a shape scan, and the key is
+Chiu's** — it is never read into a session's environment. So the archive is built
+here and the gate is run by him.
