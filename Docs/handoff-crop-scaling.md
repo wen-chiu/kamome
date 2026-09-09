@@ -501,5 +501,10 @@ became unreachable:
   now available offline via `CountryExtent.Country.localizedName`, but **wiring it
   into the card was not done** — that is `App/Services/RecapComposer.titleSubtitle`
   and a `RecapTrip` field, and it is chrome layout, which is DESIGNER territory.
+  ⚠️ **Re-VERIFIED 2026-09-04, after the type-2 opening round**:
+  `LinearTimeline.swift:215` is still `title = trip.title`, `subtitle =
+  trip.subtitle`. The countries a type-2 film now shows are on *other* surfaces —
+  the boarding pass's FROM/TO and the two flight-end marks — not on this card.
+  (Moved here from `HANDOFF.md` 2026-09-10 under its size budget.)
 - **The continuity gate still never measures the shipped `establishing: nil`
   camera.** Unchanged deliberately; re-confirmed still true.

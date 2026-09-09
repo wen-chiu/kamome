@@ -27,6 +27,7 @@ its move.
 | `Docs/eng-session-closeout.md` | `_archive/eng-session-closeout.md` | executed — sprite tree and the key |
 | `Docs/eng-session-appearance.md` | `_archive/eng-session-appearance.md` | shipped; the decision is ADR 2026-08-27 |
 | `Docs/eng-session-cross-region.md` | `_archive/eng-session-cross-region.md` | session 1 shipped (PR #24/#31); session 2, the mode classifier, is deferred by name in `Docs/current-state.md` |
+| `Docs/device-test-P1.md` | `_archive/device-test-P1.md` | the **Phase 1** device gate, signed off and closed with Phases 0–3. ⚠️ **Its "2 h continuous drive" definition is still the definition** `Docs/device-test-P3.md` and D1–D5 mean, and `HomeView`, `TripRepository` and `DriveTestLog` still cite it by the old path. Moved 2026-09-10 to pay for `Docs/handoff-openfreemap-eval.md` under the corpus ceiling — it was simply missed by the 2026-09-03 sweep |
 | `Docs/handoff-P3.5.md` | `_archive/handoff-P3.5.md` | Phase 3.5 closed 2026-08-15. **Its §6 gate item definitions are still the definitions** anything citing them means |
 | `Docs/gate-P3.5-checklist.md` | `_archive/gate-P3.5-checklist.md` | the gate it sequenced closed 2026-08-15 |
 | `Docs/handoff-recap-visuals.md` | `_archive/handoff-recap-visuals.md` | historical. **§3 vehicle-sprite constraints stay authoritative** — cited by `Core/ExportEngine/Resources/Vehicles/README.md` and `DESIGNER.md` |

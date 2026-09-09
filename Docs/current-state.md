@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-09 against decisions.md **2026-09-09** and `main` at
-**PR #46**. Re-read: the 2026-09-08/09 entries, every line of `HANDOFF.md`,
+Last synced: 2026-09-10 against decisions.md **2026-09-09** and `main` at
+**PR #47**. Re-read: the 2026-09-08/09 entries, every line of `HANDOFF.md`,
 and `Docs/release-readiness.md` S2–S7. 🔴 **The config flip is made** (Chiu,
 ADR 2026-09-08): builds carry no key, the Worker carries the traffic, **S6 is
 closed**, and the first-run notice is now published. **S7 is new** — the flip does

@@ -40,10 +40,12 @@ published. → ADR 2026-09-08.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.**
-This round only *looks* at it: three stock styles, labels on for evaluation
-only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
-§2.5/§2.3/§2.1, not a guess. → `Docs/decisions.md` **2026-09-09**.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09); this
+round only *looks*. ✅ **The pictures exist** — 15 annotated frames in
+`~/Kamome-films/openfreemap-eval/`, never in the repo (§0). Three unknowns are
+settled, **two ADR statements need correcting** (one is Apple's logo), three
+visual findings are for judgement. ⏳ **Awaiting Chiu.**
+→ `Docs/handoff-openfreemap-eval.md`.
 
 ---
 
@@ -55,11 +57,8 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **Five questions from the retimed type-2 opening** — four visual, one semantic
   (its DATE row is the **trip's** range, not the flight's).
   → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
-- **The title card still shows trip title + dates, not the country name.**
-  ⚠️ **Still true after the type-2 opening round** — VERIFIED 2026-09-04,
-  `LinearTimeline.swift:215` is `title = trip.title`, `subtitle = trip.subtitle`.
-  The countries a type-2 film now shows are on *other* surfaces: the boarding
-  pass's FROM/TO and the two flight-end marks. A DESIGNER question.
+- **The title card still shows trip title + dates, not the country name** —
+  re-VERIFIED 2026-09-04, and a DESIGNER question.
   → `Docs/handoff-crop-scaling.md` §11, §14.
 - **The badge's 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
@@ -173,6 +172,7 @@ film (`Docs/handoff-crop-scaling.md`).
 | `Docs/handoff-cross-region-crossing.md` | the crossing beat, the pan-floor correction, the safe-zone margin |
 | `Docs/handoff-crop-scaling.md` | crop-scaling, the budget split, the opening and the country card |
 | `Docs/handoff-audit-2026-08-30.md` | the owed MapLibre sweep, dead pacing, the §0 films question |
+| `Docs/handoff-openfreemap-eval.md` | the substrate evaluation: the frames, the number, the corrections |
 | `Docs/handoff-marker-badge.md` | the fallback badge and the gaps it left |
 | `Docs/handoff-pacing.md` | film duration and travel pacing |
 | `Docs/handoff-subject-lookup.md` | the silent subject fallback |

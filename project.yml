@@ -88,6 +88,26 @@ targets:
         # deliberately boring stand-in until it exists.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # **CJK place names on a MapLibre base** (ADR 2026-09-09 evaluation).
+        #
+        # OpenFreeMap's glyph server serves Noto Sans Regular/Bold/Italic only —
+        # Latin — so every ideographic label arrives as a missing glyph unless
+        # MapLibre is told to render CJK locally. This key is the only way to tell
+        # it: MapLibre reads it from the **main** bundle at startup and there is no
+        # runtime API, so it cannot live in the test target or in an env variable.
+        #
+        # ⚠️ **This is the one line of the round that lands in the shipped
+        # bundle.** It is inert there: `RecapModel.snapshotProvider(for:)` builds a
+        # MapLibre renderer only when `RecapMapTiles` finds a `.pmtiles` region,
+        # nothing ships one, and the evaluation does not install one — so no build
+        # constructs the renderer that would read this. Recorded rather than
+        # hidden.
+        #
+        # ⚠️ **Which family is a DESIGNER/product question, not settled here.**
+        # `PingFang TC` follows `CFBundleDevelopmentRegion: zh-Hant`, which means
+        # Japanese place names render in Chinese glyph forms — visible on the
+        # miyakojima fixture and reported for judgement, not fixed by guessing.
+        MLNIdeographicFontFamilyName: PingFang TC
         # Reaching the dogfood OSRM, which runs on the developer's Mac over home
         # Wi-Fi (`Docs/dogfood-infrastructure.md`). Two separate iOS gates stand
         # between a device build and `http://192.168.x.x:5100`, and both fail
@@ -202,6 +222,7 @@ schemes:
         - { variable: KAMOME_MAP_APPEARANCE, value: "$(TEST_RUNNER_KAMOME_MAP_APPEARANCE)", isEnabled: true }
         - { variable: KAMOME_MAP_PROBE, value: "$(TEST_RUNNER_KAMOME_MAP_PROBE)", isEnabled: true }
         - { variable: KAMOME_MAP_DISPLAY_SCALE, value: "$(TEST_RUNNER_KAMOME_MAP_DISPLAY_SCALE)", isEnabled: true }
+        - { variable: KAMOME_MAP_SUBSTRATE, value: "$(TEST_RUNNER_KAMOME_MAP_SUBSTRATE)", isEnabled: true }
         - { variable: KAMOME_MARKER_STILLS, value: "$(TEST_RUNNER_KAMOME_MARKER_STILLS)", isEnabled: true }
         - { variable: KAMOME_MATCHING_E, value: "$(TEST_RUNNER_KAMOME_MATCHING_E)", isEnabled: true }
         - { variable: KAMOME_OSRM_BASE_URL, value: "$(TEST_RUNNER_KAMOME_OSRM_BASE_URL)", isEnabled: true }
@@ -223,6 +244,8 @@ schemes:
         - { variable: KAMOME_STOP_PHOTOS, value: "$(TEST_RUNNER_KAMOME_STOP_PHOTOS)", isEnabled: true }
         - { variable: KAMOME_STOP_STILL, value: "$(TEST_RUNNER_KAMOME_STOP_STILL)", isEnabled: true }
         - { variable: KAMOME_SUBJECT_STILL, value: "$(TEST_RUNNER_KAMOME_SUBJECT_STILL)", isEnabled: true }
+        - { variable: KAMOME_SUBSTRATE_EVAL, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL)", isEnabled: true }
+        - { variable: KAMOME_SUBSTRATE_EVAL_T, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL_T)", isEnabled: true }
         - { variable: KAMOME_SUBJECT, value: "$(TEST_RUNNER_KAMOME_SUBJECT)", isEnabled: true }
         - { variable: KAMOME_SUBJECT_LENGTH_PX, value: "$(TEST_RUNNER_KAMOME_SUBJECT_LENGTH_PX)", isEnabled: true }
         - { variable: KAMOME_TERRAIN_PATH, value: "$(TEST_RUNNER_KAMOME_TERRAIN_PATH)", isEnabled: true }

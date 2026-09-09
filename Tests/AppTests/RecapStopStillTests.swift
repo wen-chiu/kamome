@@ -95,7 +95,7 @@ final class RecapStopStillTests: XCTestCase {
             "Manual review harness — set KAMOME_SUBJECT_STILL to a fixture name (e.g. miyakojima)."
         )
         let scene = try await RecapReviewScene.make(fixture: fixture)
-        let time = try XCTUnwrap(travellingTime(scene.timeline), "the film never shows a moving subject")
+        let time = try XCTUnwrap(scene.travellingTime(), "the film never shows a moving subject")
         let image = try await scene.frame(at: time)
 
         let outDir = RecapReviewScene.outputDirectory()
@@ -147,23 +147,6 @@ final class RecapStopStillTests: XCTestCase {
             revealed, inferred.count, longest / 1000,
             longest / camera.spanM * 100, camera.spanM / 1000
         )
-    }
-
-    /// The latest instant at which the subject is fully drawn — late enough that
-    /// a trail exists behind it, and deterministic so a sweep compares like with
-    /// like across sizes and subjects.
-    private func travellingTime(_ timeline: LinearTimeline, dt: Double = 1.0 / 30) -> Double? {
-        var visible: [Double] = []
-        var time = timeline.openingS
-        while time <= timeline.durationS {
-            let state = timeline.subjectState(atTime: time)
-            if state.isVisible, state.emphasis > 0.99 { visible.append(time) }
-            time += dt
-        }
-        guard !visible.isEmpty else { return nil }
-        // Two thirds of the way through the moving frames: past the first leg,
-        // before the closing reveal.
-        return visible[Int(Double(visible.count - 1) * 0.66)]
     }
 
     /// The instant this stop's deck is most open — the frame that shows the
