@@ -4143,3 +4143,142 @@ everything above proves the source and the network path. 🔴 **`check-archive.s
 requires the real key and refuses to degrade into a shape scan, and the key is
 Chiu's** — it is never read into a session's environment. So the archive is built
 here and the gate is run by him.
+
+## 2026-09-09 — The export substrate leaves Apple Maps: OpenFreeMap + MapLibre, and this round only looks at it
+
+**Decision (Chiu, 2026-09-09), in his words:**
+
+> 「既然 apple 版權有潛在問題那我不要浪費時間問他，我就直接把 Kamome 的 Export
+> 地圖方向切換為：OpenFreeMap → MapLibre」
+>
+> 「這一輪目標很單純：先把 MapLibre + OpenFreeMap 的實際地圖畫面做出來，讓我評估
+> 視覺品質。不要做架構重設，也不要擴大 scope。」
+
+**This reopens the 2026-08-15 park, and Chiu named it** — `CLAUDE.md` rule 6 is
+satisfied by the sentence above, not by this entry. It reopens it for the
+**export path**; the in-app maps (`RecordingView`, `TripDetailView`) stay MapKit
+and are not in scope.
+
+Written at Chiu's instruction **before** implementation, so the engineering
+session that does the work does not write a second entry for the same decision
+(`PO.md` — one decision, one entry).
+
+### Why the park's own reason is gone
+
+2026-08-15 parked MapLibre because **tile provisioning had no answer**: a
+`.pmtiles` region covers a bounded area, regions run to hundreds of megabytes,
+nothing ships one, and serving them was P7 backend work that left the roadmap in
+the same ADR. `RecapMapTiles` still searches four locations for a region and
+finds none, which is why `RecapModel.snapshotProvider(for:)` has fallen back to
+Apple Maps on every film since.
+
+**OpenFreeMap is a free hosted planet, so the blocker the park was built on is
+the thing that changed.** This is not a reopening on taste.
+
+### The Apple premise is VERIFIED — and it is the licence, not a copyright guess
+
+Read from Apple's live Developer Program License Agreement, **Attachment 6
+(Additional Terms for the use of the Apple Maps Service), VERIFIED 2026-09-08**.
+`"Map Data"` is defined to include **imagery**, so a snapshot's tiles are Map Data:
+
+- **§2.5** — *"Unless otherwise expressly permitted in writing by Apple, Map Data
+  may not be cached, pre-fetched, or stored ... other than on a temporary and
+  limited basis ... after which, **in all cases, You must delete** any such Map
+  Data."* An exported MP4 is permanent storage of Map Data outside the app.
+- **§2.3** — *"not to copy, modify, translate, **create a derivative work of,
+  publish or publicly display** the Map Data **in any way**."*
+- **§2.1 / §4** — Apple's logo and legal link may not be removed or obscured; §4
+  names exactly that as grounds for revoking MapKit access.
+
+**Measured in the artifact, not argued:** `Docs/demos/phase3/still-stop-card.png`
+is a 1080×1920 frame of an exported film — unmistakably Apple cartography,
+full-bleed, **with no Apple logo and no legal link**. `MKMapSnapshotter` returns a
+bare image; MapKit's own live view supplies those notices and the snapshotter
+does not, which is visible side by side against
+`Docs/demos/phase3_5/import/03-trip-detail-provenance.png`, where the in-app map
+shows " Maps" and "Legal" correctly.
+
+**Chiu declined to ask Apple for written permission** — recorded as his decision,
+not as an oversight. Concurred, and the reason is worth keeping: attribution
+cannot cure §2.5 or §2.3, so the only thing a request could buy is the written
+permission §2.5 names, and a release would then be gated on someone else's inbox.
+
+⚠️ **What stays UNKNOWN, deliberately: whether Apple would ever have objected.**
+Nobody asked. Do not let a later entry record this as "Apple said no" — the
+verified fact is the text of the terms, and nothing else.
+
+### What this round is, and what it is not
+
+**It is an evaluation** — the deliverable is pictures Chiu can judge plus one
+number (seconds per snapshot). **It is not a shipping switch**: `RecapModel`'s
+fallback is untouched and the switch lives in the review harness, so no build's
+behaviour changes.
+
+**It is also not a new pipeline.** MapLibre has rendered films before — Phase 3.5
+§6a, in-sim confirmed 2026-07-22 — the `MapRenderer` boundary is from 2026-07-19,
+each renderer is confined to one file, and `Config/architecture.json` already
+permits `import MapLibre` in `MapLibreSnapshotProvider.swift`. **The work is a
+tile source and a harness switch**, which is what keeps this inside Chiu's "不要
+做架構重設".
+
+**Three styles, Chiu's pick, from OpenFreeMap's five hosted ones: Positron,
+Liberty and Fiord 3D.** Bright and Dark are not in this round.
+
+**No Kamome style is authored this round.** `Config/RecapThemes/modern-minimal.json`
+is the parked souvenir style and stays parked and accurate.
+
+### Labels: opened for this round only, and the lock does not move
+
+`PO.md`'s register has held **map labels off the roadmap, not deferred** since
+2026-08-15, on Chiu's own reasoning that "大大的可愛地名" should be a
+**Kamome-drawn overlay**, independent of the substrate.
+
+**Chiu 2026-09-09: labels are allowed in this round, evaluation-only.** The
+reason is narrow and does not generalise: a world map with no city or country
+names cannot be judged for visual quality at all, so the lock would make the
+evaluation meaningless. **It does not unlock anything.** Whether place names
+ultimately belong to the base map or to a Kamome overlay is **still the locked
+question**, and the pictures from this round are the evidence for answering it.
+
+### §0 — the evaluation needs no new exception; shipping will
+
+**The evaluation is a desk render** on Chiu's own machine, from his own fixtures,
+and it adds **no new category of exposure**: those same coordinates already go to
+Geoapify (the decided exception) and, on every Apple Maps render, to Apple.
+
+⚠️ **And that last clause is an unrecorded gap, stated here rather than used as
+cover.** `MKMapSnapshotter` must fetch tiles for the region it is asked for
+(INFERRED — strong; Apple's own documentation says it works "by loading all of
+the available map tiles"; the cheapest settling is one render in airplane mode),
+and `CLGeocoder` sends each stop's centre to Apple for its name. **Neither is in
+§0's decided-exceptions list, and neither ever was.** That predates this decision
+and is not created by it.
+
+**The shipping decision is deferred, and it is a real one.** If OpenFreeMap
+becomes the shipping export substrate, every keyframe's centre and zoom become a
+third party's HTTP request, and `privacy_intro`'s *"One thing leaves it"* becomes
+false — the first-run card gains a second item (ADR 2026-09-05 (b) governs how it
+is told). **That decision is made after Chiu has seen the pictures, not before.**
+
+### What is VERIFIED about OpenFreeMap, and what is not
+
+VERIFIED 2026-09-09 from openfreemap.org and from `tiles.openfreemap.org/styles/positron`:
+
+| claim | state |
+|---|---|
+| Planetiler-generated, **unmodified OpenMapTiles schema** | **VERIFIED** — so Kamome's 11 layers can port by swapping the source |
+| commercial use, hotlinking the public CDN, no API key, no request limit | **VERIFIED** |
+| **no SLA, no support** — their own words | **VERIFIED**, and it is the shipping risk, not an evaluation one |
+| required attribution: `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | **VERIFIED** (the OpenFreeMap clause is optional-but-asked; the **OSM clause is an ODbL obligation**) |
+| 5 of Kamome's 6 source-layers appear in positron's own style | **VERIFIED** — `water` `waterway` `transportation` `landcover` `park` |
+| `mountain_peak` present in the tiles | **INFERRED** — it is in the OMT schema but positron does not draw it; settle by querying one tile |
+| glyph server serves **Noto Sans** (Latin) | **VERIFIED** — so CJK labels need `MLNIdeographicFontFamilyName`, which MapLibre's iOS docs say applies to snapshots too |
+| whether `MLNMapSnapshotter` burns attribution into the image | **UNKNOWN** — assume not; settle by looking at one output |
+| seconds per snapshot over the network | **UNKNOWN** — the only prior MapLibre figure (0.84 s) was local pmtiles |
+
+### Not decided here
+
+The shipping substrate; whether Kamome authors its own style; where place names
+finally live; the first-run notice's second item; whether the parked pmtiles
+path is ever retired. **None of these may be settled by the engineering session
+that runs this evaluation** — it returns pictures and a number.

@@ -6,15 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-08 against decisions.md **2026-09-08** and `main` at
-**PR #45**. Re-read: the 2026-09-05/06/08 entries, every line of `HANDOFF.md`,
+Last synced: 2026-09-09 against decisions.md **2026-09-09** and `main` at
+**PR #46**. Re-read: the 2026-09-08/09 entries, every line of `HANDOFF.md`,
 and `Docs/release-readiness.md` S2–S7. 🔴 **The config flip is made** (Chiu,
 ADR 2026-09-08): builds carry no key, the Worker carries the traffic, **S6 is
 closed**, and the first-run notice is now published. **S7 is new** — the flip does
-not retire the key already inside other people's IPAs; only rotation does. And
-**Chiu's film judgements landed** (2026-09-05 (c)/(d)) — one accent, a plane that
-reads, a cross-faded origin mark, and a closing card that is the map again, which
-turned out to be **empty on every imported trip**.
+not retire the key already inside other people's IPAs; only rotation does.
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -61,6 +58,8 @@ type-2 opening included — retimed, with a boarding pass, a plane and two marke
 flight ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's
 judgement, in `HANDOFF.md`, which wins on findings and blockers.
 
+⚠️ **One line is in flight again**: the export substrate evaluation (2026-09-09).
+
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — and then Chiu's submission sequence,
 the artifact check (`./check.sh --release`, which needs the real key) and **then**
@@ -99,9 +98,9 @@ the key rotation, in that order.
 |---|---|
 | **The division of labour: Chiu owns whether the film is good enough; engineering owns that the code does not break and that a release carries no security, licence or privacy fault.** Never answer "is this ready?" with a film — answer with the gates, and where a gate does not exist, say so. | 2026-09-02 |
 | **§0** — location data never leaves the device by default; the decided exceptions are the Geoapify routing payloads and one user-initiated share. Honest disclosure is the posture. Anything further is Chiu's. | 2026-08-16, 2026-08-20 (b)/(c) |
-| **MapLibre parked, Apple Maps ships.** Pixel art and map labels parked with it; the provider, themes and tile pipeline stay dormant and accurate. | 2026-08-15 |
+| ⚠️ **Export is LEAVING Apple Maps** — OpenFreeMap + MapLibre, **evaluation round only**: stock styles, labels on for evaluation, no shipping switch. Apple Maps still ships until Chiu judges the pictures; in-app maps stay MapKit; pixel art stays parked. | 2026-08-15, **2026-09-09** |
 | **Routing is Geoapify**; the detour gate stays 2.5. | 2026-08-20 (a)–(d), 2026-08-21 |
-| **The film follows the device's system appearance**, captured at export, never read inside the render loop. A manual picker is **deferred**. Trail is `#FF6A3D`, the one accent; glow off in both; the end card's dim is per appearance. | 2026-08-27, 2026-09-05 (c)/(d) |
+| **The film follows the device's system appearance**, captured at export, never read inside the render loop. A manual picker is **deferred**. Trail is `#FF6A3D`, the film's one accent; glow off in both; the end card's dim is per appearance. | 2026-08-27, 2026-09-05 (c)/(d) |
 | **The subject is 157.5 px and the mark is pinned at `length_fraction` 1.0.** ⚠️ That pin **spends** the relational guarantee: next time `subject_length_px` moves, the mark's size is a fresh judgement. | 2026-08-27 (b) |
 | **The fallback marker is a badge, not a bare bird** — one `#1D6FE0` disc, the same in both appearances, at 0.60 of the subject. The bare gull stays the end-card brand mark. **Three gull objects; do not restyle in place.** | 2026-08-29 |
 | **The user names the trip; recording ships behind a beta marker.** Neither is built; `Trip.title` already reaches the title card, so what is missing is an edit surface, not a schema. | 2026-08-30 |
