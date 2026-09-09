@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-08.** `main` carries PRs #16–#45. Everything closed has been
+**Updated 2026-09-09.** `main` carries PRs #16–#46. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -38,14 +38,12 @@ published. → ADR 2026-09-08.
 
 ---
 
-## Findings — engineering session (2026-09-08)
+## 🔵 Live — the export substrate evaluation
 
-- 🟠 **No desk render can validate `matching.base_url`.**
-  `RecapDemoFilmTests.importedRecap` resolves its endpoint as
-  `requestedBaseURL ?? KAMOME_ROUTING_BASE_URL ?? "https://api.geoapify.com"` and
-  never reads the shipped config. Not changed here — making it follow the config
-  would point every desk render at the Worker and spend real quota.
-  → `Docs/decisions.md` 2026-09-08.
+**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.**
+This round only *looks* at it: three stock styles, labels on for evaluation
+only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
+§2.5/§2.3/§2.1, not a guess. → `Docs/decisions.md` **2026-09-09**.
 
 ---
 
@@ -97,6 +95,10 @@ published. → ADR 2026-09-08.
 ---
 
 ## 🟠 Open — nobody is on these
+
+- 🟠 **No desk render can validate `matching.base_url`** — `RecapDemoFilmTests`
+  never reads the shipped config, and making it would spend real quota.
+  → `Docs/decisions.md` 2026-09-08.
 
 - **The subject lookup still misses; it no longer crashes.** `VehicleCatalog.resolve`
   returns nil and the film silently draws the seagull instead of the car. Rate and
