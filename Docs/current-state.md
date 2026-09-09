@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-08 against decisions.md **2026-09-08** and `main` at
-**PR #45**. Re-read: the 2026-09-05/06/08 entries, every line of `HANDOFF.md`,
+Last synced: 2026-09-09 against decisions.md **2026-09-09** and `main` at
+**PR #46**. Re-read: the 2026-09-08/09 entries, every line of `HANDOFF.md`,
 and `Docs/release-readiness.md` S2–S7. 🔴 **The config flip is made** (Chiu,
 ADR 2026-09-08): builds carry no key, the Worker carries the traffic, **S6 is
 closed**, and the first-run notice is now published. **S7 is new** — the flip does
@@ -58,6 +58,8 @@ type-2 opening included — retimed, with a boarding pass, a plane and two marke
 flight ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's
 judgement, in `HANDOFF.md`, which wins on findings and blockers.
 
+⚠️ **One line is in flight again**: the export substrate evaluation (2026-09-09).
+
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — and then Chiu's submission sequence,
 the artifact check (`./check.sh --release`, which needs the real key) and **then**
@@ -96,7 +98,7 @@ the key rotation, in that order.
 |---|---|
 | **The division of labour: Chiu owns whether the film is good enough; engineering owns that the code does not break and that a release carries no security, licence or privacy fault.** Never answer "is this ready?" with a film — answer with the gates, and where a gate does not exist, say so. | 2026-09-02 |
 | **§0** — location data never leaves the device by default; the decided exceptions are the Geoapify routing payloads and one user-initiated share. Honest disclosure is the posture. Anything further is Chiu's. | 2026-08-16, 2026-08-20 (b)/(c) |
-| **MapLibre parked, Apple Maps ships.** Pixel art and map labels parked with it; the provider, themes and tile pipeline stay dormant and accurate. | 2026-08-15 |
+| ⚠️ **Export is LEAVING Apple Maps** — OpenFreeMap + MapLibre, **evaluation round only**: stock styles, labels on for evaluation, no shipping switch. Apple Maps still ships until Chiu judges the pictures; in-app maps stay MapKit; pixel art stays parked. | 2026-08-15, **2026-09-09** |
 | **Routing is Geoapify**; the detour gate stays 2.5. The Iceland film was the acceptance test and it passed. | 2026-08-20 (a)–(d), 2026-08-21 |
 | **The film follows the device's system appearance**, captured at export, never read inside the render loop. A manual picker is **deferred — do not build one**. Trail is `#FF8A5B`; glow off in both appearances. | 2026-08-27 |
 | **The subject is 157.5 px and the mark is pinned at `length_fraction` 1.0.** ⚠️ That pin **spends** the relational guarantee: next time `subject_length_px` moves, the mark's size is a fresh judgement. | 2026-08-27 (b) |

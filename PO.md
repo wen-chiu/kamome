@@ -52,10 +52,10 @@ ADR and the newest merged PR on `main`.
 
 | subject | state | canonical | reopening condition |
 |---|---|---|---|
-| **Rendering substrate** | MapLibre parked; **Apple Maps is what ships**. The provider, themes, tile pipeline and `Deploy/regions.json` all stay, dormant and accurate. | `decisions.md` 2026-08-15, amending 2026-08-08 | Chiu's words: *"之後有新的需求或是我很想不同地圖再展開."* |
+| **Rendering substrate** | ⚠️ **REOPENED for the export path, 2026-09-09** — Chiu switched export to **OpenFreeMap + MapLibre**; this round is an **evaluation**, so Apple Maps still ships until he judges the pictures. **In-app maps stay MapKit.** The pmtiles provider, themes and tile pipeline stay dormant and accurate. | `decisions.md` **2026-09-09**, reopening 2026-08-15 | reopened — the condition below was met |
 | **Routing** | **Geoapify**, key behind a Cloudflare Worker. Self-hosted OSRM stays viable behind the unchanged boundary. | `decisions.md` 2026-08-20 (a)–(d) | — |
-| **Pixel art** | Parked with MapLibre — it was the identity path MapLibre was retained for. | 2026-08-15 | with the substrate |
-| **Map labels, tiles, tile server** | **Off the roadmap, not deferred.** What Chiu wants from "big cute place names" is a **Kamome-drawn overlay** — substrate-independent, and the app already geocodes every stop. Iceboxed as "Place names as narrative rhythm". | 2026-08-15 | none pending |
+| **Pixel art** | Parked with MapLibre — it was the identity path MapLibre was retained for. **The 2026-09-09 export reopening does not carry it.** | 2026-08-15 | with the substrate |
+| **Map labels, tiles, tile server** | **Off the roadmap, not deferred.** What Chiu wants from "big cute place names" is a **Kamome-drawn overlay** — substrate-independent, and the app already geocodes every stop. ⚠️ **Labels are ON for the 2026-09-09 evaluation only, and the lock did NOT move** — a map with no place names cannot be judged. Where names finally live is still this locked question. | 2026-08-15; carve-out 2026-09-09 | evaluation carve-out only |
 
 Consequences that are part of the locks, not implementation detail:
 
