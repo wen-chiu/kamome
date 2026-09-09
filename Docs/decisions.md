@@ -3750,6 +3750,278 @@ strings grow past the shipped copy plus roughly half again. It exists to stop th
 
 ---
 
+## 2026-09-05 (c) — One orange, a plane that reads, a mark that hands over, and a card the map survives
+
+**Context.** Chiu watched the 2026-09-04 films and returned four judgements.
+Three answer the open questions in
+`Docs/design-reviews/2026-09-04-open-questions-type2-opening.md` (that document
+carries his verdicts and is now closed); the fourth is new. All four are visual,
+none moves the camera, the timeline or the framing.
+
+### 1. The film has one accent, and it is `#FF6A3D`
+
+`RecapStyle.routeAccent` becomes `(1, 0.416, 0.239)`. `chromeAccentColor` and
+`RecapJourneyCardStyle.accentColor` now **read that property** rather than
+restating it, so the value exists once. It was three near-misses — `#FF8A5B` on
+the trail and the strap, `#F28C52` on the end card, `#FF6A3D` on the boarding
+pass — which is the exact failure `routeAccent`'s own comment was written to
+prevent.
+
+🔴 **This re-decides a value Chiu chose himself.** `trailOnLight` *is*
+`routeAccent`, and on **2026-08-29** he picked `#FF8A5B` — candidate **B** — from
+a three-candidate sweep on one frame; the new value is close to the deeper
+candidate `(0.96, 0.42, 0.15)` he did not pick then.
+
+**The August method is not overturned, and the reason the trail is warm at all
+survives intact.** That reason is *legibility*, measured, not taste: on Apple
+Maps' light base a cyan trail is the same colour family as the ocean, lakes and
+fjords it crosses, and the north-coast leg was indistinguishable from a fjord.
+A warm hue is the one direction that cannot collide with water on either base —
+and `#FF6A3D` is still warm, so nothing that argument rests on has moved.
+
+**What changed is the evidence, not the judgement.** In August the candidates
+were three swatches on one still. Since then a boarding pass drawn in `#FF6A3D`
+shares the frame with the trail, and Chiu judged the two together in a finished
+film. A colour that wins beside the object it must match is a better-founded
+answer than one that wins alone.
+
+### 2. The aircraft glyph is redrawn
+
+One shape (`drawPlane`) draws twice: the `DISTANCE` field's ~26 px mark and the
+aircraft riding the pass's dashed arc. It was a swept dart with a notch bitten
+out of its base, and at the icon's size that is what it read as.
+
+What makes a silhouette an aircraft is the **three-part plan** — slim fuselage,
+wings swept from a root forward of centre, and a **separate tailplane** with bare
+fuselage visible between them. Swept as hard as the old dart, the tail closes up
+against the wings and the shape goes back to an arrowhead. The outline is held in
+units of half the glyph's length so both sizes scale together; nothing in it may
+be given a pixel size of its own.
+
+⚠️ Unrelated to the map's crossing sprite (`plane`, ADR 2026-09-04 (b)) and to
+`export.subject_length_px`, which is untouched.
+
+### 3. The origin mark cross-fades, and the country name wins
+
+**The handover.** The departure airport's stop and the flight's origin are the
+same point, so only one *mark* may hold it. That was a boundary test on
+`holdingStop`: the mark vanished in one frame while the thing replacing it faded
+in over `deck_label_lead_s`, and 3.59 s later it snapped back. Asymmetric, and it
+read as a glitch. `RecapFlightEnd` now carries `markOpacity`, and the mark rides
+`1 − departureSceneOpacity` — a cross-fade, the idiom the stop-label → photo-card
+handoff already uses.
+
+⚠️ **The mark gets its own ramp rather than mirroring the stop's**, and the first
+shape that did mirror it was wrong twice over, measured: the stop's presentation
+is not monotonic across its hold (the label hands off to the card faster than the
+card grows, by decision), so the mark rose to **0.82 for four frames underneath
+the open card**; and the deck's closing ramp is clamped to 40% of a window a
+two-photograph stop makes short, so the mark's return ran in ~5 frames — the same
+pop at the other end. It now ramps on `deck_zoom_s` against the hold's edges.
+
+**The name.** Chiu ruled: at a place with two names the **country wins**. `TAIWAN`
+stands for the whole opening, and the airport's own name is suppressed — so the
+"name flickers" half of the defect disappears rather than being fixed.
+
+🔴 **The intended consequence: the departure airport's name never appears
+anywhere in the film.** Not on the pin, not on its photo card, not in the HUD.
+One rule (`LinearTimeline.displayName(of:)`) serves all three surfaces, because a
+rule honoured in two of three places and forgotten in the third is how the pass
+and the map came to disagree once already. `OverlayContent.stopLabel`'s name and
+`RecapPhotoDeck.name` became optional to say so in the type; nil means *named
+elsewhere in this frame*, and the pin is still drawn.
+
+### 4. The end card keeps the map, and reports the film's own journey
+
+#### (a) `.full` is redrawn as a card, not joined by a third treatment
+
+`drawEndChrome`'s first act was `drawScrim`, a full-frame wash — the **only**
+reason the map disappeared under the closing panel, seconds after the reveal had
+opened the frame onto the whole journey. The content is unchanged; only the
+ground is. It is now one shadowed card over a map that keeps playing.
+
+A third `RecapEndCardTreatment` case was the alternative and is rejected: it
+would need a third value of `export.end_card_style`, and the look that value
+names is the one Chiu has just rejected. The two remaining treatments are a real
+pair — free closes on a card over its map, `.minimal` closes on the map alone.
+The raw value stays `"full"`, so no config file moves. `chromeScrimCenterBoost`
+lost its only consumer and is deleted.
+
+**No vignette of its own**: the frame is already vignetted every frame
+(`vignetteStrength` 0.42 in the shipped preset), so a closing vignette would be
+the second pass on the same pixels. The card's shadow is the whole separation.
+
+⚠️ **The framing is untouched**, deliberately. `endRevealFrame` already opens to
+the complete trajectory the film tells — `destinationJourney` on type-2, the
+whole route on type-1 — and it must not be widened: two countries need 11,907 km
+and 190.2° of latitude, which the guard refuses, and before that guard it was an
+Objective-C exception that killed the export (measured 2026-09-02).
+
+#### (b) The closing line is brand copy
+
+`recap_end_cta` — *"Record your own journey"* — becomes `RecapWordmark.tagline`,
+**"Turn your journey into memory."**, beside the wordmark and **not localized**,
+on the wordmark's own argument: a tagline is a brand mark, not a sentence about a
+trip. The film's chrome already works this way (the pass's `FROM` / `TO` /
+`DISTANCE` / `DATE` are English literals by decision; the HUD's `km` is
+un-localized so a frame renders identically on any device). Set as written rather
+than uppercased — the line it replaced was a label, this one is a sentence.
+
+The string was deleted, and so were `RecapTrip.callToAction` and
+`OverlayContent.endChrome`'s `callToAction` parameter. **A public-interface
+change**, taken on Chiu's instruction to give the line the wordmark's standing: a
+brand mark does not travel through the narrow waist as trip data, and a waist
+field that no longer reaches the film is the dead plumbing this project keeps
+paying for.
+
+#### (c) The figures are the film's own journey: stops, days, kilometres
+
+One line — `N stops · M days · K km` (`recap_stat_summary`, localized; the
+figures are about this trip, not the brand). `recap_stat_distance_stops` and
+`recap_stat_drive` are deleted with it: Chiu named three figures and driving
+hours is not one of them.
+
+🔴 **Measured before changing, as asked** (`RecapTimelineReportTests`, committed
+fixtures, 2026-09-05):
+
+| | whole trip | the film's own journey |
+|---|---:|---:|
+| `auckland-crossing` | **6** stops | **5** |
+| `ishigaki-crossing` | **6** stops | **5** |
+| `miyakojima` (type-1 control) | 5 | 5 |
+
+The suspicion was right: `RecapComposer` counted `stops.count` on the whole trip
+and `RecapTypeTwoFilm` dropped the origin country's journey **afterwards**, inside
+`LinearTimeline`, so a type-2 card claimed Taipei's stop. The fix is not a second
+implementation of the trim: `RecapTypeTwoFilm.destinationJourney(legs:stops:)` is
+split out of `trimmedToTheDestination` and both callers ask it.
+
+🔴 **And a larger defect underneath, which is why nobody had seen the first one.**
+`statsLines` began `guard let stats` — and an **imported** trip has no `TripStats`
+at all. `ImportService` writes no `stats_json`; only `TrackingSession` and
+`DemoSeeder` do. So the closing card of every imported film has been **empty**,
+measured on all three review fixtures. The figures now come from the film:
+
+- **stops** — the journey's own stop list.
+- **days** — `trip.startedAt`…`endedAt`, by the same arithmetic as the HUD's
+  `Day N` chip, so the card cannot say "3 days" over a frame reading `Day 4`.
+- **kilometres** — `RecapTrip.localRouteDistanceM`, the drawn route with flown
+  legs excluded. This is the **odometer's own axis**: the number a viewer watches
+  climb to 269 km is the number the card then shows. It cannot regress to 9,024,
+  because crossings are excluded by construction.
+
+⚠️ **The title card's subtitle keeps the recorded measure** (`stats.distanceM`
+minus the flight, ADR 2026-09-02) and the closing card now uses the drawn one.
+They are two rulers, and that is stated rather than hidden: the recorded total is
+the better number and does not exist on an imported trip, while the drawn one
+always does. On a recorded trip they will differ by the simplification error.
+**Not measured on a real recorded trip — UNKNOWN.** The cheapest thing that
+settles it is one recorded trip through `RecapComposer` with both figures printed.
+`RecapTrip.localRouteDistanceM` and `CameraPath.traveledLocalDistanceM` are two
+implementations of one quantity and are pinned to each other by test.
+
+### 5. Not touched, deliberately
+
+`zoom_transition_s`, `export.subject_length_px`,
+`crossing_flight_max_longitude_deg` (70), the camera, the timeline, the base
+map's place names, `endRevealFrame`, and the export flow. No `TrackingConfig`
+key changed.
+
+## 2026-09-05 (d) — The end card is the map again: a slight dim, and the summary floating on it
+
+**Context.** ADR 2026-09-05 (c) §4(a) replaced the closing scrim with a card over
+the map. Chiu watched it and changed his mind the same day: *"片尾卡不要做成卡片"*
+— a panel is still a lid, and the ending is supposed to *be* the journey. He sent
+a layout to build against. This entry supersedes (c) §4(a) and §4(c) in full;
+everything else in (c) stands.
+
+Three grounds have now been tried under one stack, and recording all three is the
+point — the next session must not propose the first two again:
+
+| ground | verdict |
+|---|---|
+| full-frame scrim, alpha 0.55 + 0.32 centre boost | rejected 2026-09-04 — the map disappeared |
+| a card over the map | rejected 2026-09-05 — the map survived *around* it, which is not the same as being the ending |
+| **the whole map, dimmed slightly, summary floating on it** | **this one** |
+
+### 1. The dim, and why it is two values
+
+`drawEndCardPanel` is gone. What replaces it is one flat wash over the frame,
+`RecapEndCardStyle.dimColor`, and its whole job is to let unplated type read. The
+trail, the coastline and the stop pins stay legible; that is the acceptance test
+and it is judged on a render, not in CI.
+
+🔴 **Per appearance, and it must stay so** (Chiu). One alpha cannot serve both:
+Apple Maps' light base sits around luminance 180–200, so the wash white type needs
+there turns the land grey, while the dark base is already near black and the same
+value flattens what separation it has. Shipped: **0.48 light, 0.24 dark**, set in
+`modernMinimal(_:)`.
+
+⚠️ **The type carries its own halo, and that is what buys the light dim.** The
+first render used the stop label's shadow — tuned for 40 px type — and at 104 px
+the trip's name and the 30 px tagline washed out against bright green land. The
+choice was then to deepen the dim (grey the map, the thing rejected twice) or to
+separate the type. A second render with a 30 px blur was still too diffuse to
+define a thin letter; **16 px at alpha 0.95** does. A halo is invisible except
+directly behind a glyph, so the map keeps every pixel the type is not standing on.
+
+### 2. The layout
+
+Top to bottom, per Chiu's screenshot: the **mark**, the **trip's name** (new to
+the end card — it was never carried here), one **row of three figures**, then the
+wordmark with its line beneath it. Each figure is a large number over a small
+tracked label: `269` over `KM`, `3` over `DAYS`, `5` over `STOPS` — three columns,
+never three lines of prose.
+
+The screenshot's **"Get this route" button is deliberately not built** (Chiu).
+
+### 3. The narrow waist carries pairs, not sentences
+
+`OverlayContent.endChrome(stats: [String], …)` became
+`endChrome(title:figures:shareURL:)`, and `RecapTrip.statsLines` became
+`endCardFigures: [RecapEndCardFigure]` — a `(value, label)` pair.
+
+🔴 **The alternative was the renderer splitting `269 km · 3 days · 5 stops` back
+apart to find the numbers**, in a language it does not know, in copy it did not
+write. The pair crosses the waist instead and the **app layer builds it**, which
+is where localization lives and the only layer with a locale.
+
+⚠️ **The labels' inflection is a two-key `one` / everything-else split, and that
+is a marked limitation, not an oversight.** A String Catalog plural variation is
+the right tool and the compiler refuses it here — *"Plural variation requires
+referencing the number in the string"* — because the number is drawn as its own
+figure and never appears in the label. Xcode's own remedy is separate top-level
+strings, which is what `recap_figure_label_day` / `_days` are. Correct for English
+and for zh-Hant (one category, both keys the same word); **a language with a `few`
+or `many` category cannot be served by it**, and the answer then is to put the
+count back into the label, not to add a third key.
+
+### 4. Two reported, not decided
+
+- **The wordmark stays `"Kamome"`.** The screenshot's bottom line reads
+  `KAMOME かもめ`, which is a different wordmark from the one that ships. This
+  round added the tagline **beneath the existing mark** and changed nothing about
+  the mark itself: what the product is called, and in which scripts, is a brand
+  decision and Chiu's, not an implementer's. If he wants the screenshot's
+  combination it is one constant in `RecapWordmark`.
+- 🔴 **`RecapTrip.callToAction` stays deleted, and the screenshot says what it was
+  for.** That field carried *"Record your own journey"* — and the **"Get this
+  route" button is exactly that field's purpose**, returning as a real control the
+  day there is a share URL to put behind it (spec P6/P7). It was removed because
+  today's payload, `kamome://route/<id>`, opens no page, installs no app and loads
+  no trip (PD-4), so the film must not invite the tap. **This is written down so
+  the deletion is never read as an accident**: the capability comes back with the
+  URL, not by restoring a string.
+
+### 5. Not touched, deliberately
+
+`endRevealFrame` — the framing is already right (type-2 frames the destination's
+local journey, type-1 the whole route) and widening it is refused by the guard.
+`zoom_transition_s`, `export.subject_length_px`, the camera and the timeline are
+untouched, and no `TrackingConfig` key changed. **miyakojima's nine timeline
+numbers are unchanged**, measured before and after: 60.00 / 6.50 / 10.50 / 6.53 /
+7.50 / 2.97 @57.00 / 2111.6 km / 14.8 km / 142.85×.
+
 ## 2026-09-08 — The config flip: the key stops shipping, and the counter is the proof
 
 **Status:** approved — **Chiu's decision, 2026-09-05**, taken because it changes
@@ -3871,142 +4143,3 @@ everything above proves the source and the network path. 🔴 **`check-archive.s
 requires the real key and refuses to degrade into a shape scan, and the key is
 Chiu's** — it is never read into a session's environment. So the archive is built
 here and the gate is run by him.
-
-## 2026-09-09 — The export substrate leaves Apple Maps: OpenFreeMap + MapLibre, and this round only looks at it
-
-**Decision (Chiu, 2026-09-09), in his words:**
-
-> 「既然 apple 版權有潛在問題那我不要浪費時間問他，我就直接把 Kamome 的 Export
-> 地圖方向切換為：OpenFreeMap → MapLibre」
->
-> 「這一輪目標很單純：先把 MapLibre + OpenFreeMap 的實際地圖畫面做出來，讓我評估
-> 視覺品質。不要做架構重設，也不要擴大 scope。」
-
-**This reopens the 2026-08-15 park, and Chiu named it** — `CLAUDE.md` rule 6 is
-satisfied by the sentence above, not by this entry. It reopens it for the
-**export path**; the in-app maps (`RecordingView`, `TripDetailView`) stay MapKit
-and are not in scope.
-
-Written at Chiu's instruction **before** implementation, so the engineering
-session that does the work does not write a second entry for the same decision
-(`PO.md` — one decision, one entry).
-
-### Why the park's own reason is gone
-
-2026-08-15 parked MapLibre because **tile provisioning had no answer**: a
-`.pmtiles` region covers a bounded area, regions run to hundreds of megabytes,
-nothing ships one, and serving them was P7 backend work that left the roadmap in
-the same ADR. `RecapMapTiles` still searches four locations for a region and
-finds none, which is why `RecapModel.snapshotProvider(for:)` has fallen back to
-Apple Maps on every film since.
-
-**OpenFreeMap is a free hosted planet, so the blocker the park was built on is
-the thing that changed.** This is not a reopening on taste.
-
-### The Apple premise is VERIFIED — and it is the licence, not a copyright guess
-
-Read from Apple's live Developer Program License Agreement, **Attachment 6
-(Additional Terms for the use of the Apple Maps Service), VERIFIED 2026-09-08**.
-`"Map Data"` is defined to include **imagery**, so a snapshot's tiles are Map Data:
-
-- **§2.5** — *"Unless otherwise expressly permitted in writing by Apple, Map Data
-  may not be cached, pre-fetched, or stored ... other than on a temporary and
-  limited basis ... after which, **in all cases, You must delete** any such Map
-  Data."* An exported MP4 is permanent storage of Map Data outside the app.
-- **§2.3** — *"not to copy, modify, translate, **create a derivative work of,
-  publish or publicly display** the Map Data **in any way**."*
-- **§2.1 / §4** — Apple's logo and legal link may not be removed or obscured; §4
-  names exactly that as grounds for revoking MapKit access.
-
-**Measured in the artifact, not argued:** `Docs/demos/phase3/still-stop-card.png`
-is a 1080×1920 frame of an exported film — unmistakably Apple cartography,
-full-bleed, **with no Apple logo and no legal link**. `MKMapSnapshotter` returns a
-bare image; MapKit's own live view supplies those notices and the snapshotter
-does not, which is visible side by side against
-`Docs/demos/phase3_5/import/03-trip-detail-provenance.png`, where the in-app map
-shows " Maps" and "Legal" correctly.
-
-**Chiu declined to ask Apple for written permission** — recorded as his decision,
-not as an oversight. Concurred, and the reason is worth keeping: attribution
-cannot cure §2.5 or §2.3, so the only thing a request could buy is the written
-permission §2.5 names, and a release would then be gated on someone else's inbox.
-
-⚠️ **What stays UNKNOWN, deliberately: whether Apple would ever have objected.**
-Nobody asked. Do not let a later entry record this as "Apple said no" — the
-verified fact is the text of the terms, and nothing else.
-
-### What this round is, and what it is not
-
-**It is an evaluation** — the deliverable is pictures Chiu can judge plus one
-number (seconds per snapshot). **It is not a shipping switch**: `RecapModel`'s
-fallback is untouched and the switch lives in the review harness, so no build's
-behaviour changes.
-
-**It is also not a new pipeline.** MapLibre has rendered films before — Phase 3.5
-§6a, in-sim confirmed 2026-07-22 — the `MapRenderer` boundary is from 2026-07-19,
-each renderer is confined to one file, and `Config/architecture.json` already
-permits `import MapLibre` in `MapLibreSnapshotProvider.swift`. **The work is a
-tile source and a harness switch**, which is what keeps this inside Chiu's "不要
-做架構重設".
-
-**Three styles, Chiu's pick, from OpenFreeMap's five hosted ones: Positron,
-Liberty and Fiord 3D.** Bright and Dark are not in this round.
-
-**No Kamome style is authored this round.** `Config/RecapThemes/modern-minimal.json`
-is the parked souvenir style and stays parked and accurate.
-
-### Labels: opened for this round only, and the lock does not move
-
-`PO.md`'s register has held **map labels off the roadmap, not deferred** since
-2026-08-15, on Chiu's own reasoning that "大大的可愛地名" should be a
-**Kamome-drawn overlay**, independent of the substrate.
-
-**Chiu 2026-09-09: labels are allowed in this round, evaluation-only.** The
-reason is narrow and does not generalise: a world map with no city or country
-names cannot be judged for visual quality at all, so the lock would make the
-evaluation meaningless. **It does not unlock anything.** Whether place names
-ultimately belong to the base map or to a Kamome overlay is **still the locked
-question**, and the pictures from this round are the evidence for answering it.
-
-### §0 — the evaluation needs no new exception; shipping will
-
-**The evaluation is a desk render** on Chiu's own machine, from his own fixtures,
-and it adds **no new category of exposure**: those same coordinates already go to
-Geoapify (the decided exception) and, on every Apple Maps render, to Apple.
-
-⚠️ **And that last clause is an unrecorded gap, stated here rather than used as
-cover.** `MKMapSnapshotter` must fetch tiles for the region it is asked for
-(INFERRED — strong; Apple's own documentation says it works "by loading all of
-the available map tiles"; the cheapest settling is one render in airplane mode),
-and `CLGeocoder` sends each stop's centre to Apple for its name. **Neither is in
-§0's decided-exceptions list, and neither ever was.** That predates this decision
-and is not created by it.
-
-**The shipping decision is deferred, and it is a real one.** If OpenFreeMap
-becomes the shipping export substrate, every keyframe's centre and zoom become a
-third party's HTTP request, and `privacy_intro`'s *"One thing leaves it"* becomes
-false — the first-run card gains a second item (ADR 2026-09-05 (b) governs how it
-is told). **That decision is made after Chiu has seen the pictures, not before.**
-
-### What is VERIFIED about OpenFreeMap, and what is not
-
-VERIFIED 2026-09-09 from openfreemap.org and from `tiles.openfreemap.org/styles/positron`:
-
-| claim | state |
-|---|---|
-| Planetiler-generated, **unmodified OpenMapTiles schema** | **VERIFIED** — so Kamome's 11 layers can port by swapping the source |
-| commercial use, hotlinking the public CDN, no API key, no request limit | **VERIFIED** |
-| **no SLA, no support** — their own words | **VERIFIED**, and it is the shipping risk, not an evaluation one |
-| required attribution: `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | **VERIFIED** (the OpenFreeMap clause is optional-but-asked; the **OSM clause is an ODbL obligation**) |
-| 5 of Kamome's 6 source-layers appear in positron's own style | **VERIFIED** — `water` `waterway` `transportation` `landcover` `park` |
-| `mountain_peak` present in the tiles | **INFERRED** — it is in the OMT schema but positron does not draw it; settle by querying one tile |
-| glyph server serves **Noto Sans** (Latin) | **VERIFIED** — so CJK labels need `MLNIdeographicFontFamilyName`, which MapLibre's iOS docs say applies to snapshots too |
-| whether `MLNMapSnapshotter` burns attribution into the image | **UNKNOWN** — assume not; settle by looking at one output |
-| seconds per snapshot over the network | **UNKNOWN** — the only prior MapLibre figure (0.84 s) was local pmtiles |
-
-### Not decided here
-
-The shipping substrate; whether Kamome authors its own style; where place names
-finally live; the first-run notice's second item; whether the parked pmtiles
-path is ever retired. **None of these may be settled by the engineering session
-that runs this evaluation** — it returns pictures and a number.

@@ -44,32 +44,47 @@ public enum RecapTypeTwoFilm {
     public static func trimmedToTheDestination(
         _ trip: RecapTrip, config: TrackingConfig.Export
     ) -> RecapTrip {
-        guard let crossing = trip.legs.firstIndex(where: \.isCrossing), crossing > 0 else {
-            return trip
-        }
-        guard let departure = trip.legs[crossing].coordinates.first else { return trip }
+        guard let journey = destinationJourney(
+            legs: trip.legs, stops: trip.stops, config: config
+        ) else { return trip }
+        return RecapTrip(
+            legs: journey.legs,
+            stops: journey.stops,
+            title: trip.title,
+            subtitle: trip.subtitle,
+            endCardFigures: trip.endCardFigures,
+            shareURL: trip.shareURL,
+            journeyDates: trip.journeyDates,
+            everyLegRoutabilityEstablished: trip.everyLegRoutabilityEstablished
+        )
+    }
+
+    /// **The legs and stops the destination half keeps** — the trim itself, with
+    /// no `RecapTrip` around it. nil when there is nothing to remove.
+    ///
+    /// 🔴 **Split out on 2026-09-05 so there is exactly one implementation of
+    /// "which journey does this film tell".** The closing card has to count the
+    /// stops of the *film's* journey rather than the whole trip's
+    /// (Chiu 2026-09-05), and it is composed in the app layer before any
+    /// `RecapTrip` exists to trim — so it asks this. Re-deriving the rule there
+    /// is precisely how the card came to claim a journey the film does not show:
+    /// `RecapComposer` counted the whole trip and `LinearTimeline` trimmed it
+    /// afterwards, and nothing made the two agree.
+    public static func destinationJourney(
+        legs: [RecapTrip.Leg], stops: [RecapTrip.Stop], config: TrackingConfig.Export
+    ) -> (legs: [RecapTrip.Leg], stops: [RecapTrip.Stop])? {
+        guard let crossing = legs.firstIndex(where: \.isCrossing), crossing > 0 else { return nil }
+        guard let departure = legs[crossing].coordinates.first else { return nil }
 
         // The departure is the stop nearest the crossing's first vertex. Nearest
         // rather than "the last stop before it in the list", because a stop list
         // that has been through selection may not contain every cluster, and the
         // one the film should open on is the one the flight actually leaves from.
-        let keepFrom = trip.stops.indices.min(by: { lhs, rhs in
-            distanceM(trip.stops[lhs].coordinate, departure)
-                < distanceM(trip.stops[rhs].coordinate, departure)
+        let keepFrom = stops.indices.min(by: { lhs, rhs in
+            distanceM(stops[lhs].coordinate, departure) < distanceM(stops[rhs].coordinate, departure)
         })
-        let kept = keepFrom.map { Array(trip.stops[$0...]) } ?? trip.stops
-
-        return RecapTrip(
-            legs: Array(trip.legs[crossing...]),
-            stops: cappedDeparture(kept, config: config),
-            title: trip.title,
-            subtitle: trip.subtitle,
-            statsLines: trip.statsLines,
-            callToAction: trip.callToAction,
-            shareURL: trip.shareURL,
-            journeyDates: trip.journeyDates,
-            everyLegRoutabilityEstablished: trip.everyLegRoutabilityEstablished
-        )
+        let kept = keepFrom.map { Array(stops[$0...]) } ?? stops
+        return (Array(legs[crossing...]), cappedDeparture(kept, config: config))
     }
 
     /// The kept stops with the **first** one — the departure airport — holding at

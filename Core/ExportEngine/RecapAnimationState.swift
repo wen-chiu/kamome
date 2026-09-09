@@ -122,7 +122,9 @@ public struct RecapPhotoDeck: Equatable {
     /// so they live in the persistent `hud` overlay — on screen while driving as
     /// well as while stopped. A card that carried them repeated the HUD for a few
     /// seconds and then took them away again.
-    public let name: String
+    /// nil when the place is named by something else in the same frame and must
+    /// not be labelled twice — see `OverlayContent.stopLabel`.
+    public let name: String?
     public let detail: String?
     /// Where the stop is. The renderer projects it and places the whole card
     /// group *beside the vehicle parked there* — with a static camera the
@@ -132,7 +134,7 @@ public struct RecapPhotoDeck: Equatable {
 
     public init(
         photos: [PhotoRef], focusIndex: Int, reveal: Double, opacity: Double,
-        name: String, detail: String? = nil, coordinate: RecapCoordinate
+        name: String?, detail: String? = nil, coordinate: RecapCoordinate
     ) {
         self.photos = photos
         self.focusIndex = focusIndex
@@ -241,10 +243,25 @@ public struct RecapFlightEnd: Equatable {
     /// The country or region, in English — nothing else. Not the stop, not a
     /// city, not a place name of any other kind (ADR 2026-09-04 §3).
     public let name: String?
+    /// **The mark alone, cross-fading with whatever else claims this point**
+    /// (Chiu 2026-09-05, ADR 2026-09-05 (c)) — 1 drawn, 0 yielded.
+    ///
+    /// The departure airport's stop and the flight's origin are the same place,
+    /// so only one of them can hold it. Until 2026-09-05 that was a boundary
+    /// test and the mark cut out in a single frame while the thing replacing it
+    /// faded in over `deck_label_lead_s` — asymmetric, and it read as a glitch.
+    /// Now the two ramp against each other.
+    ///
+    /// 🔴 **The name does not follow the mark.** It is drawn at the overlay's own
+    /// opacity throughout: the country wins at a place that has two names (Chiu
+    /// 2026-09-05), so `TAIWAN` stands for the whole opening while only the
+    /// *mark* hands over.
+    public let markOpacity: Double
 
-    public init(coordinate: RecapCoordinate, name: String?) {
+    public init(coordinate: RecapCoordinate, name: String?, markOpacity: Double = 1) {
         self.coordinate = coordinate
         self.name = name
+        self.markOpacity = markOpacity
     }
 }
 
@@ -263,6 +280,25 @@ public struct RecapRouteLeg: Equatable {
     }
 }
 
+/// **One figure on the closing card** — a value over its label, e.g. `1,358` over
+/// `KM` (Chiu 2026-09-05, from his layout).
+///
+/// Both strings arrive finished. The value is grouped and the label is localized
+/// and inflected (`1 DAY` / `13 DAYS`) by the app layer, because that is the only
+/// layer with a locale; `KamomeExportEngine` never localizes and never counts.
+public struct RecapEndCardFigure: Equatable {
+    /// The number as it is set, e.g. `1,358`.
+    public let value: String
+    /// The unit beneath it, e.g. `KM`. Already in the case it is drawn in —
+    /// uppercasing is locale-dependent and the renderer must not do it.
+    public let label: String
+
+    public init(value: String, label: String) {
+        self.value = value
+        self.label = label
+    }
+}
+
 /// One drawable element active at an instant — **pure data**, no CoreGraphics
 /// and no geo→pixel (the renderer projects through the `CameraFrame`, resolves
 /// `PhotoRef`s, and generates the QR from `shareURL`). Overlays never mutate or
@@ -278,7 +314,11 @@ public enum OverlayContent: Equatable {
     /// A stop pin on the map with its name label floating clear above the
     /// vehicle (the lead-in beat). `opacity` fades it out as the photo deck
     /// takes over the stop's identity below the card.
-    case stopLabel(name: String, coordinate: RecapCoordinate, detail: String?, opacity: Double)
+    /// `name` is nil when the place is **named by something else in the same
+    /// frame** and must not be labelled twice — today only the departure airport,
+    /// whose flight-end mark carries the country name instead (ADR 2026-09-05 (c)).
+    /// The pin is still drawn; only the type is absent.
+    case stopLabel(name: String?, coordinate: RecapCoordinate, detail: String?, opacity: Double)
     /// The enlarged photo deck at a stop.
     case photoDeck(RecapPhotoDeck)
     /// **The boarding pass, during the crossing beat and nowhere else** (Chiu
@@ -310,10 +350,10 @@ public enum OverlayContent: Equatable {
     /// Each end carries **the name the boarding pass already resolved**, never a
     /// second lookup — see `RecapFlightEnd`.
     ///
-    /// `origin` is nil while the departure stop is presenting itself: its pin and
-    /// this mark are the same point, and exactly one of them is ever drawn (see
-    /// `LinearTimeline.flightEnds`).
-    case flightEnds(origin: RecapFlightEnd?, destination: RecapFlightEnd, opacity: Double)
+    /// Both ends are always carried. The origin's *mark* yields to the departure
+    /// stop's own pin by cross-fading on `RecapFlightEnd.markOpacity` — they are
+    /// the same point — while its name stays up (ADR 2026-09-05 (c)).
+    case flightEnds(origin: RecapFlightEnd, destination: RecapFlightEnd, opacity: Double)
     /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
     /// and how far the journey has come, in the frame's top corners, for the whole
     /// body of the film — driving as well as stopped.
@@ -329,9 +369,21 @@ public enum OverlayContent: Equatable {
     case hud(dayLabel: String, place: String?, travelledM: Double)
     /// Opening chrome: trip name + dates/distance.
     case titleChrome(title: String, subtitle: String)
-    /// Closing chrome: stats, the call to action, and the share payload the
-    /// renderer turns into a QR. `shareURL` is nil for the Replay MVP (PD-4) —
-    /// the end card shows the Kamome wordmark instead of a code that resolves
-    /// to nothing.
-    case endChrome(stats: [String], callToAction: String, shareURL: String?)
+    /// Closing chrome: the trip's name, the film's three figures, and the share
+    /// payload the renderer turns into a QR. `shareURL` is nil for the Replay MVP
+    /// (PD-4) — the end card shows the Kamome wordmark instead of a code that
+    /// resolves to nothing.
+    ///
+    /// 🔴 **Figures, not sentences** (Chiu 2026-09-05, ADR 2026-09-05 (d)). This
+    /// carried `stats: [String]` — laid-out lines like `269 km · 3 stops` — and the
+    /// closing card now sets them as a row of three columns, each a large number
+    /// over a small label. A renderer that had to split those strings back apart
+    /// to find the number would be parsing copy it did not write, in a language it
+    /// does not know. So the **pair** crosses the waist and the app layer, which
+    /// owns localization, builds it.
+    ///
+    /// 🔴 **The closing line is not carried here.** It is `RecapWordmark.tagline`,
+    /// a brand mark the renderer owns, not trip data (Chiu 2026-09-05) — the same
+    /// standing the wordmark beside it has always had.
+    case endChrome(title: String, figures: [RecapEndCardFigure], shareURL: String?)
 }

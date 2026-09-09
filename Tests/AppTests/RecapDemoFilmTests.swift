@@ -360,8 +360,11 @@ final class RecapDemoFilmTests: XCTestCase {
         return RecapTrip(
             legs: legs, stops: tripStops,
             title: "Perth → Margaret River", subtitle: "Day 1 · 291 km",
-            statsLines: ["291 km · \(tripStops.count) 停留", "5.8 小時"],
-            callToAction: "Record your own journey"
+            endCardFigures: [
+                RecapEndCardFigure(value: "291", label: "KM"),
+                RecapEndCardFigure(value: "5", label: "DAYS"),
+                RecapEndCardFigure(value: "\(tripStops.count)", label: "STOPS")
+            ]
         )
     }
 

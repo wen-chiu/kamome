@@ -242,3 +242,37 @@ archived once camera-arc Pass 1 has run and been judged.
 
 ---
 
+### 8. 🔴 A third feature built and never reached: imported trips carry no `TripStats`
+
+Found 2026-09-05, while giving the closing card its figures (ADR 2026-09-05 (c)
+§4(c), (d) §3). **VERIFIED**, not inferred.
+
+`RecapModel` reads `TripStats.from(jsonString: detail.trip.statsJson)`, and
+**`ImportService` never writes `stats_json`** — only `TrackingSession` (a recorded
+trip) and `DemoSeeder` do. Every trip in Phase 4 is imported, so `stats` is nil on
+every one of them, and each reader degrades silently:
+
+| surface | what a viewer sees today |
+|---|---|
+| the closing card | **was empty** — `statsLines` began `guard let stats`. Fixed: its figures now come from the film |
+| the title card's subtitle | dates only, **no kilometres** — `titleSubtitle` takes the same nil |
+| Home, Trip Detail | no figures |
+
+**This is finding 4's shape again, from a different direction.** There the value
+was tuned against a substrate that changed underneath it; here the *producer* was
+never wired to the path that ships, and three consumers have been quietly reading
+nil ever since. It joins `stop_weighting`-era content-derived pacing (finding 3)
+and the subject lookup: **three features that are implemented and unreachable**,
+each found by accident, one film or one card at a time.
+
+**The question that catches this class is *"who writes this, and does the shipping
+path ever call them?"*** — the producer side of finding 4's question. Chiu:
+**one sweep for the class, not three fixes**, and not in the 2026-09-05 round.
+
+⚠️ **The fix is not obviously "make `ImportService` compute stats".** `TripStats.compute`
+takes `TrackingEngine` types the importer does not produce, and what an imported
+trip's `drive_s` and `top_speed_kmh` would even *mean* is a product question —
+photo timestamps are not a recorded speed (`CLAUDE.md` rule 5). **UNKNOWN**, and
+the cheapest thing that settles it is deciding which of the five fields an
+imported trip can honestly claim.
+

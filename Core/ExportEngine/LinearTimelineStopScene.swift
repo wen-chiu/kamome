@@ -61,11 +61,42 @@ extension LinearTimeline {
     /// is, and a stop with nothing to show is still a place the journey stopped;
     /// on the road between stops it is nil and the HUD shows the day alone.
     func holdingStop(atTime time: Double) -> RecapTrip.Stop? {
+        holdingStopIndex(atTime: time).map { stops[$0] }
+    }
+
+    /// The same answer as `holdingStop`, as an index — what a caller needs when
+    /// it has to ask `displayName(of:)` whether this stop prints its name at all.
+    func holdingStopIndex(atTime time: Double) -> Int? {
         for hold in holds where hold.startS <= time && time < hold.endS {
             guard stops.indices.contains(hold.stopIndex) else { continue }
-            return stops[hold.stopIndex]
+            return hold.stopIndex
         }
         return nil
+    }
+
+    /// **The name this stop prints in the film, or nil when it prints none.**
+    ///
+    /// 🔴 One stop is nameless, deliberately: on a type-2 opening the first stop
+    /// is the departure airport, and the flight's origin mark stands on the same
+    /// point with the **country's** name under it. Chiu ruled the country name
+    /// wins there (2026-09-05, ADR 2026-09-05 (c)) — `TAIWAN`, not `TAOYUAN over
+    /// TAIWAN`, and not the two alternating.
+    ///
+    /// **The consequence is intended: the departure airport's name never appears
+    /// anywhere in the film.** Not on the pin, not on its photo card, not in the
+    /// HUD. Every surface that could print a stop's name asks this, so the rule
+    /// cannot be honoured in two of the three places and forgotten in the
+    /// third — which is how the pass and the map came to disagree once already.
+    func displayName(of stopIndex: Int) -> String? {
+        guard stops.indices.contains(stopIndex) else { return nil }
+        return stopIsNamedByItsFlightEndMark(stopIndex) ? nil : stops[stopIndex].name
+    }
+
+    /// Whether this stop's place is already named by a flight-end mark over it.
+    /// Only ever the first stop of a type-2 opening — the trim leaves the
+    /// departure airport at index 0 (`RecapTypeTwoFilm`).
+    func stopIsNamedByItsFlightEndMark(_ stopIndex: Int) -> Bool {
+        opensOnTheFlight && flightEndCoordinates != nil && stopIndex == 0
     }
 
     /// Which day of the trip the film is on: the day of the **most recent stop

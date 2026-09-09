@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-09.** `main` carries PRs #16–#46. Everything closed has been
+**Updated 2026-09-08.** `main` carries PRs #16–#45. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -38,12 +38,14 @@ published. → ADR 2026-09-08.
 
 ---
 
-## 🔵 Live — the export substrate evaluation
+## Findings — engineering session (2026-09-08)
 
-**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.**
-This round only *looks* at it: three stock styles, labels on for evaluation
-only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
-§2.5/§2.3/§2.1, not a guess. → `Docs/decisions.md` **2026-09-09**.
+- 🟠 **No desk render can validate `matching.base_url`.**
+  `RecapDemoFilmTests.importedRecap` resolves its endpoint as
+  `requestedBaseURL ?? KAMOME_ROUTING_BASE_URL ?? "https://api.geoapify.com"` and
+  never reads the shipped config. Not changed here — making it follow the config
+  would point every desk render at the Worker and spend real quota.
+  → `Docs/decisions.md` 2026-09-08.
 
 ---
 
@@ -52,15 +54,11 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **The long-haul 70 threshold is untouched and still probably wrong.** Its
   *"the wide frame loses the viewer"* half is answered (ADR 2026-09-04 (b)).
   → `Docs/handoff-type2-films.md` closeout.
-- **Five questions from the retimed type-2 opening** — four visual, one semantic
-  (its DATE row is the **trip's** range, not the flight's).
-  → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
-- **The title card still shows trip title + dates, not the country name.**
-  ⚠️ **Still true after the type-2 opening round** — VERIFIED 2026-09-04,
-  `LinearTimeline.swift:215` is `title = trip.title`, `subtitle = trip.subtitle`.
-  The countries a type-2 film now shows are on *other* surfaces: the boarding
-  pass's FROM/TO and the two flight-end marks. A DESIGNER question.
-  → `Docs/handoff-crop-scaling.md` §11, §14.
+- **The title card still shows trip title + dates, not the country name.** VERIFIED
+  2026-09-05: `LinearTimeline.swift:214` is still `title = trip.title`. The
+  countries a type-2 film shows are on other surfaces — the pass's FROM/TO and the
+  two flight-end marks — and the **end card now carries the trip's name too**
+  (2026-09-05 (d)). A DESIGNER question. → `Docs/handoff-crop-scaling.md` §11, §14.
 - **The badge's 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **79.8% against the 80% safe-zone limit** on `ishigaki-crossing`, on the camera
@@ -72,34 +70,34 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **Film length, two questions in order** — the duration rule (direction decided
   2026-08-14, **rule not**), then travel pacing (`travel_max_s` names a thing
   that does not exist). → `Docs/handoff-pacing.md`.
-- **§0 — two films of real trips are committed to this repository**
-  (`Docs/demos/phase3/`, `Docs/demos/phase3_5/`). They are gate artifacts, and
-  they are not in §0's decided-exceptions list. Either a recorded exception or
-  they move out. **Deliberately not gated** — a gate would pre-empt your call.
-  → `Docs/handoff-audit-2026-08-30.md` finding 7.
+- **§0 — two films of real trips are committed** (`Docs/demos/phase3{,_5}/`), and
+  they are not in §0's exceptions list. A recorded exception, or they move out.
+  **Deliberately not gated.** → `Docs/handoff-audit-2026-08-30.md` finding 7.
 - **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
   the first-run card's wording is ruled. **Whether a user may refuse** stays
   deferred. → `Docs/release-readiness.md` S2/S3.
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.
+- **The end card's wordmark.** Chiu's layout reads `KAMOME かもめ`; the film ships
+  `RecapWordmark.text` = `"Kamome"`. The tagline was added **beneath the existing
+  mark** and the mark itself was not touched — what the product is called, and in
+  which scripts, is yours. → `Docs/decisions.md` 2026-09-05 (d) §4.
 - **A staging rule for `Arch.md`** — confirm the branch before committing, stage
   explicit paths, never `-A`. A branch ref picked up another session's commits
   three times. Recommended, **not in force** until you say so.
-- **The MapLibre-era sweep.** Five defects share one shape: a value tuned while
-  MapLibre was the substrate that silently degraded when Apple Maps became what
-  ships. Each was found one film at a time, by accident. The question that
-  catches the class is *"what was this value tuned against?"* Not scheduled.
+- **The MapLibre-era sweep.** Five defects share one shape — a value tuned against
+  a substrate that changed underneath it — each found by accident. Not scheduled.
   → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
 ---
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **No desk render can validate `matching.base_url`** — `RecapDemoFilmTests`
-  never reads the shipped config, and making it would spend real quota.
-  → `Docs/decisions.md` 2026-09-08.
-
+- 🔴 **Imported trips carry no `TripStats`**, so the title card's subtitle, Home
+  and Trip Detail print **no kilometres**. The **third** feature built and never
+  reached; one sweep for the class, not three fixes.
+  → `Docs/handoff-audit-2026-08-30.md` finding 8.
 - **The subject lookup still misses; it no longer crashes.** `VehicleCatalog.resolve`
   returns nil and the film silently draws the seagull instead of the car. Rate and
   trigger **UNKNOWN**; two log lines ship to name the next occurrence.
@@ -122,11 +120,11 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 
 ## ⚠️ Traps — read before you touch these
 
-- **A worktree renders a different film.** `Config/Secrets.xcconfig` and
-  `Tests/Fixtures/trips/local/` are gitignored, so it routes on straight lines and
-  reads different geometry. Copy both, then compare `drive/reconstructed` counts.
-- **There is no render length limit.** The SIGKILLs were six `xcodebuild`
-  processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
+- **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
+  gitignored, so it reads different geometry. ⚠️ Routing needs a key the flip
+  **removed**. → `Docs/handoff-crop-scaling.md` §3.
+- **There is no render length limit.** `pgrep -fl xcodebuild` first, one at a time
+  — and a killed render still leaves an unplayable MP4 behind.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.
 - **The production KV counter lies to your first read.** A day's key returned
   **404 while holding 4**, and a read straight after a render shows the pre-render

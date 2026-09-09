@@ -56,3 +56,4 @@ Three, and only three. Everything else here is record.
 
 Citing one of these from live work is fine. Citing anything else here as current
 is the mistake this directory exists to prevent.
+| `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md` | `_archive/2026-09-04-open-questions-type2-opening.md` | all five answered; the verdicts are in it and in ADR 2026-09-05 (b) (2026-09-05) |
