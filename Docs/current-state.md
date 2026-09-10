@@ -6,12 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-09 against decisions.md **2026-09-09** and `main` at
-**PR #46**. Re-read: the 2026-09-08/09 entries, every line of `HANDOFF.md`,
-and `Docs/release-readiness.md` S2–S7. 🔴 **The config flip is made** (Chiu,
-ADR 2026-09-08): builds carry no key, the Worker carries the traffic, **S6 is
-closed**, and the first-run notice is now published. **S7 is new** — the flip does
-not retire the key already inside other people's IPAs; only rotation does.
+Last synced: 2026-09-10 against decisions.md **2026-09-09** and `main` at
+**PR #48**. Config flip made (S6 closed, S7 new — rotation owed). Film
+persists (ADR #68, `film` table v5, Photos save is explicit tap per §0).
+Export substrate evaluation in flight (2026-09-09).
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -42,6 +40,8 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 2. ✅ Cross-region crossing — PRs #24/#31.
 3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half closed by ADR
    2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
+4. **Closeout** (Chiu 2026-09-05, 4 steps): ✅ step 1 film record (ADR
+   2026-09-08); remaining: export service, device session D1–D5, performance.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a

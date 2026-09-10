@@ -79,6 +79,7 @@ targets:
         NSLocationAlwaysAndWhenInUseUsageDescription: Always access lets Kamome keep recording an active trip in the background. Tracking stops the moment you end the trip.
         NSMotionUsageDescription: Motion data tells driving from walking so Kamome can save battery while recording.
         NSPhotoLibraryUsageDescription: Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded.
+        NSPhotoLibraryAddUsageDescription: Kamome can save a finished recap film to your photo library when you tap Save. Films are never saved automatically.
         UIBackgroundModes: [location]
         # Map-region side-load for the Replay MVP dogfood gate (PD-7,
         # Docs/dogfood-infrastructure.md): a `.pmtiles` region is dragged into

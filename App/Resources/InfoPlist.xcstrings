@@ -93,6 +93,23 @@
         }
       }
     },
+    "NSPhotoLibraryAddUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome can save a finished recap film to your photo library when you tap Save. Films are never saved automatically."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome 可以在你按下「儲存」時把回顧影片存到照片圖庫。影片絕不會自動儲存。"
+          }
+        }
+      }
+    },
     "NSPhotoLibraryUsageDescription": {
       "extractionState": "manual",
       "localizations": {
