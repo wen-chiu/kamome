@@ -48,10 +48,11 @@ its move.
 | `Docs/pre-launch.md` | `_archive/pre-launch.md` | **superseded** by `Docs/release-readiness.md` (current-state.md's authority table). The reasoning and accepted risks are record; the live obligations are in the successor |
 | `Docs/cross-region-journeys.md` | `_archive/cross-region-journeys.md` | cross-region requirements met — Phase 4 step 2 ✅, PRs #24/#31. Open crossing findings live in `Docs/handoff-cross-region-crossing.md` |
 | `Docs/icebox.md` | `_archive/icebox.md` | all deferred; the deferred items are listed by name in `Docs/current-state.md` |
+| `Docs/kamome-poc-spec.md` | `_archive/kamome-poc-spec.md` | the POC spec — historical reference, superseded by ADRs and `Docs/current-state.md`. **§0 rules and §4.4.1 provenance stay authoritative** |
 
 ## What is still load-bearing inside an archived file
 
-Three, and only three. Everything else here is record.
+Four groups. Everything else here is record.
 
 1. **`handoff-P3.5.md` §6** — the gate item definitions. Anything that says "§6a"
    or "§6b" means those.
@@ -59,6 +60,9 @@ Three, and only three. Everything else here is record.
    the sprite directory's own README.
 3. **`vector-tile-pipeline.md` and `osrm-setup.md`** — dormant, accurate, and the
    only description of the parked substrate and the self-hosted fallback.
+4. **`kamome-poc-spec.md` §0 and §4.4.1** — the rules of engagement and honest
+   provenance. Cited from `CLAUDE.md`, `Docs/current-state.md`, and one source
+   comment (`AppDatabase.swift`).
 
 Citing one of these from live work is fine. Citing anything else here as current
 is the mistake this directory exists to prevent.

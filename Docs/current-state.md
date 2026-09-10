@@ -25,8 +25,8 @@ decides something that changes anything below.
 
 Kamome (卡摸咩) is a **memory engine for road trips**: import (or later, capture)
 a journey once, then turn it into a cinematic recap film (MP4) worth keeping and
-sharing. Not a GPS visualizer. Reference: `Docs/kamome-poc-spec.md` v1.8 —
-**product reference, never status**; north star in `PO.md`.
+sharing. Not a GPS visualizer. North star in `PO.md`; the original spec is
+archived (`Docs/_archive/kamome-poc-spec.md`).
 
 **No release is in flight.** The current work proves the *artefact* ahead of
 productisation (Chiu 2026-08-15). The next release target is Phase 2 (App Store),
@@ -131,7 +131,7 @@ fetching · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
 
 | what | where |
 |---|---|
-| Product intent & rules | `Docs/kamome-poc-spec.md` (v1.8 — reference, not status) |
+| Product intent & rules | `Docs/_archive/kamome-poc-spec.md` (v1.8 — §0 rules and §4 provenance still authoritative) |
 | Decisions (append-only) | `Docs/decisions.md`; find one via `Docs/decisions-index.md` |
 | Live findings & blockers | `HANDOFF.md` — **wins over this file on anything open** |
 | Current state | this file; `CLAUDE.md` is the boot file |
