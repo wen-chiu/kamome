@@ -7,7 +7,7 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-10 against decisions.md **2026-09-09** and `main` at
-**PR #46**. Config flip made (S6 closed, S7 new — rotation owed). Film
+**PR #48**. Config flip made (S6 closed, S7 new — rotation owed). Film
 persists (ADR #68, `film` table v5, Photos save is explicit tap per §0).
 Export substrate evaluation in flight (2026-09-09).
 
