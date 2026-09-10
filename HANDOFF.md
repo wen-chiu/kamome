@@ -19,9 +19,7 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 ## 🔴 The critical path to a release — neither item is a document
 
 Everything else on this page can wait behind these two, and **no Claude session
-can do either**. ✅ **The config flip is made** (2026-09-08): builds carry no key,
-the Worker carries the traffic, S6 is closed and the first-run notice is now
-published. → ADR 2026-09-08.
+can do either**.
 
 1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
@@ -95,6 +93,9 @@ guess. → `Docs/decisions.md` **2026-09-09**.
 ---
 
 ## 🟠 Open — nobody is on these
+
+- **Dismissing the first-run notice backgrounds the app.** The §0 path every user
+  walks once (PR #45). Simulator-reproducible; **UNKNOWN on device** — joins D1–D5.
 
 - 🟠 **No desk render can validate `matching.base_url`** — `RecapDemoFilmTests`
   never reads the shipped config, and making it would spend real quota.
