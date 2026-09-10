@@ -75,6 +75,11 @@ struct TripDetailView: View {
         .sheet(item: $playingFilm) { film in
             FilmPlayerSheet(film: film, onDelete: {
                 model.deleteFilm(film)
+                // The export sheet remembers this trip's last finished film, and
+                // that memory now outlives the sheet — so deleting the film here
+                // has to clear it, or reopening the sheet plays a file that is
+                // gone (ADR 2026-09-10).
+                exportCoordinator.forget(film: film)
                 playingFilm = nil
             })
         }

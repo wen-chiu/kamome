@@ -15,77 +15,6 @@ import XCTest
 /// the battery is gone.
 @MainActor
 final class RecapExportCoordinatorTests: XCTestCase {
-    // MARK: - Doubles
-
-    /// A stand-in for `RecapExportJob` that never renders. It parks inside
-    /// `run` until the test decides how the export ends, which is what lets one
-    /// test hold four exports in flight and another assert the exact moment the
-    /// lifecycle guard is released.
-    private final class SpyExportJob: RecapExportRunning {
-        /// **The "never a second writer" counter.** `RecapExporter` opens its
-        /// `AVAssetWriter` inside `run`, so a peak of 2 here is two writers and
-        /// two snapshotter streams on one phone.
-        static var live = 0
-        static var peak = 0
-        static var runs = 0
-
-        static func resetCounters() {
-            live = 0
-            peak = 0
-            runs = 0
-        }
-
-        private var channel: RecapExportChannel?
-        private var continuation: CheckedContinuation<RecapExportOutcome, Never>?
-
-        var hasStarted: Bool { channel != nil }
-        /// What the render loop reads every frame.
-        var isCancelled: Bool { !(channel?.shouldContinue() ?? true) }
-
-        func run(_ channel: RecapExportChannel) async -> RecapExportOutcome {
-            Self.live += 1
-            Self.peak = max(Self.peak, Self.live)
-            Self.runs += 1
-            self.channel = channel
-            let outcome = await withCheckedContinuation { continuation in
-                self.continuation = continuation
-            }
-            Self.live -= 1
-            return outcome
-        }
-
-        func report(progress: Double) { channel?.progress(progress) }
-
-        func complete(_ outcome: RecapExportOutcome) {
-            let continuation = self.continuation
-            self.continuation = nil
-            continuation?.resume(returning: outcome)
-        }
-    }
-
-    /// `UIApplication`'s three effects, counted. The expiry handler is held so
-    /// the test can fire it — iOS reclaiming an assertion is the one exit path
-    /// no test could otherwise provoke.
-    private final class FakePlatform {
-        var idleTimerDisabled = false
-        var heldAssertions = 0
-        var expiry: (() -> Void)?
-        private var nextIdentifier = 1
-
-        var platform: ExportLifecycleGuard.Platform {
-            ExportLifecycleGuard.Platform(
-                setIdleTimerDisabled: { self.idleTimerDisabled = $0 },
-                beginTask: { handler in
-                    self.expiry = handler
-                    self.heldAssertions += 1
-                    self.nextIdentifier += 1
-                    return UIBackgroundTaskIdentifier(rawValue: self.nextIdentifier)
-                },
-                endTask: { _ in self.heldAssertions -= 1 }
-            )
-        }
-    }
-
     // MARK: - Harness
 
     private func request(_ tripId: String) -> RecapExportRequest {
@@ -281,6 +210,53 @@ final class RecapExportCoordinatorTests: XCTestCase {
         XCTAssertFalse(job.isCancelled)
         coordinator.cancel(tripId: "trip-a")
         XCTAssertTrue(job.isCancelled)
+    }
+
+    // MARK: - What an outcome that outlives its screen has to keep straight
+
+    /// Deleting a film from the trip screen must clear the export sheet's memory
+    /// of it. The outcome now outlives the sheet, so without this the sheet
+    /// reopens playing a file that is gone.
+    func testDeletingAFilmClearsTheOutcomeStillHoldingIt() async throws {
+        let coordinator = RecapExportCoordinator()
+        let job = SpyExportJob()
+        coordinator.start(request: request("trip-a"), job: job)
+        await waitUntil("the job to start") { job.hasStarted }
+        let record = film("trip-a")
+        job.complete(.finished(film: record, fileURL: URL(fileURLWithPath: "/tmp/test.mp4")))
+        await waitUntil("the export to finish") { coordinator.running == nil }
+        XCTAssertNotNil(coordinator.outcome(tripId: "trip-a"))
+
+        // A different film of the same trip must not clear it.
+        coordinator.forget(film: film("trip-a"))
+        XCTAssertNotNil(coordinator.outcome(tripId: "trip-a"), "only the deleted film is forgotten")
+
+        coordinator.forget(film: record)
+        XCTAssertNil(coordinator.outcome(tripId: "trip-a"))
+    }
+
+    /// A cancelled run's progress hops back to the main actor as fire-and-forget
+    /// `Task`s, so some can still be in flight when the next export starts.
+    /// Landing them in the new run would report another film's percentage.
+    func testAStaleRunCannotWriteProgressIntoTheNextOne() async throws {
+        let coordinator = RecapExportCoordinator()
+        let stale = SpyExportJob()
+        coordinator.start(request: request("trip-a"), job: stale)
+        await waitUntil("the first job to start") { stale.hasStarted }
+        stale.report(progress: 0.9)
+        coordinator.cancel(tripId: "trip-a")
+        stale.complete(.cancelled)
+        await waitUntil("the first export to end") { coordinator.running == nil }
+
+        let fresh = SpyExportJob()
+        coordinator.start(request: request("trip-b"), job: fresh)
+        await waitUntil("the second job to start") { fresh.hasStarted }
+        fresh.report(progress: 0.1)
+
+        // The cancelled run, still holding its channel, tries to report again.
+        stale.report(progress: 0.9)
+        XCTAssertEqual(coordinator.running?.tripId, "trip-b")
+        XCTAssertEqual(coordinator.running?.fraction, 0.1, "a finished run must not write into the live one")
     }
 
     // MARK: - The lifecycle guard, on all four exits

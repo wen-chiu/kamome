@@ -103,6 +103,15 @@ final class RecapExportCoordinator {
         outcomes[tripId] = nil
     }
 
+    /// Forgets a finished outcome whose film has been deleted **somewhere else**.
+    /// The trip screen can delete the very film the export sheet is still
+    /// holding, and reopening the sheet would then play a file that is gone —
+    /// the cost of an outcome that now outlives the screen that produced it.
+    func forget(film: FilmRecord) {
+        guard case let .finished(stored, _) = outcomes[film.tripId], stored.id == film.id else { return }
+        outcomes[film.tripId] = nil
+    }
+
     // MARK: - Single flight
 
     /// Starts the export, joins the one already running for this trip, or
@@ -131,10 +140,22 @@ final class RecapExportCoordinator {
             KamomeLog.recap.error("export: the background assertion expired — cancelling at the next frame")
             flag.set()
         }
+        // Every write is gated on the run that made it still being the current
+        // one. The render's progress hops back to the main actor as
+        // fire-and-forget `Task`s, so a cancelled run can still have some in
+        // flight when the next export starts — and without this they would land
+        // in the new run's `Running` and report another film's percentage.
+        // The flag is already unique per run, so it doubles as the token.
+        func ifCurrent(_ apply: @escaping (inout Running) -> Void) -> () -> Void {
+            { [weak self] in
+                guard let self, self.cancelFlag === flag, self.running != nil else { return }
+                apply(&self.running!)
+            }
+        }
         let channel = RecapExportChannel(
-            progress: { [weak self] fraction in self?.running?.fraction = fraction },
-            routing: { [weak self] report in self?.running?.routing = report },
-            photoShortfall: { [weak self] summary in self?.running?.photoShortfall = summary },
+            progress: { fraction in ifCurrent { $0.fraction = fraction }() },
+            routing: { report in ifCurrent { $0.routing = report }() },
+            photoShortfall: { summary in ifCurrent { $0.photoShortfall = summary }() },
             shouldContinue: { !flag.isSet }
         )
         task = Task { [weak self] in
