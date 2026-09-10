@@ -159,9 +159,20 @@ nobody re-tuning it.**
 | 3 | **dashed leg** indistinguishable from solid on light | 2026-08-28 | a pixel probe, accidentally |
 | 4 | the **establishing shot** silently lost its country beat | 2026-08-30 | this audit |
 | 5 | **`keyframe_interval_frames`** — arguably the same class, one substrate earlier: a number whose premise (a static camera) expired | 2026-08-30 | this audit |
+| 6 | the **closing dim**, 0.48 light / 0.24 dark — premised on Apple Maps' light base at luminance ~180–200 | 2026-09-09 | registered ahead of the substrate move, not found |
+| 7 | the **closing type halo**, 16 px at α0.95 — premised on that base's bright green land washing the tagline out | 2026-09-09 | same |
+| 8 | **`routeAccent` `#FF6A3D`** — warm *because cyan collides with water on Apple Maps' light base*; the collision is a property of that palette | 2026-09-09 | same |
 
-Each was found **one film at a time, by accident**. That is an expensive discovery
+1–5 were found **one film at a time, by accident**. That is an expensive discovery
 method and there is no reason to think 4 was the last.
+
+🔴 **6–8 are the first entries registered *before* they break** (Chiu 2026-09-09,
+ADR 2026-09-05 (d) §6). ADR 2026-09-09 moves the export path off Apple Maps, and
+those three values were all judged against that base — two of them by render, in
+one session, in a tuning loop a substrate swap invalidates outright. They are
+logged here so the substrate round **inherits a list rather than repeating the
+discovery method.** If that round finds a fourth, add it here rather than to a
+film review.
 
 **RECOMMENDATION (needs Chiu):** one deliberate sweep — go through every value and
 capability that was chosen while MapLibre was the substrate and ask *"what is this

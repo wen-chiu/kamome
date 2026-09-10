@@ -81,9 +81,6 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
   `RecapWordmark.text` = `"Kamome"`. The tagline went **beneath the existing mark**
   and the mark was not touched — what the product is called, and in which scripts,
   is yours. → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **A staging rule for `Arch.md`** — confirm the branch before committing, stage
-  explicit paths, never `-A`. A branch ref picked up another session's commits
-  three times. Recommended, **not in force** until you say so.
 - **The MapLibre-era sweep.** Five defects share one shape — a value tuned against
   a substrate that changed underneath it — each found by accident. Not scheduled.
   → `Docs/handoff-audit-2026-08-30.md` finding 4.

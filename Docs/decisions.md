@@ -4022,6 +4022,32 @@ untouched, and no `TrackingConfig` key changed. **miyakojima's nine timeline
 numbers are unchanged**, measured before and after: 60.00 / 6.50 / 10.50 / 6.53 /
 7.50 / 2.97 @57.00 / 2111.6 km / 14.8 km / 142.85×.
 
+### 6. 🔴 Three values here are premised on Apple Maps, and the substrate is leaving
+
+**ADR 2026-09-09 takes the export path off Apple Maps** (OpenFreeMap + MapLibre).
+That round is an evaluation and changes no code — but it changes the ground three
+values in *this* entry were judged against, and none of them survives the move
+automatically. Registering them now, so the substrate round **inherits a list
+instead of finding them one film at a time**:
+
+| value | where | what it is premised on |
+|---|---|---|
+| the closing dim, **0.48 light / 0.24 dark** | `RecapStyle.modernMinimal(_:)` | Apple Maps' light base sitting at luminance ~180–200. On a different base the light value is either a grey wash or too weak to read type over. |
+| the type halo, **16 px at α0.95** | `RecapEndCardStyle.typeShadowBlurPx` | the same base's **bright green land**, which washed the tagline out at 30 px blur. A darker or flatter base needs less; a busier one needs more. |
+| **`routeAccent` `#FF6A3D`** | `RecapStyle` | warm *because cyan collides with water on Apple Maps' light base* (2026-08-27, re-decided §1). The collision is a property of that base's palette, not of trails in general. |
+
+⚠️ **The two dim values are the sharpest case**, because they were tuned by
+render, twice, in one session — the first pair washed out and the second only
+worked once the halo was tightened. That tuning loop is exactly what a substrate
+change invalidates, and re-running it is cheap **only if someone knows to**.
+
+**These are members of the `HANDOFF.md` MapLibre-era sweep**, and they are logged
+in `Docs/handoff-audit-2026-08-30.md` finding 4 with the rest. The class's cause
+is not that any one value was wrong: it is that **the discovery method has been
+"a film review notices it", every time.** A substrate swap is the moment to spend
+the sweep instead of paying for it five more times.
+
+
 ## 2026-09-08 — The config flip: the key stops shipping, and the counter is the proof
 
 **Status:** approved — **Chiu's decision, 2026-09-05**, taken because it changes
