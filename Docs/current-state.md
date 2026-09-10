@@ -125,7 +125,7 @@ transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·
 per-act / per-segment camera framing (rejected 2026-08-02) · iCloud original
-fetching · "Place names as narrative rhythm" (`Docs/icebox.md`).
+fetching · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
 
 ## Authoritative sources — higher wins; newest wins within a level
 
@@ -135,7 +135,7 @@ fetching · "Place names as narrative rhythm" (`Docs/icebox.md`).
 | Decisions (append-only) | `Docs/decisions.md`; find one via `Docs/decisions-index.md` |
 | Live findings & blockers | `HANDOFF.md` — **wins over this file on anything open** |
 | Current state | this file; `CLAUDE.md` is the boot file |
-| Release gate | `Docs/release-readiness.md` — supersedes `Docs/pre-launch.md`, which keeps the reasoning and the accepted risks |
+| Release gate | `Docs/release-readiness.md` |
 | Governance / conduct | `PO.md`, `Arch.md`, `DESIGNER.md` — one per session |
 | Rule rationale | `Docs/rule-rationale.md` |
 | History | `Docs/_archive/` — and `Docs/_archive/README.md` resolves any path that moved there |

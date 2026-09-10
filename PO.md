@@ -64,7 +64,7 @@ Consequences that are part of the locks, not implementation detail:
   that `radiuses=500` supposedly guarded returns `400 No suitable edges` from
   Geoapify natively. Read (d) before citing any older snap-radius text.
 - **§0 was amended for routing**: real leg coordinates go to Geoapify, and
-  honest disclosure is the decided posture (`Docs/pre-launch.md` item 7).
+  honest disclosure is the decided posture (`Docs/release-readiness.md` S3).
 
 ⚠️ **A superseded lock is a governance hazard, not clutter.** Twice this file
 held a "do not reopen" lock that an ADR had already amended — the OSRM+MapLibre

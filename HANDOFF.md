@@ -78,9 +78,6 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
   the first-run card's wording is ruled. **Whether a user may refuse** stays
   deferred. → `Docs/release-readiness.md` S2/S3.
-- **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
-  arrived.** Relabel or delete; it is not an equal claim in conflict with the
-  code. → `Docs/release-readiness.md` S3b.
 - **A staging rule for `Arch.md`** — confirm the branch before committing, stage
   explicit paths, never `-A`. A branch ref picked up another session's commits
   three times. Recommended, **not in force** until you say so.
@@ -180,7 +177,6 @@ film (`Docs/handoff-crop-scaling.md`).
 | `Docs/handoff-stop-weighting.md` | the removal criterion |
 | `Docs/handoff-known-bugs.md` | the three above, in full |
 | `Docs/camera-arcs.md` | the arc design — live, and §5 carries a correction |
-| `Docs/cross-region-journeys.md` | cross-region requirements (Chiu 2026-08-14) |
 | `Docs/phase4-reference.md` | Phase 4 scope and the camera architecture |
 | `Docs/environment-gotchas.md` | routing, simulators, fixture shadowing |
 | `Docs/rule-rationale.md` | why each rule in `CLAUDE.md` exists |
