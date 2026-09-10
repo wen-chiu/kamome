@@ -57,11 +57,11 @@ final class RecapMatchingE2ETests: XCTestCase {
                 break
             }
         }
-        guard case .finished(let shareURL, let renderSeconds) = model.phase else {
+        guard case .finished(_, let fileURL, let renderSeconds) = model.phase else {
             XCTFail("export did not finish: \(model.phase)")
             return
         }
-        print(String(format: "KAMOME_E2E rendered in %.1f s → %@", renderSeconds, shareURL.path))
+        print(String(format: "KAMOME_E2E rendered in %.1f s → %@", renderSeconds, fileURL.path))
 
         // Per-segment matching report: which segments got snapped geometry.
         let detail = try XCTUnwrap(repository.detail(tripId: tripId))
@@ -84,7 +84,7 @@ final class RecapMatchingE2ETests: XCTestCase {
             let destination = URL(fileURLWithPath: out, isDirectory: true)
                 .appendingPathComponent("kamome-e2e-\(suffix).mp4")
             try? FileManager.default.removeItem(at: destination)
-            try FileManager.default.copyItem(at: shareURL, to: destination)
+            try FileManager.default.copyItem(at: fileURL, to: destination)
             print("KAMOME_E2E copied to \(destination.path)")
         }
     }

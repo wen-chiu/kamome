@@ -207,6 +207,23 @@
         }
       }
     },
+    "films_section_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片"
+          }
+        }
+      }
+    },
     "first_run_acknowledge": {
       "extractionState": "manual",
       "localizations": {
@@ -1091,6 +1108,40 @@
         }
       }
     },
+    "recap_film_delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除影片"
+          }
+        }
+      }
+    },
+    "recap_film_delete_confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this film? It cannot be undone."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確定要刪除這部影片？此動作無法復原。"
+          }
+        }
+      }
+    },
     "recap_format": {
       "extractionState": "manual",
       "localizations": {
@@ -1138,6 +1189,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "MP4 影片"
+          }
+        }
+      }
+    },
+    "recap_photos_access_denied": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo library access denied"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片取用權限被拒"
           }
         }
       }
@@ -1376,6 +1444,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "旅程沒有問題，只是我們目前連不上路線服務，所以先畫成虛線。"
+          }
+        }
+      }
+    },
+    "recap_save_to_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save to Photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存到照片"
+          }
+        }
+      }
+    },
+    "recap_saved_to_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to Photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存到照片"
           }
         }
       }

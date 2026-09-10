@@ -11,6 +11,8 @@ import Observation
 final class TripDetailModel {
     private(set) var detail: TripRepository.TripDetail?
     private(set) var selectedDay: Int?
+    /// Films stored for this trip, newest first.
+    private(set) var films: [FilmRecord] = []
 
     let tripId: String
     private let repository: TripRepository
@@ -88,6 +90,14 @@ final class TripDetailModel {
 
     func reload() {
         detail = try? repository.detail(tripId: tripId)
+        films = (try? repository.films(tripId: tripId)) ?? []
+    }
+
+    /// Deletes a single film record and its file on disk.
+    func deleteFilm(_ film: FilmRecord) {
+        try? repository.deleteFilm(filmId: film.id)
+        FilmStore.deleteFile(relativePath: film.relativePath)
+        reload()
     }
 
     /// Coalesces bursts of naming callbacks into at most one reload per runloop
