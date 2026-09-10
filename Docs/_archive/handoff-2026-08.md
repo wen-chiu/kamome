@@ -2373,3 +2373,8 @@ second, weaker account of a decision is worse than none.
 | S3b's mechanism: Geoapify has no map-matching endpoint, so a recorded leg is never sent — now gated | `RouteMatchRecordedLegTests`; `Docs/release-readiness.md` S3b (**the row itself is still open — it is Chiu's**) |
 | The CONFLICT over the pan floor — two documents stated a premise measured false | corrected in place 2026-09-03: banners in `Docs/camera-arcs.md` §5 and `_archive/handoff-camera-arc-findings.md` finding 5; measurement in `Docs/handoff-cross-region-crossing.md` finding 1 |
 | The staleness protocol — three failures, then mechanised | ADR **2026-09-02 (b)**; `Scripts/check-staleness.sh` |
+| S5 the Worker's spend ceiling — deployed, probed, its overshoot accepted | ADR **2026-09-04**; `Docs/release-readiness.md` S5; PR #40 |
+| S4 the Worker's no-log property — asserted, and `npm run deploy` runs the gate | ADR **2026-09-05**; `Deploy/worker/test/deploy-config.test.mjs`; PR #42 |
+| The per-IP burst limit — the day ceiling's other half | ADR **2026-09-05**; PR #42 |
+| The first-run notice — the user is told once, before any coordinate leaves, and the telling is not a question | ADR **2026-09-05 (b)**; PR #45 |
+| S6 the config flip — builds carry no key, the Worker carries the traffic, the KV counter is the proof | ADR **2026-09-08**; `Docs/release-readiness.md` S6; PR #46 |
