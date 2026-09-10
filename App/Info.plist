@@ -39,6 +39,8 @@
 	<string>Kamome records your route only during an active trip you started.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Motion data tells driving from walking so Kamome can save battery while recording.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kamome can save a finished recap film to your photo library when you tap Save. Films are never saved automatically.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded.</string>
 	<key>UIBackgroundModes</key>

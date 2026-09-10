@@ -3872,6 +3872,75 @@ requires the real key and refuses to degrade into a shape scan, and the key is
 Chiu's** — it is never read into a session's environment. So the archive is built
 here and the gate is run by him.
 
+## 2026-09-08 — A finished film becomes a thing that exists
+
+Phase 4 closeout, step 1 of 4 (Chiu 2026-09-05).
+
+### Context
+
+A rendered recap film lives in `tmp/` and disappears the moment the export
+sheet closes. There is no record that a film was ever made, no way to replay it,
+and no path to the trip-detail surface where a user would expect to find their
+films. This is step 1 of 4 in the Phase 4 closeout (Chiu 2026-09-05): (1) film
+record, (2) export service outliving the sheet, (3) device session D1–D5, (4)
+performance against the number step 3 measures.
+
+### Decisions
+
+1. **Film stored in app by default; Photos is an explicit user action.** A
+   finished film is moved from `tmp/` to `Application Support/Films/` and a
+   `film` row is inserted into the GRDB database via `TripRepository`. Saving to
+   the iOS photo library is a separate, explicit tap — never automatic — because
+   iCloud Photos uploads off-device and that crosses the §0 boundary.
+
+2. **Relative paths, not absolute.** The `film.relative_path` column stores
+   `Films/<filename>`, resolved against the Application Support container at
+   read time. The iOS container UUID changes across app updates and restores; a
+   stored absolute URL silently stops resolving.
+
+3. **The film record persists appearance and mode.** `film.appearance` (light /
+   dark) and `film.recap_mode` (highlight / full) capture what was previously
+   recoverable only from a log line. `film.render_seconds` records how long the
+   render took. No seed column (deferred until the render pipeline uses one).
+
+4. **PHPhotoLibrary.requestAuthorization(for: .addOnly), not .readWrite.** The
+   app already holds read access for photo import. Conflating the two muddies D4
+   (Limited Photo Library Access) and asks for a broader permission than the
+   action requires.
+
+5. **Film files are included in backup.** `isExcludedFromBackupKey` is NOT set.
+   A film the user made is user data, not a regenerable cache.
+
+6. **Deleting a trip cascades to its films.** `TripRepository.deleteTrip`
+   removes all child rows (trackpoints, segments, photos, stops, films) and
+   returns the deleted `FilmRecord`s so the caller can clean up the files outside
+   the database transaction.
+
+7. **Phase.finished carries the record, not a bare URL.** `RecapModel.Phase`
+   changes from `.finished(shareURL:renderSeconds:)` to
+   `.finished(film:fileURL:renderSeconds:)`. This is what makes the film "a
+   thing that exists" rather than a temp-file reference.
+
+### Schema
+
+Migration v5 adds a `film` table with columns: `id`, `trip_id` (FK → trip),
+`relative_path`, `format`, `created_at`, `duration_s`, `render_seconds`,
+`appearance`, `recap_mode`, `file_bytes`, plus index `idx_film_trip` on
+`trip_id`.
+
+### What this does NOT settle
+
+- **D1** (`ExportLifecycleGuard` — start an export, lock the screen, see
+  whether it survives) and **D5** (the S5 UX pass) both remain owed on
+  `Docs/release-readiness.md` Tier 3. The seed column stays deferred per ADR
+  2026-08-15.
+- **ExportEngine** — no pixel changes. This PR moves zero files in
+  `ExportEngine/`.
+- **Steps 2–4** of the Phase 4 closeout: export service outliving the sheet,
+  device session D1–D5, performance.
+
+---
+
 ## 2026-09-09 — The export substrate leaves Apple Maps: OpenFreeMap + MapLibre, and this round only looks at it
 
 **Decision (Chiu, 2026-09-09), in his words:**
@@ -4010,3 +4079,41 @@ The shipping substrate; whether Kamome authors its own style; where place names
 finally live; the first-run notice's second item; whether the parked pmtiles
 path is ever retired. **None of these may be settled by the engineering session
 that runs this evaluation** — it returns pictures and a number.
+
+### Correction, 2026-09-10 — two claims in this entry were wrong, and the decision does not move
+
+Both came back from the evaluation round the entry authorised. Written here as an
+addendum rather than as a new entry: nothing above is deleted, and the ledger
+stays append-only.
+
+**1. `MKMapSnapshotter` does draw the Apple Maps logo.** This entry said the
+exported frame carried *"no Apple logo and no legal link"*. Measured again, and
+the truth is split:
+
+- **VERIFIED 2026-09-09** (the eval round's own renders, e.g.
+  `substrate-iceland-apple-light.png`): today's `MapKitSnapshotProvider` output
+  carries " Maps" at the bottom-left. `MapKitSnapshotProvider` contains no logo
+  drawing code, so the snapshotter draws it. **The legal link is still absent.**
+- **VERIFIED 2026-09-10** (this session, cropping the cited artifact itself):
+  `Docs/demos/phase3/still-stop-card.png` has **neither** at its bottom-left —
+  the corner is map. So the sentence was true *of that artifact* and was wrong to
+  generalise from it.
+- **The cause of the difference is UNKNOWN.** Candidates: a MapKit change between
+  2026-07-19 and now, or crop-scaling (ADR 2026-08-31 (b)) changing which part of
+  the snapshot reaches the frame. Cheapest settling: render that fixture at that
+  frame on current code and compare the corner. **Do not assert a cause until
+  someone does.**
+
+⚠️ **The decision does not move, and neither does its reasoning.** §2.1 forbids
+"remove, **obscure** or alter"; the legal link is absent in both artifacts; and
+**§2.5 and §2.3 — the two clauses this decision actually rests on — never
+depended on the logo at all.** A logo that is present makes the §2.1 point weaker
+and changes nothing else.
+
+**2. `mountain_peak` is present in the tiles — INFERRED is now VERIFIED.** The
+table above marked it inferred and named "query one tile" as the settling. That
+was done: the layer is declared in the TileJSON at z7–14 and real tiles carry it
+(`12/1858/1092` Iceland, `12/3473/1756` Miyakojima). **All six of Kamome's
+source-layers are served.** The "5 of 6" row remains correct as written — it is a
+statement about *positron's own style*, not about the tiles, and none of the
+three stock styles draws peak labels.

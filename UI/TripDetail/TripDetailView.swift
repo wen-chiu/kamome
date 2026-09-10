@@ -1,3 +1,4 @@
+import AVKit
 import KamomeExportEngine
 import KamomePersistence
 import KamomeTripComposer
@@ -11,6 +12,7 @@ struct TripDetailView: View {
     @State private var model: TripDetailModel
     @State private var editingStop: StopRecord?
     @State private var showingRecap = false
+    @State private var playingFilm: FilmRecord?
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: TripDetailModel(
@@ -27,6 +29,7 @@ struct TripDetailView: View {
             if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             vehicleRow
+            filmsSection
             timeline
         }
         .navigationTitle(model.detail?.trip.title ?? "")
@@ -52,6 +55,15 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $showingRecap) {
             RecapView(tripId: model.tripId, session: session)
+        }
+        .onChange(of: showingRecap) {
+            if !showingRecap { model.reload() }
+        }
+        .sheet(item: $playingFilm) { film in
+            FilmPlayerSheet(film: film, onDelete: {
+                model.deleteFilm(film)
+                playingFilm = nil
+            })
         }
     }
 
@@ -262,6 +274,56 @@ struct TripDetailView: View {
         mode == "walk" || mode == "cycle"
             ? StrokeStyle(lineWidth: 3, dash: [4, 6])
             : StrokeStyle(lineWidth: 4)
+    }
+
+    /// Stored films for this trip, tapping plays one. Shows nothing when the
+    /// trip has no films yet — a missing section is less noisy than an empty one.
+    @ViewBuilder
+    private var filmsSection: some View {
+        if !model.films.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("films_section_title")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                    .padding(.bottom, 4)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(model.films) { film in
+                            filmCard(film)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
+            }
+            .background(.thinMaterial)
+        }
+    }
+
+    private func filmCard(_ film: FilmRecord) -> some View {
+        Button { playingFilm = film } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Image(systemName: film.format == "gif" ? "photo.on.rectangle" : "film")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                Text(film.format.uppercased())
+                    .font(.caption2.bold())
+                Text(Date(timeIntervalSince1970: film.createdAt), style: .date)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if let bytes = film.fileBytes {
+                    Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(10)
+            .background(Color.secondary.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Which subject the film draws — a trip property, so it lives here beside

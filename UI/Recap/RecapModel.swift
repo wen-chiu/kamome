@@ -20,7 +20,10 @@ final class RecapModel {
     enum Phase: Equatable {
         case idle
         case rendering(progress: Double)
-        case finished(shareURL: URL, renderSeconds: Double)
+        /// A finished film is now a record, not a bare URL. The record carries
+        /// the relative path; the resolved URL is passed alongside it so the
+        /// view can play the file without resolving again.
+        case finished(film: FilmRecord, fileURL: URL, renderSeconds: Double)
         case failed(message: String)
     }
 
@@ -315,7 +318,29 @@ final class RecapModel {
             let elapsed = ContinuousClock.now - started
             let seconds = Double(elapsed.components.seconds)
                 + Double(elapsed.components.attoseconds) * 1e-18
-            phase = .finished(shareURL: output.gifURL ?? output.videoURL, renderSeconds: seconds)
+            // The primary file: GIF when the user chose GIF, MP4 otherwise.
+            let primaryURL = output.gifURL ?? output.videoURL
+            let filmFormat = output.gifURL != nil ? "gif" : "mp4"
+            // Move out of tmp and persist the record — the film becomes a thing
+            // that exists (Phase 4 closeout, Chiu 2026-09-05).
+            let record = try persistFilm(
+                tempURL: primaryURL,
+                format: filmFormat,
+                appearance: appearance,
+                recapMode: config.export.recapMode,
+                durationS: timeline.durationS,
+                renderSeconds: seconds
+            )
+            // The other format's tmp file, if any, is cleaned up — only the
+            // chosen format is stored.
+            if output.gifURL != nil {
+                try? FileManager.default.removeItem(at: output.videoURL)
+            }
+            guard let fileURL = FilmStore.resolvedURL(relativePath: record.relativePath) else {
+                phase = .failed(message: String(localized: "recap_failed"))
+                return
+            }
+            phase = .finished(film: record, fileURL: fileURL, renderSeconds: seconds)
         } catch {
             cleanup(videoURL: videoURL, gifURL: gifURL)
             phase = .failed(message: String(describing: error))
@@ -381,6 +406,52 @@ final class RecapModel {
     private func cleanup(videoURL: URL, gifURL: URL?) {
         try? FileManager.default.removeItem(at: videoURL)
         if let gifURL { try? FileManager.default.removeItem(at: gifURL) }
+    }
+
+    // MARK: - Film persistence
+
+    /// Moves the rendered file out of tmp and inserts its record. Returns the
+    /// record for the view to carry.
+    private func persistFilm(
+        tempURL: URL,
+        format: String,
+        appearance: RecapAppearance,
+        recapMode: RecapMode,
+        durationS: Double,
+        renderSeconds: Double
+    ) throws -> FilmRecord {
+        let relativePath = try FilmStore.moveToStore(from: tempURL)
+        let fileURL = FilmStore.resolvedURL(relativePath: relativePath)
+        let fileBytes = fileURL.flatMap(FilmStore.fileSize(at:))
+        let record = FilmRecord(
+            id: UUID().uuidString,
+            tripId: tripId,
+            relativePath: relativePath,
+            format: format,
+            createdAt: Date.now.timeIntervalSince1970,
+            durationS: durationS,
+            renderSeconds: renderSeconds,
+            appearance: appearance.rawValue,
+            recapMode: recapMode.rawValue,
+            fileBytes: fileBytes
+        )
+        try repository.saveFilm(record)
+        KamomeLog.recap.notice(
+            "film stored: \(record.relativePath, privacy: .public) · \(fileBytes ?? 0) bytes"
+        )
+        return record
+    }
+
+    /// Deletes a film's row and its file. Called from the finished screen's
+    /// delete action.
+    func deleteFilm(_ film: FilmRecord) {
+        do {
+            try repository.deleteFilm(filmId: film.id)
+            FilmStore.deleteFile(relativePath: film.relativePath)
+            phase = .idle
+        } catch {
+            KamomeLog.recap.error("film deletion failed: \(error)")
+        }
     }
 
     // MARK: - Photos

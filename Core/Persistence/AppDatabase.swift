@@ -152,6 +152,31 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE segment ADD COLUMN routability TEXT")
         }
 
+        // Schema v5 — a finished film is a thing that exists (Phase 4 closeout,
+        // Chiu 2026-09-05). The film record is where a film's appearance is
+        // persisted (`Docs/decisions.md` 2026-08-15 required export variation to
+        // be stored; the log line was the stopgap). `relative_path` is resolved
+        // against the app container at read time — an absolute URL silently stops
+        // resolving after an app update or restore because the container UUID
+        // changes. Forward-only.
+        migrator.registerMigration("v5") { db in
+            try db.execute(sql: """
+                CREATE TABLE film (
+                  id TEXT PRIMARY KEY,
+                  trip_id TEXT NOT NULL REFERENCES trip(id),
+                  relative_path TEXT NOT NULL,
+                  format TEXT NOT NULL,
+                  created_at REAL NOT NULL,
+                  duration_s REAL,
+                  render_seconds REAL,
+                  appearance TEXT NOT NULL,
+                  recap_mode TEXT NOT NULL,
+                  file_bytes INTEGER
+                );
+                CREATE INDEX idx_film_trip ON film(trip_id);
+                """)
+        }
+
         return migrator
     }
 }
