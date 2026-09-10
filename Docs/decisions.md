@@ -4079,3 +4079,41 @@ The shipping substrate; whether Kamome authors its own style; where place names
 finally live; the first-run notice's second item; whether the parked pmtiles
 path is ever retired. **None of these may be settled by the engineering session
 that runs this evaluation** — it returns pictures and a number.
+
+### Correction, 2026-09-10 — two claims in this entry were wrong, and the decision does not move
+
+Both came back from the evaluation round the entry authorised. Written here as an
+addendum rather than as a new entry: nothing above is deleted, and the ledger
+stays append-only.
+
+**1. `MKMapSnapshotter` does draw the Apple Maps logo.** This entry said the
+exported frame carried *"no Apple logo and no legal link"*. Measured again, and
+the truth is split:
+
+- **VERIFIED 2026-09-09** (the eval round's own renders, e.g.
+  `substrate-iceland-apple-light.png`): today's `MapKitSnapshotProvider` output
+  carries " Maps" at the bottom-left. `MapKitSnapshotProvider` contains no logo
+  drawing code, so the snapshotter draws it. **The legal link is still absent.**
+- **VERIFIED 2026-09-10** (this session, cropping the cited artifact itself):
+  `Docs/demos/phase3/still-stop-card.png` has **neither** at its bottom-left —
+  the corner is map. So the sentence was true *of that artifact* and was wrong to
+  generalise from it.
+- **The cause of the difference is UNKNOWN.** Candidates: a MapKit change between
+  2026-07-19 and now, or crop-scaling (ADR 2026-08-31 (b)) changing which part of
+  the snapshot reaches the frame. Cheapest settling: render that fixture at that
+  frame on current code and compare the corner. **Do not assert a cause until
+  someone does.**
+
+⚠️ **The decision does not move, and neither does its reasoning.** §2.1 forbids
+"remove, **obscure** or alter"; the legal link is absent in both artifacts; and
+**§2.5 and §2.3 — the two clauses this decision actually rests on — never
+depended on the logo at all.** A logo that is present makes the §2.1 point weaker
+and changes nothing else.
+
+**2. `mountain_peak` is present in the tiles — INFERRED is now VERIFIED.** The
+table above marked it inferred and named "query one tile" as the settling. That
+was done: the layer is declared in the TileJSON at z7–14 and real tiles carry it
+(`12/1858/1092` Iceland, `12/3473/1756` Miyakojima). **All six of Kamome's
+source-layers are served.** The "5 of 6" row remains correct as written — it is a
+statement about *positron's own style*, not about the tiles, and none of the
+three stock styles draws peak labels.
