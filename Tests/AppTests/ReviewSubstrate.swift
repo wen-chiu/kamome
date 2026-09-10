@@ -73,10 +73,19 @@ enum ReviewSubstrate {
         case openFreeMapPositron = "positron"
         case openFreeMapLiberty = "liberty"
         case openFreeMapFiord = "fiord"
+        /// **Kamome's own fork of Liberty** (Chiu 2026-09-10) — 減層, the souvenir
+        /// palette, and doubled place names. Still evaluation-only: `LibertyFork`
+        /// writes it to a temp file at render time and nothing ships it.
+        case openFreeMapLibertyFork = "liberty-fork"
 
         /// OpenFreeMap serves the style, its glyphs and its sprite from absolute
-        /// URLs inside the style document, so this one URL is the whole wiring.
-        var styleURL: URL { URL(string: "https://tiles.openfreemap.org/styles/\(rawValue)")! }
+        /// URLs inside the style document, so for a stock style this one URL is
+        /// the whole wiring. The fork is built and written to a temp file, which
+        /// resolves those same absolute URLs identically.
+        func resolvedStyleURL() throws -> URL {
+            guard self != .openFreeMapLibertyFork else { return try LibertyFork.resolvedStyleURL() }
+            return URL(string: "https://tiles.openfreemap.org/styles/\(rawValue)")!
+        }
 
         /// **Which appearance Kamome's palette must be drawn in over this base**,
         /// read off each style's own `background-color` layer (VERIFIED
@@ -88,10 +97,13 @@ enum ReviewSubstrate {
         /// styles is not a population that needs an algorithm, and a luminance
         /// threshold would be an unreviewed rule for a decision (ADR 2026-08-27)
         /// that is Chiu's.
+        /// The fork is dark because it wears the souvenir palette, which is a dark
+        /// style sheet. ⚠️ **That is sequencing, not a decision** — Chiu is doing
+        /// light and dark one at a time and ADR 2026-08-27 is untouched.
         var appearance: RecapAppearance {
             switch self {
             case .openFreeMapPositron, .openFreeMapLiberty: return .light
-            case .openFreeMapFiord: return .dark
+            case .openFreeMapFiord, .openFreeMapLibertyFork: return .dark
             }
         }
 
@@ -149,12 +161,11 @@ enum ReviewSubstrate {
         // The evaluation switch is read before the region lookup, because the
         // substrate it selects has no regions to look up (see `Substrate`).
         if let substrate = try requestedSubstrate() {
+            let styleURL = try substrate.resolvedStyleURL()
             print("\(label) substrate OpenFreeMap/MapLibre · style \(substrate.rawValue) "
-                + "(\(substrate.styleURL.absoluteString)) · appearance \(substrate.appearance.rawValue) "
+                + "(\(styleURL.absoluteString)) · appearance \(substrate.appearance.rawValue) "
                 + "— EVALUATION ONLY, no build renders this (ADR 2026-09-09)")
-            return MapLibreSnapshotProvider(
-                styleURL: substrate.styleURL, appearance: substrate.appearance
-            )
+            return MapLibreSnapshotProvider(styleURL: styleURL, appearance: substrate.appearance)
         }
         guard let region else {
             return try appleMaps(
