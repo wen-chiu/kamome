@@ -32,7 +32,11 @@ final class LinearTimelineHUDTests: LinearTimelineTestCase {
         }
         return RecapTrip(
             route: route, stops: stops, title: "Sample", subtitle: "3 stops",
-            statsLines: ["291 km · 3 stops"], callToAction: "Get this route"
+            endCardFigures: [
+                RecapEndCardFigure(value: "291", label: "KM"),
+                RecapEndCardFigure(value: "3", label: "DAYS"),
+                RecapEndCardFigure(value: "3", label: "STOPS")
+            ]
         )
     }
 

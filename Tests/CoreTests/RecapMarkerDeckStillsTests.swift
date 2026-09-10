@@ -122,7 +122,11 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
         )
         let trip = RecapTrip(
             route: route, stops: [stop], title: "小樽", subtitle: "Day 3",
-            statsLines: ["120 km · 1 stop"], callToAction: "Get this route", shareURL: "kamome://route/stills"
+            endCardFigures: [
+                RecapEndCardFigure(value: "120", label: "KM"),
+                RecapEndCardFigure(value: "1", label: "DAY"),
+                RecapEndCardFigure(value: "1", label: "STOP")
+            ], shareURL: "kamome://route/stills"
         )
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let outDir = outputDirectory()

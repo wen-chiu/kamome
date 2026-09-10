@@ -209,7 +209,7 @@ final class RecapCrossingArcTests: XCTestCase {
                 )
             },
             stops: crossingTrip.stops, title: crossingTrip.title, subtitle: crossingTrip.subtitle,
-            statsLines: crossingTrip.statsLines, callToAction: crossingTrip.callToAction
+            endCardFigures: crossingTrip.endCardFigures
         )
         let union = try timeline(trip: unionTrip, config: config)
 

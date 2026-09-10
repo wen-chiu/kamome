@@ -134,14 +134,22 @@ extension LinearTimeline {
     /// a trip whose ends fall outside the six-row table draws no pass, draws no
     /// names, and still draws its two marks.
     ///
-    /// ⚠️ **The origin yields to the departure stop's pin.** They are the same
-    /// point — the airport the flight leaves from — so drawing both would put two
-    /// marks on one place. Exactly one is ever returned: while any stop is
-    /// holding, the stop's own pin is the mark, and this one is nil. **The name
-    /// follows the mark**, so the origin's country name is absent for the same
-    /// window; whether it should instead persist and stack with the airport's own
-    /// name (TAOYUAN over TAIWAN) is a designer's call about which name wins, and
-    /// is deliberately not made here.
+    /// 🔴 **The origin's mark cross-fades with the departure stop's pin; its name
+    /// does not move** (Chiu 2026-09-05, ADR 2026-09-05 (c)).
+    ///
+    /// They are the same point — the airport the flight leaves from — so only one
+    /// *mark* can hold it. Until 2026-09-05 that was a boundary test on
+    /// `holdingStop`: the mark vanished in one frame while the stop label faded in
+    /// over `deck_label_lead_s`, and 3.59 s later it snapped back. Asymmetric, and
+    /// it read as a glitch rather than as a handover. Now the mark rides
+    /// `1 − departureSceneOpacity`, which is the same ramp the stop's own
+    /// presentation comes up on — the idiom the stop-label → photo-card handoff
+    /// already uses.
+    ///
+    /// **The name stays up the whole time**, because the country wins at a place
+    /// that has two names (Chiu 2026-09-05): `TAIWAN` is on screen for the whole
+    /// opening and the airport's own name is never printed at all
+    /// (`LinearTimeline.stopIsNamedByItsFlightEndMark`).
     func flightEnds(atTime time: Double) -> OverlayContent? {
         guard opensOnTheFlight, let ends = flightEndCoordinates,
               let beat = path.crossingBeatWindowsS.first, time <= beat.upperBound else { return nil }
@@ -154,14 +162,50 @@ extension LinearTimeline {
         // when the timeline was built. Looking them up again here is how the two
         // surfaces would come to disagree about one place.
         return .flightEnds(
-            origin: holdingStop(atTime: time) == nil
-                ? RecapFlightEnd(coordinate: ends.origin, name: journeyCard?.from.english)
-                : nil,
+            origin: RecapFlightEnd(
+                coordinate: ends.origin, name: journeyCard?.from.english,
+                markOpacity: 1 - departureSceneOpacity(atTime: time)
+            ),
             destination: RecapFlightEnd(
                 coordinate: ends.destination, name: journeyCard?.to.english
             ),
             opacity: opacity
         )
+    }
+
+    /// **How much of the departure stop's scene is on screen** — 1 across its
+    /// whole hold, ramping up and down at the hold's two edges, 0 outside it.
+    ///
+    /// The origin mark is drawn at `1 −` this, so the two cross-fade: the mark
+    /// hands the point to the stop as the stop arrives and takes it back as the
+    /// stop leaves.
+    ///
+    /// 🔴 **Ramped against the hold, not against the scene's own opacities.**
+    /// Mirroring the scene was the first shape and it is wrong twice over,
+    /// measured on `auckland-crossing`:
+    ///
+    /// - the stop's presentation is **not monotonic across its hold**. The label
+    ///   hands its point to the photo card partway through (`leadLabelOpacity`
+    ///   clears on `labelHandoffS`, faster than the card's own grow, by decision),
+    ///   so `max(label, deck)` dips in the middle — and the mark rose to 0.82 for
+    ///   four frames *underneath the open card*, a flash in the middle of the
+    ///   scene rather than a handover at its edge.
+    /// - the deck's closing ramp is clamped to 40% of a window that a two-
+    ///   photograph stop makes short, so the mark's return ran in ~5 frames. That
+    ///   is the pop this change exists to remove, inherited from the other end.
+    ///
+    /// So the mark gets its **own** ramp, `deck_zoom_s`, which is the film's
+    /// standard cross-fade and is what the stop-label → photo-card handoff reads
+    /// as. Clamped to half the hold so a squeezed stop still reaches full yield.
+    func departureSceneOpacity(atTime time: Double) -> Double {
+        guard opensOnTheFlight, stops.indices.contains(0),
+              let hold = holds.first(where: { $0.stopIndex == 0 }),
+              hold.startS <= time, time < hold.endS else { return 0 }
+        let ramp = min(deck.zoomS, (hold.endS - hold.startS) / 2)
+        guard ramp > 0 else { return 1 }
+        if time < hold.startS + ramp { return Self.smoothstep((time - hold.startS) / ramp) }
+        if time > hold.endS - ramp { return Self.smoothstep((hold.endS - time) / ramp) }
+        return 1
     }
 
     // MARK: - The trail, and the dash the crossing puts away

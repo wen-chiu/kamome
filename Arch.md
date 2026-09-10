@@ -177,7 +177,19 @@ instead, and what decision is needed.
 
 **A better idea is not permission to silently reroute.**
 
-## 8. Ending a session
+## 8. Staging — confirm the branch, name the paths, never `-A`
+
+**In force 2026-09-09 (Chiu).** Before every commit: confirm the branch, `git add`
+**explicit paths** — never `-A`, never `.` — and never squash onto an
+`origin/main` that has moved since you built the tree; `git fetch` and **merge**.
+
+Four incidents bought this. Three were a branch ref picking up another session's
+commits, costing rework. The fourth silently reverted five documents of an
+already-merged PR, and git reported no conflict — a wildcard stage cannot tell
+your change from someone else's, and a squash cannot tell your content from a
+revert of theirs. → `Docs/rule-rationale.md`.
+
+## 9. Ending a session
 
 Never say "done." Say **"Ready for review,"** then: what changed, which
 boundaries were touched, verification status per item using §3's labels, the

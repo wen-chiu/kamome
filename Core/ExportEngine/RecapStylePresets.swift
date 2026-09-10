@@ -28,19 +28,25 @@ public extension RecapStyle {
     /// subject size, has no such problem. A warm hue is the one direction that
     /// cannot collide with water on either base.
     ///
-    /// **Why this warm hue and not another.** It is `routeAccent` — the value
-    /// this file already carries, whose own comment calls it "the trail's brand
-    /// colour", taken from the validated web prototype's `--route`. Kamome
-    /// already draws the progress dot and the stop's strap line in it, and
-    /// `chromeAccentColor` puts a near-miss of it on the end card. Introducing a
-    /// fourth warm value would be the "three near-misses" the accent exists to
-    /// prevent.
+    /// **Why this warm hue and not another.** It is `routeAccent`, the film's one
+    /// accent — the progress dot, the stop's strap line, the end card and the
+    /// boarding pass are all drawn in it, so a fourth warm value here would be the
+    /// "three near-misses" the accent exists to prevent.
     ///
-    /// ✅ **CHOSEN by Chiu, 2026-08-29**, from the three-candidate sweep rendered
-    /// on one frame (`Docs/eng-session-appearance.md` §6): this is candidate **B**,
-    /// against `chromeAccentColor` `(0.95,0.55,0.32)` and a deeper
+    /// ✅ **CHOSEN by Chiu, 2026-08-29** from the three-candidate sweep rendered on
+    /// one frame (`Docs/eng-session-appearance.md` §6) — candidate **B**, against
+    /// the then-`chromeAccentColor` `(0.95,0.55,0.32)` and a deeper
     /// `(0.96,0.42,0.15)`. Judged from
     /// `~/Kamome-films/2026-08-28-appearance/light-*`.
+    ///
+    /// 🔴 **RE-DECIDED 2026-09-05** (ADR 2026-09-05 (c)). The hue Chiu picked in
+    /// August was `#FF8A5B`; `routeAccent` is now `#FF6A3D`, which is near the
+    /// deeper candidate he did *not* pick then. The August method is not
+    /// overturned — **the reason the trail is warm at all is legibility**, and a
+    /// deeper orange is still warm, so it still cannot collide with water on
+    /// either base. What changed is the evidence: a boarding pass drawn in
+    /// `#FF6A3D` now shares the frame, and Chiu judged the two side by side in a
+    /// film rather than as three swatches on one still.
     static let trailOnLight = routeAccent
 
     /// How much weaker a dashed leg is than the solid trail it is derived from.
@@ -108,6 +114,12 @@ public extension RecapStyle {
             // future A/B still has alpha as its only variable.
             style.routeGlowColor = retiredGlowColor.copy(alpha: 0) ?? retiredGlowColor
             style.routeGlowWidthMultiple = 3.0
+            // **The closing dim, on a base that is already near black.** Half the
+            // light card's, because the same alpha there flattens what little
+            // separation the dark terrain has — see `RecapEndCardStyle`.
+            style.endCardStyle.dimColor = CGColor(
+                srgbRed: 0.01, green: 0.02, blue: 0.04, alpha: 0.24
+            )
             // **The boarding pass follows the appearance too** (Chiu 2026-09-04).
             // It was light in both until then, which made it the one surface that
             // ignored ADR 2026-08-27. Palette only — the layout is shared, and
@@ -115,6 +127,13 @@ public extension RecapStyle {
             style.journeyCard = .dark()
         case .light:
             style.routeColor = trailOnLight
+            // **The closing dim on Apple Maps' light base**, which sits around
+            // luminance 180–200: white type needs more wash here than on dark, and
+            // this is the most that can be spent before the land greys out. The
+            // shadowed type does the rest (`RecapEndCardStyle`).
+            style.endCardStyle.dimColor = CGColor(
+                srgbRed: 0.02, green: 0.04, blue: 0.07, alpha: 0.48
+            )
             // No glow on a light base, and this one *is* settled: a wide
             // translucent stroke under the core composites darker than pale
             // terrain and reads as a shadow ringing the trail — measured at 3.12x

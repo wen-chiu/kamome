@@ -64,7 +64,7 @@ final class RecapPacingTests: XCTestCase {
         }
         return RecapTrip(
             route: route, stops: stops, title: "Trip", subtitle: "",
-            statsLines: [], callToAction: ""
+            endCardFigures: []
         )
     }
 

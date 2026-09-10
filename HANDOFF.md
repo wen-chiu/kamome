@@ -53,11 +53,9 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **Five questions from the retimed type-2 opening** — four visual, one semantic
   (its DATE row is the **trip's** range, not the flight's).
   → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
-- **The title card still shows trip title + dates, not the country name.**
-  ⚠️ **Still true after the type-2 opening round** — VERIFIED 2026-09-04,
-  `LinearTimeline.swift:215` is `title = trip.title`, `subtitle = trip.subtitle`.
-  The countries a type-2 film now shows are on *other* surfaces: the boarding
-  pass's FROM/TO and the two flight-end marks. A DESIGNER question.
+- **The title card still shows trip title + dates, not the country name.** VERIFIED
+  2026-09-09: `LinearTimeline.swift:214` is still `title = trip.title`. The end
+  card **now carries the trip's name too** (2026-09-05 (d)). A DESIGNER question.
   → `Docs/handoff-crop-scaling.md` §11, §14.
 - **The badge's 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
@@ -70,24 +68,21 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **Film length, two questions in order** — the duration rule (direction decided
   2026-08-14, **rule not**), then travel pacing (`travel_max_s` names a thing
   that does not exist). → `Docs/handoff-pacing.md`.
-- **§0 — two films of real trips are committed to this repository**
-  (`Docs/demos/phase3/`, `Docs/demos/phase3_5/`). They are gate artifacts, and
-  they are not in §0's decided-exceptions list. Either a recorded exception or
-  they move out. **Deliberately not gated** — a gate would pre-empt your call.
-  → `Docs/handoff-audit-2026-08-30.md` finding 7.
+- **§0 — two films of real trips are committed** (`Docs/demos/phase3{,_5}/`), and
+  they are not in §0's exceptions list. A recorded exception, or they move out.
+  **Deliberately not gated.** → `Docs/handoff-audit-2026-08-30.md` finding 7.
 - **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
   the first-run card's wording is ruled. **Whether a user may refuse** stays
   deferred. → `Docs/release-readiness.md` S2/S3.
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.
-- **A staging rule for `Arch.md`** — confirm the branch before committing, stage
-  explicit paths, never `-A`. A branch ref picked up another session's commits
-  three times. Recommended, **not in force** until you say so.
-- **The MapLibre-era sweep.** Five defects share one shape: a value tuned while
-  MapLibre was the substrate that silently degraded when Apple Maps became what
-  ships. Each was found one film at a time, by accident. The question that
-  catches the class is *"what was this value tuned against?"* Not scheduled.
+- **The end card's wordmark.** Chiu's layout reads `KAMOME かもめ`; the film ships
+  `RecapWordmark.text` = `"Kamome"`. The tagline went **beneath the existing mark**
+  and the mark was not touched — what the product is called, and in which scripts,
+  is yours. → `Docs/decisions.md` 2026-09-05 (d) §4.
+- **The MapLibre-era sweep.** Five defects share one shape — a value tuned against
+  a substrate that changed underneath it — each found by accident. Not scheduled.
   → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
 ---
@@ -101,14 +96,14 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
   never reads the shipped config, and making it would spend real quota.
   → `Docs/decisions.md` 2026-09-08.
 
-- **The subject lookup still misses; it no longer crashes.** `VehicleCatalog.resolve`
-  returns nil and the film silently draws the seagull instead of the car. Rate and
-  trigger **UNKNOWN**; two log lines ship to name the next occurrence.
-  → `Docs/handoff-subject-lookup.md`.
-- **Content-derived pacing may be implemented and permanently dead.** A shipping-path
-  comment in `RecapModel.swift` is wrong on its first clause; if its second clause
-  holds, the feature sits behind a tile condition that can never be satisfied.
-  **UNKNOWN, worth an hour.** → `Docs/handoff-audit-2026-08-30.md` finding 3.
+- 🔴 **Three features built and never reached — one class, one sweep owed.**
+  Imported trips carry no `TripStats`, so the title card's subtitle, Home and Trip
+  Detail print **no kilometres** (found 2026-09-09,
+  → `Docs/handoff-audit-2026-08-30.md` finding 8); content-derived pacing may sit
+  behind a tile condition that can never hold (**UNKNOWN**, → finding 3); and
+  `VehicleCatalog.resolve` still returns nil and silently draws the seagull
+  instead of the car (rate **UNKNOWN**, → `Docs/handoff-subject-lookup.md`).
+  The question that catches the class: *"does the shipping path ever call this?"*
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
   decided in advance, and **a removal PR must not cite "provably contained"**.
@@ -123,9 +118,9 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 
 ## ⚠️ Traps — read before you touch these
 
-- **A worktree renders a different film.** `Config/Secrets.xcconfig` and
-  `Tests/Fixtures/trips/local/` are gitignored, so it routes on straight lines and
-  reads different geometry. Copy both, then compare `drive/reconstructed` counts.
+- **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
+  gitignored, so it reads different geometry. ⚠️ Routing needs a key the flip
+  **removed**. → `Docs/handoff-crop-scaling.md` §3.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.

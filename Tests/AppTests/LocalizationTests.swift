@@ -1,4 +1,5 @@
 import KamomeConfig
+@testable import KamomeExportEngine
 import XCTest
 
 /// Proves the String Catalog pipeline end to end: the compiled app bundle must
@@ -21,17 +22,49 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(try localizedValue("start_journey", locale: "en"), "Start Journey")
     }
 
-    /// The load-bearing S5 copy: the toggle must read as photo-cards-only, and
-    /// the end-card CTA must not promise a scan. The MVP film carries no QR
-    /// (PD-4) — "Get this route" invited an interaction nothing could honor, so
-    /// the CTA points at the one thing the viewer *can* do.
+    /// The load-bearing S5 copy: the toggle must read as photo-cards-only, and the
+    /// film's closing line must not promise a scan — the MVP film carries no QR
+    /// (PD-4), and "Get this route" invited an interaction nothing could honor.
+    ///
+    /// 🔴 **The closing line is no longer a localized string** (Chiu 2026-09-05):
+    /// it is `RecapWordmark.tagline`, brand copy beside the wordmark, and
+    /// `recap_end_cta` was deleted with the field that carried it. The rule it
+    /// stood for did not move, so it is asserted on the line that ships and on
+    /// the key being gone, rather than dropped along with the key.
     func testRecapStringsResolve() throws {
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "停留照片卡")
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "en"), "Stop photo cards")
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "en").contains("always appear"))
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "zh-Hant").contains("一律會顯示"))
-        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "en"), "Record your own journey")
-        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "zh-Hant"), "記錄你自己的旅程")
+
+        XCTAssertEqual(RecapWordmark.tagline, "Turn your journey into memory.")
+        for promise in ["scan", "qr", "code", "route"] {
+            XCTAssertFalse(
+                RecapWordmark.tagline.lowercased().contains(promise),
+                "the closing line must not promise \(promise) — the MVP film carries no QR (PD-4)"
+            )
+        }
+        // A missing key resolves to itself: both languages must have lost it, or
+        // the film's one piece of brand copy has two sources.
+        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "en"), "recap_end_cta")
+        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "zh-Hant"), "recap_end_cta")
+
+        // The closing card's three labels stayed localized — they are words about
+        // this trip, not brand copy — and **English inflects two of them**. A day
+        // trip printed "1 days" on the first render of this card, so only
+        // formatting the string proves the catalog's plurals resolve.
+        XCTAssertEqual(try localizedValue("recap_figure_label_km", locale: "en"), "KM")
+        XCTAssertEqual(try localizedValue("recap_figure_label_km", locale: "zh-Hant"), "公里")
+        XCTAssertEqual(try localizedValue("recap_figure_label_day", locale: "en"), "DAY")
+        XCTAssertEqual(try localizedValue("recap_figure_label_days", locale: "en"), "DAYS")
+        XCTAssertEqual(try localizedValue("recap_figure_label_stop", locale: "en"), "STOP")
+        XCTAssertEqual(try localizedValue("recap_figure_label_stops", locale: "en"), "STOPS")
+        // zh-Hant has one plural category, so both keys carry the same word.
+        XCTAssertEqual(try localizedValue("recap_figure_label_days", locale: "zh-Hant"), "天")
+        XCTAssertEqual(
+            try localizedValue("recap_figure_label_day", locale: "zh-Hant"),
+            try localizedValue("recap_figure_label_days", locale: "zh-Hant")
+        )
     }
 
     func testLimitedPhotosStringsResolve() throws {
