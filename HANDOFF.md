@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-09.** `main` carries PRs #16–#46. Everything closed has been
+**Updated 2026-09-10.** `main` carries PRs #16–#47. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -26,6 +26,8 @@ published. → ADR 2026-09-08.
 1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. D2 feeds a mandatory submission item.
+   ⚠️ **Deferred behind the substrate evaluation, not dropped** (ADR 2026-09-10);
+   **step 2 did NOT settle D1** — it survives a *screen*, not a *locked device*.
    → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
 2. **The submission sequence, and it is Chiu's in both halves.** ① Run
    `./check.sh --release <.xcarchive>` — the **only** proof the built bundle
@@ -40,10 +42,10 @@ published. → ADR 2026-09-08.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.**
-This round only *looks* at it: three stock styles, labels on for evaluation
-only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
-§2.5/§2.3/§2.1, not a guess. → `Docs/decisions.md` **2026-09-09**.
+**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.** This round only
+*looks* at it: three stock styles, labels on for evaluation only, no shipping
+switch. The Apple premise is **VERIFIED** (Attachment 6 §2.5/§2.3/§2.1), not a
+guess. → `Docs/decisions.md` **2026-09-09**.
 
 ---
 
@@ -62,20 +64,19 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
   pass's FROM/TO and the two flight-end marks. A DESIGNER question.
   → `Docs/handoff-crop-scaling.md` §11, §14.
 - **The badge's 0.60 size** — judged from a still; you reserved a film.
-  → `Docs/handoff-marker-badge.md` finding 6.
+  → `Docs/handoff-marker-badge.md` 6.
 - **79.8% against the 80% safe-zone limit** on `ishigaki-crossing`, on the camera
-  that actually ships. A pass by 0.2 points, with nothing relaxed to get it.
-  Whether that is acceptable is a bar question.
-  → `Docs/handoff-cross-region-crossing.md` finding 2.
+  that ships — a pass by 0.2 points, nothing relaxed to get it. Whether that is
+  acceptable is a bar question. → `Docs/handoff-cross-region-crossing.md` 2.
 - **The crossing beat's three defaults**: the seagull ships `selectable: true`;
-  whether the apex wants a hold. → same document, finding 9.
+  whether the apex wants a hold. → same document, 9.
 - **Film length, two questions in order** — the duration rule (direction decided
   2026-08-14, **rule not**), then travel pacing (`travel_max_s` names a thing
   that does not exist). → `Docs/handoff-pacing.md`.
 - **§0 — two films of real trips are committed to this repository**
-  (`Docs/demos/phase3/`, `Docs/demos/phase3_5/`). They are gate artifacts, and
-  they are not in §0's decided-exceptions list. Either a recorded exception or
-  they move out. **Deliberately not gated** — a gate would pre-empt your call.
+  (`Docs/demos/phase3/`, `Docs/demos/phase3_5/`): gate artifacts, not in §0's
+  decided-exceptions list. Either a recorded exception or they move out.
+  **Deliberately not gated** — a gate would pre-empt your call.
   → `Docs/handoff-audit-2026-08-30.md` finding 7.
 - **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
   the first-run card's wording is ruled. **Whether a user may refuse** stays
@@ -83,13 +84,12 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 - **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
   arrived.** Relabel or delete; it is not an equal claim in conflict with the
   code. → `Docs/release-readiness.md` S3b.
-- **A staging rule for `Arch.md`** — confirm the branch before committing, stage
-  explicit paths, never `-A`. A branch ref picked up another session's commits
-  three times. Recommended, **not in force** until you say so.
-- **The MapLibre-era sweep.** Five defects share one shape: a value tuned while
-  MapLibre was the substrate that silently degraded when Apple Maps became what
-  ships. Each was found one film at a time, by accident. The question that
-  catches the class is *"what was this value tuned against?"* Not scheduled.
+- **A staging rule for `Arch.md`** — confirm the branch, stage explicit paths,
+  never `-A`. A branch ref picked up another session's commits three times.
+  Recommended, **not in force** until you say so.
+- **The MapLibre-era sweep.** Five defects share one shape — a value tuned
+  against MapLibre that degraded silently when Apple Maps became what ships.
+  Each was found by accident, one film at a time. Not scheduled.
   → `Docs/handoff-audit-2026-08-30.md` finding 4.
 
 ---
@@ -101,19 +101,19 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
   → `Docs/decisions.md` 2026-09-08.
 
 - **The subject lookup still misses; it no longer crashes.** `VehicleCatalog.resolve`
-  returns nil and the film silently draws the seagull instead of the car. Rate and
-  trigger **UNKNOWN**; two log lines ship to name the next occurrence.
+  returns nil and the film draws the seagull instead of the car. Rate and trigger
+  **UNKNOWN**; two log lines ship to name the next one.
   → `Docs/handoff-subject-lookup.md`.
 - **Content-derived pacing may be implemented and permanently dead.** A shipping-path
-  comment in `RecapModel.swift` is wrong on its first clause; if its second clause
-  holds, the feature sits behind a tile condition that can never be satisfied.
-  **UNKNOWN, worth an hour.** → `Docs/handoff-audit-2026-08-30.md` finding 3.
+  comment — now in `RecapExportJob+Render.swift`, moved from `RecapModel` — is wrong
+  on its first clause; if its second holds, the feature sits behind a tile condition
+  that can never be satisfied. **UNKNOWN.** → `Docs/handoff-audit-2026-08-30.md` 3.
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
   decided in advance, and **a removal PR must not cite "provably contained"**.
   → `Docs/handoff-stop-weighting.md`.
-- **C4 — nothing asserts the end card's brand mark**, and the badge work proved
-  this failure mode is silent. → `Docs/release-readiness.md` C4.
+- **C4 — nothing asserts the end card's brand mark**; the badge work proved this
+  failure mode is silent. → `Docs/release-readiness.md` C4.
 - 🔴 **Two left by the type-2 opening round**: `Geo.distanceM` is **121 km short**
   over Taipei → Auckland with no sweep of who reads it, and a **ferry gets a
   boarding pass and a plane**. → `Docs/handoff-type2-opening-retime.md`.

@@ -1006,6 +1006,23 @@
         }
       }
     },
+    "recap_back": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
+          }
+        }
+      }
+    },
     "recap_cancel": {
       "extractionState": "manual",
       "localizations": {
@@ -1087,6 +1104,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新匯出"
+          }
+        }
+      }
+    },
+    "recap_export_busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another film is rendering"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另一部影片正在算圖"
+          }
+        }
+      }
+    },
+    "recap_export_busy_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome renders one film at a time. Wait for the one in progress to finish, or cancel it on its own trip."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩一次只算一部影片。請等目前這部完成，或到它所屬的旅程取消。"
           }
         }
       }
@@ -1308,6 +1359,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "算圖中…"
+          }
+        }
+      }
+    },
+    "recap_rendering_leave_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can leave this screen — the film keeps rendering as long as Kamome stays open, and the screen stays on until it is done."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你可以離開這個畫面 —— 只要卡摸咩還開著，影片就會繼續算圖，螢幕也會保持亮著直到完成。"
           }
         }
       }

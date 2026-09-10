@@ -52,7 +52,13 @@ final class TripDetailModel {
     }
 
     func load() {
-        detail = try? repository.detail(tripId: tripId)
+        // Through `reload()` so the **films** are read too. `load()` used to read
+        // only the trip, which was invisible while the sheet was the only route
+        // to a film: dismissing it called `reload()` and the section appeared.
+        // Once an export can finish with this screen not even in the hierarchy
+        // (ADR 2026-09-10), first appearance is the *only* read there is, and a
+        // stored film sat on disk with nothing listing it.
+        reload()
         guard let detail else { return }
 
         if detail.photos.isEmpty, let endedAt = detail.trip.endedAt {

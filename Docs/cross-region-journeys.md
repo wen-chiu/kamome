@@ -42,8 +42,9 @@ a scale where the island is a smudge, and renders the whole thing on Apple's map
 `RecapMapTiles.tilesURL(covering:)` requires **containment**, not overlap. A trip
 whose bounding box spans two regions matches none, and the single `nil` produces:
 
-1. **Apple's map instead of the souvenir map** — `RecapModel.snapshotProvider(for:)`
-   falls back when no region covers the trip.
+1. **Apple's map instead of the souvenir map** — `snapshotProvider(for:)` falls
+   back when no region covers the trip. (In `RecapExportJob+Render.swift` since
+   2026-09-10; it was on `RecapModel` when this was written.)
 2. **A camera framed for the union.** The body span is sized against a journey
    hundreds of kilometres wide, so the part the trip is actually about is rendered
    too small to read.

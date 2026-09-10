@@ -57,11 +57,14 @@ final class RecapMatchingE2ETests: XCTestCase {
                 break
             }
         }
-        guard case .finished(_, let fileURL, let renderSeconds) = model.phase else {
+        // The render time now comes off the stored record rather than the phase
+        // (Phase 4 closeout step 2): the export outlives the screen, so the
+        // number lives with the film instead of with whoever was watching.
+        guard case .finished(let film, let fileURL) = model.phase else {
             XCTFail("export did not finish: \(model.phase)")
             return
         }
-        print(String(format: "KAMOME_E2E rendered in %.1f s → %@", renderSeconds, fileURL.path))
+        print(String(format: "KAMOME_E2E rendered in %.1f s → %@", film.renderSeconds ?? -1, fileURL.path))
 
         // Per-segment matching report: which segments got snapped geometry.
         let detail = try XCTUnwrap(repository.detail(tripId: tripId))
