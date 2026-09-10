@@ -6,11 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-08 against decisions.md **2026-09-08** and `main` at
-**PR #45**. Re-read: ADR 2026-09-05 (b) (first-run notice, PR #45), ADR
-2026-09-08 (film persistence — closeout step 1/4). Two things moved:
-**first-run notice built**, **film persists** — `film` table v5, Save to
-Photos as explicit user tap (§0). Worker: 🔴 **still `5b33922c`.**
+Last synced: 2026-09-10 against decisions.md **2026-09-09** and `main` at
+**PR #46**. Config flip made (S6 closed, S7 new — rotation owed). Film
+persists (ADR #68, `film` table v5, Photos save is explicit tap per §0).
+Export substrate evaluation in flight (2026-09-09).
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
@@ -59,12 +58,12 @@ type-2 opening included — retimed, with a boarding pass, a plane and two marke
 flight ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's
 judgement, in `HANDOFF.md`, which wins on findings and blockers.
 
-The two things between Kamome and a submission:
-**the config flip** — `matching.base_url` is still `""` and `api_key_required`
-still `true`, so **every build carries the routing key**; the Worker is capped,
-burst limit and no-log gate **written but not deployed** (S4/S5 closed),
-first-run notice built, the flip itself two values and **Chiu's decision** —
-and **D1–D5** (one device session, never run, no Claude session can do).
+⚠️ **One line is in flight again**: the export substrate evaluation (2026-09-09).
+
+What is between Kamome and a submission is **neither a document nor a session**:
+**D1–D5**, one device run nobody has done — and then Chiu's submission sequence,
+the artifact check (`./check.sh --release`, which needs the real key) and **then**
+the key rotation, in that order.
 → `Docs/release-readiness.md`.
 
 ## Architecture
@@ -99,7 +98,7 @@ and **D1–D5** (one device session, never run, no Claude session can do).
 |---|---|
 | **The division of labour: Chiu owns whether the film is good enough; engineering owns that the code does not break and that a release carries no security, licence or privacy fault.** Never answer "is this ready?" with a film — answer with the gates, and where a gate does not exist, say so. | 2026-09-02 |
 | **§0** — location data never leaves the device by default; the decided exceptions are the Geoapify routing payloads and one user-initiated share. Honest disclosure is the posture. Anything further is Chiu's. | 2026-08-16, 2026-08-20 (b)/(c) |
-| **MapLibre parked, Apple Maps ships.** Pixel art and map labels parked with it; the provider, themes and tile pipeline stay dormant and accurate. | 2026-08-15 |
+| ⚠️ **Export is LEAVING Apple Maps** — OpenFreeMap + MapLibre, **evaluation round only**: stock styles, labels on for evaluation, no shipping switch. Apple Maps still ships until Chiu judges the pictures; in-app maps stay MapKit; pixel art stays parked. | 2026-08-15, **2026-09-09** |
 | **Routing is Geoapify**; the detour gate stays 2.5. The Iceland film was the acceptance test and it passed. | 2026-08-20 (a)–(d), 2026-08-21 |
 | **The film follows the device's system appearance**, captured at export, never read inside the render loop. A manual picker is **deferred — do not build one**. Trail is `#FF8A5B`; glow off in both appearances. | 2026-08-27 |
 | **The subject is 157.5 px and the mark is pinned at `length_fraction` 1.0.** ⚠️ That pin **spends** the relational guarantee: next time `subject_length_px` moves, the mark's size is a fresh judgement. | 2026-08-27 (b) |
@@ -110,7 +109,7 @@ and **D1–D5** (one device session, never run, no Claude session can do).
 | **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
 | **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
 | **The user is told once, on first run, that coordinates leave; the notice informs, it does not ask.** | 2026-09-05 (b) |
-| **The Worker carries two guards and fails closed on either.** 2000/day (live) plus **60/min per IP** (⚠️ built, **not yet deployed**), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
+| **The Worker carries two guards and fails closed on either.** 2000/day plus **60/min per IP**, both live (Version `09e248ee`), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
 | **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
 
 Two standing constraints that are **not** decisions and must not be implemented

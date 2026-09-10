@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-05.** `main` carries PRs #16–#42. Everything closed has been
+**Updated 2026-09-09.** `main` carries PRs #16–#46. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -18,40 +18,32 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 
 ## 🔴 The critical path to a release — neither item is a document
 
-Everything else on this page can wait behind these two. **`Docs/release-readiness.md`
-is the gate**; these are the only rows on it that nobody has started.
+Everything else on this page can wait behind these two, and **no Claude session
+can do either**. ✅ **The config flip is made** (2026-09-08): builds carry no key,
+the Worker carries the traffic, S6 is closed and the first-run notice is now
+published. → ADR 2026-09-08.
 
-1. **The config flip — two values, no code, and it is Chiu's** (`CLAUDE.md`
-   rule 2). `matching.base_url` is still `""` and `api_key_required` still
-   `true`, so no build calls the Worker and **every build still carries the
-   routing key**. Flipping it closes **S6 by construction**.
-   ⚠️ **One precondition is met in the repo and NOT in production**: the
-   **60/min per-IP burst limit** is written, tested and merged-pending, but
-   **the Worker has not been redeployed** — production is still `5b33922c`, the
-   ceiling alone. **Deploy before flipping.** The other precondition, the
-   **first-run notice, is built** (ADR 2026-09-05 (b)) — the flip is what
-   publishes it. → `Docs/release-readiness.md` S3–S6; ADR 2026-09-05 §"NOT done".
-2. **D1–D5 — one device session, never run.** Export survives a screen lock;
+1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
-   Limited Photo Library; the S5 UX pass. **No Claude session can do this one.**
-   D2 feeds a mandatory submission item. → `Docs/release-readiness.md` Tier 3,
-   `Docs/device-test-P3.md`.
+   Limited Photo Library; the S5 UX pass. D2 feeds a mandatory submission item.
+   → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
+2. **The submission sequence, and it is Chiu's in both halves.** ① Run
+   `./check.sh --release <.xcarchive>` — the **only** proof the built bundle
+   carries no key; `check-archive.sh` needs the real key and refuses to degrade
+   into a shape scan, so a session can build the archive but never run the gate.
+   ② **Then rotate the Geoapify key** — S7. Every IPA already on someone's phone
+   still holds the current one, and the flip cannot reach those.
+   **Order matters**: rotating first would leave the check validating a bundle
+   nobody ships. → `Docs/release-readiness.md` S6, S7, Tier 1.
 
 ---
 
-## Findings — engineering session (2026-09-05)
+## 🔵 Live — the export substrate evaluation
 
-- **One judgement is Chiu's, and it is small.** The burst limiter **fails
-  closed** — a missing binding or a limiter fault is 503, so routing degrades to
-  dashed legs. It buys an after-probe 200 that proves *both* guards; it costs
-  availability on a Cloudflare-side fault. Three lines to reverse.
-- ⚠️ **The overshoot arithmetic stays INFERRED, and the settling test the
-  2026-09-04 re-rating named is retired.** `wrangler dev` at ceiling 1 shows
-  **zero** overshoot, N = 2/5/10/20, 20 genuinely in flight — miniflare's KV has
-  no read cache (VERIFIED 2026-09-05 in the pinned dependency — it accepts
-  `cacheTtl` and ignores it), so the harness lacks the mechanism. Do not re-run.
-
-Both: → `Docs/decisions.md` 2026-09-05.
+**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.**
+This round only *looks* at it: three stock styles, labels on for evaluation
+only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
+§2.5/§2.3/§2.1, not a guess. → `Docs/decisions.md` **2026-09-09**.
 
 ---
 
@@ -104,6 +96,10 @@ Both: → `Docs/decisions.md` 2026-09-05.
 
 ## 🟠 Open — nobody is on these
 
+- 🟠 **No desk render can validate `matching.base_url`** — `RecapDemoFilmTests`
+  never reads the shipped config, and making it would spend real quota.
+  → `Docs/decisions.md` 2026-09-08.
+
 - **The subject lookup still misses; it no longer crashes.** `VehicleCatalog.resolve`
   returns nil and the film silently draws the seagull instead of the car. Rate and
   trigger **UNKNOWN**; two log lines ship to name the next occurrence.
@@ -132,6 +128,11 @@ Both: → `Docs/decisions.md` 2026-09-05.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.
+- **The production KV counter lies to your first read.** A day's key returned
+  **404 while holding 4**, and a read straight after a render shows the pre-render
+  value. Read twice, tens of seconds apart, believe the second. Same cache is why
+  `wrangler dev` at ceiling 1 measures **zero** overshoot — miniflare's KV has no
+  read cache, so that test is **retired, not pending** (ADRs 2026-09-05, -09-08).
 - **Continuity passing is not the film being right.** A camera wrong in a way that
   does not *move* scores 100%: a body span from the wrong beat measured 177.3 km
   against 13.3 km and scored perfectly. When a change re-derives a span, a frame

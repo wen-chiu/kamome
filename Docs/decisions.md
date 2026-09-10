@@ -3548,6 +3548,64 @@ not worth buying below a real incident.
   machine is Node 17 and the suite needs 22+, so a `check.sh` gate would fail on
   the very machine it protects. `npm run deploy` is where it binds instead.
 
+### Addendum, 2026-09-06 — deployed and probed; the deploy's 200 now proves three things
+
+**Deployed from merged `main` (`430d48c`, PR #42), Version ID
+`09e248ee-ad78-4457-b42c-7daef2815cb3`.** ⚠️ **Dates split here and it is worth
+naming once:** the deploy landed 2026-09-06 01:08 local (+0800), which is
+2026-09-05 17:08 **UTC** — so the counter's day key that evening is still
+`routing-requests-2026-09-05`. The ledger is in Chiu's local frame; the key space
+is UTC, by design (the entry above).
+
+`npm run deploy` ran the suites first, as it now must: **30 + 13 green**, then
+the upload. The deploy output lists all four bindings, both of the new ones
+included:
+
+```
+env.KAMOME_BUDGET (d533d7ee…)          KV Namespace
+env.KAMOME_BURST (60 requests/60s)     Rate Limit
+env.DAILY_REQUEST_CEILING ("2000")     Environment Variable
+env.BURST_RETRY_AFTER_S ("60")         Environment Variable
+```
+
+**The after-probe's pass conditions all hold, and the new version opened no door
+of its own.** Same discriminator as 2026-08-29 and 2026-09-04 — body length: a
+Cloudflare miss is 17 bytes of `error code: 1042`, this Worker's own `refuse()`
+is empty.
+
+| host | result |
+|---|---|
+| `kamome-routing` `/v1/routing` | **200, 9,842 B** — byte-identical to both earlier baselines |
+| `kamome-routing` `/` | **404, empty** — still the Worker |
+| `09e248ee-…` `/` and `/v1/routing` | **404, 17 B `error code: 1042`** |
+| `75c481ad-…` (the 2026-08-27 preview) | **404, 17 B** — still shut |
+| control, never deployed | **404, 17 B** — the discriminator is valid |
+
+🔴 **That first row is now the only production evidence the burst limit exists at
+all, and it is real evidence rather than a formality.** Every fault in *either*
+guard fails closed at 503 — no KV binding, an unparseable ceiling, a KV error, a
+missing rate-limit binding, an unusable `BURST_RETRY_AFTER_S`, or a limiter
+error. So a 200 says three things, where on 2026-09-04 it said two: the KV
+binding is attached and the ceiling parsed, **and the rate-limit binding was
+consulted and answered cleanly.** `routing-requests-2026-09-05` read **1**
+afterwards — the probe's single forwarded request — fresh about a minute after
+the write, consistent with the cache window measured on 2026-09-04.
+
+⚠️ **What production has NOT shown is the burst limit actually refusing.** The
+429 has its evidence elsewhere: 13 + 30 assertions, seven of which fail when the
+refusal is neutered, and a `wrangler dev` control against **miniflare's own rate
+limiter** — 75 concurrent → 60 through, 15 refused, `Retry-After: 60`.
+Demonstrating it in production means deliberately exceeding 60/min against the
+live Worker, which spends ~60 Geoapify credits of a 3,000-credit day and 60 of
+the 2,000 ceiling to re-confirm a binding Cloudflare reports as attached. **Not
+done, and not recommended without a reason** — but it is the one gap, so it is
+written down rather than left implied.
+
+**S4 now guards the running Worker and not only the repository**, because
+`npm run deploy` ran the gate and this is the artifact it passed.
+
+---
+
 ---
 
 ## 2026-09-05 (b) — The user is told once, before any coordinate leaves, and the telling is not a question
@@ -3690,6 +3748,130 @@ strings grow past the shipped copy plus roughly half again. It exists to stop th
 
 ---
 
+---
+
+## 2026-09-08 — The config flip: the key stops shipping, and the counter is the proof
+
+**Status:** approved — **Chiu's decision, 2026-09-05**, taken because it changes
+shipped behaviour (`CLAUDE.md` rule 2). **Scope:** two values in
+`Config/TrackingConfig.json`, four tests restated around them, and the documents
+that said the flip was still owed. **No code changed.**
+
+### The decision
+
+```jsonc
+"matching": {
+  "base_url": "https://kamome-routing.kamome-site.workers.dev",  // was ""
+  "api_key_required": false                                       // was true
+}
+```
+
+**The pair only works as a pair**, and each half alone is a different bug.
+`base_url` without `api_key_required: false` resolves to routing **silently off**
+in the shipped build — the app would drop the endpoint for want of a key it is no
+longer supposed to have. `api_key_required: false` without the URL leaves routing
+off because there is nothing to call. This is now a test, and it was watched red
+on each half separately.
+
+⚠️ **The hostname is not a secret.** It ships in every IPA by design; that is what
+a proxy is for. What stops being shipped is the **key**.
+
+### What this closes, and what it conspicuously does not
+
+**Closes S6 by construction.** The key was a build setting, and `xcodebuild`
+prints every build setting, so build logs echoed it in clear text. It is not a
+build setting any more, so there is nothing left to echo.
+
+**It also publishes the first-run notice.** `FirstRunNoticeView` stays silent
+while `matching.base_url` is empty (ADR 2026-09-05 (b)), so the first build after
+this flip is the first build that tells the user, before any coordinate leaves,
+that coordinates leave. That is a **user-visible change made by a config edit**,
+which is exactly why the flip was Chiu's and not a session's.
+
+🔴 **It does not retire the key, and that gap now has a row of its own — S7.**
+Every IPA that has ever reached another person's phone contains the current key
+(**VERIFIED 2026-08-20:** two built bundles carried a plaintext 32-hex key in
+`Kamome.app/Info.plist`, read out with stock `PlistBuddy`), and so does every
+build log ever taken. The flip changes what is built from now on; it cannot reach
+the builds already out. Only **rotation** kills those, and rotation was written
+down in exactly one place — `Docs/pre-launch.md` item 7 — which is no longer the
+gate. It is now a row on the gate that is. **Rotation is Chiu's**, at submission,
+*after* the artifact check passes.
+
+### The evidence, and which link each piece actually proves
+
+The two-value edit is trivial. Proving the app reaches the Worker **without a
+key** is the work, and it splits into two links that no single run covers.
+
+**Link 1 — the config is what points the app at the Worker.** A test, because
+this half is pure and needs no network:
+`RoutingKeyTests.testTheShippedConfigPointsAtTheWorkerAndNeedsNoKey` reads the
+committed `TrackingConfig.json` and asserts both values plus
+`applyingRoutingKey(config, key: nil) == config` — a keyless build reaching the
+Worker unchanged. **Watched red on each half**: reverting `api_key_required`
+fails with the resolved config showing `baseURL: ""`, which is routing off;
+reverting `base_url` fails on the URL.
+
+**Link 2 — the Worker answers a keyless app, and Geoapify answers the Worker.**
+Three desk renders, in a checkout with **no `Config/Secrets.xcconfig` at all**,
+against the URL read out of the committed config by the shell. Committed
+synthetic fixtures only — never `Tests/Fixtures/trips/local/`, which is real trip
+dumps and §0.
+
+| render | fixture | legs | production counter |
+|---|---|---|---|
+| 1 | `miyakojima` | 3 reconstructed | → 7 |
+| 2 | `miyakojima` | 3 reconstructed | 7 → **10** |
+| 3 | `margaret-river` | 2 reconstructed | 10 → **12** |
+
+Every leg came back `drive/reconstructed`, never `inferred`; the service report
+reads `0 unreachable, 0 rate-limited, 0 implausible`. **A counter that moves is
+worth more than any of that**: it is simultaneously proof that the app called the
+Worker, that the Worker received it, and that it succeeded with no key on the
+device — because a leg that had gone straight to Geoapify keyless would have come
+back 401 and drawn dashed.
+
+⚠️ **Render 2 repeated render 1's coordinates exactly and still made three fresh
+requests**, which rules out `URLSession.shared`'s heuristic caching as an
+explanation for anything here.
+
+### ⚠️ Two things about the evidence, stated because they nearly misled
+
+**The KV read lag is worse than "tens of seconds" in practice, and it fooled this
+session twice.** The first read of the day's key returned **404 — a stale
+miss** for a key that already held 4. Every read taken *immediately* after a
+render showed the pre-render value; the next read, tens of seconds later, showed
+the new one. The arithmetic only closes once you stop trusting the first read:
+4 already there, plus 3 + 3 + 2 = **12**, which is what the settled reads say.
+**The rule for anyone reading this counter: read it twice, tens of seconds apart,
+and believe the second.** This confirms 2026-09-04's finding on a second occasion
+rather than replacing it.
+
+**The four requests already on the counter are not attributed.** They were there
+before render 1 and the stale miss hid them. Other worktrees and other people can
+reach a live public Worker; this session cannot say which, and does not guess.
+
+### 🟠 A gap found on the way, not fixed here
+
+**No desk render can validate the flip end to end, because the harness does not
+read `matching.base_url`.** `RecapDemoFilmTests.importedRecap` resolves its
+endpoint as `requestedBaseURL ?? KAMOME_ROUTING_BASE_URL ?? "https://api.geoapify.com"`
+— the shipped config is never consulted. That is why link 2 above had to pass the
+URL in through the harness variable, and why link 1 has to be a separate test.
+**Deliberately not changed:** making the harness follow the config would silently
+point every desk render at the Worker and spend real quota, which is a behaviour
+change to shared tooling and not this session's to make.
+
+### ⏳ Owed, and whose
+
+**The artifact check — `./check.sh --release <.xcarchive>`.** It walks every file
+in the archive for a 32-hex string and asserts `Info.plist` carries the Worker URL
+and no key field. **It is the only proof that the built bundle carries no key**;
+everything above proves the source and the network path. 🔴 **`check-archive.sh`
+requires the real key and refuses to degrade into a shape scan, and the key is
+Chiu's** — it is never read into a session's environment. So the archive is built
+here and the gate is run by him.
+
 ## 2026-09-08 — A finished film becomes a thing that exists
 
 Phase 4 closeout, step 1 of 4 (Chiu 2026-09-05).
@@ -3756,3 +3938,144 @@ Migration v5 adds a `film` table with columns: `id`, `trip_id` (FK → trip),
   `ExportEngine/`.
 - **Steps 2–4** of the Phase 4 closeout: export service outliving the sheet,
   device session D1–D5, performance.
+
+---
+
+## 2026-09-09 — The export substrate leaves Apple Maps: OpenFreeMap + MapLibre, and this round only looks at it
+
+**Decision (Chiu, 2026-09-09), in his words:**
+
+> 「既然 apple 版權有潛在問題那我不要浪費時間問他，我就直接把 Kamome 的 Export
+> 地圖方向切換為：OpenFreeMap → MapLibre」
+>
+> 「這一輪目標很單純：先把 MapLibre + OpenFreeMap 的實際地圖畫面做出來，讓我評估
+> 視覺品質。不要做架構重設，也不要擴大 scope。」
+
+**This reopens the 2026-08-15 park, and Chiu named it** — `CLAUDE.md` rule 6 is
+satisfied by the sentence above, not by this entry. It reopens it for the
+**export path**; the in-app maps (`RecordingView`, `TripDetailView`) stay MapKit
+and are not in scope.
+
+Written at Chiu's instruction **before** implementation, so the engineering
+session that does the work does not write a second entry for the same decision
+(`PO.md` — one decision, one entry).
+
+### Why the park's own reason is gone
+
+2026-08-15 parked MapLibre because **tile provisioning had no answer**: a
+`.pmtiles` region covers a bounded area, regions run to hundreds of megabytes,
+nothing ships one, and serving them was P7 backend work that left the roadmap in
+the same ADR. `RecapMapTiles` still searches four locations for a region and
+finds none, which is why `RecapModel.snapshotProvider(for:)` has fallen back to
+Apple Maps on every film since.
+
+**OpenFreeMap is a free hosted planet, so the blocker the park was built on is
+the thing that changed.** This is not a reopening on taste.
+
+### The Apple premise is VERIFIED — and it is the licence, not a copyright guess
+
+Read from Apple's live Developer Program License Agreement, **Attachment 6
+(Additional Terms for the use of the Apple Maps Service), VERIFIED 2026-09-08**.
+`"Map Data"` is defined to include **imagery**, so a snapshot's tiles are Map Data:
+
+- **§2.5** — *"Unless otherwise expressly permitted in writing by Apple, Map Data
+  may not be cached, pre-fetched, or stored ... other than on a temporary and
+  limited basis ... after which, **in all cases, You must delete** any such Map
+  Data."* An exported MP4 is permanent storage of Map Data outside the app.
+- **§2.3** — *"not to copy, modify, translate, **create a derivative work of,
+  publish or publicly display** the Map Data **in any way**."*
+- **§2.1 / §4** — Apple's logo and legal link may not be removed or obscured; §4
+  names exactly that as grounds for revoking MapKit access.
+
+**Measured in the artifact, not argued:** `Docs/demos/phase3/still-stop-card.png`
+is a 1080×1920 frame of an exported film — unmistakably Apple cartography,
+full-bleed, **with no Apple logo and no legal link**. `MKMapSnapshotter` returns a
+bare image; MapKit's own live view supplies those notices and the snapshotter
+does not, which is visible side by side against
+`Docs/demos/phase3_5/import/03-trip-detail-provenance.png`, where the in-app map
+shows " Maps" and "Legal" correctly.
+
+**Chiu declined to ask Apple for written permission** — recorded as his decision,
+not as an oversight. Concurred, and the reason is worth keeping: attribution
+cannot cure §2.5 or §2.3, so the only thing a request could buy is the written
+permission §2.5 names, and a release would then be gated on someone else's inbox.
+
+⚠️ **What stays UNKNOWN, deliberately: whether Apple would ever have objected.**
+Nobody asked. Do not let a later entry record this as "Apple said no" — the
+verified fact is the text of the terms, and nothing else.
+
+### What this round is, and what it is not
+
+**It is an evaluation** — the deliverable is pictures Chiu can judge plus one
+number (seconds per snapshot). **It is not a shipping switch**: `RecapModel`'s
+fallback is untouched and the switch lives in the review harness, so no build's
+behaviour changes.
+
+**It is also not a new pipeline.** MapLibre has rendered films before — Phase 3.5
+§6a, in-sim confirmed 2026-07-22 — the `MapRenderer` boundary is from 2026-07-19,
+each renderer is confined to one file, and `Config/architecture.json` already
+permits `import MapLibre` in `MapLibreSnapshotProvider.swift`. **The work is a
+tile source and a harness switch**, which is what keeps this inside Chiu's "不要
+做架構重設".
+
+**Three styles, Chiu's pick, from OpenFreeMap's five hosted ones: Positron,
+Liberty and Fiord 3D.** Bright and Dark are not in this round.
+
+**No Kamome style is authored this round.** `Config/RecapThemes/modern-minimal.json`
+is the parked souvenir style and stays parked and accurate.
+
+### Labels: opened for this round only, and the lock does not move
+
+`PO.md`'s register has held **map labels off the roadmap, not deferred** since
+2026-08-15, on Chiu's own reasoning that "大大的可愛地名" should be a
+**Kamome-drawn overlay**, independent of the substrate.
+
+**Chiu 2026-09-09: labels are allowed in this round, evaluation-only.** The
+reason is narrow and does not generalise: a world map with no city or country
+names cannot be judged for visual quality at all, so the lock would make the
+evaluation meaningless. **It does not unlock anything.** Whether place names
+ultimately belong to the base map or to a Kamome overlay is **still the locked
+question**, and the pictures from this round are the evidence for answering it.
+
+### §0 — the evaluation needs no new exception; shipping will
+
+**The evaluation is a desk render** on Chiu's own machine, from his own fixtures,
+and it adds **no new category of exposure**: those same coordinates already go to
+Geoapify (the decided exception) and, on every Apple Maps render, to Apple.
+
+⚠️ **And that last clause is an unrecorded gap, stated here rather than used as
+cover.** `MKMapSnapshotter` must fetch tiles for the region it is asked for
+(INFERRED — strong; Apple's own documentation says it works "by loading all of
+the available map tiles"; the cheapest settling is one render in airplane mode),
+and `CLGeocoder` sends each stop's centre to Apple for its name. **Neither is in
+§0's decided-exceptions list, and neither ever was.** That predates this decision
+and is not created by it.
+
+**The shipping decision is deferred, and it is a real one.** If OpenFreeMap
+becomes the shipping export substrate, every keyframe's centre and zoom become a
+third party's HTTP request, and `privacy_intro`'s *"One thing leaves it"* becomes
+false — the first-run card gains a second item (ADR 2026-09-05 (b) governs how it
+is told). **That decision is made after Chiu has seen the pictures, not before.**
+
+### What is VERIFIED about OpenFreeMap, and what is not
+
+VERIFIED 2026-09-09 from openfreemap.org and from `tiles.openfreemap.org/styles/positron`:
+
+| claim | state |
+|---|---|
+| Planetiler-generated, **unmodified OpenMapTiles schema** | **VERIFIED** — so Kamome's 11 layers can port by swapping the source |
+| commercial use, hotlinking the public CDN, no API key, no request limit | **VERIFIED** |
+| **no SLA, no support** — their own words | **VERIFIED**, and it is the shipping risk, not an evaluation one |
+| required attribution: `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | **VERIFIED** (the OpenFreeMap clause is optional-but-asked; the **OSM clause is an ODbL obligation**) |
+| 5 of Kamome's 6 source-layers appear in positron's own style | **VERIFIED** — `water` `waterway` `transportation` `landcover` `park` |
+| `mountain_peak` present in the tiles | **INFERRED** — it is in the OMT schema but positron does not draw it; settle by querying one tile |
+| glyph server serves **Noto Sans** (Latin) | **VERIFIED** — so CJK labels need `MLNIdeographicFontFamilyName`, which MapLibre's iOS docs say applies to snapshots too |
+| whether `MLNMapSnapshotter` burns attribution into the image | **UNKNOWN** — assume not; settle by looking at one output |
+| seconds per snapshot over the network | **UNKNOWN** — the only prior MapLibre figure (0.84 s) was local pmtiles |
+
+### Not decided here
+
+The shipping substrate; whether Kamome authors its own style; where place names
+finally live; the first-run notice's second item; whether the parked pmtiles
+path is ever retired. **None of these may be settled by the engineering session
+that runs this evaluation** — it returns pictures and a number.

@@ -1,24 +1,27 @@
 # The routing proxy — how the key stops shipping in the binary
 
-**Status: deployed 2026-08-27** — `https://kamome-routing.kamome-site.workers.dev`,
+**Status: deployed; current version `09e248ee`, 2026-09-06** —
+`https://kamome-routing.kamome-site.workers.dev`,
 from Chiu's own Cloudflare account and his authenticated shell, never from an
 agent session. That hostname is **not a secret**: it ships in every IPA by design.
 Preview URLs were turned off on 2026-08-28 — see "Why `preview_urls = false`".
 
-**The app is not pointed at it yet.** Everything below is still a runbook for the
-step that remains: until `matching.base_url` and `api_key_required` are flipped in
-`Config/TrackingConfig.json`, builds call Geoapify directly and the key is inside
-every one of them.
+✅ **The app is pointed at it as of 2026-09-08** (ADR 2026-09-08): `base_url` is
+this hostname, `api_key_required` is `false`, and a build carries no key at all.
+Everything below is now a runbook for operating it rather than for a step that
+remains.
 
 ```
 iOS app ──(no key)──▶ Cloudflare Worker ──(+ key)──▶ Geoapify ──▶ back
 ```
 
-Why this exists at all is in `Docs/pre-launch.md`: the key reaches the app today
-through a gitignored `.xcconfig` and lands in `Info.plist`, so it is **inside
-every IPA that has ever reached another person's phone**. Provider-side key
-restriction cannot fix that for a native app — Geoapify's restrictions (IP
-allowlist, HTTP referrer, CORS origin) are all browser mechanisms.
+Why this exists at all is in `Docs/pre-launch.md`: the key used to reach the app
+through a gitignored `.xcconfig` and land in `Info.plist`, so it is **inside every
+IPA that has ever reached another person's phone**. Provider-side key restriction
+cannot fix that for a native app — Geoapify's restrictions (IP allowlist, HTTP
+referrer, CORS origin) are all browser mechanisms. 🔴 **The flip fixed what is
+built from here; it did not reach the builds already out.** Only rotating the key
+does that, and it is owed — `Docs/release-readiness.md` **S7**.
 
 ## Deploy
 
@@ -76,12 +79,14 @@ That permission comes with conditions, each of which exists for a reason:
   anyone choosing to. That distinction is the whole point, and it is why the
   integration was removed on 2026-08-27 rather than configured.
 
-Then point the app at it, which is **two config values** and no code:
+Pointing the app at it was **two config values** and no code. ✅ Done 2026-09-08;
+this is what `Config/TrackingConfig.json` now says, kept here because it is the
+shape, not an instruction:
 
 ```jsonc
 // Config/TrackingConfig.json
 "matching": {
-  "base_url": "https://kamome-routing.<your-subdomain>.workers.dev",
+  "base_url": "https://kamome-routing.kamome-site.workers.dev",
   "api_key_required": false,   // the Worker holds the key; the app carries none
   …
 }
@@ -94,9 +99,14 @@ Geoapify, and is why the flag exists rather than the rule simply being deleted:
 a keyless build must not fire coordinate-bearing requests that can only be
 refused (§0 — exposure for nothing).
 
-`Config/Secrets.xcconfig` becomes unnecessary at that point. Leaving a key in it
-is harmless — the app just stops sending one — but delete it from any machine
-that builds for distribution.
+🔴 **`Config/Secrets.xcconfig` is unnecessary as of the flip (2026-09-08), and
+deleting it from every machine that builds for distribution is what actually
+closes S6.** Leaving a key in it is harmless to the app — it just stops sending
+one — but the file is what puts the key into `Info.plist` and into the build log,
+so a distribution machine that still has it is a machine that can still ship one.
+The archive built on 2026-09-08 was produced on a checkout that had no such file:
+its build log holds no `KAMOME_ROUTING_API_KEY`, and the shipped `Info.plist`
+key field is empty.
 
 ## The Node version trap
 
@@ -257,9 +267,9 @@ a cache, not a bug — wait a minute before concluding anything.**
 
 ## The burst limit
 
-**Built 2026-09-05. ⚠️ NOT YET DEPLOYED — production still runs version
-`5b33922c` (2026-09-04), which has the ceiling and no burst limit.** Cloudflare's
-rate-limiting binding, in `src/index.js`
+**Built 2026-09-05, live in production since 2026-09-06** (Version ID
+`09e248ee`, from merged `main` `430d48c`). Cloudflare's rate-limiting binding,
+in `src/index.js`
 **before** the per-day counter. It exists because the ceiling provably cannot see
 a burst: KV's read cache is tens of seconds wide (measured 2026-09-04), so one
 client could spend the whole 2000 inside a single window while the stored number
@@ -322,9 +332,9 @@ the stubbed suite predicts.
 
 ## The no-log gate
 
-**Built 2026-09-05, and it closes S4 for the repository.** ⚠️ It asserts the
-artifact about to be deployed, not the Worker running now — those match only
-after the next deploy.
+**Built 2026-09-05, and it closes S4.** It asserts the artifact about to be
+deployed; `npm run deploy` runs it, and the 2026-09-06 deploy is an artifact that
+passed it — so it guards the running Worker, not only the repository.
  `/v1/routing` is GET-only, so a real
 trip's coordinates travel **in the URL** — the most-logged part of an HTTP
 request. Until now "no `console.log`" and "`[observability] enabled = false`"
@@ -410,6 +420,33 @@ result: production unchanged, both new preview hostnames are Cloudflare misses.
 
 That first row does double duty now: **it is also the proof the spend counter is
 live**, because every KV fault fails closed at 503. See "The spend ceiling".
+
+### Re-measured 2026-09-06 — the burst limit's deploy opened no door either
+
+Version `09e248ee` (from merged `main` `430d48c`, PR #42). Same discriminator,
+same result, and one row now carries more weight than it did.
+
+| host | result |
+|---|---|
+| `kamome-routing` `/v1/routing` | **200, 9,842 B** — byte-identical to 2026-08-29 and 2026-09-04 |
+| `kamome-routing` `/` | **404, empty** — still the Worker |
+| `09e248ee-…` `/` and `/v1/routing` | **404, 17 B `error code: 1042`** |
+| `75c481ad-…` (the 2026-08-27 preview) | **404, 17 B** — still shut |
+| control, never deployed | **404, 17 B** — unchanged |
+
+🔴 **That first row is now the only production evidence the burst limit exists**,
+and it is real evidence: *every* fault in either guard fails closed at 503 — a
+missing rate-limit binding and an unusable `BURST_RETRY_AFTER_S` included — so a
+200 says the KV binding is attached, the ceiling parsed, **and the rate limiter
+was consulted and answered cleanly.** Three things, where in 2026-09-04 it said
+two. `routing-requests-2026-09-05` read **1** afterwards (UTC day; the deploy was
+2026-09-06 local), fresh about a minute after the write.
+
+⚠️ **Production has not been shown the burst limit *refusing*.** That evidence is
+the suite and the `wrangler dev` control above. Forcing a 429 in production means
+deliberately exceeding 60/min against the live Worker — ~60 Geoapify credits and
+60 of the day's 2,000, to re-confirm a binding the deploy output already lists.
+Not done, and not recommended without a reason.
 
 **These are the pass conditions for every future deploy.** Re-run
 `~/Kamome-wt/probe.sh <first-8-of-Version-ID>` — public landmark coordinates only

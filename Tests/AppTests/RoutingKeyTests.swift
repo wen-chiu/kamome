@@ -22,25 +22,60 @@ final class RoutingKeyTests: XCTestCase {
     }
 
     /// A build with no key routes nothing — and does not crash doing it.
+    ///
+    /// ⚠️ **The premise is stated here rather than inherited from the shipped
+    /// file** (2026-09-08, the config flip). This test used to take
+    /// `api_key_required` from `TrackingConfig.json`, which was `true`; the flip
+    /// made it `false`, and a test that reads its own premise out of a file the
+    /// product may change is a test that stops holding its rule the day the file
+    /// moves. The rule is unchanged: **an endpoint that needs a key routes
+    /// nothing without one.**
     func testNoKeyDisablesRoutingRatherThanFailing() throws {
         let config = try shipped().withMatching(
-            try shipped().matching.withBaseURL("https://routing.example.com")
+            try directMatching().withBaseURL("https://routing.example.com")
         )
         let resolved = AppConfig.applyingRoutingKey(config, key: nil)
 
         XCTAssertEqual(resolved.matching.baseURL, "", "no key must mean routing disabled")
         XCTAssertEqual(resolved.matching.apiKey, "")
-        // Every other tunable still comes from the file.
+        // Every other tunable still comes from the config it was given.
         XCTAssertEqual(resolved.matching.timeoutS, config.matching.timeoutS)
         XCTAssertEqual(resolved.export, config.export)
     }
 
-    /// The shipped config already ships routing disabled, so a keyless build is
-    /// unchanged rather than "disabled twice".
+    /// A config that already has routing off is left alone rather than "disabled
+    /// twice".
+    ///
+    /// ⚠️ Until 2026-09-08 this asserted *the shipped config* was the disabled
+    /// one. The flip pointed it at the Worker, so that precondition is now false
+    /// by decision — but the rule it was testing is about an already-disabled
+    /// config, not about what ships, so it is restated with one rather than
+    /// deleted.
     func testNoKeyLeavesAnAlreadyDisabledConfigAlone() throws {
-        let config = try shipped()
-        XCTAssertEqual(config.matching.baseURL, "", "precondition: the committed config ships routing off")
+        let config = try shipped().withMatching(try shipped().matching.withBaseURL(""))
+        XCTAssertEqual(config.matching.baseURL, "", "precondition: this config has routing off")
         XCTAssertEqual(AppConfig.applyingRoutingKey(config, key: nil), config)
+    }
+
+    /// 🔴 **The config flip itself, as a gate** (Chiu 2026-09-05, ADR 2026-09-08).
+    ///
+    /// The three tests around this one are about the *rule*; this one is about
+    /// **what Kamome actually ships**, and it is the one that goes red if anyone
+    /// reverts the flip or half-reverts it. Both values matter and they only work
+    /// as a pair: the Worker URL without `api_key_required: false` would route
+    /// nothing, and `false` without the URL would leave routing off.
+    func testTheShippedConfigPointsAtTheWorkerAndNeedsNoKey() throws {
+        let config = try shipped()
+
+        XCTAssertEqual(config.matching.baseURL, "https://kamome-routing.kamome-site.workers.dev",
+                       "the app must call the Worker, which is the only thing holding a key")
+        XCTAssertFalse(config.matching.apiKeyRequired,
+                       "the app carries no key, so requiring one would switch routing off in the shipped build")
+        XCTAssertEqual(config.matching.apiKey, "", "and the committed file can never supply one")
+
+        // The whole point of the pair: a build with no key routes anyway.
+        XCTAssertEqual(AppConfig.applyingRoutingKey(config, key: nil), config,
+                       "a keyless build must reach the Worker unchanged — that is what the flip bought")
     }
 
     /// A key present is carried on `matching`, never read from the config file.
@@ -85,12 +120,26 @@ final class RoutingKeyTests: XCTestCase {
     /// provider — still routes nothing rather than sending coordinates that can
     /// only come back 401 (§0: exposure for nothing).
     func testAnEndpointThatNeedsAKeyStillRoutesNothingWithoutOne() throws {
-        let direct = try shipped().matching.withBaseURL("https://api.geoapify.com")
-        XCTAssertTrue(direct.apiKeyRequired, "precondition: the shipped config expects to supply a key")
+        let direct = try directMatching()
+        XCTAssertTrue(direct.apiKeyRequired, "precondition: this endpoint expects to supply a key")
 
         let resolved = AppConfig.applyingRoutingKey(try shipped().withMatching(direct), key: nil)
 
         XCTAssertEqual(resolved.matching.baseURL, "")
+    }
+
+    /// The direct-to-provider block — the shape Kamome shipped in before the
+    /// 2026-09-08 flip — decoded the way the app would read it. It is written
+    /// out here, rather than taken from `TrackingConfig.json`, precisely so the
+    /// rules above keep holding after the file stops having this shape.
+    private func directMatching() throws -> TrackingConfig.Matching {
+        let json = """
+        {"base_url":"https://api.geoapify.com","chunk_size":100,"confidence_min":0.5,
+         "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
+         "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
+         "route_waypoint_radius_m":500,"api_key_required":true}
+        """
+        return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }
 
     /// The Worker-shaped block, decoded the way the app would read it, so the
