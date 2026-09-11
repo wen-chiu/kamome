@@ -40,10 +40,12 @@ can do either**.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Chiu moved export off Apple Maps to OpenFreeMap + MapLibre.**
-This round only *looks* at it: three stock styles, labels on for evaluation
-only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
-§2.5/§2.3/§2.1, not a guess. → `Docs/decisions.md` **2026-09-09**.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09); this
+round only *looks*. ✅ **The pictures exist** — 15 annotated frames in
+`~/Kamome-films/openfreemap-eval/`, never in the repo (§0). Three unknowns are
+settled, **two ADR statements need correcting** (one is Apple's logo), three
+visual findings are for judgement. ⏳ **Awaiting Chiu.**
+→ `Docs/handoff-openfreemap-eval.md`.
 
 ---
 

@@ -1,3 +1,4 @@
+import Foundation
 @testable import Kamome
 import KamomeExportEngine
 
@@ -52,6 +53,67 @@ enum ReviewSubstrate {
         var appearance = RecapAppearance.light
     }
 
+    /// **The OpenFreeMap evaluation switch** (`KAMOME_MAP_SUBSTRATE`, ADR
+    /// 2026-09-09). Review harness only — nothing in the app reads it, and
+    /// `RecapModel.snapshotProvider(for:)` is untouched, so no build behaves
+    /// differently because this exists.
+    ///
+    /// **Why the switch lives here rather than in `RecapMapTiles`.** That lookup
+    /// matches a trip against a `.pmtiles` region's own header bounds, and
+    /// OpenFreeMap is a *planet* with no region file and no bounds to match — so
+    /// every trip would fall back to Apple Maps no matter what path it was given.
+    /// The evaluation therefore bypasses region resolution entirely instead of
+    /// teaching the region lookup about a substrate that has no regions.
+    ///
+    /// The styles are OpenFreeMap's own hosted ones, loaded by URL. **No Kamome
+    /// style is authored or bundled this round** (the ADR forbids it), and
+    /// `RecapMapStyle`'s `pmtiles://` path is not touched — the parked souvenir
+    /// style stays exactly as parked.
+    enum Substrate: String, CaseIterable {
+        case openFreeMapPositron = "positron"
+        case openFreeMapLiberty = "liberty"
+        case openFreeMapFiord = "fiord"
+
+        /// OpenFreeMap serves the style, its glyphs and its sprite from absolute
+        /// URLs inside the style document, so this one URL is the whole wiring.
+        var styleURL: URL { URL(string: "https://tiles.openfreemap.org/styles/\(rawValue)")! }
+
+        /// **Which appearance Kamome's palette must be drawn in over this base**,
+        /// read off each style's own `background-color` layer (VERIFIED
+        /// 2026-09-09 against the served style documents):
+        /// Positron `rgb(242,243,240)` and Liberty `#f8f4f0` are light grounds;
+        /// Fiord `#45516E` is a dark slate.
+        ///
+        /// Hard-coded rather than sniffed from the style JSON on purpose: three
+        /// styles is not a population that needs an algorithm, and a luminance
+        /// threshold would be an unreviewed rule for a decision (ADR 2026-08-27)
+        /// that is Chiu's.
+        var appearance: RecapAppearance {
+            switch self {
+            case .openFreeMapPositron, .openFreeMapLiberty: return .light
+            case .openFreeMapFiord: return .dark
+            }
+        }
+
+        /// The attribution OpenFreeMap's TileJSON declares and ODbL obliges.
+        /// The OpenFreeMap clause is optional-but-asked; the OpenStreetMap clause
+        /// is not optional.
+        static let attribution = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+    }
+
+    /// The substrate the reviewer asked for, or nil for today's normal path.
+    /// An unrecognised value is refused, never ignored — `HarnessEnv`'s reason.
+    static func requestedSubstrate() throws -> Substrate? {
+        guard let raw = HarnessEnv.value("KAMOME_MAP_SUBSTRATE") else { return nil }
+        guard let substrate = Substrate(rawValue: raw) else {
+            throw HarnessError(
+                "KAMOME_MAP_SUBSTRATE=\(raw) is not one of "
+                    + Substrate.allCases.map(\.rawValue).joined(separator: ", ")
+            )
+        }
+        return substrate
+    }
+
     static func experiment() throws -> Experiment {
         var experiment = Experiment()
         if let raw = HarnessEnv.value("KAMOME_MAP_DISPLAY_SCALE") {
@@ -84,6 +146,16 @@ enum ReviewSubstrate {
     /// always says on the console which substrate it drew — never judged.
     static func renderer(region: RecapMapRegion?, reporting label: String) throws -> MapRenderer {
         #if canImport(MapLibre)
+        // The evaluation switch is read before the region lookup, because the
+        // substrate it selects has no regions to look up (see `Substrate`).
+        if let substrate = try requestedSubstrate() {
+            print("\(label) substrate OpenFreeMap/MapLibre · style \(substrate.rawValue) "
+                + "(\(substrate.styleURL.absoluteString)) · appearance \(substrate.appearance.rawValue) "
+                + "— EVALUATION ONLY, no build renders this (ADR 2026-09-09)")
+            return MapLibreSnapshotProvider(
+                styleURL: substrate.styleURL, appearance: substrate.appearance
+            )
+        }
         guard let region else {
             return try appleMaps(
                 reporting: label,

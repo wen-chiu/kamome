@@ -48,7 +48,18 @@ struct RecapReviewScene {
     /// after what varies in it (`variantSuffix`).
     let style: RecapStyle
 
-    static func make(fixture: String) async throws -> RecapReviewScene {
+    /// `appearance` overrides what `KAMOME_MAP_APPEARANCE` would have said, for a
+    /// caller that renders **several substrates of one frame in one process** and
+    /// therefore cannot express its choice through the environment
+    /// (`RecapSubstrateEvalTests`, ADR 2026-09-09). Nil — every existing caller —
+    /// keeps reading the environment exactly as before.
+    ///
+    /// It is still only a *request*: the substrate's veto below is unchanged, so
+    /// this cannot be used to draw a light palette over a base that says it is
+    /// dark.
+    static func make(
+        fixture: String, appearance appearanceOverride: RecapAppearance? = nil
+    ) async throws -> RecapReviewScene {
         // The crossing fixture is routed by the offline sea provider, never by
         // the live endpoint: its "no road here" is a **fixture fact**, authored
         // with the coordinates, and a review render must not have it depend on
@@ -96,7 +107,7 @@ struct RecapReviewScene {
         // still equal to the film the app would render (`RecapModel.runExport`).
         let provider = try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_REVIEW")
         let appearance = provider.capabilities.appearance(
-            honouring: try ReviewSubstrate.experiment().appearance
+            honouring: try appearanceOverride ?? ReviewSubstrate.experiment().appearance
         )
         let style = try ReviewPalette.style(appearance).withEndCard(config.endCardStyle)
         return RecapReviewScene(
@@ -260,11 +271,7 @@ struct RecapReviewScene {
     /// One composited frame at `time`, over a fresh snapshot at the timeline's own
     /// camera — the same path the exporter takes, minus the keyframe cache.
     func frame(at time: Double) async throws -> CGImage {
-        let camera = timeline.cameraFrame(atTime: time)
-        let background = try await provider.snapshot(
-            camera, map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
-        )
-        return try compositor.render(atTime: time, background: RecapBackground(current: background))
+        try await frame(at: time, using: provider).image
     }
 
     // MARK: - Construction

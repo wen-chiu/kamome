@@ -32,22 +32,45 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// A style file already resolved against its tiles (see `RecapMapStyle`).
     private let styleURL: URL
 
-    public init(styleURL: URL) {
+    /// The appearance the style at `styleURL` **is**, which the palette drawn over
+    /// it must follow. Defaults to `.dark`, which is what the one shipping style
+    /// sheet is — see `capabilities`.
+    private let appearance: RecapAppearance
+
+    public init(styleURL: URL, appearance: RecapAppearance = .dark) {
         self.styleURL = styleURL
+        self.appearance = appearance
     }
 
     /// Rotates the map (`MLNMapCamera.heading`), so it drives the heading-up
     /// follow cam (§4) — the substrate the anime hero car needs.
     ///
-    /// **Locked to dark.** The souvenir map is a dark subtractive style sheet
+    /// **Locked to whichever appearance its style sheet is**, defaulting to dark.
+    /// The souvenir map is a dark subtractive style sheet
     /// (`Config/RecapThemes/modern-minimal.json` — `#08111A`, `#04070C`,
     /// `#03070d`; the direction decided in `Docs/decisions.md` 2026-07-22), and
     /// there is no light variant of it. Declaring that here is what stops a
     /// light-mode device with tiles installed from drawing Kamome's light palette
     /// over a near-black map — the palette/base mismatch that produced the halo
     /// defect, in the other direction.
+    ///
+    /// **Why the init parameter, and why it defaults** (ADR 2026-09-09). The
+    /// OpenFreeMap evaluation renders three *stock* styles, two of which are light
+    /// (Positron `rgb(242,243,240)`, Liberty `#f8f4f0`) and one dark (Fiord
+    /// `#45516E`), so a hard-coded `.dark` would put Kamome's dark palette over
+    /// two light maps — the same mismatch this field exists to prevent, in a third
+    /// direction. The default keeps the **shipping** call site
+    /// (`RecapModel.snapshotProvider(for:)`) bit-identical: it passes no
+    /// appearance and still gets `.dark`.
+    ///
+    /// ⚠️ Deliberately **not** derived from the style sheet's own background
+    /// colour. That would be a real design — it would also reinterpret ADR
+    /// 2026-08-27's appearance rule, which is Chiu's to reopen and not this
+    /// round's.
     public var capabilities: MapRendererCapabilities {
-        MapRendererCapabilities(supportsBearing: true, supportsHeadingUp: true, fixedAppearance: .dark)
+        MapRendererCapabilities(
+            supportsBearing: true, supportsHeadingUp: true, fixedAppearance: appearance
+        )
     }
 
     public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
