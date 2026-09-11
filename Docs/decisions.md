@@ -4527,3 +4527,64 @@ it is a **"before"** for the substrate switch.
 Anything about the substrate (that is ADR 2026-09-09's own round); performance of
 any kind; music; whether the export should ever survive process death. No new
 tunable was needed and none was added.
+
+---
+
+## 2026-09-12 (c) — The app reproduces the licences of the code it contains, and a pin cannot land without one
+
+**Status:** engineering implementation of a licence obligation. Brief: Chiu's
+release-blocker round, 2026-09-12, item 4 of 4. **The section's wording and
+placement are drafts** under the same rule as S2/S3 — the words are Chiu's to
+rule on, the craft is `DESIGNER.md`'s.
+
+### The obligation
+
+Two third-party packages are linked into every `Kamome.app`: **GRDB.swift 6.29.3
+(MIT)** through `KamomeCore`, and **MapLibre Native 6.27.0 (BSD-2-Clause)**
+directly — `MapLibre.framework` is present in every built app on the development
+machine. MIT requires its notice in all copies of the software; BSD-2-Clause
+requires a binary redistribution to reproduce its notice in the materials that
+accompany it. Neither text appeared anywhere in the app (brief, VERIFIED).
+`AboutView` carried the Geoapify and OpenStreetMap attributions, which are a
+different obligation: owed for data the app *fetches*, not for code it
+*contains*. MapLibre stays linked — it is about to become the export substrate
+(ADR 2026-09-09).
+
+### Decided
+
+1. **The texts are copied, never retyped**, to
+   `App/Resources/Acknowledgements/<identity>.txt`, named by the package's
+   `Package.resolved` identity. **VERIFIED byte-identical by `cmp`** against the
+   pinned sources: GRDB's checkout at `v6.29.3` (`2cf6c756`), and MapLibre's binary
+   artifact at `6.27.0` (`84a79bc3`), whose `LICENSE.md` is itself identical to the
+   distribution repository's. Both files were confirmed byte-identical again
+   inside the built `Kamome.app`.
+2. **About gains a last section**, one row per package showing name, version and
+   licence, opening the full text — monospaced and selectable, because it is a
+   legal text a reader may want to copy.
+3. **The gate is keyed on `Package.resolved`, not on a list someone has to
+   remember to update.** `Scripts/release/check-attribution.sh` fails unless
+   every pin has its text, carrying a copyright notice, **and** one line in
+   `UI/About/Acknowledgements.swift` naming its identity at its **pinned
+   version**. A new dependency fails the gate; so does a bump, until someone
+   re-reads the licence, which is the moment its text can change.
+   `AcknowledgementsTests` holds the other half: each text reaches the built
+   bundle and is the licence its entry names.
+
+**Positive-controlled 2026-09-12**, each restored byte-identical afterwards: the
+GRDB text removed → FAIL; MapLibre acknowledged at a stale version → FAIL; a
+synthetic new pin → FAIL on both counts; restored → pass.
+
+### Limits, stated rather than assumed
+
+- **INFERRED — that the root `Package.resolved` is what the app links.** It pins
+  both packages today, and its MapLibre version matches `project.yml`'s
+  `exactVersion: 6.27.0`. If a bump ever lands only in the generated project's
+  own resolved file, the gate reads a stale pin. Cheapest settling: change one
+  pin in `project.yml`, regenerate, resolve, and see which file moves.
+- **UNKNOWN — whether MapLibre's binary contains third-party code whose notices
+  are owed separately.** The binary artifact ships one `LICENSE.md` and nothing
+  else. Settling it means reading the third-party licence list of MapLibre
+  Native's 6.27.0 source tree.
+- **Not decided here:** attribution inside the exported film once OSM-derived
+  tiles render it — outside this round by the brief.

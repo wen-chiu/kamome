@@ -45,6 +45,7 @@ struct AboutView: View {
             List {
                 attributionSection
                 privacySection
+                acknowledgementsSection
             }
             .navigationTitle("about_title")
             .navigationBarTitleDisplayMode(.inline)
@@ -100,6 +101,25 @@ struct AboutView: View {
             Text("privacy_header")
         }
         .font(.callout)
+    }
+
+    /// The software licences the app's own contents oblige it to reproduce,
+    /// in full rather than linked (ADR 2026-09-12 (c)). Last, because it is the
+    /// section a reader is least likely to have come for.
+    private var acknowledgementsSection: some View {
+        Section {
+            ForEach(Acknowledgement.all) { library in
+                NavigationLink {
+                    LicenceTextView(acknowledgement: library)
+                } label: {
+                    LabeledContent(library.name, value: "\(library.version) · \(library.licence)")
+                }
+            }
+        } header: {
+            Text("acknowledgements_header")
+        } footer: {
+            Text("acknowledgements_note")
+        }
     }
 
     /// The imported payload is the only sentence carrying numbers, and both come
