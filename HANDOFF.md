@@ -47,45 +47,20 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 
 ---
 
-## ⏳ Awaiting Chiu — a film or a judgement, not a session
+## ⏳ Awaiting Chiu
 
-- **The long-haul 70 threshold is untouched and still probably wrong.** Its
-  *"the wide frame loses the viewer"* half is answered (ADR 2026-09-04 (b)).
-  → `Docs/handoff-type2-films.md` closeout.
-- **Five questions from the retimed type-2 opening** — four visual, one semantic
-  (its DATE row is the **trip's** range, not the flight's).
-  → `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`.
-- **The title card still shows trip title + dates, not the country name.** VERIFIED
-  2026-09-09: `LinearTimeline.swift:214` is still `title = trip.title`. The end
-  card **now carries the trip's name too** (2026-09-05 (d)). A DESIGNER question.
-  → `Docs/handoff-crop-scaling.md` §11, §14.
-- **The badge's 0.60 size** — judged from a still; you reserved a film.
+- **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
-- **79.8% against the 80% safe-zone limit** on `ishigaki-crossing`, on the camera
-  that actually ships. A pass by 0.2 points, with nothing relaxed to get it.
-  Whether that is acceptable is a bar question.
-  → `Docs/handoff-cross-region-crossing.md` finding 2.
-- **The crossing beat's three defaults**: the seagull ships `selectable: true`;
-  whether the apex wants a hold. → same document, finding 9.
-- **Film length, two questions in order** — the duration rule (direction decided
-  2026-08-14, **rule not**), then travel pacing (`travel_max_s` names a thing
-  that does not exist). → `Docs/handoff-pacing.md`.
-- **§0 — two films of real trips are committed** (`Docs/demos/phase3{,_5}/`), and
-  they are not in §0's exceptions list. A recorded exception, or they move out.
-  **Deliberately not gated.** → `Docs/handoff-audit-2026-08-30.md` finding 7.
-- **S2's placement and `AboutView`'s wording** are still a draft, not a ruling;
-  the first-run card's wording is ruled. **Whether a user may refuse** stays
-  deferred. → `Docs/release-readiness.md` S2/S3.
-- **S3b — `pre-launch.md`'s recorded-leg payload row describes a state that never
-  arrived.** Relabel or delete; it is not an equal claim in conflict with the
-  code. → `Docs/release-readiness.md` S3b.
-- **The end card's wordmark.** Chiu's layout reads `KAMOME かもめ`; the film ships
-  `RecapWordmark.text` = `"Kamome"`. The tagline went **beneath the existing mark**
-  and the mark was not touched — what the product is called, and in which scripts,
-  is yours. → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **The MapLibre-era sweep.** Five defects share one shape — a value tuned against
-  a substrate that changed underneath it — each found by accident. Not scheduled.
-  → `Docs/handoff-audit-2026-08-30.md` finding 4.
+- **Film length rule** — direction decided 2026-08-14, **rule not**.
+  → `Docs/handoff-pacing.md`.
+- **§0 — two real-trip films in the repo** (`Docs/demos/phase3{,_5}/`).
+  Either a recorded exception or they move out.
+  → `Docs/handoff-audit-2026-08-30.md` finding 7.
+- **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
+  → `Docs/release-readiness.md` S2/S3.
+- **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
+  ships `"Kamome"`. What the product is called, and in which scripts, is yours.
+  → `Docs/decisions.md` 2026-09-05 (d) §4.
 
 ---
 
@@ -159,26 +134,3 @@ one; the glacier renders flat. All three, in full, with workarounds:
 boundaries**, accepted as it stands — revisit only if someone notices it in a
 film (`Docs/handoff-crop-scaling.md`).
 
----
-
-## Where the detail lives
-
-| document | what is in it |
-|---|---|
-| `Docs/release-readiness.md` | **the release gate** — every obligation, sorted by who can settle it |
-| `Docs/handoff-type2-films.md` | the type-2 film: what MapKit can frame, the classifier, the closeout |
-| `Docs/handoff-type2-opening-retime.md` | the retimed opening, the pass, the plane, the two marks |
-| `Docs/handoff-cross-region-crossing.md` | the crossing beat, the pan-floor correction, the safe-zone margin |
-| `Docs/handoff-crop-scaling.md` | crop-scaling, the budget split, the opening and the country card |
-| `Docs/handoff-audit-2026-08-30.md` | the owed MapLibre sweep, dead pacing, the §0 films question |
-| `Docs/handoff-marker-badge.md` | the fallback badge and the gaps it left |
-| `Docs/handoff-pacing.md` | film duration and travel pacing |
-| `Docs/handoff-subject-lookup.md` | the silent subject fallback |
-| `Docs/handoff-stop-weighting.md` | the removal criterion |
-| `Docs/handoff-known-bugs.md` | the three above, in full |
-| `Docs/camera-arcs.md` | the arc design — live, and §5 carries a correction |
-| `Docs/cross-region-journeys.md` | cross-region requirements (Chiu 2026-08-14) |
-| `Docs/phase4-reference.md` | Phase 4 scope and the camera architecture |
-| `Docs/environment-gotchas.md` | routing, simulators, fixture shadowing |
-| `Docs/rule-rationale.md` | why each rule in `CLAUDE.md` exists |
-| `Docs/_archive/README.md` | **what was archived and where it went** — history, never a work instruction |

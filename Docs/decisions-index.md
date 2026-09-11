@@ -69,7 +69,7 @@ does not.
 | 49 | `2026-08-20 (d)` | The snap radius was the wrong mechanism, and it was never guarding what I said |  |
 | 50 | `2026-08-21` | The Iceland film passed: the Geoapify migration is accepted |  |
 | 51 | `2026-08-27` | The film follows the device's system appearance, and light gets a warm trail |  |
-| 52 | `2026-08-27 (b)` | The subject shrinks 30%, and the mark's fraction is spent doing it |  |
+| 52 | `2026-08-27 (b)` | The subject shrinks 30%, and the mark's fraction is spent doing it | ⚠️ pin spends the relational guarantee — next size move is a fresh judgement |
 | 53 | `2026-08-29` | The fallback marker becomes a badge, and it is one badge for both appearances |  |
 | 54 | `2026-08-30` | The second round of outside feedback: shake is a P0, the film gets a frame, and the trip gets a name |  |
 | 55 | `2026-08-31` | The opening cuts out of a title card, and the frame it cuts out of is the country |  |
@@ -79,7 +79,7 @@ does not.
 | 59 | `2026-09-02 (b)` | The staleness protocol could never be satisfied, and it is a check now | **corrects the diagnosis in 2026-09-02 §6** |
 | 60 | `2026-09-03` | The corpus is cut in half: closed work is archived, and the live set has a ceiling |  |
 | 61 | `2026-09-03 (b)` | The crossing beat is 4.0 s because that is how long a boarding pass takes to read | **re-decides `crossing_beat_s` 6.0 from 2026-09-02; amends `Docs/handoff-type2-films.md`'s closeout** |
-| 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
+| 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed | ⚠️ day + burst are complements, not substitutes — do not switch to a Durable Object |
 | 63 | `2026-09-04 (b)` | The crossing flies a plane, and its two ends are marked and named | **reclaims `cross-region-journeys.md` requirement 2; answers the closeout's handover item 1; thaws neither place-name lock** |
 | 64 | `2026-09-05` | The Worker gets a burst limit, and its no-log property becomes a gate | closes `Docs/release-readiness.md` **S4**; implements the 2026-09-04 re-rating; **retires** that re-rating's named settling test as a null result; **addendum 2026-09-06: deployed and probed, Version `09e248ee`** |
 | 65 | `2026-09-05 (b)` | The user is told once, before any coordinate leaves, and the telling is not a question | **answers the question `Docs/release-readiness.md` S3 left open** |
