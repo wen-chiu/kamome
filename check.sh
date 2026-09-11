@@ -69,8 +69,9 @@ else
     destination=${KAMOME_TEST_DESTINATION:-platform=iOS Simulator,name=iPhone 17 Pro}
     set -o pipefail
     # `env -u` (ADR 2026-09-12): `--release` needs the real routing key in
-    # KAMOME_ROUTING_API_KEY, and xcodebuild turns every environment variable it
-    # inherits into a build setting. The suite never needs the key.
+    # KAMOME_ROUTING_API_KEY and the suite never does, so the build never sees it.
+    # A precaution, not a measured leak: on xcodebuild 26.6 an inherited variable
+    # appeared neither in -showBuildSettings nor in a build log.
     env -u KAMOME_ROUTING_API_KEY xcodebuild -scheme Kamome test -destination "$destination" CODE_SIGNING_ALLOWED=NO
     record $? "xcodebuild test"
   fi

@@ -39,8 +39,8 @@ fi
 #   KAMOME_ROUTING_API_KEY="$(grep '^GEOAPIFY_API_KEY=' ~/.kamome/routing.env | cut -d= -f2-)" \
 #     ./check.sh --release <path to .xcarchive>
 #
-# ./check.sh strips the variable from its xcodebuild stage, so it is never
-# inherited as a build setting and never lands in a build log.
+# ./check.sh strips the variable from its xcodebuild stage, so the build it runs
+# never sees the key.
 key="${KAMOME_ROUTING_API_KEY:-}"
 if [ -z "$key" ]; then
   kamome_fail "KAMOME_ROUTING_API_KEY is not set, so the exact scan cannot run"

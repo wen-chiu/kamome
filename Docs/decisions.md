@@ -4583,10 +4583,10 @@ source), so nothing ever needed it.
    fallback to the secrets file is gone — a gate that still reads the file is a
    reason for the file to survive on the machine that builds the archive. It now
    requires the plist field to be **absent**, not merely empty. `./check.sh`
-   strips the variable from its `xcodebuild` stage. That is a precaution:
-   xcodebuild 26.6 makes an inherited variable a build setting but did not print
-   it (0 occurrences in a build run with a fake value in its environment,
-   VERIFIED 2026-09-12).
+   strips the variable from its `xcodebuild` stage. That is a precaution, not a
+   measured leak: on xcodebuild 26.6 an inherited variable appeared neither in
+   `-showBuildSettings` nor in a build log (0 occurrences with a fake value in
+   the environment, full `./check.sh` included — VERIFIED 2026-09-12).
 6. **A regression is caught twice.** `check-secrets.sh` fails when the mapping or
    the include returns — static, so it runs without Xcode, and it was shown to
    fire on each and to ignore the same names in a comment. `RoutingKeyTests`
