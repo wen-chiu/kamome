@@ -41,12 +41,11 @@ can do either**.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09); this
-round only *looks*. ✅ **The pictures exist** — 15 annotated frames in
-`~/Kamome-films/openfreemap-eval/`, never in the repo (§0). Three unknowns are
-settled, **two ADR statements need correcting** (one is Apple's logo), three
-visual findings are for judgement. ⏳ **Awaiting Chiu.**
-→ `Docs/handoff-openfreemap-eval.md`.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09); these
+rounds only *look*. ✅ **18 annotated frames**, never in the repo (§0): 15 stock
+plus **Kamome's dark Liberty fork** (減層, souvenir palette, 大地名 ×2). On the
+fork the coastline and the distance readout come back; the roads are still a web,
+not a skeleton. ⏳ **Awaiting Chiu.** → `Docs/handoff-openfreemap-eval.md`.
 
 ---
 

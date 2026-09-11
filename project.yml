@@ -250,6 +250,7 @@ schemes:
         - { variable: KAMOME_SUBJECT_STILL, value: "$(TEST_RUNNER_KAMOME_SUBJECT_STILL)", isEnabled: true }
         - { variable: KAMOME_SUBSTRATE_EVAL, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL)", isEnabled: true }
         - { variable: KAMOME_SUBSTRATE_EVAL_T, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL_T)", isEnabled: true }
+        - { variable: KAMOME_SUBSTRATE_EVAL_STYLES, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL_STYLES)", isEnabled: true }
         - { variable: KAMOME_SUBJECT, value: "$(TEST_RUNNER_KAMOME_SUBJECT)", isEnabled: true }
         - { variable: KAMOME_SUBJECT_LENGTH_PX, value: "$(TEST_RUNNER_KAMOME_SUBJECT_LENGTH_PX)", isEnabled: true }
         - { variable: KAMOME_TERRAIN_PATH, value: "$(TEST_RUNNER_KAMOME_TERRAIN_PATH)", isEnabled: true }
