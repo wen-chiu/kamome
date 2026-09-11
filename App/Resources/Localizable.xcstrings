@@ -1006,6 +1006,23 @@
         }
       }
     },
+    "recap_back": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
+          }
+        }
+      }
+    },
     "recap_cancel": {
       "extractionState": "manual",
       "localizations": {
@@ -1036,23 +1053,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成"
-          }
-        }
-      }
-    },
-    "recap_end_cta": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Record your own journey"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記錄你自己的旅程"
           }
         }
       }
@@ -1091,6 +1091,40 @@
         }
       }
     },
+    "recap_export_busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another film is rendering"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另一部影片正在算圖"
+          }
+        }
+      }
+    },
+    "recap_export_busy_detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome renders one film at a time. Wait for the one in progress to finish, or cancel it on its own trip."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩一次只算一部影片。請等目前這部完成，或到它所屬的旅程取消。"
+          }
+        }
+      }
+    },
     "recap_failed": {
       "extractionState": "manual",
       "localizations": {
@@ -1104,6 +1138,96 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯出失敗"
+          }
+        }
+      }
+    },
+    "recap_figure_label_day": {
+      "comment": "The unit under the closing card's day count, for exactly one. Two keys rather than a plural variation: the number is drawn as a separate figure, and Xcode refuses a plural whose text does not contain it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DAY"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天"
+          }
+        }
+      }
+    },
+    "recap_figure_label_days": {
+      "comment": "The unit under the closing card's day count, for any other count. See recap_figure_label_day.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DAYS"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天"
+          }
+        }
+      }
+    },
+    "recap_figure_label_km": {
+      "comment": "The unit under the closing card's distance figure. Uppercase in English; it is a label in a row of three, never a sentence.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KM"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公里"
+          }
+        }
+      }
+    },
+    "recap_figure_label_stop": {
+      "comment": "The unit under the closing card's stop count, for exactly one. See recap_figure_label_day.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STOP"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停留"
+          }
+        }
+      }
+    },
+    "recap_figure_label_stops": {
+      "comment": "The unit under the closing card's stop count, for any other count. See recap_figure_label_day.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STOPS"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停留"
           }
         }
       }
@@ -1312,6 +1436,23 @@
         }
       }
     },
+    "recap_rendering_leave_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can leave this screen — the film keeps rendering as long as Kamome stays open, and the screen stays on until it is done."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你可以離開這個畫面 —— 只要卡摸咩還開著，影片就會繼續算圖，螢幕也會保持亮著直到完成。"
+          }
+        }
+      }
+    },
     "recap_routing_budget": {
       "extractionState": "manual",
       "localizations": {
@@ -1495,40 +1636,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享"
-          }
-        }
-      }
-    },
-    "recap_stat_distance_stops": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld km · %2$lld stops"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld 公里 · %2$lld 個停留"
-          }
-        }
-      }
-    },
-    "recap_stat_drive": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ h driving"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行駛 %@ 小時"
           }
         }
       }

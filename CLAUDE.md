@@ -2,8 +2,8 @@
 
 Kamome (卡摸咩) is a **memory engine for road trips**: import or capture a
 journey once, then turn it into a cinematic recap film worth keeping and
-sharing. What Kamome *is*: `Docs/kamome-poc-spec.md` (later ADRs override its
-stale status text).
+sharing. The spec (`Docs/_archive/kamome-poc-spec.md`) is the historical
+reference; ADRs and `Docs/current-state.md` are current.
 
 **Phase 4 — films worth keeping**: vehicle sprites → cross-region crossing →
 export that survives. Phase 3.5 closed 2026-08-15. Later: P5 Capture Beta,

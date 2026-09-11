@@ -79,13 +79,27 @@ final class RecapComposerTests: XCTestCase {
         XCTAssertFalse(recap.stops[1].name.isEmpty, "unnamed stop must get the localized fallback")
         XCTAssertEqual(recap.title, "Perth Loop")
         XCTAssertTrue(recap.subtitle.contains("1203"), "subtitle carries distance, got: \(recap.subtitle)")
-        XCTAssertEqual(recap.statsLines.count, 2)
-        // localizedStringWithFormat groups digits ("1,203") per locale.
-        let distanceLine = recap.statsLines[0].replacingOccurrences(of: ",", with: "")
-        XCTAssertTrue(distanceLine.contains("1203"), "distance km in the stats line, got: \(recap.statsLines[0])")
-        XCTAssertTrue(recap.statsLines[0].contains("2"), "stop count in the distance line")
-        XCTAssertTrue(recap.statsLines[1].contains("3.2"), "drive hours with one decimal")
-        XCTAssertFalse(recap.callToAction.isEmpty)
+        // **Three figures, not a sentence** (Chiu 2026-09-05): the card sets a row
+        // of KM / DAYS / STOPS, so what the composer produces is (value, label)
+        // pairs and the renderer never splits a string.
+        XCTAssertEqual(recap.endCardFigures.count, 3)
+        let byLabel = Dictionary(
+            uniqueKeysWithValues: recap.endCardFigures.map { ($0.label, $0.value) }
+        )
+        XCTAssertEqual(byLabel["STOPS"], "2", "the film's stop count")
+        // `daysLong: 2` is two elapsed 24-hour blocks, which is Day 3 on the HUD's
+        // own counter — the card and the chip must agree, so it is 3 here too.
+        XCTAssertEqual(RecapComposer.dayCount(trip: trip(daysLong: 2)), 3)
+        XCTAssertEqual(byLabel["DAYS"], "3", "the trip's day count")
+
+        // 🔴 **The card measures the route the film draws, not `TripStats`.** The
+        // subtitle above still carries the recorded 1,203 km; this fixture's
+        // geometry is three synthetic points, so the two are far apart here by
+        // construction. The figure has to be the drawn one — an imported trip has
+        // no `TripStats` at all, and the card would otherwise print nothing.
+        let drawnKm = Int((RecapTrip.localRouteDistanceM(legs: legs) / 1000).rounded())
+        XCTAssertEqual(byLabel["KM"], "\(drawnKm)", "drawn kilometres")
+        XCTAssertNotEqual(byLabel["KM"], "1,203", "the recorded total belongs to the subtitle, not the card")
     }
 
     func testDegenerateRouteYieldsNoTrip() {
@@ -152,7 +166,7 @@ final class RecapComposerTests: XCTestCase {
             stops: [], stats: nil, photosByStop: [:]
         ))
         XCTAssertNil(recap.shareURL)
-        XCTAssertFalse(recap.callToAction.isEmpty, "the CTA stays — only the unresolved code goes")
+        XCTAssertFalse(recap.endCardFigures.isEmpty, "the card's figures stay — only the unresolved code goes")
     }
 
     /// The opening title's date range is the trip's **real** span, straight from
@@ -199,18 +213,40 @@ final class RecapComposerTests: XCTestCase {
         XCTAssertLessThan(localM, stats.distanceM, "the flight must come off the reported distance")
         XCTAssertGreaterThan(localM, 0, "and it must never take the figure negative")
 
-        // Both card surfaces print the local figure, and neither prints the whole
+        // Both card surfaces print a local figure and neither prints the whole
         // trip's. Structure, not wording — the copy is localized.
+        //
+        // 🔴 **They no longer print the same local figure, deliberately** (ADR
+        // 2026-09-05). The subtitle carries the *recorded* total with the flight
+        // subtracted; the closing card measures the *route the film draws*, which
+        // is the odometer's own axis and the only figure an imported trip has at
+        // all. What both still owe is that the flight is not in them.
         let subtitle = RecapComposer.titleSubtitle(trip: trip(), distanceM: localM)
-        let stat = try XCTUnwrap(
-            RecapComposer.statsLines(stats: stats, distanceM: localM, stopCount: 2).first
+        let drawnM = RecapTrip.localRouteDistanceM(legs: legs)
+        let km = try XCTUnwrap(
+            RecapComposer.endCardFigures(trip: trip(), distanceM: drawnM, stopCount: 2).first
         )
         let whole = "\(Int((stats.distanceM / 1000).rounded()))"
         let local = "\(Int((localM / 1000).rounded()))"
         XCTAssertTrue(subtitle.contains(local), "the title card prints the local journey")
         XCTAssertFalse(subtitle.contains(whole), "and never the whole trip: \(subtitle)")
-        XCTAssertTrue(stat.contains(local), "the end card prints the local journey")
-        XCTAssertFalse(stat.contains(whole), "and never the whole trip: \(stat)")
+        XCTAssertEqual(km.label, "KM", "the distance is the row's first figure")
+        XCTAssertEqual(
+            km.value, "\(Int((drawnM / 1000).rounded()))", "the end card prints the route it drew"
+        )
+        XCTAssertNotEqual(km.value, whole, "and never the whole trip")
+        // The flight is excluded from that axis **by construction**, which is what
+        // stops the closing card ever reading 9,024 km again.
+        XCTAssertLessThan(
+            drawnM, RecapTrip.localRouteDistanceM(legs: legs.map(Self.notACrossing)),
+            "the crossing must not be in the card's figure"
+        )
+    }
+
+    /// The same leg, declared routable — so `localRouteDistanceM` counts it. Used
+    /// only to measure how much the crossing contributes.
+    private static func notACrossing(_ leg: RecapTrip.Leg) -> RecapTrip.Leg {
+        RecapTrip.Leg(coordinates: leg.coordinates, mode: leg.mode, provenance: leg.provenance)
     }
 
     /// **A local trip's kilometres are unchanged**, which is the type-1 control's

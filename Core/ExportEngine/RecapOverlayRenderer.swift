@@ -18,7 +18,10 @@ public protocol RecapPhotoResolving {
 /// and beat 2's caption under the card are literally the same drawing — which is
 /// what lets them cross-fade in place instead of jumping.
 struct RecapStopIdentity {
-    let name: String
+    /// nil when the place is named elsewhere in the same frame — the band
+    /// collapses to the strap and the dots, and the pin still lands
+    /// (ADR 2026-09-05 (c)).
+    let name: String?
     let subtitle: String?
     var photoCount: Int = 0
     var focusIndex: Int = 0
@@ -67,8 +70,8 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             drawHUD(dayLabel: dayLabel, place: place, travelledM: travelledM, into: surface)
         case let .titleChrome(title, subtitle):
             drawTitleChrome(title: title, subtitle: subtitle, into: surface)
-        case let .endChrome(stats, callToAction, shareURL):
-            drawEndChrome(stats: stats, callToAction: callToAction, shareURL: shareURL, into: surface)
+        case let .endChrome(title, figures, shareURL):
+            drawEndChrome(title: title, figures: figures, shareURL: shareURL, into: surface)
         }
     }
 
@@ -97,7 +100,11 @@ public struct RecapOverlayRenderer: OverlayRenderer {
     /// Thousands separators, done by hand rather than through `NumberFormatter`:
     /// a film's frames must be byte-identical run to run, and a formatter's
     /// output follows the device locale.
-    static func grouped(_ value: Int) -> String {
+    ///
+    /// **public since 2026-09-05**: the closing card's `KM` figure is composed in
+    /// the app layer, and it and the HUD odometer show the same quantity — set by
+    /// two different rules they would disagree in the same frame.
+    public static func grouped(_ value: Int) -> String {
         let digits = Array(String(value))
         return digits.enumerated().reduce(into: "") { text, item in
             let remaining = digits.count - item.offset
@@ -180,7 +187,9 @@ public struct RecapOverlayRenderer: OverlayRenderer {
     func identityMetrics(_ identity: RecapStopIdentity, in surface: RenderSurface) -> IdentityMetrics {
         let scale = surface.scale
         let maxWidth = CGFloat(surface.widthPx) - style.cardMarginPx * 2 * scale
-        let nameFontPx = fittedFontPx(identity.name, preferred: style.labelFontPx, maxWidth: maxWidth, in: surface)
+        let nameFontPx = identity.name.map {
+            fittedFontPx($0, preferred: style.labelFontPx, maxWidth: maxWidth, in: surface)
+        } ?? 0
         var strapFontPx = style.labelDetailFontPx
         var strapTracking = strapFontPx * style.labelDetailTrackingEm * scale
         var strapWidth: CGFloat = 0
@@ -196,10 +205,11 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             ? (style.deckDotGapPx + style.deckDotRadiusPx * 2 * style.deckDotActiveScale) * scale
             : 0
         let strapHeight = identity.subtitle == nil ? 0 : (style.labelDetailGapPx * scale + strapFontPx * scale)
+        let nameWidth = identity.name.map { textWidth($0, fontPx: nameFontPx, in: surface) } ?? 0
         return IdentityMetrics(
             nameFontPx: nameFontPx, strapFontPx: strapFontPx, strapTracking: strapTracking,
             dotsHeight: dotsHeight,
-            width: max(textWidth(identity.name, fontPx: nameFontPx, in: surface), strapWidth),
+            width: max(nameWidth, strapWidth),
             height: nameFontPx * scale + strapHeight + dotsHeight
         )
     }
@@ -213,12 +223,14 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         let centerX = rect.midX
         var cursorY = rect.maxY
 
-        cursorY -= metrics.nameFontPx * scale
-        drawShadowedText(
-            identity.name, anchor: CGPoint(x: centerX, y: cursorY + metrics.nameFontPx * scale * 0.18),
-            fontPx: metrics.nameFontPx, tracking: metrics.nameFontPx * style.labelTrackingEm * scale,
-            color: style.labelTextColor, in: surface
-        )
+        if let name = identity.name {
+            cursorY -= metrics.nameFontPx * scale
+            drawShadowedText(
+                name, anchor: CGPoint(x: centerX, y: cursorY + metrics.nameFontPx * scale * 0.18),
+                fontPx: metrics.nameFontPx, tracking: metrics.nameFontPx * style.labelTrackingEm * scale,
+                color: style.labelTextColor, in: surface
+            )
+        }
 
         if let subtitle = identity.subtitle {
             cursorY -= style.labelDetailGapPx * scale + metrics.strapFontPx * scale

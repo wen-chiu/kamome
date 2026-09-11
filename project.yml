@@ -139,8 +139,14 @@ targets:
     postBuildScripts:
       - name: Strip Finder junk from bundled resources
         basedOnDependencyAnalysis: false
+        # The product directory does not always exist when this runs — the phase
+        # opts out of dependency analysis, so it can be scheduled before the
+        # resource bundles are copied in. `find` then exits non-zero on a missing
+        # path and fails the whole build, which cost three renders on 2026-09-09
+        # before the cause was read off the log. Finding no junk, or finding no
+        # directory to look in, is a success for this phase.
         script: |
-          find "$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME" -name '.DS_Store' -delete
+          find "$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME" -name '.DS_Store' -delete || true
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).

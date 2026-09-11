@@ -69,7 +69,7 @@ does not.
 | 49 | `2026-08-20 (d)` | The snap radius was the wrong mechanism, and it was never guarding what I said |  |
 | 50 | `2026-08-21` | The Iceland film passed: the Geoapify migration is accepted |  |
 | 51 | `2026-08-27` | The film follows the device's system appearance, and light gets a warm trail |  |
-| 52 | `2026-08-27 (b)` | The subject shrinks 30%, and the mark's fraction is spent doing it |  |
+| 52 | `2026-08-27 (b)` | The subject shrinks 30%, and the mark's fraction is spent doing it | ⚠️ pin spends the relational guarantee — next size move is a fresh judgement |
 | 53 | `2026-08-29` | The fallback marker becomes a badge, and it is one badge for both appearances |  |
 | 54 | `2026-08-30` | The second round of outside feedback: shake is a P0, the film gets a frame, and the trip gets a name |  |
 | 55 | `2026-08-31` | The opening cuts out of a title card, and the frame it cuts out of is the country |  |
@@ -79,10 +79,13 @@ does not.
 | 59 | `2026-09-02 (b)` | The staleness protocol could never be satisfied, and it is a check now | **corrects the diagnosis in 2026-09-02 §6** |
 | 60 | `2026-09-03` | The corpus is cut in half: closed work is archived, and the live set has a ceiling |  |
 | 61 | `2026-09-03 (b)` | The crossing beat is 4.0 s because that is how long a boarding pass takes to read | **re-decides `crossing_beat_s` 6.0 from 2026-09-02; amends `Docs/handoff-type2-films.md`'s closeout** |
-| 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed |  |
+| 62 | `2026-09-04` | The Worker gets a spend ceiling, and it fails closed | ⚠️ day + burst are complements, not substitutes — do not switch to a Durable Object |
 | 63 | `2026-09-04 (b)` | The crossing flies a plane, and its two ends are marked and named | **reclaims `cross-region-journeys.md` requirement 2; answers the closeout's handover item 1; thaws neither place-name lock** |
 | 64 | `2026-09-05` | The Worker gets a burst limit, and its no-log property becomes a gate | closes `Docs/release-readiness.md` **S4**; implements the 2026-09-04 re-rating; **retires** that re-rating's named settling test as a null result; **addendum 2026-09-06: deployed and probed, Version `09e248ee`** |
 | 65 | `2026-09-05 (b)` | The user is told once, before any coordinate leaves, and the telling is not a question | **answers the question `Docs/release-readiness.md` S3 left open** |
-| 66 | `2026-09-08` | The config flip: the key stops shipping, and the counter is the proof | **Chiu 2026-09-05.** Closes **S6**; opens **S7** (key rotation, which the flip does not do); artifact check owed to Chiu |
-| 67 | `2026-09-08` | A finished film becomes a thing that exists | Phase 4 closeout step 1/4; `film` table v5; Photos save is explicit user tap (§0); does NOT settle D1 or D5 |
-| 68 | `2026-09-09` | The export substrate leaves Apple Maps: OpenFreeMap + MapLibre, and this round only looks at it | **Chiu 2026-09-09.** Reopens the **2026-08-15** MapLibre park for the export path; opens the **2026-08-15 label lock for evaluation only**, without unlocking it; the §0 shipping question is **deferred**, not answered; **correction 2026-09-10: `MKMapSnapshotter` DOES draw the Apple logo (legal link still absent); `mountain_peak` INFERRED → VERIFIED** |
+| 66 | `2026-09-05 (c)` | One orange, a plane that reads, a mark that hands over, and a card the map survives | **re-decides `trailOnLight` `#FF8A5B` from 2026-08-29; reverses "the name follows the mark" from 2026-09-04 (b) §3; closes `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md`** |
+| 67 | `2026-09-05 (d)` | The end card is the map again: a slight dim, and the summary floating on it | **supersedes 2026-09-05 (c) §4(a) and §4(c); `endChrome` and `RecapTrip.statsLines` change shape; §6 registers its three tuned values against the 2026-09-09 substrate change** |
+| 68 | `2026-09-08` | The config flip: the key stops shipping, and the counter is the proof | **Chiu 2026-09-05.** Closes **S6**; opens **S7** (key rotation, which the flip does not do); artifact check owed to Chiu |
+| 69 | `2026-09-08` | A finished film becomes a thing that exists | Phase 4 closeout step 1/4; `film` table v5; Photos save is explicit user tap (§0); does NOT settle D1 or D5 |
+| 70 | `2026-09-09` | The export substrate leaves Apple Maps: OpenFreeMap + MapLibre, and this round only looks at it | **Chiu 2026-09-09.** Reopens the **2026-08-15** MapLibre park for the export path; opens the **2026-08-15 label lock for evaluation only**, without unlocking it; the §0 shipping question is **deferred**, not answered; **correction 2026-09-10: `MKMapSnapshotter` DOES draw the Apple logo (legal link still absent); `mountain_peak` INFERRED → VERIFIED** |
+| 71 | `2026-09-10` | The Phase 4 closeout is four steps, and the last two wait for the substrate | **Chiu 2026-09-10.** Names the four steps (① film record ② export service ③ D1–D5 ④ performance); **defers ③ and ④** behind ADR 2026-09-09 because both price `MKMapSnapshotter`; closes step ②; corrects `ExportLifecycleGuard`'s 270 s / 600 s to a SIMULATOR 65.6 s; does **NOT** settle D1 |

@@ -72,6 +72,7 @@ final class RecapTimelineReportTests: XCTestCase {
         """)
 
         Self.reportTheRetime(line, recap: recap, config: config)
+        Self.reportTheEndCard(line, recap: recap, config: config)
 
         // The camera's two spans and the zoom between them, which nothing else
         // prints — the figures in HANDOFF.md were derived when a region was
@@ -148,11 +149,38 @@ final class RecapTimelineReportTests: XCTestCase {
         let odometerM = line.path.traveledLocalDistanceM(atTime: line.durationS - config.endCardS)
         let flownM = line.path.traveledDistanceM(atTime: line.durationS - config.endCardS) - odometerM
         print(String(
-            format: "  KAMOME_LOCAL_KM odometer %.0f km local · %.0f km flown (the card only) · "
+            format: "  KAMOME_LOCAL_KM odometer %.0f km local · %.0f km flown (the pass only) · "
                 + "end card %@",
             odometerM / 1000, flownM / 1000,
-            (recap.statsLines.first ?? "no stats — this harness composes with stats: nil") as NSString
+            (recap.endCardFigures.first.map { "\($0.value) \($0.label)" } ?? "no figures") as NSString
         ))
+    }
+
+    /// **What the closing card claims, and against which journey** — the two
+    /// figures Chiu asked to have measured before either is changed
+    /// (2026-09-04).
+    ///
+    /// The stop count is printed twice on purpose. `RecapComposer` builds
+    /// the figures from the **whole** trip, and `RecapTypeTwoFilm` drops the
+    /// origin country's journey afterwards, inside `LinearTimeline` — so on a
+    /// type-2 film those are two different journeys, and only printing both
+    /// shows it.
+    ///
+    /// No frame loop: whether the film ever prints the departure airport's name
+    /// is asserted in `LinearTimelineTests`, not counted here. This walked every
+    /// frame a second time and the run was killed for it.
+    private static func reportTheEndCard(
+        _ line: LinearTimeline, recap: RecapTrip, config: TrackingConfig.Export
+    ) {
+        let trimmed = RecapTypeTwoFilm.trimmedToTheDestination(recap, config: config)
+        let odometerM = line.path.traveledLocalDistanceM(atTime: line.durationS - config.endCardS)
+        let figures = recap.endCardFigures.map { "\($0.value) \($0.label)" }.joined(separator: " · ")
+        print("""
+          KAMOME_END_CARD \(recap.filmType)
+            stop count   \(recap.stops.count) whole trip · \(trimmed.stops.count) the film's own journey
+            local km     \(String(format: "%.0f", odometerM / 1000)) km, the odometer's last reading
+            figures      \(figures.isEmpty ? "EMPTY" : figures)
+        """)
     }
 
     /// Names a point by the stop it sits closest to. Equirectangular on purpose:

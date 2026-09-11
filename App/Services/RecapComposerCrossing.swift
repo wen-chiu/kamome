@@ -1,4 +1,5 @@
 import Foundation
+import KamomeConfig
 import KamomeExportEngine
 import KamomePersistence
 import KamomeTrackingEngine
@@ -94,5 +95,104 @@ extension RecapComposer {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "d MMM yyyy"
         return formatter.string(from: Date(timeIntervalSince1970: timestamp)).uppercased()
+    }
+
+    /// **The closing card's three figures: how far, how long, how many places**
+    /// (Chiu 2026-09-05, in that order, from his layout).
+    ///
+    /// It was one sentence — `N stops · M days · K km` — and before that two lines
+    /// with driving hours. The card now sets a row of three columns, so what
+    /// crosses the narrow waist is **(value, label) pairs**: the renderer draws
+    /// them and never splits a string it did not write.
+    ///
+    /// Both halves are finished here because this is the only layer with a locale.
+    /// The label is uppercased **by the catalog**, never by `.uppercased()`, which
+    /// follows the *device's* locale and would turn a Turkish `i` into `İ` in a
+    /// frame nobody reviewed.
+    ///
+    /// ⚠️ **The inflection is a two-key `one` / everything-else split, and that is
+    /// a real limitation.** A String Catalog plural variation is the right tool
+    /// and the compiler refuses it here — *"Plural variation requires referencing
+    /// the number in the string"* — because the number is drawn as its own figure
+    /// and never appears in the label. Xcode's own remedy is separate top-level
+    /// strings, which is what these are. It is correct for English and for
+    /// zh-Hant (one category, both keys the same word); **a language with a `few`
+    /// or `many` category cannot be served by it**, and the answer then is to put
+    /// the count back in the label rather than to add a third key here.
+    ///
+    /// 🔴 **Every input is a fact about the film, and none of them needs
+    /// `TripStats`.** That matters more than it looks: an **imported** trip has no
+    /// `TripStats` at all — `ImportService` writes no `stats_json`, only
+    /// `TrackingSession` and `DemoSeeder` do — so the old `guard let stats`
+    /// returned `[]` and the closing card of every imported film was **empty**
+    /// (measured 2026-09-05 on all three review fixtures). Sourcing the figures
+    /// from the journey the film drew is what puts a card back on screen.
+    /// The same gap still empties the title card's subtitle: `HANDOFF.md`.
+    ///
+    /// - `distanceM` — `RecapTrip.localRouteDistanceM`, the odometer's own axis,
+    ///   grouped by `RecapOverlayRenderer.grouped` so the card and the HUD set one
+    ///   number one way.
+    /// - days — `trip.startedAt`…`endedAt`, counted exactly as the HUD's `Day N`
+    ///   counts, so the film cannot say "3 DAYS" over a frame reading `Day 4`.
+    /// - `stopCount` — the stops of the film's own journey (`filmJourney`).
+    static func endCardFigures(
+        trip: TripRecord, distanceM: Double, stopCount: Int
+    ) -> [RecapEndCardFigure] {
+        let days = dayCount(trip: trip)
+        return [
+            RecapEndCardFigure(
+                value: RecapOverlayRenderer.grouped(Int((distanceM / 1000).rounded())),
+                label: String(localized: "recap_figure_label_km")
+            ),
+            RecapEndCardFigure(
+                value: RecapOverlayRenderer.grouped(days),
+                label: days == 1
+                    ? String(localized: "recap_figure_label_day")
+                    : String(localized: "recap_figure_label_days")
+            ),
+            RecapEndCardFigure(
+                value: RecapOverlayRenderer.grouped(stopCount),
+                label: stopCount == 1
+                    ? String(localized: "recap_figure_label_stop")
+                    : String(localized: "recap_figure_label_stops")
+            )
+        ]
+    }
+
+    /// How many days the trip covered, by the **same arithmetic as the HUD's day
+    /// chip** (`dayLabel`): elapsed 24-hour blocks since the start, plus one. Two
+    /// day counters on one film that disagree by one is worse than either answer.
+    static func dayCount(trip: TripRecord) -> Int {
+        let ended = trip.endedAt ?? trip.startedAt
+        return max(Int((ended - trip.startedAt) / 86_400) + 1, 1)
+    }
+
+    /// **The journey the film tells** — the whole trip, or, when the film opens on
+    /// a flight, only its destination half (`RecapTypeTwoFilm`).
+    ///
+    /// 🔴 **This asks `RecapTypeTwoFilm` rather than deciding.** The trim runs
+    /// inside `LinearTimeline`, *after* this function has already worded the
+    /// closing card, so the card had been counting a journey the film does not
+    /// show: on `auckland-crossing` it claimed 6 stops where the film visits 5,
+    /// the extra being Taipei's, which the trim drops (measured 2026-09-05).
+    /// Re-implementing "which stops survive" here would fix the number and keep
+    /// the defect — two rules that have to be corrected twice.
+    ///
+    /// The film type is classified from the **untrimmed** legs, as
+    /// `LinearTimeline` classifies it, because the trim leaves one local journey
+    /// and a trimmed trip reads honestly as a local one.
+    static func filmJourney(
+        legs: [RecapTrip.Leg], stops: [RecapTrip.Stop], config: TrackingConfig.Export?,
+        everyLegRoutabilityEstablished: Bool
+    ) -> (legs: [RecapTrip.Leg], stops: [RecapTrip.Stop]) {
+        let filmType = RecapFilmType.classify(
+            legs: legs, everyLegEstablished: everyLegRoutabilityEstablished
+        )
+        guard filmType.hasDestinationAbroad, let config,
+              let journey = RecapTypeTwoFilm.destinationJourney(
+                  legs: legs, stops: stops, config: config
+              )
+        else { return (legs, stops) }
+        return journey
     }
 }

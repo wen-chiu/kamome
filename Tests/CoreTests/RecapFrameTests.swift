@@ -266,7 +266,7 @@ final class RecapFrameTests: RecapRenderTestCase {
         }
         let trip = RecapTrip(
             route: coords, stops: stops, title: "Perth", subtitle: "Day 1",
-            statsLines: [], callToAction: "", shareURL: "kamome://route/perth"
+            endCardFigures: [], shareURL: "kamome://route/perth"
         )
         let timeline = try makeTimeline(trip, config: config)
         let compositor = makeCompositor(timeline)
