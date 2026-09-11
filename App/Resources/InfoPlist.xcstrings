@@ -25,23 +25,6 @@
         }
       }
     },
-    "NSLocalNetworkUsageDescription": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamome reconstructs your route using a routing service you run on your own computer. It is only contacted while you import or export a trip, and only on your local network."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kamome 會透過你自己電腦上執行的路線服務重建路徑。僅在匯入或匯出旅程時連線，且只在你的區域網路內。"
-          }
-        }
-      }
-    },
     "NSLocationAlwaysAndWhenInUseUsageDescription": {
       "extractionState": "manual",
       "localizations": {

@@ -4527,3 +4527,67 @@ it is a **"before"** for the substrate switch.
 Anything about the substrate (that is ADR 2026-09-09's own round); performance of
 any kind; music; whether the export should ever survive process death. No new
 tunable was needed and none was added.
+
+---
+
+## 2026-09-12 (b) — The local-network permission belongs to Debug builds, and the shipped plist carries neither key
+
+**Status:** engineering decision. Brief: Chiu's release-blocker round, 2026-09-12,
+item 3 of 4, which offered "gate both behind Debug, or remove them". **Scope:**
+`project.yml`, the generated `App/Info.plist`, `InfoPlist.xcstrings`, one test,
+one step of `check-archive.sh`.
+
+### The problem
+
+`NSAppTransportSecurity → NSAllowsLocalNetworking` and
+`NSLocalNetworkUsageDescription` — *"a routing service you run on your own
+computer"* — were in every configuration's plist. `AppConfig.loadOrDie` refuses
+any non-https endpoint outside Debug, so in what ships the purpose string tells a
+reviewer about a service the app cannot contact, and the ATS exemption buys
+nothing. **VERIFIED 2026-09-12:** both keys are in an app built from `main`
+(`2f36360`), and the new `check-archive.sh` step fails on that app.
+
+### Gated behind Debug rather than removed, and why
+
+**Debug permits a LAN endpoint on purpose.** The release guard reads
+`TrackingConfig.Matching.isDistributableEndpoint`, whose own contract is that a
+debug run against `http://192.168.x.x` stays legal. Deleting the keys would
+quietly take away a capability that guard was written to keep.
+
+**No live workflow uses it today, and that is stated rather than hidden**
+(VERIFIED by search, 2026-09-12): `Docs/dogfood-infrastructure.md` is archived,
+`Docs/device-test-P3.md` names no LAN endpoint, and `check-routing-endpoint.sh`
+forbids committing one. So this preserves a designed Debug capability; it does
+not serve a current workflow. If Chiu judges the capability dead, deleting the
+Debug phase and the test's Debug half removes it cleanly.
+
+**How.** Both keys leave `info.properties`. A post-build phase adds them **only
+when `CONFIGURATION` is Debug**, ordered after the plist by `inputFiles`, with
+`set -e` so a missing plist fails the Debug build instead of skipping. **Added in
+Debug, never removed in Release** — so if the phase ever stops running, a Release
+build still ships neither key and it is the Debug LAN build that breaks, which
+the test catches. The two localized purpose strings are deleted too: an
+`InfoPlist.strings` entry would override the Debug-only sentence, and would ship
+the untrue one inside the Release bundle's resources.
+
+### Evidence, 2026-09-12
+
+| | app built from `main` | this change, Debug | this change, Release |
+|---|---|---|---|
+| `NSAppTransportSecurity.NSAllowsLocalNetworking` | `true` | `true` | absent |
+| `NSLocalNetworkUsageDescription` | the LAN sentence | the Debug-only sentence | absent |
+| `NSLocalNetwork*` in `en` / `zh-Hant` `InfoPlist.strings` | — | 0 / 0 | 0 / 0 |
+| `check-archive.sh` step 5 | FAIL on both keys | — | pass, as do steps 1–4 |
+
+`LocalNetworkPermissionTests` was **watched red** on its Debug half with the
+phase neutered (both assertions failed; `project.yml` restored byte-identical
+afterwards). Its source half reads `App/Info.plist`, which on `main` carries both
+keys.
+
+### Unknown — carried, not re-measured
+
+That ATS refuses cleartext to a private address without the exemption, and that
+on a device the Local Network prompt fails quietly without a purpose string, are
+the 2026-08 comment's claims; neither was re-measured here. Cheapest settling for
+both: one Debug **device** build pointed at a LAN endpoint with the phase removed.
+It needs hardware, so it belongs with the D1–D5 session if anyone wants it settled.
