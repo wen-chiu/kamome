@@ -22,29 +22,10 @@ import XCTest
 /// Offline throughout (`baseURL: ""` + `UnroutableSeaProvider`), the same way the
 /// continuity gate runs, so this gates every CI run.
 final class RecapJourneyCardTests: XCTestCase {
-    private static let crossing = UnroutableSeaProvider.longHaulFixture
-    /// Pinned, because `Locale.current` is a property of the machine and the
-    /// card's second line is localized. Two desks must assert the same card.
-    private static let locale = Locale(identifier: "en_US")
+    private static let crossing = TypeTwoFilm.crossing
 
-    /// One fixture, built the way the shipped app builds it: offline, `nil`
-    /// establishing extent, content-derived pacing.
-    private struct Film {
-        let line: LinearTimeline
-        let trip: RecapTrip
-        let config: TrackingConfig.Export
-    }
-
-    private func film(_ fixture: String) async throws -> Film {
-        let (trip, config) = try await RecapDemoFilmTests.importedRecap(
-            named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
-        )
-        return Film(
-            line: try XCTUnwrap(LinearTimeline(
-                trip: trip, config: config, establishing: nil, locale: Self.locale
-            )),
-            trip: trip, config: config
-        )
+    private func film(_ fixture: String) async throws -> TypeTwoFilm {
+        try await TypeTwoFilm.make(fixture)
     }
 
     /// One frame that carried a pass. A named shape rather than a tuple, so the
@@ -286,14 +267,23 @@ final class RecapJourneyCardTests: XCTestCase {
         XCTAssertNotNil(line.journeyCardContent(atTime: (beat.lowerBound + beat.upperBound) / 2))
     }
 
-    /// **Here, and there** — two marks over the opening's still frame, and the
-    /// origin never drawn on top of the departure stop's own pin.
+    /// **Here, and there** — two marks over the opening's still frame, the origin
+    /// never drawn on top of the departure stop's own pin, and the handover
+    /// between them a cross-fade rather than a cut.
+    ///
+    /// 🔴 **Restated 2026-09-05 (ADR 2026-09-05 (c)), and one half of it reversed.**
+    /// The rule *"only one mark may hold the departure point"* is unchanged and
+    /// still asserted — it is now carried by `markOpacity` reaching 0 rather than
+    /// by the origin being absent, so the assertion moved rather than went. The
+    /// half that Chiu reversed is *"the name follows the mark"*: the country wins
+    /// at a place with two names, so `TAIWAN` is now asserted **present**
+    /// throughout, where this test used to assert it absent.
     func testTheFlightsTwoEndsAreMarkedOverTheOpeningAndNowhereElse() async throws {
         let made = try await film(Self.crossing)
         let (line, config) = (made.line, made.config)
         let beat = try XCTUnwrap(line.path.crossingBeatWindowsS.first)
 
-        func ends(atTime timeS: Double) -> (origin: RecapFlightEnd?, destination: RecapFlightEnd)? {
+        func ends(atTime timeS: Double) -> (origin: RecapFlightEnd, destination: RecapFlightEnd)? {
             for overlay in line.overlayContents(atTime: timeS) {
                 if case let .flightEnds(origin, destination, opacity) = overlay, opacity > 0.001 {
                     return (origin, destination)
@@ -315,25 +305,50 @@ final class RecapJourneyCardTests: XCTestCase {
         XCTAssertNil(ends(atTime: line.durationS - 0.1), "nor reappear for the end card")
 
         // 🔴 Exactly one mark on the departure point, ever. The stop's own pin and
-        // this mark are the same place, so the origin yields while the stop holds.
+        // this mark are the same place, so the origin's mark yields while the stop
+        // presents itself.
         let duringDeparture = try XCTUnwrap(ends(atTime: config.titleCardS + 0.5))
-        XCTAssertNil(
-            duringDeparture.origin,
+        XCTAssertEqual(
+            duringDeparture.origin.markOpacity, 0, accuracy: 0.01,
             "the departure stop's pin and the origin mark are the same point — only one may be drawn"
         )
-        XCTAssertNotNil(duringDeparture.destination, "the destination still says 'there' throughout")
+        XCTAssertEqual(duringDeparture.destination.markOpacity, 1, accuracy: 0.01)
+
+        // 🔴 **The country name stays up while the mark hands over** (Chiu
+        // 2026-09-05). This is the half that reversed: the name used to go with
+        // the mark, which made TAIWAN blink out for the departure stop's scene.
+        XCTAssertEqual(
+            duringDeparture.origin.name, try XCTUnwrap(cards(in: line, fps: config.fps).last?.card).from.english,
+            "the origin is still named while its mark is yielded"
+        )
+
+        // 🔴 **A cross-fade, not a cut.** A boundary test steps the mark by a whole
+        // 1.0 in one frame; every ramp the film uses is ≥ 0.4 s, which at 30 fps
+        // cannot move it more than ~0.13 per frame.
+        let step = 1.0 / Double(config.fps)
+        var previous: Double?
+        var sawAPartialFade = false
+        for frame in 0...Int(beat.upperBound / step) {
+            guard let now = ends(atTime: Double(frame) * step)?.origin.markOpacity else { continue }
+            if now > 0.05, now < 0.95 { sawAPartialFade = true }
+            if let previous {
+                XCTAssertLessThanOrEqual(
+                    abs(now - previous), 0.2,
+                    "the origin mark jumped \(previous) → \(now) at frame \(frame): that is a cut"
+                )
+            }
+            previous = now
+        }
+        XCTAssertTrue(sawAPartialFade, "a cross-fade has frames that are neither drawn nor gone")
 
         // 🔴 **The name is the card's own**, not a second lookup — the two
         // surfaces resolving `CountryExtent` independently is how they would come
         // to print different names for one place.
         let card = try XCTUnwrap(cards(in: line, fps: config.fps).last?.card)
         let crossing = try XCTUnwrap(ends(atTime: (beat.lowerBound + beat.upperBound) / 2))
-        XCTAssertEqual(try XCTUnwrap(crossing.origin).name, card.from.english)
+        XCTAssertEqual(crossing.origin.name, card.from.english)
         XCTAssertEqual(crossing.destination.name, card.to.english)
         XCTAssertEqual(crossing.destination.name, "NEW ZEALAND")
-        // The name follows the mark, so it is absent for exactly the window the
-        // origin mark is. Reported to the designer rather than decided here.
-        XCTAssertNil(duringDeparture.origin, "no origin mark, and therefore no origin name")
     }
 
     // MARK: - 1. The departure airport, and the type-1 control

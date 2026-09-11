@@ -224,7 +224,20 @@ extension RecapOverlayRenderer {
         context.restoreGState()
     }
 
-    /// A printed aircraft glyph — a swept dart, drawn nose-first along +x.
+    /// **The aircraft glyph, nose-first along +x** — one shape, drawn twice: at
+    /// `planeLengthPx` on the arc, and at ~26 px as the `DISTANCE` field's mark.
+    ///
+    /// 🔴 **Redrawn 2026-09-05 (Chiu): the old one did not read as a plane.** It
+    /// was a swept dart with a notch bitten out of its base, and that is what it
+    /// looked like. What makes a silhouette an aircraft is the **three-part
+    /// plan** — slim fuselage, wings swept from a root forward of centre, and a
+    /// **separate tailplane**. Leave the tailplane out and it is a dart at any
+    /// size.
+    ///
+    /// ⚠️ Both call sites matter and they differ by ~1.5×, so the outline is in
+    /// units of half the length and every proportion scales with it: nothing here
+    /// may be given a pixel size of its own, or the glyph that reads at 40 px
+    /// stops reading at 26.
     ///
     /// ⚠️ **Not the map's crossing subject**, which is the `plane` sprite set
     /// since ADR 2026-09-04. This is ticket furniture on a fixed-size card: it
@@ -239,18 +252,46 @@ extension RecapOverlayRenderer {
         context.translateBy(x: center.x, y: center.y)
         context.rotate(by: headingRadians)
         let half = lengthPx / 2
-        let wing = lengthPx * 0.46
         context.beginPath()
-        context.move(to: CGPoint(x: half, y: 0))                       // nose
-        context.addLine(to: CGPoint(x: -half * 0.15, y: wing / 2))     // port wing
-        context.addLine(to: CGPoint(x: -half * 0.42, y: wing / 2))
-        context.addLine(to: CGPoint(x: -half * 0.2, y: 0))
-        context.addLine(to: CGPoint(x: -half * 0.42, y: -wing / 2))    // starboard wing
-        context.addLine(to: CGPoint(x: -half * 0.15, y: -wing / 2))
+        // Port side, nose to tail; then the same points mirrored, tail to nose.
+        let outline = Self.planeOutline
+        context.move(to: CGPoint(x: outline[0].x * half, y: outline[0].y * half))
+        for point in outline.dropFirst() {
+            context.addLine(to: CGPoint(x: point.x * half, y: point.y * half))
+        }
+        for point in outline.reversed().dropFirst() {
+            context.addLine(to: CGPoint(x: point.x * half, y: -point.y * half))
+        }
         context.closePath()
         context.setFillColor(color ?? style.journeyCard.accentColor)
         context.fillPath()
     }
+
+    /// Half the aircraft, in units of half its length: the port side from the
+    /// nose tip to the tail, mirrored by `drawPlane`. `x` = +1 nose, −1 tail;
+    /// `y` negative is the port wing.
+    ///
+    /// The span comes out at 0.88 of the length, roughly an airliner's, and the
+    /// fuselage at 0.12 — thin enough to read as a body beside the wings and
+    /// still ≥ 3 px wide at the icon's 26.
+    ///
+    /// The wing root sits at x = 0.34 and the tailplane at −0.82, so a clear
+    /// stretch of bare fuselage runs between them. That gap is what was tried and
+    /// kept: with the wings swept as hard as the old dart's, the tail closes up
+    /// against them and the silhouette goes back to reading as an arrowhead.
+    static let planeOutline: [CGPoint] = [
+        CGPoint(x: 1.00, y: 0.00),    // nose
+        CGPoint(x: 0.66, y: -0.10),   // cockpit shoulder
+        CGPoint(x: 0.34, y: -0.14),   // wing root, leading edge
+        CGPoint(x: -0.16, y: -0.88),  // wingtip, leading edge
+        CGPoint(x: -0.34, y: -0.88),  // wingtip, trailing edge
+        CGPoint(x: -0.14, y: -0.20),  // wing root, trailing edge
+        CGPoint(x: -0.64, y: -0.12),  // rear fuselage
+        CGPoint(x: -0.82, y: -0.40),  // tailplane, leading edge
+        CGPoint(x: -0.95, y: -0.40),  // tailplane, trailing edge
+        CGPoint(x: -1.00, y: -0.09),  // tail cone
+        CGPoint(x: -1.00, y: 0.00)
+    ]
 
     /// The bottom row's two marks. Internal, not private: the row is laid out in
     /// `RecapOverlayJourneyCardDrawing` and drawn here, and Swift scopes
@@ -288,71 +329,6 @@ extension RecapOverlayRenderer {
                     y: body.minY + body.height * 0.24, width: dot, height: dot
                 ))
             }
-        }
-    }
-}
-
-/// **Here, and there** — the two marks on the ends of the flight (Chiu
-/// 2026-09-04), drawn over the opening's still frame and nowhere else.
-///
-/// Beside the boarding pass because they answer the same question in two halves:
-/// the pass says *where* in words, these say *here and there* on the picture.
-/// Together they are the closeout's handover item 1 — *"the wide flight frame
-/// loses the viewer"* — answered without drawing a single place name.
-///
-/// 🔴 **The icebox stays frozen.** What is drawn is a wordless Kamome mark, not a
-/// label; `Docs/icebox.md`'s map place names are untouched and
-/// `crossing_flight_max_longitude_deg` stays 70.
-extension RecapOverlayRenderer {
-    /// **`Landmarks/flight-end.png`, the landmark's own artwork** (Chiu
-    /// 2026-09-04) — its own resource so it can be replaced without touching a
-    /// vehicle sprite, and so it can never be offered as one. See
-    /// `LandmarkArtwork` and `Resources/Landmarks/README.md`.
-    ///
-    /// 🔴 **When it does not load, this falls back to the vector
-    /// `VehicleMarker.seagull` and `LandmarkArtwork` logs why.** It never draws
-    /// nothing: a mark that silently disappears takes *here and there* off the
-    /// frame and leaves an 8,891 km texture, which is the defect the marks exist
-    /// to fix. The vector is the same bird as the end card's wordmark and is
-    /// **sized and coloured at this call site, never reshaped** (`HANDOFF.md`
-    /// 2026-08-29 finding 5b).
-    func drawFlightEnds(
-        origin: RecapFlightEnd?, destination: RecapFlightEnd, opacity: Double,
-        into surface: RenderSurface
-    ) {
-        guard opacity > 0.001 else { return }
-        let context = surface.context
-        context.saveGState()
-        defer { context.restoreGState() }
-        context.setAlpha(CGFloat(opacity))
-        let side = style.flightEnd.markLengthPx * surface.scale
-        for end in [origin, destination].compactMap({ $0 }) {
-            let at = surface.cgPoint(lat: end.coordinate.lat, lon: end.coordinate.lon)
-            if let artwork = LandmarkArtwork.flightEnd {
-                context.draw(artwork, in: CGRect(
-                    x: at.x - side / 2, y: at.y - side / 2, width: side, height: side
-                ))
-            } else {
-                VehicleMarker.seagull.draw(
-                    in: context, at: at, lengthPx: side, rotationDegrees: 0,
-                    colors: VehicleMarker.Palette(
-                        fill: style.labelTextColor,
-                        accent: style.labelTextColor,
-                        outline: style.labelShadowColor
-                    )
-                )
-            }
-            // **The country, and nothing else** — no stop, no city, no other kind
-            // of place name (ADR 2026-09-04 §3). Absent when `CountryExtent` has
-            // no row: the mark is still drawn, the name is simply not claimed.
-            guard let name = end.name else { continue }
-            drawShadowedText(
-                name,
-                anchor: CGPoint(x: at.x, y: at.y - side * 0.5 - style.flightEnd.nameFontPx * surface.scale),
-                fontPx: style.flightEnd.nameFontPx,
-                tracking: style.flightEnd.nameFontPx * style.labelDetailTrackingEm * surface.scale,
-                color: style.labelTextColor, in: surface
-            )
         }
     }
 }

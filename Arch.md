@@ -95,7 +95,14 @@ Stop. State what changed, why the original plan is insufficient, what you
 propose instead, and what decision is needed. **A better idea is not permission
 to silently reroute.**
 
-## 7. Ending a session
+## 7. Staging — confirm the branch, name the paths, never `-A`
+
+**In force 2026-09-09 (Chiu).** Before every commit: confirm the branch, `git add`
+explicit paths — never `-A`, never `.` — and never squash onto an `origin/main`
+that has moved since you built the tree; `git fetch` and **merge**.
+→ `Docs/rule-rationale.md`.
+
+## 8. Ending a session
 
 Say **"Ready for review,"** then: what changed, which boundaries were touched,
 verification status per item (§3 labels), commands run and where output lives,

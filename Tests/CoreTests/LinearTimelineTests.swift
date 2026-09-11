@@ -73,7 +73,11 @@ class LinearTimelineTestCase: XCTestCase {
         }
         return RecapTrip(
             route: route, stops: stops, title: "Sample", subtitle: "3 stops",
-            statsLines: ["291 km · 3 stops"], callToAction: "Get this route", shareURL: "kamome://route/sample"
+            endCardFigures: [
+                RecapEndCardFigure(value: "291", label: "KM"),
+                RecapEndCardFigure(value: "3", label: "DAYS"),
+                RecapEndCardFigure(value: "3", label: "STOPS")
+            ], shareURL: "kamome://route/sample"
         )
     }
 
@@ -253,8 +257,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
                 coordinate: trip.stops[0].coordinate, name: "Bare", dayLabel: "Day 1",
                 detail: nil, photos: [], dwellS: config.stopHoldS
             )],
-            title: trip.title, subtitle: trip.subtitle, statsLines: trip.statsLines,
-            callToAction: trip.callToAction, shareURL: trip.shareURL
+            title: trip.title, subtitle: trip.subtitle, endCardFigures: trip.endCardFigures, shareURL: trip.shareURL
         )
         let timeline = try fixedTimeline(trip, config)
         for time in stride(from: 0.0, through: timeline.durationS, by: 0.25) {

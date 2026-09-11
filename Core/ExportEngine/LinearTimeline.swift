@@ -92,8 +92,7 @@ public struct LinearTimeline {
     let cardFadeS: Double
     private let title: String
     private let subtitle: String
-    private let statsLines: [String]
-    private let callToAction: String
+    private let endCardFigures: [RecapEndCardFigure]
     private let shareURL: String?
 
     /// Which of the three films this is (`RecapFilmType`), and whether its
@@ -214,8 +213,7 @@ public struct LinearTimeline {
         endCardS = config.endCardS
         title = trip.title
         subtitle = trip.subtitle
-        statsLines = trip.statsLines
-        callToAction = trip.callToAction
+        endCardFigures = trip.endCardFigures
         shareURL = trip.shareURL
         filmType = untrimmedTrip.filmType
         // Both halves of the camera's own condition, not just the frame. The
@@ -302,7 +300,7 @@ public struct LinearTimeline {
             contents.append(.titleChrome(title: title, subtitle: subtitle))
         }
         if time >= durationS - endCardS {
-            contents.append(.endChrome(stats: statsLines, callToAction: callToAction, shareURL: shareURL))
+            contents.append(.endChrome(title: title, figures: endCardFigures, shareURL: shareURL))
         }
         // A stop the allocator gave no photographs to still happened, and the film
         // should say where it was (Chiu 2026-08-05): the pin lands with its name
@@ -310,7 +308,8 @@ public struct LinearTimeline {
         // no park beat, so the car drives through rather than stopping.
         if activeScene(atTime: time) == nil, let quiet = quietStop(atTime: time) {
             contents.append(.stopLabel(
-                name: quiet.stop.name, coordinate: quiet.stop.coordinate, detail: quiet.stop.detail,
+                name: displayName(of: quiet.hold.stopIndex),
+                coordinate: quiet.stop.coordinate, detail: quiet.stop.detail,
                 opacity: quietLabelOpacity(atTime: time, hold: quiet.hold)
             ))
         }
@@ -326,7 +325,8 @@ public struct LinearTimeline {
             let labelOpacity = leadLabelOpacity(atTime: time, hold: active.hold, deck: window)
             if labelOpacity > 0.001 {
                 contents.append(.stopLabel(
-                    name: stop.name, coordinate: stop.coordinate, detail: stop.detail, opacity: labelOpacity
+                    name: displayName(of: active.hold.stopIndex), coordinate: stop.coordinate,
+                    detail: stop.detail, opacity: labelOpacity
                 ))
             }
             if time >= window.start {
@@ -337,7 +337,7 @@ public struct LinearTimeline {
                     focusIndex: focusIndex(atTime: time, deck: window, count: shown),
                     reveal: deckReveal(atTime: time, deck: window),
                     opacity: deckOpacity(atTime: time, deck: window),
-                    name: stop.name,
+                    name: displayName(of: active.hold.stopIndex),
                     detail: stop.detail,
                     coordinate: stop.coordinate
                 )))
@@ -348,7 +348,7 @@ public struct LinearTimeline {
         if time >= titleCardS, time < durationS - endCardS {
             contents.append(.hud(
                 dayLabel: dayLabel(atTime: time),
-                place: holdingStop(atTime: time)?.name,
+                place: holdingStopIndex(atTime: time).flatMap(displayName(of:)),
                 // **The local journey, never the flight** (Chiu 2026-09-02). The
                 // trail reveal still uses the whole route — the dashed leg has to
                 // be drawn while the sprite crosses it — so the two readers of

@@ -39,7 +39,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
     private struct Chrome {
         let title: String
         let subtitle: String
-        let statsLines: [String]
+        let endCardFigures: [RecapEndCardFigure]
         let shareURL: String
     }
 
@@ -58,8 +58,7 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         }
         return RecapTrip(
             route: route.map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }, stops: tripStops,
-            title: chrome.title, subtitle: chrome.subtitle, statsLines: chrome.statsLines,
-            callToAction: "Get this route", shareURL: chrome.shareURL
+            title: chrome.title, subtitle: chrome.subtitle, endCardFigures: chrome.endCardFigures, shareURL: chrome.shareURL
         )
     }
 
@@ -88,7 +87,11 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             route: route, stops: stops, names: stops.indices.map { "Stop \($0 + 1)" },
             chrome: Chrome(
                 title: "Benchmark Trip", subtitle: "8 days · 1,200 km",
-                statsLines: ["1,200 km · 24 stops"], shareURL: "kamome://route/bench"
+                endCardFigures: [
+                    RecapEndCardFigure(value: "1,200", label: "KM"),
+                    RecapEndCardFigure(value: "6", label: "DAYS"),
+                    RecapEndCardFigure(value: "24", label: "STOPS")
+                ], shareURL: "kamome://route/bench"
             ),
             config: config
         )
@@ -156,7 +159,11 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             route: route, stops: stops, names: stops.indices.map { "Stop \($0 + 1)" },
             chrome: Chrome(
                 title: "Benchmark Trip", subtitle: "8 days · 1,200 km",
-                statsLines: ["1,200 km · 24 stops"], shareURL: "kamome://route/bench"
+                endCardFigures: [
+                    RecapEndCardFigure(value: "1,200", label: "KM"),
+                    RecapEndCardFigure(value: "6", label: "DAYS"),
+                    RecapEndCardFigure(value: "24", label: "STOPS")
+                ], shareURL: "kamome://route/bench"
             ),
             config: config
         )
@@ -191,7 +198,11 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             route: route, stops: stops, names: names,
             chrome: Chrome(
                 title: "Perth → Margaret River", subtitle: "Day 1 · 291 km",
-                statsLines: ["291 km · 4 stops", "5.8 h on the road"], shareURL: "kamome://route/demo"
+                endCardFigures: [
+                    RecapEndCardFigure(value: "291", label: "KM"),
+                    RecapEndCardFigure(value: "5", label: "DAYS"),
+                    RecapEndCardFigure(value: "4", label: "STOPS")
+                ], shareURL: "kamome://route/demo"
             ),
             config: config
         )

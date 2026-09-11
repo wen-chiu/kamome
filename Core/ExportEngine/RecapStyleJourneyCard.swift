@@ -27,11 +27,11 @@ import Foundation
 /// **Do not restore it from the picture.** Same for the flight number: the
 /// mockup reads `KM-523`, the decided constant is `THX-9527`.
 ///
-/// ⚠️ **The card's orange is the mockup's `#FF6A3D`, not the film's `#FF8A5B`.**
-/// `RecapStyle` warns against "three near-misses" of one accent, and this is
-/// knowingly a second one — Chiu supplied the hex as part of the target. It is
-/// one edit to collapse them if he would rather have one accent; flagged rather
-/// than decided here.
+/// ✅ **The card's orange IS the film's accent** (Chiu 2026-09-05, ADR
+/// 2026-09-05 (b)). It was the mockup's `#FF6A3D` against a film accent of `#FF8A5B`,
+/// flagged here as knowingly a second near-miss; Chiu judged the card's value the
+/// better one and the film moved to it, so `RecapStyle.routeAccent` is now
+/// `#FF6A3D` and this reads it rather than restating it.
 public struct RecapJourneyCardStyle {
     // MARK: - The ticket
 
@@ -59,9 +59,10 @@ public struct RecapJourneyCardStyle {
     public var mutedColor = CGColor(srgbRed: 0.557, green: 0.557, blue: 0.576, alpha: 1)
     /// `#D9D9DE` — hairlines, the arc, and the dotted ground behind it.
     public var ruleColor = CGColor(srgbRed: 0.851, green: 0.851, blue: 0.871, alpha: 1)
-    /// `#FF6A3D` — `FROM`/`TO`, the flight number's rule, the origin dot, and the
-    /// aircraft. See the ⚠️ above: this is not `RecapStyle.routeAccent`.
-    public var accentColor = CGColor(srgbRed: 1.0, green: 0.416, blue: 0.239, alpha: 1)
+    /// `FROM`/`TO`, the flight number's rule, the origin dot, and the aircraft.
+    /// **`RecapStyle.routeAccent`** — see the ✅ above; the pass and the film draw
+    /// one orange, and this must never be written out as components again.
+    public var accentColor = RecapStyle.routeAccent
 
     // MARK: - The stub (left, per the mockup)
 

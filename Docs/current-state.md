@@ -6,10 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-10 against decisions.md **2026-09-09** and `main` at
-**PR #48**. Config flip made (S6 closed, S7 new — rotation owed). Film
+Last synced: 2026-09-11 against decisions.md **2026-09-09** and `main` at
+**PR #52**. Config flip made (S6 closed, S7 new — rotation owed). Film
 persists (ADR #68, `film` table v5, Photos save is explicit tap per §0).
-Export substrate evaluation in flight (2026-09-09).
+Export substrate evaluation in flight (2026-09-09). Staging rule in force
+(PR #52). Trail accent is `#FF6A3D` (ADR 2026-09-05 (c)/(d)).
 
 ⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
 corrected 2026-09-03). The line is written inside a PR that is not yet merged, so

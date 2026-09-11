@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-10.** `main` carries PRs #16–#47. Everything closed has been
+**Updated 2026-09-11.** `main` carries PRs #16–#52. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -51,11 +51,14 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
   → `Docs/handoff-pacing.md`.
-- **§0 — two real-trip films in the repo** (`Docs/demos/phase3/`,
-  `Docs/demos/phase3_5/`). Either a recorded exception or they move out.
+- **§0 — two real-trip films in the repo** (`Docs/demos/phase3{,_5}/`).
+  Either a recorded exception or they move out.
   → `Docs/handoff-audit-2026-08-30.md` finding 7.
 - **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
   → `Docs/release-readiness.md` S2/S3.
+- **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
+  ships `"Kamome"`. What the product is called, and in which scripts, is yours.
+  → `Docs/decisions.md` 2026-09-05 (d) §4.
 
 ---
 
@@ -68,14 +71,14 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
   never reads the shipped config, and making it would spend real quota.
   → `Docs/decisions.md` 2026-09-08.
 
-- **The subject lookup still misses; it no longer crashes.** `VehicleCatalog.resolve`
-  returns nil and the film silently draws the seagull instead of the car. Rate and
-  trigger **UNKNOWN**; two log lines ship to name the next occurrence.
-  → `Docs/handoff-subject-lookup.md`.
-- **Content-derived pacing may be implemented and permanently dead.** A shipping-path
-  comment in `RecapModel.swift` is wrong on its first clause; if its second clause
-  holds, the feature sits behind a tile condition that can never be satisfied.
-  **UNKNOWN, worth an hour.** → `Docs/handoff-audit-2026-08-30.md` finding 3.
+- 🔴 **Three features built and never reached — one class, one sweep owed.**
+  Imported trips carry no `TripStats`, so the title card's subtitle, Home and Trip
+  Detail print **no kilometres** (found 2026-09-09,
+  → `Docs/handoff-audit-2026-08-30.md` finding 8); content-derived pacing may sit
+  behind a tile condition that can never hold (**UNKNOWN**, → finding 3); and
+  `VehicleCatalog.resolve` still returns nil and silently draws the seagull
+  instead of the car (rate **UNKNOWN**, → `Docs/handoff-subject-lookup.md`).
+  The question that catches the class: *"does the shipping path ever call this?"*
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
   decided in advance, and **a removal PR must not cite "provably contained"**.
@@ -90,9 +93,9 @@ only, no shipping switch. The Apple premise is **VERIFIED** — Attachment 6
 
 ## ⚠️ Traps — read before you touch these
 
-- **A worktree renders a different film.** `Config/Secrets.xcconfig` and
-  `Tests/Fixtures/trips/local/` are gitignored, so it routes on straight lines and
-  reads different geometry. Copy both, then compare `drive/reconstructed` counts.
+- **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
+  gitignored, so it reads different geometry. ⚠️ Routing needs a key the flip
+  **removed**. → `Docs/handoff-crop-scaling.md` §3.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.

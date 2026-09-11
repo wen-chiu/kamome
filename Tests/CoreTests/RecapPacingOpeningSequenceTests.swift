@@ -23,7 +23,7 @@ extension RecapPacingTests {
         )
         return RecapTrip(
             route: route, stops: [first, later], title: "Trip", subtitle: "",
-            statsLines: [], callToAction: ""
+            endCardFigures: []
         )
     }
 
