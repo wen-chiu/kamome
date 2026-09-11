@@ -24,6 +24,8 @@ can do either**.
 1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
    Limited Photo Library; the S5 UX pass. D2 feeds a mandatory submission item.
+   ⚠️ **Deferred behind the substrate evaluation, not dropped** (ADR 2026-09-10);
+   **step 2 did NOT settle D1** — it survives a *screen*, not a *locked device*.
    → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
 2. **The submission sequence, and it is Chiu's in both halves.** ① Run
    `./check.sh --release <.xcarchive>` — the **only** proof the built bundle

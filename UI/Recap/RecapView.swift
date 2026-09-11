@@ -49,7 +49,7 @@ struct RecapView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if case let .finished(_, fileURL, _) = model.phase {
+                if case let .finished(_, fileURL) = model.phase {
                     finishedContent(fileURL: fileURL)
                 } else {
                     exportForm
@@ -59,14 +59,21 @@ struct RecapView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("recap_done") {
-                        model.cancel()
-                        dismiss()
-                    }
+                    // **Leaving no longer cancels** (Chiu 2026-09-10). This
+                    // button used to call `model.cancel()` on the way out, which
+                    // is why a render of a minute or more pinned the user here.
+                    // The export belongs to `RecapExportCoordinator` now and
+                    // outlives this screen; cancelling is the Cancel button
+                    // below, and nothing else.
+                    Button(model.isRendering ? "recap_back" : "recap_done") { dismiss() }
                 }
             }
         }
-        .interactiveDismissDisabled(model.isRendering)
+        // ⚠️ `interactiveDismissDisabled(model.isRendering)` used to live here.
+        // It was the only thing preventing a half-written file and a leaked
+        // background assertion while the model owned the render, and it could
+        // only be removed **together with** the coordinator that made leaving
+        // safe — removing it on its own is the regression, not the fix.
     }
 
     // MARK: - Export form (idle / rendering / failed)
@@ -100,6 +107,7 @@ struct RecapView: View {
             }
 
             routingSection
+            busySection
 
             Section {
                 switch model.phase {
@@ -111,6 +119,16 @@ struct RecapView: View {
                         ProgressView(value: progress) {
                             Text("recap_rendering")
                         }
+                        // The promise, and its exact bounds (Chiu 2026-09-10):
+                        // leave this SCREEN, stay in the APP. `AVAssetWriter`
+                        // cannot resume across process death, so this copy may
+                        // never say the export continues in the background —
+                        // `ExportLifecycleGuard` is what makes the narrower
+                        // promise true, and `LocalizationTests` holds the copy
+                        // to it in both languages.
+                        Text("recap_rendering_leave_note")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                         Button("recap_cancel", role: .cancel) { model.cancel() }
                     }
 
@@ -125,6 +143,24 @@ struct RecapView: View {
                         .foregroundStyle(.secondary)
                     Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
                 }
+            }
+        }
+    }
+
+    /// **One export at a time, said out loud.** With a back button the user can
+    /// leave a running export, open another trip and tap Export there; two
+    /// `AVAssetWriter`s and two snapshotter streams on a phone is a crash rather
+    /// than a slowdown, so `RecapExportCoordinator` refuses. A refusal the screen
+    /// swallowed would look exactly like a dead button (`Arch.md` §6).
+    @ViewBuilder
+    private var busySection: some View {
+        if model.busyTripId != nil {
+            Section {
+                Label("recap_export_busy", systemImage: "hourglass")
+                    .foregroundStyle(.orange)
+                Text("recap_export_busy_detail")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -144,9 +180,11 @@ struct RecapView: View {
                     .padding()
             }
 
-            if case let .finished(_, _, renderSeconds) = model.phase {
+            if case let .finished(film, _) = model.phase, let renderSeconds = film.renderSeconds {
                 // Actual number, visible on device — this is the §4.5
-                // render-budget readout (< 90 s bar).
+                // render-budget readout (< 90 s bar). Read off the stored
+                // record rather than off the phase, so it is the same number
+                // whether the film finished with this screen open or not.
                 Text(String.localizedStringWithFormat(
                     String(localized: "recap_render_time"),
                     String(format: "%.1f", renderSeconds)
@@ -161,7 +199,7 @@ struct RecapView: View {
                 // Save to Photos — explicit user tap, never automatic (§0).
                 photosSaveButton(fileURL: fileURL)
 
-                if case let .finished(film, _, _) = model.phase {
+                if case let .finished(film, _) = model.phase {
                     ShareLink(item: fileURL) {
                         Label("recap_share", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
@@ -189,7 +227,7 @@ struct RecapView: View {
 
                 Button("recap_export_again") {
                     player = nil
-                    model.startExport(appearance: RecapAppearance(colorScheme))
+                    model.exportAgain(appearance: RecapAppearance(colorScheme))
                 }
                 .buttonStyle(.bordered)
             }

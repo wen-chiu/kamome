@@ -13,6 +13,11 @@ struct TripDetailView: View {
     @State private var editingStop: StopRecord?
     @State private var showingRecap = false
     @State private var playingFilm: FilmRecord?
+    /// The export outlives the sheet, so the trip screen has to be able to draw
+    /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
+    /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
+    /// answer to be wrong, and Observation tracks the reads in `body` either way.
+    private let exportCoordinator = RecapExportCoordinator.shared
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: TripDetailModel(
@@ -29,6 +34,7 @@ struct TripDetailView: View {
             if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             vehicleRow
+            exportProgressRow
             filmsSection
             timeline
         }
@@ -59,9 +65,21 @@ struct TripDetailView: View {
         .onChange(of: showingRecap) {
             if !showingRecap { model.reload() }
         }
+        // **The film that landed while nobody was looking.** An export now
+        // finishes with the sheet closed, so the trip screen has to pick up the
+        // new record itself — waiting for the sheet to be dismissed was the only
+        // refresh there was, and it no longer happens at the right moment.
+        .onChange(of: exportCoordinator.outcome(tripId: model.tripId)) {
+            model.reload()
+        }
         .sheet(item: $playingFilm) { film in
             FilmPlayerSheet(film: film, onDelete: {
                 model.deleteFilm(film)
+                // The export sheet remembers this trip's last finished film, and
+                // that memory now outlives the sheet — so deleting the film here
+                // has to clear it, or reopening the sheet plays a file that is
+                // gone (ADR 2026-09-10).
+                exportCoordinator.forget(film: film)
                 playingFilm = nil
             })
         }
@@ -274,6 +292,33 @@ struct TripDetailView: View {
         mode == "walk" || mode == "cycle"
             ? StrokeStyle(lineWidth: 3, dash: [4, 6])
             : StrokeStyle(lineWidth: 4)
+    }
+
+    /// The running export, on the trip screen rather than inside the sheet
+    /// (Chiu 2026-09-10). Progress has to be visible from outside, or "you can
+    /// leave this screen" means the film disappears the moment you do.
+    ///
+    /// Only this trip's export is drawn. One export runs app-wide, but a trip
+    /// showing another trip's progress bar would read as its own.
+    @ViewBuilder
+    private var exportProgressRow: some View {
+        if let running = exportCoordinator.running(tripId: model.tripId) {
+            HStack(spacing: 12) {
+                ProgressView(value: running.fraction)
+                    .frame(maxWidth: .infinity)
+                Text(running.fraction, format: .percent.precision(.fractionLength(0)))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Button("recap_cancel", role: .cancel) {
+                    exportCoordinator.cancel(tripId: model.tripId)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(.thinMaterial)
+        }
     }
 
     /// Stored films for this trip, tapping plays one. Shows nothing when the
