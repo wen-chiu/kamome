@@ -29,9 +29,9 @@ final class FirstRunNoticeTests: XCTestCase {
         super.tearDown()
     }
 
-    /// The endpoint is the *effective* one, so this is also what a build with no
-    /// API key gets — `AppConfig.applyingRoutingKey` empties `base_url` for it,
-    /// and a build that cannot route has nothing to disclose.
+    /// The endpoint is the *effective* one, so this is also what an endpoint that
+    /// needs an API key gets — `AppConfig.routingForAKeylessBuild` empties
+    /// `base_url` for it, and a build that cannot route has nothing to disclose.
     func testNothingIsSaidWhileNothingLeavesTheDevice() {
         XCTAssertFalse(
             FirstRunNotice.shouldPresent(matching: matching(baseURL: ""), defaults: defaults),

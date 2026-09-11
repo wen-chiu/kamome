@@ -30,16 +30,21 @@ if [ -z "$artifact" ] || [ ! -e "$artifact" ]; then
   exit 1
 fi
 
-# The key, for the exact scan. Secrets.xcconfig is gitignored and lives on the
-# machine that built the archive, which is the machine running this.
+# The key, for the exact scan — from the environment ONLY (ADR 2026-09-12). This
+# used to fall back to Config/Secrets.xcconfig; no build reads that file any
+# more, and a gate that still gives it a use is a reason for it to survive on the
+# very machine that builds the archive. Supply the key for the one command,
+# without writing it to a file:
+#
+#   KAMOME_ROUTING_API_KEY="$(grep '^GEOAPIFY_API_KEY=' ~/.kamome/routing.env | cut -d= -f2-)" \
+#     ./check.sh --release <path to .xcarchive>
+#
+# ./check.sh strips the variable from its xcodebuild stage, so the build it runs
+# never sees the key.
 key="${KAMOME_ROUTING_API_KEY:-}"
-if [ -z "$key" ] && [ -f Config/Secrets.xcconfig ]; then
-  key=$(sed -n 's/^[[:space:]]*KAMOME_ROUTING_API_KEY[[:space:]]*=[[:space:]]*//p' Config/Secrets.xcconfig \
-        | tr -d '[:space:]' | head -1)
-fi
 if [ -z "$key" ]; then
-  kamome_fail "no routing key available, so the exact scan cannot run"
-  kamome_info "Provide it via Config/Secrets.xcconfig or KAMOME_ROUTING_API_KEY."
+  kamome_fail "KAMOME_ROUTING_API_KEY is not set, so the exact scan cannot run"
+  kamome_info "Pass the real key in the environment for this one command — see this script's header."
   kamome_info "A shape scan alone is not this gate — it would pass a key of another shape."
   exit 1
 fi
@@ -69,7 +74,9 @@ else
   kamome_ok "the routing key does not appear anywhere in the artifact"
 fi
 
-# 2. The Info.plist field the app reads, structurally.
+# 2. The Info.plist field the app used to read, structurally. Since ADR 2026-09-12
+#    no build input defines it, so it must be ABSENT: present-but-empty means the
+#    mapping came back, one machine-local secrets file away from carrying a key.
 plists=$(find "$root" -name Info.plist -path '*.app/*' 2>/dev/null || true)
 if [ -z "$plists" ]; then
   kamome_fail "no Kamome.app/Info.plist found inside the artifact — is this an app archive?"
@@ -77,16 +84,16 @@ if [ -z "$plists" ]; then
 else
   bad=0
   while read -r plist; do
-    value=$(/usr/libexec/PlistBuddy -c "Print :KamomeRoutingAPIKey" "$plist" 2>/dev/null || true)
-    if [ -n "$value" ]; then
-      kamome_fail "KamomeRoutingAPIKey is set in ${plist#"$root"} (${#value} chars)"
+    if /usr/libexec/PlistBuddy -c "Print :KamomeRoutingAPIKey" "$plist" >/dev/null 2>&1; then
+      value=$(/usr/libexec/PlistBuddy -c "Print :KamomeRoutingAPIKey" "$plist" 2>/dev/null || true)
+      kamome_fail "KamomeRoutingAPIKey is defined in ${plist#"$root"} (${#value} chars)"
       bad=1
     fi
   done <<< "$plists"
   if [ "$bad" -eq 0 ]; then
-    kamome_ok "KamomeRoutingAPIKey is absent or empty in every bundled Info.plist"
+    kamome_ok "no bundled Info.plist defines KamomeRoutingAPIKey"
   else
-    kamome_info "The app reads this at App/KamomeApp.swift:69. It must reach the Worker instead."
+    kamome_info "No build input may map it (ADR 2026-09-12) — was this archive built from older source?"
     failures=$((failures + 1))
   fi
 fi

@@ -99,14 +99,15 @@ Geoapify, and is why the flag exists rather than the rule simply being deleted:
 a keyless build must not fire coordinate-bearing requests that can only be
 refused (§0 — exposure for nothing).
 
-🔴 **`Config/Secrets.xcconfig` is unnecessary as of the flip (2026-09-08), and
-deleting it from every machine that builds for distribution is what actually
-closes S6.** Leaving a key in it is harmless to the app — it just stops sending
-one — but the file is what puts the key into `Info.plist` and into the build log,
-so a distribution machine that still has it is a machine that can still ship one.
-The archive built on 2026-09-08 was produced on a checkout that had no such file:
-its build log holds no `KAMOME_ROUTING_API_KEY`, and the shipped `Info.plist`
-key field is empty.
+✅ **No build reads `Config/Secrets.xcconfig` since ADR 2026-09-12.** The flip
+(2026-09-08) made the key unnecessary, but the file still put it into
+`Info.plist`, into the build log, and into the query string of every request to
+this Worker, on any machine that had it — the Worker strips a client `apiKey`,
+but Cloudflare's edge saw it first. The `Info.plist` field and the xcconfig
+include are gone, so the file is inert wherever it survives: deleting it is its
+owner's tidy-up, no longer what keeps a key out of an archive. The release gate
+takes the key from `KAMOME_ROUTING_API_KEY` in the environment only
+(`Scripts/release/check-archive.sh`).
 
 ## The Node version trap
 

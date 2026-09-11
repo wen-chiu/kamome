@@ -25,9 +25,8 @@ targets:
     platform: iOS
     # Build settings live in a file so they survive `xcodegen generate` — a team
     # or a key typed into Xcode's UI is lost on the next regeneration, which has
-    # already cost this project once. `Base.xcconfig` optionally includes the
-    # gitignored `Secrets.xcconfig`; with no key present the build is still a
-    # working build with routing disabled.
+    # already cost this project once. `Base.xcconfig` carries no routing key and
+    # includes no secrets file (ADR 2026-09-12).
     configFiles:
       Debug: Config/Base.xcconfig
       Release: Config/Base.xcconfig
@@ -64,13 +63,11 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Kamome
-        # The routing provider's API key, delivered by `Config/Secrets.xcconfig`
-        # (gitignored) through `Config/Base.xcconfig`. Empty when no secrets file
-        # exists, which the app reads as "routing disabled" rather than crashing.
-        #
-        # ⚠️ This keeps the key out of git, NOT out of the IPA. Moving it off the
-        # device entirely is a submission blocker — `Docs/pre-launch.md`.
-        KamomeRoutingAPIKey: $(KAMOME_ROUTING_API_KEY)
+        # ⚠️ **No routing key field, on purpose** (ADR 2026-09-12). One used to sit
+        # here, fed from a gitignored secrets xcconfig: out of git, but into the
+        # IPA, the build log and every request's query string on any machine that
+        # had the file. The Worker holds the key; the app carries none.
+        # `Scripts/check-secrets.sh` and `RoutingKeyTests` fail if it returns.
         CFBundleDevelopmentRegion: zh-Hant
         UILaunchScreen: {}
         # Purpose strings are localized in App/Resources/InfoPlist.xcstrings;

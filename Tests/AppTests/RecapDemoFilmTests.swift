@@ -182,9 +182,11 @@ final class RecapDemoFilmTests: XCTestCase {
     /// and a real photo library can be dumped straight into that shape
     /// (`Tools/exif-to-fixture.sh`).
     ///
-    /// Needs a routing key in `Config/Secrets.xcconfig` and tiles for the region:
+    /// Real roads need the Worker named explicitly — no build carries a routing
+    /// key since ADR 2026-09-12 (see `importedRecap`) — and tiles for the region:
     ///
     ///   KAMOME_DEMO_FILM_IMPORT=iceland \
+    ///   KAMOME_ROUTING_BASE_URL=https://kamome-routing.kamome-site.workers.dev \
     ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
     ///   KAMOME_RENDER_OUT=/path/to/out
     func testRenderImportedFilm() async throws {
@@ -212,10 +214,14 @@ final class RecapDemoFilmTests: XCTestCase {
     /// offline continuity gate needs — and what the shipped app does today,
     /// since `matching.base_url` ships empty.
     ///
-    /// The default is the live provider (2026-08-20): a render with a key in
-    /// `Config/Secrets.xcconfig` routes against Geoapify, and one without it
-    /// gets 401s reported as an unreachable provider. Every caller that reaches
-    /// this default is env-gated and never runs in CI.
+    /// The default is the live provider, direct (2026-08-20). ⚠️ **Since ADR
+    /// 2026-09-12 no build carries a key for it**, so a render that reaches this
+    /// default gets 401s, reported as an unreachable provider — and those
+    /// requests still carry the fixture's coordinates, which for a local dump are
+    /// real (§0, exposure for nothing). Pass `KAMOME_ROUTING_BASE_URL` = the
+    /// Worker for real roads; that spends the Worker's daily ceiling. Changing
+    /// this default is not decided here — see `HANDOFF.md`. Every caller that
+    /// reaches it is env-gated and never runs in CI.
     ///
     /// `reconstructor` replaces the routing provider outright. The offline gates
     /// need it because their `baseURL: ""` disables routing altogether, which

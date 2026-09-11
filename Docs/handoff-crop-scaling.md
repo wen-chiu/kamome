@@ -94,6 +94,12 @@ one, and a genuinely different film.
 > announce itself, and the difference is only visible if you count
 > `drive/reconstructed` against `drive/inferred`.
 
+⚠️ **2026-09-12 — the `Secrets.xcconfig` half no longer applies** (ADR
+2026-09-12): no build reads that file, so copying it changes nothing and no
+checkout routes with a key. What still splits two renders is the endpoint — a
+render left on the harness default draws dashed unless `KAMOME_ROUTING_BASE_URL`
+names the Worker. Count provenance lines exactly as above.
+
 Caught only because a control was measured. **Any render comparison without a
 "these two should be identical" row is not evidence.**
 
