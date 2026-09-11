@@ -151,7 +151,8 @@ was wrong:
 - `RecapDemoFilmTests.renderFilm` built its `FrameCompositor` **without
   `crossingSubject:`**, which defaults to nil, and `FrameCompositor` documents nil
   as *"a film whose caller supplied none draws its own vehicle across the
-  crossing."* `RecapModel` passes it.
+  crossing."* The shipping path passes it (`RecapExportJob+Render.swift` since
+  2026-09-10, `RecapModel` before that).
 
 So the app drew a gull and the review film drew a car, and both statements were
 true of **different renderers**. `VehicleCatalog.resolve` never failed and

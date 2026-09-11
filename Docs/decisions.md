@@ -4415,3 +4415,115 @@ was done: the layer is declared in the TileJSON at z7–14 and real tiles carry 
 source-layers are served.** The "5 of 6" row remains correct as written — it is a
 statement about *positron's own style*, not about the tiles, and none of the
 three stock styles draws peak labels.
+
+## 2026-09-10 — The Phase 4 closeout is four steps, and the last two wait for the substrate
+
+**Decision (Chiu, 2026-09-10).** The Phase 4 closeout opened 2026-09-05 as "four
+steps" without the four ever being written down. They are:
+
+| # | step | state |
+|---|---|---|
+| ① | **A finished film becomes a thing that exists** — the `film` record, its file, the trip's list | ✅ closed, ADR 2026-09-08 |
+| ② | **The export outlives the screen** — an app-level export service, a back button | ✅ this entry |
+| ③ | **The device session D1–D5** | ⏸ **deferred** |
+| ④ | **Performance** | ⏸ **deferred** |
+
+Dated to the decision, not to the day it was written (`PO.md`).
+
+### ③ and ④ are deferred behind the substrate evaluation, and the reason is one line
+
+**Both price `MKMapSnapshotter`, and that is what is leaving.** D2 (per-trip
+export time and memory) and D3 (seconds per snapshot on current hardware) are
+measurements of the Apple Maps path; ADR 2026-09-09 moves the export path to
+OpenFreeMap + MapLibre. Measuring the substrate that is on its way out buys a
+number nobody can act on, and a device session is a scarce thing — nobody has
+run one yet.
+
+So they wait for the evaluation to return, and they are **deferred, not
+dropped**: D1–D5 is still the critical path to a release (`HANDOFF.md`), and
+nothing in this entry settles any of it. In particular **D1 — export survives a
+screen lock — is NOT settled by step ②.** Step ② keeps the render alive across a
+*screen* change; whether iOS lets it survive a *locked device* is a device fact
+and stays open.
+
+**Music is an enhancement outside the closeout** (Chiu, same day). It is not a
+fifth step.
+
+### ② — what "outlives the screen" is, and exactly what it is not
+
+The export lived in `RecapModel`, held as `@State` inside `RecapView`'s sheet.
+Closing the sheet destroyed it, and the Done button called `cancel()` on the way
+out; `interactiveDismissDisabled(model.isRendering)` was the only thing standing
+between a user and a half-written file plus a leaked background assertion. A
+render of a minute or more therefore pinned the user to one screen. That is the
+other half of the complaint step ① answered.
+
+**The scope is honest and bounded:**
+
+- **In:** leave the SCREEN. Keep using the app, come back, find the export
+  running or finished.
+- **NOT in:** leave the APP. `AVAssetWriter` cannot resume across process death
+  — `ExportLifecycleGuard`'s own doc comment says so and is right. Checkpointed
+  segments are a project, not this step.
+- **No user-facing copy may promise background export.** What it may promise:
+  you can leave this screen, stay in the app, the screen stays awake.
+  `LocalizationTests.testTheExportCopyPromisesTheScreenAndNeverTheBackground`
+  holds the copy to that in both languages, so a well-meaning rewording cannot
+  quietly widen the promise.
+
+### How it is built, and why it is not a new pattern
+
+`RecapExportCoordinator.shared`, modelled on **`RouteMatchCoordinator.shared`** —
+the precedent already in this codebase for a coordinator that outlives a screen
+so a second caller **joins** the running work instead of starting a second one.
+The pipeline moved out of `RecapModel` into `RecapExportJob` unchanged;
+`Core/ExportEngine` has **zero pixel change**, and the golden-frame and
+continuity gates are untouched.
+
+Two differences from the routing coordinator, and both are the point:
+
+1. **Single flight is app-wide, not per trip.** Routing two trips at once wastes
+   quota. Exporting two at once is two `AVAssetWriter`s and two snapshotter
+   streams on a phone, which is a crash rather than a slowdown — and a back
+   button is exactly what lets a user open a second trip and tap Export. A
+   second request is **joined** when it is the same trip and **refused** when it
+   is not, with the busy trip named so the screen says a sentence instead of
+   looking like a dead button. Never started.
+2. **The coordinator owns `ExportLifecycleGuard`**, which the model used to hold.
+   It is taken in `start` and released in `finish`, and `finish` is the only
+   exit — so finish, cancel and failure release it structurally rather than by
+   three call sites remembering to. Expiry releases it inside the guard itself,
+   which is why it is a genuinely separate fourth path.
+
+**`interactiveDismissDisabled` may only be removed in the same change as the
+service.** Removing it alone is the regression, not the fix.
+
+**Cancel stays an explicit user action** — a Cancel button, on the sheet and on
+the trip screen. Dismissing cancels nothing, and has not since this entry.
+
+### The rule that is a test, not a comment
+
+Every rule above fails silently. Two writers crash on a phone and never in CI; a
+leaked lifecycle guard is invisible until the battery is gone. So
+`RecapExportCoordinatorTests` asserts, with the render replaced by a spy that
+parks inside `run`: an export survives its sheet's model being deallocated and
+still produces its film record; a second request joins or is refused and the
+concurrent-run peak stays 1; cancel still cancels and a stale screen cannot
+cancel another trip's run; and the guard is released on **all four** exits.
+Each was falsified against a deliberately broken coordinator before being
+believed.
+
+### The measured number this corrects
+
+`ExportLifecycleGuard` cited **270 s and 600 s** as "the two measured device
+films". Those are **pre-reprojection** — the 4.4–9.5 min era `RecapRenderLoop`
+names — and they described a render that no longer exists. Replaced with what
+was measured 2026-09-10: **65.6 s of render for a 60.0 s film, 33.3 MB out**,
+marked **SIMULATOR / Apple Maps / one trip**. It is **not D2 and not D3**, and
+it is a **"before"** for the substrate switch.
+
+### Not decided here
+
+Anything about the substrate (that is ADR 2026-09-09's own round); performance of
+any kind; music; whether the export should ever survive process death. No new
+tunable was needed and none was added.

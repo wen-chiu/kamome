@@ -104,7 +104,8 @@ have.
 The East Australia complaint (*"看不到整個澳洲… 不知道在哪裡"*) is not a camera
 tuning problem.
 
-`RecapModel.swift:204` builds `establishing` **only** from an installed `.pmtiles`
+`RecapExportJob+Render.swift` (was `RecapModel.swift:204` when this was written;
+moved 2026-09-10) builds `establishing` **only** from an installed `.pmtiles`
 region. MapLibre was parked 2026-08-15 and nothing installs one, so `establishing`
 is permanently `nil`. `CameraPathPrologue.buildWideOpening`'s own doc states the
 consequence:
@@ -124,7 +125,8 @@ The app already geocodes every stop, so a country-level frame is reachable.
 
 ### 3. ⚠️ A shipping-path comment is wrong, and it hides a possibly-large question
 
-`RecapModel.swift:201–203`:
+`RecapExportJob+Render.swift`, in `plan(_:)` (was `RecapModel.swift:201–203`;
+moved 2026-09-10):
 
 > The region's extent drives the opening establishing shot and switches the film
 > onto content-derived pacing (Chiu 2026-07-30). **No region means Apple's map, no

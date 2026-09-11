@@ -6,26 +6,24 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-10 against decisions.md **2026-09-09** and `main` at
-**PR #48**. Config flip made (S6 closed, S7 new — rotation owed). Film
-persists (ADR #68, `film` table v5, Photos save is explicit tap per §0).
-Export substrate evaluation in flight (2026-09-09).
+Last synced: 2026-09-11 against decisions.md **2026-09-10** and `main` at
+**PR #52**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
+(ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
+export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight.
 
-⚠️ **One merged PR behind passes; two or more fails** (ADR 2026-09-02 (b), as
-corrected 2026-09-03). The line is written inside a PR that is not yet merged, so
-it can never name the PR containing it — demanding equality made the gate
-permanently red on `main`. Do not "fix" a failure by bumping the number: the line
-claims someone re-read the ledger and `HANDOFF.md` and brought this file up to
-date, and that is the half that rotted twice while the number stayed right.
+⚠️ **One merged PR behind passes; two or more fails**, counted by PR *number*,
+not merge date. Never "fix" a failure by bumping the number: the line claims
+someone re-read the ledger and `HANDOFF.md`, and that is the half that rotted
+twice while the number stayed right. → `Scripts/check-staleness.sh`, ADR
+2026-09-02 (b).
 
-Update this file when an ADR is appended, a PR merges, the phase changes, or Chiu
-decides something that changes anything below.
+Update this file when an ADR is appended, a PR merges, the phase changes, or
+Chiu decides anything that changes what is below.
 
 ## Product
 
-Kamome (卡摸咩) is a **memory engine for road trips**: import (or later, capture)
-a journey once, then turn it into a cinematic recap film (MP4) worth keeping and
-sharing. Not a GPS visualizer. Reference: `Docs/kamome-poc-spec.md` v1.8 —
+Kamome (卡摸咩) is a **memory engine for road trips** (`CLAUDE.md` carries the
+sentence). Not a GPS visualizer. Reference: `Docs/kamome-poc-spec.md` v1.8 —
 **product reference, never status**; north star in `PO.md`.
 
 **No release is in flight.** The current work proves the *artefact* ahead of
@@ -38,10 +36,13 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 
 1. ✅ Vehicle sprites — PR #15.
 2. ✅ Cross-region crossing — PRs #24/#31.
-3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half closed by ADR
-   2026-08-31 (b), release half is `Docs/release-readiness.md` D1–D3.
-4. **Closeout** (Chiu 2026-09-05, 4 steps): ✅ step 1 film record (ADR
-   2026-09-08); remaining: export service, device session D1–D5, performance.
+3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half in ADR
+   2026-08-31 (b), release half in `Docs/release-readiness.md` D1–D3.
+4. **Closeout** — four steps, named 2026-09-10. ① ✅ film record (ADR
+   2026-09-08). ② ✅ export outlives the screen (ADR 2026-09-10). ③ ⏸ D1–D5 and
+   ④ ⏸ performance are **deferred behind the substrate evaluation** — both price
+   `MKMapSnapshotter`, which ADR 2026-09-09 is leaving. Deferred, not dropped;
+   **② does not settle D1**. Music is outside the closeout.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
@@ -53,18 +54,16 @@ P7 backend deferred.
 
 ## Where the work actually stands
 
-**Everything in Phase 4 that was in flight has landed and been judged**, the
-type-2 opening included — retimed, with a boarding pass, a plane and two marked
-flight ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's
-judgement, in `HANDOFF.md`, which wins on findings and blockers.
-
-⚠️ **One line is in flight again**: the export substrate evaluation (2026-09-09).
+**Every Phase 4 film that was in flight has landed and been judged**, the type-2
+opening included — retimed, with a boarding pass, a plane and two marked flight
+ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's judgement, in
+`HANDOFF.md`, which wins on findings and blockers. ⚠️ **One line is in flight**:
+the export substrate evaluation (2026-09-09).
 
 What is between Kamome and a submission is **neither a document nor a session**:
-**D1–D5**, one device run nobody has done — and then Chiu's submission sequence,
-the artifact check (`./check.sh --release`, which needs the real key) and **then**
-the key rotation, in that order.
-→ `Docs/release-readiness.md`.
+**D1–D5**, one device run nobody has done — then Chiu's submission sequence, the
+artifact check (`./check.sh --release`, needs the real key) and **then** the key
+rotation, in that order. → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
 
 ## Architecture
 
@@ -79,12 +78,13 @@ the key rotation, in that order.
 - **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per trip.
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
+- **Export:** one film at a time, app-wide; `RecapExportCoordinator` outlives
+  every screen (ADR 2026-09-10).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
-  ⚠️ **Three keys are dead config** and are baselined in
-  `Scripts/dead-config.baseline` — `route_waypoint_radius_m`,
-  `keyframe_interval_frames`, `export.total_duration_max_s`. The third is the
-  dangerous one: film duration is an open question and it is the first key anyone
-  would reach for. Tuning any of the three does nothing.
+  ⚠️ **Three keys are dead** — tuning them does nothing, and
+  `export.total_duration_max_s` is the trap: film duration is an open question
+  and it is the first key anyone reaches for. All three, and why:
+  `Scripts/dead-config.baseline`.
 - **Infrastructure:** `.xcodeproj` generated by `xcodegen` from `project.yml`;
   env-gated harnesses via `TEST_RUNNER_` settings declared there; `Deploy/`
   (self-hosted OSRM + tiles) dormant as fallback.
