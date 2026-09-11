@@ -73,19 +73,30 @@ final class RecapSubstrateEvalTests: XCTestCase {
             "KAMOME_MAP_SUBSTRATE steers a single-substrate render; this harness renders all of them."
         )
 
+        let requested = try Self.requestedStyles()
         let light = try await RecapReviewScene.make(fixture: fixture, appearance: .light)
         let time = try XCTUnwrap(
             HarnessEnv.value("KAMOME_SUBSTRATE_EVAL_T").flatMap(Double.init)
                 ?? light.travellingTime(),
             "the film never shows a moving subject — pin one with KAMOME_SUBSTRATE_EVAL_T"
         )
-        var renders = try await self.renders(on: light, at: time, styles: [.openFreeMapPositron, .openFreeMapLiberty])
+        var renders = try await self.renders(
+            on: light, at: time, styles: requested.styles.filter { $0.appearance == .light },
+            baseline: requested.baseline
+        )
 
         // The dark half. Rebuilt rather than restyled: the compositor bakes the
         // palette in at construction, and reaching into it would be a second way
         // to build a scene.
-        let dark = try await RecapReviewScene.make(fixture: fixture, appearance: .dark)
-        renders += try await self.renders(on: dark, at: time, styles: [.openFreeMapFiord])
+        let dark = requested.styles.contains { $0.appearance == .dark } || requested.baseline
+            ? try await RecapReviewScene.make(fixture: fixture, appearance: .dark)
+            : nil
+        if let dark {
+            renders += try await self.renders(
+                on: dark, at: time, styles: requested.styles.filter { $0.appearance == .dark },
+                baseline: requested.baseline
+            )
+        }
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
@@ -97,20 +108,48 @@ final class RecapSubstrateEvalTests: XCTestCase {
         report(renders, fixture: fixture, time: time)
     }
 
-    /// The baseline plus each requested style, all on `scene`'s single camera.
+    /// **Which styles this run draws** (`KAMOME_SUBSTRATE_EVAL_STYLES`).
+    ///
+    /// Unset renders everything, which is what the first round did and what
+    /// reproduces it. Naming a subset — `liberty-fork`, say — renders only those
+    /// and **drops the Apple baselines**, because those frames already exist in
+    /// the output directory and re-rendering them would spend snapshots to
+    /// produce files that are already there. An unrecognised name is refused, for
+    /// `HarnessEnv`'s reason: a run that quietly drew a different style than the
+    /// reviewer asked for looks exactly like one that honoured it.
+    private static func requestedStyles() throws -> (styles: [ReviewSubstrate.Substrate], baseline: Bool) {
+        guard let raw = HarnessEnv.value("KAMOME_SUBSTRATE_EVAL_STYLES") else {
+            return (ReviewSubstrate.Substrate.allCases.filter { $0 != .openFreeMapLibertyFork }, true)
+        }
+        let styles = try raw.split(separator: ",").map { name -> ReviewSubstrate.Substrate in
+            guard let substrate = ReviewSubstrate.Substrate(rawValue: String(name)) else {
+                throw HarnessError(
+                    "KAMOME_SUBSTRATE_EVAL_STYLES=\(raw) names \(name), which is not one of "
+                        + ReviewSubstrate.Substrate.allCases.map(\.rawValue).joined(separator: ", ")
+                )
+            }
+            return substrate
+        }
+        return (styles, false)
+    }
+
+    /// Each requested style on `scene`'s single camera, and the Apple baseline
+    /// with it when this run is drawing one.
     ///
     /// **Apple Maps is rendered in every group, not once.** It is the baseline the
     /// whole round exists to beat, and a light baseline cannot be compared with a
     /// dark Fiord frame — so each appearance gets its own.
     private func renders(
-        on scene: RecapReviewScene, at time: Double, styles: [ReviewSubstrate.Substrate]
+        on scene: RecapReviewScene, at time: Double,
+        styles: [ReviewSubstrate.Substrate], baseline: Bool
     ) async throws -> [Render] {
-        var result: [Render] = [
-            try await render(
+        var result: [Render] = []
+        if baseline {
+            result.append(try await render(
                 on: scene, at: time, label: "apple-\(scene.appearance.rawValue)",
                 using: scene.provider, attribution: nil
-            )
-        ]
+            ))
+        }
         for style in styles {
             // The scene's appearance is the one this style declares, or the scene
             // would be drawing the wrong palette over it.
@@ -121,7 +160,9 @@ final class RecapSubstrateEvalTests: XCTestCase {
             )
             result.append(try await render(
                 on: scene, at: time, label: "openfreemap-\(style.rawValue)",
-                using: MapLibreSnapshotProvider(styleURL: style.styleURL, appearance: style.appearance),
+                using: MapLibreSnapshotProvider(
+                    styleURL: try style.resolvedStyleURL(), appearance: style.appearance
+                ),
                 attribution: ReviewSubstrate.Substrate.attribution
             ))
         }
