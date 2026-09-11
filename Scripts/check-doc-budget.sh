@@ -19,11 +19,15 @@ status=0
 
 budget() {
   local file="$1" limit="$2" purpose="$3"
-  local size
+  local size warn_at pct
   size=$(wc -c < "$file" | tr -d '[:space:]')
+  warn_at=$(( limit * 90 / 100 ))
+  pct=$(( size * 100 / limit ))
   if [ "$size" -gt "$limit" ]; then
     kamome_fail "$file is $size bytes, over its $limit-byte budget ($purpose)"
     status=1
+  elif [ "$size" -gt "$warn_at" ]; then
+    kamome_warn "$(printf '%-12s %6d / %6d bytes (%d%%) — room for ~%d bytes' "$file" "$size" "$limit" "$pct" "$(( limit - size ))")"
   else
     kamome_ok "$(printf '%-12s %6d / %6d bytes' "$file" "$size" "$limit")"
   fi
@@ -59,11 +63,15 @@ budget DESIGNER.md  9000 "the visual charter"
 # affordable; a new topic document plus every old one is what got us here.
 corpus_limit=355000
 corpus=$(cat $(ls Docs/*.md | grep -v '^Docs/decisions.md$') | wc -c | tr -d '[:space:]')
+corpus_warn=$(( corpus_limit * 90 / 100 ))
+corpus_pct=$(( corpus * 100 / corpus_limit ))
 if [ "$corpus" -gt "$corpus_limit" ]; then
   kamome_fail "live Docs/ corpus is $corpus bytes, over its $corpus_limit-byte ceiling"
   printf '        Archive a document whose work has closed (Docs/_archive/), do\n' >&2
   printf '        not raise the ceiling. See ADR 2026-09-03.\n' >&2
   status=1
+elif [ "$corpus" -gt "$corpus_warn" ]; then
+  kamome_warn "$(printf '%-12s %6d / %6d bytes (%d%%) — room for ~%d bytes' 'live Docs/' "$corpus" "$corpus_limit" "$corpus_pct" "$(( corpus_limit - corpus ))")"
 else
   kamome_ok "$(printf '%-12s %6d / %6d bytes' 'live Docs/' "$corpus" "$corpus_limit")"
 fi

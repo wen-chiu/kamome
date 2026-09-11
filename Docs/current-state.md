@@ -89,33 +89,14 @@ the key rotation, in that order.
   env-gated harnesses via `TEST_RUNNER_` settings declared there; `Deploy/`
   (self-hosted OSRM + tiles) dormant as fallback.
 
-## Locked decisions — one line each; the ADR is the decision
+## Locked decisions
 
-`Docs/decisions.md`, newest entry on a subject wins. Find one via
-`Docs/decisions-index.md`.
+`Docs/decisions-index.md` is the lookup; `PO.md` §3 carries the reopening
+conditions. Newest entry on a subject wins.
 
-| what is locked | ADR |
-|---|---|
-| **The division of labour: Chiu owns whether the film is good enough; engineering owns that the code does not break and that a release carries no security, licence or privacy fault.** Never answer "is this ready?" with a film — answer with the gates, and where a gate does not exist, say so. | 2026-09-02 |
-| **§0** — location data never leaves the device by default; the decided exceptions are the Geoapify routing payloads and one user-initiated share. Honest disclosure is the posture. Anything further is Chiu's. | 2026-08-16, 2026-08-20 (b)/(c) |
-| ⚠️ **Export is LEAVING Apple Maps** — OpenFreeMap + MapLibre, **evaluation round only**: stock styles, labels on for evaluation, no shipping switch. Apple Maps still ships until Chiu judges the pictures; in-app maps stay MapKit; pixel art stays parked. | 2026-08-15, **2026-09-09** |
-| **Routing is Geoapify**; the detour gate stays 2.5. The Iceland film was the acceptance test and it passed. | 2026-08-20 (a)–(d), 2026-08-21 |
-| **The film follows the device's system appearance**, captured at export, never read inside the render loop. A manual picker is **deferred — do not build one**. Trail is `#FF8A5B`; glow off in both appearances. | 2026-08-27 |
-| **The subject is 157.5 px and the mark is pinned at `length_fraction` 1.0.** ⚠️ That pin **spends** the relational guarantee: next time `subject_length_px` moves, the mark's size is a fresh judgement. | 2026-08-27 (b) |
-| **The fallback marker is a badge, not a bare bird** — one `#1D6FE0` disc, the same in both appearances, at 0.60 of the subject. The bare gull stays the end-card brand mark. **Three gull objects; do not restyle in place.** | 2026-08-29 |
-| **The user names the trip; recording ships behind a beta marker.** Neither is built; `Trip.title` already reaches the title card, so what is missing is an edit surface, not a schema. | 2026-08-30 |
-| **The opening cuts out of a title card held over the COUNTRY**, from a built-in `CountryExtent` table — never MapKit or `CLGeocoder`, which would send a real coordinate off-device for framing. Beat 2 onward is the film proper. | 2026-08-31 |
-| **Camera shake / ghosting closed** — the loop reprojects one snapshot instead of cross-fading two. | 2026-08-31 (b) |
-| **Kamome's films are three types; 1 and 2 ship, 3 is deferred. The film ends at the destination — there is no return flight.** A type is *distinct local journeys*, derived and never stored. | 2026-09-01 |
-| **Documents are archived when their work closes**, and the live corpus has a byte ceiling. | 2026-09-03 |
-| **The user is told once, on first run, that coordinates leave; the notice informs, it does not ask.** | 2026-09-05 (b) |
-| **The Worker carries two guards and fails closed on either.** 2000/day plus **60/min per IP**, both live (Version `09e248ee`), both in `wrangler.toml`, never in the app's config. ⚠️ **Complements, not substitutes** — a day cannot express a burst and 60 s cannot express a day. KV's overshoot is accepted; **do not switch to a Durable Object.** Its no-log property is a gate `npm run deploy` runs. | 2026-09-04, 2026-09-05 |
-| **Honest provenance** — never "Verified Trip"; recorded and reconstructed-from-photos are different things; a wrong road is never drawn as fact. | spec §0, v1.8 §4.4.1 |
-
-Two standing constraints that are **not** decisions and must not be implemented
-as if they were: **film duration must scale with trip size — direction decided
-(Chiu 2026-08-14), rule NOT**; and **Variant B (shipped `highlight` mode) is not
-to be tuned** — Variant A is harness-only env overrides, never config edits.
+Two standing constraints that are **not** decisions: **film duration must scale
+with trip size — direction decided (Chiu 2026-08-14), rule NOT**; and **Variant B
+is not to be tuned** — Variant A is harness-only env overrides.
 
 ## Deferred — do not implement opportunistically
 
