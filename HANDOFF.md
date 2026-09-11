@@ -92,6 +92,12 @@ visual findings are for judgement. ⏳ **Awaiting Chiu.**
 - 🔴 **Two left by the type-2 opening round**: `Geo.distanceM` is **121 km short**
   over Taipei → Auckland with no sweep of who reads it, and a **ferry gets a
   boarding pass and a plane**. → `Docs/handoff-type2-opening-retime.md`.
+- 🟠 **Every local `./check.sh` sends routing requests to the production Worker.**
+  `RouteMatchRecordedLegTests.testTheSameShippedServiceStillOffersAnImportedLeg`
+  builds the shipped service with no stub, so three synthetic legs per run count
+  against the 2000/day ceiling — VERIFIED 2026-09-12, real verdicts came back. A
+  stub reconstructor would keep what the test proves; not done.
+  → `Tests/AppTests/RouteMatchRecordedLegTests.swift`.
 
 ---
 
