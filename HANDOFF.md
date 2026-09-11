@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-11.** `main` carries PRs #16–#52. Everything closed has been
+**Updated 2026-09-12.** `main` carries PRs #16–#52. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -29,7 +29,8 @@ can do either**.
    → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
 2. **The submission sequence, and it is Chiu's in both halves.** ① Run
    `./check.sh --release <.xcarchive>` — the **only** proof the built bundle
-   carries no key; `check-archive.sh` needs the real key and refuses to degrade
+   carries no key; `check-archive.sh` needs the real key — in `KAMOME_ROUTING_API_KEY`, never a
+   file (ADR 2026-09-12) — and refuses to degrade
    into a shape scan, so a session can build the archive but never run the gate.
    ② **Then rotate the Geoapify key** — S7. Every IPA already on someone's phone
    still holds the current one, and the flip cannot reach those.
@@ -68,6 +69,12 @@ visual findings are for judgement. ⏳ **Awaiting Chiu.**
 
 ## 🟠 Open — nobody is on these
 
+- 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
+  checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'
+  `api.geoapify.com` default can only get 401s — carrying a local dump's real
+  coordinates (§0). Default it to `""`, to the Worker (quota), or leave it: Chiu's.
+  → `Docs/decisions.md` 2026-09-12.
+
 - **Dismissing the first-run notice backgrounds the app.** The §0 path every user
   walks once (PR #45). Simulator-reproducible; **UNKNOWN on device** — joins D1–D5.
 
@@ -98,8 +105,9 @@ visual findings are for judgement. ⏳ **Awaiting Chiu.**
 ## ⚠️ Traps — read before you touch these
 
 - **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
-  gitignored, so it reads different geometry. ⚠️ Routing needs a key the flip
-  **removed**. → `Docs/handoff-crop-scaling.md` §3.
+  gitignored, so it reads different geometry. ⚠️ **No checkout routes with a key**
+  (ADR 2026-09-12): real roads need `KAMOME_ROUTING_BASE_URL` = the Worker.
+  → `Docs/handoff-crop-scaling.md` §3.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.

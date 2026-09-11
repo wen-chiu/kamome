@@ -68,7 +68,10 @@ else
   if require xcodebuild "Xcode is required to run the suite"; then
     destination=${KAMOME_TEST_DESTINATION:-platform=iOS Simulator,name=iPhone 17 Pro}
     set -o pipefail
-    xcodebuild -scheme Kamome test -destination "$destination" CODE_SIGNING_ALLOWED=NO
+    # `env -u` (ADR 2026-09-12): `--release` needs the real routing key in
+    # KAMOME_ROUTING_API_KEY, and xcodebuild turns every environment variable it
+    # inherits into a build setting. The suite never needs the key.
+    env -u KAMOME_ROUTING_API_KEY xcodebuild -scheme Kamome test -destination "$destination" CODE_SIGNING_ALLOWED=NO
     record $? "xcodebuild test"
   fi
 

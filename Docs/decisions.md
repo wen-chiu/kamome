@@ -4527,3 +4527,98 @@ it is a **"before"** for the substrate switch.
 Anything about the substrate (that is ADR 2026-09-09's own round); performance of
 any kind; music; whether the export should ever survive process death. No new
 tunable was needed and none was added.
+
+---
+
+## 2026-09-12 — The routing key has no build path, and the artifact gate reads it from the environment only
+
+**Status:** engineering decision, completing ADR 2026-09-08. Brief: Chiu's
+release-blocker round, 2026-09-12, item 1 of 4. **No shipped behaviour changes**
+— a build made without `Config/Secrets.xcconfig` already carried no key; what
+changes is that no machine can build one that does.
+
+### Why the flip did not finish it
+
+ADR 2026-09-08 made the key *unnecessary*, not *unreachable*. `project.yml` still
+mapped `KamomeRoutingAPIKey` into `Info.plist` from a build setting, and
+`Config/Base.xcconfig` still did `#include? "Secrets.xcconfig"`. On any machine
+keeping that file — Chiu's does — `AppConfig` read the key back and
+`GeoapifyRouteProvider` appended `apiKey=<key>` to every request, which since the
+flip goes to the Worker: the real key in a URL query string at Cloudflare's edge,
+where the Worker's no-log configuration does not reach. The Worker discards a
+client `apiKey` and sets its own (`Deploy/worker/src/index.js`, VERIFIED from
+source), so nothing ever needed it.
+
+**Measured 2026-09-12 with a fake 32-hex key planted as `Config/Secrets.xcconfig`**
+(never the real key):
+
+| | unfixed `main` (`2f36360`) | this change |
+|---|---|---|
+| built `Kamome.app/Info.plist` | `KamomeRoutingAPIKey` = the fake key | no such entry |
+| occurrences in the build log | 3 | 0 |
+| `check-archive.sh`, fake key in the environment | FAIL ×3 (exact scan, field, 32-hex) | pass |
+
+### Decided
+
+1. **The path is removed, not guarded:** the `Info.plist` field, its `project.yml`
+   mapping, the xcconfig default and the include. `Config/Base.xcconfig` stays, as
+   the home for settings that must survive `xcodegen generate`.
+2. **`Config/Secrets.xcconfig.example` is deleted.** It documented how to create a
+   file no build reads, and a committed template is an instruction to recreate
+   it. `.gitignore` keeps ignoring `Config/Secrets.xcconfig`, because the file
+   still exists — holding a real key — on machines that built before today. **No
+   one's copy is deleted by this change**, and neither is `~/.kamome/routing.env`:
+   the file is inert now, and removing it is its owner's call.
+3. **`AppConfig`'s bundle read goes; the rule it fed stays.**
+   `routingAPIKeyFromBundle` and `usableRoutingKey` had nothing left to read.
+   `applyingRoutingKey(_:key:)` becomes `routingForAKeylessBuild(_:)`: an endpoint
+   marked `api_key_required` is switched off rather than sent coordinates that
+   can only be refused (§0). Its key-present branch had no caller left, and a
+   parameter only ever passed `nil` is a seam that invites a new source.
+4. **Core is untouched.** `TrackingConfig.Matching.apiKey`, `withAPIKey` and the
+   provider's `apiKey` query item are public interface (`CLAUDE.md` rule 2). No
+   App code can set the key any more, so from the app they are unreachable; only
+   Core tests use them. Removing them is a separate decision, not taken here.
+5. **`check-archive.sh` takes the key from `KAMOME_ROUTING_API_KEY` only.** Its
+   fallback to the secrets file is gone — a gate that still reads the file is a
+   reason for the file to survive on the machine that builds the archive. It now
+   requires the plist field to be **absent**, not merely empty. `./check.sh`
+   strips the variable from its `xcodebuild` stage. That is a precaution:
+   xcodebuild 26.6 makes an inherited variable a build setting but did not print
+   it (0 occurrences in a build run with a fake value in its environment,
+   VERIFIED 2026-09-12).
+6. **A regression is caught twice.** `check-secrets.sh` fails when the mapping or
+   the include returns — static, so it runs without Xcode, and it was shown to
+   fire on each and to ignore the same names in a comment. `RoutingKeyTests`
+   fails inside the built app.
+
+### Tests — `CLAUDE.md` rule 3
+
+Eleven before, eleven after; the baseline does not move. **Eight describe
+behaviour that still exists** and change only by the renamed call: four for the
+no-key rule, the shipped Worker config, the config file that cannot supply a key,
+the release guard, and the untracked-secrets-file check — which matters more now
+that the file outlives its use. **Three described the bundle read, which cannot
+exist any more, and are restated rather than deleted** — each watched red on
+unfixed `main` (9 assertions, VERIFIED 2026-09-12):
+
+| was | restated as |
+|---|---|
+| `testAKeyIsCarriedOnMatchingAndNotFromTheFile` | `testTheBuiltAppCarriesNoRoutingKeyField` — hosted: no entry in `Bundle.main`, and the loaded config's key is empty |
+| `testUnsetAndPlaceholderValuesCountAsNoKey` | `testNoBuildInputMapsTheRoutingKey` — `project.yml` and `App/Info.plist` |
+| `testTheExampleFileContainsNoUsableKey` | `testNoConfigFileDefinesOrIncludesTheRoutingKey` — every xcconfig in `Config/` |
+
+### What it costs, and what it does not decide
+
+- **Desk renders no longer route by default, on any machine.**
+  `RecapDemoFilmTests.importedRecap` falls back to `https://api.geoapify.com` when
+  `KAMOME_ROUTING_BASE_URL` is unset. With no key those legs come back 401 and
+  draw dashed — **and the requests still carry the fixture's coordinates**, real
+  ones for a local dump (§0: exposure for nothing). That was already true in every
+  worktree; it is now true on the main checkout too. Real roads need
+  `KAMOME_ROUTING_BASE_URL` = the Worker, which spends the daily ceiling. **What
+  that default should be is not decided here** — ADR 2026-09-08 declined to point
+  it at the Worker, for quota. → `HANDOFF.md`.
+- **S7 is unchanged.** Rotation is still owed, still Chiu's, and still comes after
+  the artifact check — which is now run as
+  `KAMOME_ROUTING_API_KEY=… ./check.sh --release <archive>`.

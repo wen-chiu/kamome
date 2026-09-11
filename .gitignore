@@ -26,11 +26,11 @@ Tests/Fixtures/trips/local/
 !.env.example
 !**/.env.example
 
-# Build-time secrets. The routing API key reaches the app through an xcconfig
-# that is generated locally from ~/.kamome/routing.env — it must never be
-# committed, and Secrets.xcconfig.example is the template that documents it.
+# A machine-local secrets file from before ADR 2026-09-12, when the routing key
+# reached the app through it. No build reads it any more and its template is
+# deleted — but it may still exist, holding a real key, on a machine that built
+# before then. It must never be committed.
 Config/Secrets.xcconfig
-!Config/Secrets.xcconfig.example
 
 # Wrangler's local secret file for `npx wrangler dev`. Same class as
 # Secrets.xcconfig, and added 2026-08-28 alongside the Worker README's debug

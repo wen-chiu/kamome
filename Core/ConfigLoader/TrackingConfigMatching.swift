@@ -107,17 +107,18 @@ public extension TrackingConfig {
         /// all and says why.
         public let apiKeyRequired: Bool
 
-        /// The routing provider's API key — **deliberately not a JSON key.**
+        /// The routing provider's API key — **deliberately not a JSON key, and
+        /// never supplied by the app** (ADR 2026-09-12).
         ///
         /// `TrackingConfig.json` is committed and bundled, so a secret in it is a
         /// secret in git; `Docs/handoff-P3.5.md` has forbidden that since the VPS
         /// token was first discussed. This value is absent from `CodingKeys` and
-        /// defaults to empty, so the file cannot carry it even by accident: it is
-        /// supplied at load time from the app bundle (`AppConfig`), which reads it
-        /// from an `Info.plist` entry fed by a gitignored `.xcconfig`.
+        /// defaults to empty, so the file cannot carry it even by accident.
         ///
-        /// Empty is a normal state, not a failure — a checkout with no
-        /// `Secrets.xcconfig` runs with routing disabled.
+        /// Empty is the shipped state: the Worker holds the key. The app has no
+        /// source for one any more — the `Info.plist` field it used to read is
+        /// gone — so only a caller that builds `Matching` itself (a test) can set
+        /// it, and `GeoapifyRouteProvider` sends it only when it is non-empty.
         public private(set) var apiKey: String = ""
 
         enum CodingKeys: String, CodingKey {
