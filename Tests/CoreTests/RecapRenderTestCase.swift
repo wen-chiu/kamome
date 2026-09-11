@@ -154,8 +154,11 @@ class RecapRenderTestCase: XCTestCase {
         stops: [StopSpec] = [],
         title: String = "Trip",
         subtitle: String = "Subtitle",
-        statsLines: [String] = ["1 km · 1 stop"],
-        callToAction: String = "Record your own journey",
+        endCardFigures: [RecapEndCardFigure] = [
+            RecapEndCardFigure(value: "1", label: "KM"),
+            RecapEndCardFigure(value: "1", label: "DAY"),
+            RecapEndCardFigure(value: "1", label: "STOP")
+        ],
         shareURL: String? = nil,
         config: TrackingConfig.Export
     ) -> RecapTrip {
@@ -174,7 +177,7 @@ class RecapRenderTestCase: XCTestCase {
         return RecapTrip(
             legs: legs ?? [RecapTrip.Leg(coordinates: coords, mode: .drive, provenance: .recorded)],
             stops: tripStops, title: title, subtitle: subtitle,
-            statsLines: statsLines, callToAction: callToAction, shareURL: shareURL
+            endCardFigures: endCardFigures, shareURL: shareURL
         )
     }
 

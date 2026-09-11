@@ -164,18 +164,26 @@ enum RecapComposer {
         }
 
         // **Every kilometre the film shows a viewer is the local journey**
-        // (Chiu 2026-09-02). One number, computed once, feeding both surfaces —
-        // the title card's subtitle and the end card's stats — because fixing one
-        // of the three and not the others is exactly how 9,024 km survived on two
-        // cards after the odometer was corrected.
+        // (Chiu 2026-09-02) — the flight appears once, on the boarding pass, and
+        // is labelled there. The title card's subtitle takes the recorded total
+        // with the flown legs subtracted; the closing card measures the journey it
+        // just showed (`filmJourney`), which is the same axis the HUD odometer
+        // counts. Fixing one of the three and not the others is exactly how
+        // 9,024 km survived on two cards after the odometer was corrected.
         let localM = localDistanceM(stats: stats, legs: legs)
+        let film = filmJourney(
+            legs: legs, stops: tripStops, config: weighting,
+            everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
+        )
         return RecapTrip(
             legs: legs,
             stops: tripStops,
             title: trip.title,
             subtitle: titleSubtitle(trip: trip, distanceM: localM),
-            statsLines: statsLines(stats: stats, distanceM: localM, stopCount: stops.count),
-            callToAction: String(localized: "recap_end_cta"),
+            endCardFigures: endCardFigures(
+                trip: trip, distanceM: RecapTrip.localRouteDistanceM(legs: film.legs),
+                stopCount: film.stops.count
+            ),
             shareURL: nil,
             journeyDates: journeyDates(trip),
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
@@ -311,22 +319,6 @@ enum RecapComposer {
         let dates = formatter.string(from: start, to: end)
         guard let distanceM else { return dates }
         return "\(dates) · \(Int((distanceM / 1000).rounded())) km"
-    }
-
-    /// The end card's stats. **`distanceM` is the local journey**, for the same
-    /// reason and from the same source as the subtitle above.
-    static func statsLines(stats: TripStats?, distanceM: Double?, stopCount: Int) -> [String] {
-        guard let stats, let distanceM else { return [] }
-        let distanceStops = String.localizedStringWithFormat(
-            String(localized: "recap_stat_distance_stops"),
-            Int((distanceM / 1000).rounded()),
-            stopCount
-        )
-        let drive = String.localizedStringWithFormat(
-            String(localized: "recap_stat_drive"),
-            String(format: "%.1f", stats.driveS / 3600)
-        )
-        return [distanceStops, drive]
     }
 
     /// The share payload the end-card QR would encode. **Unused by the Replay

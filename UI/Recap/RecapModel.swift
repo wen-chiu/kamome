@@ -1,58 +1,88 @@
-import CoreGraphics
 import Foundation
 import KamomeConfig
 import KamomeExportEngine
-import KamomeImportKit
 import KamomePersistence
-import KamomeTripComposer
 import Observation
 
-/// Backs S5: builds recap content from the trip DB, runs `RecapExporter`
-/// off the main actor, and publishes progress / the finished files.
+/// Backs S5. **This model no longer owns the export** (Chiu 2026-09-10, Phase 4
+/// closeout step 2).
+///
+/// It used to run the render itself, which is why closing the sheet destroyed
+/// the film: the model was `@State` inside `RecapView`, and Done called
+/// `cancel()` on the way out. The pipeline is now `RecapExportJob`, owned and
+/// single-flighted by `RecapExportCoordinator.shared`, which outlives every
+/// view. What is left here is one trip's view of that coordinator, plus the two
+/// settings the *next* export will be started with.
+///
+/// So this type is cheap and disposable on purpose: a new one is built each time
+/// the sheet opens, and it finds the render already in progress.
 @Observable
 @MainActor
 final class RecapModel {
-    enum Format: String, CaseIterable {
-        case mp4
-        case gif
-    }
+    typealias Format = RecapExportFormat
 
     enum Phase: Equatable {
         case idle
         case rendering(progress: Double)
-        /// A finished film is now a record, not a bare URL. The record carries
-        /// the relative path; the resolved URL is passed alongside it so the
-        /// view can play the file without resolving again.
-        case finished(film: FilmRecord, fileURL: URL, renderSeconds: Double)
+        /// A finished film is a record, not a bare URL. The record carries the
+        /// relative path; the resolved URL is passed alongside it so the view can
+        /// play the file without resolving again.
+        case finished(film: FilmRecord, fileURL: URL)
         case failed(message: String)
-    }
-
-    /// Set on main, read from the render thread every frame — a plain Bool
-    /// on the model would need actor hops the render loop can't make.
-    private final class CancelFlag: @unchecked Sendable {
-        private let lock = NSLock()
-        private var value = false
-
-        func set() {
-            lock.withLock { value = true }
-        }
-
-        var isSet: Bool {
-            lock.withLock { value }
-        }
     }
 
     /// Photo overlays only (decisions.md 2026-07-18 recap-chrome, Chiu):
     /// off removes stop photo cards; title/end cards always render.
-    var photosEnabled = true
-    var format: Format = .mp4
-    private(set) var phase: Phase = .idle
+    ///
+    /// ⚠️ These two are what the **next** export is started with. While one is
+    /// running, `photosEnabled` and `format` below read from the running request
+    /// instead, so a sheet reopened mid-render shows the settings the film in
+    /// flight is actually using rather than this fresh model's defaults.
+    private var requestedPhotosEnabled = true
+    private var requestedFormat: Format = .mp4
 
-    /// Set when warming could not load every deck photo — see
-    /// `PhotoLibraryPhotoResolver.WarmSummary`. Surfaced rather than swallowed:
-    /// the symptom is blank cards in a finished film, which reads as a rendering
-    /// bug rather than as photos that are not on this device.
-    private(set) var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
+    /// Set when a start was refused because a **different** trip is rendering.
+    /// One export at a time is a hard rule (`RecapExportCoordinator`); this is
+    /// how the screen says so.
+    private(set) var busyTripId: String?
+
+    let tripId: String
+    private let config: TrackingConfig
+    private let repository: TripRepository
+    private let coordinator: RecapExportCoordinator
+
+    init(
+        tripId: String, config: TrackingConfig, repository: TripRepository,
+        coordinator: RecapExportCoordinator = .shared
+    ) {
+        self.tripId = tripId
+        self.config = config
+        self.repository = repository
+        self.coordinator = coordinator
+    }
+
+    // MARK: - What the screen draws
+
+    var photosEnabled: Bool {
+        get { running?.request.photosEnabled ?? requestedPhotosEnabled }
+        set { requestedPhotosEnabled = newValue }
+    }
+
+    var format: Format {
+        get { running?.request.format ?? requestedFormat }
+        set { requestedFormat = newValue }
+    }
+
+    var phase: Phase {
+        if let running { return .rendering(progress: running.fraction) }
+        switch coordinator.outcome(tripId: tripId) {
+        case let .finished(film, fileURL): return .finished(film: film, fileURL: fileURL)
+        case let .failed(message): return .failed(message: message)
+        case .cancelled, .none: return .idle
+        }
+    }
+
+    var isRendering: Bool { running != nil }
 
     /// What road reconstruction managed for this trip, surfaced for the same
     /// reason `photoShortfall` is (2026-08-15): a film whose legs draw dashed
@@ -60,31 +90,23 @@ final class RecapModel {
     /// route exists, the provider could not be reached, it refused for load, or
     /// the budget ran out — need four different responses from the user. Only
     /// one of them means "this is simply what the journey looks like".
-    private(set) var routing: RouteMatchReport?
+    var routing: RouteMatchReport? { running?.routing }
 
-    private let tripId: String
-    private let config: TrackingConfig
-    private let repository: TripRepository
-    private var cancelFlag = CancelFlag()
-    private var exportTask: Task<Void, Never>?
-    /// Holds the screen awake and a background-task assertion for the duration
-    /// of a render (2026-08-15): a locked screen or a brief app switch used to
-    /// kill an export outright, and a film takes minutes.
-    private let lifecycle = ExportLifecycleGuard()
+    /// Set when warming could not load every deck photo — see
+    /// `PhotoLibraryPhotoResolver.WarmSummary`. Surfaced rather than swallowed:
+    /// the symptom is blank cards in a finished film, which reads as a rendering
+    /// bug rather than as photos that are not on this device.
+    var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary? { running?.photoShortfall }
 
-    init(tripId: String, config: TrackingConfig, repository: TripRepository) {
-        self.tripId = tripId
-        self.config = config
-        self.repository = repository
+    private var running: RecapExportCoordinator.Running? {
+        coordinator.running(tripId: tripId)
     }
 
-    var isRendering: Bool {
-        if case .rendering = phase { return true } else { return false }
-    }
+    // MARK: - Actions
 
-    /// Starts the render. **`appearance` is captured by the caller at the tap**,
-    /// not read here.
+    /// Starts the render, or joins the one already in flight for this trip.
     ///
+    /// **`appearance` is captured by the caller at the tap**, not read here.
     /// This is the composition boundary in the sense `Docs/decisions.md`
     /// 2026-08-15 means it: the place where a trip becomes *a specific film*. The
     /// ADR requires export variation to enter as an explicit value chosen here
@@ -93,353 +115,36 @@ final class RecapModel {
     /// reason. The appearance is ambient device state, so left unbound it would
     /// be exactly the coin toss the ADR names: a film that changes if the user
     /// toggles dark mode mid-render, and a failing golden frame nobody can
-    /// reproduce.
-    ///
-    /// So it arrives as a parameter from `RecapView`, which reads
+    /// reproduce. It arrives as a parameter from `RecapView`, which reads
     /// `@Environment(\.colorScheme)` on the main actor at the moment the button
-    /// is pressed, and from here it is a `let` that crosses into the detached
-    /// render task unchanged.
-    ///
-    /// **What is not yet met:** the ADR also says a seed that is not stored is
-    /// not a seed. There is no export record in the schema to store this in — the
-    /// seed feature that would create one is deferred by the same ADR — so the
-    /// resolved value goes into the film's log line below and the gap is written
-    /// down (`Docs/eng-session-appearance.md` §4.1) rather than assumed away.
+    /// is pressed, and travels into `RecapExportRequest` unchanged.
     func startExport(appearance: RecapAppearance) {
-        guard !isRendering else { return }
-        cancelFlag = CancelFlag()
-        phase = .rendering(progress: 0)
-        // Taken before the render starts and released on every exit below —
-        // finished, cancelled, failed. On expiry the export cancels itself at a
-        // frame boundary rather than being suspended mid-write.
-        lifecycle.begin { [weak self] in
-            KamomeLog.recap.error("export: the background assertion expired — cancelling at the next frame")
-            self?.cancelFlag.set()
-        }
-        exportTask = Task { [weak self] in
-            await self?.runExport(appearance: appearance)
-            self?.lifecycle.end()
+        let request = RecapExportRequest(
+            tripId: tripId,
+            photosEnabled: requestedPhotosEnabled,
+            format: requestedFormat,
+            appearance: appearance
+        )
+        let job = RecapExportJob(request: request, config: config, repository: repository)
+        switch coordinator.start(request: request, job: job) {
+        case .started, .joined:
+            busyTripId = nil
+        case let .refused(busyTripId):
+            self.busyTripId = busyTripId
         }
     }
 
+    /// **An explicit user action, and only that.** Dismissing the export screen
+    /// no longer cancels — that is the whole of Phase 4 closeout step 2.
     func cancel() {
-        cancelFlag.set()
+        coordinator.cancel(tripId: tripId)
     }
 
-    // MARK: - Pipeline
-
-    private func runExport(appearance requested: RecapAppearance) async {
-        // Best-effort §4.4 matching before composing: an instant no-op while
-        // base_url is empty, and now bounded by `matching.trip_budget_s` for the
-        // whole trip rather than only per request. The replay should follow
-        // roads whenever a server is around.
-        //
-        // Through the coordinator, so a film started seconds after an import
-        // **joins** that import's run instead of starting a second one over the
-        // same legs (2026-08-15). Concurrent runs were verified not to corrupt
-        // anything — `DatabaseQueue` serialises, and the write is one column
-        // that does not read itself — but two runs mean two budgets and two
-        // verdicts for one trip, and the screen can only show one.
-        routing = await RouteMatchCoordinator.shared.result(
-            tripId: tripId,
-            service: RouteMatchService(repository: repository, matching: config.matching)
-        )
-        guard let detail = try? repository.detail(tripId: tripId) else {
-            phase = .failed(message: String(localized: "recap_failed"))
-            return
-        }
-        let stats = TripStats.from(jsonString: detail.trip.statsJson)
-        // Deck photo refs are selected here (data); the resolver loads the
-        // bitmaps. Refs stay out of the render size.
-        let photoRefs = photosEnabled ? selectStopPhotoRefs(detail: detail) : [:]
-        let deck = RecapDeck(
-            photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
-            labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
-        )
-        // Typed legs (Fable review 2026-07-26): each stretch reaches the film
-        // with its own transport mode and provenance, so a leg Kamome could not
-        // reconstruct renders visibly as a guess rather than as road (PD-1).
-        let legs = RecapComposer.legs(
-            from: detail.segments,
-            epsilonM: config.simplify.epsilonM,
-            matchedEpsilonM: config.matching.displayEpsilonM
-        )
-        guard let trip = RecapComposer.trip(
-            trip: detail.trip,
-            legs: legs,
-            stops: detail.stops,
-            stats: stats,
-            photosByStop: photoRefs,
-            deck: deck,
-            stopHoldS: config.export.stopHoldS,
-            rawPhotoCounts: rawPhotoCounts(detail: detail),
-            favoriteCounts: favoriteCounts(detail: detail),
-            weighting: config.export,
-            everyLegRoutabilityEstablished:
-                RecapComposer.everyLegRoutabilityEstablished(detail.segments)
-        ) else {
-            phase = .failed(message: String(localized: "recap_failed"))
-            return
-        }
-        // The film type is derived, never stored (`RecapFilmType`), so it is
-        // resolved here — after routing has had whatever time it has had — and
-        // announced. `.unknown` renders the local film, and saying so is the
-        // difference between a declared fallback and a silent one: a trip whose
-        // crossing has not been routed yet looks exactly like a trip with no
-        // crossing, and only this line tells them apart (`Arch.md` §6).
-        let journeyCount = RecapFilmType.distinctJourneyCount(legs: trip.legs)
-        switch trip.filmType {
-        case .unknown:
-            KamomeLog.recap.notice(
-                "recap: film type UNKNOWN — routing has not answered for every leg, so a crossing may not have been found; rendering the local film and a later export may differ"
-            )
-        case .multiRegion:
-            KamomeLog.recap.notice(
-                "recap: film type multi-region, \(journeyCount, privacy: .public) local journeys — that film is not built, rendering the local one"
-            )
-        case .local:
-            KamomeLog.recap.notice("recap: film type local — one journey, no crossing")
-        case .oneDestination:
-            KamomeLog.recap.notice("recap: film type one destination abroad — 2 local journeys")
-        }
-
-        // Layer 3 pipeline. The map stays north-up (product decision, Chiu
-        // 2026-07-25) and the 8-direction car sprite carries the heading, so the
-        // subject looks identical whichever base map renders underneath.
-        //
-        // `follow_heading_up` ships false; the capability check only stops a
-        // renderer that cannot rotate from being handed a bearing it would drop,
-        // should the flag ever be turned on.
-        // One question, asked once (`RecapMapRegion` is the seam): which region
-        // covers this trip? Its tiles feed the renderer, its DEM feeds hillshade,
-        // and its extent is what the opening establishing shot frames.
-        let region = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) })
-            .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
-        let provider = Self.snapshotProvider(for: region, appearance: requested)
-        // Resolved once, here, and never asked again — the substrate can veto the
-        // device's choice (the MapLibre souvenir map has no light variant), and
-        // the palette below must follow whatever the *base map* actually is, not
-        // what the device asked for. Same shape as the heading-up line under it:
-        // a capability the renderer declares rather than silently ignores.
-        let appearance = provider.capabilities.appearance(honouring: requested)
-        let exportConfig = config.export.withFollowHeadingUp(
-            config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
-        )
-        // The region's extent drives the opening establishing shot and switches
-        // the film onto content-derived pacing (Chiu 2026-07-30). No region means
-        // Apple's map, no prologue, and the previous fixed duration.
-        let establishing = region.map {
-            RecapBounds(
-                minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
-                maxLat: $0.bounds.maxLat, maxLon: $0.bounds.maxLon
-            )
-        }
-        guard let timeline = LinearTimeline(
-            trip: trip, config: exportConfig, establishing: establishing,
-            // The capability layer reaching the film's form: the substrate says
-            // how wide a frame it can draw, and the type-2 opening picks between
-            // its two forms accordingly rather than discovering the answer one
-            // snapshot at a time (`CrossingFraming`).
-            substrateMaxLongitudeDeg: provider.capabilities.maxFramableLongitudeDeg
-        ) else {
-            phase = .failed(message: String(localized: "recap_failed"))
-            return
-        }
-        // The single most useful line in the log when a film comes out wrong
-        // (2026-08-01). No covering region silently costs the souvenir map, the
-        // opening prologue *and* content-derived pacing at once — a six-day trip
-        // rendering as a 30-second Apple-map film looked like three separate bugs
-        // and was one missing tile set.
-        if region == nil {
-            KamomeLog.recap.error("""
-                no installed map region covers this trip — falling back to Apple's map, \
-                no prologue, and the legacy \(exportConfig.targetDurationS, format: .fixed(precision: 0))s duration. \
-                A trip spanning two regions hits this (handoff §"Trips that span two map regions").
-                """)
-        }
-        // The appearance is on this line because it is the only record of it.
-        // With no export table to persist it in, the log is where a finished
-        // film's palette can still be recovered from — which is the difference
-        // between "we do not store it yet" and "we cannot tell you what you got".
-        KamomeLog.recap.notice("""
-            film: \(timeline.durationS, format: .fixed(precision: 1))s · \
-            \(timeline.frameCount) frames · opening \(timeline.openingS, format: .fixed(precision: 1))s · \
-            \(trip.stops.count) stops · \(trip.legs.filter(\.provenance.isInferred).count)/\(trip.legs.count) legs dashed · \
-            \(appearance.rawValue, privacy: .public) appearance\
-            \(appearance == requested ? "" : " (device asked for \(requested.rawValue), the substrate is fixed)", privacy: .public)
-            """)
-        let style = RecapStyle.modernMinimal(appearance).withEndCard(config.export.endCardStyle)
-        let resolver = PhotoLibraryPhotoResolver()
-        await warmDeckPhotos(trip: trip, style: style, resolver: resolver)
-        let compositor = FrameCompositor(
-            timeline: timeline,
-            subject: VehicleSubjectRenderer.make(
-                style: style, config: exportConfig, subjectId: detail.trip.vehicle
-            ),
-            overlay: RecapOverlayRenderer(style: style, resolver: resolver),
-            style: style,
-            widthPx: config.export.frameWidthPx,
-            heightPx: config.export.frameHeightPx,
-            // Built for every film, not only for a trip that has a crossing:
-            // whether one exists is a fact the timeline discovers, and a
-            // compositor that had to be told in advance would be a second place
-            // for the answer to be wrong. Unused films pay one sprite decode.
-            crossingSubject: VehicleSubjectRenderer.make(
-                style: style, config: exportConfig, subjectId: VehicleCatalog.crossingSubjectId
-            ),
-            // What flies a crossing the film has issued a boarding pass for
-            // (ADR 2026-09-04). Built for every film for the same reason the
-            // seagull is: whether one is needed is the timeline's discovery.
-            flightSubject: VehicleSubjectRenderer.make(
-                style: style, config: exportConfig, subjectId: VehicleCatalog.planeSubjectId
-            )
-        )
-        let exporter = RecapExporter(
-            timeline: timeline,
-            compositor: compositor,
-            provider: provider,
-            config: exportConfig
-        )
-
-        let scratch = FileManager.default.temporaryDirectory
-        let stamp = Int(Date.now.timeIntervalSince1970)
-        let videoURL = scratch.appendingPathComponent("kamome-recap-\(stamp).mp4")
-        let gifURL = format == .gif ? scratch.appendingPathComponent("kamome-recap-\(stamp).gif") : nil
-        try? FileManager.default.removeItem(at: videoURL)
-
-        let started = ContinuousClock.now
-        do {
-            let output = try await runDetached(exporter: exporter, videoURL: videoURL, gifURL: gifURL)
-            guard let output else {
-                cleanup(videoURL: videoURL, gifURL: gifURL)
-                phase = .idle
-                return
-            }
-            let elapsed = ContinuousClock.now - started
-            let seconds = Double(elapsed.components.seconds)
-                + Double(elapsed.components.attoseconds) * 1e-18
-            // The primary file: GIF when the user chose GIF, MP4 otherwise.
-            let primaryURL = output.gifURL ?? output.videoURL
-            let filmFormat = output.gifURL != nil ? "gif" : "mp4"
-            // Move out of tmp and persist the record — the film becomes a thing
-            // that exists (Phase 4 closeout, Chiu 2026-09-05).
-            let record = try persistFilm(
-                tempURL: primaryURL,
-                format: filmFormat,
-                appearance: appearance,
-                recapMode: config.export.recapMode,
-                durationS: timeline.durationS,
-                renderSeconds: seconds
-            )
-            // The other format's tmp file, if any, is cleaned up — only the
-            // chosen format is stored.
-            if output.gifURL != nil {
-                try? FileManager.default.removeItem(at: output.videoURL)
-            }
-            guard let fileURL = FilmStore.resolvedURL(relativePath: record.relativePath) else {
-                phase = .failed(message: String(localized: "recap_failed"))
-                return
-            }
-            phase = .finished(film: record, fileURL: fileURL, renderSeconds: seconds)
-        } catch {
-            cleanup(videoURL: videoURL, gifURL: gifURL)
-            phase = .failed(message: String(describing: error))
-        }
-    }
-
-    /// The render loop is CPU-bound; keep it off the main actor and hop back
-    /// only for progress updates. Cancellation reads the lock-guarded flag
-    /// directly on the render thread.
-    private func runDetached(
-        exporter: RecapExporter,
-        videoURL: URL,
-        gifURL: URL?
-    ) async throws -> RecapExporter.Output? {
-        let model = self
-        let flag = cancelFlag
-        return try await Task.detached(priority: .userInitiated) {
-            try await exporter.export(
-                videoURL: videoURL,
-                gifURL: gifURL,
-                progress: { fraction in
-                    Task { @MainActor in
-                        if model.isRendering { model.phase = .rendering(progress: fraction) }
-                    }
-                },
-                shouldContinue: { !flag.isSet }
-            )
-        }.value
-    }
-
-    /// The base map to render on: the Kamome souvenir map when vector tiles
-    /// covering **this trip** are on hand, Apple's otherwise.
-    ///
-    /// This is the §3 "MapLibre production switch", made conditional on purpose.
-    /// A `.pmtiles` file covers a bounded region and there is no planet-sized
-    /// file to bundle, so until tile provisioning exists (spec P7) a hard
-    /// retirement of MapKit would render blank frames for any trip outside the
-    /// installed regions. Falling back keeps every trip exportable; the moment
-    /// tiles for its area are present the film is the designed one.
-    ///
-    /// The region is chosen per trip (Fable review 2026-07-26): the §6 gate is
-    /// three real trips in three places, side-loaded over Finder, so the lookup
-    /// matches each render against what it actually covers.
-    ///
-    /// `appearance` is what the *device* asked for. Only Apple Maps can honour
-    /// it; the souvenir map answers `.dark` through its capabilities and the
-    /// caller resolves the two.
-    private static func snapshotProvider(
-        for region: RecapMapRegion?, appearance: RecapAppearance
-    ) -> MapRenderer {
-        guard let region,
-              let styleURL = try? RecapMapStyle.resolvedStyleURL(
-                  styleResource: RecapMapTiles.styleResource,
-                  tilesURL: region.tilesURL,
-                  // Hillshade when a DEM for this area is installed; the style
-                  // strips the layer when it is not (Chiu 2026-07-30).
-                  terrainURL: region.terrainURL
-              )
-        else { return MapKitSnapshotProvider(appearance: appearance) }
-        return MapLibreSnapshotProvider(styleURL: styleURL)
-    }
-
-    private func cleanup(videoURL: URL, gifURL: URL?) {
-        try? FileManager.default.removeItem(at: videoURL)
-        if let gifURL { try? FileManager.default.removeItem(at: gifURL) }
-    }
-
-    // MARK: - Film persistence
-
-    /// Moves the rendered file out of tmp and inserts its record. Returns the
-    /// record for the view to carry.
-    private func persistFilm(
-        tempURL: URL,
-        format: String,
-        appearance: RecapAppearance,
-        recapMode: RecapMode,
-        durationS: Double,
-        renderSeconds: Double
-    ) throws -> FilmRecord {
-        let relativePath = try FilmStore.moveToStore(from: tempURL)
-        let fileURL = FilmStore.resolvedURL(relativePath: relativePath)
-        let fileBytes = fileURL.flatMap(FilmStore.fileSize(at:))
-        let record = FilmRecord(
-            id: UUID().uuidString,
-            tripId: tripId,
-            relativePath: relativePath,
-            format: format,
-            createdAt: Date.now.timeIntervalSince1970,
-            durationS: durationS,
-            renderSeconds: renderSeconds,
-            appearance: appearance.rawValue,
-            recapMode: recapMode.rawValue,
-            fileBytes: fileBytes
-        )
-        try repository.saveFilm(record)
-        KamomeLog.recap.notice(
-            "film stored: \(record.relativePath, privacy: .public) · \(fileBytes ?? 0) bytes"
-        )
-        return record
+    /// Returns the screen to idle so a new export can be configured. Never
+    /// touches a run in flight.
+    func exportAgain(appearance: RecapAppearance) {
+        coordinator.clearOutcome(tripId: tripId)
+        startExport(appearance: appearance)
     }
 
     /// Deletes a film's row and its file. Called from the finished screen's
@@ -448,77 +153,9 @@ final class RecapModel {
         do {
             try repository.deleteFilm(filmId: film.id)
             FilmStore.deleteFile(relativePath: film.relativePath)
-            phase = .idle
+            coordinator.clearOutcome(tripId: tripId)
         } catch {
             KamomeLog.recap.error("film deletion failed: \(error)")
         }
-    }
-
-    // MARK: - Photos
-
-    /// Selects each stop's deck photo *refs* (§5): highlight first, then the rest
-    /// evenly spread across the visit, capped at `deck_max_photos` so a
-    /// photo-dense stop samples the whole visit rather than just its first burst
-    /// (`PhotoDeckSelector`, shared with import). Pure data — no PhotoKit, no
-    /// bitmaps; the render layer resolves the refs.
-    /// Decodes every deck photo up front, so a stop that will render a blank card
-    /// is reported before the export rather than discovered in the finished film.
-    /// iCloud-optimised originals are the usual cause (`PhotoLibraryPhotoResolver`).
-    private func warmDeckPhotos(
-        trip: RecapTrip, style: RecapStyle, resolver: PhotoLibraryPhotoResolver
-    ) async {
-        photoShortfall = nil
-        guard photosEnabled else { return }
-        let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
-        let warmed = await resolver.warm(trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1))
-        guard warmed.missing > 0 else { return }
-        photoShortfall = warmed
-        KamomeLog.recap.error("""
-            \(warmed.missing) of \(warmed.requested) deck photos could not be loaded \
-            (\(warmed.inCloud) are in iCloud, not on this device) — those stops will render \
-            blank cards. The route is unaffected: EXIF place and time need no download.
-            """)
-    }
-
-    /// Every stop's **raw** photograph count — what `StopWeighting` judges the
-    /// place on, before `deck_max_photos` caps what the film can show.
-    private func rawPhotoCounts(detail: TripRepository.TripDetail) -> [String: Int] {
-        var counts: [String: Int] = [:]
-        for photo in detail.photos {
-            guard let stopId = photo.stopId else { continue }
-            counts[stopId, default: 0] += 1
-        }
-        return counts
-    }
-
-    /// Favourited photographs per stop — `PHAsset.isFavorite` at import time,
-    /// stored in `is_highlight`. Zero on trips imported before that landed.
-    private func favoriteCounts(detail: TripRepository.TripDetail) -> [String: Int] {
-        var counts: [String: Int] = [:]
-        for photo in detail.photos where photo.isHighlight != 0 {
-            guard let stopId = photo.stopId else { continue }
-            counts[stopId, default: 0] += 1
-        }
-        return counts
-    }
-
-    private func selectStopPhotoRefs(detail: TripRepository.TripDetail) -> [String: [PhotoRef]] {
-        var result: [String: [PhotoRef]] = [:]
-        for stop in detail.stops {
-            let ordered = detail.photos
-                .filter { $0.stopId == stop.id }
-                .sorted { lhs, rhs in
-                    if lhs.isHighlight != rhs.isHighlight { return lhs.isHighlight > rhs.isHighlight }
-                    return (lhs.takenAt ?? 0) < (rhs.takenAt ?? 0)
-                }
-                .map(\.phAssetId)
-            let selected = PhotoDeckSelector.evenlySpread(
-                ordered,
-                min: config.photoImport.deckMinPhotos,
-                max: config.photoImport.deckMaxPhotos
-            )
-            if !selected.isEmpty { result[stop.id] = selected.map(PhotoRef.asset) }
-        }
-        return result
     }
 }

@@ -1,10 +1,24 @@
 import CoreGraphics
 import Foundation
 
-/// The product name as it appears in the film. Not localized — a wordmark is a
-/// brand mark, the same in every language.
+/// The product name as it appears in the film, and the line under it. Neither is
+/// localized — a wordmark is a brand mark, the same in every language, and so is
+/// a tagline.
 enum RecapWordmark {
     static let text = "Kamome"
+
+    /// **The film's closing line** (Chiu 2026-09-05). It replaced `recap_end_cta`
+    /// — *"Record your own journey"*, a localized call to action carried through
+    /// the narrow waist as `RecapTrip.callToAction` — and the string, the field
+    /// and the overlay's parameter went with it.
+    ///
+    /// 🔴 **Deliberately not localized, on the wordmark's own argument.** Chiu
+    /// named the standing: this is brand copy, not a sentence about a trip, so it
+    /// belongs beside `text` rather than in `Localizable.xcstrings`. The film's
+    /// chrome already works this way — the boarding pass's `FROM` / `TO` /
+    /// `DISTANCE` / `DATE` are English literals by decision, and the HUD's `km`
+    /// is un-localized so a frame renders identically on any device.
+    static let tagline = "Turn your journey into memory."
 }
 
 /// Trip chrome for the overlay renderer (§4.5 step 4): the opening title and the
@@ -79,63 +93,139 @@ extension RecapOverlayRenderer {
         )
     }
 
-    /// Closing card: what the journey came to, in the same visual language as the
-    /// opening so the film is bracketed rather than merely ended.
+    /// Closing card: what the journey came to, floating on the map it just drew.
     ///
-    /// Carries either the share QR or — for the Replay MVP — the Kamome wordmark
-    /// (PD-4). The only payload the MVP could encode is `kamome://route/<id>`,
-    /// which resolves to nothing: scanning it opens no page, installs no app,
-    /// loads no trip. A code that invites a scan and then does nothing is worse
-    /// for the film than no code, so the space goes to the wordmark until the
-    /// share URL exists (spec P6/P7). The QR path below is untouched and returns
-    /// the moment `shareURL` is non-nil.
-    func drawEndChrome(stats: [String], callToAction: String, shareURL: String?, into surface: RenderSurface) {
+    /// 🔴 **Neither a scrim nor a panel** (Chiu 2026-09-05, ADR 2026-09-05 (d)).
+    /// The frame is dimmed a little so unplated type reads, and everything else
+    /// is drawn straight onto the map — trail, coastline and stop pins all still
+    /// visible. `RecapEndCardStyle` carries the three grounds that were tried and
+    /// why this is the one. The framing is untouched.
+    ///
+    /// Top to bottom, per Chiu's layout: the mark, the **trip's name**, one row of
+    /// three figures, then the wordmark with its line beneath.
+    ///
+    /// Carries the share QR in the mark's place when there is one — for the Replay
+    /// MVP there is not (PD-4): `kamome://route/<id>` opens no page, installs no
+    /// app, loads no trip, and a code inviting a scan nothing can honour is worse
+    /// for the film than no code. The QR path returns the moment `shareURL` is
+    /// non-nil.
+    func drawEndChrome(
+        title: String, figures: [RecapEndCardFigure], shareURL: String?, into surface: RenderSurface
+    ) {
         guard style.endCard == .full else { return drawMinimalEndChrome(into: surface) }
         let scale = surface.scale
-        drawScrim(into: surface)
+        let tokens = style.endCardStyle
+
+        surface.context.setFillColor(tokens.dimColor)
+        surface.context.fill(CGRect(x: 0, y: 0, width: surface.widthPx, height: surface.heightPx))
+
+        // One halo for the whole stack — see `RecapEndCardStyle.typeShadowColor`
+        // for why the type carries its own separation instead of the dim carrying
+        // it. Everything below draws with `drawCenteredText`, never
+        // `drawShadowedText`, which would replace this with the stop label's.
+        surface.context.saveGState()
+        defer { surface.context.restoreGState() }
+        surface.context.setShadow(
+            offset: .zero, blur: tokens.typeShadowBlurPx * scale, color: tokens.typeShadowColor
+        )
 
         let markSide = shareURL == nil ? style.titleMarkSidePx * scale : style.qrSidePx * scale
+        let sideMargin = style.cardMarginPx * scale * style.titleSideMarginScale
+        let titleFontPx = fittedFontPx(
+            title, preferred: style.titleFontPx,
+            maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface
+        )
+        let titleH = titleFontPx * scale
+        let figuresH = (tokens.figureValueFontPx + tokens.figureLabelGapPx + tokens.figureLabelFontPx) * scale
         let wordmarkH = style.wordmarkFontPx * scale
-        let statH = style.statFontPx * scale * 1.4
-        let ctaH = style.subtitleFontPx * scale
+        let taglineH = tokens.taglineFontPx * scale
         let gap = style.cardPaddingPx * scale
-        let stackH = markSide + gap + wordmarkH + gap * 1.5
-            + CGFloat(stats.count) * statH + gap + ctaH
+
+        let stackH = markSide + gap * 1.2 + titleH + gap * 2 + figuresH
+            + gap * 2 + wordmarkH + gap * 0.5 + taglineH
         var cursorY = (CGFloat(surface.heightPx) + stackH) / 2
         let centerX = CGFloat(surface.widthPx) / 2
 
         cursorY -= markSide
-        if let shareURL, let qrCode = RecapQRCode.image(for: shareURL, sidePx: Int(style.qrSidePx)) {
-            surface.context.saveGState()
-            surface.context.interpolationQuality = .none  // keep the QR modules crisp
-            surface.context.draw(qrCode, in: CGRect(
-                x: centerX - markSide / 2, y: cursorY, width: markSide, height: markSide
-            ))
-            surface.context.restoreGState()
-        } else {
-            drawMark(centeredAt: CGPoint(x: centerX, y: cursorY + markSide / 2), side: markSide, in: surface)
-        }
+        drawEndMark(shareURL: shareURL, centerX: centerX, bottomY: cursorY, side: markSide, in: surface)
 
-        cursorY -= gap + wordmarkH
+        cursorY -= gap * 1.2 + titleH
+        drawCenteredText(
+            title, centerX: centerX, baselineY: cursorY + titleH * 0.22,
+            fontPx: titleFontPx, color: style.chromeTitleColor, in: surface
+        )
+
+        cursorY -= gap * 2 + figuresH
+        drawFigureRow(figures, topY: cursorY + figuresH, in: surface)
+
+        cursorY -= gap * 2 + wordmarkH
         drawCenteredText(
             RecapWordmark.text, centerX: centerX, baselineY: cursorY + wordmarkH * 0.2,
             fontPx: style.wordmarkFontPx, color: style.chromeTitleColor, in: surface
         )
 
-        cursorY -= gap * 1.5
-        for statLine in stats {
-            cursorY -= statH
+        // **Directly under the wordmark and smaller** (Chiu 2026-09-05): it reads
+        // as that mark's line rather than as another row of the summary. Set as
+        // written, not uppercased — it is a sentence with a full stop.
+        cursorY -= gap * 0.5 + taglineH
+        drawCenteredText(
+            RecapWordmark.tagline, centerX: centerX, baselineY: cursorY + taglineH * 0.2,
+            fontPx: tokens.taglineFontPx, color: style.chromeAccentColor, in: surface
+        )
+    }
+
+    /// The brand mark, or the share QR when the film has a payload for one.
+    private func drawEndMark(
+        shareURL: String?, centerX: CGFloat, bottomY: CGFloat, side: CGFloat, in surface: RenderSurface
+    ) {
+        guard let shareURL, let qrCode = RecapQRCode.image(for: shareURL, sidePx: Int(style.qrSidePx)) else {
+            return drawMark(centeredAt: CGPoint(x: centerX, y: bottomY + side / 2), side: side, in: surface)
+        }
+        surface.context.saveGState()
+        surface.context.interpolationQuality = .none  // keep the QR modules crisp
+        surface.context.draw(qrCode, in: CGRect(x: centerX - side / 2, y: bottomY, width: side, height: side))
+        surface.context.restoreGState()
+    }
+
+    /// **`1,358 KM · 13 DAYS · 9 STOPS`, as three columns rather than a sentence**
+    /// (Chiu 2026-09-05): each is a large number with its small tracked label
+    /// under it, and the columns are spaced evenly across `figureRowWidthFraction`
+    /// of the frame.
+    ///
+    /// `topY` is the top of the row — the value's own height — so the caller
+    /// places the block and this fills it.
+    ///
+    /// Empty is a real state and draws nothing: a trip whose figures could not be
+    /// composed closes on its name and its mark rather than on three blanks.
+    private func drawFigureRow(_ figures: [RecapEndCardFigure], topY: CGFloat, in surface: RenderSurface) {
+        guard !figures.isEmpty else { return }
+        let scale = surface.scale
+        let tokens = style.endCardStyle
+        let valueH = tokens.figureValueFontPx * scale
+        let labelH = tokens.figureLabelFontPx * scale
+        let rowWidth = CGFloat(surface.widthPx) * tokens.figureRowWidthFraction
+        let column = rowWidth / CGFloat(figures.count)
+        let firstCentre = (CGFloat(surface.widthPx) - rowWidth) / 2 + column / 2
+
+        for (index, figure) in figures.enumerated() {
+            let centreX = firstCentre + column * CGFloat(index)
             drawCenteredText(
-                statLine, centerX: centerX, baselineY: cursorY + statH * 0.25,
-                fontPx: style.statFontPx, color: style.chromeMetaColor, in: surface
+                figure.value,
+                centerX: centreX, baselineY: topY - valueH + valueH * 0.22,
+                fontPx: fittedFontPx(
+                    figure.value, preferred: tokens.figureValueFontPx,
+                    maxWidth: column * 0.9, in: surface
+                ),
+                color: style.chromeTitleColor, in: surface
+            )
+            drawCenteredText(
+                figure.label,
+                centerX: centreX,
+                baselineY: topY - valueH - tokens.figureLabelGapPx * scale - labelH * 0.78,
+                fontPx: tokens.figureLabelFontPx, color: style.chromeMetaColor,
+                tracking: tokens.figureLabelFontPx * tokens.figureLabelTrackingEm * scale, in: surface
             )
         }
-
-        cursorY -= gap + ctaH
-        drawCenteredText(
-            callToAction.uppercased(), centerX: centerX, baselineY: cursorY + ctaH * 0.2,
-            fontPx: style.subtitleFontPx, color: style.chromeAccentColor, in: surface
-        )
     }
 
     /// The premium sign-off: a small mark and wordmark in the top-right corner,
@@ -203,31 +293,6 @@ extension RecapOverlayRenderer {
             gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: height), options: []
         )
         surface.context.restoreGState()
-    }
-
-    /// The full-frame dark wash that pushes the map back. Strongest at the centre
-    /// where the text sits, so the map still reads at the edges instead of the
-    /// card looking like a flat black slide.
-    private func drawScrim(into surface: RenderSurface) {
-        let context = surface.context
-        let rect = CGRect(x: 0, y: 0, width: surface.widthPx, height: surface.heightPx)
-        context.setFillColor(style.chromeScrimColor)
-        context.fill(rect)
-
-        guard style.chromeScrimCenterBoost > 0.001,
-              let space = CGColorSpace(name: CGColorSpace.sRGB),
-              let inner = style.chromeScrimColor.copy(alpha: style.chromeScrimCenterBoost),
-              let outer = style.chromeScrimColor.copy(alpha: 0),
-              let gradient = CGGradient(colorsSpace: space, colors: [inner, outer] as CFArray, locations: [0, 1])
-        else { return }
-        context.saveGState()
-        context.translateBy(x: rect.midX, y: rect.midY)
-        context.scaleBy(x: rect.width / rect.height, y: 1)
-        context.drawRadialGradient(
-            gradient, startCenter: .zero, startRadius: 0,
-            endCenter: .zero, endRadius: rect.height * 0.55, options: []
-        )
-        context.restoreGState()
     }
 
     /// The brand mark — the seagull Kamome is named for, drawn from the same

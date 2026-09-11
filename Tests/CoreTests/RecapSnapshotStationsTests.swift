@@ -43,7 +43,7 @@ final class RecapSnapshotStationsTests: RecapRenderTestCase {
         ]
         let trip = RecapTrip(
             route: jumped, stops: [], title: "Jump", subtitle: "",
-            statsLines: [], callToAction: "", shareURL: ""
+            endCardFigures: [], shareURL: ""
         )
         let timeline = try makeTimeline(trip, config: config)
         let compositor = makeCompositor(timeline)

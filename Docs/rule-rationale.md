@@ -62,3 +62,24 @@ gate is worse than none because the rule then looks covered.
 The promising alternative, if this is revisited: assert that every key in
 `Config/TrackingConfig.json` has a typed mirror and a `ConfigLoaderTests`
 assertion. That is a closed set, and checkable exactly.
+
+## Why staging is a rule (`Arch.md` §8)
+
+Four incidents, and the fourth is a different kind from the first three.
+
+Three times a branch ref picked up another session's commits — sessions here
+share a checkout family, `main` moves under you mid-task, and a wildcard stage
+cannot tell your change from someone else's. The cost each time was rework.
+
+The fourth, **2026-09-09**, cost someone else's work. A squash rebased a tree
+built against PR #46 onto a `main` that had reached #47; git reported no
+conflict, because a soft reset keeps your index and asks no questions. **Five
+documents of an already-merged PR came back as silent reverts** — an ADR, its
+index row, `HANDOFF.md`, `PO.md` and `current-state.md` — and nothing failed. It
+was caught by diffing the commit against the new head *afterwards*, which is not
+a control anyone had asked for.
+
+That is why the rule names three separate acts — confirm the branch, name the
+paths, do not squash onto a moved `main`. Each of them turns a silent overwrite
+into either a conflict or a diff you have to read.
+
