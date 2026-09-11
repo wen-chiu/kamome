@@ -59,7 +59,7 @@ being read.
 | what is guaranteed | gate |
 |---|---|
 | the routing key is not in the built artifact — exact match across every file, binaries included; `KamomeRoutingAPIKey` absent or empty; the **shipped** `TrackingConfig.json` is distributable; no 32-hex string in any bundled text resource | `release/check-archive.sh` |
-| the app carries Geoapify + OpenStreetMap attribution and a privacy notice string — **passing since 2026-09-02**, and the only one of the two that can be run without an artifact | `release/check-attribution.sh` |
+| the app carries Geoapify + OpenStreetMap attribution and a privacy notice string — **passing since 2026-09-02**, and the only one of the two that can be run without an artifact — **and, since ADR 2026-09-12 (c), the verbatim licence of every package `Package.resolved` pins, acknowledged at its pinned version** | `release/check-attribution.sh` |
 
 An ordinary `./check.sh` **prints that these did not run**, so a release gate
 cannot be silently forgotten. Both are runnable on their own for a quick check
