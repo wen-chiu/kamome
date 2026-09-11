@@ -1057,23 +1057,6 @@
         }
       }
     },
-    "recap_end_cta": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Record your own journey"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記錄你自己的旅程"
-          }
-        }
-      }
-    },
     "recap_export": {
       "extractionState": "manual",
       "localizations": {
@@ -1155,6 +1138,96 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯出失敗"
+          }
+        }
+      }
+    },
+    "recap_figure_label_day": {
+      "comment": "The unit under the closing card's day count, for exactly one. Two keys rather than a plural variation: the number is drawn as a separate figure, and Xcode refuses a plural whose text does not contain it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DAY"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天"
+          }
+        }
+      }
+    },
+    "recap_figure_label_days": {
+      "comment": "The unit under the closing card's day count, for any other count. See recap_figure_label_day.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DAYS"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天"
+          }
+        }
+      }
+    },
+    "recap_figure_label_km": {
+      "comment": "The unit under the closing card's distance figure. Uppercase in English; it is a label in a row of three, never a sentence.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KM"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公里"
+          }
+        }
+      }
+    },
+    "recap_figure_label_stop": {
+      "comment": "The unit under the closing card's stop count, for exactly one. See recap_figure_label_day.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STOP"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停留"
+          }
+        }
+      }
+    },
+    "recap_figure_label_stops": {
+      "comment": "The unit under the closing card's stop count, for any other count. See recap_figure_label_day.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "STOPS"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停留"
           }
         }
       }
@@ -1563,40 +1636,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享"
-          }
-        }
-      }
-    },
-    "recap_stat_distance_stops": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld km · %2$lld stops"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld 公里 · %2$lld 個停留"
-          }
-        }
-      }
-    },
-    "recap_stat_drive": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ h driving"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行駛 %@ 小時"
           }
         }
       }

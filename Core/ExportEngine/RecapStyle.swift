@@ -10,29 +10,11 @@ import Foundation
 /// Consumed by the render-side of the narrow waist: `SpriteSubjectRenderer`
 /// (the moving subject) and `RecapOverlayRenderer` (route trail, stop label,
 /// photo deck, title/end chrome). The story/timeline never sees it.
-/// How the film signs off.
-///
-/// A **style** choice, not a branch in the renderer: the closing beat is one of
-/// the clearest places a tier can differ, and the difference is entirely visual.
-/// Kept as a named treatment so the swap is a value, never an `if premium`
-/// scattered through the drawing code.
-public enum RecapEndCardTreatment: String, Sendable {
-    /// The default, and what the free tier ships: a full-bleed closing card —
-    /// scrim, mark, wordmark, the trip's stats, and the call to action.
-    case full
-    /// A small wordmark in the corner and nothing else. The reveal still plays,
-    /// so the film ends on the journey itself rather than on a panel about it.
-    ///
-    /// **Intended for a paid tier** (Chiu 2026-08-02). No tier system exists yet —
-    /// this is the visual option existing and being swappable ahead of one, so
-    /// when entitlements land they select a treatment rather than needing this
-    /// built. Selected today by `export.end_card_style`.
-    case minimal
-}
-
 public struct RecapStyle {
     /// Which closing treatment this style uses. See `RecapEndCardTreatment`.
     public var endCard: RecapEndCardTreatment = .full
+    /// How the `.full` closing card is drawn. See `RecapEndCardStyle`.
+    public var endCardStyle = RecapEndCardStyle()
     /// Corner mark size for the minimal ending — small enough to sign the film
     /// without competing with the route it is signing.
     public var minimalMarkSidePx: CGFloat = 56
@@ -89,16 +71,18 @@ public struct RecapStyle {
     // cinematic title screens rather than panels (Chiu 2026-07-30): a dark wash
     // across the whole frame with the map receding behind it, and a centred
     // stack of mark → title → metadata.
-    /// The wash pushing the map back. `centerBoost` deepens it where the text
-    /// sits, so the map still reads at the edges instead of the card looking
-    /// like a flat black slide.
+    /// The wash the **opening title's band** is made of (`drawTitleBand`).
+    ///
+    /// ⚠️ It was the closing card's full-frame scrim too, until that card became
+    /// a panel over the map on 2026-09-05 — `chromeScrimCenterBoost`, which
+    /// deepened the wash under the closing stack, went with it.
     public var chromeScrimColor = CGColor(srgbRed: 0.02, green: 0.04, blue: 0.07, alpha: 0.55)
-    public var chromeScrimCenterBoost: CGFloat = 0.32
     public var chromeTitleColor = CGColor(srgbRed: 0.93, green: 0.95, blue: 0.97, alpha: 1)
     public var chromeMetaColor = CGColor(srgbRed: 0.72, green: 0.78, blue: 0.84, alpha: 1)
     /// The warm accent the prototype uses for the mark and the closing line —
     /// the one non-teal colour in the film, so it reads as brand rather than map.
-    public var chromeAccentColor = CGColor(srgbRed: 0.95, green: 0.55, blue: 0.32, alpha: 1)
+    /// **`routeAccent` itself since 2026-09-05**, not a near-miss of it.
+    public var chromeAccentColor = RecapStyle.routeAccent
     /// Side of the brand mark on the title and end cards.
     public var titleMarkSidePx: CGFloat = 132
     /// How much of the frame the opening title's band occupies, measured from the
@@ -386,10 +370,17 @@ public struct RecapStyle {
     /// look. See `RecapJourneyCardStyle`.
     public var journeyCard = RecapJourneyCardStyle()
 
-    /// `--route: #FF8A5B` — the prototype's single warm accent, shared by the
-    /// trail's brand colour, the active progress dot and the stop's strap line,
-    /// so the film has one accent rather than three near-misses.
-    public static let routeAccent = CGColor(srgbRed: 1, green: 0.541, blue: 0.357, alpha: 1)
+    /// **`#FF6A3D` — the film's one warm accent, and now there is only one**
+    /// (Chiu 2026-09-05, ADR 2026-09-05 (c)). The light trail, the active progress
+    /// dot, the stop's strap line, the end card's mark and closing line, and the
+    /// boarding pass's `FROM`/`TO`, rule, origin dot and aircraft all read this
+    /// property. Until 2026-09-05 they were three near-misses — `#FF8A5B` here,
+    /// `#F28C52` on the chrome, `#FF6A3D` on the pass — which is the exact
+    /// failure this token was written to prevent.
+    ///
+    /// ⚠️ **Never write the components out again**: a fourth literal is how the
+    /// three came back.
+    public static let routeAccent = CGColor(srgbRed: 1, green: 0.416, blue: 0.239, alpha: 1)
 
     public init() {}
 }

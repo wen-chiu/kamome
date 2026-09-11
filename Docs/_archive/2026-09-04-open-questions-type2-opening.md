@@ -82,10 +82,61 @@ may be correct as it stands (an aircraft departing from where the mark is).
 
 ---
 
-### Verdict:
-### What Works
-### Blocking (must fix before ship)
-### Recommendations (fix before milestone)
-### Polish (batch later)
-### Kamome Identity:
-### My Recommendation
+## Verdict — Chiu, 2026-09-04 (recorded 2026-09-05)
+
+**All five answered. Built and landed under ADR 2026-09-05 (b);** this document
+is closed.
+
+### 1. The card's orange wins, and the film collapses to one accent
+
+`#FF6A3D`. Not "the pass keeps its hex" — the **film** moves to it:
+`RecapStyle.routeAccent` is now that value and `chromeAccentColor` and the pass
+read the property instead of restating it, so three near-misses become one token.
+
+⚠️ This re-decides a colour Chiu chose himself on **2026-08-29** (candidate B,
+`#FF8A5B`), and the new value is near the deeper candidate he passed over then.
+The August *method* stands: the trail is warm because cyan collides with water on
+a light base, and `#FF6A3D` is still warm. What changed is that a boarding pass in
+`#FF6A3D` now shares the frame, so the judgement was made against the object it
+has to match rather than against two other swatches. Reasoning: ADR 2026-09-05 (b)
+§1.
+
+### 2. Redraw the glyph
+
+Not an icon set, not "drop the icon". One shape still draws both the ~26 px
+`DISTANCE` mark and the aircraft on the arc, redrawn as a three-part plan —
+fuselage, swept wings, and the **tailplane** that was missing, which is the part
+that stops a silhouette reading as a dart. ADR 2026-09-05 (b) §2.
+
+### 3. It is a glitch. Cross-fade it
+
+The hard cut on both edges is replaced by a ramp (`RecapFlightEnd.markOpacity`),
+the same idiom the stop-label → photo-card handoff uses. ADR 2026-09-05 (b) §3.
+
+⚠️ The first implementation mirrored the stop's own opacities and was wrong: the
+stop's presentation is not monotonic across its hold, so the mark flashed back to
+0.82 for four frames **underneath the open photo card**. It now ramps on
+`deck_zoom_s` against the hold's edges. Caught by a test, not by a render.
+
+### 4. The country name wins
+
+`TAIWAN` stays up for the whole opening and the airport's stop name is
+**suppressed**. So question 3's "the name flickers" half disappears rather than
+being fixed — only the *mark* hands over.
+
+🔴 **Intended consequence, recorded so it is never read as a bug: the departure
+airport's name now appears nowhere in the film** — not on the pin, not on its
+photo card, not in the HUD.
+
+### 5. The pass's DATE row keeps the trip's range
+
+*"這本來就是假的票券."* The semantic shift ADR 2026-09-04 named — a boarding pass
+whose DATE row is about the trip rather than the flight — is accepted as it
+stands. No label change, no pipeline change.
+
+### Not asked, and still not decided
+
+Question 5's note (the plane beginning its crossing on top of the origin mark for
+a few frames) was raised as an observation and drew no verdict. It is unchanged,
+and the cross-fade does not touch it: the two are the same point by construction.
+Whether that reads as correct is still an eye's call.

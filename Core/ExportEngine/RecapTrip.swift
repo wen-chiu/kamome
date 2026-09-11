@@ -169,8 +169,15 @@ public struct RecapTrip {
     public let stops: [Stop]
     public let title: String
     public let subtitle: String
-    public let statsLines: [String]
-    public let callToAction: String
+    /// The closing card's three figures, already worded and localized — **the
+    /// kilometres, days and stops of the journey the film tells** (Chiu
+    /// 2026-09-05).
+    ///
+    /// 🔴 On a type-2 film that is the *destination's* journey, not the whole
+    /// trip's. They are composed in the app layer, which asks
+    /// `RecapTypeTwoFilm.destinationJourney` for the same journey
+    /// `LinearTimeline` will trim to — one rule, one implementation.
+    public let endCardFigures: [RecapEndCardFigure]
     /// The share payload the end card encodes as a QR — a string, not a
     /// rendered QR; the overlay renderer generates the (deterministic) code at
     /// draw time.
@@ -227,8 +234,7 @@ public struct RecapTrip {
         stops: [Stop],
         title: String,
         subtitle: String,
-        statsLines: [String],
-        callToAction: String,
+        endCardFigures: [RecapEndCardFigure],
         shareURL: String? = nil,
         journeyDates: String? = nil,
         everyLegRoutabilityEstablished: Bool = false
@@ -237,8 +243,7 @@ public struct RecapTrip {
         self.stops = stops
         self.title = title
         self.subtitle = subtitle
-        self.statsLines = statsLines
-        self.callToAction = callToAction
+        self.endCardFigures = endCardFigures
         self.shareURL = shareURL
         self.journeyDates = journeyDates
         self.everyLegRoutabilityEstablished = everyLegRoutabilityEstablished
@@ -252,14 +257,36 @@ public struct RecapTrip {
         stops: [Stop],
         title: String,
         subtitle: String,
-        statsLines: [String],
-        callToAction: String,
+        endCardFigures: [RecapEndCardFigure],
         shareURL: String? = nil
     ) {
         self.init(
             legs: [Leg(coordinates: route, mode: .drive, provenance: .recorded)],
-            stops: stops, title: title, subtitle: subtitle, statsLines: statsLines,
-            callToAction: callToAction, shareURL: shareURL
+            stops: stops, title: title, subtitle: subtitle, endCardFigures: endCardFigures,
+            shareURL: shareURL
         )
+    }
+
+    /// **The distance the film's odometer counts** — the drawn route with the
+    /// flown legs left out (Chiu 2026-09-02: every kilometre a viewer reads is
+    /// the local journey; the flight appears once, on the boarding pass, labelled).
+    ///
+    /// 🔴 **The measure is the drawn polyline, and it has to be.** The recorded
+    /// total lives in `TripStats.distanceM`, and `RecapComposer.localDistanceM`
+    /// subtracts the flight from *that* for the title card — but an **imported**
+    /// trip has no `TripStats` at all (`ImportService` writes none), so the
+    /// closing card would have no figure to print. This one always exists, and it
+    /// is the same axis the HUD odometer counts up for the whole film, so the
+    /// number a viewer watches reach 269 km is the number the card then shows.
+    ///
+    /// ⚠️ Pinned to the odometer by test, not by inspection — the two are
+    /// different implementations of one quantity (`CameraPathCore.localDistanceM`
+    /// works from the path's totals) and nothing else would catch them drifting.
+    public static func localRouteDistanceM(legs: [Leg]) -> Double {
+        legs.filter { !$0.isCrossing }.reduce(0) { total, leg in
+            total + zip(leg.coordinates, leg.coordinates.dropFirst()).reduce(0) { run, pair in
+                run + Geo.distanceM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
+            }
+        }
     }
 }

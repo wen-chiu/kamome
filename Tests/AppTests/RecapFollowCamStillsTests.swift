@@ -108,7 +108,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
         )
         let trip = RecapTrip(
             route: route, stops: [stop], title: "小樽", subtitle: "Day 3",
-            statsLines: ["120 km · 1 停留"], callToAction: "Get this route", shareURL: "kamome://route/otaru"
+            endCardFigures: [.init(value: "120", label: "KM")], shareURL: "kamome://route/otaru"
         )
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = carStyle()
@@ -213,7 +213,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
     ) async throws {
         let trip = RecapTrip(
             route: route, stops: [], title: "Follow-cam", subtitle: "Stills",
-            statsLines: [], callToAction: "", shareURL: "kamome://route/followcam"
+            endCardFigures: [], shareURL: "kamome://route/followcam"
         )
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         // The pass's own orientation decides the subject: heading-up gets the
@@ -325,7 +325,7 @@ private extension RecapFollowCamStillsTests {
         let config = followCamConfig(headingUp: false)
         let trip = RecapTrip(
             route: sweepRoute, stops: [], title: "Heading sweep", subtitle: "",
-            statsLines: [], callToAction: "", shareURL: "kamome://route/sweep"
+            endCardFigures: [], shareURL: "kamome://route/sweep"
         )
         let timeline = try XCTUnwrap(LinearTimeline(trip: trip, config: config, pacing: .fixed(totalS: config.targetDurationS)))
         let style = carStyle()

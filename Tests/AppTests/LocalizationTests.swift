@@ -1,4 +1,5 @@
 import KamomeConfig
+@testable import KamomeExportEngine
 import XCTest
 
 /// Proves the String Catalog pipeline end to end: the compiled app bundle must
@@ -21,17 +22,49 @@ final class LocalizationTests: XCTestCase {
         XCTAssertEqual(try localizedValue("start_journey", locale: "en"), "Start Journey")
     }
 
-    /// The load-bearing S5 copy: the toggle must read as photo-cards-only, and
-    /// the end-card CTA must not promise a scan. The MVP film carries no QR
-    /// (PD-4) — "Get this route" invited an interaction nothing could honor, so
-    /// the CTA points at the one thing the viewer *can* do.
+    /// The load-bearing S5 copy: the toggle must read as photo-cards-only, and the
+    /// film's closing line must not promise a scan — the MVP film carries no QR
+    /// (PD-4), and "Get this route" invited an interaction nothing could honor.
+    ///
+    /// 🔴 **The closing line is no longer a localized string** (Chiu 2026-09-05):
+    /// it is `RecapWordmark.tagline`, brand copy beside the wordmark, and
+    /// `recap_end_cta` was deleted with the field that carried it. The rule it
+    /// stood for did not move, so it is asserted on the line that ships and on
+    /// the key being gone, rather than dropped along with the key.
     func testRecapStringsResolve() throws {
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "停留照片卡")
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "en"), "Stop photo cards")
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "en").contains("always appear"))
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "zh-Hant").contains("一律會顯示"))
-        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "en"), "Record your own journey")
-        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "zh-Hant"), "記錄你自己的旅程")
+
+        XCTAssertEqual(RecapWordmark.tagline, "Turn your journey into memory.")
+        for promise in ["scan", "qr", "code", "route"] {
+            XCTAssertFalse(
+                RecapWordmark.tagline.lowercased().contains(promise),
+                "the closing line must not promise \(promise) — the MVP film carries no QR (PD-4)"
+            )
+        }
+        // A missing key resolves to itself: both languages must have lost it, or
+        // the film's one piece of brand copy has two sources.
+        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "en"), "recap_end_cta")
+        XCTAssertEqual(try localizedValue("recap_end_cta", locale: "zh-Hant"), "recap_end_cta")
+
+        // The closing card's three labels stayed localized — they are words about
+        // this trip, not brand copy — and **English inflects two of them**. A day
+        // trip printed "1 days" on the first render of this card, so only
+        // formatting the string proves the catalog's plurals resolve.
+        XCTAssertEqual(try localizedValue("recap_figure_label_km", locale: "en"), "KM")
+        XCTAssertEqual(try localizedValue("recap_figure_label_km", locale: "zh-Hant"), "公里")
+        XCTAssertEqual(try localizedValue("recap_figure_label_day", locale: "en"), "DAY")
+        XCTAssertEqual(try localizedValue("recap_figure_label_days", locale: "en"), "DAYS")
+        XCTAssertEqual(try localizedValue("recap_figure_label_stop", locale: "en"), "STOP")
+        XCTAssertEqual(try localizedValue("recap_figure_label_stops", locale: "en"), "STOPS")
+        // zh-Hant has one plural category, so both keys carry the same word.
+        XCTAssertEqual(try localizedValue("recap_figure_label_days", locale: "zh-Hant"), "天")
+        XCTAssertEqual(
+            try localizedValue("recap_figure_label_day", locale: "zh-Hant"),
+            try localizedValue("recap_figure_label_days", locale: "zh-Hant")
+        )
     }
 
     func testLimitedPhotosStringsResolve() throws {
@@ -296,54 +329,6 @@ final class LocalizationTests: XCTestCase {
                 "[\(locale)] the card is \(card.count) characters; the detail belongs on AboutView"
             )
         }
-    }
-
-    /// **The export screen may promise the screen, never the app** (Chiu
-    /// 2026-09-10, Phase 4 closeout step 2).
-    ///
-    /// `AVAssetWriter` cannot resume across process death, so an export does not
-    /// survive leaving Kamome — `ExportLifecycleGuard` buys the seconds iOS
-    /// grants for a switch and nothing more. What the copy may say is exactly:
-    /// leave this screen, stay in the app, the screen stays on.
-    ///
-    /// This is the same class of rule as `testRoutingCopyPromisesARetryOnlyWhereKamomeIsAtFault`
-    /// — a promise the app cannot keep, in either language, is a defect rather
-    /// than a wording choice. Matched loosely on purpose: the wording is still
-    /// Chiu's to rule on and the rule has to survive the rewording.
-    func testTheExportCopyPromisesTheScreenAndNeverTheBackground() throws {
-        let english = try localizedValue("recap_rendering_leave_note", locale: "en").lowercased()
-        for overpromise in ["background", "close the app", "quit", "even if you leave kamome"] {
-            XCTAssertFalse(
-                english.contains(overpromise),
-                "[en] the export cannot survive leaving the app: \(english)"
-            )
-        }
-        // It must still make the narrower promise, or the back button reads as
-        // "this throws your film away".
-        XCTAssertTrue(english.contains("leave this screen"), english)
-        XCTAssertTrue(english.contains("open"), "the app has to stay open, and it must say so: \(english)")
-
-        let chinese = try localizedValue("recap_rendering_leave_note", locale: "zh-Hant")
-        for overpromise in ["背景", "關閉卡摸咩", "關掉 App"] {
-            XCTAssertFalse(
-                chinese.contains(overpromise),
-                "[zh-Hant] the export cannot survive leaving the app: \(chinese)"
-            )
-        }
-        XCTAssertTrue(chinese.contains("離開"), chinese)
-        XCTAssertTrue(chinese.contains("開著") || chinese.contains("開啟"), chinese)
-    }
-
-    /// One export at a time is a hard rule, so the refusal has to be a sentence
-    /// in both languages rather than a disabled button.
-    func testTheBusyExportRefusalIsExplainedInBothLanguages() throws {
-        for locale in ["en", "zh-Hant"] {
-            XCTAssertFalse(try localizedValue("recap_export_busy", locale: locale).isEmpty)
-            XCTAssertFalse(try localizedValue("recap_export_busy_detail", locale: locale).isEmpty)
-            XCTAssertFalse(try localizedValue("recap_back", locale: locale).isEmpty)
-        }
-        XCTAssertTrue(try localizedValue("recap_export_busy_detail", locale: "en").contains("one film at a time"))
-        XCTAssertTrue(try localizedValue("recap_export_busy_detail", locale: "zh-Hant").contains("一次只"))
     }
 
     /// **The first-run notice tells; it does not ask** (ADR 2026-09-05 (b)). The

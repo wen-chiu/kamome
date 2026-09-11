@@ -162,7 +162,7 @@ final class RecapFilmTypeTests: XCTestCase {
     func testASyntheticTripDefaultsToUnknownRatherThanLocal() {
         let trip = RecapTrip(
             route: [RecapCoordinate(lat: 25.03, lon: 121.56), RecapCoordinate(lat: 25.08, lon: 121.23)],
-            stops: [], title: "t", subtitle: "s", statsLines: [], callToAction: "c"
+            stops: [], title: "t", subtitle: "s", endCardFigures: []
         )
         XCTAssertEqual(trip.filmType, .unknown)
         XCTAssertEqual(trip.filmType.renderedForm, .local)

@@ -20,7 +20,7 @@ final class LinearTimelineStopSceneTests: LinearTimelineTestCase {
                 RecapTrip.Leg(coordinates: drive, mode: .drive, provenance: .reconstructed),
                 RecapTrip.Leg(coordinates: walk, mode: .walk, provenance: .inferred)
             ],
-            stops: [], title: "Mixed", subtitle: "", statsLines: [], callToAction: ""
+            stops: [], title: "Mixed", subtitle: "", endCardFigures: []
         )
     }
 
