@@ -15,7 +15,9 @@ import KamomeTrackingEngine
 /// response to those is "try again", while the honest response to a ferry
 /// crossing is "there is no road here". The same dashed line cannot mean both.
 struct RouteMatchReport: Equatable {
-    /// Legs the run was willing to attempt.
+    /// Legs the run was willing to attempt — including legs answered by a
+    /// verdict already stored, which are not re-sent (2026-09-12), so
+    /// `attempted - reconstructed` is still the number that draws dashed.
     var attempted = 0
     /// Legs that came back with road geometry, now stored.
     var reconstructed = 0
@@ -150,8 +152,10 @@ struct RouteMatchService {
         }
     }
 
-    /// Idempotent: already-matched segments are skipped, so every caller (trip
-    /// end, import, recap export) can fire it freely.
+    /// Idempotent: already-matched segments are skipped, and so are segments whose
+    /// "no road" or "implausible" verdict is already stored (2026-09-12), so every
+    /// caller (trip end, import, recap export) can fire it freely without
+    /// re-sending a leg the database already has an answer for.
     ///
     /// **Idempotent is not the same as concurrency-safe, and this is safe for a
     /// different reason** (verified 2026-08-15). `AppDatabase` is a GRDB
@@ -177,20 +181,31 @@ struct RouteMatchService {
         var report = RouteMatchReport()
         report.isDisabled = config.baseURL.isEmpty
         guard let detail = try? repository.detail(tripId: tripId) else { return report }
-        let attempted = detail.segments.filter { shouldReconstruct($0.segment, points: $0.points) }
-        report.attempted = attempted.count
+        let routable = detail.segments.filter { shouldReconstruct($0.segment, points: $0.points) }
+        // **A stored "no road" or "implausible" is an answer, not a gap**
+        // (2026-09-12). Neither verdict writes a polyline, so filtering on the
+        // polyline alone re-sent those legs on every export — spending the
+        // Worker's daily ceiling and re-transmitting the same coordinates (§0) to
+        // learn what the database already held. They are tallied from storage
+        // instead, so the report says on the second film what it said on the first.
+        let recalled = routable.compactMap { Self.storedVerdict(of: $0.segment) }
+        let toAsk = routable.filter { Self.storedVerdict(of: $0.segment) == nil }
+        report.attempted = routable.count
+        report.noPlausibleRoute = recalled.filter { $0 == .noRoad }.count
+        report.implausibleRoute = recalled.filter { $0 == .implausibleRoute }.count
         KamomeLog.routing.notice("""
-            matchTrip \(tripId, privacy: .public): \(attempted.count)/\(detail.segments.count) legs routable \
-            against "\(endpoint, privacy: .public)", budget \(config.tripBudgetS, format: .fixed(precision: 0))s
+            matchTrip \(tripId, privacy: .public): \(routable.count)/\(detail.segments.count) legs routable \
+            against "\(endpoint, privacy: .public)" — \(recalled.count) answered by a stored verdict and not \
+            re-sent — budget \(config.tripBudgetS, format: .fixed(precision: 0))s
             """)
 
         let deadline = ContinuousClock.now + .seconds(config.tripBudgetS)
-        for (index, item) in attempted.enumerated() {
+        for (index, item) in toAsk.enumerated() {
             let wanted = shouldContinue()
             guard wanted, ContinuousClock.now < deadline else {
                 // Named, not silent: "we stopped asking" is a different film
                 // from "there is no road there", and only one is worth a retry.
-                report.skipped = attempted.count - index
+                report.skipped = toAsk.count - index
                 KamomeLog.routing.error("""
                     matchTrip \(tripId, privacy: .public): STOPPED after \(index) legs — \
                     \(wanted ? "trip_budget_s exhausted" : "cancelled"); \
@@ -202,7 +217,7 @@ struct RouteMatchService {
                 RouteMatchPoint(ts: $0.ts, lat: $0.lat, lon: $0.lon, hAccM: $0.hAcc)
             }
             await route(trace, source: item.segment.segmentSource, segmentId: item.segment.id, into: &report)
-            progress?(index + 1, attempted.count)
+            progress?(index + 1, toAsk.count)
         }
 
         // The headline a dogfooder needs: how much of the film will draw as road.
@@ -329,6 +344,25 @@ struct RouteMatchService {
         switch segment.segmentSource {
         case .exif, .timeline: return true
         case .gpsHifi, .gpsPassive: return matcher != nil
+        }
+    }
+
+    /// The verdict already stored on a leg, **when that verdict carries no
+    /// geometry** — `.noRoad` or `.implausibleRoute` — which answers the leg
+    /// without asking again (2026-09-12).
+    ///
+    /// `.road` is left out on purpose. It is written straight after its polyline,
+    /// so a `.road` leg that still has none is a write that half-failed, and
+    /// asking again is how that heals — the behaviour it always had.
+    ///
+    /// ⚠️ **What this gives up, knowingly:** a stored `.implausibleRoute` is not
+    /// re-judged if `route_max_detour_ratio` is later tuned, and a stored `.noRoad`
+    /// is not re-asked if the provider's road data improves. Nothing clears a
+    /// stored verdict today.
+    private static func storedVerdict(of segment: SegmentRecord) -> SegmentRoutability? {
+        switch segment.routeVerdict {
+        case .noRoad?, .implausibleRoute?: return segment.routeVerdict
+        case .road?, nil: return nil
         }
     }
 }

@@ -168,6 +168,34 @@ final class RouteMatchBoundsTests: XCTestCase {
         XCTAssertEqual(second.attempted, 0)
     }
 
+    /// **A verdict that stores no geometry is still an answer** (2026-09-12).
+    /// `.noRoad` and `.implausibleRoute` write no polyline, so a filter on the
+    /// polyline alone re-sent those legs on every export — spending the Worker's
+    /// daily ceiling and re-transmitting the same coordinates (§0) to learn what
+    /// the database already held.
+    ///
+    /// The second assertion is the one the screen depends on: the report is built
+    /// from the stored verdicts, so the export sheet's "some legs have no road"
+    /// line reads the same on the second film as on the first. A fix that only
+    /// filtered the legs out would pass the first assertion and silence that line.
+    func testASecondRunDoesNotResendALegWhoseVerdictIsStored() async throws {
+        let verdicts: [ScriptedReconstructor.Behaviour] = [.noRoute, .implausible]
+        for behaviour in verdicts {
+            let repository = TripRepository(database: try AppDatabase.inMemory())
+            let tripId = try seed(legs: 3, into: repository)
+            let reconstructor = ScriptedReconstructor(behaviour)
+            let service = try makeService(repository: repository, reconstructor: reconstructor)
+
+            let first = await service.matchTrip(tripId: tripId)
+            let second = await service.matchTrip(tripId: tripId)
+            let calls = await reconstructor.calls
+
+            XCTAssertEqual(calls, 3, "\(behaviour): a leg whose verdict is stored must not be re-requested")
+            XCTAssertEqual(second, first, "\(behaviour): the second run must report what the first established")
+            XCTAssertTrue(second.isWorthReporting, "\(behaviour): the dashed legs are still worth telling the user about")
+        }
+    }
+
     // MARK: - Harness
 
     private func report(
