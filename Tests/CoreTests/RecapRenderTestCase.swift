@@ -224,7 +224,12 @@ class RecapRenderTestCase: XCTestCase {
     func renderFrame(
         _ timeline: LinearTimeline, _ compositor: FrameCompositor, at time: Double, config: TrackingConfig.Export
     ) async throws -> CGImage {
-        try compositor.render(atTime: time, background: try await background(timeline, at: time, config: config))
+        // Every caller of this helper renders over `FlatSnapshotProvider`,
+        // whose `capabilities.attribution` is nil — so the golden-frame hashes
+        // are untouched by ADR 2026-09-12.
+        try compositor.render(
+            atTime: time, background: try await background(timeline, at: time, config: config), credit: nil
+        )
     }
 
     // MARK: - Timeline scanning helpers

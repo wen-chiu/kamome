@@ -5,6 +5,14 @@
 # attribution is always required (Docs/pre-launch.md). Chiu decided 2026-08-17
 # that it lives in the app's interface rather than the rendered film.
 #
+# AMENDED 2026-09-12: the exported film carries a map credit of its own once its
+# substrate is OSM-derived (ADR 2026-09-12). This gate is unchanged and still
+# checks the STRING CATALOGUE, because the film's credit is a Swift constant and
+# deliberately not localized — the required thing is the format, the same reason
+# "Powered by Geoapify" is asserted identical in both languages. The film's half
+# is held by Tests/CoreTests/RecapMapCreditTests.swift, which runs on every CI
+# job rather than only at a release.
+#
 # VERIFIED 2026-09-02: neither string catalogue contained "Geoapify",
 # "OpenStreetMap" or "Powered by", and no privacy string existed either — the
 # app has shipped its whole life without the attribution its licence requires,

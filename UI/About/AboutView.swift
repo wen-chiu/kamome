@@ -5,9 +5,16 @@ import SwiftUI
 ///
 /// **Attribution is a licence condition, not copy.** Geoapify attribution is
 /// mandatory on the free plan, in the format "Powered by Geoapify" with a link,
-/// and OpenStreetMap attribution is always required. Chiu decided 2026-08-17
-/// that both live in the app's *interface* and never in the rendered film
-/// (`Docs/pre-launch.md`) — nothing here may be drawn into the video.
+/// and OpenStreetMap attribution is always required.
+///
+/// ⚠️ **Amended 2026-09-12, and this screen keeps everything it carries.** Chiu
+/// decided 2026-08-17 that attribution lives in the app's *interface* and never
+/// in the rendered film (`Docs/pre-launch.md`). That was decided when the film's
+/// imagery was Apple's; a film drawn on OSM-derived tiles is a **produced work**
+/// under ODbL and carries its own map credit now (ADR 2026-09-12,
+/// `RecapMapAttribution`). Two things did **not** change: Geoapify's attribution
+/// is owed for the *routing service* and belongs here, not in a film; and the
+/// film draws nothing at all while its substrate is Apple's.
 ///
 /// **The privacy notice is an honest declaration** (ADR 2026-08-20 (c)), so
 /// every sentence was checked against the code rather than against an intention:

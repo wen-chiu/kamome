@@ -6,10 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-12 against decisions.md **2026-09-10** and `main` at
+Last synced: 2026-09-12 against decisions.md **2026-09-12** and `main` at
 **PR #54**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
-export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight.
+export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight, and
+**the film now carries its map credit on the MapLibre path only** (ADR
+2026-09-12, amending 2026-08-17).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by PR *number*,
 not merge date. Never "fix" a failure by bumping the number: the line claims
@@ -79,7 +81,10 @@ rotation, in that order. → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
 - **Export:** one film at a time, app-wide; `RecapExportCoordinator` outlives
-  every screen (ADR 2026-09-10).
+  every screen (ADR 2026-09-10). **The substrate declares its own attribution**
+  (`MapRendererCapabilities.attribution`) and the render loop draws it on every
+  frame — MapLibre credits OSM, **MapKit credits nothing and must not** (ADR
+  2026-09-12).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
   ⚠️ **Three keys are dead** — tuning them does nothing, and
   `export.total_duration_max_s` is the trap: film duration is an open question

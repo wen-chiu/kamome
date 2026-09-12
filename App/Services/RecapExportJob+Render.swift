@@ -269,6 +269,13 @@ extension RecapExportJob {
                   terrainURL: region.terrainURL
               )
         else { return MapKitSnapshotProvider(appearance: appearance) }
-        return MapLibreSnapshotProvider(styleURL: styleURL)
+        // The souvenir regions are `.pmtiles` built from OpenStreetMap, and the
+        // style sheet declares the same string
+        // (`Config/RecapThemes/modern-minimal.json`) — so a film drawn on them
+        // credits OSM, not OpenFreeMap, which is a different host of the same
+        // data and is not what these tiles came from (ADR 2026-09-12).
+        return MapLibreSnapshotProvider(
+            styleURL: styleURL, attribution: RecapMapAttribution.openStreetMap
+        )
     }
 }

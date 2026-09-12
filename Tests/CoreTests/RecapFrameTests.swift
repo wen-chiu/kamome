@@ -186,7 +186,11 @@ final class RecapFrameTests: RecapRenderTestCase {
             request, map: MapState(), widthPx: widthPx, heightPx: heightPx
         )
         let frame = try compositor.render(
-            atTime: time, background: RecapBackground(current: light, previous: dark, blend: 0.5)
+            // `FlatSnapshotProvider` declares no attribution, so a golden frame
+            // renders exactly as it did before ADR 2026-09-12 — which is the
+            // point: a substrate whose data obliges no credit draws none.
+            atTime: time, background: RecapBackground(current: light, previous: dark, blend: 0.5),
+            credit: nil
         )
 
         try assertVehiclePresent(frame, col: widthPx / 2, row: heightPx / 2, "vehicle subject survives cross-fade")

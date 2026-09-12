@@ -37,9 +37,23 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// sheet is — see `capabilities`.
     private let appearance: RecapAppearance
 
-    public init(styleURL: URL, appearance: RecapAppearance = .dark) {
+    /// **What a film drawn on these tiles must credit** — the string, not a
+    /// flag, because this one provider serves two different hosts of the same
+    /// OpenStreetMap data (the parked `.pmtiles` regions and OpenFreeMap's
+    /// hosted planet) and they ask to be named differently
+    /// (`RecapMapAttribution`).
+    ///
+    /// 🔴 **No default.** A defaulted credit is the shape of bug this whole
+    /// change exists to close: whichever string happened to be nearest would be
+    /// stamped onto whatever tiles the next substrate serves, and a *wrong*
+    /// provenance claim is worse than a missing one (`CLAUDE.md` rule 5). Every
+    /// construction site says which data it is drawing.
+    private let attribution: String
+
+    public init(styleURL: URL, appearance: RecapAppearance = .dark, attribution: String) {
         self.styleURL = styleURL
         self.appearance = appearance
+        self.attribution = attribution
     }
 
     /// Rotates the map (`MLNMapCamera.heading`), so it drives the heading-up
@@ -69,7 +83,8 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// round's.
     public var capabilities: MapRendererCapabilities {
         MapRendererCapabilities(
-            supportsBearing: true, supportsHeadingUp: true, fixedAppearance: appearance
+            supportsBearing: true, supportsHeadingUp: true, fixedAppearance: appearance,
+            attribution: attribution
         )
     }
 
@@ -94,6 +109,28 @@ public struct MapLibreSnapshotProvider: MapRenderer {
                 // 1 point == 1 pixel so frame sizes and point(for:)
                 // agree exactly, matching MapKitSnapshotProvider's displayScale 1.
                 options.scale = 1
+                // **Kamome draws the credit, so the snapshotter must not draw a
+                // second one** (ADR 2026-09-12). Measured, not assumed: the
+                // burned-in copy is 351 x 11 px at the image's bottom-right, and
+                // `RecapSnapshotStations` reprojects this image onto a run of
+                // frames — which pushes that corner off the frame above
+                // magnification 1.026, leaves it under the title band on the one
+                // beat that keeps it, and renders it at 2.07:1 contrast on the
+                // dark style. `RecapOverlayMapCreditDrawing` carries the three
+                // measurements. Turning it off is what stops a film from
+                // carrying two credits on a stop beat and one on none of the
+                // others.
+                //
+                // ⚠️ **`showsAttribution = false` is safe only because the film
+                // draws its own and `RecapMapCreditTests` holds it to that.** If
+                // that gate is ever removed, this line is the thing that has to
+                // go back first.
+                options.showsAttribution = false
+                // The MapLibre wordmark, which the library's own header calls
+                // "not required". It sits bottom-left, where Kamome's credit now
+                // goes, and it credits the *renderer* rather than the data — so
+                // it is not part of the obligation this change is about.
+                options.showsLogo = false
                 let snapshotter = MLNMapSnapshotter(options: options)
                 snapshotter.start { snapshot, error in
                     _ = snapshotter // keep alive until the callback fires

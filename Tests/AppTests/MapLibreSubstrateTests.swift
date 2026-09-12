@@ -26,7 +26,14 @@ final class MapLibreSubstrateTests: XCTestCase {
         )
         // Substrate must stay subtractive: OSM attribution present, no POI/label
         // layers snuck in (spec §0 rule 6; ODbL attribution is not optional).
-        XCTAssertTrue(json.contains("© OpenStreetMap contributors"), "attribution required")
+        // Asserted against the constant the *film* now draws (ADR 2026-09-12),
+        // not against a literal: the style sheet and the exported frame must
+        // credit the same source in the same words, and two literals is how
+        // they would drift apart without anything going red.
+        XCTAssertTrue(
+            json.contains(RecapMapAttribution.openStreetMap),
+            "attribution required, and it must match what the film draws"
+        )
         XCTAssertFalse(json.contains("\"poi\""), "functional base draws no POIs")
     }
 
@@ -62,10 +69,36 @@ final class MapLibreSubstrateTests: XCTestCase {
         // Compile-time proof the MapLibre provider satisfies the existing
         // boundary; constructed but never `.snapshot(...)`-ed so no Metal runs.
         let provider = MapLibreSnapshotProvider(
-            styleURL: URL(fileURLWithPath: "/tmp/style.json")
+            styleURL: URL(fileURLWithPath: "/tmp/style.json"),
+            attribution: RecapMapAttribution.openStreetMap
         )
         let boundary: MapRenderer = provider
         XCTAssertNotNil(boundary)
+    }
+
+    /// **The substrate declares the credit it was built for, and the two hosts
+    /// of OpenStreetMap's data are not interchangeable** (ADR 2026-09-12).
+    ///
+    /// The render loop reads `capabilities.attribution` and draws it on every
+    /// frame, so this is the join between "which tiles did we fetch" and "what
+    /// does the published film say about them". A provider that answered the
+    /// wrong one would put a *false* credit on a film, which `CLAUDE.md` rule 5
+    /// treats as worse than a missing one.
+    ///
+    /// ⚠️ **What this cannot reach: `options.showsAttribution = false`.** That
+    /// line lives inside `snapshot(...)`, which is a Metal path CI never runs
+    /// (this file's own header). It is held by the desk render in the PR and by
+    /// `RecapMapCreditTests`, which is what makes turning it off safe.
+    func testTheProviderDeclaresTheCreditItWasBuiltFor() {
+        for attribution in [RecapMapAttribution.openStreetMap, RecapMapAttribution.openFreeMap] {
+            let provider = MapLibreSnapshotProvider(
+                styleURL: URL(fileURLWithPath: "/tmp/style.json"), attribution: attribution
+            )
+            XCTAssertEqual(
+                provider.capabilities.attribution, attribution,
+                "a film must credit the host whose tiles it actually drew"
+            )
+        }
     }
 
     func testZoomLevelIsSaneAndMonotonic() {

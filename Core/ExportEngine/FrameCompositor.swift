@@ -127,7 +127,20 @@ public struct FrameCompositor {
         scale = CGFloat(widthPx) / 1080
     }
 
-    public func render(atTime time: Double, background: RecapBackground) throws -> CGImage {
+    /// Composites one frame.
+    ///
+    /// `credit` is **the base map's licence notice**, taken from the provider
+    /// that drew `background` (`MapRendererCapabilities.attribution`) and nil
+    /// when its data obliges none — see `RecapOverlayMapCreditDrawing` for why
+    /// the film draws its own rather than keeping the one the snapshotter burns
+    /// in, and ADR 2026-09-12 for the decision.
+    ///
+    /// 🔴 **No default, deliberately**, on exactly the argument
+    /// `crossingSubject` and `flightSubject` above already won: a defaulted nil
+    /// is a silent fallback, and this one's symptom is a published film missing
+    /// a licence notice — invisible in every test that does not look for it.
+    /// Every call site says which credit it wants, or writes `nil` and means it.
+    public func render(atTime time: Double, background: RecapBackground, credit: String?) throws -> CGImage {
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
                   data: nil,
@@ -180,6 +193,17 @@ public struct FrameCompositor {
             overlay.render(content, camera: camera, into: surface)
         }
         drawAtmosphere(in: context, rect: frameRect)
+        // **Above the atmosphere, and it is the only thing that is.** The grade
+        // and the vignette exist so the chrome sits *inside* one atmosphere
+        // rather than floating over it, and that is right for everything the
+        // film says about the journey. It is wrong for a licence notice: the
+        // vignette is strongest in the corners, the credit lives in one, and a
+        // theme could dim an obligation below legibility without changing a line
+        // of this file. So the credit is drawn last, over everything, and no
+        // beat, scrim, card or grade can reach it.
+        if let credit {
+            overlay.render(.mapCredit(credit), camera: camera, into: surface)
+        }
 
         guard let image = context.makeImage() else { throw RenderError() }
         return image

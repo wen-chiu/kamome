@@ -110,7 +110,13 @@ enum ReviewSubstrate {
         /// The attribution OpenFreeMap's TileJSON declares and ODbL obliges.
         /// The OpenFreeMap clause is optional-but-asked; the OpenStreetMap clause
         /// is not optional.
-        static let attribution = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+        ///
+        /// **The shipping module's constant since 2026-09-12**, not a copy of it.
+        /// The string became a licence obligation on the exported film that day
+        /// (ADR 2026-09-12), so a harness holding its own copy is two sources for
+        /// one obligation — and `ReviewSubstrate`'s own doc comment already
+        /// argues at length that such a rule gets corrected in only one of them.
+        static let attribution = RecapMapAttribution.openFreeMap
     }
 
     /// The substrate the reviewer asked for, or nil for today's normal path.
@@ -165,7 +171,10 @@ enum ReviewSubstrate {
             print("\(label) substrate OpenFreeMap/MapLibre · style \(substrate.rawValue) "
                 + "(\(styleURL.absoluteString)) · appearance \(substrate.appearance.rawValue) "
                 + "— EVALUATION ONLY, no build renders this (ADR 2026-09-09)")
-            return MapLibreSnapshotProvider(styleURL: styleURL, appearance: substrate.appearance)
+            return MapLibreSnapshotProvider(
+                styleURL: styleURL, appearance: substrate.appearance,
+                attribution: Substrate.attribution
+            )
         }
         guard let region else {
             return try appleMaps(
@@ -176,10 +185,16 @@ enum ReviewSubstrate {
         }
         print("\(label) substrate MapLibre · region \(region.tilesURL.lastPathComponent) · terrain "
             + (region.terrainURL?.lastPathComponent ?? "NONE — the map will be flat"))
-        return MapLibreSnapshotProvider(styleURL: try RecapMapStyle.resolvedStyleURL(
-            styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL,
-            terrainURL: region.terrainURL
-        ))
+        return MapLibreSnapshotProvider(
+            styleURL: try RecapMapStyle.resolvedStyleURL(
+                styleResource: RecapMapTiles.styleResource, tilesURL: region.tilesURL,
+                terrainURL: region.terrainURL
+            ),
+            // The souvenir regions are OSM-derived `.pmtiles`, not OpenFreeMap's
+            // planet — two hosts of the same data, and a film credits the one it
+            // drew (ADR 2026-09-12).
+            attribution: RecapMapAttribution.openStreetMap
+        )
         #else
         return try appleMaps(reporting: label, because: "MapLibre is not linked into this build")
         #endif
