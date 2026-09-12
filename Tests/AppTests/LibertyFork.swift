@@ -83,7 +83,7 @@ enum LibertyFork {
     }
 
     /// The souvenir map's own zoom ramps, reproduced rather than re-invented.
-    private static func ramp(_ lowZoom: Double, _ low: Double, _ highZoom: Double, _ high: Double) -> [Any] {
+    static func ramp(_ lowZoom: Double, _ low: Double, _ highZoom: Double, _ high: Double) -> [Any] {
         ["interpolate", ["linear"], ["zoom"], lowZoom, low, highZoom, high]
     }
 
@@ -103,11 +103,16 @@ enum LibertyFork {
     enum ForkError: Error, CustomStringConvertible {
         case notAStyle
         case noLayers
+        /// Liberty changed under the fork. Refused rather than skipped: a transform
+        /// that silently missed its target draws a plausible picture of the wrong
+        /// thing (`Arch.md` §6).
+        case unexpectedShape(String)
 
         var description: String {
             switch self {
             case .notAStyle: return "the fetched Liberty style is not a JSON object"
             case .noLayers: return "the fetched Liberty style has no layers array"
+            case let .unexpectedShape(what): return "the fetched Liberty style is not the shape the fork edits: \(what)"
             }
         }
     }
@@ -259,14 +264,28 @@ enum LibertyFork {
     /// document (VERIFIED 2026-09-09), so a `file://` style URL resolves them
     /// exactly as the hosted one does.
     static func resolvedStyleURL() throws -> URL {
+        try write(try forked(from: try stockStyle()), named: "kamome-liberty-fork.json")
+    }
+
+    /// The stock Liberty document, fetched fresh.
+    static func stockStyle() throws -> [String: Any] {
         let data = try Data(contentsOf: stockStyleURL)
         guard let stock = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw ForkError.notAStyle
         }
-        let out = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kamome-liberty-fork.json")
+        return stock
+    }
+
+    /// Writes a style document to a temp file and returns its URL.
+    ///
+    /// **One filename per variant.** Whether MapLibre caches a style by URL within
+    /// a process is UNKNOWN; three coast variants written to one path in one run
+    /// would, if it does, render the first variant three times and label it three
+    /// ways. Distinct names make the question moot.
+    static func write(_ style: [String: Any], named name: String) throws -> URL {
+        let out = FileManager.default.temporaryDirectory.appendingPathComponent(name)
         try JSONSerialization
-            .data(withJSONObject: try forked(from: stock), options: [.withoutEscapingSlashes])
+            .data(withJSONObject: style, options: [.withoutEscapingSlashes])
             .write(to: out, options: .atomic)
         return out
     }

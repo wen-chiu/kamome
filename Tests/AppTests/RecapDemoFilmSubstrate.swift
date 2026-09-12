@@ -95,6 +95,31 @@ extension RecapDemoFilmTests {
         XCTAssertTrue(try snapshotProvider(region: nil) is MapKitSnapshotProvider)
     }
 
+    /// **A scene asked for an appearance gets an Apple map in that appearance**
+    /// (2026-09-12).
+    ///
+    /// 🔴 It did not. `RecapReviewScene.make(fixture:appearance:)` (2026-09-09) gave
+    /// its override to the palette only, and the Apple provider kept reading
+    /// `KAMOME_MAP_APPEARANCE`, whose default is light — so every `apple-dark`
+    /// baseline the substrate evaluation delivered was a **light** Apple map under
+    /// the dark palette, captioned dark. Found by looking at a round-3 still.
+    ///
+    /// Not env-gated: no snapshot, no network, and the regression is silent.
+    func testAnAppearanceAskedOfTheSubstrateReachesTheAppleMap() throws {
+        for requested in RecapAppearance.allCases {
+            let provider = try ReviewSubstrate.renderer(region: nil, reporting: "KAMOME_REVIEW", appearance: requested)
+            XCTAssertEqual(
+                (provider as? MapKitSnapshotProvider)?.appearance, requested,
+                "a \(requested.rawValue) scene must not be drawn over the environment's Apple map"
+            )
+        }
+        // Asking nothing keeps today's stated default.
+        let unasked = try ReviewSubstrate.renderer(region: nil, reporting: "KAMOME_REVIEW")
+        XCTAssertEqual(
+            (unasked as? MapKitSnapshotProvider)?.appearance, try ReviewSubstrate.experiment().appearance
+        )
+    }
+
     /// **A substrate that is locked to one appearance overrides the device's**
     /// (2026-08-28).
     ///
