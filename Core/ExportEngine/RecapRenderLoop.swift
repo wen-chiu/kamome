@@ -135,7 +135,15 @@ public struct RecapRenderLoop {
                 )
                 let image = try compositor.render(
                     atTime: time,
-                    background: RecapBackground(station: snapshot, reprojection: reprojection)
+                    background: RecapBackground(station: snapshot, reprojection: reprojection),
+                    // **Asked of the provider, here, rather than wired in by the
+                    // app** (ADR 2026-09-12). This loop is the one object that
+                    // both holds the substrate that drew the picture and hands
+                    // the picture to the compositor, so a film physically cannot
+                    // be composited from tiles whose credit somebody forgot to
+                    // pass down. Every export surface — MP4 and GIF alike —
+                    // consumes these frames, so one line covers all of them.
+                    credit: provider.capabilities.attribution
                 )
                 if try !deliver(frame, image) { return }
             }

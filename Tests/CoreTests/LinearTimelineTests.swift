@@ -327,6 +327,11 @@ final class LinearTimelineTests: LinearTimelineTestCase {
         case .endChrome: return "end"
         case let .hud(day, place, travelledM):
             return String(format: "hud(%@/%@,%.0fm)", day, place ?? "-", travelledM)
+        // The timeline never emits this one — `FrameCompositor` synthesises it
+        // from the render loop's substrate (ADR 2026-09-12) — so it cannot
+        // appear in this trace. Named anyway, because the switch is exhaustive
+        // and "impossible" is worth saying out loud if it ever prints.
+        case .mapCredit: return "credit"
         }
     }
 }

@@ -33,8 +33,13 @@ extension RecapReviewScene {
             camera, map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
         )
         let snapshotS = Date().timeIntervalSince(started)
+        // **The credit the substrate declares, exactly as the render loop
+        // supplies it** (ADR 2026-09-12). A review still that omitted it would
+        // be judging a different frame than the film ships — which is the whole
+        // reason this harness exists.
         let image = try compositor.render(
-            atTime: time, background: RecapBackground(current: background)
+            atTime: time, background: RecapBackground(current: background),
+            credit: renderer.capabilities.attribution
         )
         return RenderedFrame(image: image, snapshotS: snapshotS, camera: camera)
     }

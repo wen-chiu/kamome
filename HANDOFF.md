@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-11.** `main` carries PRs #16–#52. Everything closed has been
+**Updated 2026-09-12.** `main` carries PRs #16–#54. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -45,6 +45,21 @@ rounds only *look*. ✅ **18 annotated frames**, never in the repo (§0): 15 sto
 plus **Kamome's dark Liberty fork** (減層, souvenir palette, 大地名 ×2). On the
 fork the coastline and the distance readout come back; the roads are still a web,
 not a skeleton. ⏳ **Awaiting Chiu.** → `Docs/handoff-openfreemap-eval.md`.
+
+---
+
+## 🔵 The film carries its map credit — MapLibre path only
+
+**ADR 2026-09-12**, amending Chiu's 2026-08-17 "never in the rendered film".
+The substrate declares its attribution and the render loop draws it on every
+frame; `MapKitSnapshotProvider` declares **none** and must keep declaring none,
+so **no shipping film draws a credit today** — the substrate switch is Chiu's.
+⚠️ **The reason it is Kamome's own credit and not the snapshotter's is
+measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
+above magnification **1.026** (shipped padding 1.03), the title band covers the
+one beat that keeps it, and it renders at **2.07:1** on the dark fork.
+`showsAttribution` is now **off** — if `RecapMapCreditTests` is ever removed,
+that line goes back first. → `Docs/decisions.md` 2026-09-12.
 
 ---
 

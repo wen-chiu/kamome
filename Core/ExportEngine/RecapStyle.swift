@@ -317,6 +317,12 @@ public struct RecapStyle {
     /// whatever happens to be on screen.
     public var hudMarginPx: CGFloat = 58
 
+    /// The base map's licence notice (ADR 2026-09-12). Its own type for the same
+    /// reason `endCardStyle` is one — a self-contained block of tokens that a
+    /// designer tunes together — and in its own file because `RecapStyle` had
+    /// reached the 400-line lint ceiling.
+    public var mapCredit = RecapMapCreditStyle()
+
     // Stop identity (§5 two-beat lead): the pin sits **on** the stop and the
     // stop's name stands on the pin (Chiu 2026-07-26 — the car parks and
     // disappears for the stop, so nothing has to be dodged). Drawn by

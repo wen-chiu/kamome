@@ -68,10 +68,20 @@ public struct MapKitSnapshotProvider: MapRenderer {
     ///
     /// It *can* render either appearance, so `fixedAppearance` stays nil and the
     /// device's choice reaches the map unchanged.
+    ///
+    /// 🔴 **`attribution` is nil, and that is a decision rather than an
+    /// omission** (ADR 2026-09-12). Two reasons, and the second is the one that
+    /// matters: a "© OpenStreetMap contributors" over Apple's cartography would
+    /// be a false statement about where the picture came from (`CLAUDE.md` rule
+    /// 5); and no credit of any wording discharges Apple's terms, which forbid
+    /// storing and publishing Map Data rather than asking to be named for it
+    /// (ADR 2026-09-09, Attachment 6 §2.3 / §2.5). **Do not "fix" a film that
+    /// renders on this provider by giving it a map credit.** The fix for that
+    /// film is the substrate, and the substrate switch is Chiu's.
     public var capabilities: MapRendererCapabilities {
         MapRendererCapabilities(
             supportsBearing: false, supportsHeadingUp: false, fixedAppearance: nil,
-            maxFramableLongitudeDeg: Self.maxLongitudeSpanDeg
+            maxFramableLongitudeDeg: Self.maxLongitudeSpanDeg, attribution: nil
         )
     }
 

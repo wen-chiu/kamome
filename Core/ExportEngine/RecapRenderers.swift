@@ -61,16 +61,37 @@ public struct MapRendererCapabilities: Equatable {
     /// east–west one that cannot be framed at all.
     public let maxFramableLongitudeDeg: Double?
 
+    /// **The credit the exported film must carry because of this substrate's
+    /// data**, or nil when its data obliges none (ADR 2026-09-12).
+    ///
+    /// Fourth field, same rule as the three above: the renderer declares what it
+    /// requires rather than leaving a call site to remember. This one is not a
+    /// capability but an *obligation* — OSM-derived tiles are ODbL data, and the
+    /// licence binds the produced work, not only the screen that produced it. So
+    /// it travels with the renderer that fetched them, and
+    /// `FrameCompositor.render` draws whatever the render loop's provider
+    /// declares, on every frame it composites.
+    ///
+    /// 🔴 **nil is a real answer and must stay one.** `MapKitSnapshotProvider`
+    /// answers nil, and stamping "© OpenStreetMap contributors" onto
+    /// Apple-rendered tiles would be a false provenance claim on a picture
+    /// (`CLAUDE.md` rule 5) *and* would still not satisfy Apple's terms, which
+    /// ADR 2026-09-09 shows attribution cannot cure. A substrate whose licence
+    /// cannot be discharged by a credit says nil, and the film draws nothing.
+    public let attribution: String?
+
     public init(
         supportsBearing: Bool,
         supportsHeadingUp: Bool,
         fixedAppearance: RecapAppearance? = nil,
-        maxFramableLongitudeDeg: Double? = nil
+        maxFramableLongitudeDeg: Double? = nil,
+        attribution: String? = nil
     ) {
         self.supportsBearing = supportsBearing
         self.supportsHeadingUp = supportsHeadingUp
         self.fixedAppearance = fixedAppearance
         self.maxFramableLongitudeDeg = maxFramableLongitudeDeg
+        self.attribution = attribution
     }
 
     /// The appearance a film will actually be rendered in on this substrate.

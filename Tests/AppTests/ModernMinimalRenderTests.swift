@@ -64,7 +64,9 @@ final class ModernMinimalRenderTests: XCTestCase {
         // Both themes side by side: the §2 functional base and the §3 draft.
         for theme in ["functional-base", "modern-minimal"] {
             let styleURL = try RecapMapStyle.resolvedStyleURL(styleResource: theme, tilesURL: tiles)
-            let provider = MapLibreSnapshotProvider(styleURL: styleURL)
+            let provider = MapLibreSnapshotProvider(
+                styleURL: styleURL, attribution: RecapMapAttribution.openStreetMap
+            )
             for shot in shots {
                 let snapshot = try await provider.snapshot(
                     CameraFrame(centerLat: shot.lat, centerLon: shot.lon, spanM: shot.spanM, bearing: 0),
