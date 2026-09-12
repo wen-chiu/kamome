@@ -40,11 +40,14 @@ can do either**.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09); these
-rounds only *look*. ✅ **18 annotated frames**, never in the repo (§0): 15 stock
-plus **Kamome's dark Liberty fork** (減層, souvenir palette, 大地名 ×2). On the
-fork the coastline and the distance readout come back; the roads are still a web,
-not a skeleton. ⏳ **Awaiting Chiu.** → `Docs/handoff-openfreemap-eval.md`.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 and its
+addenda); every round only *looks*. **Round 3 is back** — Chiu's Liberty fork
+with the prototype's linework (road skeleton, peaks, island names, lake edge,
+opaque glaciers), three coastline treatments and an orange-glow trail set.
+⏳ **Awaiting Chiu: which coastline, whether the trail goes orange.** Every coast
+variant seams somewhere — B and C across the sea, all three across tile-clipped
+lakes. 🔴 Every `apple-dark` baseline delivered before this round was a light map;
+fixed and re-rendered. → `Docs/handoff-openfreemap-eval.md` round 3.
 
 ---
 
@@ -99,6 +102,11 @@ not a skeleton. ⏳ **Awaiting Chiu.** → `Docs/handoff-openfreemap-eval.md`.
 - **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
   gitignored, so it reads different geometry. ⚠️ Routing needs a key the flip
   **removed**. → `Docs/handoff-crop-scaling.md` §3.
+- **A desk render can run another build's test code.** Round 3's first run
+  executed pre-round-3 harness code while two other sessions were mid-`xcodebuild
+  test`; the identical retry was fine. It failed only because the old code rejected
+  the new input — **gate every render on a console line only your build prints.**
+  → `Docs/environment-gotchas.md`.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.

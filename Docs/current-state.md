@@ -100,7 +100,9 @@ is not to be tuned** — Variant A is harness-only env overrides.
 
 ## Deferred — do not implement opportunistically
 
-MapLibre substrate work, tiles, tile server, map labels, pixel art · Story
+MapLibre substrate work, tiles, tile server, map labels, pixel art — **except
+the export substrate evaluation** (ADR 2026-09-09 and its addenda), which is in
+flight and is exactly that work, evaluation-only · Story
 Director's remaining content (hero photos, chapters, music, video beads) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region

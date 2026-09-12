@@ -77,15 +77,40 @@ enum ReviewSubstrate {
         /// palette, and doubled place names. Still evaluation-only: `LibertyFork`
         /// writes it to a temp file at render time and nothing ships it.
         case openFreeMapLibertyFork = "liberty-fork"
+        /// **Round 3 of the fork** (Chiu 2026-09-11) — the prototype's linework on
+        /// top of round 2, one case per coastline variant because the coastline is
+        /// the experiment. Evaluation only, like every case here.
+        case libertyForkR3CoastA = "liberty-fork-r3-coastA"
+        case libertyForkR3CoastB = "liberty-fork-r3-coastB"
+        case libertyForkR3CoastC = "liberty-fork-r3-coastC"
 
         /// OpenFreeMap serves the style, its glyphs and its sprite from absolute
         /// URLs inside the style document, so for a stock style this one URL is
         /// the whole wiring. The fork is built and written to a temp file, which
         /// resolves those same absolute URLs identically.
         func resolvedStyleURL() throws -> URL {
+            if let coast = round3Coast { return try LibertyFork.resolvedRound3StyleURL(coast: coast) }
             guard self != .openFreeMapLibertyFork else { return try LibertyFork.resolvedStyleURL() }
             return URL(string: "https://tiles.openfreemap.org/styles/\(rawValue)")!
         }
+
+        /// The coastline variant, for a round-3 case.
+        var round3Coast: LibertyFork.Coast? {
+            switch self {
+            case .libertyForkR3CoastA: return .contrastOnly
+            case .libertyForkR3CoastB: return .oceanFillOutline
+            case .libertyForkR3CoastC: return .oceanLine
+            default: return nil
+            }
+        }
+
+        /// Kamome's own styles, which a run that names nothing does not draw.
+        var isFork: Bool { self == .openFreeMapLibertyFork || round3Coast != nil }
+
+        /// The filename label. Round 3's files are `liberty-fork-r3-coast{A,B,C}` as
+        /// its brief names them; the earlier rounds keep the `openfreemap-` prefix
+        /// their files already carry on disk.
+        var fileLabel: String { round3Coast == nil ? "openfreemap-\(rawValue)" : rawValue }
 
         /// **Which appearance Kamome's palette must be drawn in over this base**,
         /// read off each style's own `background-color` layer (VERIFIED
@@ -103,7 +128,8 @@ enum ReviewSubstrate {
         var appearance: RecapAppearance {
             switch self {
             case .openFreeMapPositron, .openFreeMapLiberty: return .light
-            case .openFreeMapFiord, .openFreeMapLibertyFork: return .dark
+            case .openFreeMapFiord, .openFreeMapLibertyFork,
+                 .libertyForkR3CoastA, .libertyForkR3CoastB, .libertyForkR3CoastC: return .dark
             }
         }
 
@@ -156,7 +182,14 @@ enum ReviewSubstrate {
 
     /// The base map for this render, reported under `label` so a review render
     /// always says on the console which substrate it drew — never judged.
-    static func renderer(region: RecapMapRegion?, reporting label: String) throws -> MapRenderer {
+    ///
+    /// `appearance` is what a caller that builds a scene for a stated appearance
+    /// asks of the Apple fallback (`RecapReviewScene.make(fixture:appearance:)`).
+    /// Nil — every other caller — keeps reading `KAMOME_MAP_APPEARANCE` exactly as
+    /// before.
+    static func renderer(
+        region: RecapMapRegion?, reporting label: String, appearance: RecapAppearance? = nil
+    ) throws -> MapRenderer {
         #if canImport(MapLibre)
         // The evaluation switch is read before the region lookup, because the
         // substrate it selects has no regions to look up (see `Substrate`).
@@ -169,7 +202,7 @@ enum ReviewSubstrate {
         }
         guard let region else {
             return try appleMaps(
-                reporting: label,
+                reporting: label, appearance: appearance,
                 because: "no installed region covers the trip"
                     + " (set TEST_RUNNER_KAMOME_TILES_PATH to render the MapLibre souvenir map instead)"
             )
@@ -181,17 +214,25 @@ enum ReviewSubstrate {
             terrainURL: region.terrainURL
         ))
         #else
-        return try appleMaps(reporting: label, because: "MapLibre is not linked into this build")
+        return try appleMaps(reporting: label, appearance: appearance, because: "MapLibre is not linked into this build")
         #endif
     }
 
     /// Apple Maps, carrying whatever the review render asked of it, and saying so.
-    private static func appleMaps(reporting label: String, because reason: String) throws -> MapRenderer {
+    ///
+    /// 🔴 **`requested` wins over the environment, and until 2026-09-12 it did not
+    /// exist.** A scene built for dark passed its appearance to the palette only, so
+    /// the Apple map under it stayed `KAMOME_MAP_APPEARANCE`'s default — light — and
+    /// every `apple-dark` baseline the substrate evaluation delivered was a light
+    /// map under the dark palette, labelled dark. The console line below said
+    /// `Apple Maps (light …)` the whole time; nothing failed.
+    private static func appleMaps(
+        reporting label: String, appearance requested: RecapAppearance?, because reason: String
+    ) throws -> MapRenderer {
         let experiment = try experiment()
-        print("\(label) substrate Apple Maps (\(experiment.appearance), "
+        let appearance = requested ?? experiment.appearance
+        print("\(label) substrate Apple Maps (\(appearance), "
             + "displayScale \(experiment.displayScale)) — \(reason)")
-        return MapKitSnapshotProvider(
-            displayScale: experiment.displayScale, appearance: experiment.appearance
-        )
+        return MapKitSnapshotProvider(displayScale: experiment.displayScale, appearance: appearance)
     }
 }

@@ -222,6 +222,7 @@ schemes:
         - { variable: KAMOME_FORCE_DURATION_S, value: "$(TEST_RUNNER_KAMOME_FORCE_DURATION_S)", isEnabled: true }
         - { variable: KAMOME_FORCE_FALLBACK_MARKER, value: "$(TEST_RUNNER_KAMOME_FORCE_FALLBACK_MARKER)", isEnabled: true }
         - { variable: KAMOME_FALLBACK_MARKER_COLOR, value: "$(TEST_RUNNER_KAMOME_FALLBACK_MARKER_COLOR)", isEnabled: true }
+        - { variable: KAMOME_ROUTE_GLOW_COLOR, value: "$(TEST_RUNNER_KAMOME_ROUTE_GLOW_COLOR)", isEnabled: true }
         - { variable: KAMOME_GEOCODE_STOPS, value: "$(TEST_RUNNER_KAMOME_GEOCODE_STOPS)", isEnabled: true }
         - { variable: KAMOME_KEYFRAME_INTERVAL, value: "$(TEST_RUNNER_KAMOME_KEYFRAME_INTERVAL)", isEnabled: true }
         - { variable: KAMOME_LIVE_GEOCODE, value: "$(TEST_RUNNER_KAMOME_LIVE_GEOCODE)", isEnabled: true }
@@ -254,6 +255,7 @@ schemes:
         - { variable: KAMOME_SUBSTRATE_EVAL, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL)", isEnabled: true }
         - { variable: KAMOME_SUBSTRATE_EVAL_T, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL_T)", isEnabled: true }
         - { variable: KAMOME_SUBSTRATE_EVAL_STYLES, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL_STYLES)", isEnabled: true }
+        - { variable: KAMOME_SUBSTRATE_EVAL_TAG, value: "$(TEST_RUNNER_KAMOME_SUBSTRATE_EVAL_TAG)", isEnabled: true }
         - { variable: KAMOME_SUBJECT, value: "$(TEST_RUNNER_KAMOME_SUBJECT)", isEnabled: true }
         - { variable: KAMOME_SUBJECT_LENGTH_PX, value: "$(TEST_RUNNER_KAMOME_SUBJECT_LENGTH_PX)", isEnabled: true }
         - { variable: KAMOME_TERRAIN_PATH, value: "$(TEST_RUNNER_KAMOME_TERRAIN_PATH)", isEnabled: true }

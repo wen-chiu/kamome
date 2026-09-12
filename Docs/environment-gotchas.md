@@ -92,6 +92,15 @@ source**, before believing one:
 A second device avoids the collision; this check catches it when it happens
 anyway, and it is the only thing that does.
 
+**2026-09-12 — it reached the test code itself.** A substrate-evaluation run
+(round 3) printed an error message from the harness as it was *before* that round —
+code this worktree no longer had on disk — while two other sessions were
+mid-`xcodebuild test` on branches carrying exactly that code. They targeted other
+simulator devices, so the route is UNKNOWN. The identical retry drew the right code,
+and a controlled build-then-run-twice did not reproduce it. **A green run proves
+nothing about whose code ran: gate a render on a console line only your build can
+print.** → `Docs/handoff-openfreemap-eval.md`, the "flake" section.
+
 ## Capture the whole run, or a flake is unattributable
 
 **2026-09-02.** A `./check.sh` run reported `** TEST FAILED **` while the suite

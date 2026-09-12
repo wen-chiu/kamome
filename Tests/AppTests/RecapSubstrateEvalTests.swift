@@ -53,6 +53,11 @@ final class RecapSubstrateEvalTests: XCTestCase {
         /// picture — the exact thing `CLAUDE.md` rule 5 is about — and it would
         /// have been read as one the moment the four frames were put side by side.
         let attribution: String?
+        /// What the review palette overrides changed, from
+        /// `ReviewPalette.variantSuffix` — empty for the shipped palette. Printed
+        /// on the caption because round 3's orange set turns the Apple baseline
+        /// orange too, and a baseline that is not labelled as altered is not one.
+        let palette: String
     }
 
     /// How many times each substrate renders the frame. Two, so the cold number
@@ -74,63 +79,88 @@ final class RecapSubstrateEvalTests: XCTestCase {
         )
 
         let requested = try Self.requestedStyles()
-        let light = try await RecapReviewScene.make(fixture: fixture, appearance: .light)
+        // `KAMOME_SUBSTRATE_EVAL_TAG` names the frame when one fixture is rendered at
+        // more than one moment — round 3's wide Iceland frame is `iceland-wide` —
+        // so the two cannot write to one filename.
+        let tag = HarnessEnv.value("KAMOME_SUBSTRATE_EVAL_TAG") ?? fixture
+        let scenes = try await Self.scenes(for: requested, fixture: fixture)
+        let first = try XCTUnwrap(scenes[.light] ?? scenes[.dark], "KAMOME_SUBSTRATE_EVAL_STYLES names nothing to draw")
         let time = try XCTUnwrap(
-            HarnessEnv.value("KAMOME_SUBSTRATE_EVAL_T").flatMap(Double.init)
-                ?? light.travellingTime(),
+            HarnessEnv.value("KAMOME_SUBSTRATE_EVAL_T").flatMap(Double.init) ?? first.travellingTime(),
             "the film never shows a moving subject — pin one with KAMOME_SUBSTRATE_EVAL_T"
         )
-        var renders = try await self.renders(
-            on: light, at: time, styles: requested.styles.filter { $0.appearance == .light },
-            baseline: requested.baseline
-        )
-
-        // The dark half. Rebuilt rather than restyled: the compositor bakes the
-        // palette in at construction, and reaching into it would be a second way
-        // to build a scene.
-        let dark = requested.styles.contains { $0.appearance == .dark } || requested.baseline
-            ? try await RecapReviewScene.make(fixture: fixture, appearance: .dark)
-            : nil
-        if let dark {
+        var renders: [Render] = []
+        for appearance in RecapAppearance.allCases {
+            guard let scene = scenes[appearance] else { continue }
             renders += try await self.renders(
-                on: dark, at: time, styles: requested.styles.filter { $0.appearance == .dark },
-                baseline: requested.baseline
+                on: scene, at: time, styles: requested.styles.filter { $0.appearance == appearance },
+                baseline: requested.baselines.contains(appearance)
             )
         }
 
         let outDir = RecapReviewScene.outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
         for render in renders {
-            let url = outDir.appendingPathComponent("substrate-\(fixture)-\(render.label).png")
-            try write(annotate(render, fixture: fixture, time: time), to: url)
+            let url = outDir.appendingPathComponent("substrate-\(tag)-\(render.label).png")
+            try write(annotate(render, fixture: tag, time: time), to: url)
             print("KAMOME_SUBSTRATE_EVAL \(url.path)")
         }
-        report(renders, fixture: fixture, time: time)
+        report(renders, fixture: tag, time: time)
+    }
+
+    /// One scene per appearance this run actually draws. Each scene is an import —
+    /// a routed trip — so a dark-only run does not route a light one. Rebuilt rather
+    /// than restyled: the compositor bakes the palette in at construction, and
+    /// reaching into it would be a second way to build a scene.
+    private static func scenes(
+        for request: Request, fixture: String
+    ) async throws -> [RecapAppearance: RecapReviewScene] {
+        var scenes: [RecapAppearance: RecapReviewScene] = [:]
+        for appearance in RecapAppearance.allCases where request.needs(appearance) {
+            scenes[appearance] = try await RecapReviewScene.make(fixture: fixture, appearance: appearance)
+        }
+        return scenes
+    }
+
+    /// What one run draws: map styles, and which Apple baselines go with them.
+    private struct Request {
+        let styles: [ReviewSubstrate.Substrate]
+        let baselines: Set<RecapAppearance>
+
+        func needs(_ appearance: RecapAppearance) -> Bool {
+            baselines.contains(appearance) || styles.contains { $0.appearance == appearance }
+        }
     }
 
     /// **Which styles this run draws** (`KAMOME_SUBSTRATE_EVAL_STYLES`).
     ///
-    /// Unset renders everything, which is what the first round did and what
-    /// reproduces it. Naming a subset — `liberty-fork`, say — renders only those
-    /// and **drops the Apple baselines**, because those frames already exist in
-    /// the output directory and re-rendering them would spend snapshots to
-    /// produce files that are already there. An unrecognised name is refused, for
+    /// Unset draws the three stock styles over both Apple baselines — what the first
+    /// round did, and what reproduces it. A list draws only what it names, and
+    /// `apple-light` / `apple-dark` are names in it, so a run asks for exactly the
+    /// baseline it needs: round 2 named only `liberty-fork` because its baselines
+    /// were already on disk, and round 3's orange set names `apple-dark` because the
+    /// trail override changes that frame too. An unrecognised name is refused, for
     /// `HarnessEnv`'s reason: a run that quietly drew a different style than the
     /// reviewer asked for looks exactly like one that honoured it.
-    private static func requestedStyles() throws -> (styles: [ReviewSubstrate.Substrate], baseline: Bool) {
+    private static func requestedStyles() throws -> Request {
         guard let raw = HarnessEnv.value("KAMOME_SUBSTRATE_EVAL_STYLES") else {
-            return (ReviewSubstrate.Substrate.allCases.filter { $0 != .openFreeMapLibertyFork }, true)
+            return Request(styles: ReviewSubstrate.Substrate.allCases.filter { !$0.isFork }, baselines: [.light, .dark])
         }
-        let styles = try raw.split(separator: ",").map { name -> ReviewSubstrate.Substrate in
-            guard let substrate = ReviewSubstrate.Substrate(rawValue: String(name)) else {
+        var styles: [ReviewSubstrate.Substrate] = []
+        var baselines: Set<RecapAppearance> = []
+        for name in raw.split(separator: ",").map(String.init) {
+            if name.hasPrefix("apple-"), let appearance = RecapAppearance(rawValue: String(name.dropFirst(6))) {
+                baselines.insert(appearance)
+            } else if let substrate = ReviewSubstrate.Substrate(rawValue: name) {
+                styles.append(substrate)
+            } else {
                 throw HarnessError(
-                    "KAMOME_SUBSTRATE_EVAL_STYLES=\(raw) names \(name), which is not one of "
+                    "KAMOME_SUBSTRATE_EVAL_STYLES=\(raw) names \(name), which is not apple-light, apple-dark or one of "
                         + ReviewSubstrate.Substrate.allCases.map(\.rawValue).joined(separator: ", ")
                 )
             }
-            return substrate
         }
-        return (styles, false)
+        return Request(styles: styles, baselines: baselines)
     }
 
     /// Each requested style on `scene`'s single camera, and the Apple baseline
@@ -159,7 +189,7 @@ final class RecapSubstrateEvalTests: XCTestCase {
                     + "drawn under the \(scene.appearance.rawValue) palette"
             )
             result.append(try await render(
-                on: scene, at: time, label: "openfreemap-\(style.rawValue)",
+                on: scene, at: time, label: style.fileLabel,
                 using: MapLibreSnapshotProvider(
                     styleURL: try style.resolvedStyleURL(), appearance: style.appearance
                 ),
@@ -183,7 +213,8 @@ final class RecapSubstrateEvalTests: XCTestCase {
         let final = try XCTUnwrap(last)
         return Render(
             label: label, appearance: scene.appearance, image: final.image,
-            camera: final.camera, snapshotS: timings, attribution: attribution
+            camera: final.camera, snapshotS: timings, attribution: attribution,
+            palette: ReviewPalette.variantSuffix(scene.style)
         )
     }
 
@@ -248,7 +279,8 @@ final class RecapSubstrateEvalTests: XCTestCase {
         let cold = render.snapshotS.first ?? 0
         let warm = render.snapshotS.last ?? 0
         draw([
-            "\(render.label)   ·   \(fixture)   ·   t=\(String(format: "%.2f", time))s",
+            "\(render.label)   ·   \(fixture)   ·   t=\(String(format: "%.2f", time))s"
+                + (render.palette.isEmpty ? "" : "   ·   \(render.palette)"),
             String(
                 format: "z %.2f · span %.1f km · %@ · %.2f s cold / %.2f s warm",
                 zoomLevel(render.camera), render.camera.spanM / 1000,
