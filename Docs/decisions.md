@@ -4443,6 +4443,41 @@ handling (dark-first is sequencing, ADR 2026-08-27 stands); hillshade; which
 coastline treatment; whether the trail goes orange; where place names finally
 live.
 
+### Addendum, 2026-09-12 — the coastline question is answered, and hillshade comes back
+
+**Coast A, and B and C are rejected and closed.** Chiu, on round 3's seam table:
+「我不喜歡 tile 的格線，影片一定要拿掉」. **Not a defect to fix later:** the lines are
+the tile-clipped edges of the ocean polygon, drawn once per neighbouring tile, and
+they are ~2× the tile buffer apart (measured 17–27 px; Planetiler's default extent
+4096 / buffer 64 is ≈3.1% of a tile, ≈25 px at z12.5 — INFERRED, settled by checking
+that the separation scales with on-screen tile size). **No style setting removes
+them and self-hosting does not either** — a smaller buffer merges the pair into one
+line rather than deleting it. The only clean fix is a coastline carried as *line*
+geometry, which the OpenMapTiles schema does not have. **Do not re-open this.**
+
+The same mechanism condemns the souvenir map's own `inland-water-edge`: lake
+polygons are tile-clipped exactly as the ocean is, and round 3 measured the grid
+across Þingvallavatn. **The lake edge is deleted**, and lakes keep their fill.
+
+**Hillshade is reinstated** after two rounds deferred — it is the answer to 「我要海
+岸線跟山峰清楚，可以看出去過的地形」. ⚠️ **§0:** the DEM adds a **third** network
+recipient for a render's coordinates (AWS's Mapzen terrain tiles, beside OpenFreeMap
+and Geoapify). Acceptable for a desk evaluation on round 1's reasoning; it is one
+more line in the **shipping** question, which stays deferred.
+
+**The glow is rejected** — 「我只是不喜歡光暈」. The shipping preset already carries
+it at alpha 0 in both appearances; round 3's halo existed only because the harness
+asked for one. **Whether the trail goes orange stays open**, and is answered with a
+picture rather than a discussion: 「不是不要橘色…橘色在亮色背景的情況還是一個不錯
+對比呈現」.
+
+**Island names may outrank the city name** where that is achievable; equal sizes are
+the accepted fallback.
+
+⚠️ Unchanged: the shipping substrate, light/dark handling (dark-first is still
+sequencing, ADR 2026-08-27 stands), where place names finally live, the notice's
+second item, and the pmtiles path's retirement.
+
 ## 2026-09-10 — The Phase 4 closeout is four steps, and the last two wait for the substrate
 
 **Decision (Chiu, 2026-09-10).** The Phase 4 closeout opened 2026-09-05 as "four

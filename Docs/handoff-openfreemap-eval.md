@@ -260,3 +260,119 @@ are kept, renamed `*-apple-dark-MISLABELLED-light-map.png`, and the dark baselin
 are re-rendered. ⚠️ One of those eight re-renders came back stale and was
 rejected by that gate before it could be delivered; its retry passed.
 
+---
+
+# Round 4 — zero seams, and terrain (2026-09-12/13)
+
+**Rulings:** ADR 2026-09-09, `Addendum, 2026-09-12` — **coast A, with B and C
+rejected and closed** (the seams are tile-clipped polygon edges and no style
+setting removes them); **hillshade reinstated**; **glow rejected**; whether the
+trail goes orange **stays open and is answered with a picture**; island names may
+outrank the city name.
+
+**Built** in `Tests/AppTests/LibertyForkRound4.swift`, on top of round 3 (coast A)
+so every earlier round still reproduces; `LibertyForkRound4Tests` asserts each
+change with no network and no render.
+
+- **(a) Every tile-clipped stroke is gone.** Coast A draws none, and the souvenir
+  map's own `inland-water-edge` is **deleted** — lake polygons are clipped exactly
+  as the ocean is, which is what drew round 3's grid across Þingvallavatn. Land and
+  sea move apart to carry the separation alone: land `#243440`, sea `#080b10` (the
+  prototype's `--ground`). **Both are first guesses.** They are applied **by value,
+  not by layer id**, because round 2 painted Liberty's six `landuse` fills the land
+  colour and a `background`-only change would have left them as patches of the old.
+- **(b) Hillshade**, from Mapzen terrain tiles on AWS Open Data (terrarium, no key,
+  VERIFIED `200`). `maxzoom` **13, not the souvenir map's 10** — that 10 belonged to
+  its local pmtiles build, and the island frames are z12.3–12.5. The layer's paint
+  is **verbatim** from `modern-minimal.json`, placed directly above the land.
+  ⚠️ **§0: a third network recipient** for a render's coordinates, beside
+  OpenFreeMap and Geoapify — fine for a desk evaluation, one more line in the
+  shipping question.
+- **(c) Peaks** relaxed two ways (`rank <= 3`, and elevation alone), with the height
+  under the name at 0.75 scale.
+- **(d) Islands** scale off `label_city`'s already-doubled ramp × 1.25 **and** move
+  before the city and town layers, because size alone does not win a collision.
+- **(e) Trail** — one extra set with `KAMOME_ROUTE_COLOR=#FF8A5B` and **no glow
+  variable at all**; the shipping preset already carries the glow at alpha 0.
+
+## Two tile measurements that corrected the plan
+
+Both settled by decoding OpenFreeMap's own vector tiles rather than by rendering.
+
+- 🔴 **`rank` does not separate an islet from an island.** 石垣島 `rank=2`,
+  宮古島 `rank=2`, **Árnes — Iceland's river islet — `rank=3`**, 伊良部島 `rank=4`,
+  竹富島 `rank=5`. The islet outranks two real islands, so **`rank <= 2` is the only
+  threshold that drops Árnes**, and its price is that neighbouring islands lose
+  their names too. That price is Chiu's to accept or change; the data is not a
+  guess.
+- 🔴 **`rank <= 2` never hid Hekla.** Hekla is `class=volcano`, `ele=1491`,
+  **`rank=1`** in the z8 tile the `iceland` frame draws from — it passed round 3's
+  filter. ⚠️ So the brief's premise was wrong, and **relaxing the filter cannot be
+  the fix**: it adds competitors rather than removing an exclusion. (Hekla is also
+  absent from the z12 tile that covers it — OpenFreeMap thins peaks as zoom rises —
+  but that is not the zoom this frame uses.)
+
+## What the round returns
+
+**12 frames** — `r4/`, `r4-nohillshade/`, `r4-orange/` under
+`~/Kamome-films/openfreemap-eval/`, plus an `r4-peaks-ele/` probe. Same four
+cameras as round 3.
+
+### ✅ The binary seam test passes
+
+**No straight line anywhere, on any frame.** Measured, not eyeballed: a detector
+(`r4-logs/lines.swift`) walks every frame for pixels that differ from **both**
+neighbours three rows — or columns — away, and reports the longest run. The trail
+is far thicker than 3 px, so it cannot trigger. **Longest run anywhere: 110 px
+against a 120 px threshold**, and those are incidental texture beside the "Day 1"
+chip. ⚠️ A first pass flagged every frame at `y=1908`; that is **MapLibre's own
+attribution band**, which is text and identical in every frame, and it is excluded.
+
+### ✅ Hillshade renders in `MLNMapSnapshotter` — the round's open question
+
+Terrain reads on all four frames, and the wide frame is the one that answers 「看
+出去過的地形」: fjords, highlands and glaciers in one picture. ✅ **MapLibre also
+adds the DEM's attribution itself** — `Elevation data: Mapzen Terrain Tiles / AWS
+Open Data` appears beside OpenFreeMap's, so §0's third recipient is disclosed in
+the frame without us drawing it. The glaciers stay flat, as expected.
+
+### 🔴 Hekla appears in neither peak rule, and the filter was never why
+
+Hekla is `rank=1`, `ele=1491` in the z8 tile the frame draws from, so it passed
+round 3's filter too. It is **lost to symbol collision** — Öxl (1214 m) is drawn
+where it would go. Relaxing the rule only adds competitors: `elevationOnly` draws
+Fanntófell, Klakkur, Stóra-Jarlhetta and more, and reads visibly busier. **Shown:
+`rank <= 3`.** The cheapest remedy is `symbol-sort-key` by descending elevation, so
+the highest peak is placed first — **named, not adopted**; it is a new lever and
+this round did not ask for one.
+
+### ✅ Islands outrank the city — at a price Chiu should weigh
+
+`Miyako-jima ⏎ 宮古島` now renders at 1.25× the city's size, **and the city label
+`宮古島市` is dropped** where the two collide. That is the collision working as
+asked, not a fault, but it is a trade: the island's name replaces the city's.
+
+🔴 **VERIFIED by rendering: a LATER symbol layer wins placement.** The first
+attempt put `label_island` *before* the city, per the brief, and the **island** was
+the label that vanished. Round 3's `mountain-peak-name` comment had the rule right;
+this round's first attempt had it backwards, and the picture settled it. On
+`ishigaki-crossing`, where no city competes, the island name renders either way.
+
+### The number
+
+| | cold | warm |
+|---|---|---|
+| with hillshade | **2.50 – 4.67 s** | 0.07 – 0.18 s |
+| without hillshade | 0.38 – 0.58 s | 0.07 – 0.11 s |
+
+⚠️ **The DEM dominates the cold pass** — roughly 2–4 s of it, a second network
+source fetched per frame. Warm, it costs nothing measurable. Every re-render after
+the first was warm on both sources, so only the first pass of each is a cold
+number.
+
+### Also seen, not acted on
+
+- `Hella` and `Hvolsvöllur` are still under the trail, unchanged from round 3.
+- The orange set carries **no halo at all** — the shipping preset's glow is alpha 0
+  and no glow variable was passed. Trail width is untouched.
+

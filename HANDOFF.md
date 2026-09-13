@@ -40,14 +40,14 @@ can do either**.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 and its
-addenda); every round only *looks*. **Round 3 is back** — Chiu's Liberty fork
-with the prototype's linework (road skeleton, peaks, island names, lake edge,
-opaque glaciers), three coastline treatments and an orange-glow trail set.
-⏳ **Awaiting Chiu: which coastline, whether the trail goes orange.** Every coast
-variant seams somewhere — B and C across the sea, all three across tile-clipped
-lakes. 🔴 Every `apple-dark` baseline delivered before this round was a light map;
-fixed and re-rendered. → `Docs/handoff-openfreemap-eval.md` round 3.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 and its three
+addenda); every round only *looks*. **Round 4**: coast **A** chosen and B/C closed —
+their seams are tile-clipped polygon edges no style setting can remove — so **every
+tile-clipped stroke is gone, the lake edge included**, and **hillshade is back** for
+the terrain Chiu asked for. Glow rejected; **orange-on-dark stays open**, answered
+by a render. ⏳ **Awaiting Chiu.** 🔴 Two tile measurements corrected the plan:
+`rank` does **not** separate an islet from an island, and `rank <= 2` never hid
+Hekla. → `Docs/handoff-openfreemap-eval.md` round 4.
 
 ---
 

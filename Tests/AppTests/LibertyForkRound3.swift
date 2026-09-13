@@ -277,7 +277,8 @@ extension LibertyFork {
         layer["source-layer"] as? String ?? ""
     }
 
-    private static func position(of id: String, in layers: [[String: Any]]) -> Int? {
+    /// Internal rather than private: round 4 looks layers up the same way.
+    static func position(of id: String, in layers: [[String: Any]]) -> Int? {
         layers.firstIndex { ($0["id"] as? String) == id }
     }
 }
