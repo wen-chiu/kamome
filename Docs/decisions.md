@@ -4527,3 +4527,79 @@ it is a **"before"** for the substrate switch.
 Anything about the substrate (that is ADR 2026-09-09's own round); performance of
 any kind; music; whether the export should ever survive process death. No new
 tunable was needed and none was added.
+
+## 2026-09-12 — Committed Apple Map Data removed from the public repository
+
+**Engineering decision, implementing the finding in ADR 2026-09-09.** That ADR
+verified from Apple's Developer Program License Agreement Attachment 6 that
+MKMapSnapshotter imagery is Map Data and that §§2.3, 2.5 forbid publishing or
+permanently storing it. It applied the finding to *future* exported films and
+did not look at the artifacts already committed. This entry looks at them.
+
+**This repository is public** (VERIFIED 2026-09-12: `wen-chiu/kamome`, visibility
+PUBLIC). Seven committed files are Apple cartography rendered via
+MKMapSnapshotter, published on GitHub with no Apple logo (on some) and no legal
+link (on all):
+
+| file | what | verified how |
+|---|---|---|
+| `Docs/demos/phase3/kamome-p3-recap.mp4` | 30 s P3 demo film | Apple Maps tiles, full-bleed |
+| `Docs/demos/phase3/still-title-card.png` | P3 title card frame | Apple Maps tiles |
+| `Docs/demos/phase3/still-stop-card.png` | P3 stop card frame | Apple Maps tiles |
+| `Docs/demos/phase3/still-end-card.png` | P3 end card frame | Apple Maps tiles |
+| `Docs/demos/phase3_5/matching/before-p3-artifact.png` | Frame from the P3 film (bay crossing) | Apple Maps tiles |
+| `Docs/demos/phase3_5/matching/after-matched.png` | §4.4 matching "after" frame | Apple Maps styling + " Maps" logo visible at bottom-left (VERIFIED by inspection) |
+| `Docs/demos/phase3_5/kamome-recap-NZ-disaster.MP4` | Device film of Chiu's NZ trip | Apple Maps satellite/hybrid + " 地圖" at bottom-left (VERIFIED by frame extraction) |
+
+All seven are removed at HEAD in this PR.
+
+### What stays, and why
+
+- **`Docs/demos/phase3_5/modern-minimal/*.png`** (6 files) — MapLibre renders of
+  OSM data via the functional-base and modern-minimal themes. VERIFIED: "MapLibre"
+  logo at bottom-left, "© OpenMapTiles © OpenStreetMap contributors" at
+  bottom-right. Not Apple Map Data. OSM attribution added to the folder's README.
+- **`Docs/demos/phase2/s3-demo-trip.png`** and
+  **`Docs/demos/phase3_5/import/03-trip-detail-provenance.png`** — screenshots of
+  Kamome's own UI showing MapKit's *live* view, which supplies Apple's logo and
+  legal link. VERIFIED: both " Maps" and "Legal" are legible in each image.
+  ADR 2026-09-09 itself cites 03 as the correct-notices contrast.
+- **Everything under `Docs/demos/release/`**,
+  **`Docs/demos/phase2/photo-permission-priming.png`**, and
+  **`Core/ExportEngine/Resources/Landmarks/flight-end.png`** — no map content.
+
+### The rule conflict and how it is resolved
+
+`CLAUDE.md` rule 7 says every phase gate owes a demo artifact. This removal
+deletes the artifacts that the Phase 3 and Phase 3.5 gates owed.
+
+**The tombstone is the record.** Each affected folder's README now carries what
+the artifact was, what it proved, when it was rendered, and why it was removed.
+A phase's evidence is the record of what was measured; the file was how it was
+shown. A re-render on the new substrate (OpenFreeMap + MapLibre, ADR 2026-09-09)
+is optional rather than owed — the gates those artifacts served are closed, and
+the substrate they were rendered on is being left (ADR 2026-09-09).
+
+⚠️ **Whether rule 7 itself needs amending is Chiu's call.** The rule currently
+says "every phase gate owes a demo artifact." The fact pattern here — a gate
+closed, its artifact removed for legal reasons, its tombstone standing in — is
+not one the rule anticipated. This PR resolves it for these two gates without
+amending the rule. If Chiu decides the rule should say "a tombstone satisfies a
+closed gate whose artifact was removed," that is a separate entry.
+
+### §0 — the committed real-trip films are gone
+
+Two of the removed files (`kamome-p3-recap.mp4` and `kamome-recap-NZ-disaster.MP4`)
+were films of Chiu's real trips committed to a public repository. This was an
+open §0 owner question since 2026-08-30 (HANDOFF.md "⏳ Awaiting Chiu": "Either a
+recorded exception or they move out"). Both are now removed, and current practice
+writes films to `~/Kamome-films/` outside the repository. **The §0 owner question
+is closed by this PR.**
+
+### What this does NOT do: rewrite git history
+
+Removing these files at HEAD does not unpublish them — the blobs remain reachable
+by SHA, through the GitHub API, and in any clone. Whether to run
+`git filter-repo` and force-push is Chiu's decision, it happens only after
+PRs #55–#58 merge (a rewrite would orphan their merge bases), and it is a
+deliberate operation of its own. Do not read this merge as "the files are gone."
