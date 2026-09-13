@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// **How the base map's licence notice is set** (ADR 2026-09-12).
+/// **How the base map's licence notice is set** (ADR 2026-09-12 (b)).
 ///
 /// Drawn in the frame's bottom-left on every frame of every export, *after* the
 /// grade and the vignette — `RecapOverlayMapCreditDrawing` carries the drawing

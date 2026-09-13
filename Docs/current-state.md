@@ -6,12 +6,13 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-12 against decisions.md **2026-09-12** and `main` at
-**PR #54**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
+Last synced: 2026-09-13 against decisions.md **2026-09-12 (b)** and `main` at
+**PR #60**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
-export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight, and
-**the film now carries its map credit on the MapLibre path only** (ADR
-2026-09-12, amending 2026-08-17).
+export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight.
+Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
+**the film now carries its map credit on the MapLibre path only** (ADR 2026-09-12
+(b), amending 2026-08-17).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by PR *number*,
 not merge date. Never "fix" a failure by bumping the number: the line claims

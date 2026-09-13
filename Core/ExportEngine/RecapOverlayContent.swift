@@ -94,7 +94,7 @@ public enum OverlayContent: Equatable {
     /// standing the wordmark beside it has always had.
     case endChrome(title: String, figures: [RecapEndCardFigure], shareURL: String?)
     /// **The base map's credit** — the licence notice the substrate's data
-    /// obliges the exported film to carry (ADR 2026-09-12,
+    /// obliges the exported film to carry (ADR 2026-09-12 (b),
     /// `RecapMapAttribution`).
     ///
     /// 🔴 **It is not part of the story, and it is not the timeline's.** Every

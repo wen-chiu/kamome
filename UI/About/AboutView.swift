@@ -11,7 +11,7 @@ import SwiftUI
 /// decided 2026-08-17 that attribution lives in the app's *interface* and never
 /// in the rendered film (`Docs/pre-launch.md`). That was decided when the film's
 /// imagery was Apple's; a film drawn on OSM-derived tiles is a **produced work**
-/// under ODbL and carries its own map credit now (ADR 2026-09-12,
+/// under ODbL and carries its own map credit now (ADR 2026-09-12 (b),
 /// `RecapMapAttribution`). Two things did **not** change: Geoapify's attribution
 /// is owed for the *routing service* and belongs here, not in a film; and the
 /// film draws nothing at all while its substrate is Apple's.

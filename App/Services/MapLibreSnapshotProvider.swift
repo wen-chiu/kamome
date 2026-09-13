@@ -110,7 +110,7 @@ public struct MapLibreSnapshotProvider: MapRenderer {
                 // agree exactly, matching MapKitSnapshotProvider's displayScale 1.
                 options.scale = 1
                 // **Kamome draws the credit, so the snapshotter must not draw a
-                // second one** (ADR 2026-09-12). Measured, not assumed: the
+                // second one** (ADR 2026-09-12 (b)). Measured, not assumed: the
                 // burned-in copy is 351 x 11 px at the image's bottom-right, and
                 // `RecapSnapshotStations` reprojects this image onto a run of
                 // frames — which pushes that corner off the frame above

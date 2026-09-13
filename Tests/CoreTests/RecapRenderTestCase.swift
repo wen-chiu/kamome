@@ -226,7 +226,7 @@ class RecapRenderTestCase: XCTestCase {
     ) async throws -> CGImage {
         // Every caller of this helper renders over `FlatSnapshotProvider`,
         // whose `capabilities.attribution` is nil — so the golden-frame hashes
-        // are untouched by ADR 2026-09-12.
+        // are untouched by ADR 2026-09-12 (b).
         try compositor.render(
             atTime: time, background: try await background(timeline, at: time, config: config), credit: nil
         )

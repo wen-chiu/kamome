@@ -70,7 +70,7 @@ public struct MapKitSnapshotProvider: MapRenderer {
     /// device's choice reaches the map unchanged.
     ///
     /// 🔴 **`attribution` is nil, and that is a decision rather than an
-    /// omission** (ADR 2026-09-12). Two reasons, and the second is the one that
+    /// omission** (ADR 2026-09-12 (b)). Two reasons, and the second is the one that
     /// matters: a "© OpenStreetMap contributors" over Apple's cartography would
     /// be a false statement about where the picture came from (`CLAUDE.md` rule
     /// 5); and no credit of any wording discharges Apple's terms, which forbid

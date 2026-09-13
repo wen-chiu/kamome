@@ -26,7 +26,7 @@ final class MapLibreSubstrateTests: XCTestCase {
         )
         // Substrate must stay subtractive: OSM attribution present, no POI/label
         // layers snuck in (spec §0 rule 6; ODbL attribution is not optional).
-        // Asserted against the constant the *film* now draws (ADR 2026-09-12),
+        // Asserted against the constant the *film* now draws (ADR 2026-09-12 (b)),
         // not against a literal: the style sheet and the exported frame must
         // credit the same source in the same words, and two literals is how
         // they would drift apart without anything going red.
@@ -77,7 +77,7 @@ final class MapLibreSubstrateTests: XCTestCase {
     }
 
     /// **The substrate declares the credit it was built for, and the two hosts
-    /// of OpenStreetMap's data are not interchangeable** (ADR 2026-09-12).
+    /// of OpenStreetMap's data are not interchangeable** (ADR 2026-09-12 (b)).
     ///
     /// The render loop reads `capabilities.attribution` and draws it on every
     /// frame, so this is the join between "which tiles did we fetch" and "what

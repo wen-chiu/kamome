@@ -187,7 +187,7 @@ final class RecapFrameTests: RecapRenderTestCase {
         )
         let frame = try compositor.render(
             // `FlatSnapshotProvider` declares no attribution, so a golden frame
-            // renders exactly as it did before ADR 2026-09-12 — which is the
+            // renders exactly as it did before ADR 2026-09-12 (b) — which is the
             // point: a substrate whose data obliges no credit draws none.
             atTime: time, background: RecapBackground(current: light, previous: dark, blend: 0.5),
             credit: nil

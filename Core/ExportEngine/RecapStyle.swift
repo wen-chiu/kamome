@@ -317,7 +317,7 @@ public struct RecapStyle {
     /// whatever happens to be on screen.
     public var hudMarginPx: CGFloat = 58
 
-    /// The base map's licence notice (ADR 2026-09-12). Its own type for the same
+    /// The base map's licence notice (ADR 2026-09-12 (b)). Its own type for the same
     /// reason `endCardStyle` is one — a self-contained block of tokens that a
     /// designer tunes together — and in its own file because `RecapStyle` had
     /// reached the 400-line lint ceiling.

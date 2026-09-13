@@ -50,7 +50,7 @@ not a skeleton. ⏳ **Awaiting Chiu.** → `Docs/handoff-openfreemap-eval.md`.
 
 ## 🔵 The film carries its map credit — MapLibre path only
 
-**ADR 2026-09-12**, amending Chiu's 2026-08-17 "never in the rendered film".
+**ADR 2026-09-12 (b)**, amending Chiu's 2026-08-17 "never in the rendered film".
 The substrate declares its attribution and the render loop draws it on every
 frame; `MapKitSnapshotProvider` declares **none** and must keep declaring none,
 so **no shipping film draws a credit today** — the substrate switch is Chiu's.
@@ -59,7 +59,7 @@ measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
 above magnification **1.026** (shipped padding 1.03), the title band covers the
 one beat that keeps it, and it renders at **2.07:1** on the dark fork.
 `showsAttribution` is now **off** — if `RecapMapCreditTests` is ever removed,
-that line goes back first. → `Docs/decisions.md` 2026-09-12.
+that line goes back first. → `Docs/decisions.md` 2026-09-12 (b).
 
 ---
 
@@ -69,9 +69,9 @@ that line goes back first. → `Docs/decisions.md` 2026-09-12.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
   → `Docs/handoff-pacing.md`.
-- **§0 — two real-trip films in the repo** (`Docs/demos/phase3{,_5}/`).
-  Either a recorded exception or they move out.
-  → `Docs/handoff-audit-2026-08-30.md` finding 7.
+- ~~**§0 — two real-trip films in the repo**~~ — **closed by PR #60
+  (ADR 2026-09-12).** Both films removed; current practice writes to
+  `~/Kamome-films/` outside the repository.
 - **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
   → `Docs/release-readiness.md` S2/S3.
 - **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film

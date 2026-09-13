@@ -1,6 +1,6 @@
 import Foundation
 
-/// **The credits a rendered film may owe its base map** (ADR 2026-09-12).
+/// **The credits a rendered film may owe its base map** (ADR 2026-09-12 (b)).
 ///
 /// Chiu decided 2026-08-17 that attribution lives in the app's interface and
 /// never in the rendered film. That decision was made when the film's imagery

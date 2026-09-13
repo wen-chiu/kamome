@@ -6,7 +6,7 @@
 # that it lives in the app's interface rather than the rendered film.
 #
 # AMENDED 2026-09-12: the exported film carries a map credit of its own once its
-# substrate is OSM-derived (ADR 2026-09-12). This gate is unchanged and still
+# substrate is OSM-derived (ADR 2026-09-12 (b)). This gate is unchanged and still
 # checks the STRING CATALOGUE, because the film's credit is a Swift constant and
 # deliberately not localized — the required thing is the format, the same reason
 # "Powered by Geoapify" is asserted identical in both languages. The film's half

@@ -133,7 +133,7 @@ public struct FrameCompositor {
     /// that drew `background` (`MapRendererCapabilities.attribution`) and nil
     /// when its data obliges none — see `RecapOverlayMapCreditDrawing` for why
     /// the film draws its own rather than keeping the one the snapshotter burns
-    /// in, and ADR 2026-09-12 for the decision.
+    /// in, and ADR 2026-09-12 (b) for the decision.
     ///
     /// 🔴 **No default, deliberately**, on exactly the argument
     /// `crossingSubject` and `flightSubject` above already won: a defaulted nil

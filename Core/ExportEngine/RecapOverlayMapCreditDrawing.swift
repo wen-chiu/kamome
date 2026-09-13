@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 
-/// **The base map's credit, in the film** (ADR 2026-09-12).
+/// **The base map's credit, in the film** (ADR 2026-09-12 (b)).
 ///
 /// An exported film drawn on OSM-derived tiles is a produced work under ODbL,
 /// and the credit has to be on the work — so it is drawn here rather than left

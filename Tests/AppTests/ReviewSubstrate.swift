@@ -113,7 +113,7 @@ enum ReviewSubstrate {
         ///
         /// **The shipping module's constant since 2026-09-12**, not a copy of it.
         /// The string became a licence obligation on the exported film that day
-        /// (ADR 2026-09-12), so a harness holding its own copy is two sources for
+        /// (ADR 2026-09-12 (b)), so a harness holding its own copy is two sources for
         /// one obligation — and `ReviewSubstrate`'s own doc comment already
         /// argues at length that such a rule gets corrected in only one of them.
         static let attribution = RecapMapAttribution.openFreeMap
@@ -192,7 +192,7 @@ enum ReviewSubstrate {
             ),
             // The souvenir regions are OSM-derived `.pmtiles`, not OpenFreeMap's
             // planet — two hosts of the same data, and a film credits the one it
-            // drew (ADR 2026-09-12).
+            // drew (ADR 2026-09-12 (b)).
             attribution: RecapMapAttribution.openStreetMap
         )
         #else

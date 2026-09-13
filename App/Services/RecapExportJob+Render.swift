@@ -273,7 +273,7 @@ extension RecapExportJob {
         // style sheet declares the same string
         // (`Config/RecapThemes/modern-minimal.json`) — so a film drawn on them
         // credits OSM, not OpenFreeMap, which is a different host of the same
-        // data and is not what these tiles came from (ADR 2026-09-12).
+        // data and is not what these tiles came from (ADR 2026-09-12 (b)).
         return MapLibreSnapshotProvider(
             styleURL: styleURL, attribution: RecapMapAttribution.openStreetMap
         )

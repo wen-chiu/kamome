@@ -10,7 +10,7 @@ import XCTest
 ///
 /// It exists because three call sites in that harness compose a frame the same
 /// way, and one of the arguments is a licence obligation: the **map credit the
-/// substrate declares** (ADR 2026-09-12). A review still rendered without it
+/// substrate declares** (ADR 2026-09-12 (b)). A review still rendered without it
 /// would be a different frame from the one the app exports, which defeats the
 /// purpose of judging from a still at all — so the credit is taken from the
 /// renderer that drew the picture, exactly as `RecapRenderLoop` takes it.

@@ -62,7 +62,7 @@ public struct MapRendererCapabilities: Equatable {
     public let maxFramableLongitudeDeg: Double?
 
     /// **The credit the exported film must carry because of this substrate's
-    /// data**, or nil when its data obliges none (ADR 2026-09-12).
+    /// data**, or nil when its data obliges none (ADR 2026-09-12 (b)).
     ///
     /// Fourth field, same rule as the three above: the renderer declares what it
     /// requires rather than leaving a call site to remember. This one is not a

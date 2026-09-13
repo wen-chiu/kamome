@@ -137,7 +137,7 @@ public struct RecapRenderLoop {
                     atTime: time,
                     background: RecapBackground(station: snapshot, reprojection: reprojection),
                     // **Asked of the provider, here, rather than wired in by the
-                    // app** (ADR 2026-09-12). This loop is the one object that
+                    // app** (ADR 2026-09-12 (b)). This loop is the one object that
                     // both holds the substrate that drew the picture and hands
                     // the picture to the compositor, so a film physically cannot
                     // be composited from tiles whose credit somebody forgot to

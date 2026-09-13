@@ -34,7 +34,7 @@ extension RecapReviewScene {
         )
         let snapshotS = Date().timeIntervalSince(started)
         // **The credit the substrate declares, exactly as the render loop
-        // supplies it** (ADR 2026-09-12). A review still that omitted it would
+        // supplies it** (ADR 2026-09-12 (b)). A review still that omitted it would
         // be judging a different frame than the film ships — which is the whole
         // reason this harness exists.
         let image = try compositor.render(
