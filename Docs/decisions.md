@@ -4791,3 +4791,159 @@ and the first-run notice's second item — all Chiu's per
 `DESIGNER.md`'s. Whether the MapLibre wordmark should come back. Whether
 Geoapify's attribution ever belongs in a film — it does not today, and nothing
 here asks the question.
+
+## 2026-09-13 — The credit's licence position, verified; and the plate gets lighter
+
+**Extends ADR 2026-09-12 (b)**, which put the map credit into the exported film.
+That entry decided *that* a credit is drawn and *how* it reaches every frame. This
+one reads the two licences against the string actually shipping, records what they
+do and do not cover, and takes the one visual change Chiu asked for.
+
+Dated to the decision, not to the day it was written (`PO.md`).
+
+**The string does not change (Chiu, 2026-09-13).**
+`OpenFreeMap © OpenMapTiles Data from OpenStreetMap` stays exactly as it is.
+`RecapMapAttribution.openFreeMap` and the verbatim assertion in
+`RecapMapCreditTests.testEveryCreditNamesOpenStreetMap` are not to be edited.
+
+### The two sources, read 2026-09-13
+
+**`osmfoundation.org/wiki/Licence/Attribution_Guidelines`.** Attribution must be
+to *"OpenStreetMap"*, and both `© OpenStreetMap contributors` and
+`© OpenStreetMap` are listed as acceptable forms. It further requires the
+attribution to make clear that the data is available under the Open Database
+License, **preferably by linking the words OpenStreetMap to
+`openstreetmap.org/copyright`**. Legibility is judged on font, size, colour,
+contrast, position **and how long the notice is visible**, with WCAG named as the
+standard.
+
+**`openfreemap.org`.** Attribution is **mandatory**; the required string is
+exactly the one Kamome ships; the OpenFreeMap clause within it is
+optional-but-appreciated. The page also states that **for printed media or video
+the attribution must be added manually** — MapLibre's automatic one does not
+cover that case.
+
+⚠️ **That last sentence is independent confirmation of ADR 2026-09-12 (b) §3.**
+That entry turned `showsAttribution` off and drew Kamome's own credit on three
+*measured* grounds — crop-scaling, the title band, and 2.07:1 contrast. It did
+not know that OpenFreeMap says in so many words that the automatic credit does
+not cover video. The conclusion was right for reasons that were right; it now
+also has the publisher's own statement behind it.
+
+### (a) VERIFIED — what the shipped string does satisfy
+
+The string satisfies **OpenFreeMap's mandatory attribution** (it is their exact
+wording, carried whole, including the optional clause) and it **names
+OpenStreetMap in a form the OSMF guideline accepts**. Drawn on every frame of
+every export, so the "how long it is visible" limb is satisfied by construction
+rather than by a beat someone has to remember.
+
+### (b) ACCEPTABLE KNOWN RISK — the ODbL statement is absent, and it is Chiu's
+
+**Taken by Chiu on 2026-09-13 with this finding in front of him.**
+
+The shipped string **does not make the ODbL licence clear**, and the guideline's
+preferred remedy — linking the word *OpenStreetMap* to
+`openstreetmap.org/copyright` — **cannot exist in an MP4 at all**. An interactive
+map discharges it with a hyperlink; `UI/About/AboutView.swift` does exactly that,
+and keeps doing it. **But the person who receives the film never opens
+`AboutView`.** The gap is therefore real and it is on the produced work, which is
+the thing ADR 2026-09-12 (b) established the licence binds.
+
+**What would close it, written down so nobody has to re-derive it: six
+characters.** `, ODbL` appended inside `RecapMapAttribution.openFreeMap`, on the
+same single line, in that one constant — nothing else changes, because the credit
+is drawn from that constant on every surface. The line is currently 665 px of a
+1080 px frame, so it has the room.
+
+🔴 **Do not implement it.** Chiu has seen the six characters and decided the
+string stands. This entry exists so that the decision is a decision rather than
+an oversight, and so a later session finds the remedy already costed instead of
+reopening the question from scratch.
+
+### (c) VERIFIED by arithmetic — a platform's crop removes the credit entirely
+
+Worth recording because it is invisible: nothing in the export, the gate or a
+reviewer's eye shows it.
+
+`marginPx` 34 with a 40 px pill puts the credit at **y 1846…1886** of a 1080×1920
+frame (it was y 1840…1886 before this entry's §2 shortened the pill). A platform
+that centre-crops 9:16 to:
+
+| target | rows kept | credit |
+|---|---|---|
+| 1:1 | y 420…1500 | **gone** |
+| 4:5 | y 285…1635 | **gone** |
+
+**This is a third party's act on a work that left Kamome carrying its credit**,
+not a defect in the export, and there is no framing of a 9:16 film that survives
+an arbitrary centre crop. It is recorded rather than fixed.
+
+⚠️ **It is also the constraint on §2.** The credit must not be made smaller or
+pushed further into the corner — every millimetre in that direction spends margin
+against a crop that already takes the whole notice. `marginPx` 34 is a **floor**.
+
+### (d) The legibility standard is the guideline's list, not a pixel number
+
+The guideline judges font, size, colour, contrast, position and duration, with
+WCAG as the standard. That is not a number a test can hold, and pretending
+otherwise would be the failure `CLAUDE.md` rule 4 is about.
+
+What *is* mechanical, and gated:
+`mapCredit.fontPx × export.gif_width_px ÷ export.frame_width_px ≥ 10`
+(`RecapMapCreditTests.testTheCreditStaysLegibleAfterTheGifDownscale`). It exists
+because every export surface composites one frame and the GIF then scales it to
+480 of 1080 — the failure it catches is a credit sized for the MP4 alone.
+
+🔴 **It is a floor, not a definition of compliance.** A film passing it is not
+thereby compliant; a film failing it is certainly not. The rest of the list is
+judgement, and the visual half of that judgement is `DESIGNER.md`'s.
+
+### §2 — the plate gets lighter, and the type does not move
+
+Chiu asked twice whether the credit could be smaller. **The type cannot move:**
+`fontPx` 24 × 480/1080 = 10.67 px in the GIF against the floor of 10, so 22.5 is
+the entire headroom and the gate goes red at 22.4. So the weight came out of the
+**plate**, which carries no obligation of its own:
+
+| token | before | after |
+|---|---|---|
+| `pillPaddingXPx` | 20 | **14** |
+| `pillPaddingYPx` | 11 | **8** (pill height 46 → 40) |
+| `pillColor` alpha | 0.72 | **0.55** |
+| `fontPx` | 24 | **24, unchanged** |
+| `marginPx` | 34 | **34, unchanged** (§c) |
+
+**VERIFIED 2026-09-13 on rendered frames**, `iceland` at 1080×1920, text-on-plate
+against a 4.5:1 floor:
+
+| plate alpha | dark Liberty fork, title beat | Positron light, travelling beat |
+|---|---|---|
+| 0.72 (before) | 15.64:1 | — not rendered |
+| **0.55 (shipped)** | **15.66:1** | **7.51:1** |
+
+⚠️ **Two things about those numbers, and both matter more than the numbers.**
+
+**The dark ground cannot tell you anything.** Over a near-black map the plate is
+near-black at every alpha, so that column reads ~15:1 whatever the value is. A
+future change measured only there would look safe and be unmeasured.
+
+**The light column's margin is partly the theme's, not the plate's.** The credit
+draws *after* `drawAtmosphere` (ADR 2026-09-12 (b) §3), so on a light map it sits
+on ground `modern-minimal` has already graded 0.16 and vignetted 0.42;
+back-solving the measured plate puts the ground under that corner at **~140
+luma**, not Positron's own 242. **COMPUTED, not measured:** the same 0.55 plate on
+a light theme with *no* atmosphere gives **3.75:1** and fails. No such theme
+exists today. So do not lower this further, and if a theme ever drops its grade or
+vignette, **re-measure on a light ground**.
+
+**No test was relaxed**, and none needed to be: `RecapMapCreditTests` is untouched
+by this change and stays green, which is the point of having gated the obligation
+rather than the appearance.
+
+### Not decided here
+
+The string (Chiu: it stands). The substrate switch. The credit's final visual
+treatment, which is `DESIGNER.md`'s — this is still the defensible default ADR
+2026-09-12 (b) shipped, one notch lighter. Localizing the credit: it is a format,
+deliberately untranslated. `AboutView`, which keeps everything it carries.

@@ -59,7 +59,15 @@ measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
 above magnification **1.026** (shipped padding 1.03), the title band covers the
 one beat that keeps it, and it renders at **2.07:1** on the dark fork.
 `showsAttribution` is now **off** — if `RecapMapCreditTests` is ever removed,
-that line goes back first. → `Docs/decisions.md` 2026-09-12 (b).
+that line goes back first.
+
+⚠️ **One ACCEPTABLE KNOWN RISK, and it is Chiu's, taken 2026-09-13 with the
+finding in front of him**: the shipped string does not state ODbL, and a film
+cannot carry the link the OSMF guideline prefers (`AboutView` does, but whoever
+receives the MP4 never opens it). **The remedy is already costed — six
+characters, `, ODbL`, in one constant — and is NOT to be implemented.** The
+string stands. Do not reopen this from scratch.
+→ `Docs/decisions.md` 2026-09-12 (b) and 2026-09-13.
 
 ---
 
