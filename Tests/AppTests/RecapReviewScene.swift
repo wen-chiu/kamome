@@ -105,7 +105,11 @@ struct RecapReviewScene {
         // has no light variant and declares so. Resolving it here — rather than
         // building the style from what the reviewer typed — is what keeps a review
         // still equal to the film the app would render (`RecapModel.runExport`).
-        let provider = try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_REVIEW")
+        // The override reaches the Apple map as well as the palette — see
+        // `ReviewSubstrate.appleMaps` for what happened while it reached only one.
+        let provider = try ReviewSubstrate.renderer(
+            region: region, reporting: "KAMOME_REVIEW", appearance: appearanceOverride
+        )
         let appearance = provider.capabilities.appearance(
             honouring: try appearanceOverride ?? ReviewSubstrate.experiment().appearance
         )

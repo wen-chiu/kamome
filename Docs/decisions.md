@@ -4416,6 +4416,33 @@ source-layers are served.** The "5 of 6" row remains correct as written — it i
 statement about *positron's own style*, not about the tiles, and none of the
 three stock styles draws peak labels.
 
+### Addendum, 2026-09-11 — Chiu's rulings after the Liberty fork round
+
+Recorded here, not as a new entry: they steer the evaluation this entry
+authorised, and decide nothing about shipping. In Chiu's words, 2026-09-11:
+
+> 「liberty-fork 跟 liberty 看起來是正確方向，就決定用這個 style 去做微調成我要的
+> 樣子。」「路網資訊確實有點太繁雜，可以拿掉，只留重要道路。」「我的需求就是最少先
+> 給我一個風格簡約現代清楚，參考我原本做的 prototype 樣式的形式。我要海岸線跟山峰
+> 清楚，可以看出去過的地形跟整體地圖樣貌。」
+
+1. **Liberty is the fork base**, and **the web prototype
+   (`Docs/prototype/recap_engine.html`) is the visual reference** for tuning it.
+   Roads reduce to the important ones. **Adding layers is in scope** — the
+   round-2 "three changes, no fourth" cap is lifted. Still evaluation only.
+2. **`MLNIdeographicFontFamilyName = PingFang TC` is accepted.** Japanese place
+   names render in Chinese glyph forms; raised in the first evaluation round, ruled
+   now.
+3. **An orange trail + glow evaluation set is authorised** against the prototype
+   (`#FF8A5B`, glow `rgba(255,138,91,.55)`). **Evaluation only**: `RecapStyle`,
+   `Config/TrackingConfig.json`, the shipping dark trail and the no-glow ruling of
+   ADR 2026-08-29 are untouched.
+
+⚠️ **Unchanged and still not decided here**: the shipping substrate; light/dark
+handling (dark-first is sequencing, ADR 2026-08-27 stands); hillshade; which
+coastline treatment; whether the trail goes orange; where place names finally
+live.
+
 ## 2026-09-10 — The Phase 4 closeout is four steps, and the last two wait for the substrate
 
 **Decision (Chiu, 2026-09-10).** The Phase 4 closeout opened 2026-09-05 as "four

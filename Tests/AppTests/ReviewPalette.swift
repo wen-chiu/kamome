@@ -20,6 +20,12 @@ import KamomeExportEngine
 ///   cannot be judged apart from the solid one it weakens.
 /// - `KAMOME_ROUTE_GLOW_ALPHA` — 0 vs 0.32 on the dark base. `a58942d` retired
 ///   the glow *because the base was light*, so dark reopens it.
+/// - `KAMOME_ROUTE_GLOW_COLOR` — the glow's **hue** (2026-09-11, the prototype's
+///   orange-glow set). ⚠️ It exists because `KAMOME_ROUTE_GLOW_ALPHA` alone only
+///   re-alphas the preset's glow colour, which on dark is `retiredGlowColor` —
+///   **blue** — so an orange trail would have rendered with a blue halo and been
+///   judged as the prototype. The preset's alpha is kept, so the two variables
+///   stay independent: this one changes hue, that one changes amount.
 /// - `KAMOME_FALLBACK_MARKER_COLOR` — which navy the fallback gull takes
 ///   (2026-08-29). Orthogonal to `KAMOME_FORCE_FALLBACK_MARKER`, and
 ///   deliberately so: that lever decides *whether* the failure visual is drawn,
@@ -57,6 +63,15 @@ enum ReviewPalette {
             style.routeInferredColor = style.routeColor.copy(alpha: CGFloat(alpha)) ?? style.routeColor
         }
 
+        if let raw = HarnessEnv.value("KAMOME_ROUTE_GLOW_COLOR") {
+            // Hue only, applied BEFORE the alpha override below so the two compose:
+            // set both and the glow is this colour at that alpha. Set only this and
+            // the preset's alpha stands — on dark that is 0, and no glow is drawn,
+            // which is the honest result of changing a colour nobody can see.
+            let hue = try color(raw, variable: "KAMOME_ROUTE_GLOW_COLOR")
+            style.routeGlowColor = hue.copy(alpha: style.routeGlowColor.alpha) ?? hue
+        }
+
         if let raw = HarnessEnv.value("KAMOME_ROUTE_GLOW_ALPHA") {
             guard let alpha = Double(raw), (0...1).contains(alpha) else {
                 throw HarnessError("KAMOME_ROUTE_GLOW_ALPHA=\(raw) is not an alpha between 0 and 1")
@@ -84,7 +99,7 @@ enum ReviewPalette {
         print("KAMOME_REVIEW palette \(appearance.rawValue)"
             + " · trail \(describe(style.routeColor))"
             + " · dashed \(describe(style.routeInferredColor))"
-            + " · glow alpha \(style.routeGlowColor.alpha) x\(style.routeGlowWidthMultiple)")
+            + " · glow \(describe(style.routeGlowColor)) x\(style.routeGlowWidthMultiple)")
         return style
     }
 
@@ -154,6 +169,9 @@ enum ReviewPalette {
         }
         if HarnessEnv.value("KAMOME_ROUTE_GLOW_ALPHA") != nil {
             parts.append("glow\(String(format: "%.2f", style.routeGlowColor.alpha))")
+        }
+        if HarnessEnv.value("KAMOME_ROUTE_GLOW_COLOR") != nil {
+            parts.append("glowhue\(hex(style.routeGlowColor))")
         }
         if HarnessEnv.value("KAMOME_FORCE_FALLBACK_MARKER") != nil { parts.append("fallback") }
         if HarnessEnv.value("KAMOME_FALLBACK_MARKER_COLOR") != nil {

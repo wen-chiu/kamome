@@ -41,11 +41,14 @@ can do either**.
 
 ## 🔵 Live — the export substrate evaluation
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09); these
-rounds only *look*. ✅ **18 annotated frames**, never in the repo (§0): 15 stock
-plus **Kamome's dark Liberty fork** (減層, souvenir palette, 大地名 ×2). On the
-fork the coastline and the distance readout come back; the roads are still a web,
-not a skeleton. ⏳ **Awaiting Chiu.** → `Docs/handoff-openfreemap-eval.md`.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 and its
+addenda); every round only *looks*. **Round 3 is back** — Chiu's Liberty fork
+with the prototype's linework (road skeleton, peaks, island names, lake edge,
+opaque glaciers), three coastline treatments and an orange-glow trail set.
+⏳ **Awaiting Chiu: which coastline, whether the trail goes orange.** Every coast
+variant seams somewhere — B and C across the sea, all three across tile-clipped
+lakes. 🔴 Every `apple-dark` baseline delivered before this round was a light map;
+fixed and re-rendered. → `Docs/handoff-openfreemap-eval.md` round 3.
 
 ---
 

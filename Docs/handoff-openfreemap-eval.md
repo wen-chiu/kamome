@@ -57,9 +57,10 @@ UNKNOWN and must not be asserted**.
    `ishigaki-crossing`. *Round 2's fork answers it.*
 3. Two-line place names are **closed** — Chiu 2026-09-10 keeps them.
 
-⚠️ **The ideographic font family is a product choice.** `PingFang TC` follows
-`CFBundleDevelopmentRegion: zh-Hant`, so **Japanese** place names render in
-Chinese glyph forms. Visible on `miyakojima`. Not guessed at further.
+✅ **The ideographic font family is ruled: `PingFang TC` is accepted** (Chiu,
+ADR 2026-09-09 addendum 2026-09-11). It follows `CFBundleDevelopmentRegion:
+zh-Hant`, so **Japanese** place names render in Chinese glyph forms — raised in
+round 1, now decided.
 
 ## What was built — the edges only
 
@@ -75,14 +76,34 @@ Mechanics live in the code's comments (`ReviewSubstrate.Substrate`,
   runtime API, so there is nowhere else. Inert in a shipping build, which never
   constructs the MapLibre renderer. Named rather than hidden.
 
-## Unexplained — and it recurred
+## The "flake" — a stale test bundle, and probably not this worktree's
 
-**A run reports `Testing failed:` and produces no frames, then passes on retry**
-with the same command and the same binary. Round 1: `iceland`. Round 2:
-`miyakojima`. **Both were the first `test-without-building` invocation of a
-`for` loop after a build** — INFERRED, on two samples, and the cheapest settling
-is to run the same fixture first and second in one loop. Cause **UNKNOWN**; it
-has never survived a retry, so it costs a re-run, not a result.
+**Four occurrences** — round 1 `iceland`, round 2 `miyakojima`, and twice in
+round 3: `miyakojima`, then the `apple-dark` re-render of that same fixture.
+**Round 3 kept the whole log, and it settles what ran:** the failure printed
+`…which is not one of positron, liberty, fiord, liberty-fork`, the error text of
+the harness *before* round 3 (round 3's reads `not apple-light, apple-dark or one
+of …`). VERIFIED: pre-round-3 test code executed under a round-3 command.
+
+- **Not "the first run after a build".** A controlled repeat — build, then the
+  identical run twice — drew fresh code on the first pass (VERIFIED,
+  `r3-logs/probe/`).
+- **Probably another session's bundle.** At that moment two other sessions were
+  mid-`xcodebuild test` (`~/Kamome-wt/rb3-localnet`, `~/Kamome-wt/rb2-verdicts`),
+  both on `main` + #53 — exactly the harness that error text belongs to (VERIFIED
+  by reading their files). This worktree's own pre-round-3 build cannot have been
+  it: round-3 unit tests had already run green on this worktree's build before
+  the failure. They targeted other simulator devices, so **how** their bundle
+  reached this run is UNKNOWN — INFERRED, not asserted.
+- 🔴 **The fourth occurrence rendered instead of failing — the case the first
+  three only threatened.** The `apple-dark` re-render of `miyakojima` **exited 0,
+  wrote a plausible PNG, and printed `Apple Maps (light …)`**: pre-fix code
+  producing exactly the mislabelled baseline this round exists to correct. It was
+  thrown away only because the run was **gated on a console line that only the
+  fixed build prints** (`substrate Apple Maps (dark`); the retry passed. **A green
+  exit code is not evidence about whose code ran** — gate every desk render.
+
+Rounds 1 and 2 kept no logs; their cause is UNKNOWN and consistent with the above.
 
 ---
 
@@ -136,3 +157,106 @@ cold but tile-*warm*, the stock rounds having filled that cache. Attribution
 
 **`options.scale` stays 1** — raising it to 2 doubles every label in pixels and
 would undo the selectivity. Reported as an option, **not adopted**.
+
+---
+
+# Round 3 — the prototype's linework, and an orange trail (2026-09-11/12)
+
+**Rulings:** ADR 2026-09-09, `Addendum, 2026-09-11` — Liberty is the base, the web
+prototype is the reference, roads reduce, layers may be added, `PingFang TC` is
+accepted, and an orange trail + glow set is authorised **for evaluation only**.
+Dark-first is still sequencing; ADR 2026-08-27 is untouched.
+
+**Built** in `Tests/AppTests/LibertyForkRound3.swift`, **on top of** round 2 so
+round 2 still reproduces; `LibertyForkRound3Tests` asserts each change with no
+network and no render. (a) all 61 `transportation` layers → `road-major`
+(motorway/trunk/primary, minzoom 8) + `road-secondary` (minzoom 11); (b)
+`mountain-peak-dot` + `-name`, `ele ≥ 600` and `rank ≤ 2` (**first guesses**), the
+name copied from `label_town`'s two-line expression; (c) `island` leaves
+`label_other` for `label_island` at `label_town`'s doubled size; (d) the souvenir
+`inland-water-edge` (`class != ocean`); (e) glacier `#55646b`, opaque; (f) coast
+A / B / C. Harness: `KAMOME_ROUTE_GLOW_COLOR`, `KAMOME_SUBSTRATE_EVAL_TAG`, and
+`apple-light` / `apple-dark` as names in `KAMOME_SUBSTRATE_EVAL_STYLES`.
+
+**Frames:** `substrate-{frame}-liberty-fork-r3-coast{A,B,C}.png` (12) and
+`r3-orange-glow/substrate-{frame}-liberty-fork-r3-coastA.png` (4) — the 16 asked
+for — plus re-rendered `apple-dark` baselines (see the harness bug below). **The
+three cameras match rounds 1–2 exactly** (same z and span), so they compare like
+for like although `main` moved underneath. The fourth frame is **`iceland-wide`,
+t = 2.50 s — inside the title card's country beat**, z6.08, span 528.9 km; the
+title card covers its lower quarter.
+
+## The seam table
+
+**Measured, not eyeballed:** B and C differ from A only in their coast layer, so a
+pixel diff against A isolates exactly that layer. Masks and a lake crop are in
+`r3-logs/seams/` beside the frames; the script is `r3-logs/seams.swift`.
+
+| frame | A — contrast only | B — ocean fill outline | C — 1 px ocean line |
+|---|---|---|---|
+| `miyakojima` | no sea stroke, so no sea seam | **seams**: single straight lines across open sea (y≈94, y≈742, x≈615) | **seams**: the same tile edges |
+| `iceland` | 🔴 **lake seam** (below) | **seams**: y≈1399 across the sea | **seams, doubled**: y≈1398/1425, x≈69/96, x≈930/957 |
+| `iceland-wide` | lakes not inspected | **seams**: a full-width line at y≈30 | **seams, doubled**: a full grid — three horizontal and two vertical pairs across the whole sea |
+| `ishigaki-crossing` | no sea stroke, so no sea seam | **seams**: x≈407 the full height of the sea, y≈547 | **seams**: the same, doubled |
+
+- **B seams on every frame, and so does C.** B draws each tile edge once, C draws
+  it as a pair ~17–27 px apart (measured on `iceland` and `iceland-wide`). That the
+  pair is the tile buffer — each neighbouring tile stroking its own clipped
+  polygon — is INFERRED.
+- 🔴 **A is not seam-free either.** The souvenir lake edge strokes tile-clipped
+  lakes: `crop-iceland-coastA-lake-x3.png` shows a straight 2 × 2 grid across
+  Þingvallavatn. It is in all three variants, because (d) is.
+- **Not picking.** The table says only that "contrast only" is the one variant
+  without a sea seam, and that no variant is without a lake seam.
+
+## What the map does now
+
+- ✅ **The island-name fix works** — `Ishigaki Island ⏎ 石垣島` at town size.
+  ⚠️ Two side effects: `miyakojima` now shows **two near-identical big names side
+  by side** (city `Miyakojima ⏎ 宮古島市`, island `Miyako-jima ⏎ 宮古島`), and
+  Iceland's river island **Árnes** is promoted from small caps to town size.
+- ✅ **Peaks read on `iceland`** — eight named, with dots. None on the islands (no
+  peak there reaches 600 m) or on the wide frame (below minzoom 7). ⚠️ **Hekla,
+  1,491 m, is on Apple's frame and not the fork's** — `rank > 2` or collision with
+  Öxl beside it, UNKNOWN; cheapest settling is reading its `rank` from the tile.
+- ✅ **The skeleton reads on both islands** — neither is roadless, so `tertiary`
+  was never in question. ⚠️ At `iceland` z8.75 the skeleton is **nearly invisible**
+  (its own ramp puts it at ~0.26 opacity, ~0.6 px), so the trail loses its road
+  context at wide zooms.
+- ✅ **Glaciers read, and no pale cross** over Vatnajökull on the wide frame.
+- **The wide frame** shows `natural_earth` as relief texture on the land — it reads
+  as terrain rather than as a defect at z6.08 — no visible admin boundary lines,
+  and **low-zoom landcover drawn as rectangular blocks** in the interior.
+- The distance readout reads on every fork frame.
+
+## Labels under the trail, and the orange set
+
+- **Still under it:** `Hella` and `Hvolsvöllur` on `iceland`; `Miyako-jima` is
+  clipped on `miyakojima`. MapLibre's collision cannot see a trail drawn later.
+- **The orange glow makes it worse** — at ×3.0 width it covers `Hella`'s H and
+  `Miyakojima`'s M and 宮. Evidence for the still-locked question of where names
+  belong; not acted on.
+- ⚠️ **The glow compounds where the trail overlaps itself** — α 0.55 double-blends
+  into darker blobs at leg joins on `iceland`.
+- ⚠️ **No glow on dashed legs — by design, not a bug.** `drawRouteLeg` returns
+  before the glow pass for an inferred leg, because a glowing line would claim a
+  road nobody proved. Every visible leg on `ishigaki-crossing` is dashed, so its
+  orange frame has no glow at all.
+- ⚠️ **The orange `iceland-wide` frame is identical to the cyan one** — 0 differing
+  pixels outside the caption. No trail is revealed at t = 2.50, so one of the four
+  orange frames cannot show orange.
+
+## 🔴 A harness bug this evaluation shipped, found and fixed this round
+
+**Every `apple-dark` baseline delivered so far was a light Apple map under the dark
+palette, captioned dark** — round 1's three (PR #51) and round 3's first orange
+four. `RecapReviewScene.make(fixture:appearance:)` gave its override to the
+palette only; `ReviewSubstrate.appleMaps` kept reading `KAMOME_MAP_APPEARANCE`,
+whose default is light. Nothing failed, and the console printed
+`Apple Maps (light …)` for the dark scene the whole time. Found by looking at a
+still. **Fixed** — the override now reaches the Apple provider, and
+`testAnAppearanceAskedOfTheSubstrateReachesTheAppleMap` holds it. The wrong files
+are kept, renamed `*-apple-dark-MISLABELLED-light-map.png`, and the dark baselines
+are re-rendered. ⚠️ One of those eight re-renders came back stale and was
+rejected by that gate before it could be delivered; its retry passed.
+
