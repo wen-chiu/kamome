@@ -55,61 +55,40 @@ enum AppConfig {
                 """)
         }
         #endif
-        return applyingRoutingKey(config, key: routingAPIKeyFromBundle())
+        return routingForAKeylessBuild(config)
     }
 
-    /// The key as the bundle carries it, or nil when this build has none.
+    /// **The app carries no routing key, from any source** (ADR 2026-09-12).
     ///
-    /// Delivered by `Config/Secrets.xcconfig` (gitignored) through
-    /// `Config/Base.xcconfig` into an `Info.plist` entry, so the key reaches the
-    /// app without ever being a source file. `Base.xcconfig` defines the setting
-    /// as empty by default, which is why a checkout with no secrets file still
-    /// builds and simply arrives here with nothing.
-    static func routingAPIKeyFromBundle() -> String? {
-        let raw = Bundle.main.object(forInfoDictionaryKey: "KamomeRoutingAPIKey") as? String
-        return raw.flatMap(usableRoutingKey)
-    }
-
-    /// Three ways a build legitimately has no key, all of them normal:
-    /// the setting was empty (no `Secrets.xcconfig`), the template was copied but
-    /// never edited, or the setting was never defined at all and the plist kept
-    /// its literal `$(…)` placeholder.
-    static func usableRoutingKey(_ raw: String) -> String? {
-        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty,
-              !key.hasPrefix("replace-me"),
-              !key.contains("$(") else { return nil }
-        return key
-    }
-
-    /// **A missing key disables routing when the endpoint needs one; it never
-    /// crashes.**
+    /// Until then a key could reach the bundle from a gitignored
+    /// `Config/Secrets.xcconfig`, through an `Info.plist` field this enum read
+    /// back out. The config flip (ADR 2026-09-08) made that key unnecessary — the
+    /// Worker holds it — but not unreachable: on a machine that still had the
+    /// file, every request to the Worker carried the real key in its query string,
+    /// and every archive built there carried it in `Info.plist`. The field, the
+    /// include and the bundle read are gone, so there is nothing left to read.
     ///
-    /// Routing off is an existing, designed state — `matching.base_url` empty,
-    /// legs keep raw geometry and draw dashed (PD-2), with user-facing copy
-    /// already written for it. So a build with no key degrades into that state
-    /// rather than inventing a new failure, and a fresh checkout or CI run is
-    /// unaffected.
+    /// **What remains is the rule for an endpoint that needs a key, and it still
+    /// matters.** Routing off is an existing, designed state — `matching.base_url`
+    /// empty, legs keep raw geometry and draw dashed (PD-2), with user-facing copy
+    /// already written for it — so such an endpoint degrades into that state
+    /// rather than inventing a new failure.
     ///
-    /// **`api_key_required` is what keeps that rule true once the Cloudflare
-    /// Worker exists** (2026-08-20). The Worker holds the key and the app is
-    /// *supposed* to carry none, so an unconditional "no key ⇒ routing off"
-    /// would switch routing off in exactly the configuration Kamome ships.
-    /// Deleting the rule instead would be worse: a build pointed straight at
-    /// Geoapify with no key would put real coordinates in the query string of
-    /// every request only to be refused — §0 exposure buying nothing.
+    /// **`api_key_required` is what keeps the rule from switching the Worker off**
+    /// (2026-08-20). The Worker holds the key and the app is *supposed* to carry
+    /// none, so an unconditional "no key ⇒ routing off" would disable routing in
+    /// exactly the configuration Kamome ships. Deleting the rule instead would be
+    /// worse: a build pointed straight at Geoapify would put real coordinates in
+    /// the query string of every request only to be refused — §0 exposure buying
+    /// nothing.
     ///
-    /// Pure and separate from the bundle read so the decision itself is testable
-    /// without an `Info.plist`.
-    static func applyingRoutingKey(_ config: TrackingConfig, key: String?) -> TrackingConfig {
-        guard let key else {
-            guard config.matching.apiKeyRequired, !config.matching.baseURL.isEmpty else { return config }
-            KamomeLog.routing.notice(
-                "routing disabled — this build carries no API key, so every leg stays raw (PD-2)"
-            )
-            return config.withMatching(config.matching.withBaseURL(""))
-        }
-        return config.withMatching(config.matching.withAPIKey(key))
+    /// Pure, so the rule is testable without a bundle.
+    static func routingForAKeylessBuild(_ config: TrackingConfig) -> TrackingConfig {
+        guard config.matching.apiKeyRequired, !config.matching.baseURL.isEmpty else { return config }
+        KamomeLog.routing.notice(
+            "routing disabled — this endpoint needs an API key and the app carries none, so every leg stays raw (PD-2)"
+        )
+        return config.withMatching(config.matching.withBaseURL(""))
     }
 
     static func openDatabaseOrDie() -> AppDatabase {

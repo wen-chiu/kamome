@@ -2,15 +2,18 @@
 import KamomeConfig
 import XCTest
 
-/// **How the routing key reaches the app, and what happens when it does not.**
+/// **The app carries no routing key, and no build can give it one** (ADR
+/// 2026-09-12).
 ///
-/// The key must not enter git, so it arrives through a gitignored
-/// `Config/Secrets.xcconfig` → `Config/Base.xcconfig` → `Info.plist` →
-/// `Bundle.main`. These cover the decision that path feeds, which is the half
-/// that can be tested without a bundle.
+/// Until then a key arrived through a gitignored `Config/Secrets.xcconfig` →
+/// `Config/Base.xcconfig` → `Info.plist` → `Bundle.main`. The config flip (ADR
+/// 2026-09-08) pointed the app at the Worker, which holds the key; removing the
+/// path is what made "no key in the app" true on every machine, rather than only
+/// on the ones that happened to have no secrets file.
 ///
-/// The case that matters most is the one that will break for the next person and
-/// not for whoever added this: **a checkout with no secrets file at all.**
+/// Two halves: the rule for an endpoint that still needs a key (routing off, never
+/// a request that can only be refused), and the absence of any way for a key to
+/// arrive — in the committed build inputs and in the built bundle itself.
 final class RoutingKeyTests: XCTestCase {
     private func shipped() throws -> TrackingConfig {
         let url = URL(fileURLWithPath: #filePath)
@@ -34,7 +37,7 @@ final class RoutingKeyTests: XCTestCase {
         let config = try shipped().withMatching(
             try directMatching().withBaseURL("https://routing.example.com")
         )
-        let resolved = AppConfig.applyingRoutingKey(config, key: nil)
+        let resolved = AppConfig.routingForAKeylessBuild(config)
 
         XCTAssertEqual(resolved.matching.baseURL, "", "no key must mean routing disabled")
         XCTAssertEqual(resolved.matching.apiKey, "")
@@ -54,7 +57,7 @@ final class RoutingKeyTests: XCTestCase {
     func testNoKeyLeavesAnAlreadyDisabledConfigAlone() throws {
         let config = try shipped().withMatching(try shipped().matching.withBaseURL(""))
         XCTAssertEqual(config.matching.baseURL, "", "precondition: this config has routing off")
-        XCTAssertEqual(AppConfig.applyingRoutingKey(config, key: nil), config)
+        XCTAssertEqual(AppConfig.routingForAKeylessBuild(config), config)
     }
 
     /// 🔴 **The config flip itself, as a gate** (Chiu 2026-09-05, ADR 2026-09-08).
@@ -74,17 +77,30 @@ final class RoutingKeyTests: XCTestCase {
         XCTAssertEqual(config.matching.apiKey, "", "and the committed file can never supply one")
 
         // The whole point of the pair: a build with no key routes anyway.
-        XCTAssertEqual(AppConfig.applyingRoutingKey(config, key: nil), config,
+        XCTAssertEqual(AppConfig.routingForAKeylessBuild(config), config,
                        "a keyless build must reach the Worker unchanged — that is what the flip bought")
     }
 
-    /// A key present is carried on `matching`, never read from the config file.
-    func testAKeyIsCarriedOnMatchingAndNotFromTheFile() throws {
-        let config = try shipped()
-        let resolved = AppConfig.applyingRoutingKey(config, key: "abc123")
-
-        XCTAssertEqual(resolved.matching.apiKey, "abc123")
-        XCTAssertEqual(resolved.matching.baseURL, config.matching.baseURL, "a key does not enable an endpoint")
+    /// 🔴 **The built app has no key to carry** (2026-09-12, the build path removed).
+    ///
+    /// Restated from `testAKeyIsCarriedOnMatchingAndNotFromTheFile`, whose subject
+    /// — a key read out of the bundle and put on `matching` — no longer exists:
+    /// there is no `Info.plist` field to read one from. That test protected "the
+    /// only key the app sends is one the build deliberately supplied"; the
+    /// strongest form of that is now "the build supplies none". The other half —
+    /// `withAPIKey` carries a key without enabling an endpoint — is Core's, and
+    /// `ConfigLoaderTests` holds it.
+    ///
+    /// This runs inside the host app, so `Bundle.main` is the built `Kamome.app`:
+    /// exactly where a machine-local `Config/Secrets.xcconfig` used to land. An
+    /// **empty** field fails too — that is the mapping come back on a machine that
+    /// happens to have no key.
+    func testTheBuiltAppCarriesNoRoutingKeyField() {
+        XCTAssertNil(
+            Bundle.main.object(forInfoDictionaryKey: "KamomeRoutingAPIKey"),
+            "Info.plist must not define KamomeRoutingAPIKey at all — the key has no build path"
+        )
+        XCTAssertEqual(AppConfig.loadOrDie().matching.apiKey, "", "and the config the app loads carries no key")
     }
 
     /// `TrackingConfig.json` is committed and bundled, so the key must not be
@@ -109,7 +125,7 @@ final class RoutingKeyTests: XCTestCase {
         let worker = try workerMatching()
         XCTAssertFalse(worker.apiKeyRequired, "precondition")
 
-        let resolved = AppConfig.applyingRoutingKey(try shipped().withMatching(worker), key: nil)
+        let resolved = AppConfig.routingForAKeylessBuild(try shipped().withMatching(worker))
 
         XCTAssertEqual(resolved.matching.baseURL, "https://kamome-routing.example.workers.dev",
                        "the Worker endpoint survives a keyless build")
@@ -123,7 +139,7 @@ final class RoutingKeyTests: XCTestCase {
         let direct = try directMatching()
         XCTAssertTrue(direct.apiKeyRequired, "precondition: this endpoint expects to supply a key")
 
-        let resolved = AppConfig.applyingRoutingKey(try shipped().withMatching(direct), key: nil)
+        let resolved = AppConfig.routingForAKeylessBuild(try shipped().withMatching(direct))
 
         XCTAssertEqual(resolved.matching.baseURL, "")
     }
@@ -154,14 +170,28 @@ final class RoutingKeyTests: XCTestCase {
         return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }
 
-    /// The three ways a build legitimately has no key. The `$(…)` case is the
-    /// no-`Secrets.xcconfig` build whose plist kept its placeholder.
-    func testUnsetAndPlaceholderValuesCountAsNoKey() {
-        XCTAssertNil(AppConfig.usableRoutingKey(""))
-        XCTAssertNil(AppConfig.usableRoutingKey("   "))
-        XCTAssertNil(AppConfig.usableRoutingKey("$(KAMOME_ROUTING_API_KEY)"))
-        XCTAssertNil(AppConfig.usableRoutingKey("replace-me-with-the-routing-provider-key"))
-        XCTAssertEqual(AppConfig.usableRoutingKey("  abc123  "), "abc123")
+    /// **No committed build input maps the key into the app** (2026-09-12).
+    ///
+    /// Restated from `testUnsetAndPlaceholderValuesCountAsNoKey`, which classified
+    /// the shapes an `Info.plist` value took when a build had no key — empty, the
+    /// template placeholder, the unexpanded `$(…)`. Those shapes existed only
+    /// because the field did; with the field gone there is no value to classify,
+    /// and `usableRoutingKey` went with it. The rule underneath — a machine must
+    /// not be able to put a key into the app by having one lying around — is held
+    /// here one step earlier, where it cannot depend on which machine built: the
+    /// two files that generate the bundle's `Info.plist` never name the setting.
+    /// Comment lines are excluded so the history can still be explained in place.
+    func testNoBuildInputMapsTheRoutingKey() throws {
+        for path in ["project.yml", "App/Info.plist"] {
+            let text = try String(contentsOf: repoRoot.appendingPathComponent(path), encoding: .utf8)
+            let live = text.split(whereSeparator: \.isNewline)
+                .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("#") }
+            XCTAssertFalse(live.isEmpty, "precondition: \(path) was read")
+            XCTAssertFalse(live.contains { $0.contains("KamomeRoutingAPIKey") },
+                           "\(path) maps a routing key into Info.plist")
+            XCTAssertFalse(live.contains { $0.contains("KAMOME_ROUTING_API_KEY") },
+                           "\(path) expands the routing key build setting")
+        }
     }
 
     /// **The secrets file must never be tracked.** A gitignore rule is
@@ -192,7 +222,7 @@ final class RoutingKeyTests: XCTestCase {
         var searchStart = indexData.startIndex
         while let range = indexData.range(of: needle, in: searchStart..<indexData.endIndex) {
             // Check it is NUL-terminated (a real index entry) and not a
-            // prefix of "Config/Secrets.xcconfig.example"
+            // prefix of a longer tracked path
             let afterNeedle = range.upperBound
             if afterNeedle < indexData.endIndex && indexData[afterNeedle] == nul {
                 XCTFail("Config/Secrets.xcconfig is tracked by git — it must be in .gitignore")
@@ -229,27 +259,39 @@ final class RoutingKeyTests: XCTestCase {
         return gitDir.appendingPathComponent("index")
     }
 
-    /// The committed example file must not contain a usable key. If someone
-    /// pastes a real key into the example and commits it, this fails.
-    func testTheExampleFileContainsNoUsableKey() throws {
-        let repoRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let example = repoRoot.appendingPathComponent("Config/Secrets.xcconfig.example")
-        let content = try String(contentsOf: example, encoding: .utf8)
+    /// This checkout's root, for the tests that read committed files.
+    private var repoRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()  // AppTests/
+            .deletingLastPathComponent()  // Tests/
+            .deletingLastPathComponent()  // repo root
+    }
 
-        // Extract any value assigned to KAMOME_ROUTING_API_KEY
-        for line in content.components(separatedBy: .newlines) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            guard trimmed.hasPrefix("KAMOME_ROUTING_API_KEY"),
-                  let eqIdx = trimmed.firstIndex(of: "=") else { continue }
-            let value = String(trimmed[trimmed.index(after: eqIdx)...])
-                .trimmingCharacters(in: .whitespaces)
-            XCTAssertNil(
-                AppConfig.usableRoutingKey(value),
-                "Secrets.xcconfig.example contains a usable key — it must hold only the placeholder"
-            )
+    /// **No committed config file puts a key into a build** (2026-09-12).
+    ///
+    /// Restated from `testTheExampleFileContainsNoUsableKey`. The template it read,
+    /// `Config/Secrets.xcconfig.example`, was deleted with the build path: it
+    /// documented how to create a file no build reads any more, and a committed
+    /// template is an instruction to do exactly that. What it guarded — a key
+    /// reaching a build from a file in `Config/` — is held here over every
+    /// xcconfig in the directory, including any template someone re-adds.
+    ///
+    /// `Config/Secrets.xcconfig` itself is skipped by name: it is gitignored, may
+    /// still exist on a machine that built before this change, and is its owner's
+    /// file. `testTheSecretsFileIsNotTracked` is what keeps it out of git.
+    func testNoConfigFileDefinesOrIncludesTheRoutingKey() throws {
+        let config = repoRoot.appendingPathComponent("Config")
+        let names = try FileManager.default.contentsOfDirectory(atPath: config.path)
+        XCTAssertTrue(names.contains("Base.xcconfig"), "precondition: the scan found the app's xcconfig")
+
+        for name in names where name.contains(".xcconfig") && name != "Secrets.xcconfig" {
+            let text = try String(contentsOf: config.appendingPathComponent(name), encoding: .utf8)
+            let live = text.split(whereSeparator: \.isNewline)
+                .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            XCTAssertFalse(live.contains { $0.contains("KAMOME_ROUTING_API_KEY") },
+                           "Config/\(name) defines the routing key build setting")
+            XCTAssertFalse(live.contains { $0.contains("Secrets.xcconfig") },
+                           "Config/\(name) includes the gitignored secrets file")
         }
     }
 

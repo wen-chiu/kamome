@@ -1,5 +1,7 @@
 # §3 Modern Minimal — design review harness (needs Chiu + a real render)
 
+Map data © OpenStreetMap contributors
+
 Modern Minimal is the **one** MVP theme (spec §4.5; handoff-P3.5 §3). Its
 acceptance is **not** a test — it is a **side-by-side design review that Chiu
 signs off** (vector-tile-pipeline §1 quality bar). This folder is the review

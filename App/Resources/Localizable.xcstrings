@@ -37,6 +37,40 @@
         }
       }
     },
+    "acknowledgements_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open-source licences"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開放原始碼授權"
+          }
+        }
+      }
+    },
+    "acknowledgements_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome is built with these open-source libraries. Their licences ask for their notices to be reproduced in full, so they are."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩使用了以下開放原始碼程式庫。它們的授權條款要求完整附上授權聲明，因此收錄於此。"
+          }
+        }
+      }
+    },
     "attribution_geoapify": {
       "extractionState": "manual",
       "localizations": {
