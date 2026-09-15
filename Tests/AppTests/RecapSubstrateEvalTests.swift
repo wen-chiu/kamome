@@ -161,7 +161,8 @@ final class RecapSubstrateEvalTests: XCTestCase {
             result.append(try await render(
                 on: scene, at: time, label: "openfreemap-\(style.rawValue)",
                 using: MapLibreSnapshotProvider(
-                    styleURL: try style.resolvedStyleURL(), appearance: style.appearance
+                    styleURL: try style.resolvedStyleURL(), appearance: style.appearance,
+                    attribution: ReviewSubstrate.Substrate.attribution
                 ),
                 attribution: ReviewSubstrate.Substrate.attribution
             ))

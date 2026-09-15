@@ -125,7 +125,8 @@ extension RecapDemoFilmTests {
         // Any style URL: the capability is a property of the substrate, and this
         // takes no snapshot.
         let souvenir = MapLibreSnapshotProvider(
-            styleURL: URL(fileURLWithPath: "/dev/null")
+            styleURL: URL(fileURLWithPath: "/dev/null"),
+            attribution: RecapMapAttribution.openStreetMap
         ).capabilities
         XCTAssertEqual(
             souvenir.fixedAppearance, .dark,
