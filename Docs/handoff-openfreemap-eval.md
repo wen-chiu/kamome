@@ -376,3 +376,76 @@ number.
 - The orange set carries **no halo at all** — the shipping preset's glow is alpha 0
   and no glow variable was passed. Trail width is untouched.
 
+---
+
+# Round 5 — fewer peaks, and the close (2026-09-15)
+
+**Rulings:** ADR 2026-09-09, `Addendum, 2026-09-15`. Hillshade stays; the trail is
+settled as light → orange / dark → cyan with no glow, which is what already ships,
+so **no code changed for it**; peaks narrow; the island label is accepted as it
+stands. **The style evaluation closes with this round.**
+
+**Four frames**, one set, cyan trail, hillshade on:
+`r5/substrate-{frame}-liberty-fork-r5.png`.
+
+## Peaks: `ele >= 1000`, `rank <= 1` — five labels, and Hekla is one of them
+
+The band was chosen by **counting on `iceland`**, not by taste. Three candidates
+were rendered on that frame alone (`r5-probe/`):
+
+| band | labels on `iceland` |
+|---|---|
+| **A — `ele >= 1000`, `rank <= 1`** ✅ chosen | **5** — Bláfell, Skjaldbreiður, Hlöðufell, **Hekla**, Ýmir |
+| B — `ele >= 900`, `rank <= 1` | **5**, the same five — so **the rank ceiling binds, not the elevation floor** |
+| C — `ele >= 900`, `rank <= 2` | a superset of B by construction; not counted, because A already met the 3–5 target and is the tighter rule |
+
+✅ **Hekla appears**, which closes round 4's loose end: it was never excluded by a
+filter (it is `rank=1`, `ele=1491`), it was **losing a collision**. Remove the
+competitors and it places. `miyakojima` and `ishigaki-crossing` draw no peaks at
+all, correctly — their highest points are 109 m and 526 m, below any band.
+
+## Islands: the `rank` clause is gone, and it shows
+
+The tiles make a `rank` threshold meaningless for islands (Árnes `rank=3` outranks
+伊良部島 `rank=4` and 竹富島 `rank=5`), so the clause was removed. ⚠️ **The visible
+cost**, now on the frames rather than in an argument: `iceland` carries **Árnes**
+(a river islet) and **Home Island** at island size, and `miyakojima` carries
+**来間島** and **伊良部島** clipped at its edges. There is no rule in this schema that
+keeps the big island and drops the small one; that is Chiu's to accept or to solve
+some other way.
+
+**The city label**: 宮古島市 is absent because it **loses a collision** to the larger
+island name — verified across rounds 4 and 5, where reversing the layer order
+reversed which of the two survived. Drawing both would need `text-allow-overlap`,
+i.e. two overlapping names in the same spot. Not cheap, not done; Chiu has accepted
+island-only.
+
+## Both instruments were fixed and then shown to fire
+
+- 🔴 **The freshness gate was useless.** It grepped `"style $style "`, but the app
+  prints `KAMOME_SUBSTRATE_EVAL liberty-fork-r4 dark · …` — **no `style` token** — so
+  all 13 round-4 runs reported `REJECT` while every render was correct. A gate that
+  always fails is exactly as useless as one that always passes, and this one exists
+  because of the stale-bundle incident. Fixed in `r5-logs/gate.sh`, and **proved
+  both ways**: a foreign log scores 0 (rejects), a round-5 log scores 1 (accepts),
+  and round 4's old pattern scores 0 even on a correct log.
+- **The seam result is now measured, with a positive control.**
+  `r3-logs/seams.swift` is hard-coded to round 3 and must not be reused;
+  `r4-logs/lines.swift` is argument-driven and does a real per-pixel scan. Run on a
+  **known-seamy** frame (round-3 coast C) it reports `LINE` — 736 px row, 573 px
+  column. Run on all four round-5 frames it reports **clean**, longest run 106 px
+  against a 120 px threshold.
+
+## Numbers
+
+s/snapshot on the four frames: **0.43–0.67 s first pass, 0.09–0.17 s warm.** ⚠️ The
+first-pass figures are **tile- and DEM-warm** — the caches were full from the probe
+renders. Round 4's genuinely cold figures with the DEM (2.50–4.67 s) remain the
+honest cold numbers.
+
+## What is left, and it is not engineering
+
+The §0 question of a **third** network recipient (AWS elevation, beside OpenFreeMap
+and Geoapify) and the **second item** the first-run notice would need. Both are
+Chiu's shipping decision; ADR 2026-09-05 (b) governs the second.
+

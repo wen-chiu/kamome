@@ -90,12 +90,22 @@ enum ReviewSubstrate {
         case libertyForkR4 = "liberty-fork-r4"
         case libertyForkR4NoHillshade = "liberty-fork-r4-nohillshade"
         case libertyForkR4PeaksByElevation = "liberty-fork-r4-peaks-ele"
+        /// **Round 5** (Chiu 2026-09-15) — round 4 with the peaks narrowed to a
+        /// handful. `-a`/`-b`/`-c` are the search, run on `iceland` alone and
+        /// counted; `liberty-fork-r5` is the answer; `-nopeaks` is Chiu's
+        /// authorised fallback of removing them altogether.
+        case libertyForkR5 = "liberty-fork-r5"
+        case libertyForkR5PeaksA = "liberty-fork-r5-a"
+        case libertyForkR5PeaksB = "liberty-fork-r5-b"
+        case libertyForkR5PeaksC = "liberty-fork-r5-c"
+        case libertyForkR5NoPeaks = "liberty-fork-r5-nopeaks"
 
         /// OpenFreeMap serves the style, its glyphs and its sprite from absolute
         /// URLs inside the style document, so for a stock style this one URL is
         /// the whole wiring. The fork is built and written to a temp file, which
         /// resolves those same absolute URLs identically.
         func resolvedStyleURL() throws -> URL {
+            if isRound5 { return try LibertyFork.resolvedRound5StyleURL(peaks: round5Band) }
             if let round4 = round4Variant {
                 return try LibertyFork.resolvedRound4StyleURL(hillshade: round4.hillshade, peaks: round4.peaks)
             }
@@ -124,16 +134,37 @@ enum ReviewSubstrate {
             }
         }
 
+        /// Round 5's cases, which all render `forkedRound5`.
+        var isRound5: Bool {
+            switch self {
+            case .libertyForkR5, .libertyForkR5PeaksA, .libertyForkR5PeaksB,
+                 .libertyForkR5PeaksC, .libertyForkR5NoPeaks: return true
+            default: return false
+            }
+        }
+
+        /// Which summits this case keeps. **Nil means none** — for `-nopeaks` that
+        /// is the point, and for every non-round-5 case it is never read.
+        var round5Band: LibertyFork.PeakBand? {
+            switch self {
+            case .libertyForkR5: return LibertyFork.Round5.chosen
+            case .libertyForkR5PeaksA: return LibertyFork.Round5.bandA
+            case .libertyForkR5PeaksB: return LibertyFork.Round5.bandB
+            case .libertyForkR5PeaksC: return LibertyFork.Round5.bandC
+            default: return nil
+            }
+        }
+
         /// Kamome's own styles, which a run that names nothing does not draw.
         var isFork: Bool {
-            self == .openFreeMapLibertyFork || round3Coast != nil || round4Variant != nil
+            self == .openFreeMapLibertyFork || round3Coast != nil || round4Variant != nil || isRound5
         }
 
         /// The filename label. Round 3's files are `liberty-fork-r3-coast{A,B,C}` as
         /// its brief names them; the earlier rounds keep the `openfreemap-` prefix
         /// their files already carry on disk.
         var fileLabel: String {
-            round3Coast == nil && round4Variant == nil ? "openfreemap-\(rawValue)" : rawValue
+            round3Coast == nil && round4Variant == nil && !isRound5 ? "openfreemap-\(rawValue)" : rawValue
         }
 
         /// **Which appearance Kamome's palette must be drawn in over this base**,
@@ -154,7 +185,9 @@ enum ReviewSubstrate {
             case .openFreeMapPositron, .openFreeMapLiberty: return .light
             case .openFreeMapFiord, .openFreeMapLibertyFork,
                  .libertyForkR3CoastA, .libertyForkR3CoastB, .libertyForkR3CoastC,
-                 .libertyForkR4, .libertyForkR4NoHillshade, .libertyForkR4PeaksByElevation: return .dark
+                 .libertyForkR4, .libertyForkR4NoHillshade, .libertyForkR4PeaksByElevation,
+                 .libertyForkR5, .libertyForkR5PeaksA, .libertyForkR5PeaksB,
+                 .libertyForkR5PeaksC, .libertyForkR5NoPeaks: return .dark
             }
         }
 

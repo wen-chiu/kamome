@@ -38,16 +38,17 @@ can do either**.
 
 ---
 
-## 🔵 Live — the export substrate evaluation
+## 🔵 Live — the export substrate evaluation, now CLOSED on style
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 and its three
-addenda); every round only *looks*. **Round 4**: coast **A** chosen and B/C closed —
-their seams are tile-clipped polygon edges no style setting can remove — so **every
-tile-clipped stroke is gone, the lake edge included**, and **hillshade is back** for
-the terrain Chiu asked for. Glow rejected; **orange-on-dark stays open**, answered
-by a render. ⏳ **Awaiting Chiu.** 🔴 Two tile measurements corrected the plan:
-`rank` does **not** separate an islet from an island, and `rank <= 2` never hid
-Hekla. → `Docs/handoff-openfreemap-eval.md` round 4.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 + four
+addenda). ✅ **The style evaluation closed 2026-09-15**: coast A (B/C rejected as
+unfixable tile seams), every tile-clipped stroke gone and *measured* gone, hillshade
+in, peaks narrowed to five, islands and the trail settled — **the trail needed no
+code**, light → orange / dark → cyan with no glow is what already ships.
+🔴 **What remains is Chiu's shipping decision, not engineering**: §0's **third**
+network recipient (AWS elevation, beside OpenFreeMap and Geoapify) and the first-run
+notice's **second item** (ADR 2026-09-05 (b)).
+→ `Docs/handoff-openfreemap-eval.md` round 5.
 
 ---
 

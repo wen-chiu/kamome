@@ -4478,6 +4478,54 @@ the accepted fallback.
 sequencing, ADR 2026-08-27 stands), where place names finally live, the notice's
 second item, and the pmtiles path's retirement.
 
+### Addendum, 2026-09-15 — the style evaluation closes
+
+**Hillshade stays** — 「效果很好」. **The trail is settled and needed no code**: the
+film follows the device's appearance, **light → orange `#FF8A5B`, dark → cyan, no
+glow on either** 「定案」. That is exactly what ships (ADR 2026-08-27), so nothing
+changed, and **the orange-on-dark experiment is closed as "no"**.
+`KAMOME_ROUTE_GLOW_COLOR` stays a harness lever only.
+
+**Peaks are narrowed to `ele >= 1000` and `rank <= 1`** — five labels on the
+`iceland` frame against round 4's dozen-plus, which Chiu read as 「訊息過多對影片確實
+不好」. Chiu's authorised fallback — delete the peak layer and defer it 「等之後有要
+做爬山功能再加回去」 — was **not needed** and is recorded as available.
+
+**The island label is accepted as it stands**: the frame reads `Miyako-jima` ⏎
+`宮古島`, the island. The **city** label 宮古島市 is the one absent, lost to
+collision with the larger island name, and Chiu accepts that outcome.
+
+### ⚠️ Two premises this evaluation acted on were wrong, and the ledger says so
+
+Both were disproved by decoding OpenFreeMap's own tiles, not by argument:
+
+1. **`rank <= 2` never hid Hekla.** Hekla is `class=volcano`, `ele=1491`,
+   **`rank=1`**, present in the z8 tile the `iceland` frame draws from. Round 4's
+   instruction to *relax* the filter therefore rested on a false premise, and
+   relaxing it added competitors — the opposite of what was wanted. Hekla was lost
+   to **symbol collision**, and it appears in round 5 precisely because the
+   competitors are gone.
+2. **`rank` cannot separate an islet from an island.** Árnes `rank=3`, 伊良部島
+   `rank=4`, 竹富島 `rank=5` — the islet outranks two genuine islands. **Islands are
+   therefore not filtered by `rank`**, and the visible cost is that Árnes, Home
+   Island and 来間島 now carry island-sized names. Recorded rather than papered over
+   with a threshold that means nothing.
+
+### The style evaluation closes here
+
+Coast **A** with B and C rejected; every tile-clipped stroke gone and **measured**
+gone (a detector with a positive control, not an eyeball); hillshade in; peaks
+narrowed; islands and the trail settled. **What remains is not engineering.** It is
+Chiu's shipping decision, and neither half is a session's to settle:
+
+- **§0 — a third network recipient.** A shipping MapLibre export sends each
+  keyframe's centre to OpenFreeMap **and** the AWS elevation tiles, beside
+  Geoapify.
+- **The first-run notice's second item**, which ADR 2026-09-05 (b) governs.
+
+⚠️ Unchanged: dark-first is still sequencing (ADR 2026-08-27 stands), the fork
+stays a harness resource, and no shipping value has changed in any round.
+
 ## 2026-09-10 — The Phase 4 closeout is four steps, and the last two wait for the substrate
 
 **Decision (Chiu, 2026-09-10).** The Phase 4 closeout opened 2026-09-05 as "four
