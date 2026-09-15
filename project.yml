@@ -109,20 +109,14 @@ targets:
         # Japanese place names render in Chinese glyph forms — visible on the
         # miyakojima fixture and reported for judgement, not fixed by guessing.
         MLNIdeographicFontFamilyName: PingFang TC
-        # Reaching the dogfood OSRM, which runs on the developer's Mac over home
-        # Wi-Fi (`Docs/dogfood-infrastructure.md`). Two separate iOS gates stand
-        # between a device build and `http://192.168.x.x:5100`, and both fail
-        # quietly — the request just errors, and PD-2 then renders every leg
-        # dashed with nothing saying why.
-        #
-        # `NSAllowsLocalNetworking` is the *narrow* ATS exemption: it permits
-        # cleartext only to private-range IPs, `.local`, and unqualified
-        # hostnames. Public HTTP stays blocked, which is why this is not
-        # `NSAllowsArbitraryLoads`. Production routing is HTTPS behind Caddy
-        # (spec P7), and this key costs nothing then.
-        NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true
-        NSLocalNetworkUsageDescription: Kamome reconstructs your route using a routing service you run on your own computer. It is only contacted while you import or export a trip, and only on your local network.
+        # ⚠️ **No local-network permission in this list, on purpose** (ADR
+        # 2026-09-12 (b)). `NSAppTransportSecurity → NSAllowsLocalNetworking` and
+        # `NSLocalNetworkUsageDescription` used to live here, for a device build
+        # pointed at the dogfood OSRM on the developer's Wi-Fi. The release guard
+        # in `AppConfig.loadOrDie` refuses a LAN endpoint in every non-Debug build,
+        # so in the shipped plist the purpose string described a service the app
+        # cannot contact, and the ATS exemption bought nothing. Debug builds get
+        # both from the post-build phase "Debug only: local-network permission".
     # **Finder junk cannot reach a shipped build** (2026-08-17).
     #
     # `.copy` preserves the vehicle folder structure, which is load-bearing — and
@@ -147,6 +141,39 @@ targets:
         # directory to look in, is a success for this phase.
         script: |
           find "$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME" -name '.DS_Store' -delete || true
+      # **A Debug build keeps its LAN route; the shipped plist never gets one**
+      # (ADR 2026-09-12 (b)). The release guard in `AppConfig.loadOrDie` allows
+      # an `http://192.168.x.x` endpoint in Debug on purpose (see
+      # `TrackingConfig.Matching.isDistributableEndpoint`), and such a build
+      # needs both keys: per the 2026-08 comment this replaces — not re-measured
+      # 2026-09-12 — ATS refuses cleartext to a private address without the
+      # exemption, and on a device the Local Network prompt needs its purpose
+      # string, or the request fails quietly and every leg draws dashed (PD-2).
+      #
+      # **Added in Debug, never removed in Release**, so the failure direction is
+      # the safe one: if this phase stops running, a Release build still carries
+      # neither key and it is the Debug LAN build that breaks — which
+      # `LocalNetworkPermissionTests` fails on in every `./check.sh`. The shipped
+      # half is checked on the artifact by `Scripts/release/check-archive.sh`.
+      #
+      # `inputFiles` orders the phase after Info.plist is written: a phase that
+      # opts out of dependency analysis can otherwise run before the product
+      # exists (the strip phase above records that happening). `set -e` makes a
+      # missing plist fail the Debug build loudly rather than skip.
+      - name: "Debug only: local-network permission"
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)"
+        script: |
+          [ "$CONFIGURATION" = "Debug" ] || exit 0
+          set -eu
+          plist="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          plutil -extract NSAppTransportSecurity xml1 -o /dev/null "$plist" 2>/dev/null \
+            || plutil -insert NSAppTransportSecurity -dictionary "$plist"
+          plutil -replace NSAppTransportSecurity.NSAllowsLocalNetworking -bool YES "$plist"
+          plutil -replace NSLocalNetworkUsageDescription \
+            -string "Debug build: Kamome may contact a routing service on your local network while you import or export a trip." \
+            "$plist"
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).

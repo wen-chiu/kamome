@@ -123,5 +123,28 @@ else
   kamome_ok "no key-shaped string in any bundled plist, json, strings or xcconfig"
 fi
 
+# 5. The local-network permission is Debug-only (ADR 2026-09-12 (b)). The release
+#    guard in AppConfig.loadOrDie makes a LAN endpoint impossible outside Debug,
+#    so in a shipped plist the purpose string is untrue to a reviewer and the ATS
+#    exemption buys nothing. A Debug-only build phase adds both; this is the check
+#    that it stayed Debug-only in the thing that ships.
+if [ -n "$plists" ]; then
+  lan=0
+  while read -r plist; do
+    for entry in NSAppTransportSecurity:NSAllowsLocalNetworking NSLocalNetworkUsageDescription; do
+      if /usr/libexec/PlistBuddy -c "Print :$entry" "$plist" >/dev/null 2>&1; then
+        kamome_fail "$entry is set in ${plist#"$root"} — the local-network permission is Debug-only"
+        lan=1
+      fi
+    done
+  done <<< "$plists"
+  if [ "$lan" -eq 0 ]; then
+    kamome_ok "no bundled Info.plist carries the local-network permission"
+  else
+    kamome_info "Was this built from the Debug configuration? project.yml, \"Debug only: local-network permission\"."
+    failures=$((failures + 1))
+  fi
+fi
+
 [ "$failures" -eq 0 ] && exit 0
 exit 1

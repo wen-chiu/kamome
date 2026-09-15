@@ -72,7 +72,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
         let tiles = fixtureTilesURL()
         XCTAssertTrue(FileManager.default.fileExists(atPath: tiles.path), "fixture tiles missing at \(tiles.path)")
         let styleURL = try RecapMapStyle.resolvedStyleURL(styleResource: "modern-minimal", tilesURL: tiles)
-        let provider = MapLibreSnapshotProvider(styleURL: styleURL)
+        let provider = MapLibreSnapshotProvider(styleURL: styleURL, attribution: RecapMapAttribution.openStreetMap)
         let outDir = outputDirectory()
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
 
@@ -129,7 +129,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
                 CameraFrame(centerLat: frame.centerLat, centerLon: frame.centerLon, spanM: frame.spanM, bearing: frame.bearing),
                 map: MapState(), widthPx: width, heightPx: height
             )
-            let image = try compositor.render(atTime: time, background: RecapBackground(current: snapshot))
+            let image = try still(compositor, atTime: time, of: snapshot, on: provider)
             try writePNG(image, to: outDir, name: name)
         }
     }
@@ -234,7 +234,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
                 CameraFrame(centerLat: frame.centerLat, centerLon: frame.centerLon, spanM: frame.spanM, bearing: frame.bearing),
                 map: MapState(), widthPx: width, heightPx: height
             )
-            let image = try compositor.render(atTime: time, background: RecapBackground(current: snapshot))
+            let image = try still(compositor, atTime: time, of: snapshot, on: provider)
             try writePNG(image, to: outDir, name: "\(prefix)-\(Int(time))s")
         }
     }
@@ -354,7 +354,7 @@ private extension RecapFollowCamStillsTests {
                 ),
                 map: MapState(), widthPx: width, heightPx: height
             )
-            let image = try compositor.render(atTime: time, background: RecapBackground(current: snapshot))
+            let image = try still(compositor, atTime: time, of: snapshot, on: provider)
             print(String(format: "  heading %3d° → t=%.2fs actual=%.1f° mapBearing=%.1f° sprite=%@",
                          Int(target), time, actual, frame.bearing,
                          SpriteDirection.nearest(toBearing: actual - frame.bearing).rawValue))
