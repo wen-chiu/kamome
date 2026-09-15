@@ -60,7 +60,10 @@ final class RecapMarkerDeckStillsTests: XCTestCase {
                 CameraFrame(centerLat: frame.centerLat, centerLon: frame.centerLon, spanM: frame.spanM, bearing: frame.bearing),
                 map: MapState(), widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
             )
-            return try comp.render(atTime: time, background: RecapBackground(current: background))
+            return try comp.render(
+                atTime: time, background: RecapBackground(current: background),
+                credit: provider.capabilities.attribution
+            )
         }
     }
 
