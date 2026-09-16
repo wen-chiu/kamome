@@ -36,7 +36,7 @@ extension RecapOverlayRenderer {
                 x: margin, y: top - pillH,
                 width: textWidth(badge, fontPx: fitted, in: surface) + padding.width * 2, height: pillH
             )
-            drawPill(pill, in: surface)
+            drawPill(pill, fill: style.hudPillColor, border: style.hudPillBorderColor, in: surface)
             drawText(
                 badge, at: CGPoint(x: pill.minX + padding.width, y: baselineY),
                 fontPx: fitted, color: style.hudTextColor, in: surface
@@ -47,14 +47,18 @@ extension RecapOverlayRenderer {
         drawDistance(distance, rightEdge: CGFloat(surface.widthPx) - margin, baselineY: baselineY, in: surface)
     }
 
-    private func drawPill(_ rect: CGRect, in surface: RenderSurface) {
+    /// The dark translucent plate that keeps unplated type legible over an
+    /// arbitrary photograph. Its colours are arguments rather than read from
+    /// `style.hud…` since 2026-09-12, so the map credit can wear the same idiom
+    /// without inheriting the HUD's palette — one pill shape, two callers.
+    func drawPill(_ rect: CGRect, fill: CGColor, border: CGColor, in surface: RenderSurface) {
         let context = surface.context
         let corner = rect.height / 2
         let path = CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil)
-        context.setFillColor(style.hudPillColor)
+        context.setFillColor(fill)
         context.addPath(path)
         context.fillPath()
-        context.setStrokeColor(style.hudPillBorderColor)
+        context.setStrokeColor(border)
         context.setLineWidth(style.hudPillBorderPx * surface.scale)
         context.addPath(path)
         context.strokePath()

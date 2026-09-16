@@ -17,8 +17,8 @@ import KamomeConfig
 /// `""` in the shipped config, so nothing leaves the device yet and a notice
 /// shown now would describe a state that has not arrived — the exact mistake
 /// `Docs/release-readiness.md` S3b is still cleaning up after. The endpoint read
-/// here is the *effective* one, after `AppConfig.applyingRoutingKey` has emptied
-/// it for a build that carries no key, so "this build can send" and "the user
+/// here is the *effective* one, after `AppConfig.routingForAKeylessBuild` has
+/// emptied it for an endpoint that needs a key, so "this build can send" and "the user
 /// has been told" cannot disagree. **The config flip is therefore what publishes
 /// the notice**, on the first launch after it ships, for new and existing users
 /// alike.

@@ -4637,3 +4637,423 @@ it is a **"before"** for the substrate switch.
 Anything about the substrate (that is ADR 2026-09-09's own round); performance of
 any kind; music; whether the export should ever survive process death. No new
 tunable was needed and none was added.
+
+## 2026-09-12 — Committed Apple Map Data removed from the public repository
+
+**Engineering decision, implementing the finding in ADR 2026-09-09.** That ADR
+verified from Apple's Developer Program License Agreement Attachment 6 that
+MKMapSnapshotter imagery is Map Data and that §§2.3, 2.5 forbid publishing or
+permanently storing it. It applied the finding to *future* exported films and
+did not look at the artifacts already committed. This entry looks at them.
+
+**This repository is public** (VERIFIED 2026-09-12: `wen-chiu/kamome`, visibility
+PUBLIC). Seven committed files are Apple cartography rendered via
+MKMapSnapshotter, published on GitHub with no Apple logo (on some) and no legal
+link (on all):
+
+| file | what | verified how |
+|---|---|---|
+| `Docs/demos/phase3/kamome-p3-recap.mp4` | 30 s P3 demo film | Apple Maps tiles, full-bleed |
+| `Docs/demos/phase3/still-title-card.png` | P3 title card frame | Apple Maps tiles |
+| `Docs/demos/phase3/still-stop-card.png` | P3 stop card frame | Apple Maps tiles |
+| `Docs/demos/phase3/still-end-card.png` | P3 end card frame | Apple Maps tiles |
+| `Docs/demos/phase3_5/matching/before-p3-artifact.png` | Frame from the P3 film (bay crossing) | Apple Maps tiles |
+| `Docs/demos/phase3_5/matching/after-matched.png` | §4.4 matching "after" frame | Apple Maps styling + " Maps" logo visible at bottom-left (VERIFIED by inspection) |
+| `Docs/demos/phase3_5/kamome-recap-NZ-disaster.MP4` | Device film of Chiu's NZ trip | Apple Maps satellite/hybrid + " 地圖" at bottom-left (VERIFIED by frame extraction) |
+
+All seven are removed at HEAD in this PR.
+
+### What stays, and why
+
+- **`Docs/demos/phase3_5/modern-minimal/*.png`** (6 files) — MapLibre renders of
+  OSM data via the functional-base and modern-minimal themes. VERIFIED: "MapLibre"
+  logo at bottom-left, "© OpenMapTiles © OpenStreetMap contributors" at
+  bottom-right. Not Apple Map Data. OSM attribution added to the folder's README.
+- **`Docs/demos/phase2/s3-demo-trip.png`** and
+  **`Docs/demos/phase3_5/import/03-trip-detail-provenance.png`** — screenshots of
+  Kamome's own UI showing MapKit's *live* view, which supplies Apple's logo and
+  legal link. VERIFIED: both " Maps" and "Legal" are legible in each image.
+  ADR 2026-09-09 itself cites 03 as the correct-notices contrast.
+- **Everything under `Docs/demos/release/`**,
+  **`Docs/demos/phase2/photo-permission-priming.png`**, and
+  **`Core/ExportEngine/Resources/Landmarks/flight-end.png`** — no map content.
+
+### The rule conflict and how it is resolved
+
+`CLAUDE.md` rule 7 says every phase gate owes a demo artifact. This removal
+deletes the artifacts that the Phase 3 and Phase 3.5 gates owed.
+
+**The tombstone is the record.** Each affected folder's README now carries what
+the artifact was, what it proved, when it was rendered, and why it was removed.
+A phase's evidence is the record of what was measured; the file was how it was
+shown. A re-render on the new substrate (OpenFreeMap + MapLibre, ADR 2026-09-09)
+is optional rather than owed — the gates those artifacts served are closed, and
+the substrate they were rendered on is being left (ADR 2026-09-09).
+
+⚠️ **Whether rule 7 itself needs amending is Chiu's call.** The rule currently
+says "every phase gate owes a demo artifact." The fact pattern here — a gate
+closed, its artifact removed for legal reasons, its tombstone standing in — is
+not one the rule anticipated. This PR resolves it for these two gates without
+amending the rule. If Chiu decides the rule should say "a tombstone satisfies a
+closed gate whose artifact was removed," that is a separate entry.
+
+### §0 — the committed real-trip films are gone
+
+Two of the removed files (`kamome-p3-recap.mp4` and `kamome-recap-NZ-disaster.MP4`)
+were films of Chiu's real trips committed to a public repository. This was an
+open §0 owner question since 2026-08-30 (HANDOFF.md "⏳ Awaiting Chiu": "Either a
+recorded exception or they move out"). Both are now removed, and current practice
+writes films to `~/Kamome-films/` outside the repository. **The §0 owner question
+is closed by this PR.**
+
+### What this does NOT do: rewrite git history
+
+Removing these files at HEAD does not unpublish them — the blobs remain reachable
+by SHA, through the GitHub API, and in any clone. Whether to run
+`git filter-repo` and force-push is Chiu's decision, it happens only after
+PRs #55–#58 merge (a rewrite would orphan their merge bases), and it is a
+deliberate operation of its own. Do not read this merge as "the files are gone."
+
+## 2026-09-12 (b) — The map credit goes into the film, and this amends 2026-08-17
+
+**Decision (Chiu, 2026-09-12): map attribution goes INTO the exported film.**
+
+⚠️ **This AMENDS his 2026-08-17 decision, and is not a new topic.** That decision
+— attribution lives in the app's interface and never in the rendered film
+(`Docs/pre-launch.md`) — was made when the film's imagery was **Apple's**. Apple's
+terms are not discharged by a credit at all (ADR 2026-09-09, Attachment 6 §2.3 /
+§2.5), so putting one in the film would have bought nothing and said something
+false. OSM-derived tiles are the opposite case: ODbL binds the **produced work**,
+and a published MP4 is one.
+
+**What 2026-08-17 keeps.** `UI/About/AboutView.swift` loses nothing. Geoapify's
+free plan requires attribution for the **routing service**, which no film uses
+and which therefore still belongs in the interface; the OSM row there is owed for
+the same data by a second route and stays. `Scripts/release/check-attribution.sh`
+is unchanged — the film's credit is a Swift constant, not a catalogue string, for
+the reason §4 gives.
+
+### The sequencing, and it is a constraint
+
+**The shipping export substrate is still Apple Maps.**
+`RecapExportJob.snapshotProvider(for:)` falls back to `MapKitSnapshotProvider`
+whenever no `.pmtiles` region resolves, and none is ever installed. So this
+change is built on the **MapLibre path only** and renders **no map credit at all**
+on the MapKit path — `MapKitSnapshotProvider.capabilities.attribution` is nil, and
+`RecapMapCreditTests.testTheAppleSubstrateDeclaresNoAttribution` holds it there.
+
+Burning "© OpenStreetMap contributors" onto Apple-rendered frames would be a false
+provenance claim on a picture (`CLAUDE.md` rule 5) **and** would still not satisfy
+Apple's terms. **Whether and when the substrate switch ships is Chiu's** and is
+not decided here.
+
+### §1 — what the snapshotter actually burns in (VERIFIED, measured)
+
+Measured on the evaluation artifacts (`~/Kamome-films/openfreemap-eval/`, outside
+the repo per §0), not assumed. `MLNMapSnapshotter` draws two separate things:
+
+| what | where | size |
+|---|---|---|
+| `OpenFreeMap © OpenMapTiles Data from OpenStreetMap` | bottom-**right**, on a translucent light bar | glyph box **x 709…1059, y 1896…1906** of 1080×1920 — **351 × 11 px** |
+| a MapLibre pin + wordmark | bottom-**left** | ~95 × 60 px |
+
+The logo is the **renderer's** mark, not the data's; MapLibre's own header calls
+it "not required". Only the first is an obligation.
+
+### §2 — the real risk, and it is not covered: the credit is absent from almost every frame
+
+**This is the finding, and each of its three parts is measured.**
+
+**(a) Crop-scaling takes it off the frame.** The render loop snapshots one
+*station* and reprojects it across a run of frames (`RecapSnapshotStations`, ADR
+2026-08-31 (b)). `SnapshotReprojection.map` puts a station pixel at
+`(y − 960)·magnification + 960`, so the credit's **top** row (y = 1896) leaves a
+1920-tall frame at **magnification 1.0256**. The shipped
+`snapshot_station_padding` is **1.03** and the budget **1.1** — so every station
+that unions two framings, which is every travelling frame of every film, is
+already past the threshold. Held by
+`testCropScalingPutsTheSnapshottersOwnCreditOutsideTheFrame`.
+
+What survives is exactly the stations `splitFrames` pins at magnification **1.0**:
+the settled part of each stop hold, and the frozen title beat (a prologue `Beat`
+whose frames are identical, so `unions` is false and no padding is paid).
+
+**(b) The title beat then covers what it kept.** `drawTitleBand` lays a scrim
+across the bottom **27%** of the frame at **0.9 alpha**, full strength at the
+bottom edge — directly over the burned-in credit, on the one beat that holds
+still long enough to read it.
+
+**(c) It is illegible on the dark style anyway.** Measured contrast inside the
+credit's own bar: **7.11:1** on Positron, **2.07:1** on the dark Liberty fork —
+under WCAG's 3:1 floor for large text, on the style Chiu is actually pursuing.
+And 11 px survives the GIF's 1080 → 480 downscale as **~5 px**.
+
+**Beat by beat, therefore:** title card — present, covered. Travelling — absent.
+Stop hold before its settle point — absent. Stop hold after it — present, and
+legible only on a light style. Crossing — absent. End card — present only if its
+camera is held, and then dimmed by `endCardStyle.dimColor` and the vignette.
+**A credit that flickers in and out is an obligation with a hole in it, and
+nothing anywhere reported the hole.**
+
+### §3 — Kamome draws its own, and the snapshotter's two marks are turned off
+
+**Recommended and built. `showsAttribution = false`, `showsLogo = false`.**
+
+Relying on the snapshotter's is less code and is what §2 disqualifies: it cannot
+be positioned, sized, contrasted or gated, and it is *absent* from most of the
+film. Keeping **both** was rejected too — it puts two credits on a stop beat and
+one on no other, which is a visual defect in a film meant to be worth keeping.
+One credit, drawn by Kamome, on every frame.
+
+**That trade is only safe because the absence is gated**, which is §5. If that
+gate is ever removed, `showsAttribution` goes back on first.
+
+**Where the string comes from, and why it cannot be forgotten.** A fourth field
+on `MapRendererCapabilities` — `attribution: String?` — declared by the renderer
+that fetched the tiles, exactly as `fixedAppearance` and
+`maxFramableLongitudeDeg` already are. `RecapRenderLoop` reads it off its own
+provider and hands it to `FrameCompositor.render(atTime:background:credit:)`.
+The loop is the one object that holds both the substrate that drew the picture
+and the compositor that consumes it, so **no wiring exists for an app-level call
+site to forget**, and every export surface is covered by the same line.
+
+`MapLibreSnapshotProvider.init` takes the credit with **no default**, on the
+argument `crossingSubject` / `flightSubject` already won here (2026-09-04): one
+provider serves two hosts of the same OSM data — the parked `.pmtiles` regions
+(`© OpenStreetMap contributors`) and OpenFreeMap's planet — and a default would
+stamp whichever string was nearest onto whatever the next substrate serves.
+
+**Drawn last, after `drawAtmosphere`, and it is the only thing that is.** The
+grade and the vignette exist so chrome sits *inside* one atmosphere; that is
+right for everything the film says about the journey and wrong for a licence
+notice. `modern-minimal` ships `vignetteStrength` 0.42 and the vignette is
+strongest in the corners, where the credit lives. Drawing it last also makes
+"not covered" structural rather than a layout claim.
+
+**Bottom-left**, on the film's own layout: the HUD owns both *top* corners, the
+end card's figures are centred, and the title stack sits at 0.46 of its band.
+
+⏳ **The visual treatment is a defensible default and is explicitly a draft**
+(`DESIGNER.md` owns it). Rendered and measured on the dark Liberty fork:
+**665 × 21 px**, contrast **15.72:1** inside its pill — against the burned-in
+copy's 351 × 11 px at 2.07:1 on the same style.
+
+### §4 — not localized, and not a tunable
+
+The credit is a Swift constant (`RecapMapAttribution`), not a catalogue string
+and not a `TrackingConfig.json` key.
+
+**Not localized**, on the argument `attribution_geoapify` already won
+(`LocalizationTests.testAttributionCarriesBothLicenceObligations`): the required
+thing is the **format**, so a translation pass would break the obligation while
+looking like an improvement. The film's chrome already works this way —
+`RecapWordmark`, the HUD's `km`, the boarding pass's `FROM` / `TO` — which is
+also what keeps a frame byte-identical on any device.
+
+**Not a tunable**: rule 7 governs tunables, and changing one of these is a
+licence breach rather than a tuning decision — the same reasoning `AboutView`
+applies to its two licence URLs. The *style* tokens (`mapCreditFontPx` and its
+five neighbours) live in `RecapStyle` beside `hudFontPx`, which is where every
+visual token in this renderer lives.
+
+### §5 — the gate, because the failure mode is silent
+
+`Tests/CoreTests/RecapMapCreditTests.swift`, seven tests, on every CI job.
+**It reads overlay calls, not pixels** — a pixel gate over a corner would fail on
+every legitimate restyle and teach everyone to raise its tolerance. A spy
+`OverlayRenderer` runs the real `RecapRenderLoop` over a real timeline and
+records what each frame was asked to draw:
+
+- every frame of a film carries **exactly one** credit and it is the **last**
+  content drawn — which is how *not covered* is asserted without a bitmap;
+- a substrate declaring nothing draws nothing (rule 5, and it is also what keeps
+  the golden-frame hashes byte-identical — they render on `FlatSnapshotProvider`);
+- the credit survives an **opaque grade**, which is the one pixel read here and
+  the only way to see past an atmosphere that leaves no call to record;
+- both constants carry the ODbL clause, and the OpenFreeMap line is asserted
+  **verbatim**;
+- Apple's substrate declares none;
+- `mapCreditFontPx · gif_width_px / frame_width_px ≥ 10`, so the credit cannot
+  be sized for the MP4 alone;
+- and the crop-scaling measurement §2(a) rests on.
+
+Each was **falsified before being believed**, against a deliberately broken
+compositor: dropping the credit on the title beat only, drawing it *under* the
+atmosphere, and drawing it before the HUD. All three went red.
+
+**Every export surface is covered by construction, not by three tests.** The GIF
+encoder and the MP4 encoder consume the same composited frames
+(`RecapExporter`), and the still harnesses render through the same compositor —
+`RecapReviewFrame` now passes `renderer.capabilities.attribution`, so a review
+still is the frame the film ships rather than a different one.
+
+⚠️ **What the gate cannot reach: `options.showsAttribution = false` itself.** It
+is inside `snapshot(...)`, a Metal path CI never runs
+(`MapLibreSubstrateTests`'s own header). It is held by the desk render in this
+PR, and `testTheProviderDeclaresTheCreditItWasBuiltFor` holds the half that can
+be reached. Named rather than implied.
+
+### Not decided here
+
+The substrate switch itself, which is Chiu's. Light/dark, hillshade, place names
+and the first-run notice's second item — all Chiu's per
+`Docs/handoff-openfreemap-eval.md`. The credit's visual craft, which is
+`DESIGNER.md`'s. Whether the MapLibre wordmark should come back. Whether
+Geoapify's attribution ever belongs in a film — it does not today, and nothing
+here asks the question.
+
+## 2026-09-13 — The credit's licence position, verified; and the plate gets lighter
+
+**Extends ADR 2026-09-12 (b)**, which put the map credit into the exported film.
+That entry decided *that* a credit is drawn and *how* it reaches every frame. This
+one reads the two licences against the string actually shipping, records what they
+do and do not cover, and takes the one visual change Chiu asked for.
+
+Dated to the decision, not to the day it was written (`PO.md`).
+
+**The string does not change (Chiu, 2026-09-13).**
+`OpenFreeMap © OpenMapTiles Data from OpenStreetMap` stays exactly as it is.
+`RecapMapAttribution.openFreeMap` and the verbatim assertion in
+`RecapMapCreditTests.testEveryCreditNamesOpenStreetMap` are not to be edited.
+
+### The two sources, read 2026-09-13
+
+**`osmfoundation.org/wiki/Licence/Attribution_Guidelines`.** Attribution must be
+to *"OpenStreetMap"*, and both `© OpenStreetMap contributors` and
+`© OpenStreetMap` are listed as acceptable forms. It further requires the
+attribution to make clear that the data is available under the Open Database
+License, **preferably by linking the words OpenStreetMap to
+`openstreetmap.org/copyright`**. Legibility is judged on font, size, colour,
+contrast, position **and how long the notice is visible**, with WCAG named as the
+standard.
+
+**`openfreemap.org`.** Attribution is **mandatory**; the required string is
+exactly the one Kamome ships; the OpenFreeMap clause within it is
+optional-but-appreciated. The page also states that **for printed media or video
+the attribution must be added manually** — MapLibre's automatic one does not
+cover that case.
+
+⚠️ **That last sentence is independent confirmation of ADR 2026-09-12 (b) §3.**
+That entry turned `showsAttribution` off and drew Kamome's own credit on three
+*measured* grounds — crop-scaling, the title band, and 2.07:1 contrast. It did
+not know that OpenFreeMap says in so many words that the automatic credit does
+not cover video. The conclusion was right for reasons that were right; it now
+also has the publisher's own statement behind it.
+
+### (a) VERIFIED — what the shipped string does satisfy
+
+The string satisfies **OpenFreeMap's mandatory attribution** (it is their exact
+wording, carried whole, including the optional clause) and it **names
+OpenStreetMap in a form the OSMF guideline accepts**. Drawn on every frame of
+every export, so the "how long it is visible" limb is satisfied by construction
+rather than by a beat someone has to remember.
+
+### (b) ACCEPTABLE KNOWN RISK — the ODbL statement is absent, and it is Chiu's
+
+**Taken by Chiu on 2026-09-13 with this finding in front of him.**
+
+The shipped string **does not make the ODbL licence clear**, and the guideline's
+preferred remedy — linking the word *OpenStreetMap* to
+`openstreetmap.org/copyright` — **cannot exist in an MP4 at all**. An interactive
+map discharges it with a hyperlink; `UI/About/AboutView.swift` does exactly that,
+and keeps doing it. **But the person who receives the film never opens
+`AboutView`.** The gap is therefore real and it is on the produced work, which is
+the thing ADR 2026-09-12 (b) established the licence binds.
+
+**What would close it, written down so nobody has to re-derive it: six
+characters.** `, ODbL` appended inside `RecapMapAttribution.openFreeMap`, on the
+same single line, in that one constant — nothing else changes, because the credit
+is drawn from that constant on every surface. The line is currently 665 px of a
+1080 px frame, so it has the room.
+
+🔴 **Do not implement it.** Chiu has seen the six characters and decided the
+string stands. This entry exists so that the decision is a decision rather than
+an oversight, and so a later session finds the remedy already costed instead of
+reopening the question from scratch.
+
+### (c) VERIFIED by arithmetic — a platform's crop removes the credit entirely
+
+Worth recording because it is invisible: nothing in the export, the gate or a
+reviewer's eye shows it.
+
+`marginPx` 34 with a 40 px pill puts the credit at **y 1846…1886** of a 1080×1920
+frame (it was y 1840…1886 before this entry's §2 shortened the pill). A platform
+that centre-crops 9:16 to:
+
+| target | rows kept | credit |
+|---|---|---|
+| 1:1 | y 420…1500 | **gone** |
+| 4:5 | y 285…1635 | **gone** |
+
+**This is a third party's act on a work that left Kamome carrying its credit**,
+not a defect in the export, and there is no framing of a 9:16 film that survives
+an arbitrary centre crop. It is recorded rather than fixed.
+
+⚠️ **It is also the constraint on §2.** The credit must not be made smaller or
+pushed further into the corner — every millimetre in that direction spends margin
+against a crop that already takes the whole notice. `marginPx` 34 is a **floor**.
+
+### (d) The legibility standard is the guideline's list, not a pixel number
+
+The guideline judges font, size, colour, contrast, position and duration, with
+WCAG as the standard. That is not a number a test can hold, and pretending
+otherwise would be the failure `CLAUDE.md` rule 4 is about.
+
+What *is* mechanical, and gated:
+`mapCredit.fontPx × export.gif_width_px ÷ export.frame_width_px ≥ 10`
+(`RecapMapCreditTests.testTheCreditStaysLegibleAfterTheGifDownscale`). It exists
+because every export surface composites one frame and the GIF then scales it to
+480 of 1080 — the failure it catches is a credit sized for the MP4 alone.
+
+🔴 **It is a floor, not a definition of compliance.** A film passing it is not
+thereby compliant; a film failing it is certainly not. The rest of the list is
+judgement, and the visual half of that judgement is `DESIGNER.md`'s.
+
+### §2 — the plate gets lighter, and the type does not move
+
+Chiu asked twice whether the credit could be smaller. **The type cannot move:**
+`fontPx` 24 × 480/1080 = 10.67 px in the GIF against the floor of 10, so 22.5 is
+the entire headroom and the gate goes red at 22.4. So the weight came out of the
+**plate**, which carries no obligation of its own:
+
+| token | before | after |
+|---|---|---|
+| `pillPaddingXPx` | 20 | **14** |
+| `pillPaddingYPx` | 11 | **8** (pill height 46 → 40) |
+| `pillColor` alpha | 0.72 | **0.55** |
+| `fontPx` | 24 | **24, unchanged** |
+| `marginPx` | 34 | **34, unchanged** (§c) |
+
+**VERIFIED 2026-09-13 on rendered frames**, `iceland` at 1080×1920, text-on-plate
+against a 4.5:1 floor:
+
+| plate alpha | dark Liberty fork, title beat | Positron light, travelling beat |
+|---|---|---|
+| 0.72 (before) | 15.64:1 | — not rendered |
+| **0.55 (shipped)** | **15.66:1** | **7.51:1** |
+
+⚠️ **Two things about those numbers, and both matter more than the numbers.**
+
+**The dark ground cannot tell you anything.** Over a near-black map the plate is
+near-black at every alpha, so that column reads ~15:1 whatever the value is. A
+future change measured only there would look safe and be unmeasured.
+
+**The light column's margin is partly the theme's, not the plate's.** The credit
+draws *after* `drawAtmosphere` (ADR 2026-09-12 (b) §3), so on a light map it sits
+on ground `modern-minimal` has already graded 0.16 and vignetted 0.42;
+back-solving the measured plate puts the ground under that corner at **~140
+luma**, not Positron's own 242. **COMPUTED, not measured:** the same 0.55 plate on
+a light theme with *no* atmosphere gives **3.75:1** and fails. No such theme
+exists today. So do not lower this further, and if a theme ever drops its grade or
+vignette, **re-measure on a light ground**.
+
+**No test was relaxed**, and none needed to be: `RecapMapCreditTests` is untouched
+by this change and stays green, which is the point of having gated the obligation
+rather than the appearance.
+
+### Not decided here
+
+The string (Chiu: it stands). The substrate switch. The credit's final visual
+treatment, which is `DESIGNER.md`'s — this is still the defensible default ADR
+2026-09-12 (b) shipped, one notch lighter. Localizing the credit: it is a format,
+deliberately untranslated. `AboutView`, which keeps everything it carries.

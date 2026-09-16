@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-11.** `main` carries PRs #16–#52. Everything closed has been
+**Updated 2026-09-12.** `main` carries PRs #16–#54. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -29,7 +29,8 @@ can do either**.
    → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
 2. **The submission sequence, and it is Chiu's in both halves.** ① Run
    `./check.sh --release <.xcarchive>` — the **only** proof the built bundle
-   carries no key; `check-archive.sh` needs the real key and refuses to degrade
+   carries no key; `check-archive.sh` needs the real key — in `KAMOME_ROUTING_API_KEY`, never a
+   file (ADR 2026-09-12) — and refuses to degrade
    into a shape scan, so a session can build the archive but never run the gate.
    ② **Then rotate the Geoapify key** — S7. Every IPA already on someone's phone
    still holds the current one, and the flip cannot reach those.
@@ -52,15 +53,38 @@ notice's **second item** (ADR 2026-09-05 (b)).
 
 ---
 
+## 🔵 The film carries its map credit — MapLibre path only
+
+**ADR 2026-09-12 (b)**, amending Chiu's 2026-08-17 "never in the rendered film".
+The substrate declares its attribution and the render loop draws it on every
+frame; `MapKitSnapshotProvider` declares **none** and must keep declaring none,
+so **no shipping film draws a credit today** — the substrate switch is Chiu's.
+⚠️ **The reason it is Kamome's own credit and not the snapshotter's is
+measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
+above magnification **1.026** (shipped padding 1.03), the title band covers the
+one beat that keeps it, and it renders at **2.07:1** on the dark fork.
+`showsAttribution` is now **off** — if `RecapMapCreditTests` is ever removed,
+that line goes back first.
+
+⚠️ **One ACCEPTABLE KNOWN RISK, and it is Chiu's, taken 2026-09-13 with the
+finding in front of him**: the shipped string does not state ODbL, and a film
+cannot carry the link the OSMF guideline prefers (`AboutView` does, but whoever
+receives the MP4 never opens it). **The remedy is already costed — six
+characters, `, ODbL`, in one constant — and is NOT to be implemented.** The
+string stands. Do not reopen this from scratch.
+→ `Docs/decisions.md` 2026-09-12 (b) and 2026-09-13.
+
+---
+
 ## ⏳ Awaiting Chiu
 
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
   → `Docs/handoff-pacing.md`.
-- **§0 — two real-trip films in the repo** (`Docs/demos/phase3{,_5}/`).
-  Either a recorded exception or they move out.
-  → `Docs/handoff-audit-2026-08-30.md` finding 7.
+- ~~**§0 — two real-trip films in the repo**~~ — **closed by PR #60
+  (ADR 2026-09-12).** Both films removed; current practice writes to
+  `~/Kamome-films/` outside the repository.
 - **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
   → `Docs/release-readiness.md` S2/S3.
 - **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
@@ -70,6 +94,12 @@ notice's **second item** (ADR 2026-09-05 (b)).
 ---
 
 ## 🟠 Open — nobody is on these
+
+- 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
+  checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'
+  `api.geoapify.com` default can only get 401s — carrying a local dump's real
+  coordinates (§0). Default it to `""`, to the Worker (quota), or leave it: Chiu's.
+  → `Docs/decisions.md` 2026-09-12.
 
 - **Dismissing the first-run notice backgrounds the app.** The §0 path every user
   walks once (PR #45). Simulator-reproducible; **UNKNOWN on device** — joins D1–D5.
@@ -95,19 +125,21 @@ notice's **second item** (ADR 2026-09-05 (b)).
 - 🔴 **Two left by the type-2 opening round**: `Geo.distanceM` is **121 km short**
   over Taipei → Auckland with no sweep of who reads it, and a **ferry gets a
   boarding pass and a plane**. → `Docs/handoff-type2-opening-retime.md`.
+- 🟠 **Every local `./check.sh` sends routing requests to the production Worker.**
+  `RouteMatchRecordedLegTests.testTheSameShippedServiceStillOffersAnImportedLeg`
+  builds the shipped service with no stub, so three synthetic legs per run count
+  against the 2000/day ceiling — VERIFIED 2026-09-12, real verdicts came back. A
+  stub reconstructor would keep what the test proves; not done.
+  → `Tests/AppTests/RouteMatchRecordedLegTests.swift`.
 
 ---
 
 ## ⚠️ Traps — read before you touch these
 
 - **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
-  gitignored, so it reads different geometry. ⚠️ Routing needs a key the flip
-  **removed**. → `Docs/handoff-crop-scaling.md` §3.
-- **A desk render can run another build's test code.** Round 3's first run
-  executed pre-round-3 harness code while two other sessions were mid-`xcodebuild
-  test`; the identical retry was fine. It failed only because the old code rejected
-  the new input — **gate every render on a console line only your build prints.**
-  → `Docs/environment-gotchas.md`.
+  gitignored, so it reads different geometry. ⚠️ **No checkout routes with a key**
+  (ADR 2026-09-12): real roads need `KAMOME_ROUTING_BASE_URL` = the Worker.
+  → `Docs/handoff-crop-scaling.md` §3.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.

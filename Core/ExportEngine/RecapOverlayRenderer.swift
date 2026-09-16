@@ -52,14 +52,9 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         case let .routeReveal(legs):
             for leg in legs { drawRouteLeg(leg, into: surface) }
         case let .stopLabel(name, coordinate, detail, opacity):
-            guard opacity > 0.001 else { return }
-            surface.context.saveGState()
-            surface.context.setAlpha(CGFloat(opacity))
-            drawStopLabel(
-                identity: RecapStopIdentity(name: name, subtitle: Self.strap(detail: detail)),
-                coordinate: coordinate, into: surface
+            drawFadingStopLabel(
+                name: name, coordinate: coordinate, detail: detail, opacity: opacity, into: surface
             )
-            surface.context.restoreGState()
         case let .photoDeck(deck):
             drawPhotoDeck(deck, into: surface)
         case let .journeyCard(card):
@@ -72,7 +67,28 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             drawTitleChrome(title: title, subtitle: subtitle, into: surface)
         case let .endChrome(title, figures, shareURL):
             drawEndChrome(title: title, figures: figures, shareURL: shareURL, into: surface)
+        case let .mapCredit(text):
+            drawMapCredit(text, into: surface)
         }
+    }
+
+    /// Beat 1's label at its own fade. The opacity gate lives here rather than in
+    /// `render`'s switch: it is a property of *this* overlay, and keeping it in
+    /// the dispatch pushed that switch past the cyclomatic-complexity bar when
+    /// the map credit arrived (2026-09-12) — the same split
+    /// `LinearTimelineTests.name` already made for the same reason.
+    private func drawFadingStopLabel(
+        name: String?, coordinate: RecapCoordinate, detail: String?, opacity: Double,
+        into surface: RenderSurface
+    ) {
+        guard opacity > 0.001 else { return }
+        surface.context.saveGState()
+        surface.context.setAlpha(CGFloat(opacity))
+        drawStopLabel(
+            identity: RecapStopIdentity(name: name, subtitle: Self.strap(detail: detail)),
+            coordinate: coordinate, into: surface
+        )
+        surface.context.restoreGState()
     }
 
     /// The strap under a stop's name: whatever second identity the stop carries
