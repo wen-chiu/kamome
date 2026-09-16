@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-13 against decisions.md **2026-09-13** and `main` at
-**PR #60**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
+Last synced: 2026-09-16 against decisions.md **2026-09-13** and `main` at
+**PR #59**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
 export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight.
 Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
@@ -15,8 +15,8 @@ Committed Apple Map Data removed from the public repository (ADR 2026-09-12), an
 (b), amending 2026-08-17; licences verified and the plate lightened, ADR
 2026-09-13).
 
-⚠️ **One merged PR behind passes; two or more fails**, counted by PR *number*,
-not merge date. Never "fix" a failure by bumping the number: the line claims
+⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
+(not PR number). Never "fix" a failure by bumping the number: the line claims
 someone re-read the ledger and `HANDOFF.md`, and that is the half that rotted
 twice while the number stayed right. → `Scripts/check-staleness.sh`, ADR
 2026-09-02 (b).
