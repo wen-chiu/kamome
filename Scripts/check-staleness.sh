@@ -28,9 +28,8 @@
 # #28 changed the ledger without re-syncing the line, leaving the line at #26
 # while `main` carried #28.
 #
-# Counted, not subtracted: PR numbers skip (a PR can be closed unmerged), so
-# "#31 vs #32" says nothing on its own. What matters is how many PRs merged
-# after the one named.
+# Counted by merge date, not PR number: a lower-numbered PR can merge after a
+# higher-numbered one, and only PRs merged into main count (--base main).
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 cd "$(dirname "$0")/.."
@@ -65,29 +64,35 @@ if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
   exit $((failures > 0 ? 1 : 0))
 fi
 
-merged=$(gh pr list --state merged --limit 50 --json number --jq '.[].number' 2>/dev/null)
+merged=$(gh pr list --state merged --base main --limit 50 --json number,mergedAt \
+  --jq '.[] | [.number, .mergedAt] | @tsv' 2>/dev/null)
 if [ -z "$merged" ]; then
   kamome_info "PR HALF DID NOT RUN — gh could not list merged pull requests."
   exit $((failures > 0 ? 1 : 0))
 fi
 
-newest_pr=$(printf '%s\n' "$merged" | head -1)
-since=$(printf '%s\n' "$merged" | awk -v c="$claimed_pr" '$1 > c' | wc -l | tr -d '[:space:]')
+claimed_merged_at=$(printf '%s\n' "$merged" | awk -F'\t' -v pr="$claimed_pr" '$1 == pr {print $2}')
+if [ -z "$claimed_merged_at" ]; then
+  claimed_merged_at=$(gh pr view "$claimed_pr" --json mergedAt --jq '.mergedAt' 2>/dev/null)
+fi
 
-if [ "$claimed_pr" -gt "$newest_pr" ]; then
-  # Naming an unmerged PR is a different mistake, and a worse one: it reads as
-  # synced while pointing at something that may never land.
-  kamome_fail "current-state names PR #$claimed_pr, which is not merged (newest is #$newest_pr)"
+if [ -z "$claimed_merged_at" ] || [ "$claimed_merged_at" = "null" ]; then
+  kamome_fail "current-state names PR #$claimed_pr, which is not merged into main"
   failures=$((failures + 1))
-elif [ "$since" -le 1 ]; then
-  kamome_ok "current-state is synced to PR #$claimed_pr ($since merged since; 1 is the floor)"
 else
-  kamome_fail "current-state names PR #$claimed_pr; $since PRs have merged since (newest #$newest_pr)"
-  kamome_info "One behind is expected. $since is drift."
-  kamome_info "Re-read HANDOFF.md and Docs/decisions.md, update Active work and"
-  kamome_info "Blockers to match, THEN set the line to #$newest_pr. Bumping only the"
-  kamome_info "number is the failure this check exists to catch."
-  failures=$((failures + 1))
+  newest_pr=$(printf '%s\n' "$merged" | sort -t$'\t' -k2 | tail -1 | cut -f1)
+  since=$(printf '%s\n' "$merged" | awk -F'\t' -v cutoff="$claimed_merged_at" '$2 > cutoff' | wc -l | tr -d '[:space:]')
+
+  if [ "$since" -le 1 ]; then
+    kamome_ok "current-state is synced to PR #$claimed_pr ($since merged since; 1 is the floor)"
+  else
+    kamome_fail "current-state names PR #$claimed_pr; $since PRs have merged into main since (newest #$newest_pr)"
+    kamome_info "One behind is expected. $since is drift."
+    kamome_info "Re-read HANDOFF.md and Docs/decisions.md, update Active work and"
+    kamome_info "Blockers to match, THEN set the line to #$newest_pr. Bumping only the"
+    kamome_info "number is the failure this check exists to catch."
+    failures=$((failures + 1))
+  fi
 fi
 
 [ "$failures" -eq 0 ] && exit 0

@@ -7,7 +7,8 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-16 against decisions.md **2026-09-13** and `main` at
-**PR #63**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b).) Config flip made (S6 closed, S7 new — rotation owed). Film persists
+**PR #68**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
+licence, routing-key and local-network ADRs 2026-09-12 (c)–(e).) Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
 export outlives its screen (ADR 2026-09-10). ✅ **The substrate STYLE evaluation closed
 2026-09-15** — coast A, hillshade in, peaks narrowed, islands at `rank <= 2`; what
@@ -18,10 +19,12 @@ PRs #62 and #63 merged into their base *branches* seconds after #59 merged to
 Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
 **the film now carries its map credit on the MapLibre path only** (ADR 2026-09-12
 (b), amending 2026-08-17; licences verified and the plate lightened, ADR
-2026-09-13).
+2026-09-13). Three decisions from PRs #55–#58 were missing from the ledger
+and are now recorded: third-party licences (c), routing key build path (d),
+local-network Debug-only (e), all 2026-09-12.
 
-⚠️ **One merged PR behind passes; two or more fails**, counted by PR *number*,
-not merge date. Never "fix" a failure by bumping the number: the line claims
+⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
+(not PR number). Never "fix" a failure by bumping the number: the line claims
 someone re-read the ledger and `HANDOFF.md`, and that is the half that rotted
 twice while the number stayed right. → `Scripts/check-staleness.sh`, ADR
 2026-09-02 (b).

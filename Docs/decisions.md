@@ -4922,6 +4922,96 @@ and the first-run notice's second item — all Chiu's per
 Geoapify's attribution ever belongs in a film — it does not today, and nothing
 here asks the question.
 
+## 2026-09-12 (c) — Third-party licences reproduced in the app
+
+**Engineering decision, 2026-09-12.** Two third-party packages linked into every
+`Kamome.app` require their licence notices to be reproduced, and neither text
+appeared anywhere in the app:
+
+- **GRDB.swift 6.29.3** — MIT. Linked through KamomeCore.
+- **MapLibre Native 6.27.0** — BSD-2-Clause. Linked directly; stays linked
+  (ADR 2026-09-09).
+
+`AboutView` carried only the Geoapify and OSM *data* attributions, which are a
+different obligation.
+
+**What was done (PR #57).** Verbatim copies of both licences ship as bundled
+resources in `App/Resources/Acknowledgements/`. An Acknowledgements view shows
+the full text, monospaced and selectable, in a new last section of `AboutView`.
+`Scripts/release/check-attribution.sh` gates it: every pin in `Package.resolved`
+needs its text, containing a copyright notice, **and** an acknowledgement line at
+its pinned version.
+
+### Limits
+
+- **INFERRED:** that the root `Package.resolved` is what the app links. Cheapest
+  settling: bump one pin, regenerate, and see which file moves.
+- **UNKNOWN:** whether MapLibre's binary contains third-party code whose notices
+  are owed separately.
+- The section's wording and placement are **drafts** — Chiu's to rule on,
+  `DESIGNER.md`'s craft.
+- Attribution inside the **exported film** is not decided here.
+
+## 2026-09-12 (d) — The routing key has no build path
+
+**Engineering decision, 2026-09-12.** The config flip (ADR 2026-09-08) made the
+Geoapify routing key *unnecessary* for the app but did not make it *unreachable*.
+`project.yml` still mapped `KamomeRoutingAPIKey = $(KAMOME_ROUTING_API_KEY)` into
+`Info.plist`, and `Config/Base.xcconfig` still did
+`#include? "Secrets.xcconfig"`. On any machine keeping that file, `AppConfig` read
+the key back and `GeoapifyRouteProvider` appended `apiKey=<key>` to every request
+— which now goes to the Worker, so the real key sat in a URL query string at
+Cloudflare's edge.
+
+**What was done (PR #58).** The `Info.plist` field, its `project.yml` mapping, and
+the xcconfig default and include are removed — the path, not guarded. `AppConfig`
+no longer reads a routing key from the bundle; a build with no
+`Config/Secrets.xcconfig` and no `KAMOME_ROUTING_API_KEY` env var behaves
+identically to one with both. `Scripts/release/check-archive.sh` reads the key
+from `KAMOME_ROUTING_API_KEY` only, never from a file, and fails if the
+`KamomeRoutingAPIKey` plist field exists in the built bundle.
+
+⚠️ **Code comments cite this decision as "ADR 2026-09-12" (no suffix).** The
+Apple Map Data removal (entry #72) holds the same date without a suffix. Both
+decisions were made the same day and written concurrently; the merge resolved
+the collision by keeping #72's entry and dropping this one. Context always
+distinguishes the two: routing-key references name the key or the build path,
+never map imagery.
+
+### Not decided here
+
+Key rotation (S7, after the artifact check). Deleting Chiu's local
+`Config/Secrets.xcconfig`. The desk-harness `api.geoapify.com` default (§0,
+awaiting Chiu — HANDOFF.md 🟠).
+
+## 2026-09-12 (e) — The local-network permission is Debug-only
+
+**Engineering decision, 2026-09-12.** `NSAppTransportSecurity →
+NSAllowsLocalNetworking` and `NSLocalNetworkUsageDescription` were in every
+configuration's plist. `AppConfig.loadOrDie` refuses a LAN endpoint outside
+Debug. So in Release, the purpose string told a reviewer something untrue, and
+the ATS exemption bought nothing.
+
+**What was done (PR #56).** Both keys leave `info.properties` in `project.yml`.
+A post-build phase, `Debug only: local-network permission`, adds them only when
+`CONFIGURATION` is Debug. The localized purpose strings in
+`InfoPlist.xcstrings` are deleted (they would have overridden the Debug
+sentence and shipped the untrue one in Release). `check-archive.sh` step 5
+fails if a shipped `Info.plist` carries either key.
+
+⚠️ **Code comments cite this decision as "ADR 2026-09-12 (b)".** The map-credit
+decision (entry #73) holds the same suffix. Both were written concurrently;
+the merge kept #73's entry and dropped this one. Context always distinguishes
+the two: local-network references name the permission keys, never the film
+credit.
+
+### Not decided here
+
+Whether to delete the capability entirely (if Chiu judges it dead). Whether ATS
+blocks cleartext to a private IP without the exemption, and whether the
+Local Network prompt fails quietly without the string — both are **UNKNOWN**
+and need a Debug build on a device.
+
 ## 2026-09-13 — The credit's licence position, verified; and the plate gets lighter
 
 **Extends ADR 2026-09-12 (b)**, which put the map credit into the exported film.
