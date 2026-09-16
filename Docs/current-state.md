@@ -13,7 +13,9 @@ export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight.
 Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
 **the film now carries its map credit on the MapLibre path only** (ADR 2026-09-12
 (b), amending 2026-08-17; licences verified and the plate lightened, ADR
-2026-09-13).
+2026-09-13). Three decisions from PRs #55–#58 were missing from the ledger
+and are now recorded: third-party licences (c), routing key build path (d),
+local-network Debug-only (e), all 2026-09-12.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
