@@ -910,13 +910,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, trips and films stay on this device. One thing leaves it: to draw your route along real roads, Kamome sends the positions along that route."
+            "value": "Your photos, trips and films stay on this device. To draw your route along real roads, Kamome sends the positions along that route to a routing service. The map itself is fetched from OpenStreetMap, and place names come from Apple — these carry no account or trip information."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的相片、旅程與影片都留在這台裝置上。只有一件事會離開：為了沿著真實道路繪製路線，卡摸咩會送出這條路線上的位置。"
+            "value": "所有關於你與旅程的回憶相片及影片只會留在這台裝置。但為了能完善紀錄旅程得到真實道路繪製路線，卡摸咩將會提供停留位置送往路線規劃服務。地圖本身來自 OpenStreetMap，不會儲存帳號或旅程資訊。"
           }
         }
       }
