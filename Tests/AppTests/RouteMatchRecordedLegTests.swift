@@ -38,6 +38,12 @@ final class RouteMatchRecordedLegTests: XCTestCase {
         func match(_ points: [RouteMatchPoint]) async throws -> RouteMatchOutcome? { nil }
     }
 
+    private struct StubReconstructor: RouteReconstructing {
+        func route(_ waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction {
+            .notEstablished(.routingDisabled)
+        }
+    }
+
     /// The load-bearing one. Built exactly as the app builds it — no `provider:`
     /// — because a service constructed some other way proves nothing about what
     /// ships.
@@ -66,7 +72,9 @@ final class RouteMatchRecordedLegTests: XCTestCase {
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let tripId = try seedImportedTrip(legs: 3, into: repository)
 
-        let service = RouteMatchService(repository: repository, matching: shippedMatching())
+        let service = RouteMatchService(
+            repository: repository, matching: shippedMatching(), reconstructor: StubReconstructor()
+        )
         let report = await service.matchTrip(tripId: tripId)
 
         XCTAssertEqual(
