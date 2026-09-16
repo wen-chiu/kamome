@@ -2030,6 +2030,38 @@
           }
         }
       }
+    },
+    "privacy_tiles_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map tiles"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地圖圖磚"
+          }
+        }
+      }
+    },
+    "privacy_tiles_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Kamome renders a film, it downloads vector map tiles from OpenFreeMap for the area the trip covers. The tile URLs contain coordinates that reveal the general area — city-level, not street-level. OpenFreeMap requires no account and no API key; it sees this device's IP address and the tile coordinates, nothing else."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩製作影片時，會從 OpenFreeMap 下載該旅程所涵蓋區域的向量地圖圖磚。圖磚網址包含的座標會透露大致區域（城市級別，非街道級別）。OpenFreeMap 不需要帳號也不需要 API 金鑰；它只看得到這台裝置的 IP 位址和圖磚座標，沒有其他。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

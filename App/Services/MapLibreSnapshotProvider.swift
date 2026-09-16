@@ -50,40 +50,32 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// construction site says which data it is drawing.
     private let attribution: String
 
-    public init(styleURL: URL, appearance: RecapAppearance = .dark, attribution: String) {
+    /// Whether this provider vetoes the device's appearance choice. **nil** when
+    /// the caller already selected the right style sheet for the requested
+    /// appearance (the OpenFreeMap path, which has both dark and light), non-nil
+    /// when the style sheet has only one variant (the dormant souvenir map).
+    private let fixedAppearance: RecapAppearance?
+
+    public init(
+        styleURL: URL, appearance: RecapAppearance = .dark,
+        fixedAppearance: RecapAppearance? = nil, attribution: String
+    ) {
         self.styleURL = styleURL
         self.appearance = appearance
+        self.fixedAppearance = fixedAppearance
         self.attribution = attribution
     }
 
     /// Rotates the map (`MLNMapCamera.heading`), so it drives the heading-up
     /// follow cam (§4) — the substrate the anime hero car needs.
     ///
-    /// **Locked to whichever appearance its style sheet is**, defaulting to dark.
-    /// The souvenir map is a dark subtractive style sheet
-    /// (`Config/RecapThemes/modern-minimal.json` — `#08111A`, `#04070C`,
-    /// `#03070d`; the direction decided in `Docs/decisions.md` 2026-07-22), and
-    /// there is no light variant of it. Declaring that here is what stops a
-    /// light-mode device with tiles installed from drawing Kamome's light palette
-    /// over a near-black map — the palette/base mismatch that produced the halo
-    /// defect, in the other direction.
-    ///
-    /// **Why the init parameter, and why it defaults** (ADR 2026-09-09). The
-    /// OpenFreeMap evaluation renders three *stock* styles, two of which are light
-    /// (Positron `rgb(242,243,240)`, Liberty `#f8f4f0`) and one dark (Fiord
-    /// `#45516E`), so a hard-coded `.dark` would put Kamome's dark palette over
-    /// two light maps — the same mismatch this field exists to prevent, in a third
-    /// direction. The default keeps the **shipping** call site
-    /// (`RecapModel.snapshotProvider(for:)`) bit-identical: it passes no
-    /// appearance and still gets `.dark`.
-    ///
-    /// ⚠️ Deliberately **not** derived from the style sheet's own background
-    /// colour. That would be a real design — it would also reinterpret ADR
-    /// 2026-08-27's appearance rule, which is Chiu's to reopen and not this
-    /// round's.
+    /// `fixedAppearance` is **nil** on the OpenFreeMap path (both appearances
+    /// exist; ADR 2026-09-16) and **`.dark`** on the dormant souvenir path
+    /// (the dark subtractive style sheet has no light variant). When nil, the
+    /// device's appearance passes through and ADR 2026-08-27 holds.
     public var capabilities: MapRendererCapabilities {
         MapRendererCapabilities(
-            supportsBearing: true, supportsHeadingUp: true, fixedAppearance: appearance,
+            supportsBearing: true, supportsHeadingUp: true, fixedAppearance: fixedAppearance,
             attribution: attribution
         )
     }

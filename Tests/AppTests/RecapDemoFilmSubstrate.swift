@@ -151,6 +151,7 @@ extension RecapDemoFilmTests {
         // takes no snapshot.
         let souvenir = MapLibreSnapshotProvider(
             styleURL: URL(fileURLWithPath: "/dev/null"),
+            fixedAppearance: .dark,
             attribution: RecapMapAttribution.openStreetMap
         ).capabilities
         XCTAssertEqual(
@@ -161,6 +162,23 @@ extension RecapDemoFilmTests {
             XCTAssertEqual(
                 souvenir.appearance(honouring: requested), .dark,
                 "a light-mode device must not get Kamome's light palette over the dark souvenir map"
+            )
+        }
+
+        // The OpenFreeMap path: both appearances exist, so fixedAppearance is
+        // nil and the device's choice passes through (ADR 2026-09-16).
+        let openFreeMap = MapLibreSnapshotProvider(
+            styleURL: URL(fileURLWithPath: "/dev/null"),
+            attribution: RecapMapAttribution.openFreeMapWithElevation
+        ).capabilities
+        XCTAssertNil(
+            openFreeMap.fixedAppearance,
+            "the frozen styles have both dark and light — the substrate must not veto the device"
+        )
+        for requested in RecapAppearance.allCases {
+            XCTAssertEqual(
+                openFreeMap.appearance(honouring: requested), requested,
+                "the OpenFreeMap path must honour the device's \(requested.rawValue) appearance"
             )
         }
         #endif

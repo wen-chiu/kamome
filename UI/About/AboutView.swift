@@ -101,6 +101,7 @@ struct AboutView: View {
             }
             payload("privacy_imported_title", body: importedBody)
             payload("privacy_recorded_title", body: Text("privacy_recorded_body"))
+            payload("privacy_tiles_title", body: Text("privacy_tiles_body"))
             Text("privacy_retention")
             Text("privacy_control")
             Text("privacy_share")

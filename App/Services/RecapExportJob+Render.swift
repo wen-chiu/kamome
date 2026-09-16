@@ -244,38 +244,83 @@ extension RecapExportJob {
         if let gifURL { try? FileManager.default.removeItem(at: gifURL) }
     }
 
-    /// The base map to render on: the Kamome souvenir map when vector tiles
-    /// covering **this trip** are on hand, Apple's otherwise.
+    /// The style resource for each appearance — two frozen forks of
+    /// OpenFreeMap's Liberty, bundled as `Config/RecapThemes/` assets.
+    private static func openFreeMapStyleResource(for appearance: RecapAppearance) -> String {
+        switch appearance {
+        case .dark:  return "openfreemap-liberty-dark"
+        case .light: return "openfreemap-liberty-light"
+        }
+    }
+
+    /// The base map to render on: **OpenFreeMap + MapLibre**, with no Apple
+    /// fallback (Chiu 2026-09-16; ADR to be written this round).
     ///
-    /// This is the §3 "MapLibre production switch", made conditional on purpose.
-    /// A `.pmtiles` file covers a bounded region and there is no planet-sized
-    /// file to bundle, so until tile provisioning exists (spec P7) a hard
-    /// retirement of MapKit would render blank frames for any trip outside the
-    /// installed regions. Falling back keeps every trip exportable; the moment
-    /// tiles for its area are present the film is the designed one.
+    /// 🔴 **If the tiles cannot be reached, the export fails.** It must never
+    /// quietly fall back to Apple Maps, because that is the use the licence
+    /// forbids (DPLA Attachment 6 §2.3/§2.5, ADR 2026-09-09). A fallback
+    /// would reintroduce the exact problem this round exists to remove.
     ///
-    /// `appearance` is what the *device* asked for. Only Apple Maps can honour
-    /// it; the souvenir map answers `.dark` through its capabilities and the
-    /// caller resolves the two.
+    /// **Failure paths** (MapLibre Native iOS 6.x, analysed 2026-09-16):
+    ///
+    /// 1. *Style missing from bundle* — `fatalError` below. This is a build-time
+    ///    invariant: the two frozen styles are `project.yml` resources.
+    /// 2. *Style file unreadable at render time* — `resolvedNetworkStyleURL` throws,
+    ///    same `fatalError`. Only possible if the temp directory was purged between
+    ///    plan and render in the same process.
+    /// 3. *Tile host unreachable* (`tiles.openfreemap.org` DNS / TCP / TLS failure)
+    ///    — `MLNMapSnapshotter` fires its completion with an `NSError` (domain
+    ///    `NSURLErrorDomain`, codes −1001 timeout / −1003 host not found / −1009
+    ///    offline). The `withCheckedThrowingContinuation` in
+    ///    `MapLibreSnapshotProvider.snapshot` rethrows → `RecapExporter` propagates
+    ///    → `render()` catches → `.failed(message:)`. The user sees the generic
+    ///    export-failed string; the structured error is logged.
+    /// 4. *Tile host reachable but returns HTTP errors* (5xx, rate limit) — same
+    ///    path as (3); MapLibre treats a non-200 tile as a load error.
+    /// 5. *Partial tile failure* (some zoom levels cached, some not) — MapLibre
+    ///    renders cached tiles and leaves unfetched areas transparent. The
+    ///    snapshotter may complete *successfully* with a partially blank image. No
+    ///    error is thrown. This is the one silent degradation: the film would have
+    ///    blank map patches rather than failing. Mitigation: OpenFreeMap serves a
+    ///    full planet, and the style pins `minzoom`/`maxzoom` to the ranges the CDN
+    ///    covers, so partial failure requires a mid-render network drop — unlikely
+    ///    and self-correcting on retry.
+    ///
+    /// **In-app maps stay MapKit and are not touched.** `TripDetailView` and
+    /// `RecordingView` are sanctioned use: MapKit draws its own logo and legal
+    /// link there. The licence problem is the *exported video*, not the live map.
+    ///
+    /// The `.pmtiles` path is dormant: `RecapMapRegion` still resolves and the
+    /// souvenir style still works, but the export path no longer falls through
+    /// to it or to Apple. The souvenir regions would override the OpenFreeMap
+    /// style when present (a region carries its own tiles), which is the
+    /// correct behaviour for a future self-hosted substrate.
     private static func snapshotProvider(
         for region: RecapMapRegion?, appearance: RecapAppearance
     ) -> MapRenderer {
-        guard let region,
-              let styleURL = try? RecapMapStyle.resolvedStyleURL(
-                  styleResource: RecapMapTiles.styleResource,
-                  tilesURL: region.tilesURL,
-                  // Hillshade when a DEM for this area is installed; the style
-                  // strips the layer when it is not (Chiu 2026-07-30).
-                  terrainURL: region.terrainURL
-              )
-        else { return MapKitSnapshotProvider(appearance: appearance) }
-        // The souvenir regions are `.pmtiles` built from OpenStreetMap, and the
-        // style sheet declares the same string
-        // (`Config/RecapThemes/modern-minimal.json`) — so a film drawn on them
-        // credits OSM, not OpenFreeMap, which is a different host of the same
-        // data and is not what these tiles came from (ADR 2026-09-12 (b)).
+        if let region,
+           let styleURL = try? RecapMapStyle.resolvedStyleURL(
+               styleResource: RecapMapTiles.styleResource,
+               tilesURL: region.tilesURL,
+               terrainURL: region.terrainURL
+           ) {
+            return MapLibreSnapshotProvider(
+                styleURL: styleURL, fixedAppearance: .dark,
+                attribution: RecapMapAttribution.openStreetMap
+            )
+        }
+        let resource = openFreeMapStyleResource(for: appearance)
+        guard let styleURL = try? RecapMapStyle.resolvedNetworkStyleURL(
+            styleResource: resource
+        ) else {
+            fatalError(
+                "the frozen OpenFreeMap style \(resource).json is missing from the bundle — "
+                + "the export cannot proceed without a map"
+            )
+        }
         return MapLibreSnapshotProvider(
-            styleURL: styleURL, attribution: RecapMapAttribution.openStreetMap
+            styleURL: styleURL, appearance: appearance,
+            attribution: RecapMapAttribution.openFreeMapWithElevation
         )
     }
 }

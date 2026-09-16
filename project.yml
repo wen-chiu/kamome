@@ -42,6 +42,10 @@ targets:
         buildPhase: resources
       - path: Config/RecapThemes/modern-minimal.json
         buildPhase: resources
+      - path: Config/RecapThemes/openfreemap-liberty-dark.json
+        buildPhase: resources
+      - path: Config/RecapThemes/openfreemap-liberty-light.json
+        buildPhase: resources
     dependencies:
       - package: KamomeCore
         product: KamomePersistence
