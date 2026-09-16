@@ -39,16 +39,17 @@ can do either**.
 
 ---
 
-## 🔵 Live — the export substrate evaluation
+## 🔵 Live — the export substrate evaluation, now CLOSED on style
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 and its
-addenda); every round only *looks*. **Round 3 is back** — Chiu's Liberty fork
-with the prototype's linework (road skeleton, peaks, island names, lake edge,
-opaque glaciers), three coastline treatments and an orange-glow trail set.
-⏳ **Awaiting Chiu: which coastline, whether the trail goes orange.** Every coast
-variant seams somewhere — B and C across the sea, all three across tile-clipped
-lakes. 🔴 Every `apple-dark` baseline delivered before this round was a light map;
-fixed and re-rendered. → `Docs/handoff-openfreemap-eval.md` round 3.
+**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 + four
+addenda). ✅ **The style evaluation closed 2026-09-15**: coast A (B/C rejected as
+unfixable tile seams), every tile-clipped stroke gone and *measured* gone, hillshade
+in, peaks narrowed to five, islands and the trail settled — **the trail needed no
+code**, light → orange / dark → cyan with no glow is what already ships.
+🔴 **What remains is Chiu's shipping decision, not engineering**: §0's **third**
+network recipient (AWS elevation, beside OpenFreeMap and Geoapify) and the first-run
+notice's **second item** (ADR 2026-09-05 (b)).
+→ `Docs/handoff-openfreemap-eval.md` round 5.
 
 ---
 

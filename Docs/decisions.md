@@ -4443,6 +4443,109 @@ handling (dark-first is sequencing, ADR 2026-08-27 stands); hillshade; which
 coastline treatment; whether the trail goes orange; where place names finally
 live.
 
+### Addendum, 2026-09-12 — the coastline question is answered, and hillshade comes back
+
+**Coast A, and B and C are rejected and closed.** Chiu, on round 3's seam table:
+「我不喜歡 tile 的格線，影片一定要拿掉」. **Not a defect to fix later:** the lines are
+the tile-clipped edges of the ocean polygon, drawn once per neighbouring tile, and
+they are ~2× the tile buffer apart (measured 17–27 px; Planetiler's default extent
+4096 / buffer 64 is ≈3.1% of a tile, ≈25 px at z12.5 — INFERRED, settled by checking
+that the separation scales with on-screen tile size). **No style setting removes
+them and self-hosting does not either** — a smaller buffer merges the pair into one
+line rather than deleting it. The only clean fix is a coastline carried as *line*
+geometry, which the OpenMapTiles schema does not have. **Do not re-open this.**
+
+The same mechanism condemns the souvenir map's own `inland-water-edge`: lake
+polygons are tile-clipped exactly as the ocean is, and round 3 measured the grid
+across Þingvallavatn. **The lake edge is deleted**, and lakes keep their fill.
+
+**Hillshade is reinstated** after two rounds deferred — it is the answer to 「我要海
+岸線跟山峰清楚，可以看出去過的地形」. ⚠️ **§0:** the DEM adds a **third** network
+recipient for a render's coordinates (AWS's Mapzen terrain tiles, beside OpenFreeMap
+and Geoapify). Acceptable for a desk evaluation on round 1's reasoning; it is one
+more line in the **shipping** question, which stays deferred.
+
+**The glow is rejected** — 「我只是不喜歡光暈」. The shipping preset already carries
+it at alpha 0 in both appearances; round 3's halo existed only because the harness
+asked for one. **Whether the trail goes orange stays open**, and is answered with a
+picture rather than a discussion: 「不是不要橘色…橘色在亮色背景的情況還是一個不錯
+對比呈現」.
+
+**Island names may outrank the city name** where that is achievable; equal sizes are
+the accepted fallback.
+
+⚠️ Unchanged: the shipping substrate, light/dark handling (dark-first is still
+sequencing, ADR 2026-08-27 stands), where place names finally live, the notice's
+second item, and the pmtiles path's retirement.
+
+### Addendum, 2026-09-15 — the style evaluation closes
+
+**Hillshade stays** — 「效果很好」. **The trail is settled and needed no code**: the
+film follows the device's appearance, **light → orange `#FF8A5B`, dark → cyan, no
+glow on either** 「定案」. That is exactly what ships (ADR 2026-08-27), so nothing
+changed, and **the orange-on-dark experiment is closed as "no"**.
+`KAMOME_ROUTE_GLOW_COLOR` stays a harness lever only.
+
+**Peaks are narrowed to `ele >= 1000` and `rank <= 1`** — five labels on the
+`iceland` frame against round 4's dozen-plus, which Chiu read as 「訊息過多對影片確實
+不好」. Chiu's authorised fallback — delete the peak layer and defer it 「等之後有要
+做爬山功能再加回去」 — was **not needed** and is recorded as available.
+
+**The island label is accepted as it stands**: the frame reads `Miyako-jima` ⏎
+`宮古島`, the island. The **city** label 宮古島市 is the one absent, lost to
+collision with the larger island name, and Chiu accepts that outcome.
+
+### ⚠️ Two premises this evaluation acted on were wrong, and the ledger says so
+
+Both were disproved by decoding OpenFreeMap's own tiles, not by argument:
+
+1. **`rank <= 2` never hid Hekla.** Hekla is `class=volcano`, `ele=1491`,
+   **`rank=1`**, present in the z8 tile the `iceland` frame draws from. Round 4's
+   instruction to *relax* the filter therefore rested on a false premise, and
+   relaxing it added competitors — the opposite of what was wanted. Hekla was lost
+   to **symbol collision**, and it appears in round 5 precisely because the
+   competitors are gone.
+2. **`rank` cannot separate an islet from an island.** Árnes `rank=3`, 伊良部島
+   `rank=4`, 竹富島 `rank=5` — the islet outranks two genuine islands. **Islands are
+   therefore not filtered by `rank`**, and the visible cost is that Árnes, Home
+   Island and 来間島 now carry island-sized names. Recorded rather than papered over
+   with a threshold that means nothing.
+
+### The style evaluation closes here
+
+Coast **A** with B and C rejected; every tile-clipped stroke gone and **measured**
+gone (a detector with a positive control, not an eyeball); hillshade in; peaks
+narrowed; islands and the trail settled. **What remains is not engineering.** It is
+Chiu's shipping decision, and neither half is a session's to settle:
+
+- **§0 — a third network recipient.** A shipping MapLibre export sends each
+  keyframe's centre to OpenFreeMap **and** the AWS elevation tiles, beside
+  Geoapify.
+- **The first-run notice's second item**, which ADR 2026-09-05 (b) governs.
+
+⚠️ Unchanged: dark-first is still sequencing (ADR 2026-08-27 stands), the fork
+stays a harness resource, and no shipping value has changed in any round.
+
+### Addendum, 2026-09-15 (b) — island names keep `rank <= 2`, and the earlier point 2 is overruled
+
+**This overrules point 2 of the `Addendum, 2026-09-15`**, which said islands are
+not filtered by `rank`. They are, at `rank <= 2`.
+
+**The measurement stands; the question was wrong** (Chiu, 2026-09-15). What was
+measured — Árnes `rank=3`, 伊良部島 `rank=4`, 竹富島 `rank=5`, so `rank` cannot tell
+an islet from an island — is true and is not re-derived. But a film does not ask
+*"is this a real island"*. It asks **"is this the island the film is about"**, and
+`rank` is exactly a prominence ordering. So the "cost" recorded on 2026-09-15 —
+伊良部島 and 竹富島 losing their names — **is the wanted behaviour, not a defect.**
+
+The picture is what settles it: with the clause removed, the `iceland` frame's two
+largest labels were **Árnes** (a river islet) and **Home Island**, and the journey
+went to neither.
+
+⚠️ This changes one filter in a harness resource. Nothing else moves: no shipping
+value, no `RecapStyle`, no `Config/TrackingConfig.json`, and the style evaluation
+stays closed.
+
 ## 2026-09-10 — The Phase 4 closeout is four steps, and the last two wait for the substrate
 
 **Decision (Chiu, 2026-09-10).** The Phase 4 closeout opened 2026-09-05 as "four
