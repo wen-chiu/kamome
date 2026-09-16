@@ -15,9 +15,12 @@ import Foundation
 /// 1. `rank <= 2` never hid Hekla. Hekla is `class=volcano`, `ele=1491`,
 ///    **`rank=1`**, present in the z8 tile the `iceland` frame draws from — so
 ///    *relaxing* the filter could only add competitors, which is what it did.
-/// 2. **`rank` cannot separate an islet from an island**: Árnes `rank=3`,
-///    伊良部島 `rank=4`, 竹富島 `rank=5`. Any threshold that drops the islet drops
-///    two real islands with it, so **islands are not filtered by `rank`** here.
+/// 2. **`rank` cannot separate an islet from an island** — Árnes `rank=3`,
+///    伊良部島 `rank=4`, 竹富島 `rank=5` — which is true and was **the wrong
+///    question** (Chiu, 2026-09-15). A film does not ask *"is this a real island"*
+///    but *"is this the island the film is about"*, and `rank` is exactly a
+///    prominence ordering. So the measured "cost" — 伊良部島 and 竹富島 dropping
+///    out — **is the wanted behaviour**, and `rank <= 2` stays.
 ///
 /// ⚠️ Still evaluation only, still a harness resource. The trail is **settled and
 /// needs no code**: light → orange, dark → cyan, no glow, which is exactly what
@@ -51,10 +54,7 @@ extension LibertyFork {
     }
 
     /// Round 4 (hillshade on) with the peaks narrowed to `peaks`, or removed when
-    /// it is nil.
-    ///
-    /// The island filter loses its `rank` clause here, for the measured reason at
-    /// the top of this file: `rank` does not mean "is a real island".
+    /// it is nil. **Peaks are the only thing this round changes.**
     static func forkedRound5(from stock: [String: Any], peaks: PeakBand?) throws -> [String: Any] {
         var style = try forkedRound4(from: stock, hillshade: true, peaks: .rankAtMost3)
         guard var layers = style["layers"] as? [[String: Any]] else { throw ForkError.noLayers }
@@ -68,7 +68,12 @@ extension LibertyFork {
         } else {
             layers.removeAll { peakIDs.contains($0["id"] as? String ?? "") }
         }
-        layers = try islandsWithoutRank(layers)
+        // **The island filter is round 4's, untouched.** Round 5 briefly stripped
+        // its `rank <= 2` clause on the reasoning that `rank` cannot tell an islet
+        // from an island. It cannot — and that was the wrong question (Chiu,
+        // 2026-09-15): what a film needs is the island it is *about*, which is what
+        // a prominence ordering gives. Taking peaks away is this round's only
+        // change to the map.
         style["layers"] = layers
         return style
     }
@@ -88,21 +93,5 @@ extension LibertyFork {
         if let rank = band.maximumRank { filter.append(["<=", ["get", "rank"], rank]) }
         layer["filter"] = filter
         return layer
-    }
-
-    /// **Islands keep their size and their placement, and lose the rank clause.**
-    ///
-    /// Round 4 filtered them by `rank <= 2` to keep Iceland's river islet Árnes out
-    /// of the frame. The tiles say that cannot work: the islet ranks *above* two
-    /// genuine islands. An unfiltered island layer draws Árnes at island size on
-    /// `iceland`, which is the honest cost of not having a rule — recorded rather
-    /// than papered over with a threshold that means nothing.
-    private static func islandsWithoutRank(_ layers: [[String: Any]]) throws -> [[String: Any]] {
-        guard let index = position(of: "label_island", in: layers) else {
-            throw ForkError.unexpectedShape("no `label_island` to unfilter")
-        }
-        var layers = layers
-        layers[index]["filter"] = ["==", ["get", "class"], "island"] as [Any]
-        return layers
     }
 }

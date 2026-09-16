@@ -4526,6 +4526,26 @@ Chiu's shipping decision, and neither half is a session's to settle:
 ⚠️ Unchanged: dark-first is still sequencing (ADR 2026-08-27 stands), the fork
 stays a harness resource, and no shipping value has changed in any round.
 
+### Addendum, 2026-09-15 (b) — island names keep `rank <= 2`, and the earlier point 2 is overruled
+
+**This overrules point 2 of the `Addendum, 2026-09-15`**, which said islands are
+not filtered by `rank`. They are, at `rank <= 2`.
+
+**The measurement stands; the question was wrong** (Chiu, 2026-09-15). What was
+measured — Árnes `rank=3`, 伊良部島 `rank=4`, 竹富島 `rank=5`, so `rank` cannot tell
+an islet from an island — is true and is not re-derived. But a film does not ask
+*"is this a real island"*. It asks **"is this the island the film is about"**, and
+`rank` is exactly a prominence ordering. So the "cost" recorded on 2026-09-15 —
+伊良部島 and 竹富島 losing their names — **is the wanted behaviour, not a defect.**
+
+The picture is what settles it: with the clause removed, the `iceland` frame's two
+largest labels were **Árnes** (a river islet) and **Home Island**, and the journey
+went to neither.
+
+⚠️ This changes one filter in a harness resource. Nothing else moves: no shipping
+value, no `RecapStyle`, no `Config/TrackingConfig.json`, and the style evaluation
+stays closed.
+
 ## 2026-09-10 — The Phase 4 closeout is four steps, and the last two wait for the substrate
 
 **Decision (Chiu, 2026-09-10).** The Phase 4 closeout opened 2026-09-05 as "four

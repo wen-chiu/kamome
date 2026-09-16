@@ -6,10 +6,15 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-13 against decisions.md **2026-09-13** and `main` at
-**PR #60**. Config flip made (S6 closed, S7 new — rotation owed). Film persists
+Last synced: 2026-09-16 against decisions.md **2026-09-13** and `main` at
+**PR #63**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b).) Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
-export outlives its screen (ADR 2026-09-10). Substrate evaluation in flight.
+export outlives its screen (ADR 2026-09-10). ✅ **The substrate STYLE evaluation closed
+2026-09-15** — coast A, hillshade in, peaks narrowed, islands at `rank <= 2`; what
+is left is Chiu's shipping decision (§0's third network recipient, the first-run
+notice's second item), not engineering. ⚠️ **Rounds 4 and 5 are not on `main`** —
+PRs #62 and #63 merged into their base *branches* seconds after #59 merged to
+`main`, so the stack collapsed in the wrong order.
 Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
 **the film now carries its map credit on the MapLibre path only** (ADR 2026-09-12
 (b), amending 2026-08-17; licences verified and the plate lightened, ADR
@@ -108,8 +113,8 @@ is not to be tuned** — Variant A is harness-only env overrides.
 ## Deferred — do not implement opportunistically
 
 MapLibre substrate work, tiles, tile server, map labels, pixel art — **except
-the export substrate evaluation** (ADR 2026-09-09 and its addenda), which is in
-flight and is exactly that work, evaluation-only · Story
+the export substrate evaluation** (ADR 2026-09-09 and its addenda), whose style
+half closed 2026-09-15, evaluation-only · Story
 Director's remaining content (hero photos, chapters, music, video beads) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region

@@ -109,6 +109,41 @@ one and two. That is a real difference and it is **not** the discriminator: the
 clean re-render (`render-light-C-rerender.log`) ran the *same* heavier pattern
 and drew the car.
 
+### A fresh occurrence, with the diagnostic — 2026-09-16
+
+The two log lines added for this purpose fired, and they narrow the trigger.
+Rendering the substrate evaluation's four frames, **the `iceland` run drew the blue
+fallback badge instead of the car**; the `miyakojima` run 32 seconds earlier, on the
+same binary, drew the car correctly, and an immediate retry of `iceland` drew it
+correctly too.
+
+What the failing run printed:
+
+```
+[recap] subject: the asked-for car-red and the car-red fallback behind it both
+loaded no artwork — the film draws the vector marker instead of a vehicle.
+Resource bundle found.
+```
+
+⚠️ **It fired three times in that one process — `car-red`, `seagull` and `plane`.**
+That is new, and it is the most informative fact yet:
+
+- the failure is **per process and all-or-nothing**, not a miss on one subject id;
+- **the resource bundle was found** — so this is not the bundle-location failure the
+  2026-08-28 history describes, it is every image load inside a located bundle
+  returning nil;
+- it is **not deterministic**: same binary, same command, adjacent runs, different
+  outcome.
+
+**Rate: 1 render in 5 that day** (four frames plus one retry). Trigger still
+**UNKNOWN**. The artefact is kept — `~/Kamome-films/openfreemap-eval/r5-before-islands/`
+holds the frame with the badge, and the log is `r5-logs/islands-iceland.log`.
+
+⚠️ **What this costs a review round:** the badge is a *plausible* picture. Nothing
+failed, the run exited 0, and only looking at the still caught it — the same shape as
+the stale-bundle incident. A desk render of a film is not trustworthy on its exit
+code alone.
+
 ### What was done about it, and what was not
 
 **Done (this change).** `VehicleSubjectRenderer.make` now logs the miss

@@ -3,8 +3,8 @@ import Foundation
 import XCTest
 
 /// **Round 5's changes, asserted with no network and no render** (Chiu
-/// 2026-09-15) — the peaks narrow to a band, or leave altogether, and the island
-/// filter loses a `rank` clause the tiles proved meaningless.
+/// 2026-09-15) — the peaks narrow to a band, or leave altogether, and **nothing
+/// else about the map moves**, the island filter included.
 final class LibertyForkRound5Tests: XCTestCase {
     private let placeName: [Any] = [
         "case", ["has", "name:nonlatin"],
@@ -78,16 +78,22 @@ final class LibertyForkRound5Tests: XCTestCase {
         XCTAssertEqual(layers[1]["id"] as? String, "hillshade", "round 4's terrain is untouched")
     }
 
-    /// **Islands are no longer filtered by `rank`.**
+    /// **Islands keep `rank <= 2`, and this round must not strip it.**
     ///
-    /// The tiles say `rank` cannot mean "is a real island": Árnes, a river islet,
-    /// is `rank=3` while 伊良部島 and 竹富島 are `4` and `5`. A threshold that drops
-    /// the islet drops two genuine islands, so there is no threshold to pick and
-    /// the clause goes.
-    func testIslandsAreNoLongerFilteredByRank() throws {
+    /// Round 5 first removed the clause, reasoning that `rank` cannot tell an islet
+    /// from an island — true, and **the wrong question** (Chiu, 2026-09-15). A film
+    /// wants *the island it is about*, and `rank` is a prominence ordering, so
+    /// 伊良部島 (`4`) and 竹富島 (`5`) dropping out is the wanted behaviour rather
+    /// than a cost. The picture is the evidence: with the clause gone, `iceland`
+    /// carried Árnes and Home Island as its two largest labels, and neither is a
+    /// place the journey went.
+    func testIslandsKeepTheirRankCeiling() throws {
         let filter = try XCTUnwrap(try layer(forked(LibertyFork.Round5.chosen), "label_island")["filter"] as? [Any])
-        XCTAssertEqual(filter.first as? String, "==")
-        XCTAssertFalse("\(filter)".contains("rank"), "a rank clause here would be a rule that means nothing")
+        XCTAssertEqual(filter.first as? String, "all")
+        XCTAssertEqual(
+            (filter.last as? [Any])?.last as? Int, LibertyFork.islandMaximumRank,
+            "round 4's ceiling survives round 5 — taking peaks away is this round's only map change"
+        )
     }
 
     /// **Round 4's result survives round 5** — this round only takes peaks away.

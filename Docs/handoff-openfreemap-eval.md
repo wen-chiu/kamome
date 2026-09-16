@@ -404,21 +404,31 @@ filter (it is `rank=1`, `ele=1491`), it was **losing a collision**. Remove the
 competitors and it places. `miyakojima` and `ishigaki-crossing` draw no peaks at
 all, correctly — their highest points are 109 m and 526 m, below any band.
 
-## Islands: the `rank` clause is gone, and it shows
+## Islands keep `rank <= 2` — the clause came back the same day
 
-The tiles make a `rank` threshold meaningless for islands (Árnes `rank=3` outranks
-伊良部島 `rank=4` and 竹富島 `rank=5`), so the clause was removed. ⚠️ **The visible
-cost**, now on the frames rather than in an argument: `iceland` carries **Árnes**
-(a river islet) and **Home Island** at island size, and `miyakojima` carries
-**来間島** and **伊良部島** clipped at its edges. There is no rule in this schema that
-keeps the big island and drops the small one; that is Chiu's to accept or to solve
-some other way.
+Round 5 first **removed** the clause, on the measurement that `rank` cannot tell an
+islet from an island (Árnes `rank=3` outranks 伊良部島 `rank=4` and 竹富島 `rank=5`).
+**Chiu overruled it the same day** (ADR 2026-09-09, `Addendum, 2026-09-15 (b)`): the
+measurement is right and **the question was wrong**. A film does not ask *"is this a
+real island"* but *"is this the island the film is about"*, and `rank` is exactly a
+prominence ordering — so 伊良部島 and 竹富島 dropping out is **the wanted behaviour,
+not a cost**.
 
-**The city label**: 宮古島市 is absent because it **loses a collision** to the larger
-island name — verified across rounds 4 and 5, where reversing the layer order
-reversed which of the two survived. Drawing both would need `text-allow-overlap`,
-i.e. two overlapping names in the same spot. Not cheap, not done; Chiu has accepted
-island-only.
+The picture is what settled it: unfiltered, `iceland`'s two largest labels were
+**Árnes** (a river islet) and **Home Island**, and the journey went to neither.
+
+Re-rendered with `rank <= 2`, all four frames behave as predicted:
+
+| frame | expected | result |
+|---|---|---|
+| `iceland` | Árnes and Home Island go | ✅ both gone; the five peaks unchanged |
+| `miyakojima` | 宮古島 stays, edge islands go | ✅ 宮古島 large; 来間島 and 伊良部島 gone |
+| `ishigaki-crossing` | 石垣島 **must** stay | ✅ `Ishigaki Island ⏎ 石垣島`, unchanged |
+| `iceland-wide` | untouched | ✅ no island label at z6.08 — `label_island` starts at z8 |
+
+The **city** label 宮古島市 stays absent, losing its collision to the larger island
+name, which Chiu has accepted. The frames before the reversal are kept in
+`r5-before-islands/`.
 
 ## Both instruments were fixed and then shown to fire
 
