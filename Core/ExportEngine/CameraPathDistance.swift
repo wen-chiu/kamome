@@ -84,6 +84,29 @@ extension CameraPath {
         return Self.bearingDeg(from: route[low], to: route[high])
     }
 
+    /// Heading averaged over a forward window so the sprite faces the general
+    /// travel direction rather than snapping on every switchback. Uses circular
+    /// mean (atan2 of summed unit vectors) so the 0/360 wrap is handled.
+    func smoothedHeading(atDistance distanceM: Double, smoothingM: Double) -> Double {
+        guard smoothingM > 0 else { return heading(atDistance: distanceM) }
+        let totalM = cumulativeM.last ?? 0
+        let endM = min(distanceM + smoothingM, totalM)
+        guard endM > distanceM else { return heading(atDistance: distanceM) }
+        let sampleCount = 8
+        let stepM = (endM - distanceM) / Double(sampleCount)
+        var sinSum = 0.0
+        var cosSum = 0.0
+        for sampleIndex in 0...sampleCount {
+            let sampleM = distanceM + stepM * Double(sampleIndex)
+            let bearingRad = heading(atDistance: sampleM) * .pi / 180
+            sinSum += sin(bearingRad)
+            cosSum += cos(bearingRad)
+        }
+        let meanRad = atan2(sinSum, cosSum)
+        let meanDeg = meanRad * 180 / .pi
+        return meanDeg < 0 ? meanDeg + 360 : meanDeg
+    }
+
     /// **The odometer: along-route distance with the flown stretches taken out**
     /// (Chiu 2026-09-02).
     ///

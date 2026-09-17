@@ -214,17 +214,16 @@ public struct FrameCompositor {
     /// here rather than by a third enum case.
     ///
     /// A crossing the film has issued a boarding pass for flies a plane; every
-    /// other crossing keeps the seagull, which is still the honest answer to
-    /// *"we do not know how you got across"* (`VehicleCatalog.crossingSubjectId`).
-    /// 🔴 **This is not a classifier and does not pretend to be one**: a ferry
-    /// gets a pass and therefore a plane, because nothing today can tell a ferry
-    /// from a flight. Crossing session 2's line, unmoved.
+    /// other crossing keeps the trip's own vehicle — the dashed line already
+    /// signals uncertainty, and a seagull reads as "a bird is flying" rather
+    /// than "we don't know". The mode classifier (plane / ship / seagull) is
+    /// deferred, not cancelled; `crossingSubject` stays wired for it.
     private func drawing(for state: SubjectState, atTime time: Double) -> SubjectRenderer {
         guard state.role == .crossing else { return subject }
         if timeline.journeyCardContent(atTime: time) != nil, let flightSubject {
             return flightSubject
         }
-        return crossingSubject ?? subject
+        return subject
     }
 
     /// Grade then vignette, over the finished frame — so map, trail, subject and

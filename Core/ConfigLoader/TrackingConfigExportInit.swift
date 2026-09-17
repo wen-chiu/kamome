@@ -17,6 +17,7 @@ extension TrackingConfig.Export {
             // have no departure airport to cap.
             departureStopMaxPhotos: Int = 2,
             followHeadingUp: Bool,
+            headingSmoothingDistanceM: Double = 300,
             cameraPanWindowFractionPerS: Double, cameraDeadZoneFraction: Double, cameraSafeZoneFraction: Double,
             cameraResponsiveness: Double, endRevealS: Double, endRevealPadding: Double, endCardStyle: String,
             deckPhotoHoldS: Double, deckPhotoMinHoldS: Double, deckZoomS: Double, deckLabelLeadS: Double, subjectParkS: Double,
@@ -47,15 +48,14 @@ extension TrackingConfig.Export {
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
             self.departureStopMaxPhotos = departureStopMaxPhotos; self.followHeadingUp = followHeadingUp
+            self.headingSmoothingDistanceM = headingSmoothingDistanceM
             self.cameraPanWindowFractionPerS = cameraPanWindowFractionPerS
-            self.cameraDeadZoneFraction = cameraDeadZoneFraction
-            self.cameraSafeZoneFraction = cameraSafeZoneFraction
+            self.cameraDeadZoneFraction = cameraDeadZoneFraction; self.cameraSafeZoneFraction = cameraSafeZoneFraction
             self.cameraResponsiveness = cameraResponsiveness
             self.endRevealS = endRevealS; self.endRevealPadding = endRevealPadding
             self.endCardStyle = endCardStyle
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckPhotoMinHoldS = deckPhotoMinHoldS
-            self.deckZoomS = deckZoomS
-            self.deckLabelLeadS = deckLabelLeadS
+            self.deckZoomS = deckZoomS; self.deckLabelLeadS = deckLabelLeadS
             self.subjectParkS = subjectParkS
             self.openingCountryS = openingCountryS
             self.openingRegionalS = openingRegionalS

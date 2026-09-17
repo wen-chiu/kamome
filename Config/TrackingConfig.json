@@ -117,6 +117,7 @@
     "crossing_apex_padding": 1.5,
     "departure_stop_max_photos": 2,
     "follow_heading_up": false,
+    "heading_smoothing_distance_m": 300,
     "camera_pan_window_fraction_per_s": 0.35,
     "camera_dead_zone_fraction": 0.4,
     "camera_safe_zone_fraction": 0.8,
