@@ -21,7 +21,7 @@
       "id": "background",
       "type": "background",
       "paint": {
-        "background-color": "#1e2b33"
+        "background-color": "#243440"
       }
     },
     {
@@ -84,7 +84,7 @@
         "residential"
       ],
       "paint": {
-        "fill-color": "#1e2b33"
+        "fill-color": "#243440"
       }
     },
     {
@@ -179,7 +179,7 @@
         "pitch"
       ],
       "paint": {
-        "fill-color": "#1e2b33"
+        "fill-color": "#243440"
       }
     },
     {
@@ -196,7 +196,7 @@
         "track"
       ],
       "paint": {
-        "fill-color": "#1e2b33"
+        "fill-color": "#243440"
       }
     },
     {
@@ -213,7 +213,7 @@
         "cemetery"
       ],
       "paint": {
-        "fill-color": "#1e2b33"
+        "fill-color": "#243440"
       }
     },
     {
@@ -230,7 +230,7 @@
         "hospital"
       ],
       "paint": {
-        "fill-color": "#1e2b33"
+        "fill-color": "#243440"
       }
     },
     {
@@ -247,7 +247,7 @@
         "school"
       ],
       "paint": {
-        "fill-color": "#1e2b33"
+        "fill-color": "#243440"
       }
     },
     {
@@ -441,7 +441,7 @@
         "tunnel"
       ],
       "paint": {
-        "fill-color": "#060d15"
+        "fill-color": "#080b10"
       }
     },
     {
@@ -1060,34 +1060,54 @@
       "type": "symbol",
       "layout": {
         "text-field": [
-          "case",
+          "format",
           [
-            "has",
-            "name:nonlatin"
+            "case",
+            [
+              "has",
+              "name:nonlatin"
+            ],
+            [
+              "concat",
+              [
+                "get",
+                "name:latin"
+              ],
+              "\n",
+              [
+                "get",
+                "name:nonlatin"
+              ]
+            ],
+            [
+              "coalesce",
+              [
+                "get",
+                "name_en"
+              ],
+              [
+                "get",
+                "name"
+              ]
+            ]
           ],
+          {},
+          "\n",
+          {},
           [
             "concat",
             [
-              "get",
-              "name:latin"
+              "to-string",
+              [
+                "get",
+                "ele"
+              ]
             ],
-            "\n",
-            [
-              "get",
-              "name:nonlatin"
-            ]
+            " m"
           ],
-          [
-            "coalesce",
-            [
-              "get",
-              "name_en"
-            ],
-            [
-              "get",
-              "name"
-            ]
-          ]
+          {
+            "font-scale": 0.75
+          }
         ],
         "text-font": [
           "Noto Sans Regular"
@@ -1193,78 +1213,6 @@
           10
         ],
         "text-transform": "uppercase"
-      },
-      "paint": {
-        "text-color": "#e8f1f4",
-        "text-halo-blur": 1,
-        "text-halo-color": "#0b141a",
-        "text-halo-width": 1
-      }
-    },
-    {
-      "id": "label_island",
-      "type": "symbol",
-      "source": "openmaptiles",
-      "source-layer": "place",
-      "minzoom": 8,
-      "filter": [
-        "==",
-        [
-          "get",
-          "class"
-        ],
-        "island"
-      ],
-      "layout": {
-        "text-anchor": "center",
-        "text-field": [
-          "case",
-          [
-            "has",
-            "name:nonlatin"
-          ],
-          [
-            "concat",
-            [
-              "get",
-              "name:latin"
-            ],
-            "\n",
-            [
-              "get",
-              "name:nonlatin"
-            ]
-          ],
-          [
-            "coalesce",
-            [
-              "get",
-              "name_en"
-            ],
-            [
-              "get",
-              "name"
-            ]
-          ]
-        ],
-        "text-font": [
-          "Noto Sans Regular"
-        ],
-        "text-max-width": 8,
-        "text-size": [
-          "interpolate",
-          [
-            "exponential",
-            1.2
-          ],
-          [
-            "zoom"
-          ],
-          7,
-          24,
-          11,
-          28
-        ]
       },
       "paint": {
         "text-color": "#e8f1f4",
@@ -1707,6 +1655,91 @@
           28,
           11,
           40
+        ]
+      },
+      "paint": {
+        "text-color": "#e8f1f4",
+        "text-halo-blur": 1,
+        "text-halo-color": "#0b141a",
+        "text-halo-width": 1
+      }
+    },
+    {
+      "id": "label_island",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "place",
+      "minzoom": 8,
+      "filter": [
+        "all",
+        [
+          "==",
+          [
+            "get",
+            "class"
+          ],
+          "island"
+        ],
+        [
+          "<=",
+          [
+            "get",
+            "rank"
+          ],
+          2
+        ]
+      ],
+      "layout": {
+        "text-anchor": "center",
+        "text-field": [
+          "case",
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "concat",
+            [
+              "get",
+              "name:latin"
+            ],
+            "\n",
+            [
+              "get",
+              "name:nonlatin"
+            ]
+          ],
+          [
+            "coalesce",
+            [
+              "get",
+              "name_en"
+            ],
+            [
+              "get",
+              "name"
+            ]
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-max-width": 8,
+        "text-size": [
+          "interpolate",
+          [
+            "exponential",
+            1.2
+          ],
+          [
+            "zoom"
+          ],
+          4,
+          27.5,
+          7,
+          32.5,
+          11,
+          45.0
         ]
       },
       "paint": {

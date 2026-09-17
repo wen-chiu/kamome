@@ -29,7 +29,12 @@ extension RecapExportJob {
         // and its extent is what the opening establishing shot frames.
         let region = GeoBox.enclosing(composed.trip.route.map { (lat: $0.lat, lon: $0.lon) })
             .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
-        let provider = Self.snapshotProvider(for: region, appearance: request.appearance)
+        let provider: MapRenderer
+        do {
+            provider = try Self.snapshotProvider(for: region, appearance: request.appearance)
+        } catch {
+            return nil
+        }
         // Resolved once, here, and never asked again — the substrate can veto the
         // device's choice (the MapLibre souvenir map has no light variant), and
         // the palette below must follow whatever the *base map* actually is, not
@@ -261,30 +266,30 @@ extension RecapExportJob {
     /// forbids (DPLA Attachment 6 §2.3/§2.5, ADR 2026-09-09). A fallback
     /// would reintroduce the exact problem this round exists to remove.
     ///
-    /// **Failure paths** (MapLibre Native iOS 6.x, analysed 2026-09-16):
+    /// **Failure paths** (MapLibre Native iOS 6.x):
     ///
-    /// 1. *Style missing from bundle* — `fatalError` below. This is a build-time
-    ///    invariant: the two frozen styles are `project.yml` resources.
-    /// 2. *Style file unreadable at render time* — `resolvedNetworkStyleURL` throws,
-    ///    same `fatalError`. Only possible if the temp directory was purged between
-    ///    plan and render in the same process.
+    /// 1. *Style missing from bundle* — `resolvedNetworkStyleURL` throws
+    ///    `themeNotFound`; `plan()` returns nil → `.failed`. Build-time invariant:
+    ///    the two frozen styles are `project.yml` resources.
+    /// 2. *Style file unwritable at render time* — `resolvedNetworkStyleURL` throws
+    ///    an I/O error (full disk); same `.failed` path. Only possible if the temp
+    ///    directory was purged or the disk filled between plan and render.
     /// 3. *Tile host unreachable* (`tiles.openfreemap.org` DNS / TCP / TLS failure)
-    ///    — `MLNMapSnapshotter` fires its completion with an `NSError` (domain
-    ///    `NSURLErrorDomain`, codes −1001 timeout / −1003 host not found / −1009
-    ///    offline). The `withCheckedThrowingContinuation` in
+    ///    — VERIFIED 2026-09-17 (`TileFailureTests`): `MLNMapSnapshotter` fires
+    ///    its completion with an `NSError` (domain `NSURLErrorDomain`, code −1003
+    ///    host not found). The `withCheckedThrowingContinuation` in
     ///    `MapLibreSnapshotProvider.snapshot` rethrows → `RecapExporter` propagates
-    ///    → `render()` catches → `.failed(message:)`. The user sees the generic
-    ///    export-failed string; the structured error is logged.
+    ///    → `render()` catches → `.failed(message:)`.
     /// 4. *Tile host reachable but returns HTTP errors* (5xx, rate limit) — same
-    ///    path as (3); MapLibre treats a non-200 tile as a load error.
+    ///    path as (3); INFERRED from MapLibre source (non-200 tile → load error).
     /// 5. *Partial tile failure* (some zoom levels cached, some not) — MapLibre
     ///    renders cached tiles and leaves unfetched areas transparent. The
     ///    snapshotter may complete *successfully* with a partially blank image. No
-    ///    error is thrown. This is the one silent degradation: the film would have
-    ///    blank map patches rather than failing. Mitigation: OpenFreeMap serves a
-    ///    full planet, and the style pins `minzoom`/`maxzoom` to the ranges the CDN
-    ///    covers, so partial failure requires a mid-render network drop — unlikely
-    ///    and self-correcting on retry.
+    ///    error is thrown. INFERRED — this is the one silent degradation: the film
+    ///    would have blank map patches rather than failing. Mitigation: OpenFreeMap
+    ///    serves a full planet, and the style pins `minzoom`/`maxzoom` to the ranges
+    ///    the CDN covers, so partial failure requires a mid-render network drop —
+    ///    unlikely and self-correcting on retry.
     ///
     /// **In-app maps stay MapKit and are not touched.** `TripDetailView` and
     /// `RecordingView` are sanctioned use: MapKit draws its own logo and legal
@@ -297,7 +302,7 @@ extension RecapExportJob {
     /// correct behaviour for a future self-hosted substrate.
     private static func snapshotProvider(
         for region: RecapMapRegion?, appearance: RecapAppearance
-    ) -> MapRenderer {
+    ) throws -> MapRenderer {
         if let region,
            let styleURL = try? RecapMapStyle.resolvedStyleURL(
                styleResource: RecapMapTiles.styleResource,
@@ -310,17 +315,12 @@ extension RecapExportJob {
             )
         }
         let resource = openFreeMapStyleResource(for: appearance)
-        guard let styleURL = try? RecapMapStyle.resolvedNetworkStyleURL(
+        let styleURL = try RecapMapStyle.resolvedNetworkStyleURL(
             styleResource: resource
-        ) else {
-            fatalError(
-                "the frozen OpenFreeMap style \(resource).json is missing from the bundle — "
-                + "the export cannot proceed without a map"
-            )
-        }
+        )
         return MapLibreSnapshotProvider(
             styleURL: styleURL, appearance: appearance,
-            attribution: RecapMapAttribution.openFreeMapWithElevation
+            attribution: RecapMapAttribution.openFreeMap
         )
     }
 }

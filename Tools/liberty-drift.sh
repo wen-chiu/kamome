@@ -6,7 +6,7 @@
 # ./check.sh or CI (the transform depends on someone else's CDN, and CI has
 # no business depending on it). Run it on demand to detect upstream drift:
 #
-#   KAMOME_CHECK_LIBERTY_DRIFT=1 ./Scripts/check-liberty-drift.sh
+#   KAMOME_CHECK_LIBERTY_DRIFT=1 ./Tools/liberty-drift.sh
 #
 set -euo pipefail
 

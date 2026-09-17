@@ -169,7 +169,7 @@ extension RecapDemoFilmTests {
         // nil and the device's choice passes through (ADR 2026-09-16).
         let openFreeMap = MapLibreSnapshotProvider(
             styleURL: URL(fileURLWithPath: "/dev/null"),
-            attribution: RecapMapAttribution.openFreeMapWithElevation
+            attribution: RecapMapAttribution.openFreeMap
         ).capabilities
         XCTAssertNil(
             openFreeMap.fixedAppearance,

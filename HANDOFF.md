@@ -55,7 +55,7 @@ again (film follows device appearance).
 **ADR 2026-09-12 (b)**, amending Chiu's 2026-08-17 "never in the rendered film".
 The substrate declares its attribution and the render loop draws it on every
 frame. With the production switch (ADR 2026-09-16), **every shipping film now
-draws a credit** — `RecapMapAttribution.openFreeMapWithElevation`.
+draws a credit** — `RecapMapAttribution.openFreeMap`.
 ⚠️ **The reason it is Kamome's own credit and not the snapshotter's is
 measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
 above magnification **1.026** (shipped padding 1.03), the title band covers the

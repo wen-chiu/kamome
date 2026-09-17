@@ -42,8 +42,8 @@ REMOVED_LAYER_IDS = {
 # ── Dark palette (souvenir, from modern-minimal.json) ───────────────────
 
 class DarkPalette:
-    land = "#1e2b33"
-    water = "#060d15"
+    land = "#243440"
+    water = "#080b10"
     water_edge = "#4d7f86"
     waterway = "#3f6b72"
     wood = "#213039"
@@ -136,8 +136,10 @@ def peak_layers(layers, text_color, halo_color, dot_color):
     base = {"source": "openmaptiles", "source-layer": "mountain_peak", "minzoom": 7, "filter": filt}
 
     dot_paint = {"circle-color": dot_color, "circle-radius": ramp(7, 2.5, 12, 4.0), "circle-opacity": 0.9}
+    height = ["concat", ["to-string", ["get", "ele"]], " m"]
     name_layout = {
-        "text-field": name_field, "text-font": ["Noto Sans Regular"],
+        "text-field": ["format", name_field, {}, "\n", {}, height, {"font-scale": 0.75}],
+        "text-font": ["Noto Sans Regular"],
         "text-size": ramp(7, 16, 12, 20), "text-anchor": "top",
         "text-offset": [0, 0.6], "text-max-width": 8,
     }
@@ -152,6 +154,10 @@ def peak_layers(layers, text_color, halo_color, dot_color):
 
 
 # ── Island labels ───────────────────────────────────────────────────────
+
+ISLAND_MAX_RANK = 2
+ISLAND_SIZE_OVER_CITY = 1.25
+
 
 def with_island_labels(layers, text_color=None, halo_color=None):
     other_idx = position_of("label_other", layers)
@@ -172,11 +178,21 @@ def with_island_labels(layers, text_color=None, halo_color=None):
     island = dict(town)
     island["id"] = "label_island"
     island["minzoom"] = 8
-    island["filter"] = ["==", ["get", "class"], "island"]
+    island["filter"] = ["all", ["==", ["get", "class"], "island"],
+                         ["<=", ["get", "rank"], ISLAND_MAX_RANK]]
     layout = dict(town.get("layout", {}))
     for key in ["icon-allow-overlap", "icon-image", "icon-optional", "icon-size", "text-transform"]:
         layout.pop(key, None)
     layout["text-anchor"] = "center"
+
+    city_layout = None
+    for l in layers:
+        if l.get("id") == "label_city":
+            city_layout = l.get("layout", {})
+            break
+    city_size = city_layout.get("text-size") if city_layout else None
+    if city_size is not None:
+        layout["text-size"] = scaled(city_size, ISLAND_SIZE_OVER_CITY)
     island["layout"] = layout
 
     if text_color is not None or halo_color is not None:
@@ -187,8 +203,26 @@ def with_island_labels(layers, text_color=None, halo_color=None):
             paint["text-halo-color"] = halo_color
         island["paint"] = paint
 
-    layers.insert(other_idx + 1, island)
+    place_labels = ["label_city_capital", "label_city", "label_town"]
+    last_place = None
+    for i, l in enumerate(layers):
+        if l.get("id") in place_labels:
+            last_place = i
+    insert_at = (last_place + 1) if last_place is not None else len(layers)
+    layers.insert(insert_at, island)
     return layers
+
+
+def scaled(size, factor):
+    if isinstance(size, (int, float)):
+        return size * factor
+    if isinstance(size, list) and len(size) > 4:
+        result = list(size)
+        for i in range(4, len(result), 2):
+            if isinstance(result[i], (int, float)):
+                result[i] = result[i] * factor
+        return result
+    return size
 
 
 # ── The transform ───────────────────────────────────────────────────────

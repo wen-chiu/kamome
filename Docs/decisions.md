@@ -5186,8 +5186,8 @@ evaluation; this one closes it and commits the result.
 | `RecapExportJob.snapshotProvider` | falls back to `MapKitSnapshotProvider` when no pmtiles region resolves | selects one of two frozen Liberty styles by appearance; `fatalError` if the style is missing from the bundle |
 | frozen styles | none | `Config/RecapThemes/openfreemap-liberty-{dark,light}.json` — 39 layers each, forked from Liberty with the same subtractive rules the evaluation rounds proved |
 | `MapLibreSnapshotProvider.fixedAppearance` | always the provider's `appearance` (vetoed the device) | nil on the OpenFreeMap path (both appearances exist), `.dark` on the dormant pmtiles path |
-| `RecapMapAttribution` | `openFreeMap`, `openStreetMap` | adds `openFreeMapWithElevation` for the frozen styles (peaks + hillshade) |
-| privacy notice | "One thing leaves it" (routing) | "Two things leave it" (routing + map tiles) |
+| `RecapMapAttribution` | `openFreeMap`, `openStreetMap` | unchanged — the credit string stands (ADR 2026-09-13) |
+| privacy notice | routing only | routing, map tiles, and geocoding (three outbound payloads) |
 | `RecapMapStyle` | pmtiles resolve path only | adds `resolvedNetworkStyleURL` for bundled styles with absolute URLs |
 | Apple fallback | `MapKitSnapshotProvider` when no region | **removed** — the export fails rather than falling back |
 
@@ -5205,14 +5205,14 @@ In-app maps stay MapKit and are untouched (`TripDetailView`, `RecordingView`).
 
 Both are subtractive forks of OpenFreeMap's Liberty, frozen against tileset
 `20260916_freeze`. The transform is `Scripts/freeze-liberty-styles.py`, and
-`Scripts/check-liberty-drift.sh` detects upstream drift (env-gated, not in CI).
+`Tools/liberty-drift.sh` detects upstream drift (env-gated, not in CI).
 
 **Production thresholds differ from the evaluation** (rounds 1–5):
 
 | parameter | evaluation | production |
 |---|---|---|
 | peak minimum elevation | 600 m | 1000 m |
-| peak maximum rank | 2 | 1 |
+| peak maximum rank | 3 (R4) → bands tested in R5 | 1 |
 | coast variant | A, B, C tested | **A only** (contrast, no coast line, no lake edge) |
 
 The dark style uses the souvenir palette (`Palette` in `LibertyFork.swift`); the
@@ -5226,15 +5226,18 @@ coordinates to Geoapify, ADR 2026-08-20 (c)).
 When the export renders, `MLNMapSnapshotter` fetches vector tiles from
 `tiles.openfreemap.org` and raster hillshade from the same host. The tile URL
 path encodes z/x/y tile coordinates, which reveal the **general area** of the
-trip — city-level, not street-level (vector tiles cover large areas per tile).
-OpenFreeMap requires no account, no API key, and no registration. It sees this
-device's IP address and the tile coordinates; it does not see any trip details,
-route geometry, or device identifiers.
+trip — neighbourhood-level, not street-level (z14 tiles ≈ 1.2 km). OpenFreeMap
+requires no account, no API key, and no registration. It sees this device's IP
+address, the tile coordinates, a User-Agent string, and the time of each request.
+It does not see any trip details, route geometry, or device identifiers.
 
-The privacy notice is updated: `privacy_intro` says "Two things leave it" and
-names both payloads. `AboutView` carries a new "Map tiles" paragraph with the
-detail. The first-run card stays within its character budget (en 343/400, zh-Hant
-129/180).
+⚠️ **OpenFreeMap has no SLA.** It is a free service with no uptime guarantee. If
+it goes down, every export fails. Mitigation: the styles are frozen and could be
+served from any compatible tile host by changing the style JSON.
+
+The privacy notice names three outbound payloads: routing coordinates (to
+Geoapify), map tiles (from OpenFreeMap), and stop names (from Apple via
+geocoding). The first-run card stays within its character budget.
 
 ### §5 — ADR 2026-08-27 is true again
 

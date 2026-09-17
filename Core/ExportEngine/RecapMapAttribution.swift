@@ -34,16 +34,6 @@ public enum RecapMapAttribution {
     /// a poor trade for 26 characters.
     public static let openFreeMap = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
 
-    /// **What the production frozen styles owe** — the same obligation as
-    /// `openFreeMap`, plus an explicit nod to the elevation data the frozen
-    /// styles now render (peak labels from OSM's `ele` tag, hillshade from
-    /// Natural Earth 2 Shaded Relief which is public domain). The ODbL clause
-    /// already covers the peaks; this constant exists so the credit test can
-    /// assert that a film built on the frozen styles carries the elevation
-    /// provenance rather than the bare `openFreeMap` string.
-    public static let openFreeMapWithElevation =
-        "OpenFreeMap © OpenMapTiles Data from OpenStreetMap · Hillshade Natural Earth"
-
     /// **What the parked souvenir substrate owes** — the self-hosted `.pmtiles`
     /// regions, whose vector data is OpenStreetMap's
     /// (`Config/RecapThemes/modern-minimal.json` declares the same string, which
