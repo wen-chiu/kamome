@@ -200,7 +200,7 @@ enum ReviewSubstrate {
         /// (ADR 2026-09-12 (b)), so a harness holding its own copy is two sources for
         /// one obligation — and `ReviewSubstrate`'s own doc comment already
         /// argues at length that such a rule gets corrected in only one of them.
-        static let attribution = RecapMapAttribution.openFreeMap
+        static let attribution = RecapMapAttribution.openFreeMapBase
     }
 
     /// The substrate the reviewer asked for, or nil for today's normal path.
@@ -252,19 +252,30 @@ enum ReviewSubstrate {
     /// Nil — every other caller — keeps reading `KAMOME_MAP_APPEARANCE` exactly as
     /// before.
     static func renderer(
-        region: RecapMapRegion?, reporting label: String, appearance: RecapAppearance? = nil
+        region: RecapMapRegion?, reporting label: String, appearance: RecapAppearance? = nil,
+        tripExtent: GeoBox? = nil
     ) throws -> MapRenderer {
         #if canImport(MapLibre)
         // The evaluation switch is read before the region lookup, because the
         // substrate it selects has no regions to look up (see `Substrate`).
         if let substrate = try requestedSubstrate() {
             let styleURL = try substrate.resolvedStyleURL()
+            let credit: String
+            if let box = tripExtent {
+                credit = RecapMapAttribution.openFreeMap(
+                    minLat: box.minLat, maxLat: box.maxLat,
+                    minLon: box.minLon, maxLon: box.maxLon
+                )
+            } else {
+                credit = Substrate.attribution
+            }
             print("\(label) substrate OpenFreeMap/MapLibre · style \(substrate.rawValue) "
                 + "(\(styleURL.absoluteString)) · appearance \(substrate.appearance.rawValue) "
-                + "— EVALUATION ONLY, no build renders this (ADR 2026-09-09)")
+                + " · credit \(credit)"
+                + " — EVALUATION ONLY, no build renders this (ADR 2026-09-09)")
             return MapLibreSnapshotProvider(
                 styleURL: styleURL, appearance: substrate.appearance,
-                attribution: Substrate.attribution
+                attribution: credit
             )
         }
         guard let region else {

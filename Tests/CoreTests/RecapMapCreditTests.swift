@@ -124,7 +124,8 @@ final class RecapMapCreditTests: RecapRenderTestCase {
     /// band broke for the snapshotter's own copy — it lays a 0.9-alpha scrim
     /// across the bottom 27% of the frame, directly over it.
     func testEveryFrameOfAFilmCarriesTheCreditAndNothingIsDrawnOverIt() async throws {
-        let frames = try await recordAWholeFilm(credit: RecapMapAttribution.openFreeMap)
+        let credit = RecapMapAttribution.openFreeMapBase
+        let frames = try await recordAWholeFilm(credit: credit)
         for (index, contents) in frames.enumerated() {
             let credits = contents.filter { if case .mapCredit = $0 { return true } else { return false } }
             XCTAssertEqual(
@@ -137,7 +138,7 @@ final class RecapMapCreditTests: RecapRenderTestCase {
                         + "anything drawn later can cover it"
                 )
             }
-            XCTAssertEqual(text, RecapMapAttribution.openFreeMap, "frame \(index) credited the wrong source")
+            XCTAssertEqual(text, credit, "frame \(index) credited the wrong source")
         }
     }
 
@@ -193,7 +194,7 @@ final class RecapMapCreditTests: RecapRenderTestCase {
 
         let plain = try compositor.render(atTime: time, background: background, credit: nil)
         let credited = try compositor.render(
-            atTime: time, background: background, credit: RecapMapAttribution.openFreeMap
+            atTime: time, background: background, credit: RecapMapAttribution.openFreeMapBase
         )
         XCTAssertTrue(
             try isUniformlyBlack(plain),
@@ -217,21 +218,21 @@ final class RecapMapCreditTests: RecapRenderTestCase {
 
     // MARK: - The strings
 
-    /// **The ODbL clause is in every credit Kamome can draw**, and the
-    /// OpenFreeMap line is asserted verbatim for the same reason
-    /// `attribution_geoapify` is: the required thing is the format, so a
-    /// well-meaning edit would break the obligation while looking tidier.
+    /// **The frozen OSM credit is on every OpenFreeMap film** (ADR 2026-09-13)
+    /// and the OpenStreetMap clause is in every credit Kamome can draw.
     func testEveryCreditNamesOpenStreetMap() {
-        for credit in [RecapMapAttribution.openFreeMap, RecapMapAttribution.openStreetMap] {
-            XCTAssertTrue(
-                credit.contains("OpenStreetMap"),
-                "ODbL attribution is not optional: \(credit)"
-            )
-        }
+        XCTAssertTrue(
+            RecapMapAttribution.openFreeMapBase.contains("OpenStreetMap"),
+            "ODbL attribution is not optional in the OpenFreeMap credit"
+        )
+        XCTAssertTrue(
+            RecapMapAttribution.openStreetMap.contains("OpenStreetMap"),
+            "ODbL attribution is not optional in the souvenir credit"
+        )
         XCTAssertEqual(
-            RecapMapAttribution.openFreeMap,
-            "OpenFreeMap © OpenMapTiles Data from OpenStreetMap · Terrain: USGS/LINZ/GA",
-            "map + terrain credit (pending Chiu — VERIFIED 2026-09-09 map, 2026-09-17 terrain)"
+            RecapMapAttribution.openFreeMapBase,
+            "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
+            "the frozen OSM credit (ADR 2026-09-13) must not change"
         )
     }
 
@@ -245,6 +246,80 @@ final class RecapMapCreditTests: RecapRenderTestCase {
                 "a map credit must never be drawn over Apple's tiles"
             )
         }
+    }
+
+    // MARK: - Region-conditional terrain credit (ADR 2026-09-18 (f))
+
+    /// Taiwan and Japan are covered only by public-domain sources (USGS
+    /// SRTM/GMTED2010). No terrain credit is required.
+    func testTaiwanExtentCarriesNoTerrainCredit() {
+        let credit = RecapMapAttribution.openFreeMap(
+            minLat: 21.9, maxLat: 25.3, minLon: 120.0, maxLon: 122.0
+        )
+        XCTAssertEqual(
+            credit, RecapMapAttribution.openFreeMapBase,
+            "Taiwan is covered only by public-domain terrain — no terrain clause"
+        )
+    }
+
+    func testJapanExtentCarriesNoTerrainCredit() {
+        let credit = RecapMapAttribution.openFreeMap(
+            minLat: 24.3, maxLat: 26.5, minLon: 124.5, maxLon: 126.0
+        )
+        XCTAssertEqual(
+            credit, RecapMapAttribution.openFreeMapBase,
+            "Miyakojima (Japan) is covered only by public-domain terrain — no terrain clause"
+        )
+    }
+
+    /// Auckland, New Zealand → LINZ required (CC BY 3.0 NZ).
+    func testAucklandExtentCreditsLINZ() {
+        let credit = RecapMapAttribution.openFreeMap(
+            minLat: -37.0, maxLat: -36.7, minLon: 174.6, maxLon: 175.0
+        )
+        XCTAssertTrue(credit.contains("LINZ"), "Auckland is inside LINZ's coverage")
+        XCTAssertTrue(credit.hasPrefix(RecapMapAttribution.openFreeMapBase),
+                       "the frozen OSM credit must still lead")
+        XCTAssertFalse(credit.contains("USGS"), "USGS is public domain — never credited")
+    }
+
+    /// Reykjavik, Iceland → EU-DEM required (Copernicus, EEA coverage).
+    func testIcelandExtentCreditsEUDEM() {
+        let credit = RecapMapAttribution.openFreeMap(
+            minLat: 63.8, maxLat: 64.3, minLon: -22.2, maxLon: -21.5
+        )
+        XCTAssertTrue(credit.contains("Copernicus"), "Iceland is inside EU-DEM's EEA coverage")
+        XCTAssertTrue(credit.contains("EU-DEM"), "the EU-DEM dataset name must appear")
+        XCTAssertTrue(credit.hasPrefix(RecapMapAttribution.openFreeMapBase),
+                       "the frozen OSM credit must still lead")
+    }
+
+    /// Sydney, Australia → Geoscience Australia required (CC BY 4.0).
+    func testSydneyExtentCreditsGeoscienceAustralia() {
+        let credit = RecapMapAttribution.openFreeMap(
+            minLat: -34.0, maxLat: -33.7, minLon: 151.0, maxLon: 151.4
+        )
+        XCTAssertTrue(credit.contains("Geoscience Australia"),
+                       "Sydney is inside Geoscience Australia's coverage")
+        XCTAssertTrue(credit.hasPrefix(RecapMapAttribution.openFreeMapBase),
+                       "the frozen OSM credit must still lead")
+    }
+
+    /// A type-2 film spanning Taipei → Auckland. The extent spans both cities,
+    /// so the bounding box intersects LINZ (New Zealand) and Geoscience
+    /// Australia (the longitude range overlaps). Both must be credited per the
+    /// over-include rule (ADR 2026-09-18 (f): a missed credit is a licence
+    /// breach; an extra one costs a few characters).
+    func testTaipeiToAucklandCreditsLINZAndGA() {
+        let credit = RecapMapAttribution.openFreeMap(
+            minLat: -36.8, maxLat: 25.0, minLon: 121.5, maxLon: 174.8
+        )
+        XCTAssertTrue(credit.contains("LINZ"),
+                       "the extent reaches New Zealand — LINZ is required")
+        XCTAssertTrue(credit.contains("Geoscience Australia"),
+                       "the extent overlaps Australia's longitude range — over-include")
+        XCTAssertFalse(credit.contains("USGS"),
+                        "USGS is public domain — never credited, even at global extent")
     }
 
     // MARK: - The two measurements this design rests on

@@ -90,7 +90,7 @@ final class MapLibreSubstrateTests: XCTestCase {
     /// (this file's own header). It is held by the desk render in the PR and by
     /// `RecapMapCreditTests`, which is what makes turning it off safe.
     func testTheProviderDeclaresTheCreditItWasBuiltFor() {
-        for attribution in [RecapMapAttribution.openStreetMap, RecapMapAttribution.openFreeMap] {
+        for attribution in [RecapMapAttribution.openStreetMap, RecapMapAttribution.openFreeMapBase] {
             let provider = MapLibreSnapshotProvider(
                 styleURL: URL(fileURLWithPath: "/tmp/style.json"), attribution: attribution
             )

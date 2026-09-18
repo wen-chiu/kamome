@@ -77,8 +77,8 @@ struct RecapReviewScene {
         // threw, which made every harness built on this scene impossible to run
         // once MapLibre was parked on 2026-08-15: the length-limited film
         // (`RecapPilotFilmTests`) and every still (`RecapStopStillTests`).
-        let region = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) })
-            .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
+        let tripBox = GeoBox.enclosing(trip.route.map { (lat: $0.lat, lon: $0.lon) })
+        let region = tripBox.flatMap { RecapMapRegionResolver.resolve(covering: $0) }
         // The establishing shot is the region's bounds when there is a region.
         // With none it is nil — exactly what the shipped app passes, and what
         // `buildWideOpening` already has a branch for.
@@ -108,7 +108,8 @@ struct RecapReviewScene {
         // The override reaches the Apple map as well as the palette — see
         // `ReviewSubstrate.appleMaps` for what happened while it reached only one.
         let provider = try ReviewSubstrate.renderer(
-            region: region, reporting: "KAMOME_REVIEW", appearance: appearanceOverride
+            region: region, reporting: "KAMOME_REVIEW", appearance: appearanceOverride,
+            tripExtent: tripBox
         )
         let appearance = provider.capabilities.appearance(
             honouring: try appearanceOverride ?? ReviewSubstrate.experiment().appearance

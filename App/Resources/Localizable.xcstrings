@@ -162,13 +162,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome asks Geoapify where the roads are, so a journey can be drawn along the roads you actually travelled instead of straight lines between points. Geoapify's road data comes from OpenStreetMap. Terrain hillshading uses elevation data from AWS Open Data, sourced from USGS, LINZ and Geoscience Australia."
+            "value": "Kamome asks Geoapify where the roads are, so a journey can be drawn along the roads you actually travelled instead of straight lines between points. Geoapify’s road data comes from OpenStreetMap. Terrain hillshading uses elevation data from AWS Open Data. Some sources are public domain (USGS SRTM, GMTED2010); others require attribution when their data appears in the film."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩會向 Geoapify 詢問道路的位置，讓旅程沿著你實際走過的路繪製，而不是在點與點之間畫直線。Geoapify 的道路資料來自 OpenStreetMap。地形使用來自 AWS Open Data 的高程資料，來源為 USGS、LINZ 與 Geoscience Australia。"
+            "value": "卡摸咩會向 Geoapify 詢問道路的位置，讓旅程沿著你實際走過的路繪製，而不是在點與點之間畫直線。Geoapify 的道路資料來自 OpenStreetMap。地形使用來自 AWS Open Data 的高程資料。部分來源屬公有領域（USGS SRTM、GMTED2010）；其他來源的資料出現在影片中時需要標註。"
           }
         }
       }
@@ -196,13 +196,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terrain: USGS · LINZ (CC BY 3.0 NZ) · Geoscience Australia (CC BY 4.0)"
+            "value": "Terrain: LINZ (CC BY 3.0 NZ) · Geoscience Australia (CC BY 4.0) · Produced using Copernicus data and information funded by the European Union - EU-DEM layers · UK Environment Agency (OGL v3) · data.gv.at Austria (CC BY 3.0 AT) · Kartverket (CC BY 4.0) · CDEM Canada (OGL Canada) · INEGI Mexico"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "地形：USGS · LINZ (CC BY 3.0 NZ) · Geoscience Australia (CC BY 4.0)"
+            "value": "地形：LINZ (CC BY 3.0 NZ) · Geoscience Australia (CC BY 4.0) · Produced using Copernicus data and information funded by the European Union - EU-DEM layers · UK Environment Agency (OGL v3) · data.gv.at Austria (CC BY 3.0 AT) · Kartverket (CC BY 4.0) · CDEM Canada (OGL Canada) · INEGI Mexico"
           }
         }
       }
