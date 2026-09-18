@@ -208,10 +208,12 @@ final class TripDetailModel {
         }
     }
 
-    /// Photographs to lead the screen with: highlights first, then spread.
-    func coverAssetIds(count: Int) -> [String] {
-        let photos = (detail?.photos ?? []).sorted { ($0.takenAt ?? 0) < ($1.takenAt ?? 0) }
-        return PhotoCoverSelectorBridge.select(photos, count: count)
+    /// **The distance the diary itself adds up.** An imported trip carries no
+    /// `TripStats` (`HANDOFF.md` finding 8), so this is the only total that can
+    /// be told truthfully about one — and it is the sum of the very numbers the
+    /// connectors below print, so a reader can check it by hand.
+    var totalDistanceM: Double {
+        storyDays.flatMap(\.entries).compactMap { $0.leg?.distanceM }.reduce(0, +)
     }
 
     var storyDays: [StoryDay] {

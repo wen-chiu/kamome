@@ -273,7 +273,8 @@ final class JourneyDiscoveryModel {
                 count: config.discovery.coverPhotos
             ),
             distanceM: stats?.distanceM,
-            modes: Set(facts.legModes),
+            legModes: facts.legModes,
+            milestones: facts.stopNames,
             provenance: trip.tripSource.isReconstructed ? .fromPhotos : .recorded,
             filmCount: facts.filmCount,
             nameLookupLat: facts.nameLookupLat,
@@ -306,7 +307,10 @@ final class JourneyDiscoveryModel {
                 count: config.discovery.coverPhotos
             ),
             distanceM: nil,
-            modes: Set(modes),
+            legModes: modes,
+            // A journey nobody has opened has no geocoded stops, so it has no
+            // milestones to name — the entry says how many places instead.
+            milestones: [],
             provenance: .fromPhotos,
             filmCount: 0,
             nameLookupLat: busiest?.lat ?? journey.centroidLat,

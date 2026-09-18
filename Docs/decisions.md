@@ -5243,3 +5243,75 @@ The thresholds (Chiu, from his library). Whether the geocode-at-discovery
 stays. A rename for trips (none exists; the resolved destination becomes the
 title at import). The "User-confirmed" label. Visual sign-off — a render is
 attached to the PR and the judgement is `DESIGNER.md`'s.
+
+## 2026-09-18 — The home and the journey are timelines, and the photographs are evidence inside them
+
+**Decision (Chiu, 2026-09-18).** The Journey Discovery screens built the day
+before were functionally right and **the wrong genre**: they led with a large
+photograph and hung the facts on it, which read as Apple Photos sorted by trip.
+Kamome is not a photo library. It is *an automatically written travel journal* —
+the user should feel **"Kamome reconstructed my journey and wrote the story for
+me"**, never "Kamome organised my photos".
+
+**The hierarchy is inverted, and this is the whole change:**
+
+    TIME → PLACE → JOURNEY EVENT → PHOTO
+
+not `PHOTO → metadata`. Photographs are memories and evidence *inside* a
+chronology; they are never the navigation structure.
+
+### The test this is held to
+
+**Cover every photograph.** If the screen still says *this is a journey I took,
+what happened, where I went, and when*, the architecture is right. If hiding the
+photographs empties the screen, it is photo-centric. Both screens are built to
+pass it, and the renders in `~/Kamome-films/2026-09-18-journal/` are judged with
+that question asked out loud.
+
+### What was built
+
+- **One rail, two scales** (`UI/Timeline/TimelineRail.swift`). Home is a
+  chronology of journeys; a journey is a chronology of days. They are the same
+  object drawn by the same primitive, so the product reads as one thing. The
+  rail is information, not decoration: it is what makes a page of events read as
+  time passing.
+- **A Home entry is a journal record**, not a card: the date anchors it, the
+  destination follows in editorial serif, then the route as named milestones
+  joined by the mode that travelled between them, then **three thumbnails at
+  54 pt**. The photo-cover card, its gradient scrim and its overlaid text are
+  gone, and so are the shadows and the large corner radii that made the list
+  read as an album shelf.
+- **A journey opens as a diary**: a text masthead (no hero photograph), a
+  tracked line of figures rather than a row of big numbers, a **150 pt map
+  strip** that supports the words instead of leading them, then day anchors with
+  an editorial rule, each carrying the travel that led there, the place it
+  reached, and the photographs taken there at 62 pt.
+- **Editorial type is the system serif** (`.system(_, design: .serif)`) on
+  years, destinations and place names only. No font resource is added and the
+  chrome stays SF: the structural layer is Apple's, the content layer is
+  Kamome's. It is the single strongest signal that this is a journal rather than
+  a gallery, which is why it earns a place against `DESIGNER.md`'s hard no on
+  new fonts.
+- **Distance is now told for imported trips.** `TripDetailModel.totalDistanceM`
+  sums the legs the diary already prints, so a trip with no `TripStats`
+  (`HANDOFF.md` finding 8) stops printing no kilometres at all. It is the
+  reader's own arithmetic, not a new estimate.
+
+### Two defects the first render caught, both now tested
+
+1. **"3 – AUG 5"** — the month sat on the closing date and the range read as a
+   typo. The month belongs to the opening date.
+2. **"Whitehorse › Whitehorse › Whitehorse"** — three stops around one town
+   geocode to one name. Consecutive repeats collapse; the stop *count* does not
+   change, and a genuine return (Kyoto → Nara → Kyoto) still prints twice.
+
+`JourneyTimelineTextTests` holds both, because both are the kind of defect that
+looks like a styling detail and is actually the screen lying about the journey.
+
+### Not decided here
+
+The architecture, which did not move: `JourneyDetector`, schema v6, the
+discovery config and the whole EXIF → Trip → Legs → Transportation → Route →
+Recap pipeline are untouched (ADR 2026-09-17). The `discovery` thresholds and
+the geocode-at-discovery question are still open and still Chiu's. Visual
+sign-off on the new language is `DESIGNER.md`'s, from the renders.

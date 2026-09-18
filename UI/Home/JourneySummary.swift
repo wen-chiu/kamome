@@ -30,8 +30,13 @@ struct JourneySummary: Identifiable, Equatable {
     /// Known only when the trip carries stats (recordings do; imports do not,
     /// `HANDOFF.md` finding 8). Shown when known, never invented.
     let distanceM: Double?
-    /// `TransportMode` raw values the legs carry.
-    let modes: Set<String>
+    /// `TransportMode` raw values the legs carry, **in trip order** — the
+    /// timeline draws them between the places they join, so the order is the
+    /// information.
+    let legModes: [String]
+    /// The named places this journey passed through, in order. Empty for a
+    /// journey that has not been imported and geocoded yet.
+    let milestones: [String]
     let provenance: Provenance
     let filmCount: Int
     /// Where the name is looked up. Never drawn.
@@ -42,6 +47,7 @@ struct JourneySummary: Identifiable, Equatable {
 
     var headline: String { name?.title ?? fallbackTitle }
     var isImported: Bool { tripId != nil }
+    var modes: Set<String> { Set(legModes) }
 
     /// Calendar days the journey covers, both ends counted, in the current zone.
     var dayCount: Int {

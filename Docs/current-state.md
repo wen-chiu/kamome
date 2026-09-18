@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-17 against decisions.md **2026-09-17** and `main` at
+Last synced: 2026-09-18 against decisions.md **2026-09-18** and `main` at
 **PR #69**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
 licence, routing-key and local-network ADRs 2026-09-12 (c)–(e).) Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
@@ -71,8 +71,9 @@ opening included — retimed, with a boarding pass, a plane and two marked fligh
 ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's judgement, in
 `HANDOFF.md`, which wins on findings and blockers. ⚠️ **One line is in flight**:
 the export substrate evaluation (2026-09-09). **The home is journey discovery**
-(ADR 2026-09-17): the library is read, cards by year, *Make this a Film* on the
-story; thresholds and the geocode-at-discovery are Chiu's to judge.
+(ADR 2026-09-17), **drawn as a journal** (ADR 2026-09-18: time → place → event →
+photo, no photo covers); thresholds and the geocode-at-discovery are Chiu's to
+judge.
 
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — then Chiu's submission sequence, the

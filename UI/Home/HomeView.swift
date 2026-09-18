@@ -31,7 +31,7 @@ struct HomeView: View {
             ScrollView {
                 content
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
             .navigationTitle(Text("home_title"))
@@ -121,17 +121,35 @@ struct HomeView: View {
         }
     }
 
+    /// **One continuous chronology**, not a list of cards. The rail runs from
+    /// the first year heading to the last journey, and every entry hangs off
+    /// it — which is what makes the screen read as a life of travel rather
+    /// than a folder of albums.
     private var journeyList: some View {
-        LazyVStack(alignment: .leading, spacing: 28, pinnedViews: []) {
+        LazyVStack(alignment: .leading, spacing: 0) {
             if model.isScanning {
                 ScanningRow()
+                    .padding(.bottom, 16)
                     .transition(.opacity)
             }
             if model.isLimitedAccess {
                 LimitedLibraryRow { model.selectMorePhotos() }
+                    .padding(.bottom, 20)
             }
-            ForEach(model.sections) { section in
-                yearSection(section)
+            ForEach(Array(model.sections.enumerated()), id: \.element.id) { sectionIndex, section in
+                yearHeading(section.year, isFirst: sectionIndex == 0)
+                ForEach(Array(section.journeys.enumerated()), id: \.element.id) { index, journey in
+                    JourneyEntry(
+                        journey: journey,
+                        isOpening: model.openingId == journey.id,
+                        isLast: isLastOverall(section: sectionIndex, entry: index),
+                        namespace: cardNamespace
+                    ) {
+                        open(journey)
+                    }
+                    .contextMenu { contextMenu(for: journey) }
+                    .transition(.opacity)
+                }
             }
             if !model.hasJourneys, !model.isScanning {
                 NothingFoundCard(access: model.access) { showingImport = true }
@@ -141,24 +159,22 @@ struct HomeView: View {
         .animation(.snappy(duration: 0.45), value: model.sections)
     }
 
-    private func yearSection(_ section: JourneyYearSection) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(verbatim: String(section.year))
-                .font(.title2.weight(.semibold))
+    /// The year, in the same editorial serif the destinations use, sitting on
+    /// the rail rather than beside it.
+    private func yearHeading(_ year: Int, isFirst: Bool) -> some View {
+        TimelineRow(
+            marker: .none, connectsUp: !isFirst, markerOffset: 16, bottomPadding: 14
+        ) {
+            Text(verbatim: String(year))
+                .font(.system(.title3, design: .serif).weight(.semibold))
                 .foregroundStyle(.secondary)
-                .accessibilityAddTraits(.isHeader)
-            ForEach(section.journeys) { journey in
-                JourneyCard(
-                    journey: journey,
-                    isOpening: model.openingId == journey.id,
-                    namespace: cardNamespace
-                ) {
-                    open(journey)
-                }
-                .contextMenu { contextMenu(for: journey) }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
+                .tracking(1)
         }
+        .accessibilityAddTraits(.isHeader)
+    }
+
+    private func isLastOverall(section: Int, entry: Int) -> Bool {
+        section == model.sections.count - 1 && entry == (model.sections.last?.journeys.count ?? 0) - 1
     }
 
     @ViewBuilder

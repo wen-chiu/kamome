@@ -22,6 +22,11 @@ extension TripRepository {
         public let filmCount: Int
         /// Leg transport modes, in trip order (`TransportMode` raw values).
         public let legModes: [String]
+        /// The named stops, in trip order — the journey's milestones. Unnamed
+        /// stops are left out rather than filled with a placeholder: the
+        /// timeline says "3 places" when it does not know them yet, which is
+        /// true, where "Unnamed stop › Unnamed stop" is noise.
+        public let stopNames: [String]
         /// The busiest stop's position — where the journey's name is looked up.
         public let nameLookupLat: Double?
         public let nameLookupLon: Double?
@@ -46,9 +51,10 @@ extension TripRepository {
                 .filter(sql: "trip_id = ?", arguments: [tripId])
                 .order(sql: "taken_at")
                 .fetchAll(db)
-            let stopCount = try Int.fetchOne(
-                db, sql: "SELECT COUNT(*) FROM stop WHERE trip_id = ?", arguments: [tripId]
-            ) ?? 0
+            let stops = try StopRecord
+                .filter(sql: "trip_id = ?", arguments: [tripId])
+                .order(sql: "arrived_at")
+                .fetchAll(db)
             let filmCount = try Int.fetchOne(
                 db, sql: "SELECT COUNT(*) FROM film WHERE trip_id = ?", arguments: [tripId]
             ) ?? 0
@@ -74,9 +80,10 @@ extension TripRepository {
             }
             return JourneyCardFacts(
                 photos: photos,
-                stopCount: stopCount,
+                stopCount: stops.count,
                 filmCount: filmCount,
                 legModes: modes,
+                stopNames: stops.compactMap(\.name),
                 nameLookupLat: busiest?["lat"],
                 nameLookupLon: busiest?["lon"],
                 stopSpan: stopSpan

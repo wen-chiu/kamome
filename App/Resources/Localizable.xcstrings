@@ -343,40 +343,6 @@
         }
       }
     },
-    "glance_days": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Days"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "天數"
-          }
-        }
-      }
-    },
-    "glance_photos": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Photos"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "相片"
-          }
-        }
-      }
-    },
     "home_title": {
       "extractionState": "manual",
       "localizations": {
@@ -873,6 +839,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 張相片"
+          }
+        }
+      }
+    },
+    "journey_places": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld place"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld places"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個地點"
           }
         }
       }

@@ -2,43 +2,13 @@ import KamomePersistence
 import Photos
 import SwiftUI
 
-/// Small horizontal run of photo thumbnails for timeline rows.
-struct PhotoStrip: View {
-    let photos: [PhotoRefRecord]
-    let maxThumbnails: Int
-    var side: CGFloat = 36
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(photos.prefix(maxThumbnails), id: \.id) { photo in
-                PhotoThumbnail(assetId: photo.phAssetId, isHighlight: photo.isHighlight == 1, targetPx: Int(side * 3))
-                    .frame(width: side, height: side)
-                    .clipShape(RoundedRectangle(cornerRadius: side / 6, style: .continuous))
-            }
-            if photos.count > maxThumbnails {
-                Text("+\(photos.count - maxThumbnails)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-}
-
 /// Loads one PhotoKit thumbnail; a deleted or unavailable asset renders the
 /// placeholder tile instead of failing (§3 rules).
 struct PhotoThumbnail: View {
-    enum Placeholder {
-        /// The grey tile with a photo glyph — a strip's missing thumbnail.
-        case tile
-        /// A soft gradient and the gull — a card with no photograph to show.
-        case cinematic
-    }
-
     let assetId: String
     var isHighlight = false
     /// Longest side requested from PhotoKit, in pixels.
     var targetPx: Int = 100
-    var placeholder: Placeholder = .tile
 
     @State private var image: UIImage?
 
@@ -52,18 +22,16 @@ struct PhotoThumbnail: View {
                 )
                 .clipped()
             } else {
-                switch placeholder {
-                case .tile:
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(.secondary.opacity(0.2))
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        )
-                case .cinematic:
-                    Self.cinematicPlaceholder
-                }
+                // A missing thumbnail is a quiet tile, never a broken-image
+                // glyph: the asset being in iCloud or deleted is not an error
+                // the reader can act on, and the row beside it still reads.
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.secondary.opacity(0.18))
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    )
             }
             if isHighlight {
                 Image(systemName: "star.fill")
@@ -73,20 +41,6 @@ struct PhotoThumbnail: View {
             }
         }
         .task(id: "\(assetId)-\(targetPx)") { await loadThumbnail() }
-    }
-
-    /// Sky over sand with the gull — what a journey looks like before its
-    /// photographs load, or when they cannot.
-    static var cinematicPlaceholder: some View {
-        LinearGradient(
-            colors: [Color.accentColor.opacity(0.45), Color.accentColor.opacity(0.15), Color(.systemFill)],
-            startPoint: .topLeading, endPoint: .bottomTrailing
-        )
-        .overlay(alignment: .center) {
-            Image(systemName: "bird")
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(.white.opacity(0.7))
-        }
     }
 
     private func loadThumbnail() async {

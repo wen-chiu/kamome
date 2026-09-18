@@ -1,48 +1,42 @@
+import KamomeExportEngine
 import KamomePersistence
 import KamomeTrackingEngine
 import SwiftUI
 
-/// The hero: the journey's photographs, its name, its dates, and one line of
-/// provenance — never "verified" (§3).
-struct TripHero: View {
+/// **The masthead — words, not a photograph.**
+///
+/// This screen opened on a full-bleed photo cover until 2026-09-18. That made
+/// the journey look like an album: the first thing the eye met was an image,
+/// and the dates and the place were captions on it. A journal opens with its
+/// dateline, so this does: where, when, how long, and how the route is known.
+/// The photographs are further down, inside the days they belong to.
+struct JourneyMasthead: View {
     let model: TripDetailModel
-    let coverCount: Int
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        let stacked = dynamicTypeSize.isAccessibilitySize
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .bottomLeading) {
-                JourneyCover(assetIds: model.coverAssetIds(count: coverCount))
-                    .aspectRatio(stacked ? 16 / 10 : 4 / 5, contentMode: .fit)
-                if !stacked {
-                    LinearGradient(
-                        colors: [.black.opacity(0.35), .clear, .clear, .black.opacity(0.75)],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                    words.foregroundStyle(.white).padding(20)
-                }
-            }
-            if stacked { words.padding(20) }
-        }
-    }
-
-    private var words: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if let flag = model.journeyName?.flag { Text(flag).font(.title) }
-                Text(model.journeyName?.title ?? model.detail?.trip.title ?? "")
-                    .font(.largeTitle.weight(.bold))
-                    .lineLimit(2)
-            }
+        VStack(alignment: .leading, spacing: 10) {
             if let trip = model.detail?.trip {
-                Text(Self.dates(trip)).font(.subheadline).opacity(0.85)
+                Text(Self.dates(trip))
+                    .font(.caption.weight(.semibold))
+                    .tracking(0.8)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.secondary)
             }
-            Label(model.isReconstructed ? "story_provenance_photos" : "story_provenance_recorded",
-                  systemImage: model.isReconstructed ? "photo.on.rectangle" : "location")
-                .font(.caption)
-                .opacity(0.8)
-                .padding(.top, 2)
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                if let flag = model.journeyName?.flag {
+                    Text(flag).font(.title)
+                }
+                Text(model.journeyName?.title ?? model.detail?.trip.title ?? "")
+                    .font(.system(.largeTitle, design: .serif).weight(.semibold))
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Label(
+                model.isReconstructed ? "story_provenance_photos" : "story_provenance_recorded",
+                systemImage: model.isReconstructed ? "photo.on.rectangle" : "location"
+            )
+            .font(.caption)
+            .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -58,90 +52,135 @@ struct TripHero: View {
     }
 }
 
-/// Four figures, at a glance. Distance only when the trip carries stats;
-/// an imported trip does not, and the figure is left out rather than invented.
-struct TripGlance: View {
+/// The journey's figures as one tracked line. Deliberately **not** a row of
+/// large numbers: that reads as a dashboard, and this is a dateline.
+///
+/// Distance appears when it can be told truthfully — from the trip's own stats
+/// when it has them, else summed from the legs the diary below prints, which is
+/// the same number the reader can add up by hand.
+struct JourneyFigures: View {
     let model: TripDetailModel
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            figure("\(model.detail?.photos.count ?? 0)", "glance_photos")
-            figure("\(model.detail?.stops.count ?? 0)", "stat_stops")
-            figure("\(model.dayCount)", "glance_days")
-            if let stats = model.stats, stats.distanceM >= 1000 {
-                figure(String(format: "%.0f", stats.distanceM / 1000), "recap_figure_label_km")
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
+        Text(line)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(line)
     }
 
-    private func figure(_ value: String, _ label: LocalizedStringKey) -> some View {
-        VStack(spacing: 2) {
-            Text(value).font(.title2.weight(.semibold)).monospacedDigit()
-            Text(label).font(.caption).foregroundStyle(.secondary).textCase(.uppercase)
+    private var line: String {
+        var parts = [
+            String.localizedStringWithFormat(
+                String(localized: "journey_photos"), model.detail?.photos.count ?? 0
+            ),
+            String.localizedStringWithFormat(
+                String(localized: "journey_stops"), model.detail?.stops.count ?? 0
+            ),
+            String.localizedStringWithFormat(String(localized: "journey_days"), model.dayCount)
+        ]
+        let distance = model.stats?.distanceM ?? model.totalDistanceM
+        if distance >= 1000 {
+            parts.append(String.localizedStringWithFormat(String(localized: "journey_km"), distance / 1000))
         }
-        .frame(maxWidth: .infinity)
+        return parts.joined(separator: " · ")
     }
 }
 
-/// The story itself: day by day, stop by stop, with the travel between.
-struct TripStoryTimeline: View {
+/// **The diary.** Days are the anchors; under each, the travel that led there
+/// and the place it arrived at, with the photographs taken there hanging off
+/// the same rail. Read it with every photograph removed and it is still an
+/// account of a journey — that is the property this layout exists to hold.
+struct JourneyDiary: View {
     let model: TripDetailModel
     let onEdit: (StopRecord) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            ForEach(model.storyDays) { day in
-                dayHeader(day)
-                ForEach(day.entries, id: \.stop.id) { entry in
-                    if let leg = entry.leg { LegConnector(leg: leg) }
-                    StopRow(stop: entry.stop, photos: model.photos(for: entry.stop.id), model: model, onEdit: onEdit)
+        LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(model.storyDays.enumerated()), id: \.element.id) { dayIndex, day in
+                DayAnchor(day: day, isFirst: dayIndex == 0)
+                ForEach(Array(day.entries.enumerated()), id: \.element.stop.id) { entryIndex, entry in
+                    if let leg = entry.leg {
+                        LegRow(leg: leg)
+                    }
+                    StopRow(
+                        stop: entry.stop,
+                        photos: model.photos(for: entry.stop.id),
+                        model: model,
+                        isLast: isLastRow(dayIndex: dayIndex, entryIndex: entryIndex),
+                        onEdit: onEdit
+                    )
                 }
             }
             if !model.routePhotos.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("route_photos_header").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                    PhotoStrip(photos: model.routePhotos, maxThumbnails: 4, side: 72)
+                TimelineRow(marker: .place, connectsDown: false, markerOffset: 10, bottomPadding: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("route_photos_header")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        MemoryRow(
+                            assetIds: model.routePhotos.prefix(4).map(\.phAssetId),
+                            total: model.routePhotos.count, side: 62
+                        )
+                    }
                 }
             }
         }
     }
 
-    private func dayHeader(_ day: TripDetailModel.StoryDay) -> some View {
-        HStack(spacing: 8) {
-            Text(String.localizedStringWithFormat(String(localized: "day_chip"), day.index + 1))
-                .font(.subheadline.weight(.semibold))
-            Text(day.date, format: .dateTime.weekday(.wide).day().month())
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    private func isLastRow(dayIndex: Int, entryIndex: Int) -> Bool {
+        guard model.routePhotos.isEmpty else { return false }
+        let days = model.storyDays
+        return dayIndex == days.count - 1 && entryIndex == (days.last?.entries.count ?? 0) - 1
+    }
+}
+
+/// `DAY 2 ───────── Tuesday, 4 Aug` — the editorial rule that makes a page of
+/// events read as a chronology.
+private struct DayAnchor: View {
+    let day: TripDetailModel.StoryDay
+    let isFirst: Bool
+
+    var body: some View {
+        TimelineRow(marker: .none, connectsUp: !isFirst, markerOffset: 14, bottomPadding: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                Text(String.localizedStringWithFormat(String(localized: "day_chip"), day.index + 1))
+                    .font(.caption.weight(.bold))
+                    .tracking(1.2)
+                    .textCase(.uppercase)
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.25))
+                    .frame(height: 1)
+                Text(day.date, format: .dateTime.weekday(.abbreviated).day().month())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 10)
         }
-        .padding(.top, 8)
         .accessibilityAddTraits(.isHeader)
     }
 }
 
-/// One stop: when, where, its photographs. Tapping edits; swiping merges or
-/// deletes, as before.
+/// A place, and what time the journey reached it.
 private struct StopRow: View {
     let stop: StopRecord
     let photos: [PhotoRefRecord]
     let model: TripDetailModel
+    let isLast: Bool
     let onEdit: (StopRecord) -> Void
 
     var body: some View {
         Button { onEdit(stop) } label: {
-            HStack(alignment: .top, spacing: 14) {
-                Circle()
-                    .fill(Color.accentColor)
-                    .frame(width: 10, height: 10)
-                    .padding(.top, 6)
-                VStack(alignment: .leading, spacing: 6) {
+            TimelineRow(marker: .place, connectsDown: !isLast, markerOffset: 9, bottomPadding: 22) {
+                VStack(alignment: .leading, spacing: 7) {
                     Text(Date(timeIntervalSince1970: stop.arrivedAt), style: .time)
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                     if let name = stop.name {
-                        Text(name).font(.title3.weight(.semibold))
+                        Text(name)
+                            .font(.system(.title3, design: .serif).weight(.semibold))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                     } else {
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.mini)
@@ -149,18 +188,22 @@ private struct StopRow: View {
                         }
                     }
                     if let note = stop.note, !note.isEmpty {
-                        Text(note).font(.subheadline).foregroundStyle(.secondary)
+                        Text(note)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
                     }
                     if !photos.isEmpty {
-                        PhotoStrip(photos: photos, maxThumbnails: 4, side: 72)
-                            .padding(.top, 2)
+                        MemoryRow(
+                            assetIds: photos.prefix(4).map(\.phAssetId), total: photos.count, side: 62
+                        )
+                        .padding(.top, 2)
                     }
                 }
-                Spacer(minLength: 0)
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(EntryPress())
         .contextMenu {
             Button(role: .destructive) { model.deleteStop(stopId: stop.id) } label: {
                 Label("delete_stop", systemImage: "trash")
@@ -175,41 +218,28 @@ private struct StopRow: View {
     }
 }
 
-/// The travel into a stop: how, how far, and how well the line is known.
-/// Uncertainty is a quiet word in the caption, not a warning.
-private struct LegConnector: View {
+/// **A journey event in its own right**: the travel between two places, on the
+/// rail, saying how far it went and how well the line is known. Uncertainty is
+/// a quiet clause here, never a warning — an inferred leg is an honest account
+/// of a journey nobody watched, not a fault.
+private struct LegRow: View {
     let leg: TripDetailModel.StoryLeg
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            Rectangle()
-                .fill(Color.accentColor.opacity(leg.provenance == .inferred ? 0.35 : 0.7))
-                .frame(width: 2, height: 28)
-                .padding(.horizontal, 4)
-            HStack(spacing: 6) {
-                ForEach(Array(leg.modes.enumerated()), id: \.offset) { _, mode in
-                    Image(systemName: Self.symbol(mode))
-                }
-                Text(Self.text(leg))
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        TimelineRow(marker: .transport(symbol), markerOffset: 11, bottomPadding: 22) {
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 2)
         }
         .accessibilityElement(children: .combine)
     }
 
-    private static func symbol(_ mode: TransportMode) -> String {
-        switch mode {
-        case .drive: return "car.fill"
-        case .scooter: return "scooter"
-        case .walk: return "figure.walk"
-        case .cycle: return "bicycle"
-        case .transit: return "tram.fill"
-        case .unknown: return "arrow.right"
-        }
+    private var symbol: String {
+        leg.isCrossing ? TransportGlyph.crossing : TransportGlyph.symbol(for: leg.modes.first ?? .unknown)
     }
 
-    private static func text(_ leg: TripDetailModel.StoryLeg) -> String {
+    private var text: String {
         var parts: [String] = []
         if leg.distanceM >= 1000 {
             parts.append(String.localizedStringWithFormat(String(localized: "journey_km"), leg.distanceM / 1000))
