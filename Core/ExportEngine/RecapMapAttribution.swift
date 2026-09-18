@@ -24,7 +24,8 @@ import Foundation
 /// `AboutView` already applies to its two licence URLs.
 public enum RecapMapAttribution {
     /// **What OpenFreeMap asks for**, VERIFIED 2026-09-09 from openfreemap.org
-    /// and from the TileJSON its styles declare.
+    /// and from the TileJSON its styles declare, **plus the terrain sources**
+    /// (addendum 2026-09-17).
     ///
     /// Two clauses with two different standings, worth keeping straight: the
     /// `Data from OpenStreetMap` half is the **ODbL obligation** and is not
@@ -32,7 +33,15 @@ public enum RecapMapAttribution {
     /// required. Carried whole because a credit that drops the half its host
     /// asks for, on a free planet-wide CDN with no key and no request limit, is
     /// a poor trade for 26 characters.
-    public static let openFreeMap = "OpenFreeMap © OpenMapTiles Data from OpenStreetMap"
+    ///
+    /// ⚠️ **Pending Chiu's approval** — the film credit string was frozen by
+    /// Chiu on 2026-09-13 and the terrain addition needs his sign-off. The
+    /// terrain sources that require attribution for Kamome's areas (VERIFIED
+    /// 2026-09-17, tilezen/joerd attribution.md): USGS (SRTM/GMTED2010, global),
+    /// LINZ (New Zealand, CC BY 3.0 NZ), Geoscience Australia (CC BY 4.0).
+    /// `AboutView` carries the full notices; this is the compact film form.
+    public static let openFreeMap =
+        "OpenFreeMap © OpenMapTiles Data from OpenStreetMap · Terrain: USGS/LINZ/GA"
 
     /// **What the parked souvenir substrate owes** — the self-hosted `.pmtiles`
     /// regions, whose vector data is OpenStreetMap's

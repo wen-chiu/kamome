@@ -12,6 +12,16 @@
     "openmaptiles": {
       "type": "vector",
       "url": "https://tiles.openfreemap.org/planet"
+    },
+    "kamome-terrain": {
+      "type": "raster-dem",
+      "tiles": [
+        "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+      ],
+      "encoding": "terrarium",
+      "tileSize": 256,
+      "maxzoom": 13,
+      "attribution": "Elevation data: Mapzen Terrain Tiles / AWS Open Data"
     }
   },
   "sprite": "https://tiles.openfreemap.org/sprites/ofm_f384/ofm",
@@ -22,6 +32,19 @@
       "type": "background",
       "paint": {
         "background-color": "#f8f4f0"
+      }
+    },
+    {
+      "id": "hillshade",
+      "type": "hillshade",
+      "source": "kamome-terrain",
+      "paint": {
+        "hillshade-exaggeration": 0.5,
+        "hillshade-shadow-color": "#5a6872",
+        "hillshade-highlight-color": "#ffffff",
+        "hillshade-accent-color": "#d0d8de",
+        "hillshade-illumination-direction": 315,
+        "hillshade-illumination-anchor": "map"
       }
     },
     {
@@ -1969,7 +1992,7 @@
     }
   ],
   "metadata": {
-    "kamome:forkedAgainstTileSet": "20260916_freeze",
+    "kamome:forkedAgainstTileSet": "20260917_freeze",
     "kamome:variant": "light"
   }
 }

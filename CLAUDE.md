@@ -34,11 +34,13 @@ never a work instruction.
    off-device, synced, sent to analytics or crash reporting, or committed to
    this repository. Real dumps live only in `Tests/Fixtures/trips/local/` and
    `Docs/tests/`, both gitignored. `KamomeLog` may name *which* stop failed,
-   never where it is. Decided exceptions, and only these: routing sends real leg
-   coordinates to Geoapify; map tile fetching reveals the trip's general area to
-   OpenFreeMap (ADR 2026-09-16); stop geocoding sends stop coordinates to Apple;
-   and one user-initiated share of one trip. Anything further is a product
-   decision for Chiu, never an implementation detail.
+   never where it is. Decided exceptions, and only these: routing positions to
+   Geoapify through Kamome's relay; map tiles to OpenFreeMap; terrain tiles to
+   AWS (ADR 2026-09-16, addendum 2026-09-17); stop names to Apple (Chiu
+   2026-09-17, subject to Apple's terms — see Part D); and one user-initiated
+   share of one trip. CLGeocoder output is not Map Data under DPLA Attachment 6
+   on the plain reading (ADR 2026-09-16 §6, Part D analysis). Anything further
+   is a product decision for Chiu, never an implementation detail.
 2. **Stop and confirm** before changing product behaviour, the Story/Rendering
    separation, the `RouteProvider` boundary, a public interface, what ships in
    MVP, or before adding a dependency.

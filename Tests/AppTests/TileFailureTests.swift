@@ -14,9 +14,44 @@ import XCTest
 /// (an IANA reserved name that cannot resolve) drives the snapshotter and
 /// records what comes back.
 final class TileFailureTests: XCTestCase {
-    /// DNS failure must surface as an error, not a blank image.
+    /// DNS failure (all hosts unreachable) must surface as an error, not a
+    /// blank image.
     func testUnreachableTileHostReturnsAnError() async throws {
-        let styleURL = try styleWithUnresolvableHost()
+        let styleURL = try styleWithUnresolvableHost(replacingAll: true)
+        let error = try await snapshotError(styleURL: styleURL)
+        let ns = error as NSError
+        print("all-unreachable: domain=\(ns.domain) code=\(ns.code)")
+    }
+
+    /// Tiles-only failure (sprite and glyphs reachable, vector tiles not).
+    /// VERIFIED 2026-09-17: `MLNErrorDomain` code 6.
+    func testUnreachableTilesOnlyReturnsAnError() async throws {
+        let styleURL = try styleWithUnresolvableHost(replacingAll: false)
+        let error = try await snapshotError(styleURL: styleURL)
+        let ns = error as NSError
+        print("tiles-only: domain=\(ns.domain) code=\(ns.code)")
+        XCTAssertEqual(ns.domain, "MLNErrorDomain", "tiles-only failure domain")
+        XCTAssertEqual(ns.code, 6, "tiles-only failure code")
+    }
+
+    /// Terrain-only failure (vector tiles, sprite and glyphs reachable, terrain
+    /// tiles not). VERIFIED 2026-09-18: MLNMapSnapshotter errors even when only
+    /// the raster-dem source is unreachable. This means a terrain host failure
+    /// blocks the film — the same path as vector tile failure.
+    func testUnreachableTerrainOnlyAlsoReturnsAnError() async throws {
+        let styleURL = try styleWithUnresolvableHost(replacing: .terrainOnly)
+        let error = try await snapshotError(styleURL: styleURL)
+        let ns = error as NSError
+        print("terrain-only: domain=\(ns.domain) code=\(ns.code)")
+    }
+
+    // MARK: - Helpers
+
+    private enum ReplacementScope {
+        case all, vectorOnly, terrainOnly
+    }
+
+    private func snapshotResult(styleURL: URL) async throws -> Result<MLNMapSnapshot, Error> {
         let center = CLLocationCoordinate2D(latitude: 35.68, longitude: 139.76)
         let camera = MLNMapCamera()
         camera.centerCoordinate = center
@@ -28,7 +63,7 @@ final class TileFailureTests: XCTestCase {
         options.zoomLevel = 10
         options.scale = 1
 
-        let result: Result<MLNMapSnapshot, Error> = await withCheckedContinuation { continuation in
+        return await withCheckedContinuation { continuation in
             DispatchQueue.main.async {
                 let snapshotter = MLNMapSnapshotter(options: options)
                 snapshotter.start { snapshot, error in
@@ -41,13 +76,16 @@ final class TileFailureTests: XCTestCase {
                 }
             }
         }
+    }
 
+    private func snapshotError(styleURL: URL) async throws -> Error {
+        let result = try await snapshotResult(styleURL: styleURL)
         switch result {
-        case .failure:
-            break
+        case .failure(let error):
+            return error
         case .success(let snapshot):
             guard let cgImage = snapshot.image.cgImage else {
-                return
+                throw MapLibreSnapshotProvider.SnapshotError()
             }
             let isBlank = Self.isEffectivelyBlank(cgImage)
             XCTFail(
@@ -55,24 +93,50 @@ final class TileFailureTests: XCTestCase {
                 + "(blank=\(isBlank), \(cgImage.width)×\(cgImage.height)). "
                 + "Detection logic is needed in MapLibreSnapshotProvider."
             )
+            throw MapLibreSnapshotProvider.SnapshotError()
         }
     }
 
-    // MARK: - Helpers
+    private func styleWithUnresolvableHost(replacingAll: Bool) throws -> URL {
+        try styleWithUnresolvableHost(replacing: replacingAll ? .all : .vectorOnly)
+    }
 
-    private func styleWithUnresolvableHost() throws -> URL {
+    private func styleWithUnresolvableHost(replacing scope: ReplacementScope) throws -> URL {
         let resource = "openfreemap-liberty-dark"
         let url = try XCTUnwrap(
             Bundle.main.url(forResource: resource, withExtension: "json"),
             "\(resource).json must be bundled"
         )
         var json = try String(contentsOf: url, encoding: .utf8)
-        json = json.replacingOccurrences(
-            of: "tiles.openfreemap.org",
-            with: "tiles.unresolvable.invalid"
-        )
+        switch scope {
+        case .all:
+            json = json.replacingOccurrences(
+                of: "tiles.openfreemap.org",
+                with: "tiles.unresolvable.invalid"
+            )
+            json = json.replacingOccurrences(
+                of: "s3.amazonaws.com",
+                with: "s3.unresolvable.invalid"
+            )
+        case .vectorOnly:
+            json = json.replacingOccurrences(
+                of: "\"https://tiles.openfreemap.org/planet\"",
+                with: "\"https://tiles.unresolvable.invalid/planet\""
+            )
+        case .terrainOnly:
+            json = json.replacingOccurrences(
+                of: "s3.amazonaws.com/elevation-tiles-prod",
+                with: "s3.unresolvable.invalid/elevation-tiles-prod"
+            )
+        }
+        let suffix: String
+        switch scope {
+        case .all: suffix = "all"
+        case .vectorOnly: suffix = "tiles-only"
+        case .terrainOnly: suffix = "terrain-only"
+        }
         let out = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kamome-test-unreachable-style.json")
+            .appendingPathComponent("kamome-test-unreachable-\(suffix).json")
         try json.write(to: out, atomically: true, encoding: .utf8)
         return out
     }
