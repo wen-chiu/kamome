@@ -2,10 +2,10 @@ import Foundation
 @testable import Kamome
 import XCTest
 
-/// Holds the frozen dark style (bundled JSON) equivalent to the Swift round-5
-/// transform applied to stock Liberty. The test loads both, strips the
-/// hillshade layer (D1 undecided), and compares layer by layer — ids, order,
-/// filters, paint, layout, sources.
+/// Holds the frozen styles (bundled JSON) equivalent to the Python transform
+/// applied to stock Liberty. The tests compare layer by layer — ids, order,
+/// filters, paint, layout — and also compare top-level `sources`, `glyphs`
+/// and `sprite`.
 ///
 /// Offline: the stock Liberty fixture is committed, never fetched.
 final class FrozenStyleEquivalenceTests: XCTestCase {
@@ -18,54 +18,121 @@ final class FrozenStyleEquivalenceTests: XCTestCase {
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    private func frozenDarkStyle() throws -> [String: Any] {
+    private func frozenStyle(resource: String) throws -> [String: Any] {
         let url = try XCTUnwrap(
-            Bundle.main.url(forResource: "openfreemap-liberty-dark", withExtension: "json"),
-            "openfreemap-liberty-dark.json must be bundled"
+            Bundle.main.url(forResource: resource, withExtension: "json"),
+            "\(resource).json must be bundled"
         )
         let data = try Data(contentsOf: url)
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    private func strippingHillshade(from style: [String: Any]) -> [String: Any] {
-        var style = style
-        if var sources = style["sources"] as? [String: Any] {
-            sources.removeValue(forKey: LibertyFork.terrainSourceID)
-            style["sources"] = sources
-        }
-        if let layers = style["layers"] as? [[String: Any]] {
-            style["layers"] = layers.filter {
-                ($0["source"] as? String) != LibertyFork.terrainSourceID
-            }
-        }
-        return style
-    }
+    // MARK: - Dark
 
     func testFrozenDarkMatchesRound5Transform() throws {
         let stock = try stockStyle()
         let round5 = try LibertyFork.forkedRound5(from: stock, peaks: LibertyFork.Round5.chosen)
-        let swift = strippingHillshade(from: round5)
-        let frozen = try frozenDarkStyle()
+        let frozen = try frozenStyle(resource: "openfreemap-liberty-dark")
 
+        compareTopLevel(swift: round5, frozen: frozen, variant: "dark")
+        try compareLayers(swift: round5, frozen: frozen, variant: "dark")
+    }
+
+    // MARK: - Light
+
+    func testFrozenLightMatchesRound5Transform() throws {
+        let stock = try stockStyle()
+        let frozen = try frozenStyle(resource: "openfreemap-liberty-light")
+
+        compareLightTopLevel(frozen: frozen)
+        try compareLightLayers(frozen: frozen)
+    }
+
+    /// Light and dark must share layer ids, order, filters and layout —
+    /// only colour values (paint) may differ.
+    func testLightAndDarkShareStructure() throws {
+        let dark = try frozenStyle(resource: "openfreemap-liberty-dark")
+        let light = try frozenStyle(resource: "openfreemap-liberty-light")
+
+        let darkLayers = dark["layers"] as? [[String: Any]] ?? []
+        let lightLayers = light["layers"] as? [[String: Any]] ?? []
+
+        let darkIDs = darkLayers.compactMap { $0["id"] as? String }
+        let lightIDs = lightLayers.compactMap { $0["id"] as? String }
+        XCTAssertEqual(darkIDs, lightIDs, "light and dark layer IDs or order differ")
+
+        for (darkLayer, lightLayer) in zip(darkLayers, lightLayers) {
+            let layerID = darkLayer["id"] as? String ?? "?"
+            compareFilter(swift: darkLayer, frozen: lightLayer, id: "light≡dark \(layerID)")
+            compareLayout(swift: darkLayer, frozen: lightLayer, id: "light≡dark \(layerID)")
+        }
+    }
+
+    // MARK: - Top-level comparisons
+
+    private func compareTopLevel(swift: [String: Any], frozen: [String: Any], variant: String) {
+        XCTAssertTrue(
+            jsonEqual(swift["sources"], frozen["sources"]),
+            "[\(variant)] sources differ"
+        )
+        XCTAssertTrue(
+            jsonEqual(swift["glyphs"], frozen["glyphs"]),
+            "[\(variant)] glyphs differ"
+        )
+        XCTAssertTrue(
+            jsonEqual(swift["sprite"], frozen["sprite"]),
+            "[\(variant)] sprite differ"
+        )
+    }
+
+    private func compareLightTopLevel(frozen: [String: Any]) {
+        let sources = frozen["sources"] as? [String: Any] ?? [:]
+        XCTAssertNotNil(sources["openmaptiles"], "light must have openmaptiles source")
+        XCTAssertNotNil(sources[LibertyFork.terrainSourceID], "light must have terrain source")
+        XCTAssertNotNil(frozen["glyphs"], "light must have glyphs")
+        XCTAssertNotNil(frozen["sprite"], "light must have sprite")
+    }
+
+    // MARK: - Layer comparisons
+
+    private func compareLayers(swift: [String: Any], frozen: [String: Any], variant: String) throws {
         let swiftLayers = try XCTUnwrap(swift["layers"] as? [[String: Any]])
         let frozenLayers = try XCTUnwrap(frozen["layers"] as? [[String: Any]])
 
         XCTAssertEqual(
             swiftLayers.count, frozenLayers.count,
-            "layer count: swift \(swiftLayers.count) vs frozen \(frozenLayers.count)"
+            "[\(variant)] layer count: swift \(swiftLayers.count) vs frozen \(frozenLayers.count)"
         )
 
         let swiftIDs = swiftLayers.compactMap { $0["id"] as? String }
         let frozenIDs = frozenLayers.compactMap { $0["id"] as? String }
-        XCTAssertEqual(swiftIDs, frozenIDs, "layer IDs or order differ")
+        XCTAssertEqual(swiftIDs, frozenIDs, "[\(variant)] layer IDs or order differ")
 
-        for (index, (swiftLayer, frozenLayer)) in zip(swiftLayers, frozenLayers).enumerated() {
-            let layerID = swiftLayer["id"] as? String ?? "(unnamed \(index))"
-            comparePaint(swift: swiftLayer, frozen: frozenLayer, id: layerID)
-            compareFilter(swift: swiftLayer, frozen: frozenLayer, id: layerID)
-            compareLayout(swift: swiftLayer, frozen: frozenLayer, id: layerID)
+        for (swiftLayer, frozenLayer) in zip(swiftLayers, frozenLayers) {
+            let layerID = swiftLayer["id"] as? String ?? "?"
+            comparePaint(swift: swiftLayer, frozen: frozenLayer, id: "[\(variant)] \(layerID)")
+            compareFilter(swift: swiftLayer, frozen: frozenLayer, id: "[\(variant)] \(layerID)")
+            compareLayout(swift: swiftLayer, frozen: frozenLayer, id: "[\(variant)] \(layerID)")
         }
     }
+
+    private func compareLightLayers(frozen: [String: Any]) throws {
+        let frozenLayers = try XCTUnwrap(frozen["layers"] as? [[String: Any]])
+        XCTAssertTrue(
+            frozenLayers.contains { ($0["id"] as? String) == "hillshade" },
+            "light must include the hillshade layer (D1)"
+        )
+        XCTAssertTrue(
+            frozenLayers.contains { ($0["id"] as? String) == "mountain-peak-dot" },
+            "light must include peak dots"
+        )
+        XCTAssertTrue(
+            frozenLayers.contains { ($0["id"] as? String) == "label_island" },
+            "light must include island labels"
+        )
+    }
+
+    // MARK: - Helpers
 
     private func comparePaint(swift: [String: Any], frozen: [String: Any], id: String) {
         let sp = swift["paint"] as? [String: Any] ?? [:]
@@ -84,7 +151,7 @@ final class FrozenStyleEquivalenceTests: XCTestCase {
     private func compareFilter(swift: [String: Any], frozen: [String: Any], id: String) {
         XCTAssertTrue(
             jsonEqual(swift["filter"], frozen["filter"]),
-            "\(id) filter differs: swift=\(String(describing: swift["filter"])) frozen=\(String(describing: frozen["filter"]))"
+            "\(id) filter differs"
         )
     }
 

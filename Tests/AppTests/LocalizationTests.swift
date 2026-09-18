@@ -114,20 +114,9 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("provenance_note", locale: "zh-Hant").contains("重建"))
     }
 
-    /// **The routing copy may only promise what Kamome controls** (Chiu
-    /// 2026-08-15), and this asserts it in both languages at once.
-    ///
-    /// The time budget is ours, so that case — and only that case — offers a
-    /// retry. The connection and rate-limit cases are someone else's failure:
-    /// they state the situation and stop. The no-road case promises nothing
-    /// because nothing is wrong; it is PD-1/PD-2 rendered as a sentence, and a
-    /// well-meaning "try exporting again" bolted onto it would turn an honest
-    /// account of the journey into a bug report.
-    ///
-    /// A retry promise appearing in one language and not the other is a defect,
-    /// not a stylistic difference — which is exactly what a translation pass
-    /// tends to introduce, and what a human reviewer reading one language at a
-    /// time cannot see.
+    /// Only the time-budget case is Kamome's fault and may promise a retry.
+    /// Connection, rate-limit, and no-road are someone else's — they state the
+    /// situation and stop. Both languages must agree.
     func testRoutingCopyPromisesARetryOnlyWhereKamomeIsAtFault() throws {
         // Matched loosely on purpose: the copy will be reworded, and the rule
         // has to survive the rewording. Any phrasing that tells the user to
@@ -352,5 +341,59 @@ final class LocalizationTests: XCTestCase {
         // the place named has to be the screen that actually exists.
         XCTAssertTrue(try localizedValue("first_run_where", locale: "en").contains("About"))
         XCTAssertTrue(try localizedValue("first_run_where", locale: "zh-Hant").contains("關於"))
+    }
+
+    // MARK: - The intro names the right sources (2026-09-17)
+
+    /// The intro must name OpenFreeMap, Amazon and Apple as recipients. It must
+    /// NOT say tiles come "from OpenStreetMap" — the request goes to OpenFreeMap;
+    /// OSM is the data, not the host.
+    func testPrivacyIntroNamesTheRightSources() throws {
+        for locale in ["en", "zh-Hant"] {
+            let intro = try localizedValue("privacy_intro", locale: locale)
+            XCTAssertTrue(
+                intro.contains("OpenFreeMap"),
+                "[\(locale)] the intro must name OpenFreeMap as tile source: \(intro)"
+            )
+            XCTAssertTrue(
+                intro.contains("Amazon"),
+                "[\(locale)] the intro must name Amazon as terrain tile source: \(intro)"
+            )
+            XCTAssertTrue(
+                intro.contains("Apple"),
+                "[\(locale)] the intro must name Apple as stop-name source: \(intro)"
+            )
+        }
+        let en = try localizedValue("privacy_intro", locale: "en")
+        XCTAssertFalse(
+            en.contains("from OpenStreetMap"),
+            "tiles come from OpenFreeMap, not OpenStreetMap — OSM is the data: \(en)"
+        )
+    }
+
+    func testTheHopSentenceNamesRoutePositions() throws {
+        let en = try localizedValue("privacy_hop_relay", locale: "en")
+        XCTAssertTrue(
+            en.lowercased().contains("positions"),
+            "the hop must say what goes through the relay — route positions: \(en)"
+        )
+        let zh = try localizedValue("privacy_hop_relay", locale: "zh-Hant")
+        XCTAssertTrue(
+            zh.contains("位置"),
+            "the hop must say what goes through the relay — route positions: \(zh)"
+        )
+    }
+
+    func testTheRecordedParagraphKeepsItsPromise() throws {
+        let en = try localizedValue("privacy_recorded_body", locale: "en")
+        XCTAssertTrue(
+            en.lowercased().contains("notice will say so") || en.lowercased().contains("notice will tell"),
+            "the promise about future disclosure must survive: \(en)"
+        )
+        let zh = try localizedValue("privacy_recorded_body", locale: "zh-Hant")
+        XCTAssertTrue(
+            zh.contains("寫明") || zh.contains("說明"),
+            "the promise about future disclosure must survive: \(zh)"
+        )
     }
 }

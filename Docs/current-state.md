@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-16 against decisions.md **2026-09-16** and `main` at
+Last synced: 2026-09-18 against decisions.md **2026-09-16** and `main` at
 **PR #69**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
 licence, routing-key and local-network ADRs 2026-09-12 (c)–(e); #69 updated
 privacy_intro wording.) Config flip made (S6 closed, S7 new — rotation owed). Film persists

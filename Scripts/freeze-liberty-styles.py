@@ -25,7 +25,39 @@ DARK_OUT = "Config/RecapThemes/openfreemap-liberty-dark.json"
 LIGHT_OUT = "Config/RecapThemes/openfreemap-liberty-light.json"
 
 # The tile set the committed styles were frozen against.
-FORKED_AGAINST_TILE_SET = "20260916_freeze"
+FORKED_AGAINST_TILE_SET = "20260917_freeze"
+
+
+# ── Terrain (D1: Chiu 2026-09-17 「D1 要 hillshade」) ──────────────────────
+
+TERRAIN_SOURCE_ID = "kamome-terrain"
+
+TERRAIN_SOURCE = {
+    "type": "raster-dem",
+    "tiles": ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+    "encoding": "terrarium",
+    "tileSize": 256,
+    "maxzoom": 13,
+    "attribution": "Elevation data: Mapzen Terrain Tiles / AWS Open Data"
+}
+
+DARK_HILLSHADE_PAINT = {
+    "hillshade-exaggeration": 0.85,
+    "hillshade-shadow-color": "#03070d",
+    "hillshade-highlight-color": "#4f7f95",
+    "hillshade-accent-color": "#0a1420",
+    "hillshade-illumination-direction": 315,
+    "hillshade-illumination-anchor": "map",
+}
+
+LIGHT_HILLSHADE_PAINT = {
+    "hillshade-exaggeration": 0.5,
+    "hillshade-shadow-color": "#5a6872",
+    "hillshade-highlight-color": "#ffffff",
+    "hillshade-accent-color": "#d0d8de",
+    "hillshade-illumination-direction": 315,
+    "hillshade-illumination-anchor": "map",
+}
 
 
 # ── Layer removals ──────────────────────────────────────────────────────
@@ -297,8 +329,24 @@ def transform(stock, dark=True):
 
     layers[insert_at:insert_at] = peaks
 
+    # 8. Terrain hillshade (D1, Chiu 2026-09-17)
+    hillshade_paint = DARK_HILLSHADE_PAINT if dark else LIGHT_HILLSHADE_PAINT
+    hillshade_layer = {
+        "id": "hillshade", "type": "hillshade", "source": TERRAIN_SOURCE_ID,
+        "paint": hillshade_paint,
+    }
+    # Directly above the land background, exactly where the souvenir map puts it.
+    if layers and layers[0].get("type") == "background":
+        layers.insert(1, hillshade_layer)
+    else:
+        layers.insert(0, hillshade_layer)
+
     style = dict(stock)
     style["layers"] = layers
+    # Add the terrain DEM source alongside the existing sources.
+    sources = dict(style.get("sources", {}))
+    sources[TERRAIN_SOURCE_ID] = TERRAIN_SOURCE
+    style["sources"] = sources
     style["metadata"] = {
         "kamome:forkedAgainstTileSet": FORKED_AGAINST_TILE_SET,
         "kamome:variant": "dark" if dark else "light",
