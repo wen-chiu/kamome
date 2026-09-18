@@ -9,7 +9,7 @@ gates the submission. The audience here is people Chiu knows — accepted
 2026-08-20 (`Docs/_archive/pre-launch.md`, "The TestFlight position"). D1–D5 and
 S7 do not block it; the TestFlight build is how D1–D5 get run.
 
-## Task 1 — the version comes from build settings (T1)
+## Task 1 — the version comes from build settings (T1) ✅ PR #76
 
 `App/Info.plist` (XcodeGen output, tracked) carries `CFBundleShortVersionString`
 `1.0` and `CFBundleVersion` `1` as literals; `project.yml`'s `MARKETING_VERSION`
@@ -24,7 +24,7 @@ App Store Connect refuses a build number it has already seen.
   kept for the App Store release. Each upload bumps `CURRENT_PROJECT_VERSION`.
 - Pass: the built `.app`'s `Info.plist` shows the two build-setting values.
 
-## Task 2 — a privacy manifest (T2)
+## Task 2 — a privacy manifest (T2) ✅ PR #76
 
 No `PrivacyInfo.xcprivacy` exists in the app target, and app code reads
 `UserDefaults` — `FirstRunNotice`, `JourneyNaming`, `LastVehicleChoice`,
@@ -44,7 +44,7 @@ MapLibre 6.27.0 ship their own manifests. That a missing one fails the upload
   Apple) is a product statement — Chiu's, owed at the App Store privacy label.
 - Pass: the file is in the built `.app`; `plutil -lint` clean.
 
-## Task 3 — export compliance (T3)
+## Task 3 — export compliance (T3) ✅ PR #76
 
 Add `ITSAppUsesNonExemptEncryption: false` to the `info.properties`.
 **Chiu 2026-09-18: set it to false if Kamome only uses HTTPS.** Checked 2026-09-18:
@@ -53,7 +53,7 @@ imports in `App`, `UI`, `Core`, `Package.swift`; plain GRDB (no SQLCipher); all
 traffic is `URLSession`/MapLibre/`CLGeocoder` over the OS's TLS. **Re-run that
 grep in the PR** — if anything turns up, stop and report instead of setting the key.
 
-## Task 4 — the app follows the device's appearance (ADR 2026-09-18 (d))
+## Task 4 — the app follows the device's appearance (ADR 2026-09-18 (d)) ✅ PR #76
 
 - Delete `.preferredColorScheme(.dark)` at `UI/Home/HomeView.swift:77`.
 - Rewrite the ⚠️ comment at `UI/Discovery/JourneyTimelineView.swift` (≈67) that
@@ -65,8 +65,12 @@ grep in the PR** — if anything turns up, stop and report instead of setting th
 - The light film style is **approved** (addendum to (d)) — light-mode films are
   intended, not a regression.
 - Do **not** write another ADR; (d) is the record.
+- **Captures still owed** (PR #76 checked S1 light+dark, first-run notice light,
+  About light): S3 (Trip Detail), the recap screen, Discovery beta (use
+  `-demo-discover` on the simulator), **light and dark**, and one film exported
+  in each mode. All require a trip with photos.
 
-## Task 5 — dismissing the first-run notice backgrounds the app
+## Task 5 — dismissing the first-run notice backgrounds the app ✅ PR #76 (non-reproduction)
 
 Found while verifying PR #44 (commit `625316b`), simulator-reproducible, no
 repro steps recorded, **UNKNOWN on device**. `HomeView` presents

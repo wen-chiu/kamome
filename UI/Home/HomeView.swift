@@ -74,7 +74,6 @@ struct HomeView: View {
             }
             #endif
         }
-        .preferredColorScheme(.dark) // dark-mode-first: maps look better (§5)
         .onAppear {
             #if DEBUG
             // Demo screenshot automation (Phase 2 gate): jump straight to S3.

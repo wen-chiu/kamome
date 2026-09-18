@@ -84,8 +84,10 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **TestFlight: three upload fixes, the appearance line, the first-run
-  notice that backgrounds the app, and the terrain credit (ADR 2026-09-18 (f)).**
+- 🟠 **TestFlight: Tasks 1–5 done (PR #76); Task 6 (terrain credit,
+  ADR 2026-09-18 (f)) pending.** T5 (first-run notice backgrounds the app):
+  did not reproduce on iPhone 17 Pro simulator, two fresh installs; cause
+  unknown; device verification deferred to TestFlight testing.
   → `Docs/handoff-testflight.md`.
 - 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
   checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'

@@ -64,13 +64,9 @@ struct JourneyTimelineView: View {
                 }
             }
         }
-        // ⚠️ **This inherits the home screen's `.preferredColorScheme(.dark)`**,
-        // because a sheet is presented inside that hierarchy and `nil` here does
-        // not undo an ancestor's preference (tried, 2026-09-18). So the beta is
-        // dark-mode-first exactly like the rest of the app. The light treatment
-        // is drawn and works — `~/Kamome-films/2026-09-18-journal/` — but it is
-        // unreachable until the home's override is lifted, which is the open
-        // half of ADR 2026-08-27 and Chiu's to decide.
+        // The app follows the device's appearance (ADR 2026-09-18 (d)), so
+        // this sheet inherits light or dark from the system. The light style
+        // is approved (addendum to (d)).
         .task { await model.refresh() }
     }
 
