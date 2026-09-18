@@ -6,16 +6,62 @@ import Photos
 import PhotosUI
 import UIKit
 
+/// What the app may read from the photo library, reduced to the four states
+/// the discovery home draws differently. Keeps `PHAuthorizationStatus` inside
+/// the PhotoKit adapters.
+enum PhotoReadAccess: Equatable {
+    /// Never asked. The home shows the welcome card rather than prompting.
+    case undetermined
+    case granted
+    /// Selected Photos: the library the app sees is the subset the user picked.
+    case limited
+    case denied
+}
+
+/// The one PhotoKit capability the discovery model needs beyond fetching:
+/// where access stands, and asking for it. A protocol so the model's tests
+/// never touch the system prompt.
+protocol PhotoAccessProviding: AnyObject {
+    var readAccess: PhotoReadAccess { get }
+    func requestReadAccess() async -> PhotoReadAccess
+    /// Under Selected Photos, the system picker that grows the selection.
+    func presentLimitedLibraryPicker(completion: @escaping () -> Void)
+}
+
 /// PhotoKit adapter for §4.3: fetch assets in the trip window, run the pure
 /// matcher, persist photo_refs. Limited library access works transparently —
 /// fetches simply return the user-selected subset.
-final class PhotoLibraryService {
+final class PhotoLibraryService: PhotoAccessProviding {
     private let config: TrackingConfig
     private let repository: TripRepository
 
     init(config: TrackingConfig, repository: TripRepository) {
         self.config = config
         self.repository = repository
+    }
+
+    var readAccess: PhotoReadAccess {
+        Self.access(PHPhotoLibrary.authorizationStatus(for: .readWrite))
+    }
+
+    /// Raises the system prompt if it has never been shown; otherwise answers
+    /// from the stored status without prompting.
+    func requestReadAccess() async -> PhotoReadAccess {
+        await withCheckedContinuation { continuation in
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+                continuation.resume(returning: Self.access(status))
+            }
+        }
+    }
+
+    private static func access(_ status: PHAuthorizationStatus) -> PhotoReadAccess {
+        switch status {
+        case .notDetermined: return .undetermined
+        case .authorized: return .granted
+        case .limited: return .limited
+        case .denied, .restricted: return .denied
+        @unknown default: return .denied
+        }
     }
 
     /// Under Selected Photos access, shots taken with the Camera app during a

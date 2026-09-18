@@ -5336,3 +5336,281 @@ Whether to pre-cache tiles for offline export. The pmtiles souvenir regions
 (dormant, not removed). Whether `MLNMapSnapshotter`'s partial tile failure (§5
 of the failure analysis in `RecapExportJob+Render.swift`) needs a retry or a
 blank-tile detector.
+
+## 2026-09-17 — The home is journey discovery: the library is read, nothing is saved until a journey is opened
+
+**Decision (Chiu's brief, 2026-09-17; engineering choices marked below).** The
+first screen is **Your Journeys**: the journeys Kamome found in the photo
+library, by year, each a card that already says where it went, when, how many
+photographs, and how it travelled. Tapping a card opens the journey's story —
+place, time, transport, route, photographs — and the one dominant action on it
+is **Make this a Film**. "Create a trip" is gone from the front; the date-range
+and album import sheet and live recording stay reachable from the toolbar menu,
+as the paths for a journey the library cannot see. The product loop the screen
+has to make obvious is *Discover → Understand → Remember → Create*.
+
+### What was built, and where the boundaries fell
+
+- **Detection is pure** — `JourneyDetector` in `KamomeImportKit`, beside the
+  clusterer. Home is the grid cell photographed across the most *distinct
+  weeks* (a fortnight abroad out-shoots a year at home but cannot out-span it);
+  photographs beyond `discovery.away_radius_m` of it are away; a run of away
+  photographs cut at `discovery.journey_gap_s` is a journey if it holds at
+  least `discovery.min_photos`. Every threshold is in `Config/TrackingConfig.json`
+  under `discovery`, and **every value is INFERRED** — a first guess against the
+  three dogfood trips, not measured over a range of libraries. The cheapest
+  thing that settles them is Chiu's own library on the phone.
+- **A journey's key is its first UTC day**, so adding photographs later does not
+  rename it, and **schema v6** adds `trip.discovery_key` (nullable, indexed) so a
+  rescan finds the trip it already made. NULL means "not from discovery": every
+  recording and manual import stays NULL. Forward-only, like v2–v5.
+- **Nothing is written by a scan.** `JourneyDiscoveryModel` holds discovered
+  journeys in memory; **opening one** is what runs the unchanged
+  `ImportService → StopNamer → RouteMatchCoordinator → RecapView` path and
+  what starts routing — the same user-initiated moment the import sheet was.
+  A hidden journey is remembered by key; deleting a stored trip may let the
+  scan find it again, which is the honest outcome of deleting the trip and not
+  the photographs.
+- **§0, stated exactly.** One new automatic network call exists: **one coarse
+  reverse-geocode per discovered journey**, plus one for home, to Apple's
+  geocoder — the service stop naming already uses and the privacy notice
+  already names. The difference is *timing*: stop naming ran after the user
+  imported; this runs when the home screen finds a journey. It is throttled at
+  `geocode.min_interval_s`, cached on device by journey key (names only, never
+  positions), and it is **Chiu's to keep or move behind the first tap** —
+  recorded here as a product decision inside the brief, not an implementation
+  detail. Routing still runs only on open. Nothing is uploaded, and the welcome
+  card says so in both languages (`LocalizationTests` holds it to that).
+- **The name rule** (`JourneyNaming`, pure): a journey inside
+  `discovery.single_place_extent_m` is the town ("Whitehorse"); wider is the
+  country ("Japan"); wider *and at home* is the region, because a domestic road
+  trip named after the home country says nothing. The flag is the ISO code.
+- **The detail is a story, and the map supports it.** Hero photographs, four
+  figures, a small map with its legend (solid = a known line, dashed = a guess,
+  PD-1), then day by day: each stop with its photographs, and between stops one
+  connector saying how, how far, and how honestly — *recorded*, *matched to
+  roads*, *inferred between photos*, or *a crossing*. The day-filter chips are
+  replaced by day headers; the stop editor, merge, delete, the ride and stored
+  films all remain. The four provenance labels the brief named are drawn as
+  **Photo-derived / Inferred route / Detected transportation** (from `mode`,
+  which is detected by pace on an import and by motion on a recording).
+  **"User-confirmed" is NOT drawn**: nothing in the schema records that a name
+  was typed rather than geocoded, and drawing the label without the fact would
+  be the claim rule 5 forbids. A `stop.name_source` column is the cheapest way
+  to earn it; not added here.
+- **The app now follows the system appearance** (engineering choice). Home
+  carried `.preferredColorScheme(.dark)` from the map-first days, and because
+  `RecapView` captures `@Environment(\colorScheme)` at the tap, every film made
+  from the app was dark regardless of the device. Removing the override is what
+  makes ADR 2026-08-27 ("the film follows the device's system appearance") true
+  on the shipping path. Flagged rather than buried: a light-mode film from the
+  app is now reachable for the first time.
+
+### Not decided here
+
+The thresholds (Chiu, from his library). Whether the geocode-at-discovery
+stays. A rename for trips (none exists; the resolved destination becomes the
+title at import). The "User-confirmed" label. Visual sign-off — a render is
+attached to the PR and the judgement is `DESIGNER.md`'s.
+
+## 2026-09-18 — The home and the journey are timelines, and the photographs are evidence inside them
+
+**Decision (Chiu, 2026-09-18).** The Journey Discovery screens built the day
+before were functionally right and **the wrong genre**: they led with a large
+photograph and hung the facts on it, which read as Apple Photos sorted by trip.
+Kamome is not a photo library. It is *an automatically written travel journal* —
+the user should feel **"Kamome reconstructed my journey and wrote the story for
+me"**, never "Kamome organised my photos".
+
+**The hierarchy is inverted, and this is the whole change:**
+
+    TIME → PLACE → JOURNEY EVENT → PHOTO
+
+not `PHOTO → metadata`. Photographs are memories and evidence *inside* a
+chronology; they are never the navigation structure.
+
+### The test this is held to
+
+**Cover every photograph.** If the screen still says *this is a journey I took,
+what happened, where I went, and when*, the architecture is right. If hiding the
+photographs empties the screen, it is photo-centric. Both screens are built to
+pass it, and the renders in `~/Kamome-films/2026-09-18-journal/` are judged with
+that question asked out loud.
+
+### What was built
+
+- **One rail, two scales** (`UI/Timeline/TimelineRail.swift`). Home is a
+  chronology of journeys; a journey is a chronology of days. They are the same
+  object drawn by the same primitive, so the product reads as one thing. The
+  rail is information, not decoration: it is what makes a page of events read as
+  time passing.
+- **A Home entry is a journal record**, not a card: the date anchors it, the
+  destination follows in editorial serif, then the route as named milestones
+  joined by the mode that travelled between them, then **three thumbnails at
+  54 pt**. The photo-cover card, its gradient scrim and its overlaid text are
+  gone, and so are the shadows and the large corner radii that made the list
+  read as an album shelf.
+- **A journey opens as a diary**: a text masthead (no hero photograph), a
+  tracked line of figures rather than a row of big numbers, a **150 pt map
+  strip** that supports the words instead of leading them, then day anchors with
+  an editorial rule, each carrying the travel that led there, the place it
+  reached, and the photographs taken there at 62 pt.
+- **Editorial type is the system serif** (`.system(_, design: .serif)`) on
+  years, destinations and place names only. No font resource is added and the
+  chrome stays SF: the structural layer is Apple's, the content layer is
+  Kamome's. It is the single strongest signal that this is a journal rather than
+  a gallery, which is why it earns a place against `DESIGNER.md`'s hard no on
+  new fonts.
+- **Distance is now told for imported trips.** `TripDetailModel.totalDistanceM`
+  sums the legs the diary already prints, so a trip with no `TripStats`
+  (`HANDOFF.md` finding 8) stops printing no kilometres at all. It is the
+  reader's own arithmetic, not a new estimate.
+
+### Two defects the first render caught, both now tested
+
+1. **"3 – AUG 5"** — the month sat on the closing date and the range read as a
+   typo. The month belongs to the opening date.
+2. **"Whitehorse › Whitehorse › Whitehorse"** — three stops around one town
+   geocode to one name. Consecutive repeats collapse; the stop *count* does not
+   change, and a genuine return (Kyoto → Nara → Kyoto) still prints twice.
+
+`JourneyTimelineTextTests` holds both, because both are the kind of defect that
+looks like a styling detail and is actually the screen lying about the journey.
+
+### Not decided here
+
+The architecture, which did not move: `JourneyDetector`, schema v6, the
+discovery config and the whole EXIF → Trip → Legs → Transportation → Route →
+Recap pipeline are untouched (ADR 2026-09-17). The `discovery` thresholds and
+the geocode-at-discovery question are still open and still Chiu's. Visual
+sign-off on the new language is `DESIGNER.md`'s, from the renders.
+
+## 2026-09-18 (b) — Journey Discovery is an added feature in beta; S1 stays the home
+
+**Decision (Chiu, 2026-09-18).** *「不要取代原本的首頁 而是將這個當新增功能 這先幫
+測試版 我希望原本的功能頁面繼續保留 我們先慢慢優化這個 UI 在看後面如何修改」* —
+Journey Discovery does **not** replace the home screen. It is an added feature,
+in beta, and the original functional pages keep working untouched while its UI
+is refined.
+
+**What this reverses.** ADRs 2026-09-17 and 2026-09-18 replaced `HomeView` (S1)
+and `TripDetailView` (S3) in place. Both are **restored from `9313573`** and are
+now byte-identical to what shipped before this line of work, with two additions
+that change nothing on them:
+
+1. one toolbar button opening the beta, beside the existing info button and
+   inside the **same** `ToolbarItem` — two items at `.topBarTrailing` is what
+   lost the info button on a relaunch (2026-09-02), and that button carries a
+   licence obligation;
+2. `PhotoThumbnail` gains `targetPx`, defaulting to the 100 px it always
+   requested, so every original call site behaves exactly as before.
+
+**Where the new work lives.** `UI/Discovery/` holds the whole feature —
+`JourneyTimelineView` (the beta screen, presented as a sheet), `JourneyDiaryView`
+(its own detail), the entry, the summary, the states and the model. The shared
+timeline primitive stays in `UI/Timeline/`. **Two detail screens now exist on
+purpose**: S3 is the shipping trip screen, the diary is the beta's, and both read
+one `TripDetailModel`, so they cannot disagree about a journey.
+
+**What the beta deliberately does not have.** Import and live capture. Adding a
+journey the library cannot see is the home screen's job, and duplicating it into
+the beta would be the second place for that flow to drift.
+
+**Two consequences, stated rather than buried:**
+
+- 🔴 **The film-appearance fix from ADR 2026-09-17 is reverted with S1.** The
+  home carries `.preferredColorScheme(.dark)` again, so `RecapView` captures dark
+  at the tap and **every film exported from the app is dark whatever the device
+  is set to** — the gap ADR 2026-08-27 named. The beta inherits it too: a sheet
+  cannot undo an ancestor's preference (`nil` was tried, 2026-09-18). The light
+  treatment is drawn, works, and is rendered in
+  `~/Kamome-films/2026-09-18-journal/`, but it is **unreachable until Chiu lifts
+  the override**, which is a one-line change and his call.
+- The beta can create a trip (opening a discovered journey imports it) and can
+  delete one, so the home refreshes its list when the sheet closes.
+
+**Not decided here:** when, or whether, the beta is promoted to the home. That is
+a decision to take when the UI is judged good enough, not a leftover step — and
+until it is taken, S1 is the home.
+
+## 2026-09-18 (c) — Before merge: home is never looked up, the welcome card says what leaves, and S1's title is S1's
+
+**Found while merging PR #70/#71 into this branch, and fixed before the PR, not
+after.** Chiu's instruction was to merge *if there were no issues*; there were
+three in this branch's own work, all fixed here, and one conflict between two of
+his decisions that is recorded, not resolved.
+
+### 1. The inferred home location was sent to Apple — removed
+
+ADR 2026-09-17 disclosed "one coarse reverse-geocode per discovered journey,
+**plus one for home**", and that second clause was under-weighted. The detector
+estimates where the user lives on device, which is fine: it only decides what
+counts as "away". The naming task then **sent that estimate to Apple's
+geocoder**, automatically, the moment the beta opened, to learn home's country.
+Home is the most sensitive coordinate in a photo library, and it is not a stop,
+so it was **not** covered by the notice PR #71 settled — *"stop names from Apple"*
+(ADR 2026-09-16 §4).
+
+The rule only ever needed home's **country code**, and the device's region
+setting already knows it. `JourneyNaming` now takes `homeCountryCode` from
+`Locale.current.region`, the home lookup and its cache are deleted, and
+`JourneyDiscoveryModelTests.testTheHomeLocationIsNeverSentToTheGeocoder` fails
+if one returns. **What leaves now:** one coordinate per journey — its busiest
+stop — to Apple, for its name. That is the payload the notice names; only its
+*timing* (at discovery, not on opening a trip) remains Chiu's to decide
+(ADR 2026-09-17).
+
+**The cost, stated:** someone whose region setting is not where they live gets a
+domestic journey named by country rather than region. A naming cost, traded for
+a privacy cost.
+
+**PR #72 then made this a requirement rather than a judgement.** It merged while
+this branch was being merged, and records Chiu's scope for the Apple exception:
+*「停留點一定只能送 apple 去問」* — **stop points only** (ADR 2026-09-16). A home
+location is not a stop point, so the lookup removed above would have been
+outside the exception. The same scope caught one more path: a discovered
+journey whose photographs never clustered into a stop fell back to geocoding
+**the centroid of all of them**, which is not a stop either. That fallback is
+removed; such a journey is not looked up and keeps its month title
+(`testAJourneyWithNoStopIsNeverLookedUp`). **Every coordinate the beta sends is
+now a stop point, to Apple, for its name** — inside the decided exception, with
+only its timing still Chiu's to rule on.
+
+### 2. The welcome card said "nothing is uploaded" — it now says what leaves, and that it is a stop
+
+It read *"Nothing is uploaded"* while each journey's coordinates went to Apple to
+be named — the understatement `LocalizationTests` exists to catch, and my own
+test asserted the false wording. After the merge it also contradicted
+`privacy_intro`, which PRs #71–#72 made say Kamome *asks Apple for stop names*.
+The card now says photos never leave, nothing is saved until opened, and **Apple
+is asked for the name of each journey's main stop, which sends that stop's
+coordinates** — the same words as `privacy_intro`, and the same scope as Chiu's
+exception. The test asserts all four, in both languages, and asserts the
+overclaim cannot return. The test
+got stricter, not looser: it now enforces a disclosure instead of a denial.
+
+### 3. The original home's title had changed — restored
+
+ADR 2026-09-18 (b) said S1 was restored with only additive changes. It was not
+quite: `home_title` had been renamed *My Journeys → Your Journeys* (我的旅程 →
+你的旅程) for the beta, and S1 reads that key. The beta now has
+`discovery_title`, `home_title` is back to its original value, and the
+localization test holds S1's title fixed. `journey_add` and `live_capture_body`,
+orphaned when the redesigns removed their screens, are deleted.
+
+### 4. 🔴 A conflict between two of Chiu's decisions — recorded, not resolved
+
+ADR 2026-09-16 ships **light and dark** OpenFreeMap styles as production assets
+and has the film follow the device (*「Light + Dark 都做成 production assets」*;
+`fixedAppearance` is nil on that path). But `RecapView` captures
+`@Environment(\.colorScheme)` at the tap, and S1 carries
+`.preferredColorScheme(.dark)` — so **the app always requests dark, and the
+light production style is unreachable from the shipping path.**
+
+**This is on `main` independently of this branch**: PR #71 shipped the light
+style without touching S1, and this branch restored S1 verbatim, so it neither
+causes nor fixes it. Fixing it means deleting one line from S1, which changes how
+the original home looks in light mode — and Chiu's instruction of 2026-09-18 is
+that the original pages stay as they are. Two decisions of his, same level,
+pulling opposite ways: `CLAUDE.md` says state it, never pick. **One line in S1;
+his call.**

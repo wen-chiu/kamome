@@ -140,4 +140,25 @@ final class SchemaTests: XCTestCase {
         XCTAssertFalse(TripSource.recorded.isReconstructed)
         XCTAssertEqual(SegmentSource(storage: nil), .gpsHifi)
     }
+
+    // MARK: - Schema v6 (journey discovery)
+
+    /// The discovery key is nullable and indexed, and every row that predates
+    /// it reads NULL — a recording or a manual import is not "from discovery".
+    func testMigrationToV6AddsANullableIndexedDiscoveryKey() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v5")
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO trip (id, title, started_at, status) VALUES ('t1', 'Legacy', 0, 'completed')")
+        }
+
+        try AppDatabase.migrator.migrate(queue)
+
+        try queue.read { db in
+            XCTAssertTrue(try db.columns(in: "trip").map(\.name).contains("discovery_key"))
+            XCTAssertNil(try String.fetchOne(db, sql: "SELECT discovery_key FROM trip WHERE id = 't1'"))
+            let indexes = try String.fetchSet(db, sql: "SELECT name FROM sqlite_master WHERE type = 'index'")
+            XCTAssertTrue(indexes.contains("idx_trip_discovery_key"))
+        }
+    }
 }

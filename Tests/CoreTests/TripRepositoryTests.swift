@@ -232,4 +232,35 @@ final class TripRepositoryTests: XCTestCase {
         XCTAssertNil(cleared.vehicle)
         XCTAssertEqual(cleared.vehicleId, "car-red")
     }
+
+    // MARK: - Journey discovery (schema v6)
+
+    /// A trip made from a discovered journey is found by its key, and a trip
+    /// that was not is not — the guard against importing a journey twice.
+    func testATripIsFoundByItsDiscoveryKey() throws {
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let stop = TripRepository.NewStopWithPhotos(
+            stop: TripRepository.NewStop(lat: 35.68, lon: 139.65, arrivedAt: 0, departedAt: 600),
+            photos: [TripRepository.NewPhoto(assetId: "a"), TripRepository.NewPhoto(assetId: "b", isHighlight: true)]
+        )
+        let discovered = try repository.saveImportedTrip(TripRepository.ImportedTrip(
+            title: "Japan", startedAt: 0, endedAt: 600, source: TripSource.importedPhotos.rawValue,
+            segments: [], stopsWithPhotos: [stop], routeAttachedPhotos: [], discoveryKey: "journey-0"
+        ))
+        let manual = try repository.saveImportedTrip(TripRepository.ImportedTrip(
+            title: "By album", startedAt: 0, endedAt: 600, source: TripSource.importedPhotos.rawValue,
+            segments: [], stopsWithPhotos: [stop], routeAttachedPhotos: []
+        ))
+
+        XCTAssertEqual(try repository.trip(discoveryKey: "journey-0")?.id, discovered)
+        XCTAssertNil(try repository.trip(discoveryKey: "journey-1"))
+        XCTAssertNil(try repository.detail(tripId: manual)?.trip.discoveryKey)
+
+        let facts = try repository.journeyCardFacts(tripId: discovered)
+        XCTAssertEqual(facts.photos.map(\.phAssetId), ["a", "b"])
+        XCTAssertEqual(facts.stopCount, 1)
+        XCTAssertEqual(facts.filmCount, 0)
+        XCTAssertEqual(facts.nameLookupLat ?? 0, 35.68, accuracy: 0.0001)
+        XCTAssertEqual(facts.stopSpan?.latDeg, 0, "one stop spans nothing")
+    }
 }

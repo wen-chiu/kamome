@@ -105,6 +105,14 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
         // The widest range the picker will hold, as a sliding window (Chiu's 21).
         XCTAssertEqual(config.photoImport.maxRangeDays, 21)
+        // Journey discovery (2026-09-17) — first guesses, INFERRED not measured.
+        XCTAssertEqual(config.discovery.lookbackYears, 5)
+        XCTAssertEqual(config.discovery.homeCellDeg, 0.5)
+        XCTAssertEqual(config.discovery.awayRadiusM, 40_000)
+        XCTAssertEqual(config.discovery.journeyGapS, 172_800)
+        XCTAssertEqual(config.discovery.minPhotos, 8)
+        XCTAssertEqual(config.discovery.singlePlaceExtentM, 60_000)
+        XCTAssertEqual(config.discovery.coverPhotos, 3)
     }
 
     /// The §4.5 recap-export block: frame, pacing, prologue, duration window.

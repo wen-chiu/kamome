@@ -37,6 +37,57 @@
         }
       }
     },
+    "access_denied_body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journeys are found from where and when your photos were taken. Allow photo access in Settings and Kamome will look again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程是從相片的拍攝地點與時間找出來的。請在「設定」中允許相片存取，卡摸咩會再看一次。"
+          }
+        }
+      }
+    },
+    "access_denied_settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開設定"
+          }
+        }
+      }
+    },
+    "access_denied_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome can’t see your photos yet."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩還看不到你的相片。"
+          }
+        }
+      }
+    },
     "acknowledgements_header": {
       "extractionState": "manual",
       "localizations": {
@@ -203,6 +254,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除停留點"
+          }
+        }
+      }
+    },
+    "discovery_beta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beta"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測試版"
+          }
+        }
+      }
+    },
+    "discovery_open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discover journeys"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "探索旅程"
+          }
+        }
+      }
+    },
+    "discovery_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Journeys"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的旅程"
           }
         }
       }
@@ -649,6 +751,275 @@
         }
       }
     },
+    "journey_days": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld days"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 天"
+          }
+        }
+      }
+    },
+    "journey_delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete journey"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除旅程"
+          }
+        }
+      }
+    },
+    "journey_delete_confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this journey and its films? Your photos are untouched."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除這段旅程和它的影片嗎？你的相片不會受影響。"
+          }
+        }
+      }
+    },
+    "journey_hide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide this journey"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱藏這段旅程"
+          }
+        }
+      }
+    },
+    "journey_km": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.0f km"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.0f 公里"
+          }
+        }
+      }
+    },
+    "journey_m": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.0f m"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.0f 公尺"
+          }
+        }
+      }
+    },
+    "journey_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 張相片"
+          }
+        }
+      }
+    },
+    "journey_places": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld place"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld places"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個地點"
+          }
+        }
+      }
+    },
+    "journey_stops": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld stop"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld stops"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個停留"
+          }
+        }
+      }
+    },
+    "leg_crossing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no road — a crossing"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有道路——一段跨越"
+          }
+        }
+      }
+    },
+    "leg_inferred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "inferred between photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相片之間推測"
+          }
+        }
+      }
+    },
+    "leg_matched": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "matched to roads"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已對齊道路"
+          }
+        }
+      }
+    },
+    "leg_recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recorded"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已記錄"
+          }
+        }
+      }
+    },
     "limited_photos_albums_notice": {
       "extractionState": "manual",
       "localizations": {
@@ -717,6 +1088,23 @@
         }
       }
     },
+    "make_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make this a Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "做成一部影片"
+          }
+        }
+      }
+    },
     "merge_with_previous": {
       "extractionState": "manual",
       "localizations": {
@@ -747,6 +1135,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在辨識停留地點… %1$d / %2$d"
+          }
+        }
+      }
+    },
+    "nothing_found_body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome looks for geotagged photos taken away from home. When you next travel, this is where the journey will appear — or import one by date or album."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩會尋找離家拍攝、帶有位置的相片。下次旅行後，旅程就會出現在這裡——也可以依日期或相簿匯入。"
+          }
+        }
+      }
+    },
+    "nothing_found_limited": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome can only see the photos you selected. Select more, or import a journey by date or album."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩只看得到你選取的相片。可以選取更多，或依日期、相簿匯入旅程。"
+          }
+        }
+      }
+    },
+    "nothing_found_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No journeys yet."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有找到旅程。"
           }
         }
       }
@@ -1023,6 +1462,38 @@
         }
       }
     },
+    "privacy_tiles_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Kamome renders a film, it downloads vector map tiles (z14) from OpenFreeMap and terrain tiles (z13) from Amazon for the area the trip covers. The sequence of tile requests follows the route. OpenFreeMap requires no account and no API key; both hosts see this device's IP address, the tile coordinates, a User-Agent string and the time of each request."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩製作影片時，會從 OpenFreeMap 下載該旅程所涵蓋區域的向量地圖圖磚（z14），以及從 Amazon 下載地形圖磚（z13）。圖磚請求的順序會沿路線進行。OpenFreeMap 不需要帳號也不需要 API 金鑰；兩個主機都看得到這台裝置的 IP 位址、圖磚座標、User-Agent 字串及每次請求的時間。"
+          }
+        }
+      }
+    },
+    "privacy_tiles_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map tiles"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地圖圖磚"
+          }
+        }
+      }
+    },
     "provenance_badge": {
       "extractionState": "manual",
       "localizations": {
@@ -1053,6 +1524,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "這趟旅程根據相片的位置與時間重建，並非實際記錄的軌跡。"
+          }
+        }
+      }
+    },
+    "provenance_recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recorded"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即時記錄"
           }
         }
       }
@@ -1759,6 +2247,23 @@
         }
       }
     },
+    "scanning_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looking through your photos…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在翻閱你的相片…"
+          }
+        }
+      }
+    },
     "start_journey": {
       "extractionState": "manual",
       "localizations": {
@@ -1980,6 +2485,108 @@
         }
       }
     },
+    "story_identifying": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifying this place…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在辨識這個地方…"
+          }
+        }
+      }
+    },
+    "story_map_label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Route map"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路線地圖"
+          }
+        }
+      }
+    },
+    "story_provenance_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rebuilt from your photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從你的相片重建"
+          }
+        }
+      }
+    },
+    "story_provenance_recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recorded live by Kamome"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由卡摸咩即時記錄"
+          }
+        }
+      }
+    },
+    "story_ride": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your ride"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的座駕"
+          }
+        }
+      }
+    },
+    "story_roads_arriving": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding roads…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在尋找道路…"
+          }
+        }
+      }
+    },
     "vehicle_bicycle": {
       "extractionState": "manual",
       "localizations": {
@@ -2048,34 +2655,70 @@
         }
       }
     },
-    "privacy_tiles_title": {
+    "welcome_body": {
+      "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Map tiles"
+            "value": "Your photos remember every journey — where you went, when, and how. Kamome finds them and turns each one into a film worth keeping."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "地圖圖磚"
+            "value": "你的相片記得每一趟旅程——去了哪裡、什麼時候、怎麼去。卡摸咩會找出它們，把每一趟做成值得留下的影片。"
           }
         }
       }
     },
-    "privacy_tiles_body": {
+    "welcome_find": {
+      "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When Kamome renders a film, it downloads vector map tiles (z14) from OpenFreeMap and terrain tiles (z13) from Amazon for the area the trip covers. The sequence of tile requests follows the route. OpenFreeMap requires no account and no API key; both hosts see this device's IP address, the tile coordinates, a User-Agent string and the time of each request."
+            "value": "Find my journeys"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩製作影片時，會從 OpenFreeMap 下載該旅程所涵蓋區域的向量地圖圖磚（z14），以及從 Amazon 下載地形圖磚（z13）。圖磚請求的順序會沿路線進行。OpenFreeMap 不需要帳號也不需要 API 金鑰；兩個主機都看得到這台裝置的 IP 位址、圖磚座標、User-Agent 字串及每次請求的時間。"
+            "value": "找出我的旅程"
+          }
+        }
+      }
+    },
+    "welcome_privacy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome reads where and when your photos were taken. Your photos never leave this device, and no journey is saved until you open it. To name each journey, Kamome asks Apple for the name of its main stop, which means sending that stop's coordinates."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩只讀取相片的拍攝地點與時間。相片不會離開這台裝置，打開之前也不會儲存任何旅程。為了替每趟旅程命名，卡摸咩會向 Apple 查詢其主要停留點的名稱，因此會送出該停留點的座標。"
+          }
+        }
+      }
+    },
+    "welcome_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome already knows where you’ve been."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩已經知道你去過哪裡。"
           }
         }
       }

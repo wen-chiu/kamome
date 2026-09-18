@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-18 against decisions.md **2026-09-16** and `main` at
-**PR #69**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
+Last synced: 2026-09-18 against decisions.md **2026-09-18 (c)** and `main` at
+**PR #73**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
 licence, routing-key and local-network ADRs 2026-09-12 (c)–(e); #69 updated
 privacy_intro wording.) Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
@@ -68,9 +68,15 @@ P7 backend deferred.
 **Every Phase 4 film that was in flight has landed and been judged**, the type-2
 opening included — retimed, with a boarding pass, a plane and two marked flight
 ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's judgement, in
-`HANDOFF.md`, which wins on findings and blockers. ⚠️ **The production switch is
-in flight**: OpenFreeMap + MapLibre replaces Apple Maps in the export, with no
-Apple fallback (ADR 2026-09-09 evaluated; this branch switches).
+`HANDOFF.md`, which wins on findings and blockers. ✅ **The production switch has
+landed** (ADR 2026-09-16, PRs #71–#72): OpenFreeMap + MapLibre replaces Apple Maps
+in the export, with no Apple fallback, and Apple geocoding is a §0 exception
+scoped to **stop points** (#72). **Journey Discovery ships as an added feature
+in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
+restored untouched, the feature lives behind one toolbar button, and home is
+never looked up. 🔴 **Open for Chiu:** the discovery thresholds (INFERRED), the
+geocode-at-discovery timing, and S1's `.preferredColorScheme(.dark)` — which
+makes 2026-09-16's light film style unreachable (2026-09-18 (c) §4).
 
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — then Chiu's submission sequence, the

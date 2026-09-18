@@ -28,6 +28,10 @@ struct PhotoStrip: View {
 struct PhotoThumbnail: View {
     let assetId: String
     var isHighlight = false
+    /// Longest side requested from PhotoKit, in pixels. The default is the size
+    /// the timeline rows have always asked for; the Journey Discovery beta's
+    /// larger tiles pass their own.
+    var targetPx: Int = 100
 
     @State private var image: UIImage?
 
@@ -53,7 +57,7 @@ struct PhotoThumbnail: View {
                     .padding(2)
             }
         }
-        .task(id: assetId) { await loadThumbnail() }
+        .task(id: "\(assetId)-\(targetPx)") { await loadThumbnail() }
     }
 
     private func loadThumbnail() async {
@@ -66,11 +70,12 @@ struct PhotoThumbnail: View {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.isNetworkAccessAllowed = false
+        let side = CGFloat(max(targetPx, 1))
         image = await withCheckedContinuation { continuation in
             var resumed = false
             manager.requestImage(
                 for: asset,
-                targetSize: CGSize(width: 100, height: 100),
+                targetSize: CGSize(width: side, height: side),
                 contentMode: .aspectFill,
                 options: options
             ) { result, _ in

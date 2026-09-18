@@ -2,6 +2,8 @@ import Foundation
 import KamomeConfig
 import KamomeExportEngine
 import KamomePersistence
+import KamomeRouteMatching
+import KamomeTrackingEngine
 import KamomeTripComposer
 import Observation
 
@@ -157,6 +159,115 @@ final class TripDetailModel {
 
     var stats: TripStats? {
         TripStats.from(jsonString: detail?.trip.statsJson)
+    }
+
+    // MARK: - The story (Journey Discovery detail, 2026-09-17)
+
+    /// The name the home card resolved for this journey, if it did. Read from
+    /// the same cache the card writes, so the two screens cannot disagree.
+    var journeyName: JourneyName? {
+        guard let detail else { return nil }
+        let lats = detail.stops.map(\.lat)
+        let lons = detail.stops.map(\.lon)
+        var extentM = 0.0
+        if let minLat = lats.min(), let maxLat = lats.max(), let minLon = lons.min(), let maxLon = lons.max() {
+            extentM = Geo.distanceM(latA: minLat, lonA: minLon, latB: maxLat, lonB: maxLon)
+        }
+        return JourneyNameCache().name(
+            for: detail.trip.discoveryKey ?? detail.trip.id,
+            homeCountryCode: JourneyNameCache.deviceHomeCountryCode,
+            isSinglePlace: extentM < config.discovery.singlePlaceExtentM
+        )
+    }
+
+    /// One stretch of travel between two stops, as the story tells it: how, how
+    /// far, and how honestly the line is known. Aggregated from every segment
+    /// that starts inside the gap, so a recording with many mode changes reads
+    /// as one connector rather than a list.
+    struct StoryLeg: Equatable, Identifiable {
+        let id: String
+        let modes: [TransportMode]
+        /// The weakest claim any of the segments makes: inferred beats
+        /// reconstructed beats recorded, because a line is only as honest as its
+        /// least-known stretch.
+        let provenance: RouteProvenance
+        let distanceM: Double
+        let isCrossing: Bool
+    }
+
+    /// The stops of one calendar day of the trip, with the connector that
+    /// leads *into* each stop (nil for the first stop of the journey).
+    struct StoryDay: Equatable, Identifiable {
+        let index: Int
+        let date: Date
+        let entries: [(leg: StoryLeg?, stop: StopRecord)]
+        var id: Int { index }
+
+        static func == (lhs: StoryDay, rhs: StoryDay) -> Bool {
+            lhs.index == rhs.index && lhs.entries.map(\.stop) == rhs.entries.map(\.stop)
+                && lhs.entries.map(\.leg) == rhs.entries.map(\.leg)
+        }
+    }
+
+    /// **The distance the diary itself adds up.** An imported trip carries no
+    /// `TripStats` (`HANDOFF.md` finding 8), so this is the only total that can
+    /// be told truthfully about one — and it is the sum of the very numbers the
+    /// connectors below print, so a reader can check it by hand.
+    var totalDistanceM: Double {
+        storyDays.flatMap(\.entries).compactMap { $0.leg?.distanceM }.reduce(0, +)
+    }
+
+    var storyDays: [StoryDay] {
+        guard let detail else { return [] }
+        let stops = detail.stops
+        var entries: [(leg: StoryLeg?, stop: StopRecord)] = []
+        for (index, stop) in stops.enumerated() {
+            let from = index == 0 ? detail.trip.startedAt : (stops[index - 1].departedAt ?? stops[index - 1].arrivedAt)
+            let leg = index == 0 ? nil : storyLeg(between: from, and: stop.arrivedAt, id: stop.id)
+            entries.append((leg, stop))
+        }
+        let grouped = Dictionary(grouping: entries) { dayIndex(of: $0.stop.arrivedAt) }
+        return grouped.keys.sorted().map { day in
+            StoryDay(
+                index: day,
+                date: Date(timeIntervalSince1970: detail.trip.startedAt + Double(day) * 86_400),
+                entries: grouped[day] ?? []
+            )
+        }
+    }
+
+    /// Every segment that starts in `[from, to]`, folded into one connector.
+    private func storyLeg(between from: Double, and to: Double, id: String) -> StoryLeg? {
+        guard let detail else { return nil }
+        let inside = detail.segments.filter { $0.segment.startedAt >= from - 1 && $0.segment.startedAt <= to + 1 }
+        guard !inside.isEmpty else { return nil }
+        var modes: [TransportMode] = []
+        var distance = 0.0
+        var provenance = RouteProvenance.recorded
+        var crossing = false
+        for item in inside {
+            let mode = TransportMode(rawValue: item.segment.mode) ?? .unknown
+            if modes.last != mode { modes.append(mode) }
+            distance += Self.length(of: item)
+            let claim = RecapComposer.provenance(for: item.segment)
+            if claim == .inferred || (claim == .reconstructed && provenance == .recorded) { provenance = claim }
+            crossing = crossing || RecapComposer.isCrossing(item.segment)
+        }
+        return StoryLeg(id: "leg-\(id)", modes: modes, provenance: provenance, distanceM: distance, isCrossing: crossing)
+    }
+
+    /// Along the road when one was matched, else along the raw points — the
+    /// same choice the film makes (`RecapComposer.legs`).
+    private static func length(of item: (segment: SegmentRecord, points: [TrackpointRecord])) -> Double {
+        let coordinates: [(lat: Double, lon: Double)]
+        if let encoded = item.segment.matchedPolyline, case let decoded = EncodedPolyline.decode(encoded), decoded.count >= 2 {
+            coordinates = decoded.map { ($0.lat, $0.lon) }
+        } else {
+            coordinates = item.points.map { ($0.lat, $0.lon) }
+        }
+        return zip(coordinates, coordinates.dropFirst()).reduce(0.0) { sum, pair in
+            sum + Geo.distanceM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
+        }
     }
 
     func photos(for stopId: String) -> [PhotoRefRecord] {

@@ -5,11 +5,18 @@ import UIKit
 
 /// S1 Home / Trip List: trip cards (title, date, distance, stops), vehicle
 /// selector, big Start button. Cover map thumbnails remain a later polish.
+///
+/// ⚠️ **This screen stays the home** (Chiu, 2026-09-18). Journey Discovery is an
+/// *added* feature in beta, not a replacement: it is one toolbar button away and
+/// opens as its own screen, so everything below — the trip list, import, live
+/// capture, the licence anchor — keeps working exactly as it did while the new
+/// UI is refined. Nothing here was restyled for it.
 struct HomeView: View {
     @Environment(TrackingSession.self) private var session
     @State private var vehicle: VehicleType = .car
     @State private var path: [String] = []
     @State private var showingImport = false
+    @State private var showingDiscovery = false
     @State private var showingAbout = false
     @State private var showingFirstRunNotice = false
     #if DEBUG
@@ -43,6 +50,15 @@ struct HomeView: View {
                 }
             }
             .toolbar { toolbarItems }
+            .sheet(isPresented: $showingDiscovery) {
+                JourneyTimelineView(session: session)
+            }
+            .onChange(of: showingDiscovery) {
+                // The beta can create a trip (opening a discovered journey
+                // imports it) and can delete one, so the list behind it is
+                // refreshed on the way back rather than left stale.
+                if !showingDiscovery { session.refreshTrips() }
+            }
             .sheet(isPresented: $showingAbout) {
                 AboutView(matching: session.config.matching)
             }
@@ -70,14 +86,18 @@ struct HomeView: View {
             if ProcessInfo.processInfo.arguments.contains("-demo-open-import") {
                 showingImport = true
             }
+            if ProcessInfo.processInfo.arguments.contains("-demo-discover") {
+                showingDiscovery = true
+            }
             #endif
             // Told once, before this build can send a real coordinate anywhere
-            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). `showingImport` is checked
-            // because the DEBUG demo automation above opens a sheet from this
-            // same `onAppear`, and two sheets raised in one pass is a race
-            // rather than a stack. Nothing is remembered on the launch that
-            // loses it, so the notice comes back on the next one.
-            if !showingImport, FirstRunNotice.shouldPresent(matching: session.config.matching) {
+            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). Both demo sheets above are
+            // checked because they open from this same `onAppear`, and two
+            // sheets raised in one pass is a race rather than a stack. Nothing
+            // is remembered on the launch that loses it, so the notice comes
+            // back on the next one.
+            if !showingImport, !showingDiscovery,
+               FirstRunNotice.shouldPresent(matching: session.config.matching) {
                 showingFirstRunNotice = true
             }
         }
@@ -102,10 +122,17 @@ struct HomeView: View {
         ToolbarItem(placement: .topBarLeading) { debugExportMenu }
         #endif
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                showingAbout = true
-            } label: {
-                Label("about_title", systemImage: "info.circle")
+            HStack(spacing: 2) {
+                Button {
+                    showingDiscovery = true
+                } label: {
+                    Label("discovery_open", systemImage: "sparkles.rectangle.stack")
+                }
+                Button {
+                    showingAbout = true
+                } label: {
+                    Label("about_title", systemImage: "info.circle")
+                }
             }
         }
     }

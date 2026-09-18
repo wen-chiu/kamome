@@ -145,6 +145,45 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
+    public struct Discovery: Decodable, Equatable {
+        /// **Journey discovery** (2026-09-17): the home screen finds journeys in
+        /// the photo library instead of waiting for a date range to be typed.
+        /// The detector is pure (`JourneyDetector`, KamomeImportKit); these are
+        /// its knobs. Every value is a first guess, INFERRED from the three
+        /// dogfood trips, not measured against a wide range of libraries.
+        ///
+        /// How far back the library is scanned, in years. Bounded so a
+        /// twenty-year library does not become a twenty-year scan on first launch.
+        public let lookbackYears: Int
+        /// Grid cell, in degrees, used to guess where home is: the cell holding
+        /// photographs across the most distinct weeks. ~55 km at 0.5°.
+        public let homeCellDeg: Double
+        /// A photograph further than this from home is "away", and only away
+        /// photographs form journeys — the film should not open at the front door.
+        public let awayRadiusM: Double
+        /// Two away photographs further apart in time than this belong to
+        /// different journeys. Two days: a night and a full day at home between.
+        public let journeyGapS: Double
+        /// A run of away photographs becomes a journey only with at least this
+        /// many. Below it there is no story to tell and the card would be empty.
+        public let minPhotos: Int
+        /// A journey whose photographs all lie within this extent is one place
+        /// ("Whitehorse"); wider, and it is named after the country ("Japan").
+        public let singlePlaceExtentM: Double
+        /// How many photographs a journey card shows.
+        public let coverPhotos: Int
+
+        enum CodingKeys: String, CodingKey {
+            case lookbackYears = "lookback_years"
+            case homeCellDeg = "home_cell_deg"
+            case awayRadiusM = "away_radius_m"
+            case journeyGapS = "journey_gap_s"
+            case minPhotos = "min_photos"
+            case singlePlaceExtentM = "single_place_extent_m"
+            case coverPhotos = "cover_photos"
+        }
+    }
+
     public struct Geocode: Decodable, Equatable {
         /// CLGeocoder is throttled and cached (§4.2).
         public let minIntervalS: Double
@@ -238,6 +277,7 @@ public struct TrackingConfig: Decodable, Equatable {
     public private(set) var matching: Matching
     public let photos: Photos
     public let photoImport: Import
+    public let discovery: Discovery
     public let geocode: Geocode
     public let trip: Trip
     public let sampling: Sampling
@@ -245,7 +285,7 @@ public struct TrackingConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, matching, photos, geocode, trip, sampling, export
+        case filter, segmentation, dwell, simplify, matching, photos, discovery, geocode, trip, sampling, export
         case photoImport = "import"
     }
 
