@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-16 against decisions.md **2026-09-13** and `main` at
-**PR #68**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
+Last synced: 2026-09-17 against decisions.md **2026-09-13** and `main` at
+**PR #69**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
 licence, routing-key and local-network ADRs 2026-09-12 (c)–(e).) Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
 export outlives its screen (ADR 2026-09-10). ✅ **The substrate STYLE evaluation closed

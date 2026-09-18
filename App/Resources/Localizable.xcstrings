@@ -910,7 +910,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, trips and films stay on this device. To draw your route along real roads, Kamome sends the positions along that route to a routing service. The map itself is fetched from OpenStreetMap, and place names come from Apple — these carry no account or trip information."
+            "value": "Your photos, trips and films stay on this device. To draw your route along real roads, Kamome sends the positions along that route to a routing service. The map itself is fetched from OpenStreetMap."
           }
         },
         "zh-Hant": {
