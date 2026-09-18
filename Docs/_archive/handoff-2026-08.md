@@ -2378,3 +2378,4 @@ second, weaker account of a decision is worse than none.
 | The per-IP burst limit — the day ceiling's other half | ADR **2026-09-05**; PR #42 |
 | The first-run notice — the user is told once, before any coordinate leaves, and the telling is not a question | ADR **2026-09-05 (b)**; PR #45 |
 | S6 the config flip — builds carry no key, the Worker carries the traffic, the KV counter is the proof | ADR **2026-09-08**; `Docs/release-readiness.md` S6; PR #46 |
+| §0 — two real-trip films in the repository: both removed; renders are written to `~/Kamome-films/`, never `Docs/` | ADR **2026-09-12**; PR #60 |

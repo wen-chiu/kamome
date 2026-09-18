@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-16.** `main` carries PRs #16–#68. Everything closed has been
+**Updated 2026-09-17.** `main` carries PRs #16–#69. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -75,24 +75,33 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
-- **Journey discovery, in beta (ADRs 2026-09-17 → 2026-09-18 (c))** — thresholds
-  are INFERRED and settle only on your library; one Apple geocode per journey
-  runs at discovery, not at import (home is never looked up). 🔴 **Your two
-  decisions conflict**: 2026-09-16 ships a light film style, but S1's
-  `.preferredColorScheme(.dark)` — kept by your keep-S1 instruction — makes it
-  unreachable. One line in S1. → `Docs/decisions.md` 2026-09-18 (c) §4.
+- **Journey discovery beta** — yours: INFERRED thresholds, geocoding at
+  discovery, and 🔴 S1's dark override vs 2026-09-16's light film.
+  → `Docs/decisions.md` 2026-09-18 (c).
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
   → `Docs/handoff-pacing.md`.
-- ~~**§0 — two real-trip films in the repo**~~ — **closed by PR #60
-  (ADR 2026-09-12).** Both films removed; current practice writes to
-  `~/Kamome-films/` outside the repository.
 - **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
   → `Docs/release-readiness.md` S2/S3.
 - **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
   ships `"Kamome"`. What the product is called, and in which scripts, is yours.
   → `Docs/decisions.md` 2026-09-05 (d) §4.
+- **Light style awaiting judgement** — renders produced 2026-09-17. Not approved.
+  → `Docs/decisions.md` 2026-09-17 §6 (D2).
+- **Terrain credit string awaiting Chiu** — the film credit was frozen 2026-09-13;
+  the terrain addition needs his approval.
+  → `Docs/decisions.md` 2026-09-17 §6.
+- **`privacy_intro` wording awaiting Chiu** — interim draft installed; he writes
+  the final text (「給我建議的寫法我再修正」).
+  → `Docs/decisions.md` 2026-09-17 §6.
+- **Part D: Apple geocoder terms** — CLGeocoder output is not Map Data under
+  DPLA Attachment 6 on the plain reading (Core Location, not MapKit; §1.2 scopes
+  to "Apple Maps Service"). Chiu's condition is satisfied. Three alternatives
+  listed if the reading is wrong.
+  → `Docs/decisions.md` 2026-09-16 §6, Part D analysis.
+- **TestFlight films in Application Support/Films/** — rendered on Apple Maps,
+  still present (§2.5). Chiu's call.
 
 ---
 
@@ -134,6 +143,11 @@ string stands. Do not reopen this from scratch.
   against the 2000/day ceiling — VERIFIED 2026-09-12, real verdicts came back. A
   stub reconstructor would keep what the test proves; not done.
   → `Tests/AppTests/RouteMatchRecordedLegTests.swift`.
+
+- **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
+  VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
+  Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
+- **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
 
 ---
 

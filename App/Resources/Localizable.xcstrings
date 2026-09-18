@@ -145,13 +145,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maps and routing"
+            "value": "Maps, terrain and routing"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "地圖與路線"
+            "value": "地圖、地形與路線"
           }
         }
       }
@@ -162,13 +162,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome asks Geoapify where the roads are, so a journey can be drawn along the roads you actually travelled instead of straight lines between points. Geoapify's road data comes from OpenStreetMap."
+            "value": "Kamome asks Geoapify where the roads are, so a journey can be drawn along the roads you actually travelled instead of straight lines between points. Geoapify's road data comes from OpenStreetMap. Terrain hillshading uses elevation data from AWS Open Data, sourced from USGS, LINZ and Geoscience Australia."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩會向 Geoapify 詢問道路的位置，讓旅程沿著你實際走過的路繪製，而不是在點與點之間畫直線。Geoapify 的道路資料來自 OpenStreetMap。"
+            "value": "卡摸咩會向 Geoapify 詢問道路的位置，讓旅程沿著你實際走過的路繪製，而不是在點與點之間畫直線。Geoapify 的道路資料來自 OpenStreetMap。地形使用來自 AWS Open Data 的高程資料，來源為 USGS、LINZ 與 Geoscience Australia。"
           }
         }
       }
@@ -186,6 +186,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "地圖資料 © OpenStreetMap 貢獻者"
+          }
+        }
+      }
+    },
+    "attribution_terrain": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terrain: USGS · LINZ (CC BY 3.0 NZ) · Geoscience Australia (CC BY 4.0)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地形：USGS · LINZ (CC BY 3.0 NZ) · Geoscience Australia (CC BY 4.0)"
           }
         }
       }
@@ -1298,13 +1315,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "These go to Kamome's relay, which holds the key, and on to Geoapify."
+            "value": "Those positions pass through Kamome's relay, which holds the key, on to Geoapify."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "它們會先送到卡摸咩的中繼（地圖金鑰放在那裡），再送到 Geoapify。"
+            "value": "這些路線位置會先送到卡摸咩的中繼（金鑰放在那裡），再送到 Geoapify。"
           }
         }
       }
@@ -1349,13 +1366,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, trips and films stay on this device. To draw your route along real roads, Kamome sends the positions along that route to a routing service. Map tiles come from OpenStreetMap and stop names from Apple; both carry coordinates."
+            "value": "Your photos, trips and films stay on this device. To draw the map, Kamome downloads map and terrain tiles for your trip's area from OpenFreeMap and Amazon, and asks Apple for stop names. To follow real roads, it sends the positions along your route."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "所有關於你與旅程的回憶相片及影片只會留在這台裝置。但為了能完善紀錄旅程得到真實道路繪製路線，卡摸咩將會提供停留位置送往路線規劃服務。地圖圖磚來自 OpenStreetMap，地名來自 Apple；兩者都攜帶座標。"
+            "value": "你的相片、旅程與影片都留在這台裝置。為了畫出地圖，卡摸咩會向 OpenFreeMap 與 Amazon 下載該區域的地圖與地形，並向 Apple 查詢停留點名稱；為了沿真實道路繪製，會送出路線上的位置。"
           }
         }
       }
@@ -1366,13 +1383,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The path your phone recorded is not sent to a routing service — it is already the route. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above."
+            "value": "The path your phone recorded is not sent to a routing service — it is already the route. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above. If a future version ever sends it, this notice will say so."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。"
+            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。若日後的版本要送出它，本說明也會如實寫明。"
           }
         }
       }
@@ -1450,13 +1467,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "When Kamome renders a film, it downloads vector map tiles from OpenFreeMap for the area the trip covers. The tile URLs contain coordinates that reveal the general area — neighbourhood-level, not street-level. OpenFreeMap requires no account and no API key; it sees this device's IP address, the tile coordinates, a User-Agent string and the time of each request."
+            "value": "When Kamome renders a film, it downloads vector map tiles (z14) from OpenFreeMap and terrain tiles (z13) from Amazon for the area the trip covers. The sequence of tile requests follows the route. OpenFreeMap requires no account and no API key; both hosts see this device's IP address, the tile coordinates, a User-Agent string and the time of each request."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩製作影片時，會從 OpenFreeMap 下載該旅程所涵蓋區域的向量地圖圖磚。圖磚網址包含的座標會透露大致區域（街區級別，非街道級別）。OpenFreeMap 不需要帳號也不需要 API 金鑰；它看得到這台裝置的 IP 位址、圖磚座標、User-Agent 字串及每次請求的時間。"
+            "value": "卡摸咩製作影片時，會從 OpenFreeMap 下載該旅程所涵蓋區域的向量地圖圖磚（z14），以及從 Amazon 下載地形圖磚（z13）。圖磚請求的順序會沿路線進行。OpenFreeMap 不需要帳號也不需要 API 金鑰；兩個主機都看得到這台裝置的 IP 位址、圖磚座標、User-Agent 字串及每次請求的時間。"
           }
         }
       }
@@ -2678,13 +2695,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome reads where and when your photos were taken. Your photos never leave this device, and no journey is saved until you open it. To name each journey, Kamome asks Apple, which receives that place's coordinates."
+            "value": "Kamome reads where and when your photos were taken. Your photos never leave this device, and no journey is saved until you open it. To name each journey, Kamome asks Apple for the name of its main stop, which means sending that stop's coordinates."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩只讀取相片的拍攝地點與時間。相片不會離開這台裝置，打開之前也不會儲存任何旅程。為了替每趟旅程命名，卡摸咩會向 Apple 查詢，Apple 會收到該地點的座標。"
+            "value": "卡摸咩只讀取相片的拍攝地點與時間。相片不會離開這台裝置，打開之前也不會儲存任何旅程。為了替每趟旅程命名，卡摸咩會向 Apple 查詢其主要停留點的名稱，因此會送出該停留點的座標。"
           }
         }
       }

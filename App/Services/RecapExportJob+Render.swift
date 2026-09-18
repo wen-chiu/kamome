@@ -33,6 +33,7 @@ extension RecapExportJob {
         do {
             provider = try Self.snapshotProvider(for: region, appearance: request.appearance)
         } catch {
+            KamomeLog.recap.error("snapshotProvider failed: \(error, privacy: .public)")
             return nil
         }
         // Resolved once, here, and never asked again — the substrate can veto the
@@ -274,12 +275,16 @@ extension RecapExportJob {
     /// 2. *Style file unwritable at render time* — `resolvedNetworkStyleURL` throws
     ///    an I/O error (full disk); same `.failed` path. Only possible if the temp
     ///    directory was purged or the disk filled between plan and render.
-    /// 3. *Tile host unreachable* (`tiles.openfreemap.org` DNS / TCP / TLS failure)
-    ///    — VERIFIED 2026-09-17 (`TileFailureTests`): `MLNMapSnapshotter` fires
-    ///    its completion with an `NSError` (domain `NSURLErrorDomain`, code −1003
-    ///    host not found). The `withCheckedThrowingContinuation` in
-    ///    `MapLibreSnapshotProvider.snapshot` rethrows → `RecapExporter` propagates
-    ///    → `render()` catches → `.failed(message:)`.
+    /// 3. *Tile host unreachable* — two sub-cases measured:
+    ///    - All hosts unreachable: VERIFIED 2026-09-17 (`TileFailureTests`),
+    ///      `MLNMapSnapshotter` fires its completion with an `NSError`.
+    ///    - Tiles only unreachable (sprite/glyphs/terrain reachable): VERIFIED
+    ///      2026-09-17 (`TileFailureTests`): `MLNErrorDomain` code 6.
+    ///    - Terrain only unreachable (vector tiles/sprite/glyphs reachable):
+    ///      VERIFIED 2026-09-18 (`TileFailureTests`): the snapshotter still
+    ///      errors. A terrain host failure blocks the film.
+    ///    All three rethrow via `MapLibreSnapshotProvider.snapshot` →
+    ///    `RecapExporter` propagates → `render()` catches → `.failed(message:)`.
     /// 4. *Tile host reachable but returns HTTP errors* (5xx, rate limit) — same
     ///    path as (3); INFERRED from MapLibre source (non-200 tile → load error).
     /// 5. *Partial tile failure* (some zoom levels cached, some not) — MapLibre

@@ -5183,7 +5183,7 @@ evaluation; this one closes it and commits the result.
 
 | what | before | after |
 |---|---|---|
-| `RecapExportJob.snapshotProvider` | falls back to `MapKitSnapshotProvider` when no pmtiles region resolves | selects one of two frozen Liberty styles by appearance; `fatalError` if the style is missing from the bundle |
+| `RecapExportJob.snapshotProvider` | falls back to `MapKitSnapshotProvider` when no pmtiles region resolves | selects one of two frozen Liberty styles by appearance; throws `themeNotFound` if the style is missing from the bundle → `plan()` returns nil → `.failed` |
 | frozen styles | none | `Config/RecapThemes/openfreemap-liberty-{dark,light}.json` — 39 layers each, forked from Liberty with the same subtractive rules the evaluation rounds proved |
 | `MapLibreSnapshotProvider.fixedAppearance` | always the provider's `appearance` (vetoed the device) | nil on the OpenFreeMap path (both appearances exist), `.dark` on the dormant pmtiles path |
 | `RecapMapAttribution` | `openFreeMap`, `openStreetMap` | unchanged — the credit string stands (ADR 2026-09-13) |
@@ -5207,7 +5207,7 @@ Both are subtractive forks of OpenFreeMap's Liberty, frozen against tileset
 `20260916_freeze`. The transform is `Scripts/freeze-liberty-styles.py`, and
 `Tools/liberty-drift.sh` detects upstream drift (env-gated, not in CI).
 
-**Production thresholds differ from the evaluation** (rounds 1–5):
+**Production thresholds are round 5's chosen values** (`1000 / 1`):
 
 | parameter | evaluation | production |
 |---|---|---|
@@ -5215,21 +5215,23 @@ Both are subtractive forks of OpenFreeMap's Liberty, frozen against tileset
 | peak maximum rank | 3 (R4) → bands tested in R5 | 1 |
 | coast variant | A, B, C tested | **A only** (contrast, no coast line, no lake edge) |
 
-The dark style uses the souvenir palette (`Palette` in `LibertyFork.swift`); the
-light style uses stock Liberty colours with the subtractive rules only.
+The dark style uses the `DarkPalette` in `freeze-liberty-styles.py` (values from
+`Round4Palette`); the light style uses stock Liberty colours with the subtractive
+rules only.
 
 ### §4 — the §0 exception: map tile fetching
 
 **This is the second thing that leaves the device** (the first is routing
 coordinates to Geoapify, ADR 2026-08-20 (c)).
 
-When the export renders, `MLNMapSnapshotter` fetches vector tiles from
-`tiles.openfreemap.org` and raster hillshade from the same host. The tile URL
-path encodes z/x/y tile coordinates, which reveal the **general area** of the
-trip — neighbourhood-level, not street-level (z14 tiles ≈ 1.2 km). OpenFreeMap
-requires no account, no API key, and no registration. It sees this device's IP
-address, the tile coordinates, a User-Agent string, and the time of each request.
-It does not see any trip details, route geometry, or device identifiers.
+When the export renders, `MLNMapSnapshotter` fetches vector tiles (z14) from
+`tiles.openfreemap.org` and terrain raster tiles (z13) from
+`s3.amazonaws.com/elevation-tiles-prod` (AWS Open Data). The tile URL path
+encodes z/x/y tile coordinates. The sequence of tile requests follows the route,
+so a network observer can reconstruct the general area and approximate direction
+of the trip. OpenFreeMap requires no account, no API key, and no registration.
+Both hosts see this device's IP address, the tile coordinates, a User-Agent
+string, and the time of each request.
 
 ⚠️ **OpenFreeMap has no SLA.** It is a free service with no uptime guarantee. If
 it goes down, every export fails. Mitigation: the styles are frozen and could be
@@ -5247,13 +5249,93 @@ dark map → cyan). It was **suspended** when the only MapLibre style was dark a
 `fixedAppearance` is nil on the OpenFreeMap path, and the caller selects the right
 style for the requested appearance. The substrate no longer vetoes.
 
+### §6 — addendum 2026-09-17: Chiu's decisions
+
+| item | decision (Chiu's words) | consequence |
+|---|---|---|
+| D1 hillshade | 「D1 要 hillshade」 | Ship round 4/5's Mapzen terrain hillshade in both styles. AWS becomes a data recipient. |
+| D2 light style | 「D2 出一版 light 給我看」 | Light renders produced for judgement. **Light is not approved until Chiu has seen it.** |
+| `privacy_intro` wording | 「給我建議的寫法我再修正」 | Interim draft installed; **Chiu writes the final text**. |
+| Stop names from Apple | 「停留點一定只能送 apple 去問…如果這樣詢問地點沒有被限制 那應該沒有問題」 | A decided §0 exception, **conditional on Apple's terms not restricting it**. See Part D analysis below. |
+| OpenFreeMap has no SLA | 「理解」 | Acknowledged by Chiu. |
+
+**AWS as a recipient.** The terrain tiles (`s3.amazonaws.com/elevation-tiles-prod`)
+are a second network host. `privacy_intro` and `privacy_tiles_body` now name
+both OpenFreeMap and Amazon.
+
+**Terrain credit string.** The existing film credit is
+`OpenFreeMap © OpenMapTiles Data from OpenStreetMap`. With terrain, the credit
+must also cover the Mapzen/AWS terrain tile sources. **Pending Chiu's approval**
+(the film credit string was frozen by Chiu on 2026-09-13).
+
+**Light hillshade paint.** The dark hillshade paint is round 4's verbatim. The
+light paint (`hillshade-exaggeration` 0.5, muted shadow/accent) is a first
+guess with no Chiu approval — it ships with the light renders for his judgement.
+
+### Part D — is CLGeocoder output "Map Data" under DPLA Attachment 6?
+
+**Short answer: no, on the plain reading. CLGeocoder is Core Location, not
+MapKit, and Attachment 6 scopes itself to the "Apple Maps Service".**
+
+Attachment 6 §1.2 defines **"Apple Maps Service"** as the **MapKit API** and/or
+**Apple Maps Server API**. `CLGeocoder` is a Core Location class (`import
+CoreLocation`, `CL` prefix) documented under the Core Location framework, not
+under MapKit. It predates the Apple Maps Server API and the current Attachment 6
+language. The DPLA applies "Map Data" restrictions (§2.3 copy/publish, §2.5
+storage) only to data obtained through the Apple Maps Service.
+
+**Three facts that support the plain reading:**
+
+1. **Framework boundary.** Apple keeps Core Location (`CLGeocoder`,
+   `CLLocationManager`) and MapKit (`MKMapView`, `MKMapSnapshotter`) as separate
+   frameworks with separate imports. The DPLA names MapKit, not Core Location.
+2. **No cross-reference.** The `CLGeocoder` documentation does not reference
+   Attachment 6, Map Data restrictions, or the Apple Maps Service. `MKMapView`'s
+   documentation does.
+3. **The output is a `CLPlacemark`** — a structured record (name, locality,
+   country, etc.), not imagery or cartographic tiles. Attachment 6's "Map Data"
+   definition centres on map imagery. A place name string is not a map tile.
+
+**One fact that counsels caution:**
+
+`CLGeocoder` almost certainly resolves against Apple's geographic database — the
+same data MapKit draws from. If Apple ever broadened Attachment 6's scope or
+issued guidance that geocoding results are Map Data, the analysis changes.
+**No such guidance exists today** (VERIFIED 2026-09-18: no public Apple
+documentation, WWDC session, or developer forum post equates CLGeocoder output
+with Map Data).
+
+**Consequence for Kamome:**
+
+- **Storing stop names** (in the trip record, in the film's stop cards): **not
+  restricted** by Attachment 6 on the plain reading. Kamome already stores the
+  `CLPlacemark`-derived display name in Core Data (`StopNamer` → DB write).
+- **Publishing stop names** (visible in an exported film): **not restricted**.
+  A place name string like "池袋" or "Reykjavík" is a geographic fact, not
+  Apple's copyrightable expression.
+- **The §0 exception holds.** Chiu's conditional — 「如果這樣詢問地點沒有被限制
+  那應該沒有問題」— is satisfied on the plain reading: the inquiry is not
+  restricted by Attachment 6.
+
+**If the plain reading is wrong — alternatives:**
+
+1. Extract stop names from OpenFreeMap vector tiles (the `place` layer carries
+   `name` at various ranks). No off-device call; but the name set and
+   localisation differ from Apple's.
+2. Reverse geocode via Geoapify (already a decided exception for routing). Adds
+   a second coordinate payload to a third party.
+3. Let the user type or edit stop names. No off-device call; more friction.
+
+None of these is needed today. The analysis is recorded for Chiu's review.
+
 ### Not decided here
 
-The credit string (stands — ADR 2026-09-13). The credit's visual treatment
-(`DESIGNER.md`'s). Whether to pre-cache tiles for offline export. The pmtiles
-souvenir regions (dormant, not removed). Whether `MLNMapSnapshotter`'s partial
-tile failure (§5 of the failure analysis in `RecapExportJob+Render.swift`) needs
-a retry or a blank-tile detector.
+The credit string (the existing one stands — ADR 2026-09-13; the terrain
+addition is pending Chiu). The credit's visual treatment (`DESIGNER.md`'s).
+Whether to pre-cache tiles for offline export. The pmtiles souvenir regions
+(dormant, not removed). Whether `MLNMapSnapshotter`'s partial tile failure (§5
+of the failure analysis in `RecapExportJob+Render.swift`) needs a retry or a
+blank-tile detector.
 
 ## 2026-09-17 — The home is journey discovery: the library is read, nothing is saved until a journey is opened
 
@@ -5482,15 +5564,29 @@ stop — to Apple, for its name. That is the payload the notice names; only its
 domestic journey named by country rather than region. A naming cost, traded for
 a privacy cost.
 
-### 2. The welcome card said "nothing is uploaded" — it now says what leaves
+**PR #72 then made this a requirement rather than a judgement.** It merged while
+this branch was being merged, and records Chiu's scope for the Apple exception:
+*「停留點一定只能送 apple 去問」* — **stop points only** (ADR 2026-09-16). A home
+location is not a stop point, so the lookup removed above would have been
+outside the exception. The same scope caught one more path: a discovered
+journey whose photographs never clustered into a stop fell back to geocoding
+**the centroid of all of them**, which is not a stop either. That fallback is
+removed; such a journey is not looked up and keeps its month title
+(`testAJourneyWithNoStopIsNeverLookedUp`). **Every coordinate the beta sends is
+now a stop point, to Apple, for its name** — inside the decided exception, with
+only its timing still Chiu's to rule on.
+
+### 2. The welcome card said "nothing is uploaded" — it now says what leaves, and that it is a stop
 
 It read *"Nothing is uploaded"* while each journey's coordinates went to Apple to
 be named — the understatement `LocalizationTests` exists to catch, and my own
 test asserted the false wording. After the merge it also contradicted
-`privacy_intro`, which PR #71 made say that stop names come from Apple and carry
-coordinates. The card now says photos never leave, nothing is saved until opened,
-and **Apple receives each journey's coordinates to name it**; the test asserts
-all three, in both languages, and asserts the overclaim cannot return. The test
+`privacy_intro`, which PRs #71–#72 made say Kamome *asks Apple for stop names*.
+The card now says photos never leave, nothing is saved until opened, and **Apple
+is asked for the name of each journey's main stop, which sends that stop's
+coordinates** — the same words as `privacy_intro`, and the same scope as Chiu's
+exception. The test asserts all four, in both languages, and asserts the
+overclaim cannot return. The test
 got stricter, not looser: it now enforces a disclosure instead of a denial.
 
 ### 3. The original home's title had changed — restored

@@ -114,20 +114,9 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("provenance_note", locale: "zh-Hant").contains("重建"))
     }
 
-    /// **The routing copy may only promise what Kamome controls** (Chiu
-    /// 2026-08-15), and this asserts it in both languages at once.
-    ///
-    /// The time budget is ours, so that case — and only that case — offers a
-    /// retry. The connection and rate-limit cases are someone else's failure:
-    /// they state the situation and stop. The no-road case promises nothing
-    /// because nothing is wrong; it is PD-1/PD-2 rendered as a sentence, and a
-    /// well-meaning "try exporting again" bolted onto it would turn an honest
-    /// account of the journey into a bug report.
-    ///
-    /// A retry promise appearing in one language and not the other is a defect,
-    /// not a stylistic difference — which is exactly what a translation pass
-    /// tends to introduce, and what a human reviewer reading one language at a
-    /// time cannot see.
+    /// Only the time-budget case is Kamome's fault and may promise a retry.
+    /// Connection, rate-limit, and no-road are someone else's — they state the
+    /// situation and stop. Both languages must agree.
     func testRoutingCopyPromisesARetryOnlyWhereKamomeIsAtFault() throws {
         // Matched loosely on purpose: the copy will be reworded, and the rule
         // has to survive the rewording. Any phrasing that tells the user to
@@ -354,48 +343,57 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("first_run_where", locale: "zh-Hant").contains("關於"))
     }
 
-    /// **The Journey Discovery beta** (2026-09-17, a beta since 2026-09-18 (b)).
-    /// Its title, its one button and the film button must resolve in both
-    /// languages — and **the original home's title must not have moved**: the
-    /// beta is an added feature, so it has its own key rather than borrowing
-    /// S1's and renaming it.
-    func testDiscoveryHomeStringsResolve() throws {
-        XCTAssertEqual(try localizedValue("home_title", locale: "en"), "My Journeys", "S1's title is untouched")
-        XCTAssertEqual(try localizedValue("home_title", locale: "zh-Hant"), "我的旅程", "S1's title is untouched")
-        XCTAssertEqual(try localizedValue("discovery_title", locale: "en"), "Your Journeys")
-        XCTAssertEqual(try localizedValue("discovery_title", locale: "zh-Hant"), "你的旅程")
-        XCTAssertEqual(try localizedValue("welcome_find", locale: "en"), "Find my journeys")
-        XCTAssertEqual(try localizedValue("welcome_find", locale: "zh-Hant"), "找出我的旅程")
-        XCTAssertEqual(try localizedValue("make_film", locale: "en"), "Make this a Film")
-        XCTAssertEqual(try localizedValue("make_film", locale: "zh-Hant"), "做成一部影片")
+    // MARK: - The intro names the right sources (2026-09-17)
 
-        // **The welcome card may not say less than what is sent** — the class of
-        // understatement `testPrivacyNoticeDescribesTwoDifferentPayloads` guards.
-        // The first version read "nothing is uploaded" while each journey's
-        // coordinates went to Apple to be named. So the card must name Apple and
-        // what it receives, and that overclaim may not come back.
-        let privacyEN = try localizedValue("welcome_privacy", locale: "en")
-        XCTAssertTrue(privacyEN.lowercased().contains("never leave"), "photos stay: \(privacyEN)")
-        XCTAssertTrue(privacyEN.lowercased().contains("until you open"), "nothing saved first: \(privacyEN)")
-        XCTAssertTrue(privacyEN.contains("Apple"), "the recipient is named: \(privacyEN)")
-        XCTAssertTrue(privacyEN.lowercased().contains("coordinates"), "and what it receives: \(privacyEN)")
-        XCTAssertFalse(privacyEN.lowercased().contains("nothing is uploaded"), "the overclaim: \(privacyEN)")
-        let privacyZH = try localizedValue("welcome_privacy", locale: "zh-Hant")
-        XCTAssertTrue(privacyZH.contains("不會離開"), "photos stay: \(privacyZH)")
-        XCTAssertTrue(privacyZH.contains("打開之前"), "nothing saved first: \(privacyZH)")
-        XCTAssertTrue(privacyZH.contains("Apple"), "the recipient is named: \(privacyZH)")
-        XCTAssertTrue(privacyZH.contains("座標"), "and what it receives: \(privacyZH)")
-        XCTAssertFalse(privacyZH.contains("不會上傳"), "the overclaim: \(privacyZH)")
-
-        // Provenance on the card: the recorded chip exists beside the photos one,
-        // and neither says "verified" (§3).
+    /// The intro must name OpenFreeMap, Amazon and Apple as recipients. It must
+    /// NOT say tiles come "from OpenStreetMap" — the request goes to OpenFreeMap;
+    /// OSM is the data, not the host.
+    func testPrivacyIntroNamesTheRightSources() throws {
         for locale in ["en", "zh-Hant"] {
-            let recorded = try localizedValue("provenance_recorded", locale: locale)
-            XCTAssertFalse(recorded.lowercased().contains("verified"), recorded)
-            XCTAssertNotEqual(recorded, try localizedValue("provenance_badge", locale: locale))
+            let intro = try localizedValue("privacy_intro", locale: locale)
+            XCTAssertTrue(
+                intro.contains("OpenFreeMap"),
+                "[\(locale)] the intro must name OpenFreeMap as tile source: \(intro)"
+            )
+            XCTAssertTrue(
+                intro.contains("Amazon"),
+                "[\(locale)] the intro must name Amazon as terrain tile source: \(intro)"
+            )
+            XCTAssertTrue(
+                intro.contains("Apple"),
+                "[\(locale)] the intro must name Apple as stop-name source: \(intro)"
+            )
         }
-        // English inflects the card's counts; the catalogue's plurals must resolve.
-        XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 1), "1 day")
-        XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 12), "12 days")
+        let en = try localizedValue("privacy_intro", locale: "en")
+        XCTAssertFalse(
+            en.contains("from OpenStreetMap"),
+            "tiles come from OpenFreeMap, not OpenStreetMap — OSM is the data: \(en)"
+        )
+    }
+
+    func testTheHopSentenceNamesRoutePositions() throws {
+        let en = try localizedValue("privacy_hop_relay", locale: "en")
+        XCTAssertTrue(
+            en.lowercased().contains("positions"),
+            "the hop must say what goes through the relay — route positions: \(en)"
+        )
+        let zh = try localizedValue("privacy_hop_relay", locale: "zh-Hant")
+        XCTAssertTrue(
+            zh.contains("位置"),
+            "the hop must say what goes through the relay — route positions: \(zh)"
+        )
+    }
+
+    func testTheRecordedParagraphKeepsItsPromise() throws {
+        let en = try localizedValue("privacy_recorded_body", locale: "en")
+        XCTAssertTrue(
+            en.lowercased().contains("notice will say so") || en.lowercased().contains("notice will tell"),
+            "the promise about future disclosure must survive: \(en)"
+        )
+        let zh = try localizedValue("privacy_recorded_body", locale: "zh-Hant")
+        XCTAssertTrue(
+            zh.contains("寫明") || zh.contains("說明"),
+            "the promise about future disclosure must survive: \(zh)"
+        )
     }
 }

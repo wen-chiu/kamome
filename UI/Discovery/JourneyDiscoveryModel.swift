@@ -314,8 +314,14 @@ final class JourneyDiscoveryModel {
             milestones: [],
             provenance: .fromPhotos,
             filmCount: 0,
-            nameLookupLat: busiest?.lat ?? journey.centroidLat,
-            nameLookupLon: busiest?.lon ?? journey.centroidLon,
+            // **A stop, or nothing.** Chiu's §0 exception for Apple is scoped to
+            // stop points (ADR 2026-09-16, PR #72: 「停留點一定只能送 apple 去問」).
+            // This used to fall back to the centroid of all the journey's photos
+            // when no cluster became a stop — an average position that is not a
+            // stop, so outside the exception. A journey with no stop is simply not
+            // looked up, and keeps its month title.
+            nameLookupLat: busiest?.lat,
+            nameLookupLon: busiest?.lon,
             isSinglePlace: isSinglePlace
         )
     }

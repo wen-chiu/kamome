@@ -229,8 +229,9 @@ final class RecapMapCreditTests: RecapRenderTestCase {
             )
         }
         XCTAssertEqual(
-            RecapMapAttribution.openFreeMap, "OpenFreeMap © OpenMapTiles Data from OpenStreetMap",
-            "this is the format openfreemap.org asks for (VERIFIED 2026-09-09)"
+            RecapMapAttribution.openFreeMap,
+            "OpenFreeMap © OpenMapTiles Data from OpenStreetMap · Terrain: USGS/LINZ/GA",
+            "map + terrain credit (pending Chiu — VERIFIED 2026-09-09 map, 2026-09-17 terrain)"
         )
     }
 

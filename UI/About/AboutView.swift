@@ -46,6 +46,7 @@ struct AboutView: View {
     /// decision, and a key someone may edit is the wrong shape for that.
     private static let geoapify = URL(string: "https://www.geoapify.com/")!
     private static let openStreetMap = URL(string: "https://www.openstreetmap.org/copyright")!
+    private static let terrainTiles = URL(string: "https://registry.opendata.aws/terrain-tiles/")!
 
     var body: some View {
         NavigationStack {
@@ -76,6 +77,9 @@ struct AboutView: View {
             }
             Link(destination: Self.openStreetMap) {
                 linkRow("attribution_osm")
+            }
+            Link(destination: Self.terrainTiles) {
+                linkRow("attribution_terrain")
             }
         } header: {
             Text("attribution_header")

@@ -159,6 +159,31 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         XCTAssertFalse(harness.geocoder.askedLatitudes.isEmpty, "journeys are still named")
     }
 
+    /// **Only a stop is ever sent** (Chiu's §0 scope, ADR 2026-09-16, PR #72:
+    /// 「停留點一定只能送 apple 去問」). A journey whose photographs never cluster
+    /// into a stop used to be looked up at the centroid of all of them — an
+    /// average position that is not a stop. It is now not looked up at all, and
+    /// keeps the month title it had.
+    func testAJourneyWithNoStopIsNeverLookedUp() async throws {
+        let harness = try makeHarness()
+        let home = (0..<52).map { photo("home-\($0)", Double($0) * week, 25.04, 121.56) }
+        // Eight photographs, each ~11 km from the last: every cluster holds one,
+        // so none reaches `min_photos_per_stop` and the journey has no stop.
+        let scattered = (0..<8).map {
+            photo("far-\($0)", 40 * week + Double($0) * 1_800, 45.0 + Double($0) * 0.1, 7.0)
+        }
+        harness.library.photos = home + scattered
+        await harness.model.refresh()
+
+        let journey = try XCTUnwrap(harness.model.journeys.first)
+        XCTAssertEqual(journey.stopCount, 0, "the fixture must produce a stopless journey")
+        XCTAssertNil(journey.nameLookupLat, "no stop, so nothing to look up")
+        // Give a naming task every chance to run, then prove it sent nothing.
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertTrue(harness.geocoder.askedLatitudes.isEmpty, "sent: \(harness.geocoder.askedLatitudes)")
+        XCTAssertNil(journey.name)
+    }
+
     // MARK: - Opening
 
     func testOpeningAJourneyImportsItOnceAndFindsItAgain() async throws {
