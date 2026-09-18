@@ -113,6 +113,11 @@ public extension TrackingConfig {
         public let departureStopMaxPhotos: Int
         /// Rotate the map heading-up (needs a `bearing`-honoring provider; §3).
         public let followHeadingUp: Bool
+        /// Look-ahead distance (metres) for smoothing the vehicle sprite's heading.
+        /// The raw route bearing flips on every switchback; this averages the bearing
+        /// across a forward window so the car faces the general travel direction.
+        /// 0 disables smoothing. Camera bearing is unaffected.
+        public let headingSmoothingDistanceM: Double
         /// How much of a window the travel camera may cross per second — the
         /// dead-zone dolly's whole budget, and what `bodySpanM` inverts to size
         /// the span (Chiu 2026-08-01). 0.35 slides one full window every ~3 s.

@@ -261,7 +261,10 @@ public struct CameraPath {
         let point = coordinate(atDistance: distanceM)
         return Position(
             lat: point.lat, lon: point.lon,
-            heading: heading(atDistance: distanceM),
+            heading: smoothedHeading(
+                atDistance: distanceM,
+                smoothingM: cutConfig.headingSmoothingDistanceM
+            ),
             holdingStopIndex: holdIndex
         )
     }
@@ -286,7 +289,9 @@ public struct CameraPath {
     /// made the old ending feel wrong.
     public func cameraFrame(atTime time: Double) -> CameraFrame {
         let subject = position(atTime: time)
-        let bearing = followHeadingUp ? subject.heading : 0
+        let bearing = followHeadingUp
+            ? heading(atDistance: state(atTime: time).distanceM)
+            : 0
         let live = trackFrame(atTime: time)
 
         let composed: CameraFrame
