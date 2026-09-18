@@ -1,8 +1,8 @@
 # Handoff — TestFlight: the fixes an engineering session owes
 
 PO audit 2026-09-18 against `main` at PR #74 (`./check.sh` green, 531 tests).
-**This file is the engineering prompt.** Charter: `Arch.md`. One PR for all of
-it; `./check.sh` green before "done"; the visual items owe captures.
+**This file is the engineering prompt.** Charter: `Arch.md`. One PR for Tasks 1–5, a
+second for Task 6 (a film change); `./check.sh` green before "done"; the visual items owe captures.
 
 **TestFlight is not the App Store submission.** `Docs/release-readiness.md`
 gates the submission. The audience here is people Chiu knows — accepted
@@ -19,9 +19,9 @@ App Store Connect refuses a build number it has already seen.
 - In `project.yml` `targets.Kamome.info.properties`:
   `CFBundleShortVersionString: $(MARKETING_VERSION)` and
   `CFBundleVersion: $(CURRENT_PROJECT_VERSION)`. `xcodegen generate`.
-- Values: Chiu decides the marketing version. Whether `1.0 (1)` was ever
-  uploaded is **UNKNOWN** — ask him to read App Store Connect → TestFlight and
-  set `CURRENT_PROJECT_VERSION` above anything there.
+- Values (**Chiu 2026-09-18**): nothing has ever been uploaded. TestFlight
+  starts at **`MARKETING_VERSION: "0.1"`**, `CURRENT_PROJECT_VERSION: 1`; `1.0` is
+  kept for the App Store release. Each upload bumps `CURRENT_PROJECT_VERSION`.
 - Pass: the built `.app`'s `Info.plist` shows the two build-setting values.
 
 ## Task 2 — a privacy manifest (T2)
@@ -80,6 +80,32 @@ button calls `FirstRunNotice.acknowledge()` and sets the flag false.
   (ADR 2026-09-05 (b), the 2026-09-06 three-line ceiling).
 - A test that fails on the regression, if the cause can be held by one.
 
+## Task 6 — the terrain credit follows the licence (ADR 2026-09-18 (f))
+
+`RecapMapAttribution.openFreeMap` ends in `· Terrain: USGS/LINZ/GA` for every
+film. The rule is now: credit a terrain source in the film **only if its licence
+requires it**, and only when the film shows its area.
+
+- **Never** credit USGS or NOAA (public domain). **Credit** LINZ (NZ), Geoscience
+  Australia, EU-DEM (Copernicus; EEA incl. Iceland), UK Environment Agency,
+  Austria, Kartverket (Norway), Canada, Mexico — when the film's extent
+  intersects their coverage. Source: tilezen/joerd `docs/attribution.md`.
+- **Over-include, never miss**: coarse coverage boxes, erring larger. A missed
+  credit is a licence breach; an extra one is a few characters.
+- The OSM half (`OpenFreeMap © OpenMapTiles Data from OpenStreetMap`) is frozen
+  (2026-09-13) — unchanged, on every film.
+- Keep it on the substrate side (`MapRendererCapabilities.attribution`, the
+  render loop draws it). The story layer must not learn about terrain sources.
+- Coverage boxes are licence facts, not tunables — constants beside the
+  string, as `RecapMapAttribution` already argues. Stop and ask if that reads
+  as a rule-7 conflict.
+- `AboutView` keeps full notices for every source; add EU-DEM's prescribed
+  wording if missing.
+- Tests: a Taiwan/Japan extent → OSM credit only; an Auckland extent → LINZ; an
+  Iceland extent → EU-DEM. Update `RecapMapCreditTests` by adding cases — do not
+  loosen what it already asserts. Render one Iceland film and one Japan film and
+  read the credit.
+
 ## For Chiu, outside the repository
 
 - Paid Program, the App Store Connect record for `com.chiu.kamome.dev`, team
@@ -97,6 +123,5 @@ button calls `FirstRunNotice.acknowledge()` and sets the flag false.
 - D1 unverified: keep the screen on during an export.
 - Imported trips show no kilometres; a ferry gets a boarding pass and a plane
   (`HANDOFF.md` Open).
-- Terrain credit ships unapproved (`HANDOFF.md` Awaiting Chiu).
 - Japanese place names render in Chinese glyph forms (`MLNIdeographicFontFamilyName`
   in `project.yml`) — a DESIGNER question.

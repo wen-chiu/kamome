@@ -5653,3 +5653,46 @@ front of him. The light OpenFreeMap style, **including its light hillshade paint
 as shipped. This closes 2026-09-16 §6 D2's *"not approved until Chiu has seen
 it"*. Consequence 1 is settled; consequence 2 (in-app screens in light mode,
 UNKNOWN) stands and is captured by Task 4 of `Docs/handoff-testflight.md`.
+
+## 2026-09-18 (e) — Journey Discovery's two open questions are closed
+
+**Decision (Chiu, 2026-09-18).** *「先使用假設的門檻值，我們看過實際使用資料再修正，
+地名查詢在『發現旅程』當下就發出無關緊要，這不是重要問題，本來就是會這麼做。」*
+
+1. **The `discovery` thresholds ship as they are** — still **INFERRED** (ADR
+   2026-09-17), and revised from real usage, not before it. Nothing is owed until
+   that data exists; do not tune them from a desk.
+2. **The stop-name lookup fires at discovery**, as built. The payload and its
+   scope are unchanged — one stop point per journey, to Apple, for its name
+   (2026-09-18 (c) §1, inside the 2026-09-16 exception) — so this closes the
+   *timing* half 2026-09-17 and 2026-09-18 (c) left open. Nothing to build.
+
+## 2026-09-18 (f) — A terrain source is credited in the film only where its licence requires it
+
+**Decision (Chiu, 2026-09-18).** *「如果沒有規定一定要標，我不認為使用者需要這個資訊。」*
+The rule: the film carries a terrain credit **only when a source it drew is
+licensed to require one**. Credits that are merely requested are not carried.
+
+**What the licences say** (tilezen/joerd `docs/attribution.md`, read 2026-09-18):
+USGS's SRTM, GMTED2010 and 3DEP, and NOAA's ETOPO1, are **public domain** —
+USGS *requests* credit, nothing *requires* it. Sources that do require it, under
+CC BY, Copernicus or open-government licences: **LINZ** (New Zealand), **Geoscience
+Australia**, **EU-DEM** (Copernicus, Europe), UK Environment Agency, Austria,
+Kartverket (Norway), Canada (CDEM), Mexico (INEGI). Their obligation binds the
+shared MP4, the work that leaves the app, not only `AboutView`.
+
+**Consequences:**
+
+- The shipped string `· Terrain: USGS/LINZ/GA` (never approved; 2026-09-16 §6)
+  is wrong both ways: **USGS is not required**, and **EU-DEM is missing** —
+  Iceland is inside EU-DEM's EEA coverage (**INFERRED**; the cheapest
+  settlement is the EU-DEM coverage map), and Chiu has an Iceland film.
+- **Most films carry no terrain credit.** Taiwan and Japan are covered only by
+  public-domain sources (**INFERRED** from the same document's coverage list).
+- **The frozen OpenStreetMap credit (2026-09-13) is untouched** — ODbL requires it.
+- `AboutView` keeps the full notices for every source.
+
+**Implementation** — region-conditional credit, engineering: Task 6 of
+`Docs/handoff-testflight.md`. The exact short form per source is **INFERRED**
+acceptable under CC BY's "reasonable manner for the medium"; the Copernicus
+wording is prescribed and may not shorten.

@@ -6,9 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-18 against decisions.md **2026-09-18 (d)** and `main` at
+Last synced: 2026-09-18 against decisions.md **2026-09-18 (f)** and `main` at
 **PR #74**. (d) lifts S1's dark override — the app and the film follow the
-device's appearance — and its addendum approves the light style. PO TestFlight audit: three upload fixes owed
+device's appearance — and its addendum approves the light style. (e) closes
+Journey Discovery's two questions; (f) sets the terrain-credit rule. PO TestFlight audit: three upload fixes owed
 (`Docs/handoff-testflight.md`); D1–D5 and S7 gate the App Store, not TestFlight.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
@@ -64,9 +65,10 @@ in the export, with no Apple fallback, and Apple geocoding is a §0 exception
 scoped to **stop points** (#72). **Journey Discovery ships as an added feature
 in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
 restored untouched, the feature lives behind one toolbar button, and home is
-never looked up. 🔴 **Open for Chiu:** the discovery thresholds (INFERRED), the
-geocode-at-discovery timing. S1's dark override is lifted and the light
-style approved (2026-09-18 (d) and addendum) — films follow the device.
+never looked up. Discovery's thresholds ship INFERRED and its lookup timing is accepted
+(2026-09-18 (e)). S1's dark override is lifted and the light style approved
+(2026-09-18 (d) and addendum) — films follow the device. The terrain credit is
+owed only where a licence requires it (2026-09-18 (f)).
 
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — then Chiu's submission sequence, the

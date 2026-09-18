@@ -65,8 +65,6 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
-- **Journey discovery beta** — yours: INFERRED thresholds, geocoding at
-  discovery. → `Docs/decisions.md` 2026-09-18 (c).
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
@@ -76,9 +74,6 @@ string stands. Do not reopen this from scratch.
 - **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
   ships `"Kamome"`. What the product is called, and in which scripts, is yours.
   → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **Terrain credit awaiting Chiu** — `· Terrain: USGS/LINZ/GA` already ships in
-  every film; the 2026-09-13 frozen string needs his sign-off on it.
-  → `Docs/decisions.md` 2026-09-17 §6.
 - **`privacy_intro` wording awaiting Chiu** — interim draft installed; he writes
   the final text (「給我建議的寫法我再修正」).
   → `Docs/decisions.md` 2026-09-17 §6.
@@ -89,8 +84,9 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **TestFlight: three upload fixes, the appearance line, and the first-run
-  notice that backgrounds the app.** → `Docs/handoff-testflight.md`.
+- 🟠 **TestFlight: three upload fixes, the appearance line, the first-run
+  notice that backgrounds the app, and the terrain credit (ADR 2026-09-18 (f)).**
+  → `Docs/handoff-testflight.md`.
 - 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
   checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'
   `api.geoapify.com` default can only get 401s — carrying a local dump's real
