@@ -1,30 +1,23 @@
+import AVKit
 import KamomeExportEngine
 import KamomePersistence
 import KamomeTripComposer
 import MapKit
 import SwiftUI
 
-/// **A journey's diary** (redesigned 2026-09-18), and one action at the foot of
-/// it: *Make this a Film*.
-///
-/// The screen reads top to bottom as the journey happened — masthead, figures,
-/// the route as a supporting illustration, then day by day: the travel, the
-/// place it reached, the photographs taken there. It used to open on a
-/// full-bleed photo cover, which made a journey look like an album; the
-/// photographs now sit inside the days they belong to, at the size of evidence.
-///
-/// Every editing affordance survives the redesign (stop editor, merge and
-/// delete, the ride, stored films). None of them competes with the film button.
+/// S3 Trip Detail: mode-colored route (drive solid, walk dotted), stop pins
+/// with photo badges, day filter chips, stats strip, timeline list.
 struct TripDetailView: View {
     @Environment(TrackingSession.self) private var session
     @State private var model: TripDetailModel
     @State private var editingStop: StopRecord?
     @State private var showingRecap = false
     @State private var playingFilm: FilmRecord?
-    /// Read directly off the shared coordinators rather than mirrored: a mirror
-    /// is a second place for the answer to be wrong (Chiu 2026-09-10).
+    /// The export outlives the sheet, so the trip screen has to be able to draw
+    /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
+    /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
+    /// answer to be wrong, and Observation tracks the reads in `body` either way.
     private let exportCoordinator = RecapExportCoordinator.shared
-    private let routeCoordinator = RouteMatchCoordinator.shared
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: TripDetailModel(
@@ -33,28 +26,35 @@ struct TripDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                JourneyMasthead(model: model)
-                JourneyFigures(model: model)
-                routeIllustration
-                if model.photoAccessIsLimited {
-                    LimitedLibraryRow { model.manageLimitedPhotoSelection() }
-                }
-                JourneyDiary(model: model) { editingStop = $0 }
-                    .padding(.top, 2)
-                rideRow
-                filmsSection
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 28)
+        VStack(spacing: 0) {
+            map.frame(minHeight: 280)
+            if model.dayCount > 1 { dayChips }
+            if let stats = model.stats { statsStrip(stats) }
+            if model.isReconstructed { provenanceNote }
+            if model.isNamingStops { namingBanner }
+            if model.photoAccessIsLimited { limitedPhotosBanner }
+            vehicleRow
+            exportProgressRow
+            filmsSection
+            timeline
         }
-        .background(Color(.systemBackground))
-        .navigationTitle("")
+        .navigationTitle(model.detail?.trip.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) { filmBar }
         .onAppear { model.load() }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                // S5 entry: only completed trips have a recap to render.
+                Button {
+                    showingRecap = true
+                } label: {
+                    Label("recap_export", systemImage: "film")
+                }
+                // Naming is throttled and asynchronous; a film exported before it
+                // finishes says "Unnamed stop" for every stop still in the queue
+                // (Chiu 2026-08-04). The banner above says why the button is off.
+                .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
+            }
+        }
         .sheet(item: $editingStop) { stop in
             StopEditorView(model: model, stop: stop)
                 .presentationDetents([.medium, .large])
@@ -65,233 +65,363 @@ struct TripDetailView: View {
         .onChange(of: showingRecap) {
             if !showingRecap { model.reload() }
         }
-        // The film that landed while nobody was looking (ADR 2026-09-10), and
-        // the roads that did: both arrive with this screen open or not.
-        .onChange(of: exportCoordinator.outcome(tripId: model.tripId)) { model.reload() }
-        .onChange(of: routeCoordinator.progress[model.tripId]) { model.reload() }
+        // **The film that landed while nobody was looking.** An export now
+        // finishes with the sheet closed, so the trip screen has to pick up the
+        // new record itself — waiting for the sheet to be dismissed was the only
+        // refresh there was, and it no longer happens at the right moment.
+        .onChange(of: exportCoordinator.outcome(tripId: model.tripId)) {
+            model.reload()
+        }
         .sheet(item: $playingFilm) { film in
             FilmPlayerSheet(film: film, onDelete: {
                 model.deleteFilm(film)
+                // The export sheet remembers this trip's last finished film, and
+                // that memory now outlives the sheet — so deleting the film here
+                // has to clear it, or reopening the sheet plays a file that is
+                // gone (ADR 2026-09-10).
                 exportCoordinator.forget(film: film)
                 playingFilm = nil
             })
         }
     }
 
-    // MARK: - The route, supporting
-
-    /// A strip, not a screen. The map shows the shape of the journey beside the
-    /// words that tell it; the film is where a route is watched.
-    ///
-    /// Not interactive on purpose: a pan inside the diary moved the map instead
-    /// of the page (2026-09-17 render).
-    private var routeIllustration: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Map(interactionModes: []) {
-                ForEach(model.visibleSegments, id: \.segment.id) { item in
-                    let coords = model.displayPolyline(for: item.points)
-                        .map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
-                    if coords.count >= 2 {
-                        MapPolyline(coordinates: coords)
-                            .stroke(Color.accentColor, style: strokeStyle(for: item.segment))
-                    }
-                }
-                ForEach(model.visibleStops, id: \.id) { stop in
-                    Annotation(stop.name ?? "", coordinate: .init(latitude: stop.lat, longitude: stop.lon)) {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 8, height: 8)
-                            .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                    }
-                    .annotationTitles(.hidden)
+    private var map: some View {
+        Map {
+            ForEach(model.visibleSegments, id: \.segment.id) { item in
+                let coords = model.displayPolyline(for: item.points)
+                    .map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
+                if coords.count >= 2 {
+                    MapPolyline(coordinates: coords)
+                        .stroke(color(for: item.segment.mode), style: strokeStyle(for: item.segment.mode))
                 }
             }
-            .frame(height: 150)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .accessibilityLabel(Text("story_map_label"))
-            legend
-        }
-    }
-
-    /// Solid is a line someone knows, dashed is a line inferred between two
-    /// photographs (PD-1). Said under the map, where the convention is first
-    /// seen, so the same convention in the film needs no explaining.
-    @ViewBuilder
-    private var legend: some View {
-        let hasInferred = model.storyDays.flatMap(\.entries).contains { $0.leg?.provenance == .inferred }
-        HStack(spacing: 12) {
-            legendSwatch(dashed: false, text: model.isReconstructed ? "leg_matched" : "leg_recorded")
-            if hasInferred { legendSwatch(dashed: true, text: "leg_inferred") }
-            if routeCoordinator.isRunning(model.tripId) {
-                ProgressView().controlSize(.mini)
-                Text("story_roads_arriving")
+            ForEach(model.visibleStops, id: \.id) { stop in
+                Annotation(stop.name ?? "", coordinate: .init(latitude: stop.lat, longitude: stop.lon)) {
+                    stopPin(stop)
+                }
             }
         }
-        .font(.caption2)
-        .foregroundStyle(.tertiary)
     }
 
-    private func legendSwatch(dashed: Bool, text: LocalizedStringKey) -> some View {
-        HStack(spacing: 5) {
-            Path { path in
-                path.move(to: .zero)
-                path.addLine(to: CGPoint(x: 18, y: 0))
+    private func stopPin(_ stop: StopRecord) -> some View {
+        Button {
+            editingStop = stop
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "mappin.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                    .background(Circle().fill(.background))
+                let count = model.photos(for: stop.id).count
+                if count > 0 {
+                    Text("\(count)")
+                        .font(.caption2.bold())
+                        .padding(3)
+                        .background(Circle().fill(.orange))
+                        .offset(x: 8, y: -8)
+                }
             }
-            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 2.5, dash: dashed ? [3, 3] : []))
-            .frame(width: 18, height: 2.5)
-            Text(text)
         }
     }
 
-    private func strokeStyle(for segment: SegmentRecord) -> StrokeStyle {
-        RecapComposer.provenance(for: segment) == .inferred
-            ? StrokeStyle(lineWidth: 3, dash: [4, 6])
-            : StrokeStyle(lineWidth: 3.5)
+    private var dayChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack {
+                chip(label: Text("day_all"), selected: model.selectedDay == nil) { model.selectDay(nil) }
+                ForEach(0..<model.dayCount, id: \.self) { day in
+                    chip(
+                        label: Text(String.localizedStringWithFormat(String(localized: "day_chip"), day + 1)),
+                        selected: model.selectedDay == day
+                    ) { model.selectDay(day) }
+                }
+            }
+            .padding(.horizontal)
+        }
+        .padding(.vertical, 8)
     }
 
-    // MARK: - Secondary
+    private func chip(label: Text, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            label
+                .font(.subheadline)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(selected ? Color.accentColor : Color.secondary.opacity(0.2)))
+                .foregroundStyle(selected ? Color.white : Color.primary)
+        }
+    }
 
-    /// Which subject the film draws — a trip property (schema v3). The plane is
-    /// absent on purpose: the app picks it for a crossing.
-    @ViewBuilder
-    private var rideRow: some View {
-        let subjects = model.pickableSubjects
-        if subjects.count > 1 {
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "story_ride")
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(subjects, id: \.id) { subject in
-                            Button { model.chooseVehicle(subject.id) } label: {
-                                RideChip(subject: subject, isSelected: subject.id == model.vehicleId)
-                            }
-                            .buttonStyle(.plain)
+    private func statsStrip(_ stats: TripStats) -> some View {
+        HStack(spacing: 24) {
+            stat(value: String(format: "%.0f km", stats.distanceM / 1000), label: "stat_distance")
+            stat(value: hours(stats.driveS), label: "stat_drive_time")
+            stat(value: "\(stats.stopCount)", label: "stat_stops")
+            stat(value: String(format: "%.0f km/h", stats.topSpeedKmh), label: "stat_top_speed")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(.thinMaterial)
+    }
+
+    private func stat(value: String, label: LocalizedStringKey) -> some View {
+        VStack {
+            Text(value).font(.subheadline.bold()).monospacedDigit()
+            Text(label).font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Honest provenance (§3/§6): an imported trip's route is inferred from
+    /// photo place+time, not recorded — say so, and never imply it is verified.
+    private var provenanceNote: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "photo.on.rectangle")
+                .foregroundStyle(.secondary)
+            Text("provenance_note")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
+    }
+
+    /// Stop naming is throttled (§4.2), so on an imported trip it runs for tens
+    /// of seconds after this screen opens. Without this row the wait is invisible
+    /// and the disabled film button looks broken rather than deliberate.
+    private var namingBanner: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text(String.localizedStringWithFormat(
+                String(localized: "naming_stops_progress"),
+                model.naming.completed, model.naming.total
+            ))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
+    }
+
+    /// Selected-Photos access hides camera shots taken during the trip until
+    /// the user adds them; without this row they'd silently never appear.
+    private var limitedPhotosBanner: some View {
+        HStack {
+            Image(systemName: "photo.badge.exclamationmark")
+                .foregroundStyle(.secondary)
+            Text("limited_photos_notice")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("limited_photos_manage") {
+                model.manageLimitedPhotoSelection()
+            }
+            .font(.caption.bold())
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(.thinMaterial)
+    }
+
+    private var timeline: some View {
+        List {
+            ForEach(model.visibleStops, id: \.id) { stop in
+                Button {
+                    editingStop = stop
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(stop.name ?? String(localized: "stop_unnamed"))
+                                .font(.headline)
+                            Text(Date(timeIntervalSince1970: stop.arrivedAt), style: .time)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        PhotoStrip(photos: model.photos(for: stop.id), maxThumbnails: 3)
+                    }
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        model.deleteStop(stopId: stop.id)
+                    } label: {
+                        Label("delete_stop", systemImage: "trash")
+                    }
+                    if model.visibleStops.first?.id != stop.id {
+                        Button {
+                            model.mergeWithPrevious(stopId: stop.id)
+                        } label: {
+                            Label("merge_with_previous", systemImage: "arrow.triangle.merge")
                         }
                     }
                 }
             }
+            // §4.3 route-attached photos (no stop) — without this row they
+            // exist in the DB but appear nowhere.
+            if !model.routePhotos.isEmpty {
+                HStack {
+                    Text("route_photos_header")
+                        .font(.headline)
+                    Spacer()
+                    PhotoStrip(photos: model.routePhotos, maxThumbnails: 3)
+                }
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    private func hours(_ seconds: Double) -> String {
+        String(format: "%.1f h", seconds / 3600)
+    }
+
+    private func color(for mode: String) -> Color {
+        switch mode {
+        case "drive", "scooter": return .accentColor
+        case "walk": return .green
+        case "cycle": return .mint
+        case "transit": return .purple
+        default: return .gray
         }
     }
 
+    private func strokeStyle(for mode: String) -> StrokeStyle {
+        // Drive = solid, on-foot = dotted (§5 S3).
+        mode == "walk" || mode == "cycle"
+            ? StrokeStyle(lineWidth: 3, dash: [4, 6])
+            : StrokeStyle(lineWidth: 4)
+    }
+
+    /// The running export, on the trip screen rather than inside the sheet
+    /// (Chiu 2026-09-10). Progress has to be visible from outside, or "you can
+    /// leave this screen" means the film disappears the moment you do.
+    ///
+    /// Only this trip's export is drawn. One export runs app-wide, but a trip
+    /// showing another trip's progress bar would read as its own.
+    @ViewBuilder
+    private var exportProgressRow: some View {
+        if let running = exportCoordinator.running(tripId: model.tripId) {
+            HStack(spacing: 12) {
+                ProgressView(value: running.fraction)
+                    .frame(maxWidth: .infinity)
+                Text(running.fraction, format: .percent.precision(.fractionLength(0)))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Button("recap_cancel", role: .cancel) {
+                    exportCoordinator.cancel(tripId: model.tripId)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(.thinMaterial)
+        }
+    }
+
+    /// Stored films for this trip, tapping plays one. Shows nothing when the
+    /// trip has no films yet — a missing section is less noisy than an empty one.
     @ViewBuilder
     private var filmsSection: some View {
         if !model.films.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "films_section_title")
+            VStack(alignment: .leading, spacing: 0) {
+                Text("films_section_title")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal)
+                    .padding(.top, 10)
+                    .padding(.bottom, 4)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(model.films) { film in
-                            Button { playingFilm = film } label: { FilmChip(film: film) }
-                                .buttonStyle(.plain)
+                            filmCard(film)
                         }
                     }
-                }
-            }
-        }
-    }
-
-    // MARK: - The one action
-
-    /// *Make this a Film*, at the foot of the diary. Off while stops are still
-    /// being named (Chiu 2026-08-04: exporting early bakes "Unnamed stop" into
-    /// the film), and the line beneath says why. A running export shows here
-    /// too, because the export outlives the sheet (ADR 2026-09-10).
-    private var filmBar: some View {
-        VStack(spacing: 8) {
-            if let running = exportCoordinator.running(tripId: model.tripId) {
-                HStack(spacing: 12) {
-                    ProgressView(value: running.fraction)
-                    Text(running.fraction, format: .percent.precision(.fractionLength(0)))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                    Button("recap_cancel", role: .cancel) { exportCoordinator.cancel(tripId: model.tripId) }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                }
-            }
-            Button { showingRecap = true } label: {
-                Label("make_film", systemImage: "film")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 8)
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
-            if model.isNamingStops {
-                Text(String.localizedStringWithFormat(
-                    String(localized: "naming_stops_progress"), model.naming.completed, model.naming.total
-                ))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            .background(.thinMaterial)
+        }
+    }
+
+    private func filmCard(_ film: FilmRecord) -> some View {
+        Button { playingFilm = film } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Image(systemName: film.format == "gif" ? "photo.on.rectangle" : "film")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                Text(film.format.uppercased())
+                    .font(.caption2.bold())
+                Text(Date(timeIntervalSince1970: film.createdAt), style: .date)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if let bytes = film.fileBytes {
+                    Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(10)
+            .background(Color.secondary.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Which subject the film draws — a trip property, so it lives here beside
+    /// the title and the stops rather than inside the export sheet. Changing it
+    /// is a column write, so it never costs a re-import, and S5 reads it at
+    /// render time.
+    ///
+    /// The plane is deliberately absent: the app picks it from the journey for a
+    /// crossing, and choosing one for a road trip is not a feature.
+    @ViewBuilder
+    private var vehicleRow: some View {
+        let subjects = model.pickableSubjects
+        if subjects.count > 1 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(subjects, id: \.id) { subject in
+                        Button {
+                            model.chooseVehicle(subject.id)
+                        } label: {
+                            vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .background(.bar)
     }
-}
 
-/// The quiet heading the diary's two footnote sections share.
-private struct SectionLabel: View {
-    let text: LocalizedStringKey
-
-    var body: some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .tracking(1)
-            .textCase(.uppercase)
-            .foregroundStyle(.tertiary)
-    }
-}
-
-private struct RideChip: View {
-    let subject: VehicleSubject
-    let isSelected: Bool
-
-    var body: some View {
+    private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
         let language = Locale.current.language.languageCode?.identifier ?? "en"
-        HStack(spacing: 6) {
+        // A subject with no thumbnail yet shows its name alone. Deliberately not
+        // a grey box or a "missing image" glyph: those read as broken, and this
+        // is not broken — the set works in a film and simply has no picture yet.
+        // A chip that is only a name is an ordinary chip.
+        return HStack(spacing: 6) {
             if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
                 Image(decorative: thumbnail, scale: 1)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 26, height: 26)
             }
-            Text(subject.displayName(language: language)).font(.subheadline)
+            Text(subject.displayName(language: language))
+                .font(.subheadline)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(isSelected ? Color.accentColor.opacity(0.16) : Color(.secondarySystemBackground))
-        .overlay(Capsule().stroke(isSelected ? Color.accentColor : .clear, lineWidth: 1.5))
+        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
+        .overlay(
+            Capsule().stroke(isSelected ? Color.accentColor : .clear, lineWidth: 1.5)
+        )
         .clipShape(Capsule())
     }
-}
 
-private struct FilmChip: View {
-    let film: FilmRecord
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: film.format == "gif" ? "photo.on.rectangle" : "play.circle.fill")
-                .font(.title3)
-                .foregroundStyle(.tint)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(Date(timeIntervalSince1970: film.createdAt), style: .date).font(.subheadline.weight(.medium))
-                HStack(spacing: 4) {
-                    Text(film.format.uppercased())
-                    if let bytes = film.fileBytes {
-                        Text(verbatim: "·")
-                        Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
-                    }
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            }
-        }
-        .padding(11)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
 }

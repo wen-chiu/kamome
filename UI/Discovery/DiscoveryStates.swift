@@ -1,8 +1,12 @@
 import SwiftUI
 
-/// The home screen's states that are not a list of journeys: before access,
-/// while looking, when refused, when nothing was found, and the Selected
-/// Photos reminder. Each is a conversation, not an alert (`DESIGNER.md` rule 5).
+/// The Journey Discovery beta's states that are not a list of journeys: before
+/// access, while looking, when refused, when nothing was found, and the
+/// Selected Photos reminder. Each is a conversation, not an alert
+/// (`DESIGNER.md` rule 5).
+///
+/// None of them offers import: adding a journey the library cannot see is the
+/// home screen's job, and this beta deliberately does not duplicate it.
 
 /// First launch: what Kamome does, and one button that lets it.
 struct WelcomeCard: View {
@@ -60,8 +64,6 @@ struct ScanningRow: View {
 /// Access was refused. Recoverable in Settings; the manual import still works
 /// for anything already shared in.
 struct AccessDeniedCard: View {
-    let importAction: () -> Void
-
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             KamomeGull(size: 36)
@@ -86,7 +88,6 @@ struct AccessDeniedCard: View {
 /// away from home. Says what it looked for, and offers the manual path.
 struct NothingFoundCard: View {
     let access: PhotoReadAccess
-    let importAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -96,11 +97,6 @@ struct NothingFoundCard: View {
             Text(access == .limited ? "nothing_found_limited" : "nothing_found_body")
                 .font(.body)
                 .foregroundStyle(.secondary)
-            Button(action: importAction) {
-                Label("import_from_photos", systemImage: "photo.stack")
-                    .font(.headline)
-            }
-            .buttonStyle(.bordered)
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)

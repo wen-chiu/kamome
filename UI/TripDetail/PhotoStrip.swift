@@ -2,12 +2,35 @@ import KamomePersistence
 import Photos
 import SwiftUI
 
+/// Small horizontal run of photo thumbnails for timeline rows.
+struct PhotoStrip: View {
+    let photos: [PhotoRefRecord]
+    let maxThumbnails: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(photos.prefix(maxThumbnails), id: \.id) { photo in
+                PhotoThumbnail(assetId: photo.phAssetId, isHighlight: photo.isHighlight == 1)
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            if photos.count > maxThumbnails {
+                Text("+\(photos.count - maxThumbnails)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
 /// Loads one PhotoKit thumbnail; a deleted or unavailable asset renders the
 /// placeholder tile instead of failing (§3 rules).
 struct PhotoThumbnail: View {
     let assetId: String
     var isHighlight = false
-    /// Longest side requested from PhotoKit, in pixels.
+    /// Longest side requested from PhotoKit, in pixels. The default is the size
+    /// the timeline rows have always asked for; the Journey Discovery beta's
+    /// larger tiles pass their own.
     var targetPx: Int = 100
 
     @State private var image: UIImage?
@@ -15,22 +38,16 @@ struct PhotoThumbnail: View {
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             if let image {
-                Color.clear.overlay(
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                )
-                .clipped()
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
             } else {
-                // A missing thumbnail is a quiet tile, never a broken-image
-                // glyph: the asset being in iCloud or deleted is not an error
-                // the reader can act on, and the row beside it still reads.
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(.secondary.opacity(0.18))
+                    .fill(.secondary.opacity(0.2))
                     .overlay(
                         Image(systemName: "photo")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     )
             }
             if isHighlight {

@@ -78,10 +78,11 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
-- **Journey discovery (ADR 2026-09-17)** — the `discovery` thresholds are
-  INFERRED and settle only on your library; and one coarse Apple geocode per
-  discovered journey now runs at discovery, not at import — keep, or move
-  behind the first tap. → `Docs/decisions.md` 2026-09-17.
+- **Journey discovery, in beta (ADRs 2026-09-17 → 2026-09-18 (b))** — thresholds
+  are INFERRED and settle only on your library; one coarse Apple geocode per
+  journey runs at discovery, not at import; and 🔴 **every film is still dark
+  whatever the device**, because S1's `.preferredColorScheme(.dark)` was restored
+  with it. One line, your call. → `Docs/decisions.md` 2026-09-18 (b).
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.

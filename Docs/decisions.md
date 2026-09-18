@@ -5315,3 +5315,51 @@ discovery config and the whole EXIF → Trip → Legs → Transportation → Rou
 Recap pipeline are untouched (ADR 2026-09-17). The `discovery` thresholds and
 the geocode-at-discovery question are still open and still Chiu's. Visual
 sign-off on the new language is `DESIGNER.md`'s, from the renders.
+
+## 2026-09-18 (b) — Journey Discovery is an added feature in beta; S1 stays the home
+
+**Decision (Chiu, 2026-09-18).** *「不要取代原本的首頁 而是將這個當新增功能 這先幫
+測試版 我希望原本的功能頁面繼續保留 我們先慢慢優化這個 UI 在看後面如何修改」* —
+Journey Discovery does **not** replace the home screen. It is an added feature,
+in beta, and the original functional pages keep working untouched while its UI
+is refined.
+
+**What this reverses.** ADRs 2026-09-17 and 2026-09-18 replaced `HomeView` (S1)
+and `TripDetailView` (S3) in place. Both are **restored from `9313573`** and are
+now byte-identical to what shipped before this line of work, with two additions
+that change nothing on them:
+
+1. one toolbar button opening the beta, beside the existing info button and
+   inside the **same** `ToolbarItem` — two items at `.topBarTrailing` is what
+   lost the info button on a relaunch (2026-09-02), and that button carries a
+   licence obligation;
+2. `PhotoThumbnail` gains `targetPx`, defaulting to the 100 px it always
+   requested, so every original call site behaves exactly as before.
+
+**Where the new work lives.** `UI/Discovery/` holds the whole feature —
+`JourneyTimelineView` (the beta screen, presented as a sheet), `JourneyDiaryView`
+(its own detail), the entry, the summary, the states and the model. The shared
+timeline primitive stays in `UI/Timeline/`. **Two detail screens now exist on
+purpose**: S3 is the shipping trip screen, the diary is the beta's, and both read
+one `TripDetailModel`, so they cannot disagree about a journey.
+
+**What the beta deliberately does not have.** Import and live capture. Adding a
+journey the library cannot see is the home screen's job, and duplicating it into
+the beta would be the second place for that flow to drift.
+
+**Two consequences, stated rather than buried:**
+
+- 🔴 **The film-appearance fix from ADR 2026-09-17 is reverted with S1.** The
+  home carries `.preferredColorScheme(.dark)` again, so `RecapView` captures dark
+  at the tap and **every film exported from the app is dark whatever the device
+  is set to** — the gap ADR 2026-08-27 named. The beta inherits it too: a sheet
+  cannot undo an ancestor's preference (`nil` was tried, 2026-09-18). The light
+  treatment is drawn, works, and is rendered in
+  `~/Kamome-films/2026-09-18-journal/`, but it is **unreachable until Chiu lifts
+  the override**, which is a one-line change and his call.
+- The beta can create a trip (opening a discovered journey imports it) and can
+  delete one, so the home refreshes its list when the sheet closes.
+
+**Not decided here:** when, or whether, the beta is promoted to the home. That is
+a decision to take when the UI is judged good enough, not a leftover step — and
+until it is taken, S1 is the home.

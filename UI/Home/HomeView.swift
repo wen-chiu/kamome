@@ -1,59 +1,63 @@
 import KamomeTrackingEngine
+import KamomeTripComposer
 import SwiftUI
 import UIKit
 
-/// **Your Journeys** — the Journey Discovery home (2026-09-17).
+/// S1 Home / Trip List: trip cards (title, date, distance, stops), vehicle
+/// selector, big Start button. Cover map thumbnails remain a later polish.
 ///
-/// The first screen is the journeys Kamome found in the photo library, by
-/// year, each a card that already knows where it went. Nothing is created until
-/// a card is opened; the manual import sheet and live recording stay reachable
-/// from the toolbar menu, as the paths for a journey the library cannot see.
+/// ⚠️ **This screen stays the home** (Chiu, 2026-09-18). Journey Discovery is an
+/// *added* feature in beta, not a replacement: it is one toolbar button away and
+/// opens as its own screen, so everything below — the trip list, import, live
+/// capture, the licence anchor — keeps working exactly as it did while the new
+/// UI is refined. Nothing here was restyled for it.
 struct HomeView: View {
     @Environment(TrackingSession.self) private var session
-    @State private var model: JourneyDiscoveryModel
+    @State private var vehicle: VehicleType = .car
     @State private var path: [String] = []
     @State private var showingImport = false
-    @State private var showingRecord = false
+    @State private var showingDiscovery = false
     @State private var showingAbout = false
     @State private var showingFirstRunNotice = false
-    @State private var deleting: JourneySummary?
-    @Namespace private var cardNamespace
     #if DEBUG
     @State private var debugShareFile: DebugShareFile?
     #endif
 
-    init(session: TrackingSession) {
-        _model = State(initialValue: HomeView.makeModel(session: session))
-    }
-
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                content
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
+            VStack(spacing: 16) {
+                if session.trips.isEmpty {
+                    emptyState
+                } else {
+                    tripList
+                }
+                Spacer()
+                importButton
+                liveCaptureSection
             }
-            .background(Color(.systemBackground))
+            .padding()
             .navigationTitle(Text("home_title"))
-            .navigationDestination(for: String.self) { tripId in
-                TripDetailView(tripId: tripId, session: session)
-                    .modifier(ZoomFromCard(id: model.summary(forTrip: tripId)?.id ?? tripId, namespace: cardNamespace))
-            }
-            .refreshable { await model.refresh() }
             .fullScreenCover(isPresented: .constant(session.isRecording)) {
                 RecordingView()
             }
             .sheet(isPresented: $showingImport) {
+                // On success: dismiss the sheet, refresh the list so the new
+                // trip appears, and push straight to S3 (Trip Detail).
                 ImportSheet(session: session) { tripId in
                     showingImport = false
                     session.refreshTrips()
-                    model.loadTrips()
                     path = [tripId]
                 }
             }
-            .sheet(isPresented: $showingRecord) {
-                StartRecordingSheet(session: session)
-                    .presentationDetents([.medium])
+            .toolbar { toolbarItems }
+            .sheet(isPresented: $showingDiscovery) {
+                JourneyTimelineView(session: session)
+            }
+            .onChange(of: showingDiscovery) {
+                // The beta can create a trip (opening a discovered journey
+                // imports it) and can delete one, so the list behind it is
+                // refreshed on the way back rather than left stale.
+                if !showingDiscovery { session.refreshTrips() }
             }
             .sheet(isPresented: $showingAbout) {
                 AboutView(matching: session.config.matching)
@@ -64,187 +68,174 @@ struct HomeView: View {
                     showingFirstRunNotice = false
                 }
             }
-            .confirmationDialog(
-                "journey_delete_confirm", isPresented: Binding(
-                    get: { deleting != nil }, set: { if !$0 { deleting = nil } }
-                ), titleVisibility: .visible
-            ) {
-                Button("journey_delete", role: .destructive) {
-                    if let deleting { withAnimation(.snappy) { model.delete(deleting) } }
-                    session.refreshTrips()
-                    deleting = nil
-                }
-            }
-            .toolbar { toolbarItems }
             #if DEBUG
             .sheet(item: $debugShareFile) { file in
                 ActivityShareSheet(url: file.url)
             }
             #endif
         }
-        .task { await model.refresh() }
-        .onChange(of: session.trips.count) { model.loadTrips() }
+        .preferredColorScheme(.dark) // dark-mode-first: maps look better (§5)
         .onAppear {
             #if DEBUG
+            // Demo screenshot automation (Phase 2 gate): jump straight to S3.
             if ProcessInfo.processInfo.arguments.contains("-demo-open-trip"),
                let first = session.trips.first {
                 path = [first.id]
             }
+            // Replay MVP §1 artifact: present the import sheet for its shot.
             if ProcessInfo.processInfo.arguments.contains("-demo-open-import") {
                 showingImport = true
             }
+            if ProcessInfo.processInfo.arguments.contains("-demo-discover") {
+                showingDiscovery = true
+            }
             #endif
             // Told once, before this build can send a real coordinate anywhere
-            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). Checked against the demo
-            // sheet above: two sheets raised in one pass is a race, not a stack.
-            if !showingImport, FirstRunNotice.shouldPresent(matching: session.config.matching) {
+            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). Both demo sheets above are
+            // checked because they open from this same `onAppear`, and two
+            // sheets raised in one pass is a race rather than a stack. Nothing
+            // is remembered on the launch that loses it, so the notice comes
+            // back on the next one.
+            if !showingImport, !showingDiscovery,
+               FirstRunNotice.shouldPresent(matching: session.config.matching) {
                 showingFirstRunNotice = true
             }
         }
     }
 
-    // MARK: - Content
-
-    @ViewBuilder
-    private var content: some View {
-        switch model.access {
-        case .undetermined where !model.hasJourneys:
-            WelcomeCard(isWorking: model.isScanning) {
-                Task { await model.requestAccessAndDiscover() }
-            }
-            .padding(.top, 8)
-        case .denied where !model.hasJourneys:
-            AccessDeniedCard { showingImport = true }
-                .padding(.top, 8)
-        default:
-            journeyList
-        }
-    }
-
-    /// **One continuous chronology**, not a list of cards. The rail runs from
-    /// the first year heading to the last journey, and every entry hangs off
-    /// it — which is what makes the screen read as a life of travel rather
-    /// than a folder of albums.
-    private var journeyList: some View {
-        LazyVStack(alignment: .leading, spacing: 0) {
-            if model.isScanning {
-                ScanningRow()
-                    .padding(.bottom, 16)
-                    .transition(.opacity)
-            }
-            if model.isLimitedAccess {
-                LimitedLibraryRow { model.selectMorePhotos() }
-                    .padding(.bottom, 20)
-            }
-            ForEach(Array(model.sections.enumerated()), id: \.element.id) { sectionIndex, section in
-                yearHeading(section.year, isFirst: sectionIndex == 0)
-                ForEach(Array(section.journeys.enumerated()), id: \.element.id) { index, journey in
-                    JourneyEntry(
-                        journey: journey,
-                        isOpening: model.openingId == journey.id,
-                        isLast: isLastOverall(section: sectionIndex, entry: index),
-                        namespace: cardNamespace
-                    ) {
-                        open(journey)
-                    }
-                    .contextMenu { contextMenu(for: journey) }
-                    .transition(.opacity)
-                }
-            }
-            if !model.hasJourneys, !model.isScanning {
-                NothingFoundCard(access: model.access) { showingImport = true }
-            }
-        }
-        .padding(.top, 4)
-        .animation(.snappy(duration: 0.45), value: model.sections)
-    }
-
-    /// The year, in the same editorial serif the destinations use, sitting on
-    /// the rail rather than beside it.
-    private func yearHeading(_ year: Int, isFirst: Bool) -> some View {
-        TimelineRow(
-            marker: .none, connectsUp: !isFirst, markerOffset: 16, bottomPadding: 14
-        ) {
-            Text(verbatim: String(year))
-                .font(.system(.title3, design: .serif).weight(.semibold))
-                .foregroundStyle(.secondary)
-                .tracking(1)
-        }
-        .accessibilityAddTraits(.isHeader)
-    }
-
-    private func isLastOverall(section: Int, entry: Int) -> Bool {
-        section == model.sections.count - 1 && entry == (model.sections.last?.journeys.count ?? 0) - 1
-    }
-
-    @ViewBuilder
-    private func contextMenu(for journey: JourneySummary) -> some View {
-        if journey.isImported {
-            Button(role: .destructive) { deleting = journey } label: {
-                Label("journey_delete", systemImage: "trash")
-            }
-        } else {
-            Button { withAnimation(.snappy) { model.hide(journey) } } label: {
-                Label("journey_hide", systemImage: "eye.slash")
-            }
-        }
-    }
-
-    private func open(_ journey: JourneySummary) {
-        Task {
-            if let tripId = await model.open(journey) {
-                session.refreshTrips()
-                path.append(tripId)
-            }
-        }
-    }
-
-    // MARK: - Toolbar
-
-    /// One trailing item, deliberately (2026-09-02: two `ToolbarItem`s at the
-    /// trailing edge lost the info button on relaunch). The info button is the
-    /// licence obligation's anchor (`Docs/release-readiness.md` S2) and stays a
-    /// button of its own; the two ways to add a journey the library cannot see
-    /// share a menu beside it.
+    /// Home is the only screen every user reaches, so it is where the licence
+    /// obligation can be relied on to be reachable (`Docs/release-readiness.md`
+    /// S2). ⏳ The placement is Chiu's and is not ruled on — this is the anchor
+    /// that already existed, not a chosen design.
+    ///
+    /// **The debug menu moves to the leading side rather than sharing this one**
+    /// (2026-09-02). Two `ToolbarItem`s at `.topBarTrailing` are not two buttons:
+    /// the info button rendered on a first launch and was **gone on every clean
+    /// relaunch after it**, which is the worst possible failure for a licence
+    /// obligation — present when you check it, absent when a user looks. The
+    /// debug menu keeps its own slot instead of being deleted, because it is the
+    /// post-drive data path (`Docs/device-test-P1.md`) and a verification route
+    /// is not something to trade for a toolbar corner.
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         #if DEBUG
         ToolbarItem(placement: .topBarLeading) { debugExportMenu }
         #endif
         ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 4) {
-                Menu {
-                    Button { showingImport = true } label: {
-                        Label("import_from_photos", systemImage: "photo.stack")
-                    }
-                    Button { showingRecord = true } label: {
-                        Label("live_capture_header", systemImage: "record.circle")
-                    }
+            HStack(spacing: 2) {
+                Button {
+                    showingDiscovery = true
                 } label: {
-                    Label("journey_add", systemImage: "plus")
+                    Label("discovery_open", systemImage: "sparkles.rectangle.stack")
                 }
-                Button { showingAbout = true } label: {
+                Button {
+                    showingAbout = true
+                } label: {
                     Label("about_title", systemImage: "info.circle")
                 }
             }
         }
     }
 
-    private static func makeModel(session: TrackingSession) -> JourneyDiscoveryModel {
-        #if DEBUG
-        if let demo = DemoJourneyLibrary.ifRequested() {
-            return JourneyDiscoveryModel(
-                config: session.config, repository: session.repository,
-                source: demo, photoAccess: demo, defaults: demo.defaults
-            )
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.system(size: 56))
+                .foregroundStyle(.tint)
+            Text("empty_state_pitch")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text("empty_state_import_hint")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
-        #endif
-        return JourneyDiscoveryModel(
-            config: session.config,
-            repository: session.repository,
-            source: PhotoLibraryImportSource(),
-            photoAccess: PhotoLibraryService(config: session.config, repository: session.repository)
-        )
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
+        .padding(.horizontal)
+    }
+
+    private var tripList: some View {
+        List(session.trips) { trip in
+            NavigationLink(value: trip.id) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trip.title)
+                        .font(.headline)
+                    HStack {
+                        Text(Date(timeIntervalSince1970: trip.startedAt), style: .date)
+                        if let stats = TripStats.from(jsonString: trip.statsJson) {
+                            Text(String(format: "· %.0f km · %d", stats.distanceM / 1000, stats.stopCount))
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    // Honest provenance (§3): a trip rebuilt from photo EXIF is
+                    // never presented as recorded/verified.
+                    if trip.tripSource.isReconstructed {
+                        provenanceBadge
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+        .navigationDestination(for: String.self) { tripId in
+            TripDetailView(tripId: tripId, session: session)
+        }
+    }
+
+    private var provenanceBadge: some View {
+        Label("provenance_badge", systemImage: "photo.on.rectangle")
+            .font(.caption2.bold())
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.secondary.opacity(0.2)))
+            .foregroundStyle(.secondary)
+    }
+
+    // MP4-from-photos is the hero action (§5 S1); live capture is secondary and
+    // graduates to Capture Beta (Phase 5).
+    private var importButton: some View {
+        Button {
+            showingImport = true
+        } label: {
+            Label("import_from_photos", systemImage: "photo.stack")
+                .font(.title2.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.borderedProminent)
+    }
+
+    private var liveCaptureSection: some View {
+        VStack(spacing: 8) {
+            Text("live_capture_header")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            vehiclePicker
+            startButton
+        }
+    }
+
+    private var vehiclePicker: some View {
+        Picker("vehicle_label", selection: $vehicle) {
+            Text("vehicle_car").tag(VehicleType.car)
+            Text("vehicle_scooter").tag(VehicleType.scooter)
+            Text("vehicle_bicycle").tag(VehicleType.bicycle)
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var startButton: some View {
+        Button {
+            session.start(vehicle: vehicle)
+        } label: {
+            Text("start_journey")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+        }
+        .buttonStyle(.bordered)
     }
 
     #if DEBUG
@@ -305,20 +296,6 @@ struct HomeView: View {
         return formatter.string(from: .now)
     }
     #endif
-}
-
-/// The card grows into its screen on iOS 18; on 17 the push is the plain one.
-private struct ZoomFromCard: ViewModifier {
-    let id: String
-    let namespace: Namespace.ID
-
-    func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content.navigationTransition(.zoom(sourceID: id, in: namespace))
-        } else {
-            content
-        }
-    }
 }
 
 #if DEBUG
