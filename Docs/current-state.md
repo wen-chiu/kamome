@@ -7,7 +7,7 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-18 against decisions.md **2026-09-18 (f)** and `main` at
-**PR #74**. (d) lifts S1's dark override — the app and the film follow the
+**PR #75**. (d) lifts S1's dark override — the app and the film follow the
 device's appearance — and its addendum approves the light style. (e) closes
 Journey Discovery's two questions; (f) sets the terrain-credit rule. PO TestFlight audit: three upload fixes owed
 (`Docs/handoff-testflight.md`); D1–D5 and S7 gate the App Store, not TestFlight.
