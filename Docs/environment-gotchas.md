@@ -99,7 +99,7 @@ mid-`xcodebuild test` on branches carrying exactly that code. They targeted othe
 simulator devices, so the route is UNKNOWN. The identical retry drew the right code,
 and a controlled build-then-run-twice did not reproduce it. **A green run proves
 nothing about whose code ran: gate a render on a console line only your build can
-print.** → `Docs/handoff-openfreemap-eval.md`, the "flake" section.
+print.** → `Docs/_archive/handoff-openfreemap-eval.md`, the "flake" section.
 
 ## Capture the whole run, or a flake is unattributable
 
