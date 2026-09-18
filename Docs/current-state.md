@@ -6,20 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-18 against decisions.md **2026-09-18 (c)** and `main` at
-**PR #73**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
-licence, routing-key and local-network ADRs 2026-09-12 (c)–(e); #69 updated
-privacy_intro wording.) Config flip made (S6 closed, S7 new — rotation owed). Film persists
-(ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
-export outlives its screen (ADR 2026-09-10). ✅ **The substrate STYLE evaluation closed
-2026-09-15** — coast A, hillshade in, peaks narrowed, islands at `rank <= 2`.
-**Production switch to OpenFreeMap + MapLibre in flight** (ADR 2026-09-16, this branch).
-Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
-**the film now carries its map credit on the MapLibre path only** (ADR 2026-09-12
-(b), amending 2026-08-17; licences verified and the plate lightened, ADR
-2026-09-13). Three decisions from PRs #55–#58 were missing from the ledger
-and are now recorded: third-party licences (c), routing key build path (d),
-local-network Debug-only (e), all 2026-09-12.
+Last synced: 2026-09-18 against decisions.md **2026-09-18 (d)** and `main` at
+**PR #74**. (d) lifts S1's dark override — the app and the film follow the
+device's appearance, which puts the not-yet-approved light style in front of
+light-mode users. PO TestFlight audit: three upload fixes owed
+(`Docs/handoff-testflight.md`); D1–D5 and S7 gate the App Store, not TestFlight.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
@@ -75,13 +66,14 @@ scoped to **stop points** (#72). **Journey Discovery ships as an added feature
 in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
 restored untouched, the feature lives behind one toolbar button, and home is
 never looked up. 🔴 **Open for Chiu:** the discovery thresholds (INFERRED), the
-geocode-at-discovery timing, and S1's `.preferredColorScheme(.dark)` — which
-makes 2026-09-16's light film style unreachable (2026-09-18 (c) §4).
+geocode-at-discovery timing, and approval of the light film style — S1's dark
+override is lifted (2026-09-18 (d)), so light now reaches users.
 
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — then Chiu's submission sequence, the
 artifact check (`./check.sh --release`, needs the real key) and **then** the key
-rotation, in that order. → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
+rotation, in that order. **TestFlight is not behind these** — it is how
+D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
 
 ## Architecture
 
@@ -123,8 +115,7 @@ is not to be tuned** — Variant A is harness-only env overrides.
 ## Deferred — do not implement opportunistically
 
 MapLibre substrate work beyond the frozen styles (custom tiles, tile server, map
-labels, pixel art) — **the export substrate evaluation closed 2026-09-15** and the
-production switch is this branch (ADR 2026-09-16) · Story
+labels, pixel art) — the production switch landed (ADR 2026-09-16) · Story
 Director's remaining content (hero photos, chapters, music, video beads) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region

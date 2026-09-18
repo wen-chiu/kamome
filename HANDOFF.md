@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-17.** `main` carries PRs #16–#69. Everything closed has been
+**Updated 2026-09-18.** `main` carries PRs #16–#74. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -19,7 +19,8 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 ## 🔴 The critical path to a release — neither item is a document
 
 Everything else on this page can wait behind these two, and **no Claude session
-can do either**.
+can do either**. Both gate the **App Store submission**, not TestFlight — a
+TestFlight build is the vehicle for D1–D5 (→ `Docs/handoff-testflight.md`).
 
 1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
@@ -36,17 +37,6 @@ can do either**.
    still holds the current one, and the flip cannot reach those.
    **Order matters**: rotating first would leave the check validating a bundle
    nobody ships. → `Docs/release-readiness.md` S6, S7, Tier 1.
-
----
-
-## 🔵 Live — the production switch to OpenFreeMap + MapLibre
-
-**Evaluation concluded 2026-09-15; production switch in flight** (ADR 2026-09-16).
-Two frozen Liberty styles (dark + light) bundled, Apple fallback removed, privacy
-notice updated. Coast variant A (contrast only). Peak thresholds: ele ≥ 1000,
-rank ≤ 1. `fixedAppearance` nil on the OpenFreeMap path → ADR 2026-08-27 is true
-again (film follows device appearance).
-→ `Docs/decisions.md` 2026-09-16, `Docs/handoff-openfreemap-eval.md`.
 
 ---
 
@@ -76,8 +66,7 @@ string stands. Do not reopen this from scratch.
 ## ⏳ Awaiting Chiu
 
 - **Journey discovery beta** — yours: INFERRED thresholds, geocoding at
-  discovery, and 🔴 S1's dark override vs 2026-09-16's light film.
-  → `Docs/decisions.md` 2026-09-18 (c).
+  discovery. → `Docs/decisions.md` 2026-09-18 (c).
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
@@ -87,19 +76,15 @@ string stands. Do not reopen this from scratch.
 - **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
   ships `"Kamome"`. What the product is called, and in which scripts, is yours.
   → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **Light style awaiting judgement** — renders produced 2026-09-17. Not approved.
-  → `Docs/decisions.md` 2026-09-17 §6 (D2).
-- **Terrain credit string awaiting Chiu** — the film credit was frozen 2026-09-13;
-  the terrain addition needs his approval.
+- 🔴 **Light style not approved, and about to ship** — S1's dark override is
+  lifted (2026-09-18 (d)), so light-mode devices get it. Approve or hold.
+  → `Docs/decisions.md` 2026-09-18 (d), 2026-09-16 §6 (D2).
+- **Terrain credit awaiting Chiu** — `· Terrain: USGS/LINZ/GA` already ships in
+  every film; the 2026-09-13 frozen string needs his sign-off on it.
   → `Docs/decisions.md` 2026-09-17 §6.
 - **`privacy_intro` wording awaiting Chiu** — interim draft installed; he writes
   the final text (「給我建議的寫法我再修正」).
   → `Docs/decisions.md` 2026-09-17 §6.
-- **Part D: Apple geocoder terms** — CLGeocoder output is not Map Data under
-  DPLA Attachment 6 on the plain reading (Core Location, not MapKit; §1.2 scopes
-  to "Apple Maps Service"). Chiu's condition is satisfied. Three alternatives
-  listed if the reading is wrong.
-  → `Docs/decisions.md` 2026-09-16 §6, Part D analysis.
 - **TestFlight films in Application Support/Films/** — rendered on Apple Maps,
   still present (§2.5). Chiu's call.
 
@@ -107,14 +92,13 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
+- 🟠 **TestFlight: three upload fixes, the appearance line, and the first-run
+  notice that backgrounds the app.** → `Docs/handoff-testflight.md`.
 - 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
   checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'
   `api.geoapify.com` default can only get 401s — carrying a local dump's real
   coordinates (§0). Default it to `""`, to the Worker (quota), or leave it: Chiu's.
   → `Docs/decisions.md` 2026-09-12.
-
-- **Dismissing the first-run notice backgrounds the app.** The §0 path every user
-  walks once (PR #45). Simulator-reproducible; **UNKNOWN on device** — joins D1–D5.
 
 - 🟠 **No desk render can validate `matching.base_url`** — `RecapDemoFilmTests`
   never reads the shipped config, and making it would spend real quota.

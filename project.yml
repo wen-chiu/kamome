@@ -90,7 +90,8 @@ targets:
         # deliberately boring stand-in until it exists.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
-        # **CJK place names on a MapLibre base** (ADR 2026-09-09 evaluation).
+        # **CJK place names on the MapLibre export** (ADR 2026-09-09; shipping
+        # since the production switch, ADR 2026-09-16).
         #
         # OpenFreeMap's glyph server serves Noto Sans Regular/Bold/Italic only —
         # Latin — so every ideographic label arrives as a missing glyph unless
@@ -98,17 +99,14 @@ targets:
         # it: MapLibre reads it from the **main** bundle at startup and there is no
         # runtime API, so it cannot live in the test target or in an env variable.
         #
-        # ⚠️ **This is the one line of the round that lands in the shipped
-        # bundle.** It is inert there: `RecapModel.snapshotProvider(for:)` builds a
-        # MapLibre renderer only when `RecapMapTiles` finds a `.pmtiles` region,
-        # nothing ships one, and the evaluation does not install one — so no build
-        # constructs the renderer that would read this. Recorded rather than
-        # hidden.
+        # **Live on every export**: the film renders on OpenFreeMap + MapLibre with
+        # no Apple fallback, so every CJK label in every shipped film is drawn in
+        # this family.
         #
         # ⚠️ **Which family is a DESIGNER/product question, not settled here.**
-        # `PingFang TC` follows `CFBundleDevelopmentRegion: zh-Hant`, which means
-        # Japanese place names render in Chinese glyph forms — visible on the
-        # miyakojima fixture and reported for judgement, not fixed by guessing.
+        # `PingFang TC` follows `CFBundleDevelopmentRegion: zh-Hant`, so Japanese
+        # place names render in Chinese glyph forms in shipped films (visible on
+        # the miyakojima fixture) — reported for judgement, not fixed by guessing.
         MLNIdeographicFontFamilyName: PingFang TC
         # ⚠️ **No local-network permission in this list, on purpose** (ADR
         # 2026-09-12 (b)). `NSAppTransportSecurity → NSAllowsLocalNetworking` and

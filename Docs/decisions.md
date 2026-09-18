@@ -5614,3 +5614,33 @@ the original home looks in light mode — and Chiu's instruction of 2026-09-18 i
 that the original pages stay as they are. Two decisions of his, same level,
 pulling opposite ways: `CLAUDE.md` says state it, never pick. **One line in S1;
 his call.**
+
+## 2026-09-18 (d) — The app follows the device's appearance; S1's dark override goes
+
+**Decision (Chiu, 2026-09-18).** *「首頁不用強制深色，就按照使用者的預設主題更改。」*
+`HomeView`'s `.preferredColorScheme(.dark)` is removed. The app, and therefore
+the film (`RecapView` reads `@Environment(\.colorScheme)` at the tap), follows
+the device's system appearance.
+
+**What this resolves.** The conflict recorded in 2026-09-18 (c) §4 — light ships
+as a production style (2026-09-16) but S1 made it unreachable. Chiu names the
+override and lifts it, so ADR 2026-08-27 (the film follows the device) is true on
+the shipping path again.
+
+**What this amends.** 2026-09-18 (b) restored S1 *byte-identical*. S1 now differs
+by this one line, on Chiu's instruction; every other part of that decision stands.
+
+**Two consequences, stated rather than buried:**
+
+1. 🔴 **The light film style reaches users in light mode.** ADR 2026-09-16 §6
+   (addendum 2026-09-17, D2) says light *"is not approved until Chiu has seen
+   it"*, and its light hillshade paint is a first guess. Renders exist
+   (`~/Kamome-films/2026-09-18-journal/` and the 2026-09-17 set). Whether this
+   decision is also that approval is **not stated** — asked, not assumed.
+2. **Every in-app screen has only been designed and captured dark-first.** How
+   S1–S5 and the discovery beta read in light mode is **UNKNOWN**; the cheapest
+   settlement is a simulator capture of each screen in both appearances.
+   Visual craft is `DESIGNER.md`'s.
+
+**Implementation** is owed to an engineering session: `Docs/handoff-testflight.md`.
+That session does **not** write a second ADR for this.
