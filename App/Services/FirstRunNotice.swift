@@ -28,7 +28,7 @@ enum FirstRunNotice {
     /// acknowledged an older version is then told again. The wording is still
     /// Chiu's to rule on (`Docs/release-readiness.md` S2/S3), which is why the
     /// stored fact is a version and not a Bool.
-    static let version = 1
+    static let version = 2
 
     private static let key = "kamome.privacyNoticeAcknowledgedVersion"
 

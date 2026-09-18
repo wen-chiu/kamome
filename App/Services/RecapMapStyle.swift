@@ -82,6 +82,30 @@ enum RecapMapStyle {
         return String(data: data, encoding: .utf8) ?? json
     }
 
+    /// Loads a bundled style whose sources are already absolute URLs (e.g. the
+    /// frozen OpenFreeMap styles that point at `tiles.openfreemap.org`). No
+    /// placeholder substitution — the style is written to a temp file as-is.
+    ///
+    /// **This is the network-source counterpart of the pmtiles resolve path.**
+    /// The pmtiles path substitutes a local file URL into
+    /// `pmtiles://__KAMOME_TILES__`; this path loads a style that already names
+    /// its tile server. Both paths produce a `file://` URL that
+    /// `MLNMapSnapshotOptions(styleURL:)` loads — the only difference is whether
+    /// the style needed patching first.
+    static func resolvedNetworkStyleURL(
+        styleResource: String,
+        in bundle: Bundle = .main
+    ) throws -> URL {
+        guard let url = bundle.url(forResource: styleResource, withExtension: "json"),
+              let json = try? String(contentsOf: url, encoding: .utf8) else {
+            throw ResolveError.themeNotFound(resource: styleResource)
+        }
+        let out = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kamome-style-\(styleResource).json")
+        try json.write(to: out, atomically: true, encoding: .utf8)
+        return out
+    }
+
     /// Writes the resolved style to a temp file and returns its URL, ready for
     /// `MapLibreSnapshotProvider(styleURL:)`.
     static func resolvedStyleURL(

@@ -13,13 +13,23 @@ struct JourneyName: Codable, Equatable {
 /// ranged across a country, and the region rather than the country for a
 /// journey at home — a Taiwan road trip named "Taiwan" on every card says
 /// nothing. The single-place threshold is `discovery.single_place_extent_m`.
+///
+/// **"At home" is decided by the device's region setting, never by looking home
+/// up** (2026-09-18). The rule only ever needed home's *country*, and the first
+/// version got it by sending the detector's estimate of where the user lives to
+/// Apple's geocoder — the single most sensitive coordinate in the library, sent
+/// without asking, to answer a question the device already knows. The region
+/// setting is a proxy, not a measurement: someone whose region is not where
+/// they live gets a domestic trip named by country instead of region. That is a
+/// naming cost; the lookup it replaced was a privacy cost.
 enum JourneyNaming {
     /// - Parameters:
     ///   - place: the coarse place of the journey's busiest stop.
-    ///   - home: the coarse place of home, if known.
+    ///   - homeCountryCode: ISO 3166-1 alpha-2 of home — the device's region.
     ///   - isSinglePlace: whether the journey's extent is under the threshold.
-    static func name(place: PlaceName, home: PlaceName?, isSinglePlace: Bool) -> JourneyName? {
-        let domestic = home?.countryCode != nil && home?.countryCode == place.countryCode
+    static func name(place: PlaceName, homeCountryCode: String?, isSinglePlace: Bool) -> JourneyName? {
+        let domestic = homeCountryCode != nil
+            && homeCountryCode?.uppercased() == place.countryCode?.uppercased()
         let title: String?
         if isSinglePlace {
             title = place.locality ?? place.region ?? place.country
@@ -56,7 +66,6 @@ enum JourneyNaming {
 struct JourneyNameCache {
     private let defaults: UserDefaults
     private static let key = "kamome.journeyPlaces"
-    private static let homeKey = "kamome.homePlace"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -74,23 +83,17 @@ struct JourneyNameCache {
         }
     }
 
-    /// The name for a journey, derived now from its cached place, home, and
-    /// the extent the caller knows today.
-    func name(for journeyKey: String, isSinglePlace: Bool) -> JourneyName? {
+    /// The name for a journey, derived now from its cached place, home's
+    /// country and the extent the caller knows today.
+    func name(for journeyKey: String, homeCountryCode: String?, isSinglePlace: Bool) -> JourneyName? {
         guard let place = place(for: journeyKey) else { return nil }
-        return JourneyNaming.name(place: place, home: home(), isSinglePlace: isSinglePlace)
+        return JourneyNaming.name(place: place, homeCountryCode: homeCountryCode, isSinglePlace: isSinglePlace)
     }
 
-    /// Home's coarse place, looked up once.
-    func home() -> PlaceName? {
-        guard let data = defaults.data(forKey: Self.homeKey) else { return nil }
-        return try? JSONDecoder().decode(PlaceName.self, from: data)
-    }
-
-    func storeHome(_ place: PlaceName) {
-        if let data = try? JSONEncoder().encode(place) {
-            defaults.set(data, forKey: Self.homeKey)
-        }
+    /// Home's country, from the device's region setting. Local; nothing is
+    /// looked up to answer it.
+    static var deviceHomeCountryCode: String? {
+        Locale.current.region?.identifier
     }
 
     private func stored() -> [String: PlaceName] {

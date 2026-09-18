@@ -42,8 +42,9 @@ final class JourneyDiscoveryModel {
 
     /// Discovered journeys not yet imported, by key.
     private var detected: [String: DiscoveredJourney] = [:]
-    private var homeLookup: (lat: Double, lon: Double)?
-    private var homePlace: PlaceName?
+    /// Home's country, for the domestic-naming rule. From the device's region,
+    /// never from a lookup (`JourneyNaming`).
+    private let homeCountryCode: String?
     private var namingTask: Task<Void, Never>?
 
     init(
@@ -53,6 +54,7 @@ final class JourneyDiscoveryModel {
         photoAccess: PhotoAccessProviding,
         geocoder: PlaceGeocoding = CLPlaceGeocoder(),
         defaults: UserDefaults = .standard,
+        homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode,
         now: @escaping () -> Date = Date.init
     ) {
         self.config = config
@@ -62,6 +64,7 @@ final class JourneyDiscoveryModel {
         self.geocoder = geocoder
         nameCache = JourneyNameCache(defaults: defaults)
         dismissed = DismissedJourneys(defaults: defaults)
+        self.homeCountryCode = homeCountryCode
         self.now = now
         importService = ImportService(repository: repository, config: config)
     }
@@ -128,8 +131,9 @@ final class JourneyDiscoveryModel {
             byAdding: .year, value: -config.discovery.lookbackYears, to: end
         ) ?? end
         let photos = await provider.photos(matching: .dateRange(from: start, to: end))
+        // Home is estimated on device to decide what is "away", and that is all
+        // it is used for: the estimate never leaves this function.
         let detection = JourneyDetector.detect(photos: photos, config: detectionConfig)
-        homeLookup = detection.home.map { ($0.lat, $0.lon) }
 
         let hidden = dismissed.keys
         var found: [String: DiscoveredJourney] = [:]
@@ -212,9 +216,13 @@ final class JourneyDiscoveryModel {
         )
     }
 
-    /// Names every journey that has none, one lookup at a time, oldest request
-    /// last. Restarted whenever the list changes; cached names are applied
-    /// synchronously in `summary(...)` so only unknown places cost a lookup.
+    /// Names every journey that has none, one lookup at a time. Restarted
+    /// whenever the list changes; cached places are applied synchronously in
+    /// `summary(...)`, so only an unknown place costs a lookup.
+    ///
+    /// **One lookup per journey, and nothing else.** Each sends that journey's
+    /// busiest stop to Apple — the recipient `privacy_intro` names for place
+    /// names. Home is never looked up (`JourneyNaming`).
     private func startNaming() {
         namingTask?.cancel()
         let pending = journeys.filter { $0.name == nil && $0.nameLookupLat != nil }
@@ -222,22 +230,13 @@ final class JourneyDiscoveryModel {
         let interval = config.geocode.minIntervalS
         namingTask = Task { [weak self] in
             guard let self else { return }
-            if homePlace == nil, let home = homeLookup {
-                if let cached = nameCache.home() {
-                    homePlace = cached
-                } else if let looked = await geocoder.place(lat: home.lat, lon: home.lon) {
-                    homePlace = looked
-                    nameCache.storeHome(looked)
-                    try? await Task.sleep(for: .seconds(interval))
-                }
-            }
             for summary in pending {
                 guard !Task.isCancelled, let lat = summary.nameLookupLat, let lon = summary.nameLookupLon else { return }
                 if let place = await geocoder.place(lat: lat, lon: lon) {
                     nameCache.store(place, for: summary.id)
                     if let index = journeys.firstIndex(where: { $0.id == summary.id }) {
                         journeys[index].name = JourneyNaming.name(
-                            place: place, home: homePlace, isSinglePlace: summary.isSinglePlace
+                            place: place, homeCountryCode: homeCountryCode, isSinglePlace: summary.isSinglePlace
                         )
                     }
                 } else {
@@ -262,7 +261,7 @@ final class JourneyDiscoveryModel {
             id: id,
             tripId: trip.id,
             discoveryKey: trip.discoveryKey,
-            name: nameCache.name(for: id, isSinglePlace: isSinglePlace),
+            name: nameCache.name(for: id, homeCountryCode: homeCountryCode, isSinglePlace: isSinglePlace),
             fallbackTitle: trip.title,
             startedAt: trip.startedAt,
             endedAt: trip.endedAt ?? trip.startedAt,
@@ -296,7 +295,9 @@ final class JourneyDiscoveryModel {
             id: journey.key,
             tripId: nil,
             discoveryKey: journey.key,
-            name: nameCache.name(for: journey.key, isSinglePlace: isSinglePlace),
+            name: nameCache.name(
+                for: journey.key, homeCountryCode: homeCountryCode, isSinglePlace: isSinglePlace
+            ),
             fallbackTitle: Self.monthTitle(for: journey.startedAt),
             startedAt: journey.startedAt,
             endedAt: journey.endedAt,

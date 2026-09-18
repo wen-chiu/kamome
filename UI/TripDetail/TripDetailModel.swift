@@ -175,6 +175,7 @@ final class TripDetailModel {
         }
         return JourneyNameCache().name(
             for: detail.trip.discoveryKey ?? detail.trip.id,
+            homeCountryCode: JourneyNameCache.deviceHomeCountryCode,
             isSinglePlace: extentM < config.discovery.singlePlaceExtentM
         )
     }

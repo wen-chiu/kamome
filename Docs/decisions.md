@@ -5168,6 +5168,93 @@ treatment, which is `DESIGNER.md`'s — this is still the defensible default ADR
 2026-09-12 (b) shipped, one notch lighter. Localizing the credit: it is a format,
 deliberately untranslated. `AboutView`, which keeps everything it carries.
 
+## 2026-09-16 — The production switch: OpenFreeMap + MapLibre becomes what ships
+
+**Decision (Chiu, 2026-09-16): the export substrate switches from Apple Maps to
+OpenFreeMap + MapLibre, with no Apple fallback.**
+
+「Light + Dark 都做成 production assets,正式切 OpenFreeMap → MapLibre,並同步修
+notification」
+
+This implements ADR 2026-09-09's evaluation conclusion. That ADR opened the
+evaluation; this one closes it and commits the result.
+
+### §1 — what changed
+
+| what | before | after |
+|---|---|---|
+| `RecapExportJob.snapshotProvider` | falls back to `MapKitSnapshotProvider` when no pmtiles region resolves | selects one of two frozen Liberty styles by appearance; `fatalError` if the style is missing from the bundle |
+| frozen styles | none | `Config/RecapThemes/openfreemap-liberty-{dark,light}.json` — 39 layers each, forked from Liberty with the same subtractive rules the evaluation rounds proved |
+| `MapLibreSnapshotProvider.fixedAppearance` | always the provider's `appearance` (vetoed the device) | nil on the OpenFreeMap path (both appearances exist), `.dark` on the dormant pmtiles path |
+| `RecapMapAttribution` | `openFreeMap`, `openStreetMap` | unchanged — the credit string stands (ADR 2026-09-13) |
+| privacy notice | routing only | routing, map tiles, and geocoding (three outbound payloads) |
+| `RecapMapStyle` | pmtiles resolve path only | adds `resolvedNetworkStyleURL` for bundled styles with absolute URLs |
+| Apple fallback | `MapKitSnapshotProvider` when no region | **removed** — the export fails rather than falling back |
+
+### §2 — why no Apple fallback
+
+DPLA Attachment 6 §2.3 / §2.5 forbids storing and publishing Map Data. A rendered
+MP4 is a published work. **A fallback would reintroduce the exact problem this
+change exists to remove.** If the tiles cannot be reached, the export fails — and
+the user sees the generic failure string, which is correct: a broken map is better
+than a map the licence forbids.
+
+In-app maps stay MapKit and are untouched (`TripDetailView`, `RecordingView`).
+
+### §3 — the two frozen styles
+
+Both are subtractive forks of OpenFreeMap's Liberty, frozen against tileset
+`20260916_freeze`. The transform is `Scripts/freeze-liberty-styles.py`, and
+`Tools/liberty-drift.sh` detects upstream drift (env-gated, not in CI).
+
+**Production thresholds differ from the evaluation** (rounds 1–5):
+
+| parameter | evaluation | production |
+|---|---|---|
+| peak minimum elevation | 600 m | 1000 m |
+| peak maximum rank | 3 (R4) → bands tested in R5 | 1 |
+| coast variant | A, B, C tested | **A only** (contrast, no coast line, no lake edge) |
+
+The dark style uses the souvenir palette (`Palette` in `LibertyFork.swift`); the
+light style uses stock Liberty colours with the subtractive rules only.
+
+### §4 — the §0 exception: map tile fetching
+
+**This is the second thing that leaves the device** (the first is routing
+coordinates to Geoapify, ADR 2026-08-20 (c)).
+
+When the export renders, `MLNMapSnapshotter` fetches vector tiles from
+`tiles.openfreemap.org` and raster hillshade from the same host. The tile URL
+path encodes z/x/y tile coordinates, which reveal the **general area** of the
+trip — neighbourhood-level, not street-level (z14 tiles ≈ 1.2 km). OpenFreeMap
+requires no account, no API key, and no registration. It sees this device's IP
+address, the tile coordinates, a User-Agent string, and the time of each request.
+It does not see any trip details, route geometry, or device identifiers.
+
+⚠️ **OpenFreeMap has no SLA.** It is a free service with no uptime guarantee. If
+it goes down, every export fails. Mitigation: the styles are frozen and could be
+served from any compatible tile host by changing the style JSON.
+
+The privacy notice names three outbound payloads: routing coordinates (to
+Geoapify), map tiles (from OpenFreeMap), and stop names (from Apple via
+geocoding). The first-run card stays within its character budget.
+
+### §5 — ADR 2026-08-27 is true again
+
+That ADR says the film follows the device's appearance (light map → orange trail,
+dark map → cyan). It was **suspended** when the only MapLibre style was dark and
+`fixedAppearance` vetoed the device. Now that both dark and light exist,
+`fixedAppearance` is nil on the OpenFreeMap path, and the caller selects the right
+style for the requested appearance. The substrate no longer vetoes.
+
+### Not decided here
+
+The credit string (stands — ADR 2026-09-13). The credit's visual treatment
+(`DESIGNER.md`'s). Whether to pre-cache tiles for offline export. The pmtiles
+souvenir regions (dormant, not removed). Whether `MLNMapSnapshotter`'s partial
+tile failure (§5 of the failure analysis in `RecapExportJob+Render.swift`) needs
+a retry or a blank-tile detector.
+
 ## 2026-09-17 — The home is journey discovery: the library is read, nothing is saved until a journey is opened
 
 **Decision (Chiu's brief, 2026-09-17; engineering choices marked below).** The
@@ -5363,3 +5450,71 @@ the beta would be the second place for that flow to drift.
 **Not decided here:** when, or whether, the beta is promoted to the home. That is
 a decision to take when the UI is judged good enough, not a leftover step — and
 until it is taken, S1 is the home.
+
+## 2026-09-18 (c) — Before merge: home is never looked up, the welcome card says what leaves, and S1's title is S1's
+
+**Found while merging PR #70/#71 into this branch, and fixed before the PR, not
+after.** Chiu's instruction was to merge *if there were no issues*; there were
+three in this branch's own work, all fixed here, and one conflict between two of
+his decisions that is recorded, not resolved.
+
+### 1. The inferred home location was sent to Apple — removed
+
+ADR 2026-09-17 disclosed "one coarse reverse-geocode per discovered journey,
+**plus one for home**", and that second clause was under-weighted. The detector
+estimates where the user lives on device, which is fine: it only decides what
+counts as "away". The naming task then **sent that estimate to Apple's
+geocoder**, automatically, the moment the beta opened, to learn home's country.
+Home is the most sensitive coordinate in a photo library, and it is not a stop,
+so it was **not** covered by the notice PR #71 settled — *"stop names from Apple"*
+(ADR 2026-09-16 §4).
+
+The rule only ever needed home's **country code**, and the device's region
+setting already knows it. `JourneyNaming` now takes `homeCountryCode` from
+`Locale.current.region`, the home lookup and its cache are deleted, and
+`JourneyDiscoveryModelTests.testTheHomeLocationIsNeverSentToTheGeocoder` fails
+if one returns. **What leaves now:** one coordinate per journey — its busiest
+stop — to Apple, for its name. That is the payload the notice names; only its
+*timing* (at discovery, not on opening a trip) remains Chiu's to decide
+(ADR 2026-09-17).
+
+**The cost, stated:** someone whose region setting is not where they live gets a
+domestic journey named by country rather than region. A naming cost, traded for
+a privacy cost.
+
+### 2. The welcome card said "nothing is uploaded" — it now says what leaves
+
+It read *"Nothing is uploaded"* while each journey's coordinates went to Apple to
+be named — the understatement `LocalizationTests` exists to catch, and my own
+test asserted the false wording. After the merge it also contradicted
+`privacy_intro`, which PR #71 made say that stop names come from Apple and carry
+coordinates. The card now says photos never leave, nothing is saved until opened,
+and **Apple receives each journey's coordinates to name it**; the test asserts
+all three, in both languages, and asserts the overclaim cannot return. The test
+got stricter, not looser: it now enforces a disclosure instead of a denial.
+
+### 3. The original home's title had changed — restored
+
+ADR 2026-09-18 (b) said S1 was restored with only additive changes. It was not
+quite: `home_title` had been renamed *My Journeys → Your Journeys* (我的旅程 →
+你的旅程) for the beta, and S1 reads that key. The beta now has
+`discovery_title`, `home_title` is back to its original value, and the
+localization test holds S1's title fixed. `journey_add` and `live_capture_body`,
+orphaned when the redesigns removed their screens, are deleted.
+
+### 4. 🔴 A conflict between two of Chiu's decisions — recorded, not resolved
+
+ADR 2026-09-16 ships **light and dark** OpenFreeMap styles as production assets
+and has the film follow the device (*「Light + Dark 都做成 production assets」*;
+`fixedAppearance` is nil on that path). But `RecapView` captures
+`@Environment(\.colorScheme)` at the tap, and S1 carries
+`.preferredColorScheme(.dark)` — so **the app always requests dark, and the
+light production style is unreachable from the shipping path.**
+
+**This is on `main` independently of this branch**: PR #71 shipped the light
+style without touching S1, and this branch restored S1 verbatim, so it neither
+causes nor fixes it. Fixing it means deleting one line from S1, which changes how
+the original home looks in light mode — and Chiu's instruction of 2026-09-18 is
+that the original pages stay as they are. Two decisions of his, same level,
+pulling opposite ways: `CLAUDE.md` says state it, never pick. **One line in S1;
+his call.**

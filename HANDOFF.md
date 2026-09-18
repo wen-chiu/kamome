@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-12.** `main` carries PRs #16–#54. Everything closed has been
+**Updated 2026-09-16.** `main` carries PRs #16–#68. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -39,26 +39,23 @@ can do either**.
 
 ---
 
-## 🔵 Live — the export substrate evaluation, now CLOSED on style
+## 🔵 Live — the production switch to OpenFreeMap + MapLibre
 
-**Export left Apple Maps for OpenFreeMap + MapLibre** (ADR 2026-09-09 + four
-addenda). ✅ **The style evaluation closed 2026-09-15**: coast A (B/C rejected as
-unfixable tile seams), every tile-clipped stroke gone and *measured* gone, hillshade
-in, peaks narrowed to five, islands and the trail settled — **the trail needed no
-code**, light → orange / dark → cyan with no glow is what already ships.
-🔴 **What remains is Chiu's shipping decision, not engineering**: §0's **third**
-network recipient (AWS elevation, beside OpenFreeMap and Geoapify) and the first-run
-notice's **second item** (ADR 2026-09-05 (b)).
-→ `Docs/handoff-openfreemap-eval.md` round 5.
+**Evaluation concluded 2026-09-15; production switch in flight** (ADR 2026-09-16).
+Two frozen Liberty styles (dark + light) bundled, Apple fallback removed, privacy
+notice updated. Coast variant A (contrast only). Peak thresholds: ele ≥ 1000,
+rank ≤ 1. `fixedAppearance` nil on the OpenFreeMap path → ADR 2026-08-27 is true
+again (film follows device appearance).
+→ `Docs/decisions.md` 2026-09-16, `Docs/handoff-openfreemap-eval.md`.
 
 ---
 
-## 🔵 The film carries its map credit — MapLibre path only
+## 🔵 The film carries its map credit
 
 **ADR 2026-09-12 (b)**, amending Chiu's 2026-08-17 "never in the rendered film".
 The substrate declares its attribution and the render loop draws it on every
-frame; `MapKitSnapshotProvider` declares **none** and must keep declaring none,
-so **no shipping film draws a credit today** — the substrate switch is Chiu's.
+frame. With the production switch (ADR 2026-09-16), **every shipping film now
+draws a credit** — `RecapMapAttribution.openFreeMap`.
 ⚠️ **The reason it is Kamome's own credit and not the snapshotter's is
 measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
 above magnification **1.026** (shipped padding 1.03), the title band covers the
@@ -78,11 +75,12 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
-- **Journey discovery, in beta (ADRs 2026-09-17 → 2026-09-18 (b))** — thresholds
-  are INFERRED and settle only on your library; one coarse Apple geocode per
-  journey runs at discovery, not at import; and 🔴 **every film is still dark
-  whatever the device**, because S1's `.preferredColorScheme(.dark)` was restored
-  with it. One line, your call. → `Docs/decisions.md` 2026-09-18 (b).
+- **Journey discovery, in beta (ADRs 2026-09-17 → 2026-09-18 (c))** — thresholds
+  are INFERRED and settle only on your library; one Apple geocode per journey
+  runs at discovery, not at import (home is never looked up). 🔴 **Your two
+  decisions conflict**: 2026-09-16 ships a light film style, but S1's
+  `.preferredColorScheme(.dark)` — kept by your keep-S1 instruction — makes it
+  unreachable. One line in S1. → `Docs/decisions.md` 2026-09-18 (c) §4.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.

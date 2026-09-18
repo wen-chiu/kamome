@@ -6,16 +6,14 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-18 against decisions.md **2026-09-18 (b)** and `main` at
-**PR #69**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
-licence, routing-key and local-network ADRs 2026-09-12 (c)–(e).) Config flip made (S6 closed, S7 new — rotation owed). Film persists
+Last synced: 2026-09-18 against decisions.md **2026-09-18 (c)** and `main` at
+**PR #71**. (ADR 2026-09-09 carries four addenda, through 2026-09-15 (b); #68 recorded the
+licence, routing-key and local-network ADRs 2026-09-12 (c)–(e); #69 updated
+privacy_intro wording.) Config flip made (S6 closed, S7 new — rotation owed). Film persists
 (ADR 2026-09-08, `film` table v5; Photos save is an explicit tap per §0). The
 export outlives its screen (ADR 2026-09-10). ✅ **The substrate STYLE evaluation closed
-2026-09-15** — coast A, hillshade in, peaks narrowed, islands at `rank <= 2`; what
-is left is Chiu's shipping decision (§0's third network recipient, the first-run
-notice's second item), not engineering. ⚠️ **Rounds 4 and 5 are not on `main`** —
-PRs #62 and #63 merged into their base *branches* seconds after #59 merged to
-`main`, so the stack collapsed in the wrong order.
+2026-09-15** — coast A, hillshade in, peaks narrowed, islands at `rank <= 2`.
+**Production switch to OpenFreeMap + MapLibre in flight** (ADR 2026-09-16, this branch).
 Committed Apple Map Data removed from the public repository (ADR 2026-09-12), and
 **the film now carries its map credit on the MapLibre path only** (ADR 2026-09-12
 (b), amending 2026-08-17; licences verified and the plate lightened, ADR
@@ -52,9 +50,10 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
    2026-08-31 (b), release half in `Docs/release-readiness.md` D1–D3.
 4. **Closeout** — four steps, named 2026-09-10. ① ✅ film record (ADR
    2026-09-08). ② ✅ export outlives the screen (ADR 2026-09-10). ③ ⏸ D1–D5 and
-   ④ ⏸ performance are **deferred behind the substrate evaluation** — both price
-   `MKMapSnapshotter`, which ADR 2026-09-09 is leaving. Deferred, not dropped;
-   **② does not settle D1**. Music is outside the closeout.
+   ④ ⏸ performance — the substrate evaluation is concluded and the production
+   switch is in flight; performance now prices `MLNMapSnapshotter`, not
+   `MKMapSnapshotter`. Deferred, not dropped; **② does not settle D1**. Music is
+   outside the closeout.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
@@ -69,12 +68,14 @@ P7 backend deferred.
 **Every Phase 4 film that was in flight has landed and been judged**, the type-2
 opening included — retimed, with a boarding pass, a plane and two marked flight
 ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's judgement, in
-`HANDOFF.md`, which wins on findings and blockers. ⚠️ **One line is in flight**:
-the export substrate evaluation (2026-09-09). **The home is journey discovery**
-(ADR 2026-09-17), **drawn as a journal** (ADR 2026-09-18: time → place → event →
-photo, no photo covers) and shipped as **an added feature in beta, not the home**
-(ADR 2026-09-18 (b) — S1 and S3 are restored untouched). Thresholds, the
-geocode-at-discovery and the dark-mode override are Chiu's to judge.
+`HANDOFF.md`, which wins on findings and blockers. ✅ **The production switch has
+landed** (ADR 2026-09-16, PR #71): OpenFreeMap + MapLibre replaces Apple Maps in
+the export, with no Apple fallback. **Journey Discovery ships as an added feature
+in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
+restored untouched, the feature lives behind one toolbar button, and home is
+never looked up. 🔴 **Open for Chiu:** the discovery thresholds (INFERRED), the
+geocode-at-discovery timing, and S1's `.preferredColorScheme(.dark)` — which
+makes 2026-09-16's light film style unreachable (2026-09-18 (c) §4).
 
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — then Chiu's submission sequence, the
@@ -86,7 +87,8 @@ rotation, in that order. → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
 - **Story ↔ Rendering separation** (`PO.md`): the story layer never depends on the
   rendering substrate.
 - **Rendering:** `RecapSnapshotProviding` is the boundary; each renderer confined
-  to one file. **The app renders Apple Maps**; MapLibre is parked, not removed.
+  to one file. **The export renders OpenFreeMap + MapLibre** (two frozen Liberty
+  styles, dark and light); in-app maps stay MapKit. Apple fallback removed.
 - **Routing:** `RouteProvider`-shaped boundary; **Geoapify**, key behind a
   Cloudflare Worker. Detour-ratio gate 2.5. **No snap radius exists or is needed**
   (ADR 2026-08-20 (d) — read it before citing any older snap-radius text).
@@ -119,9 +121,9 @@ is not to be tuned** — Variant A is harness-only env overrides.
 
 ## Deferred — do not implement opportunistically
 
-MapLibre substrate work, tiles, tile server, map labels, pixel art — **except
-the export substrate evaluation** (ADR 2026-09-09 and its addenda), whose style
-half closed 2026-09-15, evaluation-only · Story
+MapLibre substrate work beyond the frozen styles (custom tiles, tile server, map
+labels, pixel art) — **the export substrate evaluation closed 2026-09-15** and the
+production switch is this branch (ADR 2026-09-16) · Story
 Director's remaining content (hero photos, chapters, music, video beads) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region

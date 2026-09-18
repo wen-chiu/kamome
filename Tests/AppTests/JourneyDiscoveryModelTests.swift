@@ -27,13 +27,16 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         }
     }
 
-    /// Answers instantly from a table; records every lookup.
+    /// Answers instantly from a table; records every coordinate it was asked
+    /// about, because *which* coordinates leave the device is the property the
+    /// privacy test below holds.
     private final class StubGeocoder: PlaceGeocoding {
         var table: [(lat: Double, place: PlaceName)] = []
-        private(set) var lookups = 0
+        private(set) var askedLatitudes: [Double] = []
+        var lookups: Int { askedLatitudes.count }
 
         func place(lat: Double, lon: Double) async -> PlaceName? {
-            lookups += 1
+            askedLatitudes.append(lat)
             return table.first { abs($0.lat - lat) < 0.5 }?.place
         }
     }
@@ -82,7 +85,7 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let model = JourneyDiscoveryModel(
             config: fast, repository: repository, source: library, photoAccess: library,
-            geocoder: geocoder, defaults: defaults, now: { [now] in now }
+            geocoder: geocoder, defaults: defaults, homeCountryCode: "TW", now: { [now] in now }
         )
         return Harness(model: model, library: library, geocoder: geocoder, repository: repository, defaults: defaults)
     }
@@ -123,16 +126,37 @@ final class JourneyDiscoveryModelTests: XCTestCase {
 
         XCTAssertEqual(harness.model.journeys[0].name, JourneyName(title: "Whitehorse", flag: "🇨🇦"))
         XCTAssertEqual(harness.model.journeys[1].name, JourneyName(title: "Japan", flag: "🇯🇵"))
-        XCTAssertEqual(harness.geocoder.lookups, 3, "home once, then one per journey")
+        XCTAssertEqual(harness.geocoder.lookups, 2, "one per journey, and nothing else")
 
         // Names are cached: a fresh model over the same defaults asks nothing.
         let again = JourneyDiscoveryModel(
             config: AppConfig.loadOrDie(), repository: harness.repository, source: harness.library,
-            photoAccess: harness.library, geocoder: harness.geocoder, defaults: harness.defaults, now: { [now] in now }
+            photoAccess: harness.library, geocoder: harness.geocoder, defaults: harness.defaults,
+            homeCountryCode: "TW", now: { [now] in now }
         )
         await again.refresh()
         XCTAssertEqual(again.journeys.map { $0.name?.title }, ["Whitehorse", "Japan"])
-        XCTAssertEqual(harness.geocoder.lookups, 3)
+        XCTAssertEqual(harness.geocoder.lookups, 2)
+    }
+
+    /// **Where the user lives is never sent anywhere** (2026-09-18). The
+    /// detector estimates home on device to decide what counts as "away", and
+    /// the first version then sent that estimate to Apple's geocoder to learn
+    /// home's country. Home is the most sensitive coordinate in the library;
+    /// the naming rule only ever needed its country, and the device's region
+    /// already knows it. This fails if a home lookup ever comes back.
+    func testTheHomeLocationIsNeverSentToTheGeocoder() async throws {
+        let harness = try makeHarness()
+        await harness.model.refresh()
+        await waitUntil("named") { harness.model.journeys.allSatisfy { $0.name != nil } }
+
+        // The invented home in `library()` sits at latitude 25.04.
+        let homeLatitude = 25.04
+        XCTAssertFalse(
+            harness.geocoder.askedLatitudes.contains { abs($0 - homeLatitude) < 0.5 },
+            "the geocoder was asked about the home location: \(harness.geocoder.askedLatitudes)"
+        )
+        XCTAssertFalse(harness.geocoder.askedLatitudes.isEmpty, "journeys are still named")
     }
 
     // MARK: - Opening

@@ -39,7 +39,7 @@ struct JourneyTimelineView: View {
                     .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle(Text("home_title"))
+            .navigationTitle(Text("discovery_title"))
             .navigationDestination(for: String.self) { tripId in
                 JourneyDiaryView(tripId: tripId, session: session)
                     .modifier(ZoomFromEntry(

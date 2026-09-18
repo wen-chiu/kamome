@@ -42,6 +42,10 @@ targets:
         buildPhase: resources
       - path: Config/RecapThemes/modern-minimal.json
         buildPhase: resources
+      - path: Config/RecapThemes/openfreemap-liberty-dark.json
+        buildPhase: resources
+      - path: Config/RecapThemes/openfreemap-liberty-light.json
+        buildPhase: resources
     dependencies:
       - package: KamomeCore
         product: KamomePersistence
@@ -189,6 +193,8 @@ targets:
     platform: iOS
     sources:
       - Tests/AppTests
+      - path: Tests/Fixtures/stock-liberty.json
+        buildPhase: resources
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES

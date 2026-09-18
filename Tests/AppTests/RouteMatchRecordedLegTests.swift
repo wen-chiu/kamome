@@ -9,8 +9,7 @@ import XCTest
 /// that true rather than remembered.**
 ///
 /// `privacy_recorded_body` tells the user: *"The path your phone recorded is not
-/// sent anywhere … If a future version ever sends it, what would be sent is the
-/// whole recorded path — not a start and an end — and this notice will say so."*
+/// sent to a routing service — it is already the route."*
 /// Nothing enforced the promise. The day Capture Beta wires a map matcher onto a
 /// shipping path, `RouteMatchService.shouldReconstruct` flips to `true` for
 /// `.gpsHifi`/`.gpsPassive`, recorded traces start leaving the device, and the
