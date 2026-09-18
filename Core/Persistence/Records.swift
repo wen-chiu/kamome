@@ -19,6 +19,9 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// Which recap subject this trip draws (schema v3). Nullable: NULL means
     /// the user never chose, and readers fall back to the catalogue default.
     public var vehicle: String?
+    /// Which discovered journey this trip was made from (schema v6), or NULL
+    /// for a recording, a manual import, or any trip that predates discovery.
+    public var discoveryKey: String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, status, source, vehicle
@@ -26,6 +29,7 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         case endedAt = "ended_at"
         case originPlanId = "origin_plan_id"
         case statsJson = "stats_json"
+        case discoveryKey = "discovery_key"
     }
 
     public init(
@@ -37,7 +41,8 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         originPlanId: String? = nil,
         statsJson: String? = nil,
         source: String = TripSource.recorded.rawValue,
-        vehicle: String? = nil
+        vehicle: String? = nil,
+        discoveryKey: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -48,6 +53,7 @@ public struct TripRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.statsJson = statsJson
         self.source = source
         self.vehicle = vehicle
+        self.discoveryKey = discoveryKey
     }
 
     /// The subject to draw, with the catalogue's default standing in for a trip

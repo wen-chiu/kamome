@@ -49,6 +49,15 @@
     "default_range_days": 7,
     "max_range_days": 21
   },
+  "discovery": {
+    "lookback_years": 5,
+    "home_cell_deg": 0.5,
+    "away_radius_m": 40000,
+    "journey_gap_s": 172800,
+    "min_photos": 8,
+    "single_place_extent_m": 60000,
+    "cover_photos": 3
+  },
   "geocode": {
     "min_interval_s": 2,
     "cache_precision_deg": 0.001

@@ -24,7 +24,7 @@ struct KamomeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            HomeView(session: session)
                 .environment(session)
         }
     }

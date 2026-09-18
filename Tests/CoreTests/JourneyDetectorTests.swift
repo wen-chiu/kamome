@@ -1,0 +1,103 @@
+import XCTest
+
+@testable import KamomeImportKit
+
+/// **Journey discovery, as a pure function** (2026-09-17). Home is guessed,
+/// away photographs are cut into journeys by time, and the keys are stable.
+final class JourneyDetectorTests: XCTestCase {
+    // ~55 km cells, 40 km "away", a two-day gap splits, eight photographs make a journey.
+    private let config = JourneyDetectionConfig(
+        homeCellDeg: 0.5, awayRadiusM: 40_000, journeyGapS: 2 * 86_400, minPhotos: 8
+    )
+
+    private func photo(_ id: String, _ ts: Double, _ lat: Double, _ lon: Double, favorite: Bool = false) -> ImportPhoto {
+        ImportPhoto(assetId: id, timestamp: ts, lat: lat, lon: lon, isFavorite: favorite)
+    }
+
+    private let week = 7.0 * 86_400
+
+    /// One photograph a week at home for a year — invented suburb coordinates.
+    private func homeYear() -> [ImportPhoto] {
+        (0..<52).map { photo("home-\($0)", Double($0) * week, 25.04, 121.56) }
+    }
+
+    /// `count` photographs half an hour apart, starting at `start`, at one place.
+    private func burst(_ prefix: String, start: Double, count: Int, lat: Double, lon: Double) -> [ImportPhoto] {
+        (0..<count).map { photo("\(prefix)-\($0)", start + Double($0) * 1_800, lat + Double($0 % 3) * 0.001, lon) }
+    }
+
+    func testHomeIsTheCellPhotographedAcrossTheMostWeeks() {
+        // A fortnight abroad out-shoots a year at home: 40 photographs in two
+        // weeks against 52 in fifty-two. Home must still be home.
+        let abroad = burst("jp", start: 10 * week, count: 40, lat: 35.68, lon: 139.65)
+        let detection = JourneyDetector.detect(photos: homeYear() + abroad, config: config)
+
+        let home = detection.home
+        XCTAssertNotNil(home)
+        XCTAssertEqual(home?.lat ?? 0, 25.04, accuracy: 0.01)
+        XCTAssertEqual(home?.lon ?? 0, 121.56, accuracy: 0.01)
+        XCTAssertEqual(home?.weekCount, 52)
+    }
+
+    func testAwayPhotographsBecomeJourneysSplitByTheGap() {
+        let japan = burst("jp", start: 10 * week, count: 12, lat: 35.68, lon: 139.65)
+            + burst("kyoto", start: 10 * week + 2 * 86_400, count: 6, lat: 35.01, lon: 135.77)
+        let finland = burst("fi", start: 30 * week, count: 9, lat: 60.17, lon: 24.94)
+        let detection = JourneyDetector.detect(photos: homeYear() + japan + finland, config: config)
+
+        XCTAssertEqual(detection.journeys.count, 2)
+        // Newest first.
+        XCTAssertEqual(detection.journeys[0].photoCount, 9, "Finland")
+        XCTAssertEqual(detection.journeys[1].photoCount, 18, "Tokyo and Kyoto, two days apart, are one journey")
+        XCTAssertEqual(detection.journeys[1].startedAt, 10 * week)
+        XCTAssertGreaterThan(detection.journeys[1].extentM, 300_000, "Tokyo → Kyoto ranges across the country")
+        XCTAssertLessThan(detection.journeys[0].extentM, 1_000, "one city stays one place")
+    }
+
+    func testTooFewAwayPhotographsAreNotAJourney() {
+        let dayTrip = burst("day", start: 20 * week, count: 7, lat: 24.50, lon: 121.56) // 60 km south
+        let detection = JourneyDetector.detect(photos: homeYear() + dayTrip, config: config)
+        XCTAssertTrue(detection.journeys.isEmpty, "seven photographs are under the eight-photo floor")
+    }
+
+    func testPhotographsNearHomeNeverJoinAJourney() {
+        // A trip, then a photograph at home the same evening — inside the gap,
+        // but not away, so it stays out of the journey.
+        let trip = burst("nz", start: 20 * week, count: 10, lat: -45.03, lon: 168.66)
+        let atHome = photo("home-evening", 20 * week + 10 * 1_800 + 3_600, 25.04, 121.56)
+        let detection = JourneyDetector.detect(photos: homeYear() + trip + [atHome], config: config)
+
+        XCTAssertEqual(detection.journeys.count, 1)
+        XCTAssertFalse(detection.journeys[0].photos.contains { $0.assetId == "home-evening" })
+    }
+
+    /// The key is the journey's first UTC day, so adding photographs to the
+    /// library later — inside the journey — does not rename it, and the trip
+    /// made from it is found again.
+    func testTheKeyIsStableWhenLaterPhotographsAreAdded() {
+        let trip = burst("it", start: 40 * week, count: 10, lat: 41.90, lon: 12.50)
+        let before = JourneyDetector.detect(photos: homeYear() + trip, config: config)
+        let more = burst("it-more", start: 40 * week + 86_400, count: 5, lat: 43.77, lon: 11.26)
+        let after = JourneyDetector.detect(photos: homeYear() + trip + more, config: config)
+
+        XCTAssertEqual(before.journeys.map(\.key), after.journeys.map(\.key))
+        XCTAssertEqual(after.journeys[0].photoCount, 15)
+        XCTAssertEqual(before.journeys[0].key, JourneyDetector.key(startedAt: 40 * week))
+    }
+
+    func testAnEmptyLibraryHasNoHomeAndNoJourneys() {
+        let detection = JourneyDetector.detect(photos: [], config: config)
+        XCTAssertNil(detection.home)
+        XCTAssertTrue(detection.journeys.isEmpty)
+    }
+
+    /// Deterministic: shuffled input, same answer.
+    func testTheAnswerDoesNotDependOnInputOrder() {
+        let photos = homeYear()
+            + burst("jp", start: 10 * week, count: 12, lat: 35.68, lon: 139.65)
+            + burst("fi", start: 30 * week, count: 9, lat: 60.17, lon: 24.94)
+        let ordered = JourneyDetector.detect(photos: photos, config: config)
+        let shuffled = JourneyDetector.detect(photos: photos.reversed(), config: config)
+        XCTAssertEqual(ordered, shuffled)
+    }
+}

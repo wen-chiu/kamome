@@ -353,4 +353,35 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("first_run_where", locale: "en").contains("About"))
         XCTAssertTrue(try localizedValue("first_run_where", locale: "zh-Hant").contains("關於"))
     }
+
+    /// **The discovery home** (2026-09-17). The first screen's promise, the one
+    /// button on it, and the film button — each must resolve in both languages,
+    /// and the promise must be the honest one: nothing uploaded, nothing saved
+    /// until opened, which is what `JourneyDiscoveryModel` actually does.
+    func testDiscoveryHomeStringsResolve() throws {
+        XCTAssertEqual(try localizedValue("home_title", locale: "en"), "Your Journeys")
+        XCTAssertEqual(try localizedValue("home_title", locale: "zh-Hant"), "你的旅程")
+        XCTAssertEqual(try localizedValue("welcome_find", locale: "en"), "Find my journeys")
+        XCTAssertEqual(try localizedValue("welcome_find", locale: "zh-Hant"), "找出我的旅程")
+        XCTAssertEqual(try localizedValue("make_film", locale: "en"), "Make this a Film")
+        XCTAssertEqual(try localizedValue("make_film", locale: "zh-Hant"), "做成一部影片")
+
+        let privacyEN = try localizedValue("welcome_privacy", locale: "en").lowercased()
+        XCTAssertTrue(privacyEN.contains("nothing is uploaded"), privacyEN)
+        XCTAssertTrue(privacyEN.contains("until you open"), privacyEN)
+        let privacyZH = try localizedValue("welcome_privacy", locale: "zh-Hant")
+        XCTAssertTrue(privacyZH.contains("不會上傳"), privacyZH)
+        XCTAssertTrue(privacyZH.contains("打開之前"), privacyZH)
+
+        // Provenance on the card: the recorded chip exists beside the photos one,
+        // and neither says "verified" (§3).
+        for locale in ["en", "zh-Hant"] {
+            let recorded = try localizedValue("provenance_recorded", locale: locale)
+            XCTAssertFalse(recorded.lowercased().contains("verified"), recorded)
+            XCTAssertNotEqual(recorded, try localizedValue("provenance_badge", locale: locale))
+        }
+        // English inflects the card's counts; the catalogue's plurals must resolve.
+        XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 1), "1 day")
+        XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 12), "12 days")
+    }
 }

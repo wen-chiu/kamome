@@ -78,6 +78,10 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
+- **Journey discovery (ADR 2026-09-17)** — the `discovery` thresholds are
+  INFERRED and settle only on your library; and one coarse Apple geocode per
+  discovered journey now runs at discovery, not at import — keep, or move
+  behind the first tap. → `Docs/decisions.md` 2026-09-17.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.

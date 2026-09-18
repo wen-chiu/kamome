@@ -48,10 +48,13 @@ public extension TripRepository {
         public let stopsWithPhotos: [NewStopWithPhotos]
         /// Photos whose cluster fell below the stop threshold (`stop_id = NULL`).
         public let routeAttachedPhotos: [NewPhoto]
+        /// The discovered journey this trip is made from (schema v6), or nil for
+        /// a manual import.
+        public let discoveryKey: String?
 
         public init(title: String, startedAt: Double, endedAt: Double, source: String,
                     segments: [NewSegment], stopsWithPhotos: [NewStopWithPhotos],
-                    routeAttachedPhotos: [NewPhoto]) {
+                    routeAttachedPhotos: [NewPhoto], discoveryKey: String? = nil) {
             self.title = title
             self.startedAt = startedAt
             self.endedAt = endedAt
@@ -59,6 +62,7 @@ public extension TripRepository {
             self.segments = segments
             self.stopsWithPhotos = stopsWithPhotos
             self.routeAttachedPhotos = routeAttachedPhotos
+            self.discoveryKey = discoveryKey
         }
     }
 
@@ -71,7 +75,8 @@ public extension TripRepository {
             try TripRecord(
                 id: tripId, title: trip.title,
                 startedAt: trip.startedAt, endedAt: trip.endedAt,
-                status: "completed", source: trip.source
+                status: "completed", source: trip.source,
+                discoveryKey: trip.discoveryKey
             ).insert(db)
 
             for segment in trip.segments {

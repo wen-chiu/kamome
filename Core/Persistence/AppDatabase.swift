@@ -177,6 +177,18 @@ public final class AppDatabase {
                 """)
         }
 
+        // Schema v6 — which discovered journey a trip was made from (Journey
+        // Discovery home, 2026-09-17). Nullable like v3's `vehicle`: every trip
+        // that predates discovery, every manual import and every recording is
+        // NULL, and NULL means "not from discovery" rather than an error. The
+        // key is `JourneyDetector.key` — the journey's first UTC day — so a
+        // rescan finds the trip it already made instead of making a second one.
+        // Forward-only.
+        migrator.registerMigration("v6") { db in
+            try db.execute(sql: "ALTER TABLE trip ADD COLUMN discovery_key TEXT")
+            try db.execute(sql: "CREATE INDEX idx_trip_discovery_key ON trip(discovery_key)")
+        }
+
         return migrator
     }
 }

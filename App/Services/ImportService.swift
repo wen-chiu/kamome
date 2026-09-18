@@ -42,7 +42,7 @@ struct ImportService {
     /// `RouteMatchService.matchTrip` themselves, which makes a dependency that
     /// used to be accidental into one the caller states.
     @discardableResult
-    func importTrip(title: String, photos: [ImportPhoto]) async throws -> String {
+    func importTrip(title: String, photos: [ImportPhoto], discoveryKey: String? = nil) async throws -> String {
         let clustering = ImportClusteringConfig(
             stopRadiusM: config.photoImport.stopRadiusM,
             stopSplitGapS: config.photoImport.stopSplitGapS,
@@ -70,7 +70,7 @@ struct ImportService {
         // trip-wide segment can only ever make one claim about all of it.
         let segments = plan.legs.map { leg in
             TripRepository.NewSegment(
-                mode: mode(for: leg).rawValue,
+                mode: Self.mode(for: leg, config: config).rawValue,
                 startedAt: leg.startedAt,
                 endedAt: leg.endedAt,
                 points: leg.points.map { TripRepository.NewTrackpoint(ts: $0.timestamp, lat: $0.lat, lon: $0.lon) },
@@ -95,7 +95,8 @@ struct ImportService {
                 source: TripSource.importedPhotos.rawValue,
                 segments: segments,
                 stopsWithPhotos: stopsWithPhotos,
-                routeAttachedPhotos: plan.routeAttachedAssetIds.map(newPhoto)
+                routeAttachedPhotos: plan.routeAttachedAssetIds.map(newPhoto),
+                discoveryKey: discoveryKey
             )
         )
 
@@ -117,7 +118,10 @@ struct ImportService {
     /// falls back to the same road-trip assumption already made for legs with no
     /// elapsed time at all. Without that, every inter-day leg of a multi-day trip
     /// typed as a walk and drew as a straight line across whatever lay between.
-    private func mode(for leg: ImportedLeg) -> TransportMode {
+    ///
+    /// Static so the discovery home can show the same transport hint on a
+    /// journey card before the journey is imported — one rule, one answer.
+    static func mode(for leg: ImportedLeg, config: TrackingConfig) -> TransportMode {
         guard let speed = leg.impliedSpeedKmh,
               leg.endedAt - leg.startedAt <= config.photoImport.paceUnknowableGapS
         else { return .drive }

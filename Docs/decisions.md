@@ -5167,3 +5167,79 @@ The string (Chiu: it stands). The substrate switch. The credit's final visual
 treatment, which is `DESIGNER.md`'s — this is still the defensible default ADR
 2026-09-12 (b) shipped, one notch lighter. Localizing the credit: it is a format,
 deliberately untranslated. `AboutView`, which keeps everything it carries.
+
+## 2026-09-17 — The home is journey discovery: the library is read, nothing is saved until a journey is opened
+
+**Decision (Chiu's brief, 2026-09-17; engineering choices marked below).** The
+first screen is **Your Journeys**: the journeys Kamome found in the photo
+library, by year, each a card that already says where it went, when, how many
+photographs, and how it travelled. Tapping a card opens the journey's story —
+place, time, transport, route, photographs — and the one dominant action on it
+is **Make this a Film**. "Create a trip" is gone from the front; the date-range
+and album import sheet and live recording stay reachable from the toolbar menu,
+as the paths for a journey the library cannot see. The product loop the screen
+has to make obvious is *Discover → Understand → Remember → Create*.
+
+### What was built, and where the boundaries fell
+
+- **Detection is pure** — `JourneyDetector` in `KamomeImportKit`, beside the
+  clusterer. Home is the grid cell photographed across the most *distinct
+  weeks* (a fortnight abroad out-shoots a year at home but cannot out-span it);
+  photographs beyond `discovery.away_radius_m` of it are away; a run of away
+  photographs cut at `discovery.journey_gap_s` is a journey if it holds at
+  least `discovery.min_photos`. Every threshold is in `Config/TrackingConfig.json`
+  under `discovery`, and **every value is INFERRED** — a first guess against the
+  three dogfood trips, not measured over a range of libraries. The cheapest
+  thing that settles them is Chiu's own library on the phone.
+- **A journey's key is its first UTC day**, so adding photographs later does not
+  rename it, and **schema v6** adds `trip.discovery_key` (nullable, indexed) so a
+  rescan finds the trip it already made. NULL means "not from discovery": every
+  recording and manual import stays NULL. Forward-only, like v2–v5.
+- **Nothing is written by a scan.** `JourneyDiscoveryModel` holds discovered
+  journeys in memory; **opening one** is what runs the unchanged
+  `ImportService → StopNamer → RouteMatchCoordinator → RecapView` path and
+  what starts routing — the same user-initiated moment the import sheet was.
+  A hidden journey is remembered by key; deleting a stored trip may let the
+  scan find it again, which is the honest outcome of deleting the trip and not
+  the photographs.
+- **§0, stated exactly.** One new automatic network call exists: **one coarse
+  reverse-geocode per discovered journey**, plus one for home, to Apple's
+  geocoder — the service stop naming already uses and the privacy notice
+  already names. The difference is *timing*: stop naming ran after the user
+  imported; this runs when the home screen finds a journey. It is throttled at
+  `geocode.min_interval_s`, cached on device by journey key (names only, never
+  positions), and it is **Chiu's to keep or move behind the first tap** —
+  recorded here as a product decision inside the brief, not an implementation
+  detail. Routing still runs only on open. Nothing is uploaded, and the welcome
+  card says so in both languages (`LocalizationTests` holds it to that).
+- **The name rule** (`JourneyNaming`, pure): a journey inside
+  `discovery.single_place_extent_m` is the town ("Whitehorse"); wider is the
+  country ("Japan"); wider *and at home* is the region, because a domestic road
+  trip named after the home country says nothing. The flag is the ISO code.
+- **The detail is a story, and the map supports it.** Hero photographs, four
+  figures, a small map with its legend (solid = a known line, dashed = a guess,
+  PD-1), then day by day: each stop with its photographs, and between stops one
+  connector saying how, how far, and how honestly — *recorded*, *matched to
+  roads*, *inferred between photos*, or *a crossing*. The day-filter chips are
+  replaced by day headers; the stop editor, merge, delete, the ride and stored
+  films all remain. The four provenance labels the brief named are drawn as
+  **Photo-derived / Inferred route / Detected transportation** (from `mode`,
+  which is detected by pace on an import and by motion on a recording).
+  **"User-confirmed" is NOT drawn**: nothing in the schema records that a name
+  was typed rather than geocoded, and drawing the label without the fact would
+  be the claim rule 5 forbids. A `stop.name_source` column is the cheapest way
+  to earn it; not added here.
+- **The app now follows the system appearance** (engineering choice). Home
+  carried `.preferredColorScheme(.dark)` from the map-first days, and because
+  `RecapView` captures `@Environment(\colorScheme)` at the tap, every film made
+  from the app was dark regardless of the device. Removing the override is what
+  makes ADR 2026-08-27 ("the film follows the device's system appearance") true
+  on the shipping path. Flagged rather than buried: a light-mode film from the
+  app is now reachable for the first time.
+
+### Not decided here
+
+The thresholds (Chiu, from his library). Whether the geocode-at-discovery
+stays. A rename for trips (none exists; the resolved destination becomes the
+title at import). The "User-confirmed" label. Visual sign-off — a render is
+attached to the PR and the judgement is `DESIGNER.md`'s.
