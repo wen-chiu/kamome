@@ -5644,3 +5644,12 @@ by this one line, on Chiu's instruction; every other part of that decision stand
 
 **Implementation** is owed to an engineering session: `Docs/handoff-testflight.md`.
 That session does **not** write a second ADR for this.
+
+### Addendum 2026-09-18 — the light style is approved
+
+**Chiu, 2026-09-18:** *「現在就核准淺色樣式」* — asked with consequence 1 above in
+front of him. The light OpenFreeMap style, **including its light hillshade paint**
+(`hillshade-exaggeration` 0.5, muted shadow/accent — 2026-09-16 §6), is approved
+as shipped. This closes 2026-09-16 §6 D2's *"not approved until Chiu has seen
+it"*. Consequence 1 is settled; consequence 2 (in-app screens in light mode,
+UNKNOWN) stands and is captured by Task 4 of `Docs/handoff-testflight.md`.

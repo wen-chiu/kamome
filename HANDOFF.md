@@ -76,9 +76,6 @@ string stands. Do not reopen this from scratch.
 - **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
   ships `"Kamome"`. What the product is called, and in which scripts, is yours.
   → `Docs/decisions.md` 2026-09-05 (d) §4.
-- 🔴 **Light style not approved, and about to ship** — S1's dark override is
-  lifted (2026-09-18 (d)), so light-mode devices get it. Approve or hold.
-  → `Docs/decisions.md` 2026-09-18 (d), 2026-09-16 §6 (D2).
 - **Terrain credit awaiting Chiu** — `· Terrain: USGS/LINZ/GA` already ships in
   every film; the 2026-09-13 frozen string needs his sign-off on it.
   → `Docs/decisions.md` 2026-09-17 §6.

@@ -62,6 +62,8 @@ grep in the PR** — if anything turns up, stop and report instead of setting th
   discovery beta, **light and dark**, one film exported in each. Light-mode
   in-app screens have never been looked at — **report what reads badly; do not
   restyle** (`DESIGNER.md`'s call).
+- The light film style is **approved** (addendum to (d)) — light-mode films are
+  intended, not a regression.
 - Do **not** write another ADR; (d) is the record.
 
 ## Task 5 — dismissing the first-run notice backgrounds the app

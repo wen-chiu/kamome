@@ -8,8 +8,7 @@ way — this file rotted twice by growing its own reasoning.
 
 Last synced: 2026-09-18 against decisions.md **2026-09-18 (d)** and `main` at
 **PR #74**. (d) lifts S1's dark override — the app and the film follow the
-device's appearance, which puts the not-yet-approved light style in front of
-light-mode users. PO TestFlight audit: three upload fixes owed
+device's appearance — and its addendum approves the light style. PO TestFlight audit: three upload fixes owed
 (`Docs/handoff-testflight.md`); D1–D5 and S7 gate the App Store, not TestFlight.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
@@ -66,8 +65,8 @@ scoped to **stop points** (#72). **Journey Discovery ships as an added feature
 in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
 restored untouched, the feature lives behind one toolbar button, and home is
 never looked up. 🔴 **Open for Chiu:** the discovery thresholds (INFERRED), the
-geocode-at-discovery timing, and approval of the light film style — S1's dark
-override is lifted (2026-09-18 (d)), so light now reaches users.
+geocode-at-discovery timing. S1's dark override is lifted and the light
+style approved (2026-09-18 (d) and addendum) — films follow the device.
 
 What is between Kamome and a submission is **neither a document nor a session**:
 **D1–D5**, one device run nobody has done — then Chiu's submission sequence, the
