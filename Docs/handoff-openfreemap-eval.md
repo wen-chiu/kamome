@@ -1,9 +1,9 @@
 # OpenFreeMap + MapLibre — the export substrate evaluation
 
 **Rounds of 2026-09-09/11, engineering.** The decision is ADR 2026-09-09; this is
-what running it returned. **Nothing here is decided** — the shipping substrate,
-light/dark handling, hillshade, place names, the notice's second item and the
-pmtiles path's retirement are Chiu's.
+what running it returned. **Evaluation concluded 2026-09-16** — the production
+switch is ADR 2026-09-16. Coast variant A, peak thresholds tightened to
+ele ≥ 1000 / rank ≤ 1, two frozen styles (dark + light) bundled.
 
 ## The pictures
 

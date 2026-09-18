@@ -81,6 +81,14 @@ final class FirstRunNoticeTests: XCTestCase {
         )
     }
 
+    func testProductionSwitchRepresentsTheNotice() {
+        defaults.set(1, forKey: "kamome.privacyNoticeAcknowledgedVersion")
+        XCTAssertTrue(
+            FirstRunNotice.shouldPresent(matching: matching(baseURL: worker), defaults: defaults),
+            "the production switch (ADR 2026-09-16) changes what is sent; v1 users are told again"
+        )
+    }
+
     /// `api_key_required` **is** the topology, so the sentence follows it rather
     /// than being maintained alongside it: the flip changes the flag, and the
     /// copy that names Kamome's relay arrives with it.

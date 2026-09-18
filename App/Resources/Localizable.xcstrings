@@ -859,7 +859,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "They go to Kamome's relay, which holds the map key, and on to Geoapify."
+            "value": "These go to Kamome's relay, which holds the key, and on to Geoapify."
           }
         },
         "zh-Hant": {
@@ -910,13 +910,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, trips and films stay on this device. To draw your route along real roads, Kamome sends the positions along that route to a routing service. The map itself is fetched from OpenStreetMap."
+            "value": "Your photos, trips and films stay on this device. To draw your route along real roads, Kamome sends the positions along that route to a routing service. Map tiles come from OpenStreetMap and stop names from Apple; both carry coordinates."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "所有關於你與旅程的回憶相片及影片只會留在這台裝置。但為了能完善紀錄旅程得到真實道路繪製路線，卡摸咩將會提供停留位置送往路線規劃服務。地圖本身來自 OpenStreetMap，不會儲存帳號或旅程資訊。"
+            "value": "所有關於你與旅程的回憶相片及影片只會留在這台裝置。但為了能完善紀錄旅程得到真實道路繪製路線，卡摸咩將會提供停留位置送往路線規劃服務。地圖圖磚來自 OpenStreetMap，地名來自 Apple；兩者都攜帶座標。"
           }
         }
       }
@@ -927,13 +927,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The path your phone recorded is not sent anywhere. It is already the route, so there is nothing to ask, and it stays on this device. If a future version ever sends it, what would be sent is the whole recorded path — not a start and an end — and this notice will say so."
+            "value": "The path your phone recorded is not sent to a routing service — it is already the route. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "手機記錄下來的路徑不會送到任何地方。它本身就是路線，沒有什麼需要詢問，因此留在這台裝置上。若日後的版本要送出它，送出的會是整條記錄路徑——不是起點與終點——屆時本說明也會如實寫明。"
+            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。"
           }
         }
       }
@@ -2027,6 +2027,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "機車"
+          }
+        }
+      }
+    },
+    "privacy_tiles_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Map tiles"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地圖圖磚"
+          }
+        }
+      }
+    },
+    "privacy_tiles_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When Kamome renders a film, it downloads vector map tiles from OpenFreeMap for the area the trip covers. The tile URLs contain coordinates that reveal the general area — neighbourhood-level, not street-level. OpenFreeMap requires no account and no API key; it sees this device's IP address, the tile coordinates, a User-Agent string and the time of each request."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩製作影片時，會從 OpenFreeMap 下載該旅程所涵蓋區域的向量地圖圖磚。圖磚網址包含的座標會透露大致區域（街區級別，非街道級別）。OpenFreeMap 不需要帳號也不需要 API 金鑰；它看得到這台裝置的 IP 位址、圖磚座標、User-Agent 字串及每次請求的時間。"
           }
         }
       }

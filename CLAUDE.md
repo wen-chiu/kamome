@@ -35,8 +35,10 @@ never a work instruction.
    this repository. Real dumps live only in `Tests/Fixtures/trips/local/` and
    `Docs/tests/`, both gitignored. `KamomeLog` may name *which* stop failed,
    never where it is. Decided exceptions, and only these: routing sends real leg
-   coordinates to Geoapify, and one user-initiated share of one trip. Anything
-   further is a product decision for Chiu, never an implementation detail.
+   coordinates to Geoapify; map tile fetching reveals the trip's general area to
+   OpenFreeMap (ADR 2026-09-16); stop geocoding sends stop coordinates to Apple;
+   and one user-initiated share of one trip. Anything further is a product
+   decision for Chiu, never an implementation detail.
 2. **Stop and confirm** before changing product behaviour, the Story/Rendering
    separation, the `RouteProvider` boundary, a public interface, what ships in
    MVP, or before adding a dependency.
