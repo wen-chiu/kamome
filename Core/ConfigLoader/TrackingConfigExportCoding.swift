@@ -35,6 +35,7 @@ extension TrackingConfig.Export {
         case crossingApexPadding = "crossing_apex_padding"
         case departureStopMaxPhotos = "departure_stop_max_photos"
         case followHeadingUp = "follow_heading_up"
+        case headingSmoothingDistanceM = "heading_smoothing_distance_m"
         case deckPhotoHoldS = "deck_photo_hold_s"
         case deckPhotoMinHoldS = "deck_photo_min_hold_s"
         case deckZoomS = "deck_zoom_s"
