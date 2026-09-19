@@ -5740,3 +5740,44 @@ wording is prescribed and may not shorten.
    來修改。」* Nothing to build.
 
 **Not decided here:** the EU-DEM wording conflict recorded in `HANDOFF.md`.
+
+## 2026-09-19 (b) — Reading photos is not downloading them; the film's photos are fetched from iCloud before the render
+
+**Decision (Chiu, 2026-09-19).** *「Kamome『讀照片』不等於『下載原照片』。」* Reverses the
+"iCloud original fetching" deferral in `Docs/current-state.md`, and the standing
+comment in `PhotoLibraryPhotoResolver.warm` ("downloads nothing… scoped separately").
+
+1. **Metadata scan never touches pixels.** `PhotoLibraryImportSource` reads
+   `localIdentifier`, `creationDate`, `location`, `isFavorite` from `PHAsset` and
+   nothing else; an iCloud-only photo imports exactly as a local one. VERIFIED by
+   reading the file (no `requestImage` / resource call in the scan) and by Chiu's
+   2026-08-02 device finding: a trip imported perfectly, then rendered blank cards.
+   `pixelWidth/Height` are **not** read: nothing consumes them, and storing them is
+   a `photo_ref` schema change (rule 2). Revisit when something does.
+2. **Previews stay small.** Thumbnails ask for 100–300 px, never the ceiling of
+   1200–1600 px the brief allowed, because a 36–160 pt tile gains nothing from it and
+   the memory is real. They now use `resizeMode = .fast`, `isNetworkAccessAllowed =
+   true`, and cancel with the tile (`PhotoKitImageLoader.Profile.preview`).
+3. **Photos are fetched once, after Export is tapped.** `RecapExportJob` composes
+   first, so `trip.stops.flatMap(\.photos)` is exactly what the film draws (stop
+   selection and per-stop allocation already applied). `warm` then runs two passes:
+   local, with network **off** (a photo PhotoKit holds is never re-downloaded); then
+   only the refs PhotoKit reported `.inCloud`, sequentially, network **on**, with
+   progress, a per-photo timeout (`photos.icloud_fetch_timeout_s`), and Cancel. A
+   failed photo is a blank card plus the existing shortfall notice — it never fails
+   the export.
+4. **`requestImage`, not `PHAssetResourceManager`.** The resource manager returns the
+   full original written to a file; `requestImage(targetSize:)` lets Photos fetch and
+   decode a derivative and writes nothing to Kamome's storage. Nothing is written
+   back to the Photos library.
+5. **Permission is unchanged.** Limited access already shows "Kamome can only see
+   selected photos" and the system picker; Denied links to Settings. There is no
+   in-app path from Limited to Full — that would be new UI (rule 2).
+
+**INFERRED, not measured:** that `requestImage` with network on downloads a
+derivative near `targetPx` rather than the original (Apple documents the sizing, not
+the transfer); that sequential download is fast enough. **UNKNOWN:** peak memory
+over a full-mode film (bound: ≤ ~2 MB per 626 px photo, ≤ 24 photos in highlight
+mode); cellular cost of previews with network on. **Cheapest settling test:** one
+device, an Optimize-Storage library, Instruments (Allocations + Network) over a
+film of an iCloud-only trip. → `HANDOFF.md`.

@@ -24,7 +24,7 @@ final class PhotoShortfallTests: XCTestCase {
     func testFileRefsResolveWithoutPhotoKit() async {
         let resolver = PhotoLibraryPhotoResolver()
         let url = URL(fileURLWithPath: "/nonexistent/missing.jpg")
-        let summary = await resolver.warm([.file(url)], targetPx: 100)
+        let summary = await resolver.warm([.file(url)], targetPx: 100, timeoutS: 1)
         XCTAssertEqual(summary.inCloud, 0, "a missing file is not an iCloud problem")
     }
 }

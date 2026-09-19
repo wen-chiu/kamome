@@ -34,6 +34,8 @@ struct RecapExportJob: RecapExportRunning {
         }
         let resolver = PhotoLibraryPhotoResolver()
         await warmDeckPhotos(trip: composed.trip, style: plan.style, resolver: resolver, channel: channel)
+        // Cancel during the download phase ends here, before a frame is drawn.
+        guard channel.shouldContinue() else { return .cancelled }
         return await render(composed: composed, plan: plan, resolver: resolver, channel: channel)
     }
 

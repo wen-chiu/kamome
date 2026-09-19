@@ -1896,13 +1896,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$d of %2$d photos couldn’t be loaded, so those stops show blank cards. Open them in Photos to download them first, then export again. The route itself is unaffected."
+            "value": "%1$d of %2$d photos couldn’t be loaded, so those stops show blank cards. If they’re in iCloud, check your connection and export again. The route itself is unaffected."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "有 %1$d 張（共 %2$d 張）無法載入，這些停留點會顯示空白卡片。請先在「照片」開啟它們以完成下載，再重新輸出。路線本身不受影響。"
+            "value": "有 %1$d 張（共 %2$d 張）無法載入，這些停留點會顯示空白卡片。如果它們在 iCloud，請確認網路連線後再重新輸出。路線本身不受影響。"
           }
         }
       }
@@ -2719,6 +2719,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "卡摸咩已經知道你去過哪裡。"
+          }
+        }
+      }
+    },
+    "recap_photos_preparing": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing your photos…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在準備你的照片…"
+          }
+        }
+      }
+    },
+    "recap_photos_downloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading from iCloud"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在從 iCloud 下載"
           }
         }
       }

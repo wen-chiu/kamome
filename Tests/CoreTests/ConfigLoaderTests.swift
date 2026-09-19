@@ -94,6 +94,8 @@ final class ConfigLoaderTests: XCTestCase {
         // Phantom-trip guard (ADR 2026-07-16).
         XCTAssertEqual(config.trip.minDurationS, 60)
         XCTAssertEqual(config.trip.minDistanceM, 100)
+        // iCloud-only photos: one stalled download is abandoned, not waited on.
+        XCTAssertEqual(config.photos.icloudFetchTimeoutS, 60)
         // Photo-EXIF import clustering (§4.7, Replay MVP) — prototype defaults.
         XCTAssertEqual(config.photoImport.stopRadiusM, 4000)
         XCTAssertEqual(config.photoImport.stopSplitGapS, 10_800)

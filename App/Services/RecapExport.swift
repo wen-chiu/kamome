@@ -42,12 +42,15 @@ enum RecapExportOutcome: Equatable, Sendable {
 
 /// What a running export tells its owner. A struct of closures rather than a
 /// delegate: the coordinator is the only owner there will ever be, and this
-/// keeps the job's dependency on it to four functions.
+/// keeps the job's dependency on it to five functions.
 @MainActor
 struct RecapExportChannel {
     var progress: (Double) -> Void
     var routing: (RouteMatchReport) -> Void
     var photoShortfall: (PhotoLibraryPhotoResolver.WarmSummary?) -> Void
+    /// The iCloud download phase before the render: nil when there is nothing to
+    /// download or the phase is over.
+    var photoPreload: (PhotoLibraryPhotoResolver.PreloadProgress?) -> Void
     /// Read from the render thread every frame — see `ExportCancelFlag`.
     var shouldContinue: @Sendable () -> Bool
 }

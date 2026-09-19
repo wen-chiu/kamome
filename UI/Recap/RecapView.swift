@@ -116,8 +116,12 @@ struct RecapView: View {
 
                 case let .rendering(progress):
                     VStack(alignment: .leading, spacing: 8) {
-                        ProgressView(value: progress) {
-                            Text("recap_rendering")
+                        if let preload = model.photoPreload {
+                            photoPreloadProgress(preload)
+                        } else {
+                            ProgressView(value: progress) {
+                                Text("recap_rendering")
+                            }
                         }
                         // The promise, and its exact bounds (Chiu 2026-09-10):
                         // leave this SCREEN, stay in the APP. `AVAssetWriter`
@@ -143,6 +147,20 @@ struct RecapView: View {
                         .foregroundStyle(.secondary)
                     Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
                 }
+            }
+        }
+    }
+
+    /// The download phase before the render — only shown when some of the film's
+    /// photos live in iCloud only. `n / total` counts those photos alone, never
+    /// the ones already on the device.
+    private func photoPreloadProgress(_ preload: PhotoLibraryPhotoResolver.PreloadProgress) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("recap_photos_preparing")
+            ProgressView(value: preload.fraction) {
+                Text("recap_photos_downloading")
+            } currentValueLabel: {
+                Text(verbatim: "\(min(preload.completed + 1, preload.total)) / \(preload.total)")
             }
         }
     }

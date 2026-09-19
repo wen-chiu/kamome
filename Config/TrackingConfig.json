@@ -37,7 +37,8 @@
     "api_key_required": false
   },
   "photos": {
-    "match_radius_m": 300
+    "match_radius_m": 300,
+    "icloud_fetch_timeout_s": 60
   },
   "import": {
     "stop_radius_m": 4000,
