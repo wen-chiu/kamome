@@ -1,114 +1,47 @@
-# Handoff — TestFlight: the fixes an engineering session owes
+# Handoff — TestFlight: what is still owed
 
-PO audit 2026-09-18 against `main` at PR #74 (`./check.sh` green, 531 tests).
-**This file is the engineering prompt.** Charter: `Arch.md`. One PR for Tasks 1–5, a
-second for Task 6 (a film change); `./check.sh` green before "done"; the visual items owe captures.
+PO audit 2026-09-18 against `main` at PR #74. **The code is done**: Tasks 1–5 in
+PR #76, Task 6 in PR #77. What remains is two verifications and Chiu's steps
+outside the repository. Charter for any session picking this up: `Arch.md`.
 
 **TestFlight is not the App Store submission.** `Docs/release-readiness.md`
 gates the submission. The audience here is people Chiu knows — accepted
 2026-08-20 (`Docs/_archive/pre-launch.md`, "The TestFlight position"). D1–D5 and
 S7 do not block it; the TestFlight build is how D1–D5 get run.
 
-## Task 1 — the version comes from build settings (T1) ✅ PR #76
+## Done — kept as a ledger, not a to-do (VERIFIED against the tree 2026-09-19)
 
-`App/Info.plist` (XcodeGen output, tracked) carries `CFBundleShortVersionString`
-`1.0` and `CFBundleVersion` `1` as literals; `project.yml`'s `MARKETING_VERSION`
-`0.1.0` and `CURRENT_PROJECT_VERSION` `1` are read by nothing. **VERIFIED.**
-App Store Connect refuses a build number it has already seen.
+- **T1 version from build settings** — PR #76. `project.yml` maps
+  `CFBundleShortVersionString` / `CFBundleVersion` to the build settings;
+  `MARKETING_VERSION` is `0.1` (Chiu 2026-09-18), `CURRENT_PROJECT_VERSION` is `1`.
+  ⚠️ **Each upload bumps `CURRENT_PROJECT_VERSION`** — App Store Connect refuses a
+  build number it has already seen.
+- **T2 privacy manifest** — PR #76. `App/PrivacyInfo.xcprivacy`, `plutil -lint` OK,
+  `NSPrivacyCollectedDataTypes` deliberately empty: what Kamome declares as
+  collected is Chiu's, owed at the App Store privacy label.
+- **T3 export compliance** — PR #76. `ITSAppUsesNonExemptEncryption: false`.
+- **T4 device appearance** — PR #76. `.preferredColorScheme(.dark)` is gone; the
+  app follows the device (ADR 2026-09-18 (d)). Captures: see below.
+- **T5 first-run notice backgrounds the app** — PR #76 did **not** reproduce it
+  (simulator, two fresh installs). Not fixed, because a guess is not a fix.
+- **T6 terrain credit follows the licence** — PR #77. `RecapMapAttribution`
+  credits a source only when its licence requires it and the film's extent
+  intersects its coverage box; six tests added, Iceland and Miyakojima desk-rendered.
+  ⚠️ One question came out of it: the film shortens EU-DEM's Copernicus wording
+  where ADR (f) says it may not — `HANDOFF.md`.
 
-- In `project.yml` `targets.Kamome.info.properties`:
-  `CFBundleShortVersionString: $(MARKETING_VERSION)` and
-  `CFBundleVersion: $(CURRENT_PROJECT_VERSION)`. `xcodegen generate`.
-- Values (**Chiu 2026-09-18**): nothing has ever been uploaded. TestFlight
-  starts at **`MARKETING_VERSION: "0.1"`**, `CURRENT_PROJECT_VERSION: 1`; `1.0` is
-  kept for the App Store release. Each upload bumps `CURRENT_PROJECT_VERSION`.
-- Pass: the built `.app`'s `Info.plist` shows the two build-setting values.
+## Still owed — two verifications
 
-## Task 2 — a privacy manifest (T2) ✅ PR #76
-
-No `PrivacyInfo.xcprivacy` exists in the app target, and app code reads
-`UserDefaults` — `FirstRunNotice`, `JourneyNaming`, `LastVehicleChoice`,
-`JourneyDiscoveryModel`, `DemoJourneyLibrary`. **VERIFIED.** GRDB 6.29.3 and
-MapLibre 6.27.0 ship their own manifests. That a missing one fails the upload
-(ITMS-91053) is **INFERRED** from Apple's 2024-05-01 policy.
-
-- Add `App/PrivacyInfo.xcprivacy` as a resource of the `Kamome` target (via
-  `project.yml`): `NSPrivacyTracking` false, `NSPrivacyTrackingDomains` empty,
-  `NSPrivacyAccessedAPITypes` = `NSPrivacyAccessedAPICategoryUserDefaults` with
-  reason `CA92.1`.
-- `FilmStore.fileSize` reads `.size` only — no file-timestamp entry. Before
-  adding the file, grep once more for timestamp, boot-time and disk-space APIs
-  (Apple's required-reason list) in `App`, `UI`, `Core`.
-- `NSPrivacyCollectedDataTypes`: leave **empty** and say so in the PR. What
-  Kamome declares as collected (coordinates reach the Worker, OpenFreeMap, AWS,
-  Apple) is a product statement — Chiu's, owed at the App Store privacy label.
-- Pass: the file is in the built `.app`; `plutil -lint` clean.
-
-## Task 3 — export compliance (T3) ✅ PR #76
-
-Add `ITSAppUsesNonExemptEncryption: false` to the `info.properties`.
-**Chiu 2026-09-18: set it to false if Kamome only uses HTTPS.** Checked 2026-09-18:
-no `CryptoKit`, `CommonCrypto`, `Security`/`SecKey`, SQLCipher or `Network`
-imports in `App`, `UI`, `Core`, `Package.swift`; plain GRDB (no SQLCipher); all
-traffic is `URLSession`/MapLibre/`CLGeocoder` over the OS's TLS. **Re-run that
-grep in the PR** — if anything turns up, stop and report instead of setting the key.
-
-## Task 4 — the app follows the device's appearance (ADR 2026-09-18 (d)) ✅ PR #76
-
-- Delete `.preferredColorScheme(.dark)` at `UI/Home/HomeView.swift:77`.
-- Rewrite the ⚠️ comment at `UI/Discovery/JourneyTimelineView.swift` (≈67) that
-  says the beta inherits the dark override — it will not be true.
-- Captures: S1, S3, the recap screen, the first-run notice, About and the
-  discovery beta, **light and dark**, one film exported in each. Light-mode
-  in-app screens have never been looked at — **report what reads badly; do not
-  restyle** (`DESIGNER.md`'s call).
-- The light film style is **approved** (addendum to (d)) — light-mode films are
-  intended, not a regression.
-- Do **not** write another ADR; (d) is the record.
-- **Captures still owed** (PR #76 checked S1 light+dark, first-run notice light,
-  About light): S3 (Trip Detail), the recap screen, Discovery beta (use
-  `-demo-discover` on the simulator), **light and dark**, and one film exported
-  in each mode. All require a trip with photos.
-
-## Task 5 — dismissing the first-run notice backgrounds the app ✅ PR #76 (non-reproduction)
-
-Found while verifying PR #44 (commit `625316b`), simulator-reproducible, no
-repro steps recorded, **UNKNOWN on device**. `HomeView` presents
-`FirstRunNoticeView` as a sheet with `interactiveDismissDisabled()`; its only
-button calls `FirstRunNotice.acknowledge()` and sets the flag false.
-
-- Reproduce first on a fresh install (the notice shows only when
-  `matching.base_url` is non-empty — it is, in the shipped config). If it does
-  not reproduce, say so with the steps tried; do not "fix" by guessing.
-- The fix must keep: shown once, remembered, one button, no swipe-dismiss
-  (ADR 2026-09-05 (b), the 2026-09-06 three-line ceiling).
-- A test that fails on the regression, if the cause can be held by one.
-
-## Task 6 — the terrain credit follows the licence (ADR 2026-09-18 (f))
-
-`RecapMapAttribution.openFreeMap` ends in `· Terrain: USGS/LINZ/GA` for every
-film. The rule is now: credit a terrain source in the film **only if its licence
-requires it**, and only when the film shows its area.
-
-- **Never** credit USGS or NOAA (public domain). **Credit** LINZ (NZ), Geoscience
-  Australia, EU-DEM (Copernicus; EEA incl. Iceland), UK Environment Agency,
-  Austria, Kartverket (Norway), Canada, Mexico — when the film's extent
-  intersects their coverage. Source: tilezen/joerd `docs/attribution.md`.
-- **Over-include, never miss**: coarse coverage boxes, erring larger. A missed
-  credit is a licence breach; an extra one is a few characters.
-- The OSM half (`OpenFreeMap © OpenMapTiles Data from OpenStreetMap`) is frozen
-  (2026-09-13) — unchanged, on every film.
-- Keep it on the substrate side (`MapRendererCapabilities.attribution`, the
-  render loop draws it). The story layer must not learn about terrain sources.
-- Coverage boxes are licence facts, not tunables — constants beside the
-  string, as `RecapMapAttribution` already argues. Stop and ask if that reads
-  as a rule-7 conflict.
-- `AboutView` keeps full notices for every source; add EU-DEM's prescribed
-  wording if missing.
-- Tests: a Taiwan/Japan extent → OSM credit only; an Auckland extent → LINZ; an
-  Iceland extent → EU-DEM. Update `RecapMapCreditTests` by adding cases — do not
-  loosen what it already asserts. Render one Iceland film and one Japan film and
-  read the credit.
+1. **T4's captures.** PR #76 checked S1 light + dark, the first-run notice light and
+   About light. Still owed: **S3 (Trip Detail), the recap screen, the Discovery beta
+   (`-demo-discover` on the simulator), light and dark, and one film exported in
+   each mode.** All need a trip with photos. Light-mode in-app screens have never
+   been looked at — **report what reads badly; do not restyle** (`DESIGNER.md`'s
+   call). The light film style is approved (addendum to ADR (d)).
+2. **T5 on a device.** Fresh install, dismiss the notice, watch whether the app
+   backgrounds. The fix, if it exists, must keep: shown once, remembered, one
+   button, no swipe-dismiss (ADR 2026-09-05 (b), the 2026-09-06 three-line ceiling).
+   Add a test that fails on the regression if the cause can be held by one.
 
 ## For Chiu, outside the repository
 

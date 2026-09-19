@@ -237,7 +237,10 @@ final class RecapDemoFilmTests: XCTestCase {
         let full = try AppConfig.loadOrDie()
         let baseURL = requestedBaseURL
             ?? HarnessEnv.value("KAMOME_ROUTING_BASE_URL")
-            ?? "https://api.geoapify.com"
+            // The shipped Worker, which holds the key (ADR 2026-09-19). The old
+            // default, api.geoapify.com, has no key in any checkout (ADR
+            // 2026-09-12) and could only answer 401 while carrying real positions.
+            ?? full.matching.baseURL
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let service = ImportService(repository: repository, config: full)
         // Routing became its own step on 2026-08-15 (`importTrip` returns as

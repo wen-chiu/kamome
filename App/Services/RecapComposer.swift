@@ -175,14 +175,21 @@ enum RecapComposer {
             legs: legs, stops: tripStops, config: weighting,
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
         )
+        // An imported trip has no `TripStats` (`ImportService` writes none), so
+        // `localM` is nil and the card would print dates only. The composer already
+        // holds the journey the film will draw — before a frame exists — so it
+        // falls back to measuring that, on the same axis the end card and the HUD
+        // odometer use. Recorded trips are untouched: their stored total stays the
+        // base (see `localDistanceM`). Zero prints nothing rather than "0 km".
+        let drawnM = RecapTrip.localRouteDistanceM(legs: film.legs)
+        let titleM = localM ?? (drawnM > 0 ? drawnM : nil)
         return RecapTrip(
             legs: legs,
             stops: tripStops,
             title: trip.title,
-            subtitle: titleSubtitle(trip: trip, distanceM: localM),
+            subtitle: titleSubtitle(trip: trip, distanceM: titleM),
             endCardFigures: endCardFigures(
-                trip: trip, distanceM: RecapTrip.localRouteDistanceM(legs: film.legs),
-                stopCount: film.stops.count
+                trip: trip, distanceM: drawnM, stopCount: film.stops.count
             ),
             shareURL: nil,
             journeyDates: journeyDates(trip),

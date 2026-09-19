@@ -102,6 +102,24 @@ final class RecapComposerTests: XCTestCase {
         XCTAssertNotEqual(byLabel["KM"], "1,203", "the recorded total belongs to the subtitle, not the card")
     }
 
+    /// An imported trip has no `TripStats`, and its title card used to print dates
+    /// only. The composer holds the drawn journey before any frame renders, so the
+    /// subtitle now carries the same kilometres the end card prints.
+    func testAnImportedTripsTitleCardCarriesTheDrawnKilometres() throws {
+        let legs = RecapComposer.legs(
+            from: [segment(points: [(-32.0, 115.75), (-32.1, 115.90), (-32.2, 115.77)])],
+            epsilonM: 15, matchedEpsilonM: 5
+        )
+        let recap = try XCTUnwrap(RecapComposer.trip(
+            trip: trip(), legs: legs, stops: [stop()], stats: nil, photosByStop: [:]
+        ))
+        let drawnKm = Int((RecapTrip.localRouteDistanceM(legs: legs) / 1000).rounded())
+        XCTAssertGreaterThan(drawnKm, 0, "the fixture must have a drawable distance or this test is vacuous")
+        XCTAssertTrue(recap.subtitle.hasSuffix("· \(drawnKm) km"), "got: \(recap.subtitle)")
+        let byLabel = Dictionary(uniqueKeysWithValues: recap.endCardFigures.map { ($0.label, $0.value) })
+        XCTAssertEqual(byLabel["KM"], "\(drawnKm)", "title card and end card must print one number")
+    }
+
     func testDegenerateRouteYieldsNoTrip() {
         XCTAssertNil(RecapComposer.trip(
             trip: trip(),

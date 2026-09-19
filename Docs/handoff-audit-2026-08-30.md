@@ -142,6 +142,12 @@ pacing is implemented but permanently dead behind a tile condition that can neve
 be satisfied** — and the "film duration must scale with trip size" question that
 has been open since 2026-08-14 would be an *unlocking* job, not a design job.
 
+✅ **SETTLED 2026-09-19 — VERIFIED false.** `LinearTimeline.init` defaults
+`pacing: RecapPacing = .contentDerived`, and the shipping `plan(_:)` in
+`RecapExportJob+Render.swift` never passes `pacing:`, so the film is
+content-derived whatever `establishing` is. The comment quoted above is still
+wrong and still says otherwise. What follows is the record of the question.
+
 **UNKNOWN, and worth an hour.** The cheapest thing that would settle it: trace
 `totalDurationS` into `CameraPath.init` (`let total = totalDurationS ?? config.targetDurationS`)
 and print the resolved duration for two fixtures of very different size through
