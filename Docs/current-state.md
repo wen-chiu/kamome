@@ -7,10 +7,10 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-18 against decisions.md **2026-09-18 (f)** and `main` at
-**PR #75**. (d) lifts S1's dark override — the app and the film follow the
-device's appearance — and its addendum approves the light style. (e) closes
-Journey Discovery's two questions; (f) sets the terrain-credit rule. PO TestFlight audit: three upload fixes owed
-(`Docs/handoff-testflight.md`); D1–D5 and S7 gate the App Store, not TestFlight.
+**PR #76**. PR #75: PO TestFlight audit — ADRs (d)–(f). PR #76: T1–T5
+implementation (version from build settings, privacy manifest, export compliance,
+device appearance, first-run notice non-reproduction). T6 (terrain credit per
+ADR (f)) is this PR.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

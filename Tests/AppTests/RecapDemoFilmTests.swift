@@ -75,7 +75,7 @@ final class RecapDemoFilmTests: XCTestCase {
         // appearance — the order `RecapModel.runExport` uses, for its reason: a
         // substrate that is locked to one appearance (the souvenir map) must not
         // end up under a palette tuned for the other.
-        let provider = try snapshotProvider(region: region)
+        let provider = try snapshotProvider(region: region, tripExtent: bounds)
         let appearance = provider.capabilities.appearance(
             honouring: try ReviewSubstrate.experiment().appearance
         )

@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-18.** `main` carries PRs #16–#74. Everything closed has been
+**Updated 2026-09-18.** `main` carries PRs #16–#76. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -45,7 +45,11 @@ TestFlight build is the vehicle for D1–D5 (→ `Docs/handoff-testflight.md`).
 **ADR 2026-09-12 (b)**, amending Chiu's 2026-08-17 "never in the rendered film".
 The substrate declares its attribution and the render loop draws it on every
 frame. With the production switch (ADR 2026-09-16), **every shipping film now
-draws a credit** — `RecapMapAttribution.openFreeMap`.
+draws a credit**. The terrain clause is region-conditional per ADR 2026-09-18 (f):
+only sources whose licence requires attribution AND whose coverage intersects the
+film's extent appear. Public-domain sources (USGS, NOAA, ArcticDEM) are never
+credited. The desk render harness (`ReviewSubstrate`) now threads the trip extent
+so rendered films show the same credit the export would.
 ⚠️ **The reason it is Kamome's own credit and not the snapshotter's is
 measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
 above magnification **1.026** (shipped padding 1.03), the title band covers the
@@ -84,10 +88,8 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **TestFlight: Tasks 1–5 done (PR #76); Task 6 (terrain credit,
-  ADR 2026-09-18 (f)) pending.** T5 (first-run notice backgrounds the app):
-  did not reproduce on iPhone 17 Pro simulator, two fresh installs; cause
-  unknown; device verification deferred to TestFlight testing.
+- 🟠 **TestFlight: three upload fixes, the appearance line, and the first-run
+  notice that backgrounds the app.**
   → `Docs/handoff-testflight.md`.
 - 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
   checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'

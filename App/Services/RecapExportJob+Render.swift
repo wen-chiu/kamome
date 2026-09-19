@@ -27,11 +27,11 @@ extension RecapExportJob {
         // One question, asked once (`RecapMapRegion` is the seam): which region
         // covers this trip? Its tiles feed the renderer, its DEM feeds hillshade,
         // and its extent is what the opening establishing shot frames.
-        let region = GeoBox.enclosing(composed.trip.route.map { (lat: $0.lat, lon: $0.lon) })
-            .flatMap { RecapMapRegionResolver.resolve(covering: $0) }
+        let tripBox = GeoBox.enclosing(composed.trip.route.map { (lat: $0.lat, lon: $0.lon) })
+        let region = tripBox.flatMap { RecapMapRegionResolver.resolve(covering: $0) }
         let provider: MapRenderer
         do {
-            provider = try Self.snapshotProvider(for: region, appearance: request.appearance)
+            provider = try Self.snapshotProvider(for: region, appearance: request.appearance, tripBox: tripBox)
         } catch {
             KamomeLog.recap.error("snapshotProvider failed: \(error, privacy: .public)")
             return nil
@@ -306,7 +306,7 @@ extension RecapExportJob {
     /// style when present (a region carries its own tiles), which is the
     /// correct behaviour for a future self-hosted substrate.
     private static func snapshotProvider(
-        for region: RecapMapRegion?, appearance: RecapAppearance
+        for region: RecapMapRegion?, appearance: RecapAppearance, tripBox: GeoBox?
     ) throws -> MapRenderer {
         if let region,
            let styleURL = try? RecapMapStyle.resolvedStyleURL(
@@ -323,9 +323,18 @@ extension RecapExportJob {
         let styleURL = try RecapMapStyle.resolvedNetworkStyleURL(
             styleResource: resource
         )
+        let credit: String
+        if let box = tripBox {
+            credit = RecapMapAttribution.openFreeMap(
+                minLat: box.minLat, maxLat: box.maxLat,
+                minLon: box.minLon, maxLon: box.maxLon
+            )
+        } else {
+            credit = RecapMapAttribution.openFreeMapBase
+        }
         return MapLibreSnapshotProvider(
             styleURL: styleURL, appearance: appearance,
-            attribution: RecapMapAttribution.openFreeMap
+            attribution: credit
         )
     }
 }

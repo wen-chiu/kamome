@@ -54,8 +54,8 @@ extension RecapDemoFilmTests {
     /// The base map this render will use — **and falling back is not a failure**.
     /// The rule and the two overrides live in `ReviewSubstrate`, which is shared
     /// with `RecapReviewScene`; this only names the log prefix.
-    func snapshotProvider(region: RecapMapRegion?) throws -> MapRenderer {
-        try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_DEMO_FILM")
+    func snapshotProvider(region: RecapMapRegion?, tripExtent: GeoBox? = nil) throws -> MapRenderer {
+        try ReviewSubstrate.renderer(region: region, reporting: "KAMOME_DEMO_FILM", tripExtent: tripExtent)
     }
 
     /// **A film renders on whichever substrate is available, and falling back is
@@ -169,7 +169,7 @@ extension RecapDemoFilmTests {
         // nil and the device's choice passes through (ADR 2026-09-16).
         let openFreeMap = MapLibreSnapshotProvider(
             styleURL: URL(fileURLWithPath: "/dev/null"),
-            attribution: RecapMapAttribution.openFreeMap
+            attribution: RecapMapAttribution.openFreeMapBase
         ).capabilities
         XCTAssertNil(
             openFreeMap.fixedAppearance,
