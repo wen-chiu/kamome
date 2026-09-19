@@ -6,11 +6,14 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-18 against decisions.md **2026-09-18 (f)** and `main` at
-**PR #76**. PR #75: PO TestFlight audit — ADRs (d)–(f). PR #76: T1–T5
+Last synced: 2026-09-19 against decisions.md **2026-09-19** and `main` at
+**PR #77**. PR #75: PO TestFlight audit — ADRs (d)–(f). PR #76: T1–T5
 implementation (version from build settings, privacy manifest, export compliance,
-device appearance, first-run notice non-reproduction). T6 (terrain credit per
-ADR (f)) is this PR.
+device appearance, first-run notice non-reproduction). PR #77: T6, the
+region-conditional terrain credit (ADR (f)). TestFlight's code is done; T4's
+captures and T5's device check are owed (`Docs/handoff-testflight.md`). ADR
+2026-09-19: the title card carries imported trips' kilometres; the desk harness
+routes through the Worker.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

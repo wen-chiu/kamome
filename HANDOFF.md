@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-18.** `main` carries PRs #16–#76. Everything closed has been
+**Updated 2026-09-19.** `main` carries PRs #16–#77. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -88,43 +88,38 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **TestFlight: three upload fixes, the appearance line, and the first-run
-  notice that backgrounds the app.**
-  → `Docs/handoff-testflight.md`.
-- 🟠 **The desk render harness sends coordinates to Geoapify for nothing.** No
-  checkout carries a key now (ADR 2026-09-12), so `RecapDemoFilmTests`'
-  `api.geoapify.com` default can only get 401s — carrying a local dump's real
-  coordinates (§0). Default it to `""`, to the Worker (quota), or leave it: Chiu's.
-  → `Docs/decisions.md` 2026-09-12.
-
-- 🟠 **No desk render can validate `matching.base_url`** — `RecapDemoFilmTests`
-  never reads the shipped config, and making it would spend real quota.
-  → `Docs/decisions.md` 2026-09-08.
-
-- 🔴 **Three features built and never reached — one class, one sweep owed.**
-  Imported trips carry no `TripStats`, so the title card's subtitle, Home and Trip
-  Detail print **no kilometres** (found 2026-09-09,
-  → `Docs/handoff-audit-2026-08-30.md` finding 8); content-derived pacing may sit
-  behind a tile condition that can never hold (**UNKNOWN**, → finding 3); and
-  `VehicleCatalog.resolve` still returns nil and silently draws the seagull
-  instead of the car (rate **UNKNOWN**, → `Docs/handoff-subject-lookup.md`).
+- 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
+  T4's captures — S3, recap screen, Discovery beta, light + dark, one film per
+  mode — and T5, the first-run notice that backgrounds the app, which did not
+  reproduce on the simulator and needs a device. → `Docs/handoff-testflight.md`.
+- ⚠️ **The film's EU-DEM credit is shortened, and ADR 2026-09-18 (f) says the
+  Copernicus wording "may not shorten".** PR #77 ships `EU-DEM (Copernicus)`
+  (Iceland, Europe) on a reading of Delegated Regulation 1159/2013 Art. 3 that
+  is **INFERRED**. Two same-level sources disagree; a PO call, not an
+  implementation detail. → `Core/ExportEngine/RecapMapAttribution.swift`.
+- 🔴 **Two features built and never reached — one class, one sweep owed.**
+  Imported trips carry no `TripStats` (`ImportService` writes no `stats_json`,
+  → `Docs/handoff-audit-2026-08-30.md` finding 8). **The title card now measures
+  the drawn journey itself (ADR 2026-09-19); Home and Trip Detail stay empty by
+  Chiu's choice** — showing them needs a distance-only field (an interface
+  change, rule 2), and Trip Detail's other three stats cannot honestly be claimed.
+  And `VehicleCatalog.resolve`
+  still misses now and then and silently draws the fallback badge instead of the
+  car (1 render in 5 on 2026-09-16; device rate **UNKNOWN**,
+  → `Docs/handoff-subject-lookup.md`). The third of the class, content-derived
+  pacing, is **closed — VERIFIED 2026-09-19**: it is `LinearTimeline`'s default
+  and the shipping `plan(_:)` never overrides it, so no tile condition gates it.
   The question that catches the class: *"does the shipping path ever call this?"*
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
   decided in advance, and **a removal PR must not cite "provably contained"**.
   → `Docs/handoff-stop-weighting.md`.
-- **C4 — nothing asserts the end card's brand mark**, and the badge work proved
-  this failure mode is silent. → `Docs/release-readiness.md` C4.
-- 🔴 **Two left by the type-2 opening round**: `Geo.distanceM` is **121 km short**
-  over Taipei → Auckland with no sweep of who reads it, and a **ferry gets a
-  boarding pass and a plane**. → `Docs/handoff-type2-opening-retime.md`.
-- 🟠 **Every local `./check.sh` sends routing requests to the production Worker.**
-  `RouteMatchRecordedLegTests.testTheSameShippedServiceStillOffersAnImportedLeg`
-  builds the shipped service with no stub, so three synthetic legs per run count
-  against the 2000/day ceiling — VERIFIED 2026-09-12, real verdicts came back. A
-  stub reconstructor would keep what the test proves; not done.
-  → `Tests/AppTests/RouteMatchRecordedLegTests.swift`.
-
+- **C4 — nothing asserts the end card's mark is the bird.** Only weakly held:
+  `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
+  would satisfy. → `Docs/release-readiness.md` C4.
+- **A ferry gets a boarding pass and a plane** — the mode classifier is deferred
+  by name (Chiu 2026-09-19: not built yet). The `Geo.distanceM` 121 km error is
+  accepted (ADR 2026-09-19). → `Docs/handoff-type2-opening-retime.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
@@ -136,7 +131,8 @@ string stands. Do not reopen this from scratch.
 
 - **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
   gitignored, so it reads different geometry. ⚠️ **No checkout routes with a key**
-  (ADR 2026-09-12): real roads need `KAMOME_ROUTING_BASE_URL` = the Worker.
+  (ADR 2026-09-12): the desk harness defaults to the shipped Worker (ADR
+  2026-09-19); each render spends the 2000/day quota.
   → `Docs/handoff-crop-scaling.md` §3.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.

@@ -5696,3 +5696,47 @@ shared MP4, the work that leaves the app, not only `AboutView`.
 `Docs/handoff-testflight.md`. The exact short form per source is **INFERRED**
 acceptable under CC BY's "reasonable manner for the medium"; the Copernicus
 wording is prescribed and may not shorten.
+
+## 2026-09-19 — Kilometres where they can be known; two findings closed; the desk harness routes through the Worker
+
+**Decision (Chiu, 2026-09-19)**, answering the open-items list one item at a time.
+
+1. **Imported trips' kilometres.** *「如果能在匯出影片 render 前就知道可以加，如果做不到
+   就先空。」* **Knowable before render, for the title card:** `RecapComposer.trip`
+   already holds the journey the film will draw, and it already measures it for the
+   end card and the HUD odometer (`RecapTrip.localRouteDistanceM`). When there are no
+   `TripStats` (every imported trip), the title card's subtitle now prints that same
+   figure, so the two cards cannot disagree. Recorded trips are untouched — their
+   stored total stays the base, for the reason `localDistanceM` gives. Zero prints
+   nothing rather than "0 km". Provenance is unchanged: an inferred (dashed) leg is a
+   straight line and the figure is a lower bound, exactly as the odometer already
+   is.
+   **Home and Trip Detail stay empty — Chiu 2026-09-19: 「先維持空白」.** Not a
+   refusal: revisit when he wants it. The figure is computable from stored segments (`matchedPolyline`, or
+   the photo-to-photo line), but showing it there needs a distance-only field —
+   `TripStats` has five non-optional fields and an imported trip cannot honestly
+   claim `drive_s` or `top_speed_kmh` (`CLAUDE.md` rule 5) — which is a public
+   interface and schema change, and it moves once routing finishes (inferred →
+   road). Stop-and-confirm (rule 2).
+2. **`Geo.distanceM`'s 121 km error over Taipei → Auckland is accepted.** *「這個誤差
+   沒關係。」* No sweep of its readers is owed. The pass prints the great circle and
+   the cards subtract the equirectangular length, as `RecapComposerCrossing`
+   already documents; nothing else changes.
+3. **A ferry still gets a boarding pass and a plane.** Chiu: not built yet. The mode
+   classifier is deferred by name in `Docs/current-state.md`; nothing to do.
+4. **The desk harness routes through the Worker.** *「為了得到真實路徑本來就需要用真實
+   座標去給 api.geoapify.com，只要 api key 確認存在安全的地方、沒有包在 app package
+   裡就好。」* Sending a local dump's real positions for routing is the point of a
+   desk render and sits inside the §0 routing exception. What was wrong was the
+   *default endpoint*: `api.geoapify.com` with no key can only answer 401, so the
+   coordinates left with nothing coming back (ADR 2026-09-12 §"Not decided here").
+   `RecapDemoFilmTests.importedRecap` now defaults to the shipped
+   `matching.base_url` — the Worker, which holds the key — so a render gets real
+   roads and the key stays server-side. **VERIFIED by gate:** `check-secrets.sh`
+   fails on a tracked key or any build input mapping one into the app; the *built
+   artifact* is still only proved by `./check.sh --release`, which is Chiu's.
+   Each render spends the Worker's 2000/day ceiling.
+5. **Film length rule and the badge's 0.60 size stay open** — *「這確實需要有更多資料
+   來修改。」* Nothing to build.
+
+**Not decided here:** the EU-DEM wording conflict recorded in `HANDOFF.md`.
