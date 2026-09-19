@@ -51,6 +51,8 @@ final class RecapExportCoordinator {
         /// die with the model.
         var routing: RouteMatchReport?
         var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
+        /// Set only while iCloud-only photos are being fetched for this film.
+        var photoPreload: PhotoLibraryPhotoResolver.PreloadProgress?
 
         var tripId: String { request.tripId }
     }
@@ -156,6 +158,7 @@ final class RecapExportCoordinator {
             progress: { fraction in ifCurrent { $0.fraction = fraction }() },
             routing: { report in ifCurrent { $0.routing = report }() },
             photoShortfall: { summary in ifCurrent { $0.photoShortfall = summary }() },
+            photoPreload: { preload in ifCurrent { $0.photoPreload = preload }() },
             shouldContinue: { !flag.isSet }
         )
         task = Task { [weak self] in

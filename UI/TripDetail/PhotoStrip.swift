@@ -24,7 +24,9 @@ struct PhotoStrip: View {
 }
 
 /// Loads one PhotoKit thumbnail; a deleted or unavailable asset renders the
-/// placeholder tile instead of failing (§3 rules).
+/// placeholder tile instead of failing (§3 rules). Never reads more than
+/// `targetPx` of an image, so the timeline's memory is bounded by tile count ×
+/// tile size, not by the size of the photographs.
 struct PhotoThumbnail: View {
     let assetId: String
     var isHighlight = false
@@ -60,29 +62,19 @@ struct PhotoThumbnail: View {
         .task(id: "\(assetId)-\(targetPx)") { await loadThumbnail() }
     }
 
+    /// A preview, not the photo: a few hundred pixels, fetched with network access
+    /// so an iCloud-only photo shows a picture instead of a grey tile. PhotoKit
+    /// serves a derivative at `targetPx`, not the original, and the request is
+    /// cancelled with this task when the tile scrolls away.
     private func loadThumbnail() async {
         // A passive thumbnail must never trigger the system photos prompt;
         // asking is the matcher flow's job. Undetermined → placeholder.
         guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else { return }
         let fetch = PHAsset.fetchAssets(withLocalIdentifiers: [assetId], options: nil)
         guard let asset = fetch.firstObject else { return } // deleted → placeholder stays
-        let manager = PHImageManager.default()
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .opportunistic
-        options.isNetworkAccessAllowed = false
-        let side = CGFloat(max(targetPx, 1))
-        image = await withCheckedContinuation { continuation in
-            var resumed = false
-            manager.requestImage(
-                for: asset,
-                targetSize: CGSize(width: side, height: side),
-                contentMode: .aspectFill,
-                options: options
-            ) { result, _ in
-                guard !resumed else { return } // opportunistic can call twice
-                resumed = true
-                continuation.resume(returning: result)
-            }
-        }
+        let result = await PhotoKitImageLoader.image(
+            for: asset, targetPx: targetPx, profile: .preview, allowNetwork: true
+        )
+        if case let .loaded(loaded) = result { image = loaded }
     }
 }

@@ -98,6 +98,11 @@ final class RecapModel {
     /// bug rather than as photos that are not on this device.
     var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary? { running?.photoShortfall }
 
+    /// Set while photos that live only in iCloud are being downloaded for the
+    /// film, ahead of the render. nil when every photo the film needs is already
+    /// on the device — the common case, and the one that shows no extra UI.
+    var photoPreload: PhotoLibraryPhotoResolver.PreloadProgress? { running?.photoPreload }
+
     private var running: RecapExportCoordinator.Running? {
         coordinator.running(tripId: tripId)
     }

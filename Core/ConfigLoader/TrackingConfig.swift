@@ -80,9 +80,15 @@ public struct TrackingConfig: Decodable, Equatable {
     public struct Photos: Decodable, Equatable {
         /// GPS-tagged photos attach to the nearest stop within this radius (§4.3).
         public let matchRadiusM: Double
+        /// Longest one iCloud-only photo may take to download before Kamome gives
+        /// up on it and moves on. PhotoKit has no timeout of its own — a stalled
+        /// connection would otherwise hold the whole export behind one photo,
+        /// with Cancel as the only way out.
+        public let icloudFetchTimeoutS: Double
 
         enum CodingKeys: String, CodingKey {
             case matchRadiusM = "match_radius_m"
+            case icloudFetchTimeoutS = "icloud_fetch_timeout_s"
         }
     }
 

@@ -6,14 +6,15 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-19 against decisions.md **2026-09-19** and `main` at
-**PR #77**. PR #75: PO TestFlight audit — ADRs (d)–(f). PR #76: T1–T5
+Last synced: 2026-09-19 against decisions.md **2026-09-19 (b)** and `main` at
+**PR #78**. PR #75: PO TestFlight audit — ADRs (d)–(f). PR #76: T1–T5
 implementation (version from build settings, privacy manifest, export compliance,
 device appearance, first-run notice non-reproduction). PR #77: T6, the
-region-conditional terrain credit (ADR (f)). TestFlight's code is done; T4's
-captures and T5's device check are owed (`Docs/handoff-testflight.md`). ADR
-2026-09-19: the title card carries imported trips' kilometres; the desk harness
-routes through the Worker.
+region-conditional terrain credit (ADR (f)). PR #78: ADR 2026-09-19 — the title
+card carries imported trips' kilometres; the desk harness routes through the Worker.
+ADR 2026-09-19 (b): the film's iCloud-only photos are downloaded before the render
+(local first, progress, Cancel); D-item owed on device. TestFlight's code is done;
+T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
@@ -124,8 +125,7 @@ Director's remaining content (hero photos, chapters, music, video beads) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·
-per-act / per-segment camera framing (rejected 2026-08-02) · iCloud original
-fetching · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
+per-act / per-segment camera framing (rejected 2026-08-02) · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
 
 ## Authoritative sources — higher wins; newest wins within a level
 
