@@ -49,8 +49,8 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
     private var cache: [String: CGImage] = [:]
 
     /// Loads every ref's bitmap into the cache. Call once, off the render
-    /// thread, before compositing. Needs library access — undetermined means no
-    /// photos; never prompt here.
+    /// thread, before compositing. PhotoKit assets need library access —
+    /// undetermined means no photos; never prompt here.
     ///
     /// **Two passes, so nothing already on the device is ever downloaded** and the
     /// screen can say how many are not:
@@ -75,9 +75,6 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
         progress: (@Sendable (PreloadProgress) -> Void)? = nil,
         shouldContinue: @escaping @Sendable () -> Bool = { true }
     ) async -> WarmSummary {
-        guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else {
-            return WarmSummary(requested: refs.count, resolved: 0, inCloud: 0)
-        }
         let (resolved, pending) = await resolveLocally(refs, targetPx: targetPx, shouldContinue: shouldContinue)
         let downloaded = await download(
             pending, targetPx: targetPx, timeoutS: timeoutS, progress: progress, shouldContinue: shouldContinue
@@ -95,7 +92,10 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
     ) async -> (resolved: Int, pending: [(key: String, asset: PHAsset)]) {
         var resolved = 0
         var pending: [(key: String, asset: PHAsset)] = []
-        let assets = Self.assets(for: refs)
+        // Only PhotoKit assets need the library: a file on disk resolves without
+        // it. Undetermined access resolves no asset and never prompts.
+        let assets = PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined
+            ? [:] : Self.assets(for: refs)
         for ref in refs {
             guard shouldContinue() else { break }
             let key = Self.key(for: ref)
