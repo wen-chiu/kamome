@@ -116,11 +116,24 @@ extension RecapExportJob {
         composed: Composed, plan: Plan,
         resolver: PhotoLibraryPhotoResolver, channel: RecapExportChannel
     ) async -> RecapExportOutcome {
+        let compositor = compositor(composed: composed, plan: plan, resolver: resolver)
         let exporter = RecapExporter(
             timeline: plan.timeline,
-            compositor: compositor(composed: composed, plan: plan, resolver: resolver),
+            compositor: compositor,
             provider: plan.provider,
             config: plan.config
+        )
+        // **The bill, before it is paid.** `stations` is pure, so the number of
+        // snapshots an export will take is knowable in milliseconds — and it is
+        // the number that decides how long the export runs. Logged first so a
+        // film that is going to cost half an hour says so at second one rather
+        // than at minute thirty.
+        let stationCount = RecapRenderLoop(
+            timeline: plan.timeline, compositor: compositor,
+            provider: plan.provider, config: plan.config
+        ).stations.count
+        KamomeLog.recap.notice(
+            "render plan: \(stationCount) stations for \(plan.timeline.frameCount) frames"
         )
         let scratch = FileManager.default.temporaryDirectory
         let stamp = Int(Date.now.timeIntervalSince1970)
@@ -137,11 +150,38 @@ extension RecapExportJob {
                 cleanup(videoURL: videoURL, gifURL: gifURL)
                 return .cancelled
             }
-            return try store(output: output, plan: plan, seconds: elapsed(since: started))
+            let seconds = elapsed(since: started)
+            report(output: output, seconds: seconds)
+            return try store(output: output, plan: plan, seconds: seconds)
         } catch {
             cleanup(videoURL: videoURL, gifURL: gifURL)
             return .failed(message: String(describing: error))
         }
+    }
+
+    /// **Where the export's minutes went**, in one line, at the only altitude a
+    /// device run can be read from.
+    ///
+    /// Durations and counts only — nothing here names a place (`CLAUDE.md` §0).
+    ///
+    /// How to read it: `snapshots` is the substrate's own bill, summed across
+    /// concurrent fetches, so it can exceed the total; `wait` is what the loop
+    /// actually stalled for, and the gap between the two is what prefetching
+    /// already hid. A `wait` close to the total means the render is starved on
+    /// the provider and more concurrency is the lever; a large `composite` says
+    /// it is not.
+    private func report(output: RecapExporter.Output, seconds: Double) {
+        let stats = output.stats
+        KamomeLog.recap.notice("""
+            render cost: \(seconds, format: .fixed(precision: 1))s total · \
+            \(stats.frames) frames · \(stats.stations) stations / \(stats.fetches) fetches · \
+            snapshots \(stats.snapshotS, format: .fixed(precision: 1))s \
+            (mean \(stats.meanSnapshotS, format: .fixed(precision: 2))s, \
+            wait \(stats.waitS, format: .fixed(precision: 1))s) · \
+            composite \(stats.compositeS, format: .fixed(precision: 1))s · \
+            encode \(stats.deliverS, format: .fixed(precision: 1))s · \
+            finish \(output.finishS, format: .fixed(precision: 1))s
+            """)
     }
 
     private func compositor(
@@ -181,16 +221,29 @@ extension RecapExportJob {
         let progress = channel.progress
         let shouldContinue = channel.shouldContinue
         return try await Task.detached(priority: .userInitiated) {
-            try await exporter.export(
+            // `RecapExporter` calls this once per frame (2,700+ times for a
+            // typical film); this caps what crosses the main-actor boundary
+            // to ~10/s rather than hopping on every one. `export`'s own
+            // `progress` argument is still called every frame, unthrottled —
+            // `RecapEncoderTests` reads that directly and sees no change.
+            var lastEmitted: ContinuousClock.Instant?
+            return try await exporter.export(
                 videoURL: videoURL,
                 gifURL: gifURL,
                 progress: { fraction in
+                    let now = ContinuousClock.now
+                    if let lastEmitted, fraction < 1, now - lastEmitted < Self.progressInterval { return }
+                    lastEmitted = now
                     Task { @MainActor in progress(fraction) }
                 },
                 shouldContinue: shouldContinue
             )
         }.value
     }
+
+    /// ~10/s. `nonisolated`: read from the detached render task above, off
+    /// the main actor `RecapExportJob` otherwise runs on.
+    private nonisolated static let progressInterval: Duration = .milliseconds(100)
 
     private func elapsed(since started: ContinuousClock.Instant) -> Double {
         let elapsed = ContinuousClock.now - started
