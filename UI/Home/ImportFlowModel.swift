@@ -154,6 +154,9 @@ final class ImportFlowModel {
                 tripId: tripId,
                 service: RouteMatchService(repository: repository, matching: config.matching)
             )
+            // Home's card can show a place + flag without S3 ever being opened
+            // (Chiu 2026-09-22) — see `TripJourneyNaming`.
+            TripJourneyNaming.nameIfNeeded(tripId: tripId, repository: repository)
             completedTripId = tripId
         } catch {
             // The only thrown error is `notEnoughGeotaggedPhotos`; an empty

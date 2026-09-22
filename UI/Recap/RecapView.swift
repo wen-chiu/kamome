@@ -80,6 +80,8 @@ struct RecapView: View {
 
     private var exportForm: some View {
         Form {
+            vehicleSection
+
             Section {
                 Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
                     .disabled(model.isRendering)
@@ -149,6 +151,64 @@ struct RecapView: View {
                 }
             }
         }
+    }
+
+    /// Which subject the film draws. **Moved here from Trip Detail** (Chiu
+    /// 2026-09-22): the choice only ever affected the film — nothing on the
+    /// trip screen read it — so it belongs where the film is actually
+    /// configured. A mid-render edit is safe (`RecapExportJob` snapshots the
+    /// subject once at compose time); it is still disabled while rendering so
+    /// the picker never reads as "this changes the film in progress".
+    ///
+    /// The plane is deliberately absent: the app picks it from the journey for
+    /// a crossing, and choosing one for a road trip is not a feature.
+    @ViewBuilder
+    private var vehicleSection: some View {
+        let subjects = model.pickableSubjects
+        if subjects.count > 1 {
+            Section("recap_vehicle_header") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(subjects, id: \.id) { subject in
+                            Button {
+                                model.chooseVehicle(subject.id)
+                            } label: {
+                                vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .disabled(model.isRendering)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 0))
+            }
+        }
+    }
+
+    private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        // A subject with no thumbnail yet shows its name alone. Deliberately not
+        // a grey box or a "missing image" glyph: those read as broken, and this
+        // is not broken — the set works in a film and simply has no picture yet.
+        // A chip that is only a name is an ordinary chip.
+        return HStack(spacing: 6) {
+            if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
+                Image(decorative: thumbnail, scale: 1)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 26, height: 26)
+            }
+            Text(subject.displayName(language: language))
+                .font(.subheadline)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
+        .overlay(
+            Capsule().stroke(isSelected ? Color.accentColor : .clear, lineWidth: 1.5)
+        )
+        .clipShape(Capsule())
     }
 
     /// The download phase before the render — only shown when some of the film's

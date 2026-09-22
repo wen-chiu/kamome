@@ -55,24 +55,13 @@ struct ImportSheet: View {
                         Text(model.source == .album ? "limited_photos_albums_notice" : "limited_photos_notice")
                     }
                 }
-
-                Section {
-                    switch model.phase {
-                    case .idle:
-                        importButton
-                    case .importing:
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            Text("import_running")
-                        }
-                    case let .failed(failure):
-                        Label(errorText(failure), systemImage: "exclamationmark.triangle")
-                            .font(.callout)
-                            .foregroundStyle(.orange)
-                        importButton
-                    }
-                }
             }
+            // Pinned above the safe area rather than the Form's last Section:
+            // an account with many albums used to bury Import at the bottom of
+            // the scroll, behind the whole list and its footer. This keeps the
+            // action reachable at any scroll position, the way a system sheet's
+            // primary action stays put.
+            .safeAreaInset(edge: .bottom) { bottomBar }
             .navigationTitle("import_title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -234,6 +223,33 @@ struct ImportSheet: View {
         .buttonStyle(.plain)
     }
 
+    /// Pinned action area (see `.safeAreaInset` above): the Import button plus
+    /// its running/failed states, always at the same place regardless of how
+    /// far the album list or date pickers have scrolled.
+    @ViewBuilder
+    private var bottomBar: some View {
+        VStack(spacing: 8) {
+            switch model.phase {
+            case .idle:
+                importButton
+            case .importing:
+                HStack(spacing: 12) {
+                    ProgressView()
+                    Text("import_running")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            case let .failed(failure):
+                Label(errorText(failure), systemImage: "exclamationmark.triangle")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+                importButton
+            }
+        }
+        .padding()
+        .background(.bar)
+    }
+
     private var importButton: some View {
         Button {
             Task { await model.runImport() }
@@ -242,8 +258,6 @@ struct ImportSheet: View {
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
         .disabled(!model.canImport)
     }
 

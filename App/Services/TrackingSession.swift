@@ -36,6 +36,15 @@ final class TrackingSession {
         trips = (try? repository.allTrips()) ?? []
     }
 
+    /// Swipe-to-delete on the home list — same shape as Journey Discovery's own
+    /// delete (`JourneyDiscoveryModel.delete`): the trip row and its stored
+    /// films go, the photographs never do.
+    func deleteTrip(_ tripId: String) {
+        let films = (try? repository.deleteTrip(tripId: tripId)) ?? []
+        for film in films { FilmStore.deleteFile(relativePath: film.relativePath) }
+        refreshTrips()
+    }
+
     func start(vehicle: VehicleType, now: Date = .now) {
         guard !isRecording else { return }
         let engine = TrackingEngine(config: config, vehicle: vehicle)
@@ -107,6 +116,9 @@ final class TrackingSession {
             }
             // Recorded at creation for the same reason the importer does it.
             try? repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
+            // Home's card can show a place + flag without S3 ever being opened
+            // (Chiu 2026-09-22) — see `TripJourneyNaming`.
+            TripJourneyNaming.nameIfNeeded(tripId: tripId, repository: repository)
             // §4.4 matching, fire-and-forget: trip completion never waits on
             // it, and the recap path joins any run still going rather than
             // starting a second one over the same legs.

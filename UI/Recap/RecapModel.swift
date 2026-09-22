@@ -46,6 +46,11 @@ final class RecapModel {
     /// how the screen says so.
     private(set) var busyTripId: String?
 
+    /// Which subject this trip's film draws. Loaded once at init, not read
+    /// live off the trip: this model is rebuilt each time the sheet opens
+    /// (see the type doc), so a stale value cannot outlive one presentation.
+    private(set) var vehicleId: String
+
     let tripId: String
     private let config: TrackingConfig
     private let repository: TripRepository
@@ -59,6 +64,34 @@ final class RecapModel {
         self.config = config
         self.repository = repository
         self.coordinator = coordinator
+        vehicleId = (try? repository.detail(tripId: tripId))?.trip.vehicleId ?? VehicleCatalog.defaultSubjectId
+    }
+
+    // MARK: - Vehicle
+
+    /// What the picker offers: every selectable subject, plus this trip's own
+    /// even when it is not selectable — a picker must always be able to show
+    /// what is currently set, including a subject the app chose itself.
+    ///
+    /// **Moved here from Trip Detail** (Chiu 2026-09-22): the choice only ever
+    /// affects the film — nothing on the trip screen read it — so it belongs
+    /// where the film is actually configured, not sitting permanently on the
+    /// trip's own page.
+    var pickableSubjects: [VehicleSubject] {
+        let selectable = VehicleCatalog.selectableSubjects
+        guard !selectable.contains(where: { $0.id == vehicleId }),
+              let current = VehicleCatalog.subject(id: vehicleId)
+        else { return selectable }
+        return [current] + selectable
+    }
+
+    /// Writes the choice to the trip and remembers it for the next new trip's
+    /// default. A column write, same as before the move — it never costs a
+    /// re-import, and the export job reads it at render time.
+    func chooseVehicle(_ id: String) {
+        try? repository.setTripVehicle(tripId: tripId, vehicleId: id)
+        LastVehicleChoice.remember(id)
+        vehicleId = id
     }
 
     // MARK: - What the screen draws
