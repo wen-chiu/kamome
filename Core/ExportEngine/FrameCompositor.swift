@@ -101,6 +101,15 @@ public struct FrameCompositor {
     private let widthPx: Int
     private let heightPx: Int
     private let scale: CGFloat
+    /// Built once, not per frame: a colour space is a fixed descriptor, not a
+    /// drawing surface, so the ~2,700 sRGB lookups a film used to pay for are
+    /// one lookup shared by every frame this compositor renders.
+    private let colorSpace: CGColorSpace?
+    /// The vignette ramp is a pure function of `style` (colour, strength, inner
+    /// radius) — never of the frame — so it is built once here rather than once
+    /// per frame in `drawAtmosphere`. `nil` when the theme has no vignette,
+    /// which is the golden-frame gates' neutral style.
+    private let vignetteGradient: CGGradient?
 
     /// `style` supplies only the frame-wide atmosphere (grade, vignette) — the
     /// renderers carry their own copy for the things they draw. Defaults to the
@@ -125,6 +134,18 @@ public struct FrameCompositor {
         self.widthPx = widthPx
         self.heightPx = heightPx
         scale = CGFloat(widthPx) / 1080
+        let space = CGColorSpace(name: CGColorSpace.sRGB)
+        colorSpace = space
+        if let space, style.vignetteStrength > 0.001 {
+            let clear = style.vignetteColor.copy(alpha: 0) ?? style.vignetteColor
+            let edge = style.vignetteColor.copy(alpha: style.vignetteStrength) ?? style.vignetteColor
+            vignetteGradient = CGGradient(
+                colorsSpace: space, colors: [clear, clear, edge] as CFArray,
+                locations: [0, style.vignetteInnerRadius, 1]
+            )
+        } else {
+            vignetteGradient = nil
+        }
     }
 
     /// Composites one frame.
@@ -141,7 +162,7 @@ public struct FrameCompositor {
     /// a licence notice — invisible in every test that does not look for it.
     /// Every call site says which credit it wants, or writes `nil` and means it.
     public func render(atTime time: Double, background: RecapBackground, credit: String?) throws -> CGImage {
-        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+        guard let space = colorSpace,
               let context = CGContext(
                   data: nil,
                   width: widthPx,
@@ -234,15 +255,7 @@ public struct FrameCompositor {
             context.setFillColor(style.gradeColor)
             context.fill(rect)
         }
-        guard style.vignetteStrength > 0.001,
-              let space = CGColorSpace(name: CGColorSpace.sRGB)
-        else { return }
-        let clear = style.vignetteColor.copy(alpha: 0) ?? style.vignetteColor
-        let edge = style.vignetteColor.copy(alpha: style.vignetteStrength) ?? style.vignetteColor
-        guard let gradient = CGGradient(
-            colorsSpace: space, colors: [clear, clear, edge] as CFArray,
-            locations: [0, style.vignetteInnerRadius, 1]
-        ) else { return }
+        guard let gradient = vignetteGradient else { return }
         // A radial ramp out to the frame's half-diagonal, squashed into the
         // frame's aspect so the darkening reaches every corner evenly.
         let halfWidth = rect.width / 2, halfHeight = rect.height / 2
