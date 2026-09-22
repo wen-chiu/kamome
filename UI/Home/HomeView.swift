@@ -1,3 +1,4 @@
+import KamomePersistence
 import KamomeTrackingEngine
 import KamomeTripComposer
 import SwiftUI
@@ -157,22 +158,28 @@ struct HomeView: View {
     private var tripList: some View {
         List(session.trips) { trip in
             NavigationLink(value: trip.id) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(trip.title)
-                        .font(.headline)
-                    HStack {
-                        Text(Date(timeIntervalSince1970: trip.startedAt), style: .date)
-                        if let stats = TripStats.from(jsonString: trip.statsJson) {
-                            Text(String(format: "· %.0f km · %d", stats.distanceM / 1000, stats.stopCount))
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(headline(for: trip))
+                            .font(.headline)
+                        HStack(spacing: 4) {
+                            Text(Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt))
+                            if let stats = TripStats.from(jsonString: trip.statsJson) {
+                                Text(String(format: "· %.0f km · %d", stats.distanceM / 1000, stats.stopCount))
+                            }
                         }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    // Honest provenance (§3): a trip rebuilt from photo EXIF is
-                    // never presented as recorded/verified.
-                    if trip.tripSource.isReconstructed {
-                        provenanceBadge
-                    }
+                    Spacer(minLength: 8)
+                    provenanceMark(trip.tripSource)
+                }
+            }
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    session.deleteTrip(trip.id)
+                } label: {
+                    Label("trip_delete", systemImage: "trash")
                 }
             }
         }
@@ -182,13 +189,68 @@ struct HomeView: View {
         }
     }
 
-    private var provenanceBadge: some View {
-        Label("provenance_badge", systemImage: "photo.on.rectangle")
-            .font(.caption2.bold())
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.secondary.opacity(0.2)))
+    /// The card's headline: the trip's real name when it has one (an album's,
+    /// or one the user typed) — otherwise the place `TripJourneyNaming` found
+    /// for it (flag + country), falling back to the plain date range until
+    /// that one-time lookup resolves, or forever if it never finds one.
+    private func headline(for trip: TripRecord) -> String {
+        guard hasFallbackTitle(trip) else { return trip.title }
+        return placeText(for: trip) ?? Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
+    }
+
+    /// A trip whose stored title is still the plain fallback date — nobody
+    /// named it (no album title, no Discovery card, never renamed). The only
+    /// case this screen may show something else instead; a real name is never
+    /// replaced.
+    private func hasFallbackTitle(_ trip: TripRecord) -> Bool {
+        trip.title == Self.fallbackTitle(for: trip.startedAt)
+    }
+
+    private static func fallbackTitle(for startedAt: Double) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: Date(timeIntervalSince1970: startedAt))
+    }
+
+    /// "Jun 21 – 22, 2026" — the same span format the Import sheet's own album
+    /// rows already use; a single day collapses to one date.
+    private static func dateRangeText(startedAt: Double, endedAt: Double?) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        let start = Date(timeIntervalSince1970: startedAt)
+        let from = formatter.string(from: start)
+        guard let endedAt else { return from }
+        let end = Date(timeIntervalSince1970: endedAt)
+        guard !Calendar.current.isDate(start, inSameDayAs: end) else { return from }
+        return "\(from) – \(formatter.string(from: end))"
+    }
+
+    /// Reads the place `TripJourneyNaming` cached at trip creation — the same
+    /// cache Journey Discovery writes, so a trip that came from the beta
+    /// already has an entry and costs no new lookup here. First stop's
+    /// country only (§0 scope, see `TripJourneyNaming`); nil until the
+    /// one-time lookup resolves, or if it never finds one.
+    private func placeText(for trip: TripRecord) -> String? {
+        guard let place = JourneyNameCache().place(for: trip.discoveryKey ?? trip.id),
+              let country = place.country
+        else { return nil }
+        let flag = JourneyNaming.flag(countryCode: place.countryCode)
+        return [flag, country].compactMap { $0 }.joined(separator: " ")
+    }
+
+    /// A single small glyph, not a text pill — the distinction (reconstructed
+    /// from photos vs. a recorded track) matters for honesty (§3), not enough
+    /// to earn a label competing with the title on every row. VoiceOver still
+    /// gets the full word via the accessibility label.
+    private func provenanceMark(_ source: TripSource) -> some View {
+        let symbol = source.isReconstructed ? "photo.on.rectangle" : "location.fill"
+        let key: LocalizedStringKey = source.isReconstructed ? "provenance_badge" : "provenance_recorded"
+        return Image(systemName: symbol)
+            .font(.caption)
             .foregroundStyle(.secondary)
+            .accessibilityLabel(Text(key))
     }
 
     // MP4-from-photos is the hero action (§5 S1); live capture is secondary and

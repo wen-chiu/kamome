@@ -13,6 +13,7 @@ struct TripDetailView: View {
     @State private var editingStop: StopRecord?
     @State private var showingRecap = false
     @State private var playingFilm: FilmRecord?
+    @State private var showingAllFilms = false
     /// The export outlives the sheet, so the trip screen has to be able to draw
     /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
     /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
@@ -33,7 +34,6 @@ struct TripDetailView: View {
             if model.isReconstructed { provenanceNote }
             if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
-            vehicleRow
             exportProgressRow
             filmsSection
             timeline
@@ -321,107 +321,65 @@ struct TripDetailView: View {
         }
     }
 
-    /// Stored films for this trip, tapping plays one. Shows nothing when the
-    /// trip has no films yet — a missing section is less noisy than an empty one.
+    /// One line, not a permanent card rail (Chiu 2026-09-22: the export list
+    /// used to take up part of the page on every visit, for information that
+    /// matters only right after exporting). Shows nothing when the trip has no
+    /// films yet. Tapping opens the latest film directly when there is only
+    /// one — the common case — or a list to choose from when there are more.
     @ViewBuilder
     private var filmsSection: some View {
-        if !model.films.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("films_section_title")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .padding(.bottom, 4)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(model.films) { film in
-                            filmCard(film)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+        if let latest = model.films.first {
+            Button {
+                if model.films.count == 1 {
+                    playingFilm = latest
+                } else {
+                    showingAllFilms = true
                 }
-            }
-            .background(.thinMaterial)
-        }
-    }
-
-    private func filmCard(_ film: FilmRecord) -> some View {
-        Button { playingFilm = film } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                Image(systemName: film.format == "gif" ? "photo.on.rectangle" : "film")
-                    .font(.title2)
-                    .foregroundStyle(.tint)
-                Text(film.format.uppercased())
-                    .font(.caption2.bold())
-                Text(Date(timeIntervalSince1970: film.createdAt), style: .date)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                if let bytes = film.fileBytes {
-                    Text(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .padding(10)
-            .background(Color.secondary.opacity(0.10))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// Which subject the film draws — a trip property, so it lives here beside
-    /// the title and the stops rather than inside the export sheet. Changing it
-    /// is a column write, so it never costs a re-import, and S5 reads it at
-    /// render time.
-    ///
-    /// The plane is deliberately absent: the app picks it from the journey for a
-    /// crossing, and choosing one for a road trip is not a feature.
-    @ViewBuilder
-    private var vehicleRow: some View {
-        let subjects = model.pickableSubjects
-        if subjects.count > 1 {
-            ScrollView(.horizontal, showsIndicators: false) {
+            } label: {
                 HStack(spacing: 10) {
-                    ForEach(subjects, id: \.id) { subject in
-                        Button {
-                            model.chooseVehicle(subject.id)
-                        } label: {
-                            vehicleChip(subject, isSelected: subject.id == model.vehicleId)
-                        }
-                        .buttonStyle(.plain)
+                    Image(systemName: latest.format == "gif" ? "photo.on.rectangle" : "film")
+                        .foregroundStyle(.tint)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("films_section_title")
+                            .font(.subheadline.bold())
+                        Text(filmsSummaryDetail(latest))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.bold())
+                        .foregroundStyle(.tertiary)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal)
                 .padding(.vertical, 10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.primary)
+            .background(.thinMaterial)
+            .sheet(isPresented: $showingAllFilms) {
+                FilmsListSheet(films: model.films) { film in
+                    showingAllFilms = false
+                    playingFilm = film
+                }
             }
         }
     }
 
-    private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
-        let language = Locale.current.language.languageCode?.identifier ?? "en"
-        // A subject with no thumbnail yet shows its name alone. Deliberately not
-        // a grey box or a "missing image" glyph: those read as broken, and this
-        // is not broken — the set works in a film and simply has no picture yet.
-        // A chip that is only a name is an ordinary chip.
-        return HStack(spacing: 6) {
-            if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
-                Image(decorative: thumbnail, scale: 1)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 26, height: 26)
-            }
-            Text(subject.displayName(language: language))
-                .font(.subheadline)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
-        .overlay(
-            Capsule().stroke(isSelected ? Color.accentColor : .clear, lineWidth: 1.5)
+    private func filmsSummaryDetail(_ latest: FilmRecord) -> String {
+        var parts = [latest.format.uppercased()]
+        let date = DateFormatter.localizedString(
+            from: Date(timeIntervalSince1970: latest.createdAt), dateStyle: .medium, timeStyle: .none
         )
-        .clipShape(Capsule())
+        parts.append(date)
+        if let bytes = latest.fileBytes {
+            parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+        }
+        let detail = parts.joined(separator: " · ")
+        guard model.films.count > 1 else { return detail }
+        let count = String.localizedStringWithFormat(String(localized: "films_summary_count"), model.films.count)
+        return "\(count) · \(detail)"
     }
 
 }

@@ -241,6 +241,23 @@
         }
       }
     },
+    "trip_delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除"
+          }
+        }
+      }
+    },
     "delete_stop": {
       "extractionState": "manual",
       "localizations": {
@@ -356,6 +373,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "結束旅程"
+          }
+        }
+      }
+    },
+    "films_summary_count": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld films"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 部影片"
           }
         }
       }
@@ -1511,6 +1545,23 @@
         }
       }
     },
+    "provenance_recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recorded live"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現場錄製"
+          }
+        }
+      }
+    },
     "provenance_note": {
       "extractionState": "manual",
       "localizations": {
@@ -1920,6 +1971,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "只控制停留照片卡。標題卡與結尾的「取得這條路線」卡片一律會顯示。"
+          }
+        }
+      }
+    },
+    "recap_vehicle_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vehicle"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "車輛"
           }
         }
       }
