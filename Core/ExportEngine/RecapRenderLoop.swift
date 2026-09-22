@@ -48,6 +48,54 @@ public struct RecapRenderLoop {
         let map: MapState
     }
 
+    /// **Where an export's minutes actually went** — measured, not modelled.
+    ///
+    /// The export is snapshot-bound, but "how bound" was never a number anyone
+    /// held: the log said how many frames a film has and the budget harness says
+    /// how many stations it plans, and nothing said how long either cost on the
+    /// device that paid for it. A 31-minute export is 300 snapshots at 6 s or 900
+    /// at 2 s, and those are opposite problems with opposite fixes.
+    ///
+    /// Durations only — no coordinate, no place, no camera ever reaches a log
+    /// line from here (`CLAUDE.md` §0).
+    public struct RenderStats: Sendable {
+        /// Stations the plan asked for.
+        public var stations = 0
+        /// Snapshots actually requested. Fewer than `stations` when two stations
+        /// are the same picture and share one fetch.
+        public var fetches = 0
+        public var frames = 0
+        /// Wall time **summed over the fetches**, each measured around the
+        /// provider call. Prefetch overlaps them, so this exceeds the render's
+        /// own duration — it is the substrate's bill, not the loop's stall.
+        public var snapshotS = 0.0
+        /// Wall time the loop was **blocked** waiting for the station it needed.
+        /// `snapshotS - waitS` is what prefetching hid; a `waitS` near the render
+        /// duration means the loop is starved and more concurrency would pay.
+        public var waitS = 0.0
+        public var compositeS = 0.0
+        /// Whatever the caller does with each frame — encoding, for the exporter.
+        public var deliverS = 0.0
+
+        public var meanSnapshotS: Double { fetches > 0 ? snapshotS / Double(fetches) : 0 }
+
+        public init() {}
+    }
+
+    /// Fetches run concurrently, so their meter is shared mutable state.
+    private final class SnapshotMeter: @unchecked Sendable {
+        private let lock = NSLock()
+        private(set) var fetches = 0
+        private(set) var totalS = 0.0
+
+        func record(_ seconds: Double) {
+            lock.lock()
+            defer { lock.unlock() }
+            fetches += 1
+            totalS += seconds
+        }
+    }
+
     private let timeline: LinearTimeline
     private let compositor: FrameCompositor
     private let provider: MapRenderer
@@ -87,9 +135,27 @@ public struct RecapRenderLoop {
 
     /// Renders every frame in order. `frame` is the frame index; the closure
     /// returns false to cancel the render (user backed out of S5).
-    public func renderFrames(_ deliver: (Int, CGImage) throws -> Bool) async throws {
+    ///
+    /// Returns what the pass cost, stage by stage (`RenderStats`). A cancelled
+    /// render returns what it had spent up to that frame — an abandoned export is
+    /// still a measurement of the stage that was slow.
+    @discardableResult
+    public func renderFrames(_ deliver: (Int, CGImage) throws -> Bool) async throws -> RenderStats {
         let plan = stations
-        guard !plan.isEmpty else { return }
+        var stats = RenderStats()
+        stats.stations = plan.count
+        guard !plan.isEmpty else { return stats }
+        let meter = SnapshotMeter()
+        // Folded in at every exit rather than in a `defer`: a deferred write
+        // lands *after* the return value is copied, so the cancelled path would
+        // have reported zero snapshots — the one case where the measurement
+        // matters most.
+        func measured() -> RenderStats {
+            var out = stats
+            out.fetches = meter.fetches
+            out.snapshotS = meter.totalS
+            return out
+        }
         var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
         defer { fetches.values.forEach { $0.cancel() } }
 
@@ -103,7 +169,11 @@ public struct RecapRenderLoop {
             let heightPx = config.frameHeightPx
             let provider = self.provider
             let task = Task {
-                try await provider.snapshot(key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx)
+                let started = ContinuousClock.now
+                defer { meter.record(Self.seconds(since: started)) }
+                return try await provider.snapshot(
+                    key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx
+                )
             }
             fetches[key] = task
             return task
@@ -121,32 +191,58 @@ public struct RecapRenderLoop {
             }
             fetches = fetches.filter { live.contains($0.key) }
 
+            let blocked = ContinuousClock.now
             let snapshot = try await fetch(key(station)).value
-            for frame in station.frames {
-                let time = Double(frame) / Double(config.fps)
-                // Throws rather than drawing a frame with an edge of nothing. A
-                // station that does not contain its own frame is a planner bug,
-                // and the one thing that must never happen quietly is a film that
-                // renders anyway (`Arch.md` §6).
-                let reprojection = try SnapshotReprojection(
-                    station: snapshot, stationCamera: station.camera,
-                    target: timeline.cameraFrame(atTime: time),
-                    widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
-                )
-                let image = try compositor.render(
-                    atTime: time,
-                    background: RecapBackground(station: snapshot, reprojection: reprojection),
-                    // **Asked of the provider, here, rather than wired in by the
-                    // app** (ADR 2026-09-12 (b)). This loop is the one object that
-                    // both holds the substrate that drew the picture and hands
-                    // the picture to the compositor, so a film physically cannot
-                    // be composited from tiles whose credit somebody forgot to
-                    // pass down. Every export surface — MP4 and GIF alike —
-                    // consumes these frames, so one line covers all of them.
-                    credit: provider.capabilities.attribution
-                )
-                if try !deliver(frame, image) { return }
+            stats.waitS += Self.seconds(since: blocked)
+            guard try renderStation(station, snapshot: snapshot, stats: &stats, deliver: deliver) else {
+                return measured()
             }
         }
+        return measured()
+    }
+
+    /// Every frame one station serves, in order. Split out of `renderFrames`
+    /// only so each stays readable; returns false when the caller cancelled.
+    private func renderStation(
+        _ station: RecapSnapshotStations.Station, snapshot: MapSnapshot,
+        stats: inout RenderStats, deliver: (Int, CGImage) throws -> Bool
+    ) throws -> Bool {
+        for frame in station.frames {
+            let time = Double(frame) / Double(config.fps)
+            // Throws rather than drawing a frame with an edge of nothing. A
+            // station that does not contain its own frame is a planner bug,
+            // and the one thing that must never happen quietly is a film that
+            // renders anyway (`Arch.md` §6).
+            let reprojection = try SnapshotReprojection(
+                station: snapshot, stationCamera: station.camera,
+                target: timeline.cameraFrame(atTime: time),
+                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+            )
+            let composeStarted = ContinuousClock.now
+            let image = try compositor.render(
+                atTime: time,
+                background: RecapBackground(station: snapshot, reprojection: reprojection),
+                // **Asked of the provider, here, rather than wired in by the
+                // app** (ADR 2026-09-12 (b)). This loop is the one object that
+                // both holds the substrate that drew the picture and hands
+                // the picture to the compositor, so a film physically cannot
+                // be composited from tiles whose credit somebody forgot to
+                // pass down. Every export surface — MP4 and GIF alike —
+                // consumes these frames, so one line covers all of them.
+                credit: provider.capabilities.attribution
+            )
+            stats.compositeS += Self.seconds(since: composeStarted)
+            let delivered = ContinuousClock.now
+            let carryOn = try deliver(frame, image)
+            stats.deliverS += Self.seconds(since: delivered)
+            stats.frames += 1
+            if !carryOn { return false }
+        }
+        return true
+    }
+
+    private static func seconds(since instant: ContinuousClock.Instant) -> Double {
+        let elapsed = ContinuousClock.now - instant
+        return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
     }
 }

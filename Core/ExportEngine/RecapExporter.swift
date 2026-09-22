@@ -10,6 +10,22 @@ public struct RecapExporter {
     public struct Output {
         public let videoURL: URL
         public let gifURL: URL?
+        /// What the pass cost, stage by stage. `deliverS` is this pipeline's
+        /// encoding — both encoders are fed from the loop's deliver closure — and
+        /// `finishS` is the writer's final flush, which happens after the last
+        /// frame and is therefore outside it.
+        public let stats: RecapRenderLoop.RenderStats
+        public let finishS: Double
+
+        public init(
+            videoURL: URL, gifURL: URL?,
+            stats: RecapRenderLoop.RenderStats = RecapRenderLoop.RenderStats(), finishS: Double = 0
+        ) {
+            self.videoURL = videoURL
+            self.gifURL = gifURL
+            self.stats = stats
+            self.finishS = finishS
+        }
     }
 
     private let timeline: LinearTimeline
@@ -51,7 +67,7 @@ public struct RecapExporter {
 
         var cancelled = false
         let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
-        try await loop.renderFrames { frame, image in
+        let stats = try await loop.renderFrames { frame, image in
             guard shouldContinue() else {
                 cancelled = true
                 return false
@@ -63,8 +79,13 @@ public struct RecapExporter {
         }
         guard !cancelled else { return nil }
 
+        let finishStarted = ContinuousClock.now
         try await video.finish()
         try gif?.finish()
-        return Output(videoURL: videoURL, gifURL: gifURL)
+        let elapsed = ContinuousClock.now - finishStarted
+        return Output(
+            videoURL: videoURL, gifURL: gifURL, stats: stats,
+            finishS: Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
+        )
     }
 }

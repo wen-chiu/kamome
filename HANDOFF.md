@@ -162,6 +162,14 @@ string stands. Do not reopen this from scratch.
 
 ---
 
+## ⏱ Export time is measured now, and a crossing arc is half the bill
+
+A film with a transit stop took **1,859 s**. The export logs its plan up front
+and its cost by stage at the end. Measured offline: `auckland-crossing` spends
+**54 of 102 stations on ~4 s of arc**; magnification 1.10 → 1.25 halves the
+budget and costs sharpness — Chiu's call, judged against renders.
+→ `Docs/handoff-export-performance.md`.
+
 ## 🐛 Known bugs and accepted costs
 
 The import date range clips at timezone edges; `RecapMode` may be two axes, not
