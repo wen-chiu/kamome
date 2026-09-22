@@ -214,16 +214,29 @@ extension RecapExportJob {
         let progress = channel.progress
         let shouldContinue = channel.shouldContinue
         return try await Task.detached(priority: .userInitiated) {
-            try await exporter.export(
+            // `RecapExporter` calls this once per frame (2,700+ times for a
+            // typical film); this caps what crosses the main-actor boundary
+            // to ~10/s rather than hopping on every one. `export`'s own
+            // `progress` argument is still called every frame, unthrottled —
+            // `RecapEncoderTests` reads that directly and sees no change.
+            var lastEmitted: ContinuousClock.Instant?
+            return try await exporter.export(
                 videoURL: videoURL,
                 gifURL: gifURL,
                 progress: { fraction in
+                    let now = ContinuousClock.now
+                    if let lastEmitted, fraction < 1, now - lastEmitted < Self.progressInterval { return }
+                    lastEmitted = now
                     Task { @MainActor in progress(fraction) }
                 },
                 shouldContinue: shouldContinue
             )
         }.value
     }
+
+    /// ~10/s. `nonisolated`: read from the detached render task above, off
+    /// the main actor `RecapExportJob` otherwise runs on.
+    private nonisolated static let progressInterval: Duration = .milliseconds(100)
 
     private func elapsed(since started: ContinuousClock.Instant) -> Double {
         let elapsed = ContinuousClock.now - started

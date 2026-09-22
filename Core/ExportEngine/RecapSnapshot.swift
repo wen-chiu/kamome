@@ -8,9 +8,24 @@ import KamomeTrackingEngine
 /// knows it exactly — MKMapSnapshotter's `point(for:)` is the reason the
 /// traveled polyline lands on the roads it was recorded on. Overlay drawing
 /// must always project through this, never through its own mercator math.
+///
+/// `project` is a pure function of `(lat, lon)` for the life of one snapshot —
+/// the station it was taken for never changes — and one station serves every
+/// frame the render loop holds it for (`RecapSnapshotStations`). The trail
+/// alone projects every vertex of the revealed route through it on every one
+/// of those frames, so the same coordinate is asked for again and again;
+/// `cache` answers a repeat without a second call into the provider's own
+/// projection (an Obj-C round trip for `MapLibreSnapshotProvider`). Memoising
+/// a pure function is bit-identical to calling it every time — this changes
+/// nothing a frame draws, only how many times it is computed.
 public struct MapSnapshot {
     public let image: CGImage
     private let project: (_ lat: Double, _ lon: Double) -> CGPoint
+    /// Reference-shared, so every copy of this snapshot (one struct value,
+    /// handed to every frame a station serves) hits the same cache. Scoped to
+    /// the snapshot's own lifetime — it is released with it once the render
+    /// loop evicts the station.
+    private let cache = MapProjectionCache()
 
     public init(image: CGImage, project: @escaping (_ lat: Double, _ lon: Double) -> CGPoint) {
         self.image = image
@@ -18,7 +33,44 @@ public struct MapSnapshot {
     }
 
     public func point(lat: Double, lon: Double) -> CGPoint {
-        project(lat, lon)
+        cache.point(lat: lat, lon: lon, project: project)
+    }
+}
+
+/// `MapSnapshot.point`'s memoisation, split out because it also has to be the
+/// answer to a question `MapSnapshot` alone cannot ask: whether `project`
+/// itself is safe to call from more than one thread at once.
+///
+/// Parallel compositing (`RecapRenderLoop`) can ask the same station for two
+/// different frames' points at the same time. This project's own math
+/// (`FlatSnapshotProvider`) is fine with that — it touches nothing but its
+/// arguments. `MapLibreSnapshotProvider`'s `project` closure is not
+/// provably fine: it calls into `MLNMapSnapshot.point(for:)`, and nothing in
+/// MapLibre's public surface documents that call as safe under concurrent
+/// use from more than one thread. So the lock here is held **across** the
+/// underlying call, not just around the dictionary — a cache miss serialises
+/// every caller onto one `project` call at a time rather than risking two
+/// threads inside MapLibre's Objective-C++ bridge simultaneously. Once a
+/// coordinate is cached, every further reader is a lock around a dictionary
+/// read, which is what makes this pay for itself rather than merely move the
+/// contention.
+private final class MapProjectionCache: @unchecked Sendable {
+    private struct Key: Hashable {
+        let lat: Double
+        let lon: Double
+    }
+
+    private let lock = NSLock()
+    private var storage: [Key: CGPoint] = [:]
+
+    func point(lat: Double, lon: Double, project: (_ lat: Double, _ lon: Double) -> CGPoint) -> CGPoint {
+        let key = Key(lat: lat, lon: lon)
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = storage[key] { return cached }
+        let computed = project(lat, lon)
+        storage[key] = computed
+        return computed
     }
 }
 

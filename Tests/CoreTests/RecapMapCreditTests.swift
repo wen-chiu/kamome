@@ -21,25 +21,44 @@ import XCTest
 /// every frame, last**. One test does read a pixel, and its comment says why it
 /// has no alternative.
 final class RecapMapCreditTests: RecapRenderTestCase {
-    /// Records what each frame was asked to draw, in order.
+    /// Records what each frame was asked to draw — a spy rather than the real
+    /// renderer for the reason `RecapExportCoordinatorTests` gives about its
+    /// own: the question is what the pipeline *asked for*, not the bitmap.
     ///
-    /// A spy rather than the real renderer for the reason
-    /// `RecapExportCoordinatorTests` gives about its own: the question is what
-    /// the pipeline *asked for*, and answering it from the finished bitmap would
-    /// make a layout change look like a licence breach.
-    private final class RecordingOverlay: OverlayRenderer {
-        private(set) var frames: [[OverlayContent]] = []
-        private var current: [OverlayContent] = []
+    /// Keyed by each call's own `CGContext`, not by an external "frame ended"
+    /// signal: `RecapRenderLoop` composites a station's frames on a bounded
+    /// pool, so two frames' calls can land here at once, and a single shared
+    /// buffer closed from outside can no longer tell them apart.
+    /// `FrameCompositor.render` allocates a fresh `CGContext` every call, so
+    /// its identity *is* "this frame".
+    ///
+    /// ⚠️ **The key retains its context.** `ObjectIdentifier` alone is only
+    /// unique among objects alive at the same time — a context freed right
+    /// after its frame leaves its address free for the allocator to hand
+    /// straight back out, collapsing two unrelated frames into one bucket
+    /// (falsified once: 120 frames landed in 8 buckets before this retained).
+    private struct ContextKey: Hashable {
+        let context: CGContext
+        static func == (lhs: ContextKey, rhs: ContextKey) -> Bool { lhs.context === rhs.context }
+        func hash(into hasher: inout Hasher) { hasher.combine(ObjectIdentifier(context)) }
+    }
+
+    private final class RecordingOverlay: OverlayRenderer, @unchecked Sendable {
+        private let lock = NSLock()
+        private var byContext: [ContextKey: [OverlayContent]] = [:]
 
         func render(_ content: OverlayContent, camera: CameraFrame, into surface: RenderSurface) {
-            current.append(content)
+            let key = ContextKey(context: surface.context)
+            lock.lock()
+            defer { lock.unlock() }
+            byContext[key, default: []].append(content)
         }
 
-        /// Called from the loop's `deliver`, which runs **after** the frame is
-        /// composited — so the bucket closes on exactly the frame that filled it.
-        func endFrame() {
-            frames.append(current)
-            current = []
+        /// One array per frame; order carries no meaning to any assertion here.
+        var frames: [[OverlayContent]] {
+            lock.lock()
+            defer { lock.unlock() }
+            return Array(byContext.values)
         }
     }
 
@@ -102,10 +121,7 @@ final class RecapMapCreditTests: RecapRenderTestCase {
         let loop = RecapRenderLoop(
             timeline: timeline, compositor: compositor, provider: provider, config: config
         )
-        try await loop.renderFrames { _, _ in
-            overlay.endFrame()
-            return true
-        }
+        try await loop.renderFrames { _, _ in true }
         let frames = overlay.frames
         XCTAssertEqual(
             frames.count, timeline.frameCount,
