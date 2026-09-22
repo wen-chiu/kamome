@@ -109,9 +109,16 @@ struct RecapExportJob: RecapExportRunning {
         let journeyCount = RecapFilmType.distinctJourneyCount(legs: trip.legs)
         switch trip.filmType {
         case .unknown:
+            // Which of the two ways to land here this is: no leg was ever read as
+            // a crossing (0 below), or some were and the bounding-box fold still
+            // called it one region. Counts only — never a coordinate (`CLAUDE.md`
+            // §0).
+            let crossingLegs = trip.legs.filter(\.isCrossing).count
             KamomeLog.recap.notice("""
                 recap: film type UNKNOWN — routing has not answered for every leg, so a crossing \
-                may not have been found; rendering the local film and a later export may differ
+                may not have been found; rendering the local film and a later export may differ \
+                (\(journeyCount, privacy: .public) local journeys counted, \
+                \(crossingLegs, privacy: .public)/\(trip.legs.count, privacy: .public) legs marked crossing)
                 """)
         case .multiRegion:
             KamomeLog.recap.notice("""

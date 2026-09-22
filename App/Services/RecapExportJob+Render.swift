@@ -48,9 +48,11 @@ extension RecapExportJob {
         let exportConfig = config.export.withFollowHeadingUp(
             config.export.followHeadingUp && provider.capabilities.supportsHeadingUp
         )
-        // The region's extent drives the opening establishing shot and switches
-        // the film onto content-derived pacing (Chiu 2026-07-30). No region means
-        // Apple's map, no prologue, and the previous fixed duration.
+        // The region's extent drives the opening establishing shot (Chiu
+        // 2026-07-30). No region means the establishing shot frames the route's
+        // own bounds instead of a named region — pacing is `.contentDerived`
+        // either way (`LinearTimelinePacing.pacing`, unconditional on
+        // `establishing`).
         let establishing = region.map {
             RecapBounds(
                 minLat: $0.bounds.minLat, minLon: $0.bounds.minLon,
@@ -65,8 +67,7 @@ extension RecapExportJob {
             // snapshot at a time (`CrossingFraming`).
             substrateMaxLongitudeDeg: provider.capabilities.maxFramableLongitudeDeg
         ) else { return nil }
-        announce(timeline: timeline, trip: composed.trip, region: region,
-                 config: exportConfig, appearance: appearance)
+        announce(timeline: timeline, trip: composed.trip, region: region, appearance: appearance)
         return Plan(
             timeline: timeline, provider: provider,
             style: RecapStyle.modernMinimal(appearance).withEndCard(config.export.endCardStyle),
@@ -78,18 +79,24 @@ extension RecapExportJob {
     /// (2026-08-01), and the only record of the appearance a finished film was
     /// drawn in before `film.appearance` existed to store it.
     private func announce(
-        timeline: LinearTimeline, trip: RecapTrip, region: RecapMapRegion?,
-        config exportConfig: TrackingConfig.Export, appearance: RecapAppearance
+        timeline: LinearTimeline, trip: RecapTrip, region: RecapMapRegion?, appearance: RecapAppearance
     ) {
-        // No covering region silently costs the souvenir map, the opening
-        // prologue *and* content-derived pacing at once — a six-day trip
-        // rendering as a 30-second Apple-map film looked like three separate bugs
-        // and was one missing tile set.
+        // ⚠️ **Corrected 2026-09-22.** This used to say the export falls back to
+        // Apple's map with no prologue and a fixed 30s duration — true before the
+        // OpenFreeMap production switch (ADR 2026-09-16), false since:
+        // `snapshotProvider` now falls through to live OpenFreeMap tiles rather
+        // than Apple or the dormant `.pmtiles` path, and pacing has been
+        // `.contentDerived` regardless of `establishing` since before that. What a
+        // missing region still costs, confirmed by reading both call sites: the
+        // opening's establishing shot has no named region extent to frame from
+        // (it uses the route's own bounds instead), and the souvenir map's own
+        // tile set. A misdiagnosed export used to read this line and stop
+        // looking further — it no longer says something that is not happening.
         if region == nil {
             KamomeLog.recap.error("""
-                no installed map region covers this trip — falling back to Apple's map, \
-                no prologue, and the legacy \(exportConfig.targetDurationS, format: .fixed(precision: 0))s duration. \
-                A trip spanning two regions hits this (handoff §"Trips that span two map regions").
+                no installed map region covers this trip — the opening establishing shot has no \
+                named region extent to frame from, and the souvenir map falls through to live \
+                OpenFreeMap tiles. Duration and the type-2 opening are unaffected.
                 """)
         }
         KamomeLog.recap.notice("""
