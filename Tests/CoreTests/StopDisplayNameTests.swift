@@ -128,6 +128,29 @@ final class StopDisplayNameTests: XCTestCase {
         )
     }
 
+    /// Over open sea Apple's `name` is the coordinate itself (Chiu 2026-09-23,
+    /// a Đà Nẵng flight: "20.943929, 116.686423" on Trip Detail). It must never
+    /// become the card title; the ocean is the honest answer.
+    func testCoordinateNameAtSeaFallsBackToTheOcean() {
+        XCTAssertEqual(
+            StopDisplayName.choose(name: "20.943929, 116.686423", ocean: "South China Sea"),
+            "South China Sea"
+        )
+    }
+
+    /// With no water named either, there is no name — not a coordinate.
+    func testCoordinateNameWithNothingElseYieldsNil() {
+        XCTAssertNil(StopDisplayName.choose(name: "-20.943929, 116.686423"))
+    }
+
+    func testCoordinateRecognition() {
+        XCTAssertTrue(StopDisplayName.isCoordinate("21.128493, 117.089242"))
+        XCTAssertTrue(StopDisplayName.isCoordinate("-33.8,151"))
+        XCTAssertFalse(StopDisplayName.isCoordinate("871"))
+        XCTAssertFalse(StopDisplayName.isCoordinate("Hoi An"))
+        XCTAssertFalse(StopDisplayName.isCoordinate("文化三路一段100號"))
+    }
+
     func testAllNilYieldsNil() {
         XCTAssertNil(
             StopDisplayName.choose(

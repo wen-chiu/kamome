@@ -57,7 +57,24 @@ public enum StopDisplayName {
         // title, but "Unnamed stop" reads as a bug to anyone watching, while a
         // street at least looks like a deliberate answer (Chiu 2026-08-06).
         if let town = locality ?? subLocality { return town }
-        return name ?? thoroughfare
+        // Out of reach of any town — the open sea, a flight leg. Apple answers
+        // these with the coordinate itself as `name` ("20.943929, 116.686423",
+        // Chiu 2026-09-23), which is not a name and read as a bug on Trip
+        // Detail. The water it sits on is an honest answer; nothing is the
+        // honest answer after that.
+        if let name, !isCoordinate(name) { return name }
+        if let water = inlandWater ?? ocean { return water }
+        return thoroughfare
+    }
+
+    /// Is this a bare "lat, lon" pair rather than a name? True for what Apple
+    /// returns as `name` over open water. Also how a stop already stored under
+    /// such a name is recognised, so it can be named again.
+    public static func isCoordinate(_ value: String) -> Bool {
+        value.range(
+            of: #"^\s*-?\d{1,3}(\.\d+)?\s*,\s*-?\d{1,3}(\.\d+)?\s*$"#,
+            options: .regularExpression
+        ) != nil
     }
 
     /// Is this a place someone went, rather than a region, a road, or an address?

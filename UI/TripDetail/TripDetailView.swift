@@ -14,6 +14,7 @@ struct TripDetailView: View {
     @State private var showingRecap = false
     @State private var playingFilm: FilmRecord?
     @State private var showingAllFilms = false
+    @State private var showingProvenance = false
     /// The export outlives the sheet, so the trip screen has to be able to draw
     /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
     /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
@@ -28,14 +29,14 @@ struct TripDetailView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            map.frame(minHeight: 280)
+            map
+                .frame(minHeight: 280)
+                .overlay(alignment: .bottomTrailing) { mapOverlays }
             if model.dayCount > 1 { dayChips }
             if let stats = model.stats { statsStrip(stats) }
-            if model.isReconstructed { provenanceNote }
             if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             exportProgressRow
-            filmsSection
             timeline
         }
         .navigationTitle(model.detail?.trip.title ?? "")
@@ -71,6 +72,12 @@ struct TripDetailView: View {
         // refresh there was, and it no longer happens at the right moment.
         .onChange(of: exportCoordinator.outcome(tripId: model.tripId)) {
             model.reload()
+        }
+        .sheet(isPresented: $showingAllFilms) {
+            FilmsListSheet(films: model.films) { film in
+                showingAllFilms = false
+                playingFilm = film
+            }
         }
         .sheet(item: $playingFilm) { film in
             FilmPlayerSheet(film: film, onDelete: {
@@ -170,20 +177,51 @@ struct TripDetailView: View {
         }
     }
 
+    /// What floats on the map's bottom-right corner — bottom-right because
+    /// Apple's Maps logo and Legal link hold the bottom-left, and they must stay
+    /// visible. Both used to be full-width rows under the map (Chiu 2026-09-23:
+    /// too much page for too little information).
+    private var mapOverlays: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            if model.isReconstructed { provenanceChip }
+            if let latest = model.films.first {
+                FilmPosterButton(latest: latest, count: model.films.count) {
+                    if model.films.count == 1 {
+                        playingFilm = latest
+                    } else {
+                        showingAllFilms = true
+                    }
+                }
+            }
+        }
+        .padding(12)
+    }
+
     /// Honest provenance (§3/§6): an imported trip's route is inferred from
     /// photo place+time, not recorded — say so, and never imply it is verified.
-    private var provenanceNote: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "photo.on.rectangle")
-                .foregroundStyle(.secondary)
-            Text("provenance_note")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer(minLength: 0)
+    ///
+    /// **Compact, not removed** (Chiu 2026-09-23). The ADR of 2026-07-20 makes the
+    /// S3 note a product rule, so it stays on screen; it is the S1 badge's two
+    /// words now, and the full sentence is one tap away.
+    private var provenanceChip: some View {
+        Button {
+            showingProvenance = true
+        } label: {
+            Label("provenance_badge", systemImage: "photo.on.rectangle")
+                .font(.caption.bold())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(.thinMaterial))
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(.thinMaterial)
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingProvenance) {
+            Text("provenance_note")
+                .font(.footnote)
+                .padding()
+                .frame(idealWidth: 280)
+                .fixedSize(horizontal: false, vertical: true)
+                .presentationCompactAdaptation(.popover)
+        }
     }
 
     /// Stop naming is throttled (§4.2), so on an imported trip it runs for tens
@@ -320,66 +358,4 @@ struct TripDetailView: View {
             .background(.thinMaterial)
         }
     }
-
-    /// One line, not a permanent card rail (Chiu 2026-09-22: the export list
-    /// used to take up part of the page on every visit, for information that
-    /// matters only right after exporting). Shows nothing when the trip has no
-    /// films yet. Tapping opens the latest film directly when there is only
-    /// one — the common case — or a list to choose from when there are more.
-    @ViewBuilder
-    private var filmsSection: some View {
-        if let latest = model.films.first {
-            Button {
-                if model.films.count == 1 {
-                    playingFilm = latest
-                } else {
-                    showingAllFilms = true
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: latest.format == "gif" ? "photo.on.rectangle" : "film")
-                        .foregroundStyle(.tint)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("films_section_title")
-                            .font(.subheadline.bold())
-                        Text(filmsSummaryDetail(latest))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.caption.bold())
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 10)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(.primary)
-            .background(.thinMaterial)
-            .sheet(isPresented: $showingAllFilms) {
-                FilmsListSheet(films: model.films) { film in
-                    showingAllFilms = false
-                    playingFilm = film
-                }
-            }
-        }
-    }
-
-    private func filmsSummaryDetail(_ latest: FilmRecord) -> String {
-        var parts = [latest.format.uppercased()]
-        let date = DateFormatter.localizedString(
-            from: Date(timeIntervalSince1970: latest.createdAt), dateStyle: .medium, timeStyle: .none
-        )
-        parts.append(date)
-        if let bytes = latest.fileBytes {
-            parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
-        }
-        let detail = parts.joined(separator: " · ")
-        guard model.films.count > 1 else { return detail }
-        let count = String.localizedStringWithFormat(String(localized: "films_summary_count"), model.films.count)
-        return "\(count) · \(detail)"
-    }
-
 }

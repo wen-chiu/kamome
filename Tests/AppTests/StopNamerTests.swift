@@ -84,6 +84,30 @@ final class StopNamerTests: XCTestCase {
         XCTAssertEqual(namer.progress.named, 6)
     }
 
+    /// A stop stored under a bare coordinate — the open-sea placemark `name`
+    /// accepted before 2026-09-23 — is re-queued and renamed; a real name is
+    /// left alone.
+    func testACoordinateNameIsRenamedAndARealNameIsNot() async throws {
+        let config = AppConfig.loadOrDie()
+        let geocode = self.geocode(minIntervalS: 0.05)
+        let (repository, stops) = try await importedTrip(stops: 2, config: config)
+        try repository.setStopName(stopId: stops[0].id, name: "20.943929, 116.686423")
+        try repository.setStopName(stopId: stops[1].id, name: "Hoi An")
+        let stored = try XCTUnwrap(try repository.detail(tripId: stops[0].tripId)).stops
+        let stub = StubGeocoder { _, _ in "South China Sea" }
+        let namer = StopNamer(config: geocode, repository: repository, geocoder: stub)
+
+        let done = expectation(description: "naming finished")
+        namer.nameUnnamedStops(stored) { progress in
+            if progress.isFinished { done.fulfill() }
+        }
+        await fulfillment(of: [done], timeout: 10)
+
+        XCTAssertEqual(stub.lookups, 1)
+        let names = try XCTUnwrap(try repository.detail(tripId: stops[0].tripId)).stops.map(\.name)
+        XCTAssertEqual(Set(names.compactMap { $0 }), ["South China Sea", "Hoi An"])
+    }
+
     /// **The 2026-08-03 regression, at the level it actually manifested.**
     ///
     /// One failed lookup must not release the throttle for the rest of the queue.

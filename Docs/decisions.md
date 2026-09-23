@@ -5781,3 +5781,33 @@ over a full-mode film (bound: ≤ ~2 MB per 626 px photo, ≤ 24 photos in highl
 mode); cellular cost of previews with network on. **Cheapest settling test:** one
 device, an Optimize-Storage library, Instruments (Allocations + Network) over a
 film of an iCloud-only trip. → `HANDOFF.md`.
+
+## 2026-09-23 — Trip Detail's provenance note and films row move onto the map; a coordinate is never a stop name
+
+**Decision (Chiu, 2026-09-23).** *「中間不需要這麼多版面解釋這趟旅程是從照片 import 的……Export 影片完顯示的介面還可以再乾淨俐落一點。」*
+Chiu first asked for the note to be removed. It was pointed out that 2026-07-20
+makes the S3 note a product rule, so he chose to compact it instead. That ADR is
+not reopened.
+
+1. **Provenance: a chip, not a card.** The three-line S3 note becomes the S1 badge
+   (`provenance_badge`, 「相片重建」) as a chip on the map. Tapping it shows the
+   full `provenance_note` in a popover. The rule is met the same way S1 meets it.
+2. **Films: a poster, not a row.** The full-width "Films · MP4 · date · size" row
+   becomes a 64 pt poster on the map: first frame, ▶, running time, and a count
+   badge when there are several (tap → list). Format, date and size move to the
+   player sheet. Both overlays sit **bottom-right**, because Apple's Maps logo and
+   Legal link occupy the bottom-left and must stay visible. The poster is read
+   through `RecapVideoEncoder.firstFrame`, which keeps AVFoundation confined to one
+   file (`Config/architecture.json` unchanged).
+3. **A bare "lat, lon" is not a name.** `StopDisplayName.choose` used to fall back
+   to `name` whatever it held. Over open sea that was the coordinate itself
+   (「20.943929, 116.686423」 on a Đà Nẵng flight), and it reached the card and the
+   map label. It now falls back to `inlandWater ?? ocean`, then to nothing
+   ("Unnamed stop"). `StopNamer` re-queues stops already stored under a coordinate,
+   so earlier imports heal when they are next opened.
+
+**INFERRED:** that Apple's placemark carries `ocean` at those points, which would
+give "South China Sea" / 「南海」 rather than "Unnamed stop". This is inferred from
+the field's contract, not measured. **Cheapest settling test:**
+`PlacemarkSurveyTests` at one open-sea coordinate. **UNKNOWN:** how the overlays
+look on device. `./check.sh` cannot see them; a Trip Detail screenshot is owed.

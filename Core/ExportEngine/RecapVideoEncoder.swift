@@ -98,3 +98,17 @@ public final class RecapVideoEncoder {
         }
     }
 }
+
+extension RecapVideoEncoder {
+    /// The first frame of a film this encoder wrote, scaled to fit `maxSidePx` —
+    /// Trip Detail's poster (Chiu 2026-09-23). Here because this is the one file
+    /// allowed to speak AVFoundation (`Config/architecture.json`), and reading
+    /// back the container it wrote belongs with writing it. Nil when the file is
+    /// missing or unreadable; the caller draws a placeholder.
+    public static func firstFrame(of url: URL, maxSidePx: Int) async -> CGImage? {
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: maxSidePx, height: maxSidePx)
+        return try? await generator.image(at: .zero).image
+    }
+}

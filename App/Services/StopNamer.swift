@@ -52,11 +52,18 @@ final class StopNamer {
     /// any one-shot refresh.
     func nameUnnamedStops(_ stops: [StopRecord], onChange: ((Progress) -> Void)? = nil) {
         if let onChange { self.onChange = onChange }
-        let pending = stops.filter { $0.name == nil }
+        let pending = stops.filter(Self.needsName)
         queue.append(contentsOf: pending)
         progress.total += pending.count
         publish()
         drain()
+    }
+
+    /// Unnamed — or named with a bare coordinate, which is what the open-sea
+    /// placemark's `name` was stored as before 2026-09-23. Those are re-queued
+    /// so trips imported earlier heal on their next open.
+    static func needsName(_ stop: StopRecord) -> Bool {
+        stop.name.map(StopDisplayName.isCoordinate) ?? true
     }
 
     private func publish() {
