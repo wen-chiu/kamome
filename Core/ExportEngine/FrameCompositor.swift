@@ -86,15 +86,9 @@ public struct FrameCompositor {
     /// say which renderer it wants, or write `nil` and mean it.** Do not restore
     /// the defaults to make a new call site shorter.
     private let crossingSubject: SubjectRenderer?
-    /// What crosses a leg the film has issued a **boarding pass** for (ADR
-    /// 2026-09-04). nil falls back to `crossingSubject`.
-    ///
-    /// **One condition decides both**, which is the whole point: the crossing
-    /// that can draw a Journey Card is the crossing that flies a plane. The film
-    /// has already printed `FROM` / `TO` / a flight number / a distance labelled
-    /// as the flight — a seagull under that is the film contradicting itself in
-    /// one frame. Asked of the timeline rather than stored, so the two can never
-    /// answer differently.
+    /// What flies **every** crossing (Chiu 2026-09-23; before that, only the one
+    /// the film issued a boarding pass for, ADR 2026-09-04). nil falls back to
+    /// the trip's own vehicle — see `drawing(for:)`.
     private let flightSubject: SubjectRenderer?
     private let overlay: OverlayRenderer
     private let style: RecapStyle
@@ -209,7 +203,7 @@ public struct FrameCompositor {
         // rendering decision, while *that* this stretch is being crossed is a
         // fact about the journey the timeline already established.
         let subjectState = timeline.subjectState(atTime: time)
-        drawing(for: subjectState, atTime: time).render(subjectState, camera: camera, into: surface)
+        drawing(for: subjectState).render(subjectState, camera: camera, into: surface)
         for content in contents where !Self.drawsBelowSubject(content) {
             overlay.render(content, camera: camera, into: surface)
         }
@@ -234,17 +228,22 @@ public struct FrameCompositor {
     /// `SubjectState.SubjectRole` deliberately leaves to this layer, answered
     /// here rather than by a third enum case.
     ///
-    /// A crossing the film has issued a boarding pass for flies a plane; every
-    /// other crossing keeps the trip's own vehicle — the dashed line already
-    /// signals uncertainty, and a seagull reads as "a bird is flying" rather
-    /// than "we don't know". The mode classifier (plane / ship / seagull) is
-    /// deferred, not cancelled; `crossingSubject` stays wired for it.
-    private func drawing(for state: SubjectState, atTime time: Double) -> SubjectRenderer {
+    /// **Every crossing flies the plane; the trip's own vehicle is the local
+    /// journey's** (Chiu 2026-09-23, from the Miyakojima device film:
+    /// *「給user選的交通工具應該在當地才換，跨海移動應該是飛機」*). Until then only
+    /// the crossing carrying a boarding pass flew a plane and every other one
+    /// drew the trip's vehicle — so a film that did not open on the flight drew a
+    /// car across the East China Sea, which is what he saw.
+    ///
+    /// ⚠️ **The boundary this does not move** (ADR 2026-09-04 (b) §2): a crossing
+    /// is "routing found no road", not "this was a flight". A photograph taken on
+    /// a beach far from any road gets the same verdict and now shows a short
+    /// plane hop. Telling the two apart needs the provider's two 400 messages kept
+    /// apart across the `RouteProvider` boundary, which is Chiu's to open.
+    /// Falls back to the trip's vehicle only for a caller that supplied no plane.
+    private func drawing(for state: SubjectState) -> SubjectRenderer {
         guard state.role == .crossing else { return subject }
-        if timeline.journeyCardContent(atTime: time) != nil, let flightSubject {
-            return flightSubject
-        }
-        return subject
+        return flightSubject ?? subject
     }
 
     /// Grade then vignette, over the finished frame — so map, trail, subject and

@@ -6,24 +6,17 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23** and `main` at
-**PR #80** (PR #79 and #80 carried no ADR). ⚠️ PRs #81–#83 are merged and NOT yet
-read into this file. ADR 2026-09-23 moves Trip Detail's provenance note and films
-row onto the map, and stops a coordinate being a stop name. PR #75: PO TestFlight
-audit — ADRs (d)–(f). PR #76: T1–T5 implementation (version from build settings,
-privacy manifest, export compliance, device appearance, first-run notice
-non-reproduction). PR #77: T6, the region-conditional terrain credit (ADR (f)).
-PR #78: ADR 2026-09-19 — the title card carries imported trips' kilometres; the
-desk harness routes through the Worker. ADR 2026-09-19 (b): the film's iCloud-only
-photos are downloaded before the render (local first, progress, Cancel); D-item
-owed on device. PR #79: a CI-only fix — `PhotoLibraryPhotoResolver.warm` gated
-*all* refs on library access, so undetermined access skipped file-backed refs it
-never needed; now only PhotoKit assets are gated. No app behaviour changed. PR #80:
-the export logs what it costs (`RecapRenderLoop.RenderStats`, a "render plan" /
-"render cost" line, durations and counts only — §0) and opens
-`Docs/handoff-export-performance.md`, which named the no-look-change optimisation
-round now in `HANDOFF.md`. TestFlight's code is done; T4's captures and T5's
-device check are owed (`Docs/handoff-testflight.md`).
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (b)** and `main` at
+**PR #84**. PR #81: no-look-change export speed (parallel compositing, trail
+memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`).
+PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
+vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
+yet — Chiu's). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
+names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
+airport-only home is type 2, the film ends at the destination (2026-09-01 built),
+every crossing flies the plane, and the MapLibre snapshotter crash is fixed; the
+device re-export is owed (`Docs/handoff-type2-round-trip.md`). TestFlight's code
+is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

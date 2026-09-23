@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-19.** `main` carries PRs #16–#78. Everything closed has been
+**Updated 2026-09-23.** `main` carries PRs #16–#84. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -117,9 +117,10 @@ string stands. Do not reopen this from scratch.
 - **C4 — nothing asserts the end card's mark is the bird.** Only weakly held:
   `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
   would satisfy. → `Docs/release-readiness.md` C4.
-- **A ferry gets a boarding pass and a plane** — the mode classifier is deferred
-  by name (Chiu 2026-09-19: not built yet). The `Geo.distanceM` 121 km error is
-  accepted (ADR 2026-09-19). → `Docs/handoff-type2-opening-retime.md`.
+- 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
+  re-export, and three crash-free exports. Every crossing now flies a plane —
+  ferries and "no road" beaches too (classifier deferred, Chiu 2026-09-19).
+  → `Docs/handoff-type2-round-trip.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
