@@ -184,8 +184,14 @@ public struct TrackingConfig: Decodable, Equatable {
         /// A journey whose photographs all lie within this extent is one place
         /// ("Whitehorse"); wider, and it is named after the country ("Japan").
         public let singlePlaceExtentM: Double
-        /// How many photographs a journey card shows.
+        /// How many photographs a journey's drawer shows on the Discovery
+        /// timeline (a scrolling row since 2026-09-23; the collapsed entry shows none).
         public let coverPhotos: Int
+        /// Whether the timeline says how long the user was home between two
+        /// journeys ("2 months at home"). A flag because Chiu asked to be able
+        /// to hide it (2026-09-23) — the line is warmth, not information the
+        /// timeline needs.
+        public let showHomeGaps: Bool
 
         enum CodingKeys: String, CodingKey {
             case lookbackYears = "lookback_years"
@@ -195,6 +201,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case minPhotos = "min_photos"
             case singlePlaceExtentM = "single_place_extent_m"
             case coverPhotos = "cover_photos"
+            case showHomeGaps = "show_home_gaps"
         }
     }
 
