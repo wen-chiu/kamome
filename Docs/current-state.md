@@ -6,8 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-22 against decisions.md **2026-09-19 (b)** and `main` at
-**PR #80** (PR #79 and #80 carried no ADR). PR #75: PO TestFlight
+Last synced: 2026-09-23 against decisions.md **2026-09-23** and `main` at
+**PR #80** (PR #79 and #80 carried no ADR). ⚠️ PRs #81–#83 are merged and NOT yet
+read into this file. ADR 2026-09-23 moves Trip Detail's provenance note and films
+row onto the map, and stops a coordinate being a stop name. PR #75: PO TestFlight
 audit — ADRs (d)–(f). PR #76: T1–T5 implementation (version from build settings,
 privacy manifest, export compliance, device appearance, first-run notice
 non-reproduction). PR #77: T6, the region-conditional terrain credit (ADR (f)).

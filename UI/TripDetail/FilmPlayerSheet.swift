@@ -12,6 +12,17 @@ struct FilmPlayerSheet: View {
     @State private var showDeleteConfirmation = false
     @Environment(\.dismiss) private var dismiss
 
+    private var fileDetail: String {
+        var parts = [film.format.uppercased()]
+        parts.append(DateFormatter.localizedString(
+            from: Date(timeIntervalSince1970: film.createdAt), dateStyle: .medium, timeStyle: .none
+        ))
+        if let bytes = film.fileBytes {
+            parts.append(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file))
+        }
+        return parts.joined(separator: " · ")
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -48,6 +59,14 @@ struct FilmPlayerSheet: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom)
+
+                // Format, date and size used to sit on Trip Detail's films row;
+                // they belong with the film, not on every visit to the trip
+                // (Chiu 2026-09-23).
+                Text(fileDetail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 4)
 
                 if let renderSeconds = film.renderSeconds {
                     Text(String.localizedStringWithFormat(

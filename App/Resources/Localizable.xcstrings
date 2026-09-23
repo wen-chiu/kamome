@@ -377,19 +377,19 @@
         }
       }
     },
-    "films_summary_count": {
+    "film_poster_play": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld films"
+            "value": "Play film"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 部影片"
+            "value": "播放影片"
           }
         }
       }

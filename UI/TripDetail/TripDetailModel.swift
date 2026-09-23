@@ -73,7 +73,7 @@ final class TripDetailModel {
                 if matched > 0 { self?.reload() }
             }
         }
-        let unnamed = detail.stops.filter { $0.name == nil }
+        let unnamed = detail.stops.filter(StopNamer.needsName)
         if !unnamed.isEmpty {
             // Reload as each name lands, not once on a timer: a photo-dense
             // imported trip has many stops geocoded over ~30 s (§4.2 throttle),
