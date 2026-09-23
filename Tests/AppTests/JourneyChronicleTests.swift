@@ -112,6 +112,7 @@ final class JourneyChronicleTests: XCTestCase {
             leg("drive", mode: "drive", verdict: .road, lat: 10),
             leg("train", mode: "transit", verdict: .implausibleRoute, lat: 20),
             leg("flight", mode: "drive", verdict: .noRoad, lat: 30),
+            leg("beach", mode: "walk", verdict: .offRoadNetwork, lat: 35),
             leg("unasked", mode: "drive", verdict: nil, lat: 40),
             leg("unknown", mode: "unknown", verdict: .road, lat: 50)
         ]))

@@ -11,7 +11,7 @@ import SwiftUI
 /// said in full, and the way into the diary. Tapping the entry itself still
 /// opens the diary, so the drawer is a look, not a step.
 ///
-/// **Provenance is marked by exception** (ADR 2026-09-23 (b)): nearly every
+/// **Provenance is marked by exception** (ADR 2026-09-23 (e)): nearly every
 /// journey here is rebuilt from photographs, so a recorded one carries a
 /// location glyph and a photo one carries nothing.
 struct JourneyEntry: View {

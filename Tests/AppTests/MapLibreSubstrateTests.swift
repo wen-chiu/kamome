@@ -65,6 +65,43 @@ final class MapLibreSubstrateTests: XCTestCase {
     // MARK: - MapLibre provider (compiled only when the SDK is linked)
 
     #if canImport(MapLibre)
+    /// **The snapshotter is released on the main thread, whichever thread ends
+    /// its lease** (device crash 2026-09-23).
+    ///
+    /// MapLibre calls a snapshotter's completion block and then releases that
+    /// block on a background dispatch queue. When the block was the snapshotter's
+    /// last owner, `-[MLNMapSnapshotter dealloc]` ran there, joining its render
+    /// thread while the main run loop was still servicing it — `EXC_BAD_ACCESS`
+    /// on the main thread two minutes into a 134-station export. The contract
+    /// that closes it is this type's, so this is the test: end a lease from a
+    /// background queue, and the object must die on main.
+    func testALeaseReleasesItsObjectOnTheMainThreadWhicheverThreadEndsIt() {
+        final class Probe {
+            let died: (Bool) -> Void
+            init(died: @escaping (Bool) -> Void) { self.died = died }
+            deinit { died(Thread.isMainThread) }
+        }
+        let leases = MapLibreSnapshotProvider.MainThreadLeases<Probe>()
+        let released = expectation(description: "the held object was released")
+        var diedOnMain: Bool?
+        var lease: MapLibreSnapshotProvider.MainThreadLeases<Probe>.Lease?
+        autoreleasepool {
+            let probe = Probe { onMain in
+                diedOnMain = onMain
+                released.fulfill()
+            }
+            lease = leases.hold(probe)
+        }
+        XCTAssertEqual(leases.count, 1, "the lease is the only owner and must keep it alive")
+        let ended = try? XCTUnwrap(lease)
+        DispatchQueue.global(qos: .default).async {
+            if let ended { leases.end(ended) }
+        }
+        wait(for: [released], timeout: 5)
+        XCTAssertEqual(diedOnMain, true, "a snapshotter destroyed off the main thread is the crash")
+        XCTAssertEqual(leases.count, 0)
+    }
+
     func testProviderConformsToSnapshotBoundary() {
         // Compile-time proof the MapLibre provider satisfies the existing
         // boundary; constructed but never `.snapshot(...)`-ed so no Metal runs.

@@ -157,6 +157,11 @@ final class JourneyDiscoveryModel {
         var fresh: [JourneySummary] = []
         for journey in detection.journeys where !hidden.contains(journey.key) {
             if (try? repository.trip(discoveryKey: journey.key)) != nil { continue }
+            // A trip made through the import sheet has no discovery key, so it
+            // is matched by its photographs instead (Chiu 2026-09-23). It is
+            // already on this list as a stored trip; offering the journey
+            // beside it is what made two "Vietnam"s.
+            if importService.existingTrip(for: journey.photos) != nil { continue }
             found[journey.key] = journey
             fresh.append(summary(journey: journey))
         }
@@ -174,6 +179,12 @@ final class JourneyDiscoveryModel {
     func open(_ summary: JourneySummary) async -> String? {
         if let tripId = summary.tripId { return tripId }
         guard let journey = detected[summary.id] else { return nil }
+        // A trip may have been imported through the sheet since the scan.
+        if let existing = importService.existingTrip(for: journey.photos) {
+            detected[journey.key] = nil
+            loadTrips()
+            return existing
+        }
         openingId = summary.id
         defer { openingId = nil }
         do {

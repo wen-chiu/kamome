@@ -38,7 +38,10 @@ enum LegLength {
             guard let mode = TransportMode(rawValue: item.segment.mode), groundModes.contains(mode) else { return false }
             switch item.segment.routeVerdict {
             case .road, .implausibleRoute: return true
-            case .noRoad, nil: return false
+            // Off the road network (ADR 2026-09-23 (c)) is mostly a beach, but
+            // a window-seat photograph reads the same, and that leg is a
+            // flight. Left out on the same rule as an unanswered leg.
+            case .noRoad, .offRoadNetwork, nil: return false
             }
         }
         guard !ground.isEmpty else { return nil }

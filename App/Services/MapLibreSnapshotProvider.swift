@@ -29,6 +29,9 @@ import UIKit
 public struct MapLibreSnapshotProvider: MapRenderer {
     public struct SnapshotError: Error {}
 
+    /// The one owner of every snapshotter this process has in flight.
+    static let snapshotters = MainThreadLeases<MLNMapSnapshotter>()
+
     /// A style file already resolved against its tiles (see `RecapMapStyle`).
     private let styleURL: URL
 
@@ -88,8 +91,20 @@ public struct MapLibreSnapshotProvider: MapRenderer {
         let bearing = frame.bearing
 
         // MLNMapSnapshotter is run-loop bound; drive it from the main queue and
-        // hop back with the finished image. The snapshotter is retained by its
-        // own completion closure until the render resolves.
+        // hop back with the finished image.
+        //
+        // 🔴 **Its lifetime is owned by `MainThreadLeases`, never by its own
+        // completion block** (device crash 2026-09-23, `EXC_BAD_ACCESS` in
+        // MapLibre on the main run loop, two minutes into a 134-station export).
+        // This used to read `_ = snapshotter` inside the block, which made the
+        // block the last owner. MapLibre releases that block on a background
+        // dispatch queue after calling it, so the snapshotter's `dealloc` — which
+        // tears down its render thread and blocks on a `std::future` — ran off
+        // the main thread while the main run loop was still servicing the same
+        // snapshotter's sources: a use-after-free that fires only when the two
+        // interleave, which is why short films never showed it. The crash
+        // report's thread 13 is exactly that `dealloc`, reached from
+        // `_Block_release` on `com.apple.root.default-qos`.
         let (image, snapshot): (CGImage, MLNMapSnapshot) = try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.main.async {
                 let camera = MLNMapCamera()
@@ -124,8 +139,12 @@ public struct MapLibreSnapshotProvider: MapRenderer {
                 // it is not part of the obligation this change is about.
                 options.showsLogo = false
                 let snapshotter = MLNMapSnapshotter(options: options)
+                let lease = Self.snapshotters.hold(snapshotter)
+                // The block must not mention `snapshotter` — see above. It ends
+                // the lease instead, which drops the last reference on the main
+                // queue, one turn after this callback has returned into MapLibre.
                 snapshotter.start { snapshot, error in
-                    _ = snapshotter // keep alive until the callback fires
+                    Self.snapshotters.end(lease)
                     guard let snapshot, let cgImage = snapshot.image.cgImage else {
                         continuation.resume(throwing: error ?? SnapshotError())
                         return
@@ -137,6 +156,49 @@ public struct MapLibreSnapshotProvider: MapRenderer {
 
         return MapSnapshot(image: image) { lat, lon in
             snapshot.point(for: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+        }
+    }
+
+    /// **Where every in-flight snapshotter lives until its render resolves** —
+    /// on the main queue, and nowhere else.
+    ///
+    /// MapLibre's snapshotter is bound to the run loop it was created on, and its
+    /// `dealloc` joins its render thread. Both halves of that must happen on the
+    /// main thread, so the last strong reference has to be dropped there. This
+    /// type makes that structural rather than a matter of which queue happens to
+    /// release a block: it is the only owner, it is touched only on main
+    /// (`dispatchPrecondition`), and `end` defers the release by one turn of the
+    /// main queue so the snapshotter is never destroyed from inside its own
+    /// completion handler.
+    ///
+    /// Generic over `AnyObject` so its contract — *the held object is released on
+    /// the main thread, whatever thread ends the lease* — can be tested without
+    /// running Metal (`MapLibreSubstrateTests`).
+    final class MainThreadLeases<Held: AnyObject> {
+        struct Lease: Hashable { fileprivate let id: ObjectIdentifier }
+
+        private var held: [ObjectIdentifier: Held] = [:]
+
+        /// Must be called on the main queue, where the object was created.
+        func hold(_ object: Held) -> Lease {
+            dispatchPrecondition(condition: .onQueue(.main))
+            let id = ObjectIdentifier(object)
+            held[id] = object
+            return Lease(id: id)
+        }
+
+        /// Safe from any thread. The release itself always happens on main, on a
+        /// later turn of the queue than the caller's.
+        func end(_ lease: Lease) {
+            DispatchQueue.main.async { [self] in
+                held[lease.id] = nil
+            }
+        }
+
+        /// How many objects are still held — for tests.
+        var count: Int {
+            dispatchPrecondition(condition: .onQueue(.main))
+            return held.count
         }
     }
 

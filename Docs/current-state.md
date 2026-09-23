@@ -6,23 +6,25 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23 (c)** and `main` at
-**PR #84**. ADRs 2026-09-23 (b)–(c): the Discovery beta's list goes compact —
-two lines (place, visit pill, date; route, days, ground-only km), photos and
-details in a drawer that opens in place, provenance marked by exception
-(recorded only), "2 months at home" behind `discovery.show_home_gaps`, and no
-coordinate as a milestone. PR #84 / ADR
-2026-09-23: Trip Detail's provenance note and films row move onto the map, and a
-coordinate is never a stop name. PR #83: S1 craft pass — provenance as a glyph,
-place + flag titles for unnamed trips (`TripJourneyNaming`, proactive at
-import), a sticky import button, the vehicle picker moved to export (no ADR).
-PR #82: the Miyakojima "no plane" was `filmType == .unknown`, not the map
-region; a stale fallback log line is corrected and a crossing-count diagnostic
-added (no ADR, no behaviour change). PR #81: export performance with every frame
-pixel-identical — parallel compositing, memoised trail projection, throttled
-progress (no ADR). PRs #75–#80 are in the ADRs 2026-09-18 (d)–(f) and 2026-09-19
-(b) and in `HANDOFF.md`. TestFlight's code is done; T4's captures and T5's device
-check are owed (`Docs/handoff-testflight.md`).
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (f)** and `main` at
+**PR #86** (ADR (d)). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
+memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`).
+PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
+vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
+yet — Chiu's). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
+names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
+airport-only home is type 2, the film ends at the destination (2026-09-01 built),
+every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the
+device re-export is owed (`Docs/handoff-type2-round-trip.md`). TestFlight's code
+is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
+**ADR 2026-09-23 (d)**: S1's record path is one named button and a sheet; a
+repeat import offers the trip already holding its photos, and Discovery stops
+offering it (`import.duplicate_photo_share`, INFERRED).
+**ADRs 2026-09-23 (e)–(f)** (this branch): the Discovery beta's list goes
+compact — two lines (place, visit pill, date; route, days, ground-only km),
+photos and details in a drawer that opens in place, provenance marked by
+exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
+no coordinate as a milestone.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

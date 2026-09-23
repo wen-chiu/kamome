@@ -33,6 +33,9 @@ struct RouteMatchReport: Equatable {
     /// A road route came back and the PD-3 detour gate refused it. A road
     /// exists; this one is not trustworthy. Dashed, and never flown.
     var implausibleRoute = 0
+    /// Legs with a waypoint no road reaches — a beach, a cape (ADR 2026-09-23
+    /// (c)). Dashed like a crossing, but not one.
+    var offRoadNetwork = 0
     /// Nothing was established about the ground at all — routing disabled, too
     /// few waypoints, or an answer the client could not read. Not a claim about
     /// the geography and not a provider failure either.
@@ -70,7 +73,7 @@ struct RouteMatchReport: Equatable {
         // road, and the user-facing sentence for both is the same one it has
         // always been. Splitting the *counts* is what the crossing beat needed;
         // splitting the *message* is a copy decision nobody has made.
-        if noPlausibleRoute > 0 || implausibleRoute > 0 { return .someLegsHaveNoRoad }
+        if noPlausibleRoute > 0 || implausibleRoute > 0 || offRoadNetwork > 0 { return .someLegsHaveNoRoad }
         return .allRouted
     }
 
@@ -193,6 +196,7 @@ struct RouteMatchService {
         report.attempted = routable.count
         report.noPlausibleRoute = recalled.filter { $0 == .noRoad }.count
         report.implausibleRoute = recalled.filter { $0 == .implausibleRoute }.count
+        report.offRoadNetwork = recalled.filter { $0 == .offRoadNetwork }.count
         KamomeLog.routing.notice("""
             matchTrip \(tripId, privacy: .public): \(routable.count)/\(detail.segments.count) legs routable \
             against "\(endpoint, privacy: .public)" — \(recalled.count) answered by a stored verdict and not \
@@ -223,7 +227,9 @@ struct RouteMatchService {
         // The headline a dogfooder needs: how much of the film will draw as road.
         KamomeLog.routing.notice("""
             matchTrip \(tripId, privacy: .public): \(report.reconstructed)/\(report.attempted) legs reconstructed; \
-            \(report.noPlausibleRoute) have NO ROAD (crossings), \(report.implausibleRoute) implausible, \
+            \(report.noPlausibleRoute) have NO ROAD (crossings), \
+            \(report.offRoadNetwork) off the road network (beaches — not crossings), \
+            \(report.implausibleRoute) implausible, \
             \(report.notEstablished) not established, \(report.unreachable) unreachable, \
             \(report.rateLimited) rate-limited, \(report.skipped) never asked — the rest draw dashed (PD-1)
             """)
@@ -312,6 +318,11 @@ struct RouteMatchService {
             // crossing beat may be built on.
             try? repository.setRoutability(segmentId: segmentId, .noRoad)
             report.noPlausibleRoute += 1
+        case .offTheRoadNetwork:
+            // A beach, a cape, a trail: a fact about the ground, stored so it is
+            // not asked again — and never a crossing (ADR 2026-09-23 (c)).
+            try? repository.setRoutability(segmentId: segmentId, .offRoadNetwork)
+            report.offRoadNetwork += 1
         case .implausible:
             // A road exists and this route is not it. Stored so a later reader
             // cannot mistake the dashed line for water.
@@ -361,7 +372,7 @@ struct RouteMatchService {
     /// stored verdict today.
     private static func storedVerdict(of segment: SegmentRecord) -> SegmentRoutability? {
         switch segment.routeVerdict {
-        case .noRoad?, .implausibleRoute?: return segment.routeVerdict
+        case .noRoad?, .implausibleRoute?, .offRoadNetwork?: return segment.routeVerdict
         case .road?, nil: return nil
         }
     }

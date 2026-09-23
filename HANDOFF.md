@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-19.** `main` carries PRs #16–#78. Everything closed has been
+**Updated 2026-09-23.** `main` carries PRs #16–#84. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -89,7 +89,7 @@ string stands. Do not reopen this from scratch.
 ## 🟠 Open — nobody is on these
 
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
-  T4's captures — S3, recap screen, Discovery beta, light + dark, one film per
+  T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
   mode — and T5, the first-run notice that backgrounds the app, which did not
   reproduce on the simulator and needs a device. → `Docs/handoff-testflight.md`.
 - ⚠️ **The film's EU-DEM credit is shortened, and ADR 2026-09-18 (f) says the
@@ -116,14 +116,15 @@ string stands. Do not reopen this from scratch.
 - **C4 — nothing asserts the end card's mark is the bird.** Only weakly held:
   `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
   would satisfy. → `Docs/release-readiness.md` C4.
-- **A ferry gets a boarding pass and a plane** — the mode classifier is deferred
-  by name (Chiu 2026-09-19: not built yet). The `Geo.distanceM` 121 km error is
-  accepted (ADR 2026-09-19). → `Docs/handoff-type2-opening-retime.md`.
+- 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
+  re-export, and three crash-free exports. Every crossing flies a plane,
+  ferries too; beaches are no longer crossings (ADR (c)).
+  → `Docs/handoff-type2-round-trip.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
 - **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
-- 🟠 Discovery beta: one trip listed 3×; a string key defined twice → ADR 2026-09-23 (b).
+- ⚠️ `provenance_recorded` is defined twice in the string catalogue → ADR 2026-09-23 (e).
 
 ---
 

@@ -32,7 +32,7 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// survive: a day trip, an island, two countries, and a multi-day road trip.
     private static let fixtures = [
         "margaret-river", "miyakojima", "iceland", "finland", "new-zealand", "nz-real",
-        crossingFixture, longHaulFixture
+        crossingFixture, longHaulFixture, UnroutableSeaProvider.roundTripFixture
     ]
 
     /// The fixture with a leg that has no road under it. Named in one place —

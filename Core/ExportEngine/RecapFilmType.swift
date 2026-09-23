@@ -1,5 +1,6 @@
 import Foundation
 import KamomeConfig
+import KamomeTrackingEngine
 
 /// **Which of the three films this trip is** (Chiu 2026-09-01).
 ///
@@ -131,6 +132,32 @@ public enum RecapFilmType: Equatable, Sendable {
     /// could later justify, reverse-derived from whichever trip it was tuned on —
     /// how `body_span_padding` and `tier_skip_share` were both built and both
     /// removed. Two boxes either share ground or they do not.
+    ///
+    /// ## A trip's two ends are ground, even with nothing driven there
+    ///
+    /// 🔴 **Corrected 2026-09-23, from Chiu's Miyakojima device film.** This
+    /// used to count only runs of *road*, so a trip whose only photograph at home
+    /// is the departure airport had no home journey at all. The device log reads
+    /// four crossings, "1 local journey", `.unknown`, the local film — no plane,
+    /// no boarding pass (VERIFIED); that his home side was airport photographs
+    /// only is INFERRED from those counts, the database was not read. That is the
+    /// **canonical** type-2 trip, in Chiu's own words when he defined it (ADR
+    /// 2026-09-01): *「假設這樣的行程只會有出發機場照片」*. The rule was rejecting
+    /// the case it was written for.
+    ///
+    /// So a trip that **opens** on a crossing has its first place counted as
+    /// ground, and one that **closes** on a crossing its last — each as a
+    /// journey of one point — **when that crossing is longer than the ground on
+    /// its other side is wide.** That condition is what keeps a photograph taken
+    /// on a beach out of it: routing answers "no road" there too (`GeoapifyRouteProvider`),
+    /// and a 1 km hop off a 40 km island is a gap *inside* a journey, not a
+    /// journey to somewhere else. A 400 km flight away from a 40 km island is
+    /// not. Both sides of the comparison are measured on the trip itself, so
+    /// there is still no threshold here.
+    ///
+    /// A single place *between* two crossings (a transit airport, a photograph
+    /// from a boat) is still not counted: it cannot lower the count, and the
+    /// reading stays the lower bound `classify` relies on.
     public static func distinctJourneyCount(legs: [RecapTrip.Leg]) -> Int {
         var journeys: [[RecapCoordinate]] = []
         var current: [RecapCoordinate] = []
@@ -144,8 +171,17 @@ public enum RecapFilmType: Equatable, Sendable {
         }
         if !current.isEmpty { journeys.append(current) }
 
-        // A trip may legitimately open or close on a crossing (`Docs/camera-arcs.md`
-        // §4 Case C), which is why empty runs are dropped above rather than counted.
+        if let opening = legs.first, opening.isCrossing,
+           let place = opening.coordinates.first, let other = opening.coordinates.last,
+           isItsOwnGround(place, across: other, beside: journeys.first) {
+            journeys.insert([place], at: 0)
+        }
+        if let closing = legs.last, closing.isCrossing,
+           let other = closing.coordinates.first, let place = closing.coordinates.last,
+           isItsOwnGround(place, across: other, beside: journeys.last) {
+            journeys.append([place])
+        }
+
         var regions: [RecapBounds] = []
         for journey in journeys {
             guard let box = enclosing(journey) else { continue }
@@ -158,6 +194,19 @@ public enum RecapFilmType: Equatable, Sendable {
             }
         }
         return regions.count
+    }
+
+    /// Whether a trip's end `place`, joined by a crossing to `other`, is a place
+    /// of its own rather than a gap in the journey `beside` it: the crossing is
+    /// longer than that journey is wide. No journey beside it at all (a trip that
+    /// is nothing but the flight) makes it its own ground.
+    private static func isItsOwnGround(
+        _ place: RecapCoordinate, across other: RecapCoordinate, beside journey: [RecapCoordinate]?
+    ) -> Bool {
+        guard let journey, let box = enclosing(journey) else { return true }
+        let widthM = Geo.distanceM(latA: box.minLat, lonA: box.minLon, latB: box.maxLat, lonB: box.maxLon)
+        let crossingM = Geo.distanceM(latA: place.lat, lonA: place.lon, latB: other.lat, lonB: other.lon)
+        return crossingM > widthM
     }
 
     private static func enclosing(_ coordinates: [RecapCoordinate]) -> RecapBounds? {

@@ -81,19 +81,36 @@ struct RecapExportJob: RecapExportRunning {
         // Typed legs (Fable review 2026-07-26): each stretch reaches the film
         // with its own transport mode and provenance, so a leg Kamome could not
         // reconstruct renders visibly as a guess rather than as road (PD-1).
+        //
+        // The film ends at the destination (ADR 2026-09-01): the flight home and
+        // everything after it come off here, before anything is classified.
+        let film = RecapComposer.filmRecords(
+            segments: detail.segments, stops: detail.stops,
+            epsilonM: config.simplify.epsilonM,
+            matchedEpsilonM: config.matching.displayEpsilonM,
+            homeRadiusM: config.discovery.awayRadiusM
+        )
+        if film.segments.count < detail.segments.count {
+            // Counts only — never where home is (`CLAUDE.md` §0).
+            KamomeLog.recap.notice("""
+                recap: the trip comes home — the film ends at the destination; \
+                \(detail.segments.count - film.segments.count, privacy: .public) legs and \
+                \(detail.stops.count - film.stops.count, privacy: .public) stops after the flight home are left out
+                """)
+        }
         let legs = RecapComposer.legs(
-            from: detail.segments,
+            from: film.segments,
             epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM
         )
         guard let trip = RecapComposer.trip(
-            trip: detail.trip, legs: legs, stops: detail.stops, stats: stats,
+            trip: detail.trip, legs: legs, stops: film.stops, stats: stats,
             photosByStop: photoRefs, deck: deck, stopHoldS: config.export.stopHoldS,
             rawPhotoCounts: rawPhotoCounts(detail: detail),
             favoriteCounts: favoriteCounts(detail: detail),
             weighting: config.export,
             everyLegRoutabilityEstablished:
-                RecapComposer.everyLegRoutabilityEstablished(detail.segments)
+                RecapComposer.everyLegRoutabilityEstablished(film.segments)
         ) else { return nil }
         announceFilmType(trip)
         return Composed(trip: trip, detail: detail)
@@ -121,9 +138,12 @@ struct RecapExportJob: RecapExportRunning {
                 \(crossingLegs, privacy: .public)/\(trip.legs.count, privacy: .public) legs marked crossing)
                 """)
         case .multiRegion:
+            // `renderedForm` maps this to the type-2 form — the film flies the
+            // first crossing and plays the rest in the body. This line used to
+            // say "rendering the local one", which was never what happened.
             KamomeLog.recap.notice("""
                 recap: film type multi-region, \(journeyCount, privacy: .public) local journeys — \
-                that film is not built, rendering the local one
+                that film is not built; rendering the one-destination form (flies the first crossing)
                 """)
         case .local:
             KamomeLog.recap.notice("recap: film type local — one journey, no crossing")

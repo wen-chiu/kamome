@@ -48,7 +48,8 @@
     "deck_max_photos": 8,
     "pace_unknowable_gap_s": 14400,
     "default_range_days": 7,
-    "max_range_days": 21
+    "max_range_days": 21,
+    "duplicate_photo_share": 0.5
   },
   "discovery": {
     "lookback_years": 5,

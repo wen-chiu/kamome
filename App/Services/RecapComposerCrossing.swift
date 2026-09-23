@@ -58,6 +58,51 @@ extension RecapComposer {
         return max(stats.distanceM - flown, 0)
     }
 
+    /// **The records a film is made from: the trip without its flight home**
+    /// (ADR 2026-09-01, built 2026-09-23).
+    ///
+    /// The rule is `RecapTypeTwoFilm.homecomingLegIndex`; this only applies it to
+    /// the stored records, because this is the layer that has their **times**.
+    /// Everything from the first leg of the flight home onward is dropped, and so
+    /// is every stop the traveller reached after that leg began. The destination's
+    /// own last stop — in practice the airport they left from — is kept: it is
+    /// where the film ends.
+    ///
+    /// **Cut by time, not by nearest stop.** A round trip returns to the place it
+    /// left, so "the stop nearest the homecoming" is exactly the question that
+    /// has two answers on a round trip. The segments and stops share one clock,
+    /// and a stop is after the homecoming when it was reached after it began.
+    ///
+    /// Before classification, deliberately: the flight home is a return to
+    /// ground the trip already covered, which `RecapFilmType` folds anyway — and
+    /// when that ground is one airport photograph at each end, the two points do
+    /// not share a bounding box, so only removing the return counts the trip
+    /// right. Everything downstream — the type, the camera, the card's figures —
+    /// then reads one journey.
+    ///
+    /// Returns the input unchanged when the trip does not come home, which is
+    /// every local trip and every one-way trip.
+    static func filmRecords(
+        segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
+        stops: [StopRecord],
+        epsilonM: Double,
+        matchedEpsilonM: Double,
+        homeRadiusM: Double
+    ) -> (segments: [(segment: SegmentRecord, points: [TrackpointRecord])], stops: [StopRecord]) {
+        // One leg per segment, with the segment it came from: `legs(from:)`
+        // drops degenerate segments, so leg and segment indices can differ.
+        let indexed = segments.indices.compactMap { index -> (segment: Int, leg: RecapTrip.Leg)? in
+            legs(from: [segments[index]], epsilonM: epsilonM, matchedEpsilonM: matchedEpsilonM)
+                .first.map { (index, $0) }
+        }
+        guard let homecoming = RecapTypeTwoFilm.homecomingLegIndex(
+            legs: indexed.map(\.leg), homeRadiusM: homeRadiusM
+        ) else { return (segments, stops) }
+        let firstDropped = indexed[homecoming].segment
+        let leftAt = segments[firstDropped].segment.startedAt
+        return (Array(segments[..<firstDropped]), stops.filter { $0.arrivedAt <= leftAt })
+    }
+
     /// **The date range the boarding pass prints: the whole trip's** (Chiu
     /// 2026-09-04, from the film).
     ///

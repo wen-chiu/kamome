@@ -40,6 +40,12 @@ struct UnroutableSeaProvider: RouteReconstructing {
     /// `body_span_padding` and `tier_skip_share` were both built and both removed.
     static let longHaulFixture = "auckland-crossing"
 
+    /// The **round-trip** type-2 fixture (authored 2026-09-23, ADR 2026-09-23
+    /// (b)): one airport photograph pair at home on each end and nothing driven
+    /// there — the shape that classified `.unknown` on Chiu's phone and flew home.
+    /// Same sea as `crossingFixture`.
+    static let roundTripFixture = "miyakojima-round-trip"
+
     /// Where the sea is, per fixture: between Taiwan and the Yaeyama islands for
     /// one, and out in the Pacific for the other. Every other committed fixture
     /// sits entirely on one side of whichever meridian it would be given, so they
@@ -52,7 +58,7 @@ struct UnroutableSeaProvider: RouteReconstructing {
     /// question differently — the mistake `ReviewSubstrate` was created to stop.
     static func forFixture(_ fixture: String) -> UnroutableSeaProvider? {
         switch fixture {
-        case crossingFixture: return UnroutableSeaProvider(meridian: seaMeridian)
+        case crossingFixture, roundTripFixture: return UnroutableSeaProvider(meridian: seaMeridian)
         case longHaulFixture: return UnroutableSeaProvider(meridian: pacificMeridian)
         default: return nil
         }

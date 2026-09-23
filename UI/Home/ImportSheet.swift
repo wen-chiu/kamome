@@ -77,6 +77,10 @@ struct ImportSheet: View {
             .onChange(of: model.completedTripId) { _, tripId in
                 if let tripId { onImported(tripId) }
             }
+            .onChange(of: model.source) { model.selectionChanged() }
+            .onChange(of: model.startDate) { model.selectionChanged() }
+            .onChange(of: model.endDate) { model.selectionChanged() }
+            .onChange(of: model.selectedAlbumId) { model.selectionChanged() }
             .task(id: model.source) {
                 guard model.source == .album, model.albums.isEmpty else { return }
                 await model.loadAlbums()
@@ -244,10 +248,41 @@ struct ImportSheet: View {
                     .font(.callout)
                     .foregroundStyle(.orange)
                 importButton
+            case let .duplicate(duplicate):
+                duplicatePrompt(duplicate)
             }
         }
         .padding()
         .background(.bar)
+    }
+
+    /// A repeat import (Chiu 2026-09-23): the trip that already holds these
+    /// photographs is the first answer, a second copy the other.
+    @ViewBuilder
+    private func duplicatePrompt(_ duplicate: ImportFlowModel.Duplicate) -> some View {
+        Label {
+            Text(String.localizedStringWithFormat(
+                String(localized: "import_duplicate_message"), duplicate.title
+            ))
+        } icon: {
+            Image(systemName: "square.on.square")
+        }
+        .font(.callout)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        Button {
+            model.openExisting()
+        } label: {
+            Text("import_duplicate_open")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        Button {
+            Task { await model.importAnyway() }
+        } label: {
+            Text("import_duplicate_anyway")
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
     }
 
     private var importButton: some View {
