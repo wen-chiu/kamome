@@ -3,8 +3,9 @@ import SwiftUI
 /// **Your Journeys** — the Journey Discovery beta (Chiu, 2026-09-18).
 ///
 /// Kamome finds the journeys already sitting in the photo library and lays them
-/// out as one chronology: year, then date, then destination, then what happened,
-/// then the photographs. Tapping one opens its diary, whose single action is
+/// out as one chronology: year, then destination and date, then the route. Each
+/// entry folds its photographs and details into a drawer that opens in place
+/// (2026-09-23); tapping the entry opens its diary, whose single action is
 /// *Make this a Film*.
 ///
 /// ⚠️ **It does not replace the home screen.** S1 is still the app's home and
@@ -23,6 +24,8 @@ struct JourneyTimelineView: View {
     @State private var model: JourneyDiscoveryModel
     @State private var path: [String] = []
     @State private var deleting: JourneySummary?
+    /// Entries whose drawer is open. Several may be; opening one closes nothing.
+    @State private var expanded: Set<String> = []
     @Namespace private var entryNamespace
     @Environment(\.dismiss) private var dismiss
 
@@ -124,19 +127,27 @@ struct JourneyTimelineView: View {
                 LimitedLibraryRow { model.selectMorePhotos() }
                     .padding(.bottom, 20)
             }
+            let visits = model.visits
+            let gaps = model.homeGaps
             ForEach(Array(model.sections.enumerated()), id: \.element.id) { sectionIndex, section in
                 yearHeading(section.year, isFirst: sectionIndex == 0)
                 ForEach(Array(section.journeys.enumerated()), id: \.element.id) { index, journey in
                     JourneyEntry(
                         journey: journey,
+                        visit: visits[journey.id],
+                        isExpanded: expanded.contains(journey.id),
                         isOpening: model.openingId == journey.id,
                         isLast: isLastOverall(section: sectionIndex, entry: index),
-                        namespace: entryNamespace
-                    ) {
-                        open(journey)
-                    }
+                        namespace: entryNamespace,
+                        onToggle: { toggle(journey) },
+                        action: { open(journey) }
+                    )
                     .contextMenu { contextMenu(for: journey) }
                     .transition(.opacity)
+                    if let days = gaps[journey.id] {
+                        HomeGapRow(days: days)
+                            .transition(.opacity)
+                    }
                 }
             }
             if !model.hasJourneys, !model.isScanning {
@@ -175,6 +186,12 @@ struct JourneyTimelineView: View {
             Button { withAnimation(.snappy) { model.hide(journey) } } label: {
                 Label("journey_hide", systemImage: "eye.slash")
             }
+        }
+    }
+
+    private func toggle(_ journey: JourneySummary) {
+        withAnimation(.snappy(duration: 0.3)) {
+            if expanded.remove(journey.id) == nil { expanded.insert(journey.id) }
         }
     }
 

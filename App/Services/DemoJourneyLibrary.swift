@@ -3,7 +3,7 @@ import Foundation
 import KamomeImportKit
 import Photos
 
-/// A photo library with five journeys in it, for the Journey Discovery home's
+/// A photo library with six journeys in it, for the Journey Discovery home's
 /// simulator render (`-demo-discover`; debug only).
 ///
 /// Positions and times are **invented**: a home in one place, photographed
@@ -79,7 +79,9 @@ final class DemoJourneyLibrary: ImportPhotoProviding, PhotoAccessProviding {
         trip(start: day(2026, 2, 9), stops: [
             stop(60.1699, 24.9384, day: 0, 6), stop(61.4978, 23.7610, day: 2, 4), stop(66.5039, 25.7294, day: 4, 7)
         ])
-        // 2025 — Italy (Rome → Florence), New Zealand (Queenstown → Wanaka → Tekapo).
+        // 2025 — Osaka (a second visit to Japan, so the timeline has one to count),
+        // Italy (Rome → Florence), New Zealand (Queenstown → Wanaka → Tekapo).
+        trip(start: day(2025, 12, 1), stops: [stop(34.6937, 135.5023, day: 0, 7), stop(34.6690, 135.5010, day: 1, 5)])
         trip(start: day(2025, 10, 6), stops: [stop(41.9028, 12.4964, day: 0, 9), stop(43.7696, 11.2558, day: 2, 6)])
         trip(start: day(2025, 3, 10), stops: [
             stop(-45.0312, 168.6626, day: 0, 7), stop(-44.7032, 169.1321, day: 2, 5), stop(-44.0046, 170.4771, day: 4, 6)

@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23 (d)** and `main` at
-**PR #85** (ADRs (b), (c)). PR #81: no-look-change export speed (parallel compositing, trail
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (f)** and `main` at
+**PR #86** (ADR (d)). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
 vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
@@ -20,6 +20,11 @@ is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.
 **ADR 2026-09-23 (d)**: S1's record path is one named button and a sheet; a
 repeat import offers the trip already holding its photos, and Discovery stops
 offering it (`import.duplicate_photo_share`, INFERRED).
+**ADRs 2026-09-23 (e)–(f)** (this branch): the Discovery beta's list goes
+compact — two lines (place, visit pill, date; route, days, ground-only km),
+photos and details in a drawer that opens in place, provenance marked by
+exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
+no coordinate as a milestone.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

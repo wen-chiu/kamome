@@ -78,6 +78,23 @@ final class JourneyDiscoveryModel {
         }
     }
 
+    /// Which visit to its country each journey was, by id (`JourneyChronicle`).
+    var visits: [String: JourneyChronicle.Visit] {
+        JourneyChronicle.visits(journeys, homeCountryCode: homeCountryCode)
+    }
+
+    /// Days at home before each journey began, keyed by that (newer) journey's
+    /// id — the row sits under it on screen, between it and the one before it.
+    /// Empty when `discovery.show_home_gaps` is off.
+    var homeGaps: [String: Int] {
+        guard config.discovery.showHomeGaps else { return [:] }
+        var gaps: [String: Int] = [:]
+        for (newer, older) in zip(journeys, journeys.dropFirst()) {
+            if let days = JourneyChronicle.homeDays(after: older, before: newer) { gaps[newer.id] = days }
+        }
+        return gaps
+    }
+
     var isScanning: Bool { phase == .scanning }
     var isLimitedAccess: Bool { access == .limited }
     var hasJourneys: Bool { !journeys.isEmpty }
@@ -249,6 +266,8 @@ final class JourneyDiscoveryModel {
                         journeys[index].name = JourneyNaming.name(
                             place: place, homeCountryCode: homeCountryCode, isSinglePlace: summary.isSinglePlace
                         )
+                        journeys[index].countryCode = place.countryCode
+                        journeys[index].countryName = place.country
                     }
                 } else {
                     KamomeLog.geocode.notice("journey naming produced no place for \(summary.id, privacy: .public)")
@@ -268,6 +287,7 @@ final class JourneyDiscoveryModel {
             extentM = PhotoImportClusterer.haversineMeters(span.minLat, span.minLon, span.maxLat, span.maxLon)
         }
         let isSinglePlace = extentM < config.discovery.singlePlaceExtentM
+        let place = nameCache.place(for: id)
         return JourneySummary(
             id: id,
             tripId: trip.id,
@@ -282,15 +302,30 @@ final class JourneyDiscoveryModel {
                 facts.photos.map { PhotoCoverSelector.Candidate(assetId: $0.phAssetId, isHighlight: $0.isHighlight == 1) },
                 count: config.discovery.coverPhotos
             ),
-            distanceM: stats?.distanceM,
+            distanceM: groundDistance(trip: trip, stats: stats),
             legModes: facts.legModes,
-            milestones: facts.stopNames,
+            // A stop stored before ADR 2026-09-23 may be "named" by its own
+            // coordinate. `StopNamer` renames it when Trip Detail next opens;
+            // until then the timeline leaves it out rather than print a
+            // coordinate that reads as a bug (Chiu, 2026-09-23).
+            milestones: facts.stopNames.filter { !StopDisplayName.isCoordinate($0) },
             provenance: trip.tripSource.isReconstructed ? .fromPhotos : .recorded,
             filmCount: facts.filmCount,
             nameLookupLat: facts.nameLookupLat,
             nameLookupLon: facts.nameLookupLon,
-            isSinglePlace: isSinglePlace
+            isSinglePlace: isSinglePlace,
+            countryCode: place?.countryCode,
+            countryName: place?.country
         )
+    }
+
+    /// Kilometres on the ground (`LegLength.groundMeters`). A recording's own
+    /// stats are its measured distance; a trip rebuilt from photographs is
+    /// measured along its routed legs, flights left out.
+    private func groundDistance(trip: TripRecord, stats: TripStats?) -> Double? {
+        if !trip.tripSource.isReconstructed, let measured = stats?.distanceM { return measured }
+        guard let detail = try? repository.detail(tripId: trip.id) else { return nil }
+        return LegLength.groundMeters(detail.segments)
     }
 
     private func summary(journey: DiscoveredJourney) -> JourneySummary {
@@ -302,6 +337,7 @@ final class JourneyDiscoveryModel {
         let busiest = plan.stops.max { $0.photoAssetIds.count < $1.photoAssetIds.count }
         let modes = plan.legs.map { ImportService.mode(for: $0, config: config).rawValue }
         let isSinglePlace = journey.extentM < config.discovery.singlePlaceExtentM
+        let place = nameCache.place(for: journey.key)
         return JourneySummary(
             id: journey.key,
             tripId: nil,
@@ -333,7 +369,9 @@ final class JourneyDiscoveryModel {
             // looked up, and keeps its month title.
             nameLookupLat: busiest?.lat,
             nameLookupLon: busiest?.lon,
-            isSinglePlace: isSinglePlace
+            isSinglePlace: isSinglePlace,
+            countryCode: place?.countryCode,
+            countryName: place?.country
         )
     }
 

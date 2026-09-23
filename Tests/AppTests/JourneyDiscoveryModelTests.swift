@@ -279,17 +279,68 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         XCTAssertEqual(stored.provenance, .fromPhotos)
         XCTAssertEqual(stored.photoCount, 4)
     }
+
+    /// **A coordinate is never a milestone** (Chiu, 2026-09-23). A stop stored
+    /// before ADR 2026-09-23 can carry "20.943929, 116.686423" as its name; the
+    /// timeline read it straight from the table and printed it as a place.
+    func testAStopNamedByItsCoordinateIsNotAMilestone() async throws {
+        let harness = try makeHarness()
+        let service = ImportService(repository: harness.repository, config: AppConfig.loadOrDie())
+        // Two places half a degree apart, three photographs each — two stops.
+        let manual = (0..<6).map {
+            photo("m-\($0)", 45 * week + Double($0) * 1_800, $0 < 3 ? 64.1 : 64.6, -21.9)
+        }
+        let tripId = try await service.importTrip(title: "Iceland by album", photos: manual)
+        let stops = try XCTUnwrap(harness.repository.detail(tripId: tripId)).stops
+        guard stops.count >= 2 else { return XCTFail("the fixture needs two stops to name, got \(stops.count)") }
+        try harness.repository.setStopName(stopId: stops[0].id, name: "20.943929, 116.686423")
+        try harness.repository.setStopName(stopId: stops[1].id, name: "Reykjavík")
+
+        await harness.model.refresh()
+        let stored = try XCTUnwrap(harness.model.summary(forTrip: tripId))
+        XCTAssertEqual(stored.milestones, ["Reykjavík"])
+        XCTAssertEqual(stored.stopCount, stops.count, "the stop still counts; only its name is withheld")
+    }
+
+    /// The visit line counts abroad only, once the country is known.
+    func testAJourneyAbroadKnowsWhichVisitItWas() async throws {
+        let harness = try makeHarness()
+        await harness.model.refresh()
+        await waitUntil("both journeys named") { harness.model.journeys.allSatisfy { $0.countryCode != nil } }
+
+        let japan = try XCTUnwrap(harness.model.journeys.first { $0.countryCode == "JP" })
+        XCTAssertEqual(harness.model.visits[japan.id], JourneyChronicle.Visit(ordinal: 1, country: "Japan"))
+    }
+
+    /// `discovery.show_home_gaps` hides the "at home" rows and nothing else.
+    func testHomeGapsFollowTheirFlag() async throws {
+        let harness = try makeHarness()
+        await harness.model.refresh()
+        XCTAssertEqual(harness.model.homeGaps.count, 1, "two journeys, one stretch at home between them")
+
+        let hidden = JourneyDiscoveryModel(
+            config: try Self.shippedConfig(geocodeInterval: 0, showHomeGaps: false),
+            repository: harness.repository, source: harness.library, photoAccess: harness.library,
+            geocoder: harness.geocoder, defaults: harness.defaults, homeCountryCode: "TW", now: { [now] in now }
+        )
+        await hidden.refresh()
+        XCTAssertEqual(hidden.journeys.count, 2)
+        XCTAssertTrue(hidden.homeGaps.isEmpty)
+    }
 }
 
 extension JourneyDiscoveryModelTests {
     /// The shipped config with the geocode throttle replaced — test-only, so
     /// the naming task runs inside a test's patience.
-    static func shippedConfig(geocodeInterval seconds: Double) throws -> TrackingConfig {
+    static func shippedConfig(geocodeInterval seconds: Double, showHomeGaps: Bool = true) throws -> TrackingConfig {
         let url = try XCTUnwrap(Bundle.main.url(forResource: "TrackingConfig", withExtension: "json"))
         var json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         var geocode = try XCTUnwrap(json["geocode"] as? [String: Any])
         geocode["min_interval_s"] = seconds
         json["geocode"] = geocode
+        var discovery = try XCTUnwrap(json["discovery"] as? [String: Any])
+        discovery["show_home_gaps"] = showHomeGaps
+        json["discovery"] = discovery
         return try TrackingConfigLoader.load(from: JSONSerialization.data(withJSONObject: json))
     }
 }
