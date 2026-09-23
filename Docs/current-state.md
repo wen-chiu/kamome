@@ -6,9 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23 (d)** and `main` at
-**PR #85** (ADRs (b), (c)). PR #81: no-look-change export speed (parallel compositing, trail
-memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`).
+Last synced: 2026-09-24 against decisions.md **2026-09-23 (d)** and `main` at
+**PR #86** (ADR (d); #85 carried (b), (c)). PR #81: no-look-change export speed (parallel compositing, trail
+memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
+its §7 is the second pass — GIF-only render, one pool across stations).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
 vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
 yet — Chiu's). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
