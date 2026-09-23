@@ -71,6 +71,12 @@ public enum SegmentRoutability: String, CaseIterable, Sendable {
     /// A road route came back and the PD-3 detour gate refused it. A road
     /// exists; this route is not trustworthy. Dashed, never flown.
     case implausibleRoute = "implausible_route"
+    /// The provider answered and a waypoint has **no road anywhere near it** —
+    /// a beach, a cape, a trail (ADR 2026-09-23 (c)). A fact about the ground,
+    /// so it is stored and never re-asked; **not a crossing**, so no plane and
+    /// no arc. Before v7 these were stored as `no_road`, and v7 clears those
+    /// rows so each is asked once more and lands in the right one of the two.
+    case offRoadNetwork = "off_road_network"
 
     /// NULL / unknown stays **nil** rather than defaulting, unlike its two
     /// sibling enums. Both of those have a safe legacy meaning ("this was a

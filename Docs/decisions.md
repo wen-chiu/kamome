@@ -5812,7 +5812,149 @@ the field's contract, not measured. **Cheapest settling test:**
 `PlacemarkSurveyTests` at one open-sea coordinate. **UNKNOWN:** how the overlays
 look on device. `./check.sh` cannot see them; a Trip Detail screenshot is owed.
 
-## 2026-09-23 (b) — Home: import stays the hero, recording is one named button; a repeat import offers the trip that exists
+## 2026-09-23 (b) — The Miyakojima film: a trip that begins at the airport flies, the film ends at the destination, every crossing is a plane, and the export no longer crashes
+
+**Context.** Chiu exported his Miyakojima trip on his phone. The film had no
+plane and no boarding pass on the crossing, kept Taiwan in frame so the island's
+route could not be read, flew back to Taiwan at the end — and the app crashed
+mid-export. His instruction: *「跨海移動應該是飛機……到當地之後應該是要zoom in成當地的畫面，
+畫面不應該保有原有出發地……最後不用飛回來原本出發地畫面的動畫」*, stability first,
+efficiency second, picture third. The device log (VERIFIED) read: 4/18 legs "no
+road", `recap: film type UNKNOWN … 1 local journeys counted, 4/18 legs marked
+crossing`.
+
+### 1. Why there was no plane — the classifier rejected the case it was written for
+
+`RecapFilmType.distinctJourneyCount` counted only runs of **road**, and dropped
+the empty run before a trip that opens on a crossing. A trip whose home side is
+one departure-airport photograph therefore had **no home journey**: one journey
+counted, `.unknown`, the local film — no opening flight, so no pass and no plane,
+and a body camera framing the whole trip, Taiwan included. That shape is Chiu's
+own definition of type 2 (ADR 2026-09-01: *「假設這樣的行程只會有出發機場照片」*), and a
+test asserted the wrong answer for it (`testATripThatBeginsWithACrossingHasOneJourneyNotTwo`).
+That the home side was airport photographs only is **INFERRED** from the log's
+counts; the device database was not read (a permission this session was denied).
+
+**Decision.** A trip's **first** place, when it opens on a crossing, and its
+**last**, when it closes on one, are ground — each a journey of one point — **when
+that crossing is longer than the ground on its other side is wide.** Measured on
+the trip, no threshold. The condition keeps a beach photograph out: routing
+answers "no road" there too, and a 1 km hop off a 40 km island is a gap inside a
+journey. The test is replaced by the ADR's reading, with its history in its doc
+comment; it was not weakened.
+
+### 2. The film ends at the destination — ADR 2026-09-01, decided and never built
+
+2026-09-01 decided *"There is no return flight."* Nothing implemented it:
+`RecapTypeTwoFilm` kept everything after the outbound crossing. It is built now.
+
+- **The rule** (`RecapTypeTwoFilm.homecomingLegIndex`, pure): home is every vertex
+  before the outbound crossing plus its first vertex; the flight home is the first
+  later crossing that lands within **`discovery.away_radius_m`** of home — the
+  product's existing definition of *away* (INFERRED value, ADR 2026-09-18 (e)), not
+  a new key. A transit on the way back (crossings landing *away* from the
+  destination) is walked back into; a beach photograph at the destination stops
+  the walk.
+- **Why a size and not "nearer home than the destination"**: Taipei → Naha →
+  Ishigaki lands nearer Taipei than Naha, and would have ended at the transit.
+- **Where it is applied** (`RecapComposer.filmRecords`): on the stored records,
+  **cut by time** — a round trip returns to the place it left, so "the stop
+  nearest the homecoming" has two answers and the clock has one. Applied before
+  classification, in `RecapExportJob.compose` and the desk harness alike.
+- ⚠️ **Accepted**: landing home in a different city (Kaohsiung after Taoyuan) is
+  not home by this rule, and that film keeps its last flight.
+
+### 3. Every crossing flies the plane (Chiu, this conversation)
+
+`FrameCompositor` drew the plane only on the crossing carrying a boarding pass and
+the trip's own vehicle on every other one (commit `9064921`, 2026-09-17). Now every
+crossing flies the plane; the chosen vehicle is the local journey's. 🔴 **The
+boundary does not move** (ADR 2026-09-04 (b) §2): a crossing is "no road", not
+"a flight", so a beach photograph's no-road leg now shows a short plane hop.
+Telling them apart needs the provider's two 400 messages kept apart across the
+`RouteProvider` boundary — Chiu's to open (rule 2).
+
+### 4. The crash — a MapLibre snapshotter destroyed off the main thread
+
+The crash report (VERIFIED, `EXC_BAD_ACCESS` at 0x9a in MapLibre on the main run
+loop, 21:58, ~2 min into the export) shows thread 13 inside
+`-[MLNMapSnapshotter dealloc]` → `std::future::get`, reached from `_Block_release`
+on `com.apple.root.default-qos`. `MapLibreSnapshotProvider` kept each snapshotter
+alive by capturing it in its own completion block; MapLibre releases that block on
+a background queue, so the last release — and the teardown of a run-loop-bound
+object — happened there while main was still servicing it. **Fix:**
+`MapLibreSnapshotProvider.MainThreadLeases` is the only owner; it holds on main and
+releases on main one queue-turn after the callback. MapLibre's binary is stripped,
+so the MapLibre frames are **INFERRED** from shape, not symbolicated.
+`MapLibreSubstrateTests` cannot run Metal in CI; the lease contract is
+tested (`testALeaseReleasesItsObjectOnTheMainThreadWhicheverThreadEndsIt`).
+
+### 5. Also
+
+- The `multiRegion` log line said "rendering the local one"; `renderedForm` has
+  always rendered the type-2 form. Corrected.
+
+### ⏳ Owed — only a device answers these
+
+A re-export of the Miyakojima trip on the phone: the log must read `film type one
+destination abroad` and `the trip comes home — … left out`, and the film must open
+on the plane and the pass and end on the island. **The crash's absence is not
+proven by one clean export** — it was an interleaving. → `Docs/handoff-type2-round-trip.md`.
+
+## 2026-09-23 (c) — "No road" splits in two: a beach is not a crossing
+
+**Decision (Chiu, 2026-09-23).** Reviewing ADR 2026-09-23 (b)'s accepted limit
+(*a beach photograph's "no road" leg shows a plane hop*): *「海灘也會畫飛機，這聽起來不能被接受」*,
+and he asked for the `RouteProvider` boundary change that separates the two,
+with nothing else moved. This opens the boundary `CLAUDE.md` rule 2 reserves to
+him. Flying home to a different city stays accepted (his words: 可以接受).
+
+### 1. The provider already says which is which — measured, not assumed
+
+Through the production Worker, public landmark coordinates only, 4 requests
+(VERIFIED 2026-09-23):
+
+| request | answer |
+|---|---|
+| Taoyuan airport → Miyako airport | `400 No path could be found for input` |
+| Miyako town → Sunayama beach | `400 No suitable edges near location. Please check…` |
+| Miyako town → Irabu (bridge) | 200, a route |
+| Miyako town → a point 2 km offshore | 200 — the provider snapped it to a road |
+
+Until today both 400s were one verdict, `.noRoadHere`, stored as `no_road`, and
+every `no_road` leg was a crossing.
+
+### 2. What changed
+
+- **`RouteReconstruction.offTheRoadNetwork`** (public boundary, new case) for
+  `No suitable edges`. `No path could be found` **and every unrecognised 400**
+  stay `.noRoadHere` — the behaviour every 400 had before, so a reworded provider
+  message can only fall back to the old film, never a new wrong one.
+  `RouteReconstructionTests` pins both real wordings.
+- **`SegmentRoutability.offRoadNetwork`** (`off_road_network`): stored, never
+  re-asked, counts as established — and **not a crossing**. The leg draws dashed
+  (it is still inferred) with the trip's own vehicle, splits no journey, gets no
+  arc and no plane.
+- **Schema v7** clears stored `no_road` back to NULL. A pre-split `no_road` cannot
+  say which it was; the next routing run (every export runs one) asks it once
+  more. Cost: those legs' coordinates go to the provider once more — the same
+  coordinates, to the same decided exception (`CLAUDE.md` §0). Offline at that
+  export, they stay unknown and the log says so.
+- The routing summary line names the new count:
+  `… off the road network (beaches — not crossings) …`.
+
+### 3. What this does not move
+
+- **A ferry is still a crossing and still flies the plane** — both ends are on
+  the road network and nothing joins them; that is the deferred mode classifier
+  (Chiu 2026-09-19).
+- A photograph taken **in the air** with no road beneath it (a window seat)
+  would now read "off the road network" and not split the trip. UNKNOWN how often
+  that happens; the cheapest settling read is the routing summary line on a
+  device export of a trip with one.
+- The headline users see (`recap_routing_no_road`) is unchanged — copy is Chiu's.
+
+## 2026-09-23 (d) — Home: import stays the hero, recording is one named button; a repeat import offers the trip that exists
 
 **Decision (Chiu, 2026-09-23).** *「錄製……確實不是後來主力，但我還是希望使用者如果想用可以使用。」*
 On a device screenshot the bottom third of S1 held four things: the import

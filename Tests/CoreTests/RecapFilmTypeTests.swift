@@ -139,12 +139,82 @@ final class RecapFilmTypeTests: XCTestCase {
         XCTAssertTrue(RecapFilmType.oneDestination.hasDestinationAbroad)
     }
 
-    /// A trip that opens on a crossing (`Docs/camera-arcs.md` §4 Case C) has an
-    /// empty run before it, which must not count as a journey.
-    func testATripThatBeginsWithACrossingHasOneJourneyNotTwo() {
+    /// **A trip that opens on a crossing is the canonical type 2**
+    /// (`Docs/camera-arcs.md` §4 Case C; Chiu's own definition in ADR 2026-09-01:
+    /// *「假設這樣的行程只會有出發機場照片」*).
+    ///
+    /// 🔴 **This test asserted the opposite until 2026-09-23** — "one journey,
+    /// not two", `.local` — and that assertion is the rule behind the defect
+    /// Chiu hit on his Miyakojima film: four crossings counted as "1 local
+    /// journey", `.unknown`, the local film with no plane and no boarding pass
+    /// (VERIFIED from the device log). That his home side was airport
+    /// photographs only is INFERRED from those counts — the device database was
+    /// not read. It was not weakened; it pinned a rule that contradicted the ADR
+    /// it implemented, and is replaced by the ADR's reading.
+    func testATripThatBeginsAtTheDepartureAirportIsAJourneyAbroad() {
         let trip = [leg([taipei[1], ishigaki[0]], crossing: true), leg(ishigaki)]
+        XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 2)
+        XCTAssertEqual(RecapFilmType.classify(legs: trip, everyLegEstablished: true), .oneDestination)
+        XCTAssertEqual(
+            RecapFilmType.classify(legs: trip, everyLegEstablished: false), .oneDestination,
+            "a confirmed flight away from home is a fact whatever else is unrouted"
+        )
+    }
+
+    /// **A photograph on a beach is not a place abroad.** Routing answers "no
+    /// road" for a waypoint far from any road, so a trip that opens on the beach
+    /// opens on a crossing too — a short one, inside ground the trip then covers.
+    /// It must not become a type-2 film that "flies" 1 km.
+    func testAShortNoRoadHopAtTheStartIsNotAJourneyAbroad() {
+        let beach = (24.36, 124.17)   // ~2 km off the first Ishigaki vertex
+        let trip = [leg([beach, ishigaki[0]], crossing: true), leg(ishigaki)]
         XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 1)
         XCTAssertEqual(RecapFilmType.classify(legs: trip, everyLegEstablished: true), .local)
+    }
+
+    /// The same condition at the other end: a trip that closes on a beach
+    /// photograph is still one journey.
+    func testAShortNoRoadHopAtTheEndIsNotAJourneyAbroad() {
+        let beach = (24.47, 124.14)
+        let trip = [leg(ishigaki), leg([ishigaki[1], beach], crossing: true)]
+        XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 1)
+    }
+
+    /// Nothing but the flight — one photograph at each airport — is still two
+    /// places.
+    func testATripThatIsOnlyTheFlightIsTwoPlaces() {
+        let trip = [leg([taipei[1], miyakojima[0]], crossing: true)]
+        XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 2)
+        XCTAssertTrue(RecapFilmType.classify(legs: trip, everyLegEstablished: false).hasDestinationAbroad)
+    }
+
+    /// **The Miyakojima shape, untrimmed**: one airport photograph at each end
+    /// of the trip and a day of driving between. Two single points do not share
+    /// a bounding box, so the return does not fold here and the count is 3 —
+    /// which still renders the type-2 form. The composer removes the flight home
+    /// before classifying (`RecapComposer.filmRecords`), and *that* trip counts 2
+    /// (`testTheMiyakojimaShapeWithoutItsFlightHomeIsOneDestination`).
+    func testARoundTripWithOnlyAirportPhotographsAtHomeIsAJourneyAbroad() {
+        let trip = [
+            leg([taipei[1], miyakojima[0]], crossing: true),
+            leg(miyakojima),
+            leg([miyakojima[1], (25.077, 121.232)], crossing: true)
+        ]
+        XCTAssertTrue(RecapFilmType.classify(legs: trip, everyLegEstablished: false).hasDestinationAbroad)
+    }
+
+    func testTheMiyakojimaShapeWithoutItsFlightHomeIsOneDestination() {
+        let trip = [
+            leg([taipei[1], miyakojima[0]], crossing: true),
+            leg(miyakojima),
+            leg([miyakojima[1], (25.077, 121.232)], crossing: true)
+        ]
+        let home = RecapTypeTwoFilm.homecomingLegIndex(legs: trip, homeRadiusM: 40_000)
+        XCTAssertEqual(home, 2)
+        XCTAssertEqual(
+            RecapFilmType.classify(legs: Array(trip.prefix(home ?? trip.count)), everyLegEstablished: false),
+            .oneDestination
+        )
     }
 
     /// The default on `RecapTrip` must be the honest one: a synthetic trip that

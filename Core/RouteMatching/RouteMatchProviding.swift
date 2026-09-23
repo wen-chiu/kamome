@@ -86,11 +86,25 @@ public enum RouteReconstruction: Equatable, Sendable {
     /// A road route came back and survived the detour gate. Store it; the leg
     /// draws solid as `.reconstructed`.
     case routed(RouteMatchOutcome)
-    /// **The provider answered, and there is no road joining these places.**
-    /// Geoapify's `400 No suitable edges near location` / `No path could be
-    /// found` — a ferry, an island hop, a photograph taken on a beach.
-    /// Permanent, correct, and the **only** verdict a crossing may be built on.
+    /// **The provider answered, and no road joins these places** — both ends
+    /// are on the road network and the network does not connect them: water, in
+    /// practice. Geoapify's `400 No path could be found for input` (measured
+    /// 2026-09-23: Taoyuan airport → Miyako airport). Permanent, correct, and the
+    /// **only** verdict a crossing may be built on.
+    ///
+    /// Also what an unrecognised 400 maps to — the behaviour every 400 had
+    /// before the split below, kept so nothing that used to be a crossing
+    /// silently stops being one.
     case noRoadHere
+    /// **The provider answered, and a waypoint has no road anywhere near it** —
+    /// a photograph on a beach, a cape, a trail. Geoapify's `400 No suitable
+    /// edges near location` (measured 2026-09-23: Miyako town → Sunayama beach).
+    ///
+    /// Split from `noRoadHere` on 2026-09-23 (Chiu, ADR 2026-09-23 (c)): until
+    /// then both were one verdict, so a beach photograph became a crossing and
+    /// the film flew a plane to it. **Not a crossing**: the leg draws dashed,
+    /// with the trip's own vehicle, inside the journey it belongs to.
+    case offTheRoadNetwork
     /// A route came back and `RoutePlausibility` refused it. **A road exists**;
     /// this particular route is not trustworthy, usually because one EXIF fix is
     /// plainly wrong. Draws dashed, and is emphatically *not* a crossing —

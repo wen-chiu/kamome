@@ -117,9 +117,10 @@ string stands. Do not reopen this from scratch.
 - **C4 — nothing asserts the end card's mark is the bird.** Only weakly held:
   `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
   would satisfy. → `Docs/release-readiness.md` C4.
-- **A ferry gets a boarding pass and a plane** — the mode classifier is deferred
-  by name (Chiu 2026-09-19: not built yet). The `Geo.distanceM` 121 km error is
-  accepted (ADR 2026-09-19). → `Docs/handoff-type2-opening-retime.md`.
+- 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
+  re-export, and three crash-free exports. Every crossing flies a plane,
+  ferries too; beaches are no longer crossings (ADR (c)).
+  → `Docs/handoff-type2-round-trip.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.

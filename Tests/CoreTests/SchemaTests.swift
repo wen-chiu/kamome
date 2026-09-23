@@ -108,6 +108,49 @@ final class SchemaTests: XCTestCase {
         }
     }
 
+    // MARK: - Schema v7 ("no road" splits in two, ADR 2026-09-23 (c))
+
+    /// A stored `no_road` cannot say whether it was a sea or a beach, so v7
+    /// clears exactly those rows back to "nobody found out" — and nothing else.
+    func testMigrationToV7ClearsOnlyTheAmbiguousNoRoadVerdicts() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v6")
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO trip (id, title, started_at, status) VALUES ('t1', 'Legacy', 0, 'done')")
+            for (id, verdict) in [("sea", "'no_road'"), ("road", "'road'"),
+                                  ("detour", "'implausible_route'"), ("never", "NULL")] {
+                try db.execute(sql: """
+                    INSERT INTO segment (id, trip_id, mode, started_at, routability)
+                    VALUES ('\(id)', 't1', 'drive', 0, \(verdict))
+                    """)
+            }
+        }
+        try AppDatabase.migrator.migrate(queue)
+
+        try queue.read { db in
+            func verdict(_ id: String) throws -> String? {
+                try String.fetchOne(db, sql: "SELECT routability FROM segment WHERE id = ?", arguments: [id])
+            }
+            XCTAssertNil(try verdict("sea"), "an ambiguous no_road is asked again")
+            XCTAssertEqual(try verdict("road"), "road")
+            XCTAssertEqual(try verdict("detour"), "implausible_route")
+            XCTAssertNil(try verdict("never"))
+        }
+    }
+
+    func testTheOffRoadNetworkVerdictRoundTrips() throws {
+        XCTAssertEqual(SegmentRoutability(storage: "off_road_network"), .offRoadNetwork)
+        let database = try AppDatabase.inMemory()
+        try database.writer.write { db in
+            try TripRecord(id: "t1", title: "Miyakojima", startedAt: 0, status: "completed").insert(db)
+            try SegmentRecord(id: "beach", tripId: "t1", mode: "drive", startedAt: 0).insert(db)
+        }
+        try TripRepository(database: database).setRoutability(segmentId: "beach", .offRoadNetwork)
+        try database.writer.read { db in
+            XCTAssertEqual(try XCTUnwrap(try SegmentRecord.fetchOne(db, key: "beach")).routeVerdict, .offRoadNetwork)
+        }
+    }
+
     func testProvenanceRecordsRoundTrip() throws {
         let database = try AppDatabase.inMemory()
         try database.writer.write { db in
