@@ -1,0 +1,120 @@
+{
+  "_comment": "THE ROUND-TRIP FIXTURE (authored 2026-09-23, ADR 2026-09-23 (b)). The shape of Chiu's Miyakojima device film, which classified UNKNOWN and flew home: two photographs at Taoyuan airport, a flight, three days of stops on Miyakojima and Shimoji, two photographs at Miyako airport, a flight home, two photographs at Taoyuan. No drive at home at all — the origin is one airport on each end. Hand-written plausible coordinates of public places (airports, a beach, a cape, a bridge), synthetic times — never a real trip (CLAUDE.md §0).",
+  "title": "Miyakojima round trip",
+  "photos": [
+    {
+      "id": "tpe-out-1",
+      "t": 0,
+      "lat": 25.0797,
+      "lon": 121.2342
+    },
+    {
+      "id": "tpe-out-2",
+      "t": 600,
+      "lat": 25.0791,
+      "lon": 121.2351
+    },
+    {
+      "id": "mmy-arrive-1",
+      "t": 9000,
+      "lat": 24.7828,
+      "lon": 125.295
+    },
+    {
+      "id": "mmy-arrive-2",
+      "t": 9300,
+      "lat": 24.7831,
+      "lon": 125.2944
+    },
+    {
+      "id": "maehama-1",
+      "t": 13000,
+      "lat": 24.735,
+      "lon": 125.263
+    },
+    {
+      "id": "maehama-2",
+      "t": 13600,
+      "lat": 24.7356,
+      "lon": 125.2626
+    },
+    {
+      "id": "maehama-3",
+      "t": 14200,
+      "lat": 24.7343,
+      "lon": 125.2637
+    },
+    {
+      "id": "hennazaki-1",
+      "t": 90000,
+      "lat": 24.724,
+      "lon": 125.466
+    },
+    {
+      "id": "hennazaki-2",
+      "t": 90900,
+      "lat": 24.7247,
+      "lon": 125.4652
+    },
+    {
+      "id": "hennazaki-3",
+      "t": 91500,
+      "lat": 24.7236,
+      "lon": 125.4669
+    },
+    {
+      "id": "ikema-1",
+      "t": 100000,
+      "lat": 24.928,
+      "lon": 125.246
+    },
+    {
+      "id": "ikema-2",
+      "t": 100800,
+      "lat": 24.9274,
+      "lon": 125.2468
+    },
+    {
+      "id": "shimoji-1",
+      "t": 176000,
+      "lat": 24.827,
+      "lon": 125.144
+    },
+    {
+      "id": "shimoji-2",
+      "t": 176600,
+      "lat": 24.8263,
+      "lon": 125.1447
+    },
+    {
+      "id": "shimoji-3",
+      "t": 177200,
+      "lat": 24.8276,
+      "lon": 125.1434
+    },
+    {
+      "id": "mmy-leave-1",
+      "t": 190000,
+      "lat": 24.7826,
+      "lon": 125.2953
+    },
+    {
+      "id": "mmy-leave-2",
+      "t": 190500,
+      "lat": 24.7829,
+      "lon": 125.2947
+    },
+    {
+      "id": "tpe-back-1",
+      "t": 199000,
+      "lat": 25.0795,
+      "lon": 121.2339
+    },
+    {
+      "id": "tpe-back-2",
+      "t": 199400,
+      "lat": 25.0799,
+      "lon": 121.2345
+    }
+  ]
+}

@@ -121,6 +121,73 @@ public enum RecapTypeTwoFilm {
         )] + stops.dropFirst()
     }
 
+    /// **Where the trip starts home** — the index of the first leg of the flight
+    /// back, or nil when the trip never comes home.
+    ///
+    /// ADR 2026-09-01 decided it and nothing built it: *"The film ends at the
+    /// destination. There is no return flight. The import carries the homeward
+    /// leg and its photographs; the film does not."* Until 2026-09-23 the film
+    /// kept everything after the outbound crossing, so a round trip drew the
+    /// flight home, and the body camera — which frames the whole route it is
+    /// given — held Taiwan in shot for the entire Miyakojima film (Chiu's device
+    /// film, 2026-09-23).
+    ///
+    /// ## The rule
+    ///
+    /// **Home is the ground the trip left from**: every vertex before the
+    /// outbound crossing, and that crossing's first vertex. A later crossing
+    /// **lands home** when its last vertex is within `homeRadiusM` of that
+    /// ground. The first such crossing is the flight home — and if the legs
+    /// immediately before it are crossings that landed *away* from the
+    /// destination (a transit: Miyakojima → Naha → Taoyuan, with nothing but an
+    /// airport photograph at Naha), the homecoming starts at the first of them.
+    /// A crossing that landed on the destination's own ground — a beach
+    /// photograph routing answered "no road" for — is the trip, and stops the
+    /// walk. It never reaches back into the outbound crossing itself.
+    ///
+    /// **`homeRadiusM` is `discovery.away_radius_m`**, passed in by the caller —
+    /// the product's one existing definition of *away from home* (ADR
+    /// 2026-09-17). Not a new number, and not a second meaning for an old one:
+    /// the question here is literally "is this home or away?". It is what lets
+    /// Taoyuan-out, Songshan-back (35 km) count as home.
+    ///
+    /// ## Why not "nearer home than the destination"
+    ///
+    /// A scale-free comparison was the first candidate and it is wrong on real
+    /// trips: Taipei → Naha → Ishigaki lands **nearer Taipei than Naha**, and
+    /// would have cut the film at the transit. A point of departure has no extent
+    /// of its own, so "home" needs a size, and the product already has one.
+    ///
+    /// ⚠️ **What this leaves in, knowingly:** flying home to a different city
+    /// (Kaohsiung after leaving from Taoyuan) is not *home* by this rule, and that
+    /// film keeps its last flight. Honest — it is a journey to a place the trip
+    /// did not start — and cheap to revisit with a render if Chiu wants it gone.
+    public static func homecomingLegIndex(legs: [RecapTrip.Leg], homeRadiusM: Double) -> Int? {
+        guard let outbound = legs.firstIndex(where: \.isCrossing),
+              let departure = legs[outbound].coordinates.first else { return nil }
+        let home = legs[..<outbound].flatMap(\.coordinates) + [departure]
+        guard let flightHome = legs.indices.first(where: { index in
+            guard index > outbound, legs[index].isCrossing,
+                  let landing = legs[index].coordinates.last else { return false }
+            return home.contains { distanceM($0, landing) <= homeRadiusM }
+        }) else { return nil }
+        // Walk back over a transit — a crossing that landed somewhere *away* from
+        // the destination, with no journey of its own. A crossing that landed on
+        // the destination's own ground (a beach photograph, answered "no road")
+        // is part of the trip and stops the walk.
+        // The destination is the ground travelled there — not the outbound
+        // landing, which on a trip out through a transit is the transit.
+        let travelled = legs[(outbound + 1)..<flightHome].filter { !$0.isCrossing }.flatMap(\.coordinates)
+        let destination = travelled.isEmpty ? Array(legs[flightHome].coordinates.prefix(1)) : travelled
+        var start = flightHome
+        while start - 1 > outbound, legs[start - 1].isCrossing,
+              let landing = legs[start - 1].coordinates.last,
+              !destination.contains(where: { distanceM($0, landing) <= homeRadiusM }) {
+            start -= 1
+        }
+        return start
+    }
+
     /// The two ends of the flight — what the opening frame has to hold.
     ///
     /// nil for a trip with no crossing, which is every local film.

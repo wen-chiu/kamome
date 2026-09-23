@@ -264,8 +264,9 @@ final class RecapDemoFilmTests: XCTestCase {
             try await Self.nameStops(tripId: tripId, fixture: fixture, repository: repository, config: full)
         }
         let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        let film = Self.filmRecords(detail: detail, full: full)
         let legs = RecapComposer.legs(
-            from: detail.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
+            from: film.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
         )
         print("KAMOME_DEMO_FILM_IMPORT legs: "
             + legs.map { "\($0.mode.rawValue)/\($0.provenance)\($0.isCrossing ? "/CROSSING" : "")" }
@@ -276,7 +277,7 @@ final class RecapDemoFilmTests: XCTestCase {
         let config = try Self.reviewConfig(full.export)
         let selections = Self.stopPhotoSelections(detail: detail, full: full)
         let recap = try XCTUnwrap(RecapComposer.trip(
-            trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
+            trip: detail.trip, legs: legs, stops: film.stops, stats: nil,
             photosByStop: selections.photosByStop,
             deck: RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
@@ -287,7 +288,7 @@ final class RecapDemoFilmTests: XCTestCase {
             favoriteCounts: selections.favoriteCounts,
             weighting: config,
             everyLegRoutabilityEstablished:
-                RecapComposer.everyLegRoutabilityEstablished(detail.segments)
+                RecapComposer.everyLegRoutabilityEstablished(film.segments)
         ))
         print("KAMOME_DEMO_FILM_IMPORT film type: \(recap.filmType) · "
             + "\(RecapFilmType.distinctJourneyCount(legs: recap.legs)) local journeys"

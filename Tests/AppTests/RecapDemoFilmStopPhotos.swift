@@ -1,3 +1,4 @@
+@testable import Kamome
 import KamomeConfig
 import KamomeExportEngine
 import KamomeImportKit
@@ -44,5 +45,20 @@ extension RecapDemoFilmTests {
         return StopPhotoSelections(
             photosByStop: photosByStop, rawPhotoCounts: rawPhotoCounts, favoriteCounts: favoriteCounts
         )
+    }
+
+    /// The shipped path's first step (`RecapExportJob.compose`): the film ends
+    /// at the destination, so the flight home comes off before anything else.
+    static func filmRecords(
+        detail: TripRepository.TripDetail, full: TrackingConfig
+    ) -> (segments: [(segment: SegmentRecord, points: [TrackpointRecord])], stops: [StopRecord]) {
+        let film = RecapComposer.filmRecords(
+            segments: detail.segments, stops: detail.stops,
+            epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM,
+            homeRadiusM: full.discovery.awayRadiusM
+        )
+        print("KAMOME_DEMO_FILM_IMPORT homecoming: \(detail.segments.count - film.segments.count) legs, "
+            + "\(detail.stops.count - film.stops.count) stops left out")
+        return film
     }
 }

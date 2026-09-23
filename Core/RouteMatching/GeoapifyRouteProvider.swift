@@ -72,7 +72,12 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             return .notEstablished(.tooFewWaypoints)
         }
 
-        guard case let .body(data) = try await fetch(url) else { return .noRoadHere }
+        let data: Data
+        switch try await fetch(url) {
+        case let .body(body): data = body
+        case .noRoadHere: return .noRoadHere
+        case .offTheRoadNetwork: return .offTheRoadNetwork
+        }
         let body = try JSONDecoder().decode(Response.self, from: data)
         guard let route = body.features?.first else {
             KamomeLog.routing.notice("route: the provider returned no route feature — leg stays raw")
@@ -106,6 +111,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
     private enum Fetched {
         case body(Data)
         case noRoadHere
+        case offTheRoadNetwork
     }
 
     /// One request, with the provider's verdicts told apart from its failures.
@@ -145,10 +151,11 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             // location" (no road anywhere near a waypoint) or "No path could be
             // found". This is the class the OSRM snap radius used to guard, and
             // it is refused natively here (ADR 2026-08-20 (d)).
+            let message = Self.message(in: data)
             KamomeLog.routing.notice(
-                "route: the provider said \(Self.redacted(Self.message(in: data)), privacy: .public) — leg stays raw"
+                "route: the provider said \(Self.redacted(message), privacy: .public) — leg stays raw"
             )
-            return .noRoadHere
+            return Self.verdict(for400: message) == .offTheRoadNetwork ? .offTheRoadNetwork : .noRoadHere
         case 429:
             // Never observed on Geoapify, which sheds load as a TCP reset. Kept
             // because the pre-launch Cloudflare Worker is the natural place to
@@ -220,6 +227,25 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             }
             points = flattened
         }
+    }
+
+    /// **Which of the two geography answers a 400 is** (ADR 2026-09-23 (c)).
+    ///
+    /// Matched on the provider's own words, measured against the live endpoint
+    /// through the Worker on 2026-09-23 with public landmark coordinates:
+    ///
+    /// | request | answer |
+    /// |---|---|
+    /// | Taoyuan airport → Miyako airport | `No path could be found for input` |
+    /// | Miyako town → Sunayama beach | `No suitable edges near location. Please check…` |
+    ///
+    /// Only the second is matched; **every other 400 stays `.noRoadHere`**, which
+    /// is what all of them were before the split. If the provider ever rewords the
+    /// off-network message, beaches go back to being crossings — the old
+    /// behaviour, never a new wrong one — and `RouteReconstructionTests` pins the
+    /// wording so that shows up as a red test, not as planes over beaches.
+    static func verdict(for400 message: String) -> RouteReconstruction {
+        message.localizedCaseInsensitiveContains("no suitable edges") ? .offTheRoadNetwork : .noRoadHere
     }
 
     private struct ErrorBody: Decodable {
