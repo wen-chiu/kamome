@@ -1,7 +1,7 @@
 # Handoff — the Miyakojima film: round trips, airport-only homes, the crash
 
 **Opened 2026-09-23** from Chiu's device export of his Miyakojima trip. The
-decision is ADR 2026-09-23 (b); this file holds what is **owed** and what is
+decisions are ADR 2026-09-23 (b) and (c); this file holds what is **owed** and what is
 **not known**, and is archived when the device re-export below is judged.
 
 ## What changed (one line each — the ADR has the reasoning)
@@ -52,9 +52,10 @@ by `UnroutableSeaProvider` and added to `RecapCameraContinuityTests`:
 
 ## Known limits, accepted
 
-- **A beach photograph's "no road" leg now shows a short plane hop.** Distinguishing
-  it from sea needs the provider's two 400 messages kept apart across the
-  `RouteProvider` boundary — Chiu's call (rule 2).
+- ~~A beach photograph's "no road" leg shows a short plane hop~~ — **closed by
+  ADR 2026-09-23 (c)**: `No suitable edges` is its own verdict and never a
+  crossing. Owed on the phone: the routing line on the Miyakojima re-export
+  should show its beach legs under `off the road network`, not `NO ROAD`.
 - **Flying home to a different city** (Kaohsiung after Taoyuan) keeps its last
   flight: 300 km is not home under `away_radius_m`.
 - **The first crossing is assumed to be the flight.** A "no road" beach leg in the

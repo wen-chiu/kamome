@@ -5900,3 +5900,56 @@ A re-export of the Miyakojima trip on the phone: the log must read `film type on
 destination abroad` and `the trip comes home — … left out`, and the film must open
 on the plane and the pass and end on the island. **The crash's absence is not
 proven by one clean export** — it was an interleaving. → `Docs/handoff-type2-round-trip.md`.
+
+## 2026-09-23 (c) — "No road" splits in two: a beach is not a crossing
+
+**Decision (Chiu, 2026-09-23).** Reviewing ADR 2026-09-23 (b)'s accepted limit
+(*a beach photograph's "no road" leg shows a plane hop*): *「海灘也會畫飛機，這聽起來不能被接受」*,
+and he asked for the `RouteProvider` boundary change that separates the two,
+with nothing else moved. This opens the boundary `CLAUDE.md` rule 2 reserves to
+him. Flying home to a different city stays accepted (his words: 可以接受).
+
+### 1. The provider already says which is which — measured, not assumed
+
+Through the production Worker, public landmark coordinates only, 4 requests
+(VERIFIED 2026-09-23):
+
+| request | answer |
+|---|---|
+| Taoyuan airport → Miyako airport | `400 No path could be found for input` |
+| Miyako town → Sunayama beach | `400 No suitable edges near location. Please check…` |
+| Miyako town → Irabu (bridge) | 200, a route |
+| Miyako town → a point 2 km offshore | 200 — the provider snapped it to a road |
+
+Until today both 400s were one verdict, `.noRoadHere`, stored as `no_road`, and
+every `no_road` leg was a crossing.
+
+### 2. What changed
+
+- **`RouteReconstruction.offTheRoadNetwork`** (public boundary, new case) for
+  `No suitable edges`. `No path could be found` **and every unrecognised 400**
+  stay `.noRoadHere` — the behaviour every 400 had before, so a reworded provider
+  message can only fall back to the old film, never a new wrong one.
+  `RouteReconstructionTests` pins both real wordings.
+- **`SegmentRoutability.offRoadNetwork`** (`off_road_network`): stored, never
+  re-asked, counts as established — and **not a crossing**. The leg draws dashed
+  (it is still inferred) with the trip's own vehicle, splits no journey, gets no
+  arc and no plane.
+- **Schema v7** clears stored `no_road` back to NULL. A pre-split `no_road` cannot
+  say which it was; the next routing run (every export runs one) asks it once
+  more. Cost: those legs' coordinates go to the provider once more — the same
+  coordinates, to the same decided exception (`CLAUDE.md` §0). Offline at that
+  export, they stay unknown and the log says so.
+- The routing summary line names the new count:
+  `… off the road network (beaches — not crossings) …`.
+
+### 3. What this does not move
+
+- **A ferry is still a crossing and still flies the plane** — both ends are on
+  the road network and nothing joins them; that is the deferred mode classifier
+  (Chiu 2026-09-19).
+- A photograph taken **in the air** with no road beneath it (a window seat)
+  would now read "off the road network" and not split the trip. UNKNOWN how often
+  that happens; the cheapest settling read is the routing summary line on a
+  device export of a trip with one.
+- The headline users see (`recap_routing_no_road`) is unchanged — copy is Chiu's.

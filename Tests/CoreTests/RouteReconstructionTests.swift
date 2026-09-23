@@ -178,19 +178,46 @@ final class RouteReconstructionTests: XCTestCase {
     }
 
     /// The class the OSRM snap radius used to guard — a waypoint with no road
-    /// anywhere near it — refused by the provider itself, and mapped to the same
-    /// keep-raw verdict (ADR 2026-08-20 (d)).
-    func testNoSuitableEdgesIsCleanFallbackNotError() async throws {
+    /// anywhere near it — refused by the provider itself (ADR 2026-08-20 (d)).
+    ///
+    /// 🔴 **Its verdict changed on 2026-09-23 (Chiu, ADR 2026-09-23 (c)).** This
+    /// asserted `.noRoadHere` — the crossing verdict — which is exactly why a
+    /// beach photograph became a crossing and the film flew a plane to it. It
+    /// now asserts the narrower verdict the provider's own words support. The
+    /// wording is the real one, measured through the Worker the same day
+    /// (Miyako town → Sunayama beach); if Geoapify rewords it, this goes red.
+    func testNoSuitableEdgesIsOffTheRoadNetworkNotACrossing() async throws {
         let provider = GeoapifyRouteProvider(config: routingConfig) { request in
             (self.errorBody("No suitable edges near location. Please check waypoint coordinate order (lat/lon)."),
              self.http(400, request.url))
         }
         let outcome = try await provider.route(waypoints(count: 3))
         XCTAssertEqual(
-            outcome, .noRoadHere,
-            "an unroutable leg keeps raw geometry (PD-2) — and now says why, because this is the one verdict "
-                + "the cross-region crossing beat is allowed to be built on"
+            outcome, .offTheRoadNetwork,
+            "a waypoint no road reaches is a beach or a cape — it keeps raw geometry and is never flown"
         )
+    }
+
+    /// **The crossing verdict, and the wording it is built on** — measured
+    /// 2026-09-23 through the Worker, Taoyuan airport → Miyako airport: both
+    /// ends on the road network, and nothing joins them.
+    func testNoPathCouldBeFoundIsTheCrossingVerdict() async throws {
+        let provider = GeoapifyRouteProvider(config: routingConfig) { request in
+            (self.errorBody("No path could be found for input"), self.http(400, request.url))
+        }
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertEqual(outcome, .noRoadHere, "the one verdict a crossing may be built on")
+    }
+
+    /// Any 400 the split does not recognise keeps the verdict every 400 had
+    /// before it — so a reworded message can only fall back to the old
+    /// behaviour, never invent a new one.
+    func testAnUnrecognised400KeepsTheVerdictEvery400UsedToHave() async throws {
+        let provider = GeoapifyRouteProvider(config: routingConfig) { request in
+            (self.errorBody("Something the provider has never said"), self.http(400, request.url))
+        }
+        let outcome = try await provider.route(waypoints(count: 3))
+        XCTAssertEqual(outcome, .noRoadHere)
     }
 
     /// **The reasons nothing was established, kept apart from the geography

@@ -235,11 +235,11 @@ public struct FrameCompositor {
     /// drew the trip's vehicle — so a film that did not open on the flight drew a
     /// car across the East China Sea, which is what he saw.
     ///
-    /// ⚠️ **The boundary this does not move** (ADR 2026-09-04 (b) §2): a crossing
-    /// is "routing found no road", not "this was a flight". A photograph taken on
-    /// a beach far from any road gets the same verdict and now shows a short
-    /// plane hop. Telling the two apart needs the provider's two 400 messages kept
-    /// apart across the `RouteProvider` boundary, which is Chiu's to open.
+    /// **A beach is not a crossing, so it never gets here** (ADR 2026-09-23
+    /// (c)). Routing's "no road anywhere near this photograph" is its own
+    /// verdict since that day, and only "no road joins these places" — the sea —
+    /// becomes the crossing role. ⚠️ A ferry still does (ADR 2026-09-04 (b) §2):
+    /// the mode classifier is deferred.
     /// Falls back to the trip's vehicle only for a caller that supplied no plane.
     private func drawing(for state: SubjectState) -> SubjectRenderer {
         guard state.role == .crossing else { return subject }

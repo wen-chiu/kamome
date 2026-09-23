@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23 (b)** and `main` at
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (c)** and `main` at
 **PR #84**. PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
@@ -14,7 +14,7 @@ vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
 yet — Chiu's). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
 names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
 airport-only home is type 2, the film ends at the destination (2026-09-01 built),
-every crossing flies the plane, and the MapLibre snapshotter crash is fixed; the
+every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the
 device re-export is owed (`Docs/handoff-type2-round-trip.md`). TestFlight's code
 is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
 

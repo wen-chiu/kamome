@@ -109,6 +109,44 @@ final class RecapFilmRecordsTests: XCTestCase {
         )
     }
 
+    /// **A beach is not a crossing** (Chiu 2026-09-23, ADR 2026-09-23 (c)).
+    /// A leg routing answered "off the road network" for draws dashed with the
+    /// trip's own vehicle, splits no journey, and flies no plane; only "no road"
+    /// — the sea — is a crossing.
+    func testAnOffTheRoadNetworkLegIsNotACrossing() {
+        let beach = SegmentRecord(
+            id: "beach", tripId: "trip", mode: "drive", startedAt: start, endedAt: start + 3600,
+            matchedPolyline: nil, source: "exif", routability: SegmentRoutability.offRoadNetwork.rawValue
+        )
+        let sea = SegmentRecord(
+            id: "sea", tripId: "trip", mode: "drive", startedAt: start, endedAt: start + 3600,
+            matchedPolyline: nil, source: "exif", routability: SegmentRoutability.noRoad.rawValue
+        )
+        XCTAssertFalse(RecapComposer.isCrossing(beach))
+        XCTAssertTrue(RecapComposer.isCrossing(sea))
+        XCTAssertEqual(RecapComposer.provenance(for: beach), .inferred, "still dashed — nobody drove it")
+        XCTAssertTrue(
+            RecapComposer.everyLegRoutabilityEstablished([(beach, [])]),
+            "an answer about the ground is an answer: the trip is not left unknown"
+        )
+    }
+
+    /// End to end: a Miyakojima day with a beach the provider could not reach
+    /// is still **one** journey — the beach does not split the island in two.
+    func testABeachOnTheIslandDoesNotSplitTheJourney() {
+        let island = segment("d1", from: 0, hours: 1, points: [miyakoAirport, miyakoTown])
+        let toBeach = (
+            segment: SegmentRecord(
+                id: "beach", tripId: "trip", mode: "drive", startedAt: start + 7200, endedAt: start + 9000,
+                matchedPolyline: nil, source: "exif", routability: SegmentRoutability.offRoadNetwork.rawValue
+            ),
+            points: segment("x", from: 7200, hours: 0.5, points: [miyakoTown, miyakoCape]).points
+        )
+        let legs = RecapComposer.legs(from: [island, toBeach], epsilonM: 15, matchedEpsilonM: 5)
+        XCTAssertEqual(legs.filter(\.isCrossing).count, 0)
+        XCTAssertEqual(RecapFilmType.classify(legs: legs, everyLegEstablished: true), .local)
+    }
+
     func testATripThatDoesNotComeHomeIsUntouched() {
         let trip = roundTrip
         let oneWay = Array(trip.segments.dropLast())

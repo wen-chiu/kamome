@@ -118,8 +118,8 @@ string stands. Do not reopen this from scratch.
   `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
   would satisfy. → `Docs/release-readiness.md` C4.
 - 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
-  re-export, and three crash-free exports. Every crossing now flies a plane —
-  ferries and "no road" beaches too (classifier deferred, Chiu 2026-09-19).
+  re-export, and three crash-free exports. Every crossing flies a plane,
+  ferries too; beaches are no longer crossings (ADR (c)).
   → `Docs/handoff-type2-round-trip.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).

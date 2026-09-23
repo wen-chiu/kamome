@@ -189,6 +189,18 @@ public final class AppDatabase {
             try db.execute(sql: "CREATE INDEX idx_trip_discovery_key ON trip(discovery_key)")
         }
 
+        // Schema v7 — "no road" splits in two (ADR 2026-09-23 (c)). Until now a
+        // beach photograph with no road near it and a sea between two road
+        // networks were both stored as `no_road`, and only the second is a
+        // crossing. A stored `no_road` cannot say which it was, so it is
+        // cleared back to NULL — "nobody has found out" — and the next routing
+        // run (every export runs one) asks once more. Nothing else is touched:
+        // `road` and `implausible_route` meant then what they mean now.
+        // Forward-only, and data-only: no column changes.
+        migrator.registerMigration("v7") { db in
+            try db.execute(sql: "UPDATE segment SET routability = NULL WHERE routability = 'no_road'")
+        }
+
         return migrator
     }
 }
