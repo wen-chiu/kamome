@@ -547,6 +547,57 @@
         }
       }
     },
+    "import_duplicate_anyway": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import again anyway"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍然再匯入一次"
+          }
+        }
+      }
+    },
+    "import_duplicate_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Most of these photos are already in “%@”."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些相片大多已經在「%@」裡了。"
+          }
+        }
+      }
+    },
+    "import_duplicate_open": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open that trip"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開那趟旅程"
+          }
+        }
+      }
+    },
     "import_close": {
       "extractionState": "manual",
       "localizations": {
@@ -1101,6 +1152,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kamome 只能看到你選取的相片"
+          }
+        }
+      }
+    },
+    "record_sheet_body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome follows your route by GPS while you travel. End the recording when you arrive, and the real route becomes your film."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出發後 Kamome 會用 GPS 記下你走過的路線。抵達時結束記錄，這條真實路線就能做成影片。"
+          }
+        }
+      }
+    },
+    "record_trip": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record a trip"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記錄一趟旅程"
           }
         }
       }

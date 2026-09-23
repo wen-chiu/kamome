@@ -5953,3 +5953,40 @@ every `no_road` leg was a crossing.
   that happens; the cheapest settling read is the routing summary line on a
   device export of a trip with one.
 - The headline users see (`recap_routing_no_road`) is unchanged — copy is Chiu's.
+
+## 2026-09-23 (d) — Home: import stays the hero, recording is one named button; a repeat import offers the trip that exists
+
+**Decision (Chiu, 2026-09-23).** *「錄製……確實不是後來主力，但我還是希望使用者如果想用可以使用。」*
+On a device screenshot the bottom third of S1 held four things: the import
+button, a caption, a segmented vehicle picker, and a bare "Start Journey". The
+picker sat between the two buttons and read as if it applied to both.
+
+1. **Import stays the only filled button** (§5 S1, unchanged).
+2. **Recording is one full-width bordered button, 「記錄一趟旅程」 / "Record a
+   trip"**, with `location.fill` — the glyph a recorded trip carries in the list,
+   so the two ways in read as a pair. Secondary, never hidden.
+3. **The vehicle is asked in `StartRecordingSheet`**, after the user has chosen to
+   record, with one sentence on what recording does and `start_journey` as its
+   button. Same move PR #83 made for import. `session.start(vehicle:)` is
+   unchanged; so is `RecordingView`.
+4. `-demo-open-record` opens the sheet for its screenshot.
+
+**5. A repeat import offers the trip that exists** (Chiu 2026-09-23, choosing
+the recommendation put to him). The same screenshot showed "Vietnam" and
+「🇻🇳 Vietnam」 over the same dates. Neither path checked: the sheet never looked,
+and Discovery skipped a journey only when a trip carried **its**
+`discovery_key`, so a sheet import was offered again.
+
+- `TripRepository.tripHoldingMost(assetIds:minShare:)` finds the stored trip
+  holding the largest share of the photographs an import would **keep**,
+  whichever path made it.
+- **Sheet:** at or above `import.duplicate_photo_share` it stops before writing
+  and offers 「打開那趟旅程」 (primary) or 「仍然再匯入一次」. Changing the
+  range, album or source clears the prompt.
+- **Discovery:** such a journey is not offered (the stored trip is already on
+  the list), and opening one that became a trip since the scan opens that trip.
+
+**INFERRED:** `duplicate_photo_share` 0.5 — an exact repeat scores 1.0; unmeasured
+on real libraries. **Not done:** existing duplicates are not merged or removed;
+Chiu deletes the extra by swipe. **UNKNOWN:** how the sheet's prompt looks —
+the simulator has no geotagged library to trigger it; a device screenshot is owed.

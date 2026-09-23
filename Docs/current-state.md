@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23 (c)** and `main` at
-**PR #84**. PR #81: no-look-change export speed (parallel compositing, trail
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (d)** and `main` at
+**PR #85** (ADRs (b), (c)). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
 vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
@@ -17,6 +17,9 @@ airport-only home is type 2, the film ends at the destination (2026-09-01 built)
 every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the
 device re-export is owed (`Docs/handoff-type2-round-trip.md`). TestFlight's code
 is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
+**ADR 2026-09-23 (d)**: S1's record path is one named button and a sheet; a
+repeat import offers the trip already holding its photos, and Discovery stops
+offering it (`import.duplicate_photo_share`, INFERRED).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
