@@ -114,7 +114,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.discovery.journeyGapS, 172_800)
         XCTAssertEqual(config.discovery.minPhotos, 8)
         XCTAssertEqual(config.discovery.singlePlaceExtentM, 60_000)
-        XCTAssertEqual(config.discovery.coverPhotos, 3)
+        // The drawer's scrolling row since 2026-09-23 (was 3 on the card).
+        XCTAssertEqual(config.discovery.coverPhotos, 8)
+        XCTAssertTrue(config.discovery.showHomeGaps)
     }
 
     /// The §4.5 recap-export block: frame, pacing, prologue, duration window.

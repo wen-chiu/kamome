@@ -6,24 +6,23 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23** and `main` at
-**PR #80** (PR #79 and #80 carried no ADR). ⚠️ PRs #81–#83 are merged and NOT yet
-read into this file. ADR 2026-09-23 moves Trip Detail's provenance note and films
-row onto the map, and stops a coordinate being a stop name. PR #75: PO TestFlight
-audit — ADRs (d)–(f). PR #76: T1–T5 implementation (version from build settings,
-privacy manifest, export compliance, device appearance, first-run notice
-non-reproduction). PR #77: T6, the region-conditional terrain credit (ADR (f)).
-PR #78: ADR 2026-09-19 — the title card carries imported trips' kilometres; the
-desk harness routes through the Worker. ADR 2026-09-19 (b): the film's iCloud-only
-photos are downloaded before the render (local first, progress, Cancel); D-item
-owed on device. PR #79: a CI-only fix — `PhotoLibraryPhotoResolver.warm` gated
-*all* refs on library access, so undetermined access skipped file-backed refs it
-never needed; now only PhotoKit assets are gated. No app behaviour changed. PR #80:
-the export logs what it costs (`RecapRenderLoop.RenderStats`, a "render plan" /
-"render cost" line, durations and counts only — §0) and opens
-`Docs/handoff-export-performance.md`, which named the no-look-change optimisation
-round now in `HANDOFF.md`. TestFlight's code is done; T4's captures and T5's
-device check are owed (`Docs/handoff-testflight.md`).
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (c)** and `main` at
+**PR #84**. ADRs 2026-09-23 (b)–(c): the Discovery beta's list goes compact —
+two lines (place, visit pill, date; route, days, ground-only km), photos and
+details in a drawer that opens in place, provenance marked by exception
+(recorded only), "2 months at home" behind `discovery.show_home_gaps`, and no
+coordinate as a milestone. PR #84 / ADR
+2026-09-23: Trip Detail's provenance note and films row move onto the map, and a
+coordinate is never a stop name. PR #83: S1 craft pass — provenance as a glyph,
+place + flag titles for unnamed trips (`TripJourneyNaming`, proactive at
+import), a sticky import button, the vehicle picker moved to export (no ADR).
+PR #82: the Miyakojima "no plane" was `filmType == .unknown`, not the map
+region; a stale fallback log line is corrected and a crossing-count diagnostic
+added (no ADR, no behaviour change). PR #81: export performance with every frame
+pixel-identical — parallel compositing, memoised trail projection, throttled
+progress (no ADR). PRs #75–#80 are in the ADRs 2026-09-18 (d)–(f) and 2026-09-19
+(b) and in `HANDOFF.md`. TestFlight's code is done; T4's captures and T5's device
+check are owed (`Docs/handoff-testflight.md`).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

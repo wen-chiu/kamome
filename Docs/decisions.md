@@ -5811,3 +5811,81 @@ give "South China Sea" / 「南海」 rather than "Unnamed stop". This is inferr
 the field's contract, not measured. **Cheapest settling test:**
 `PlacemarkSurveyTests` at one open-sea coordinate. **UNKNOWN:** how the overlays
 look on device. `./check.sh` cannot see them; a Trip Detail screenshot is owed.
+
+## 2026-09-23 (b) — The beta timeline goes compact: place and date on one line, visits and time at home, provenance by exception
+
+**Decision (Chiu, 2026-09-23).** On a device screenshot of *Your Journeys*:
+*「from photo不必要 這裡預設就一定是從相簿撈的……國家地點跟日期是否可以在同一行……座標如果找不到不如不要show」*,
+then, on the proposal: provenance by exception — 「好」; the visit count — do it;
+time at home — do it, **behind a flag that can hide it**; the per-year summary and
+the entry's detail — 「timeline資訊是不是還是太多 沒辦法一直看到很多旅程……進去點了才看到詳細資訊」;
+the route-shape glyph — parked (「少了地圖reference又不是賽車道」).
+
+Scope: the beta's list only (`UI/Discovery/`). S1, S3 and the diary are unchanged.
+
+1. **The entry is three short lines, no photographs.** Flag and destination with
+   the date range on the same line (stacking at accessibility sizes, so the range
+   never splits); the route on one line; days and the visit line. The thumbnails
+   move out of the list — they are one tap away in the diary. The
+   cover-the-photos test of ADR 2026-09-18 now passes by construction.
+2. **Provenance by exception, in this list only.** Almost every entry here is
+   rebuilt from photographs, so 「相片重建」 on each said nothing. A *recorded*
+   journey carries a location glyph (VoiceOver: `provenance_recorded`); the two
+   stay distinguishable, which is what honest provenance asks. ADR 2026-07-20 and
+   the S1/S3 marking are not reopened.
+3. **"Your 3rd trip to Japan" / 「第3次去日本」**, from `JourneyChronicle.visits`.
+   Abroad only (home = the device's region, as for naming); a journey that
+   overlaps an earlier one of its country **continues that visit** — the
+   screenshot showed one Vietnam trip three times, and three rows are not three
+   trips. The count is among the journeys on this timeline, which reach back
+   `discovery.lookback_years`: **INFERRED** harmless for most users, but "first
+   trip to Vietnam" is wrong for someone who went before the library's window.
+   Cheapest settling step: Chiu reads the line on his own library and says
+   whether the wording overclaims.
+4. **"2 months at home" / 「在家 2個月」** between two journeys, on the rail.
+   `discovery.show_home_gaps` (default `true`) hides it.
+5. **A coordinate is never a milestone.** The list read `stop.name` straight
+   from the table, so stops stored before ADR 2026-09-23 still printed
+   「20.943929, 116.686423」 until Trip Detail was opened and `StopNamer` renamed
+   them. The list now drops any name `StopDisplayName.isCoordinate` recognises;
+   the stop still counts.
+
+**Not done, on purpose:** the per-year summary (too much information, Chiu), the
+route-shape glyph (parked), merging the duplicate Vietnam rows themselves (the
+visit count no longer multiplies them, but the rows remain — why the library holds
+one trip three times is **UNKNOWN**; cheapest check: the three trips'
+`discovery_key` and creation time).
+
+**Found in passing, not fixed:** `provenance_recorded` is defined **twice** in
+`Localizable.xcstrings` ("Recorded live"/「現場錄製」 and "Recorded"); which the
+compiled bundle keeps is **UNKNOWN**. Cheapest check: assert its value in
+`LocalizationTests`, then delete the loser.
+
+## 2026-09-23 (c) — The entry gets a drawer; kilometres are ground-only; the visit is a pill
+
+**Decision (Chiu, 2026-09-23)**, on the (b) render: line 2 carries the route with
+the days and the distance; the days/visit line goes; the photographs come back
+behind a drop-down in the list rather than only in the diary; the visit count
+stays but cleaner — he chose the **pill** (option A of three); distance is
+**ground only** (「只算地面交通（開車、步行、火車）」); the drawer holds the five
+things proposed. This amends (b) points 1 and 3.
+
+1. **Collapsed: two lines.** Flag, destination, visit pill (「初訪」/「第2次」), date
+   right; then the route (truncates first) with 「5 天 · 1,240 公里」 pinned right
+   and a chevron. The recorded glyph moves beside the date.
+2. **The drawer opens in place** (chevron, or the VoiceOver action): a scrolling
+   row of `discovery.cover_photos` (3 → **8**) photographs, the whole route and
+   its count, photos and films, the visit said in full — 「相簿裡第2次到日本 ·
+   上次是 2025年12月（大阪）」 — and 「打開這趟旅程 →」. Tapping the entry itself
+   still opens the diary. The words 「相簿裡」 are how the count admits what it
+   rests on, answering (b)'s INFERRED note.
+3. **Ground kilometres** (`LegLength.groundMeters`): legs whose mode is drive,
+   scooter, walk, cycle or transit **and** whose routing verdict is `road` or
+   `implausibleRoute`. A `noRoad` leg (a flight or ferry) is out; a leg routing
+   has not answered is out too, since it may be a crossing — an undercount that
+   fills in as routes land, never an overcount. Recordings keep their measured
+   `TripStats` distance. A journey not yet imported shows no kilometres. The
+   diary's per-leg length now reads the same `LegLength.meters`, unchanged.
+
+**INFERRED:** that `transit` is always ground (a ferry routed as `road` would
+count). Cheapest check: a ferry trip's segment verdicts in `RecapTimelineReportTests`.

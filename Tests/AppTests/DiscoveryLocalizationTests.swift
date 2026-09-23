@@ -62,4 +62,27 @@ final class DiscoveryLocalizationTests: XCTestCase {
         XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 1), "1 day")
         XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 12), "12 days")
     }
+
+    /// The timeline's visit and home lines (2026-09-23) resolve in both
+    /// languages, with their arguments in the order the code passes them.
+    func testChronicleStringsResolve() throws {
+        func format(_ key: String, _ locale: String, _ args: CVarArg...) throws -> String {
+            String(format: try localizedValue(key, locale: locale), arguments: args)
+        }
+        XCTAssertEqual(try format("journey_visit_pill_first", "zh-Hant"), "初訪")
+        XCTAssertEqual(try format("journey_visit_pill_nth", "zh-Hant", "第2"), "第2次")
+        XCTAssertEqual(try format("journey_visit_pill_nth", "en", "2nd"), "2nd visit")
+        // The full sentence says what the count rests on — the photographs.
+        XCTAssertEqual(try format("journey_visit_first", "en", "Vietnam"), "Your first trip to Vietnam in your photos")
+        XCTAssertEqual(try format("journey_visit_first", "zh-Hant", "越南"), "相簿裡第一次到越南")
+        XCTAssertEqual(try format("journey_visit_nth", "en", "3rd", "Japan"), "Your 3rd trip to Japan in your photos")
+        XCTAssertEqual(try format("journey_visit_nth", "zh-Hant", "第3", "日本"), "相簿裡第3次到日本")
+        XCTAssertEqual(try format("journey_visit_last_place", "zh-Hant", "2025年12月", "大阪"), "上次是 2025年12月（大阪）")
+        XCTAssertEqual(try format("journey_visit_last", "en", "December 2025"), "Last time: December 2025")
+        XCTAssertEqual(try format("journey_open", "zh-Hant"), "打開這趟旅程")
+        XCTAssertEqual(try format("journey_home_gap", "en", "2 months"), "2 months at home")
+        XCTAssertEqual(try format("journey_home_gap", "zh-Hant", "2個月"), "在家 2個月")
+        XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_films", locale: "en"), 1), "1 film")
+        XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_films", locale: "en"), 3), "3 films")
+    }
 }
