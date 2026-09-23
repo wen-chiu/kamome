@@ -42,9 +42,16 @@ public final class RecapGIFEncoder {
         )
     }
 
+    /// Whether `append` keeps `frame` — the one statement of the stride rule,
+    /// public so a GIF-only export can skip compositing the frames `append`
+    /// would throw away (`RecapExporter.exportGIF`).
+    public func keeps(frame: Int) -> Bool {
+        frame % frameStride == 0
+    }
+
     /// Offer every rendered frame; the encoder keeps the ones on its stride.
     public func append(_ image: CGImage, frame: Int) throws {
-        guard frame % frameStride == 0 else { return }
+        guard keeps(frame: frame) else { return }
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(
                   data: nil,

@@ -46,11 +46,10 @@ public struct RecapRenderLoop {
     /// settles — read it against this value, not assumed from it.
     private static let prefetchDepth = 8
 
-    /// Frames within one station composited at once. A station is one
-    /// snapshot reprojected onto a run of frames (`Docs/camera-arcs.md` §7),
-    /// and reprojection is a pure function of each frame's own camera — two
-    /// frames of the same station never read or write anything the other
-    /// touches — so compositing them is embarrassingly parallel. Bounded for
+    /// Frames composited at once, across station boundaries. Reprojection is a
+    /// pure function of each frame's own camera (`Docs/camera-arcs.md` §7) — two
+    /// frames never read or write anything the other touches — so compositing
+    /// them is embarrassingly parallel. Bounded for
     /// the same reason `prefetchDepth` is: each in-flight frame is a fresh
     /// ~8 MB RGBA bitmap, so this number times ~8 MB is the peak this stage
     /// adds on top of the station snapshot(s) already live.
@@ -112,6 +111,68 @@ public struct RecapRenderLoop {
         }
     }
 
+    /// The live window of station snapshots: prefetches ahead of the station
+    /// being submitted from, evicts everything outside that window, and shares
+    /// one fetch between stations that are the same picture. Frames already
+    /// submitted hold their station's snapshot themselves, so evicting a key
+    /// never pulls a picture out from under a frame in flight.
+    private final class StationFetcher {
+        let meter = SnapshotMeter()
+        private let stations: [RecapSnapshotStations.Station]
+        private let provider: MapRenderer
+        private let widthPx: Int
+        private let heightPx: Int
+        private var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
+
+        init(stations: [RecapSnapshotStations.Station], provider: MapRenderer, widthPx: Int, heightPx: Int) {
+            self.stations = stations
+            self.provider = provider
+            self.widthPx = widthPx
+            self.heightPx = heightPx
+        }
+
+        /// Makes station `index` the one being submitted from and waits for its
+        /// snapshot; `waitS` is how long the loop was blocked on it.
+        func enter(_ index: Int, prefetchDepth: Int) async throws -> (snapshot: MapSnapshot, waitS: Double) {
+            // Evict anything outside the live window. Named explicitly rather
+            // than compared by index, because the keys are values and two distant
+            // stations may legitimately be the same picture.
+            var live: Set<SnapshotKey> = [key(stations[index])]
+            for ahead in 1...prefetchDepth where index + ahead < stations.count {
+                let next = key(stations[index + ahead])
+                live.insert(next)
+                _ = fetch(next)
+            }
+            fetches = fetches.filter { live.contains($0.key) }
+
+            let blocked = ContinuousClock.now
+            let snapshot = try await fetch(key(stations[index])).value
+            return (snapshot, RecapRenderLoop.seconds(since: blocked))
+        }
+
+        func cancelAll() {
+            fetches.values.forEach { $0.cancel() }
+        }
+
+        private func key(_ station: RecapSnapshotStations.Station) -> SnapshotKey {
+            SnapshotKey(camera: station.camera, map: station.map)
+        }
+
+        private func fetch(_ key: SnapshotKey) -> Task<MapSnapshot, Error> {
+            if let running = fetches[key] { return running }
+            let (provider, meter, widthPx, heightPx) = (provider, meter, widthPx, heightPx)
+            let task = Task {
+                let started = ContinuousClock.now
+                defer { meter.record(RecapRenderLoop.seconds(since: started)) }
+                return try await provider.snapshot(
+                    key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx
+                )
+            }
+            fetches[key] = task
+            return task
+        }
+    }
+
     private let timeline: LinearTimeline
     private let compositor: FrameCompositor
     private let provider: MapRenderer
@@ -152,78 +213,28 @@ public struct RecapRenderLoop {
     /// Renders every frame in order. `frame` is the frame index; the closure
     /// returns false to cancel the render (user backed out of S5).
     ///
+    /// `only` names the frames the caller will actually use; every other frame
+    /// is neither composited nor delivered, and a station none of whose frames
+    /// is wanted is never fetched. **The plan itself does not change** — it is
+    /// still made over every frame — so each frame that *is* rendered comes from
+    /// exactly the station, and therefore exactly the pixels, it would have in a
+    /// full render. A GIF export is the caller: it keeps one frame in
+    /// `fps / gif_fps` and used to composite all of them.
+    ///
     /// Returns what the pass cost, stage by stage (`RenderStats`). A cancelled
     /// render returns what it had spent up to that frame — an abandoned export is
     /// still a measurement of the stage that was slow.
-    @discardableResult
-    public func renderFrames(_ deliver: (Int, CGImage) throws -> Bool) async throws -> RenderStats {
-        let plan = stations
-        var stats = RenderStats()
-        stats.stations = plan.count
-        guard !plan.isEmpty else { return stats }
-        let meter = SnapshotMeter()
-        // Folded in at every exit rather than in a `defer`: a deferred write
-        // lands *after* the return value is copied, so the cancelled path would
-        // have reported zero snapshots — the one case where the measurement
-        // matters most.
-        func measured() -> RenderStats {
-            var out = stats
-            out.fetches = meter.fetches
-            out.snapshotS = meter.totalS
-            return out
-        }
-        var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
-        defer { fetches.values.forEach { $0.cancel() } }
-
-        func key(_ station: RecapSnapshotStations.Station) -> SnapshotKey {
-            SnapshotKey(camera: station.camera, map: station.map)
-        }
-
-        func fetch(_ key: SnapshotKey) -> Task<MapSnapshot, Error> {
-            if let running = fetches[key] { return running }
-            let widthPx = config.frameWidthPx
-            let heightPx = config.frameHeightPx
-            let provider = self.provider
-            let task = Task {
-                let started = ContinuousClock.now
-                defer { meter.record(Self.seconds(since: started)) }
-                return try await provider.snapshot(
-                    key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx
-                )
-            }
-            fetches[key] = task
-            return task
-        }
-
-        for (index, station) in plan.enumerated() {
-            // Evict anything outside the live window. Named explicitly rather
-            // than compared by index, because the keys are values and two distant
-            // stations may legitimately be the same picture.
-            var live: Set<SnapshotKey> = [key(station)]
-            for ahead in 1...Self.prefetchDepth where index + ahead < plan.count {
-                let next = key(plan[index + ahead])
-                live.insert(next)
-                _ = fetch(next)
-            }
-            fetches = fetches.filter { live.contains($0.key) }
-
-            let blocked = ContinuousClock.now
-            let snapshot = try await fetch(key(station)).value
-            stats.waitS += Self.seconds(since: blocked)
-            guard try await renderStation(station, snapshot: snapshot, stats: &stats, deliver: deliver) else {
-                return measured()
-            }
-        }
-        return measured()
-    }
-
-    /// Every frame one station serves, composited on a bounded worker pool and
-    /// **delivered to `deliver` strictly in order** regardless of which frame's
-    /// composite finishes first — the encoder is the one thing here that is not
-    /// safe to hand frames to out of order. Split out of `renderFrames` only so
-    /// each stays readable; returns false when the caller cancelled.
     ///
-    /// Safe to parallelise because a station's frames share nothing mutable:
+    /// **One worker pool for the whole film, not one per station.** Frames are
+    /// submitted in film order across station boundaries, so while the loop waits
+    /// on the next station's snapshot the previous station's last frames are
+    /// still compositing, and a crossing arc — about two frames per station
+    /// (`Docs/handoff-export-performance.md` §2) — keeps every worker busy
+    /// instead of draining the pool at each boundary. Delivery stays strictly in
+    /// film order: the encoder is the one thing here that is not safe to hand
+    /// frames to out of order.
+    ///
+    /// Safe to parallelise because frames share nothing mutable:
     /// `SnapshotReprojection` is a value computed fresh per frame,
     /// `compositor.render` allocates its own `CGContext` per call (verified by
     /// reading `FrameCompositor` — no stored `var`, and `VehicleSubjectRenderer`
@@ -232,50 +243,91 @@ public struct RecapRenderLoop {
     /// projection cache — is lock-guarded and, on a miss, serialises the
     /// underlying call rather than risk two threads inside MapLibre's
     /// Objective-C++ bridge at once (`RecapSnapshot.swift`).
-    private func renderStation(
-        _ station: RecapSnapshotStations.Station, snapshot: MapSnapshot,
+    @discardableResult
+    public func renderFrames(
+        only wanted: (Int) -> Bool = { _ in true },
+        _ deliver: (Int, CGImage) throws -> Bool
+    ) async throws -> RenderStats {
+        let fullPlan = stations
+        var stats = RenderStats()
+        stats.stations = fullPlan.count
+        // Each station paired with the frames of it that will be drawn; a
+        // station left with none is dropped here, before anything fetches it.
+        let plan: [PlannedStation] = fullPlan.compactMap { station in
+            let frames = station.frames.filter(wanted)
+            return frames.isEmpty ? nil : PlannedStation(station: station, frames: frames)
+        }
+        guard !plan.isEmpty else { return stats }
+        let fetcher = StationFetcher(
+            stations: plan.map(\.station), provider: provider,
+            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+        )
+        defer { fetcher.cancelAll() }
+        try await composite(plan, fetcher: fetcher, stats: &stats, deliver: deliver)
+        // Read after `composite` returns, cancelled or not, rather than in a
+        // `defer`: a deferred write lands *after* the return value is copied, so
+        // the cancelled path would have reported zero snapshots — the one case
+        // where the measurement matters most.
+        stats.fetches = fetcher.meter.fetches
+        stats.snapshotS = fetcher.meter.totalS
+        return stats
+    }
+
+    /// One station and the frames of it this render will draw.
+    private struct PlannedStation {
+        let station: RecapSnapshotStations.Station
+        let frames: [Int]
+    }
+
+    /// The pool itself: submission walks (station, frame-within-station) and
+    /// delivery walks the same order behind it. The only await on the
+    /// submission side is a station's snapshot, and the frames already in the
+    /// group keep compositing through it.
+    private func composite(
+        _ plan: [PlannedStation], fetcher: StationFetcher,
         stats: inout RenderStats, deliver: (Int, CGImage) throws -> Bool
-    ) async throws -> Bool {
-        // `station.frames` is a `Range<Int>` of frame *numbers*, not a
-        // zero-based sequence — its own subscript takes a number back, not a
-        // position. Everything below indexes by position (submission order,
-        // delivery order), so it needs the array, not the range.
-        let frames = Array(station.frames)
-        guard !frames.isEmpty else { return true }
-        let stationCamera = station.camera
+    ) async throws {
         let credit = provider.capabilities.attribution
-
-        return try await withThrowingTaskGroup(of: CompositedFrame.self) { group in
-            var nextToSubmit = 0
-            func submitOne() {
-                guard nextToSubmit < frames.count else { return }
-                let frame = frames[nextToSubmit]
-                nextToSubmit += 1
-                group.addTask {
-                    try self.composite(frame: frame, snapshot: snapshot, stationCamera: stationCamera, credit: credit)
-                }
-            }
-            for _ in 0..<min(Self.compositeConcurrency, frames.count) { submitOne() }
-
+        try await withThrowingTaskGroup(of: CompositedFrame.self) { group in
+            var stationIndex = -1, frameIndex = 0, inFlight = 0, nextToDeliver = 0
+            var snapshot: MapSnapshot?
+            var order: [Int] = []
             var pending: [Int: CompositedFrame] = [:]
-            var nextToDeliver = 0
             var carryOn = true
-            while carryOn, nextToDeliver < frames.count {
+            while carryOn {
+                while inFlight < Self.compositeConcurrency, stationIndex < plan.count {
+                    if stationIndex < 0 || frameIndex >= plan[stationIndex].frames.count {
+                        stationIndex += 1
+                        frameIndex = 0
+                        guard stationIndex < plan.count else { break }
+                        let entered = try await fetcher.enter(stationIndex, prefetchDepth: Self.prefetchDepth)
+                        snapshot = entered.snapshot
+                        stats.waitS += entered.waitS
+                    }
+                    guard let snapshot else { break }
+                    let frame = plan[stationIndex].frames[frameIndex]
+                    let stationCamera = plan[stationIndex].station.camera
+                    frameIndex += 1
+                    order.append(frame)
+                    inFlight += 1
+                    group.addTask {
+                        try self.composite(frame: frame, snapshot: snapshot, stationCamera: stationCamera, credit: credit)
+                    }
+                }
                 guard let done = try await group.next() else { break }
+                inFlight -= 1
                 pending[done.frame] = done
-                submitOne()
-                while carryOn, nextToDeliver < frames.count,
-                      let ready = pending.removeValue(forKey: frames[nextToDeliver]) {
+                while carryOn, nextToDeliver < order.count,
+                      let ready = pending.removeValue(forKey: order[nextToDeliver]) {
                     stats.compositeS += ready.composeS
-                    let delivered = ContinuousClock.now
-                    carryOn = try deliver(frames[nextToDeliver], ready.image)
-                    stats.deliverS += Self.seconds(since: delivered)
+                    let started = ContinuousClock.now
+                    carryOn = try deliver(ready.frame, ready.image)
+                    stats.deliverS += Self.seconds(since: started)
                     stats.frames += 1
                     nextToDeliver += 1
                 }
             }
             if !carryOn { group.cancelAll() }
-            return carryOn
         }
     }
 
@@ -287,7 +339,7 @@ public struct RecapRenderLoop {
         let composeS: Double
     }
 
-    /// One frame's work, pulled out of `renderStation` only to keep its body
+    /// One frame's work, pulled out of `renderFrames` only to keep its body
     /// short — reads `self` for its `let` properties alone (`config`,
     /// `timeline`, `compositor`), so more than one frame can call it at once.
     private func composite(
