@@ -4,8 +4,9 @@ import KamomeTripComposer
 import SwiftUI
 import UIKit
 
-/// S1 Home / Trip List: trip cards (title, date, distance, stops), vehicle
-/// selector, big Start button. Cover map thumbnails remain a later polish.
+/// S1 Home / Trip List: trip cards (title, date, distance, stops), the import
+/// hero button, and a quieter "Record a trip" button that asks for the vehicle
+/// in its own sheet (Chiu 2026-09-23). Cover map thumbnails remain a later polish.
 ///
 /// ⚠️ **This screen stays the home** (Chiu, 2026-09-18). Journey Discovery is an
 /// *added* feature in beta, not a replacement: it is one toolbar button away and
@@ -17,6 +18,7 @@ struct HomeView: View {
     @State private var vehicle: VehicleType = .car
     @State private var path: [String] = []
     @State private var showingImport = false
+    @State private var showingStartRecording = false
     @State private var showingDiscovery = false
     @State private var showingAbout = false
     @State private var showingFirstRunNotice = false
@@ -34,7 +36,7 @@ struct HomeView: View {
                 }
                 Spacer()
                 importButton
-                liveCaptureSection
+                recordButton
             }
             .padding()
             .navigationTitle(Text("home_title"))
@@ -48,6 +50,12 @@ struct HomeView: View {
                     showingImport = false
                     session.refreshTrips()
                     path = [tripId]
+                }
+            }
+            .sheet(isPresented: $showingStartRecording) {
+                StartRecordingSheet(vehicle: $vehicle) {
+                    showingStartRecording = false
+                    session.start(vehicle: vehicle)
                 }
             }
             .toolbar { toolbarItems }
@@ -89,6 +97,10 @@ struct HomeView: View {
             if ProcessInfo.processInfo.arguments.contains("-demo-discover") {
                 showingDiscovery = true
             }
+            // The record sheet's own shot (Chiu 2026-09-23 home cleanup).
+            if ProcessInfo.processInfo.arguments.contains("-demo-open-record") {
+                showingStartRecording = true
+            }
             #endif
             // Told once, before this build can send a real coordinate anywhere
             // (Chiu 2026-09-04; ADR 2026-09-05 (b)). Both demo sheets above are
@@ -96,7 +108,7 @@ struct HomeView: View {
             // sheets raised in one pass is a race rather than a stack. Nothing
             // is remembered on the launch that loses it, so the notice comes
             // back on the next one.
-            if !showingImport, !showingDiscovery,
+            if !showingImport, !showingDiscovery, !showingStartRecording,
                FirstRunNotice.shouldPresent(matching: session.config.matching) {
                 showingFirstRunNotice = true
             }
@@ -267,31 +279,17 @@ struct HomeView: View {
         .buttonStyle(.borderedProminent)
     }
 
-    private var liveCaptureSection: some View {
-        VStack(spacing: 8) {
-            Text("live_capture_header")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            vehiclePicker
-            startButton
-        }
-    }
-
-    private var vehiclePicker: some View {
-        Picker("vehicle_label", selection: $vehicle) {
-            Text("vehicle_car").tag(VehicleType.car)
-            Text("vehicle_scooter").tag(VehicleType.scooter)
-            Text("vehicle_bicycle").tag(VehicleType.bicycle)
-        }
-        .pickerStyle(.segmented)
-    }
-
-    private var startButton: some View {
+    /// Live capture is secondary, not hidden (Chiu 2026-09-23: 「不是主力，但
+    /// 想用的人要用得到」). A full-width button that names its action, with the
+    /// same `location.fill` glyph a recorded trip carries in the list, so the
+    /// two ways in read as a pair. It used to be a caption, a segmented vehicle
+    /// picker and a bare "Start Journey" — three controls, one of which looked
+    /// like it applied to import too. The vehicle is asked in the sheet.
+    private var recordButton: some View {
         Button {
-            session.start(vehicle: vehicle)
+            showingStartRecording = true
         } label: {
-            Text("start_journey")
+            Label("record_trip", systemImage: "location.fill")
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)

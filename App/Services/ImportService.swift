@@ -43,12 +43,7 @@ struct ImportService {
     /// used to be accidental into one the caller states.
     @discardableResult
     func importTrip(title: String, photos: [ImportPhoto], discoveryKey: String? = nil) async throws -> String {
-        let clustering = ImportClusteringConfig(
-            stopRadiusM: config.photoImport.stopRadiusM,
-            stopSplitGapS: config.photoImport.stopSplitGapS,
-            minPhotosPerStop: config.photoImport.minPhotosPerStop
-        )
-        let plan = PhotoImportClusterer.plan(photos: photos, config: clustering)
+        let plan = self.plan(for: photos)
         guard plan.isRenderable else { throw ImportError.notEnoughGeotaggedPhotos }
 
         let byId = Dictionary(photos.map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
@@ -105,6 +100,27 @@ struct ImportService {
         // restyle a trip someone already made.
         try? repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
         return tripId
+    }
+
+    /// The stored trip these photographs would duplicate, if any (Chiu
+    /// 2026-09-23). Measured on the photographs an import would **keep** — the
+    /// stops' and the route's — not on everything fetched, so an exact repeat
+    /// scores 1.0 even when clustering drops strays. Nil when nothing would be
+    /// kept: that import fails on its own terms, not as a duplicate.
+    func existingTrip(for photos: [ImportPhoto]) -> String? {
+        let plan = self.plan(for: photos)
+        let kept = plan.stops.flatMap(\.photoAssetIds) + plan.routeAttachedAssetIds
+        return try? repository.tripHoldingMost(
+            assetIds: kept, minShare: config.photoImport.duplicatePhotoShare
+        )
+    }
+
+    private func plan(for photos: [ImportPhoto]) -> ImportedTripPlan {
+        PhotoImportClusterer.plan(photos: photos, config: ImportClusteringConfig(
+            stopRadiusM: config.photoImport.stopRadiusM,
+            stopSplitGapS: config.photoImport.stopSplitGapS,
+            minPhotosPerStop: config.photoImport.minPhotosPerStop
+        ))
     }
 
     /// Classifies a leg by its implied pace (PD-8). Walking-pace legs stay

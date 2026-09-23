@@ -6,24 +6,19 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-23 against decisions.md **2026-09-23** and `main` at
-**PR #80** (PR #79 and #80 carried no ADR). ⚠️ PRs #81–#83 are merged and NOT yet
-read into this file. ADR 2026-09-23 moves Trip Detail's provenance note and films
-row onto the map, and stops a coordinate being a stop name. PR #75: PO TestFlight
-audit — ADRs (d)–(f). PR #76: T1–T5 implementation (version from build settings,
-privacy manifest, export compliance, device appearance, first-run notice
-non-reproduction). PR #77: T6, the region-conditional terrain credit (ADR (f)).
-PR #78: ADR 2026-09-19 — the title card carries imported trips' kilometres; the
-desk harness routes through the Worker. ADR 2026-09-19 (b): the film's iCloud-only
-photos are downloaded before the render (local first, progress, Cancel); D-item
-owed on device. PR #79: a CI-only fix — `PhotoLibraryPhotoResolver.warm` gated
-*all* refs on library access, so undetermined access skipped file-backed refs it
-never needed; now only PhotoKit assets are gated. No app behaviour changed. PR #80:
-the export logs what it costs (`RecapRenderLoop.RenderStats`, a "render plan" /
-"render cost" line, durations and counts only — §0) and opens
-`Docs/handoff-export-performance.md`, which named the no-look-change optimisation
-round now in `HANDOFF.md`. TestFlight's code is done; T4's captures and T5's
-device check are owed (`Docs/handoff-testflight.md`).
+Last synced: 2026-09-23 against decisions.md **2026-09-23 (b)** and `main` at
+**PR #84**. PR #81: the no-look-change export-performance round (parallel
+compositing, memoised trail projection, throttled progress; pixel-identical).
+PR #82: a stale map-region fallback log corrected, crossing-count diagnostic for
+`film type UNKNOWN` (no behaviour change). PR #83: home/import/detail craft pass —
+provenance glyph per row, place + flag for untitled trips, sticky import button,
+the film's vehicle picked at export. PR #84 (ADR 2026-09-23): Trip Detail's
+provenance chip and film poster on the map; a coordinate is never a stop name.
+ADR 2026-09-23 (b): S1's record path is one named button and a sheet; a repeat
+import offers the trip that already holds its photos, and Discovery stops
+offering it (`import.duplicate_photo_share`, INFERRED). Earlier: PRs #75–#80 — TestFlight code done, T4
+captures and T5 device check owed (`Docs/handoff-testflight.md`); the export logs
+its cost (`Docs/handoff-export-performance.md`).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

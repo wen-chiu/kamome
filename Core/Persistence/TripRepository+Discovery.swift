@@ -14,6 +14,41 @@ extension TripRepository {
         }
     }
 
+    /// The stored trip that already holds the largest share of these
+    /// photographs, if that share reaches `minShare` (Chiu 2026-09-23). This is
+    /// what stops a repeat import — the sheet twice, or the sheet then
+    /// Discovery — from making a second copy of one journey; unlike
+    /// `trip(discoveryKey:)` it does not care which path made the first trip.
+    ///
+    /// Queried in chunks so a long trip stays under SQLite's bound-variable
+    /// limit. `ph_asset_id` is unindexed; a scan of `photo_ref` per chunk is
+    /// cheap at the sizes a phone holds and saves a schema migration.
+    public func tripHoldingMost(assetIds: [String], minShare: Double) throws -> String? {
+        let ids = Array(Set(assetIds))
+        guard !ids.isEmpty else { return nil }
+        let chunkSize = 500
+        var held: [String: Int] = [:]
+        try database.writer.read { db in
+            for start in stride(from: 0, to: ids.count, by: chunkSize) {
+                let chunk = Array(ids[start..<min(start + chunkSize, ids.count)])
+                let marks = Array(repeating: "?", count: chunk.count).joined(separator: ",")
+                let rows = try Row.fetchAll(db, sql: """
+                    SELECT trip_id, COUNT(DISTINCT ph_asset_id) AS n FROM photo_ref
+                    WHERE ph_asset_id IN (\(marks)) GROUP BY trip_id
+                    """, arguments: StatementArguments(chunk))
+                for row in rows {
+                    let tripId: String = row["trip_id"]
+                    let count: Int = row["n"]
+                    held[tripId, default: 0] += count
+                }
+            }
+        }
+        guard let best = held.max(by: { $0.value < $1.value }),
+              Double(best.value) / Double(ids.count) >= minShare
+        else { return nil }
+        return best.key
+    }
+
     /// Everything a journey card shows about a stored trip, in one read.
     public struct JourneyCardFacts: Equatable {
         /// Every photograph, in the order it was taken.

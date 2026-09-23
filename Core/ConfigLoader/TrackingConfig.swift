@@ -138,6 +138,13 @@ public struct TrackingConfig: Decodable, Equatable {
         /// end far from the start and the *other* end follows, so the input is
         /// never rejected and the user can always see what they asked for.
         public let maxRangeDays: Int
+        /// A new import counts as a trip already stored when at least this share
+        /// of the photographs it would keep are in that one trip (Chiu
+        /// 2026-09-23). The user is then offered the existing trip instead of a
+        /// copy; Discovery stops offering the journey at all. **INFERRED**: half
+        /// is a first guess — an exact repeat scores 1.0, a trip merely sharing
+        /// an airport morning scores far below it; not measured on real libraries.
+        public let duplicatePhotoShare: Double
 
         enum CodingKeys: String, CodingKey {
             case stopRadiusM = "stop_radius_m"
@@ -148,6 +155,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case paceUnknowableGapS = "pace_unknowable_gap_s"
             case defaultRangeDays = "default_range_days"
             case maxRangeDays = "max_range_days"
+            case duplicatePhotoShare = "duplicate_photo_share"
         }
     }
 
