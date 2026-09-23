@@ -15,6 +15,14 @@ final class ImportFlowModel {
         case idle
         case importing
         case failed(Failure)
+        /// These photographs are mostly in a stored trip already (Chiu
+        /// 2026-09-23). The sheet offers that trip, or a second import anyway.
+        case duplicate(Duplicate)
+    }
+
+    struct Duplicate: Equatable {
+        let tripId: String
+        let title: String
     }
 
     /// Distinguished only for the friendly message — the engine throws one
@@ -55,6 +63,9 @@ final class ImportFlowModel {
     private let provider: ImportPhotoProviding
     private let service: ImportService
     private let photoService: PhotoLibraryService
+    /// The fetch a duplicate verdict paused on, so "import anyway" does not
+    /// read the library a second time.
+    private var pending: (title: String, photos: [ImportPhoto])?
 
     init(
         config: TrackingConfig,
@@ -142,6 +153,40 @@ final class ImportFlowModel {
         }
 
         let photos = await provider.photos(matching: query)
+        if let tripId = service.existingTrip(for: photos),
+           let trip = try? repository.detail(tripId: tripId)?.trip {
+            pending = (tripTitle, photos)
+            phase = .duplicate(Duplicate(tripId: tripId, title: trip.title))
+            return
+        }
+        await save(title: tripTitle, photos: photos)
+    }
+
+    /// The duplicate prompt's primary answer: go to the trip that exists.
+    func openExisting() {
+        guard case let .duplicate(duplicate) = phase else { return }
+        pending = nil
+        completedTripId = duplicate.tripId
+    }
+
+    /// The duplicate prompt's other answer: the user wants a second copy (a
+    /// different cut of the same photos is a legitimate thing to want).
+    func importAnyway() async {
+        guard let pending else { return }
+        self.pending = nil
+        phase = .importing
+        await save(title: pending.title, photos: pending.photos)
+    }
+
+    /// The user changed what to import: a duplicate verdict was about the old
+    /// choice, so it goes and the Import button comes back.
+    func selectionChanged() {
+        guard case .duplicate = phase else { return }
+        pending = nil
+        phase = .idle
+    }
+
+    private func save(title tripTitle: String, photos: [ImportPhoto]) async {
         do {
             let tripId = try await service.importTrip(title: tripTitle, photos: photos)
             // Road reconstruction starts here and is **not** waited on

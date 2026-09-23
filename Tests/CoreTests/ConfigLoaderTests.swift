@@ -107,6 +107,8 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
         // The widest range the picker will hold, as a sliding window (Chiu's 21).
         XCTAssertEqual(config.photoImport.maxRangeDays, 21)
+        // Repeat-import detection (2026-09-23) — a first guess, INFERRED.
+        XCTAssertEqual(config.photoImport.duplicatePhotoShare, 0.5)
         // Journey discovery (2026-09-17) — first guesses, INFERRED not measured.
         XCTAssertEqual(config.discovery.lookbackYears, 5)
         XCTAssertEqual(config.discovery.homeCellDeg, 0.5)
