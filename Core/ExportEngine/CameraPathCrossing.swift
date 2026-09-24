@@ -321,7 +321,9 @@ extension CameraPath {
             let source = frame(at: entry.startS)
             let apex = apexFrame(source: source, destination: destination, config: config)
             let widest = max(source.spanM, destination.spanM)
-            guard widest > 0, apex.spanM > widest * config.openingCollapseZoomRatio else { return nil }
+            // Two different areas either side must still get their zoom (ADR 2026-09-24).
+            guard widest > 0, apex.spanM > widest * config.openingCollapseZoomRatio
+                    || source.spanM != destination.spanM else { return nil }
             return Arc(
                 startS: entry.startS, endS: entry.endS,
                 source: source, apex: apex, destination: destination

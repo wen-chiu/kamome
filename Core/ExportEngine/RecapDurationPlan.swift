@@ -54,10 +54,12 @@ public struct RecapDurationPlan: Equatable {
     /// `RecapCameraContinuityTests` measures, so the formula and its gate cannot
     /// drift apart.
     ///
-    /// Deliberately **not** adaptive: not per-leg, not per-act, not city-versus-
-    /// highway. Recomputing it mid-film is how the old act camera produced a 97×
-    /// zoom-out three seconds before the end card. Different trips get different
-    /// spans; one trip gets one span.
+    /// ⚠️ **Superseded for a film with several areas (ADR 2026-09-24,
+    /// `CameraPathAreas`)** — Chiu reopened the city-versus-highway line after
+    /// his Vietnam and Miyakojima films. This remains the one-area rule, and each
+    /// area applies it to itself. What survives of "never adaptive" is its reason:
+    /// the old act camera re-framed mid-motion, while an area changes scale only
+    /// in its own beat, with the vehicle waiting.
     ///
     /// **Derived from what the opening establishes** (Chiu 2026-08-09): the body
     /// is simply the established span divided by `target_zoom_ratio`, so the zoom

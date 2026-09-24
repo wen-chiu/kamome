@@ -46,8 +46,11 @@ final class FollowCameraRestingFrameTests: XCTestCase {
             ))
             let path = line.path
             let route = trip.route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+            // The world the body starts in: the route's own on a one-area film,
+            // the first area's since ADR 2026-09-24 — the bounds the opening's
+            // prediction is made in, so this still checks prediction against track.
             let predicted = FollowCamera.restingFrame(
-                subject: route[0], routeBounds: CameraPath.bounds(of: route),
+                subject: route[0], routeBounds: path.bodyStartBounds,
                 spanM: path.bodySpanM, config: config
             )
             let actual = path.cameraFrame(atTime: path.journeyStartS)

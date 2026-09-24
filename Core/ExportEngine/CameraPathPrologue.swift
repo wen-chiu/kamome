@@ -330,7 +330,9 @@ extension CameraPath {
         let closingZoomMoves = builtPrologue.map { wide in
             !isEffectivelyTheSame(
                 wide.finalFrame,
-                CameraPath.bodyFrame(route: route, spanM: bodySpanM, config: config),
+                FollowCamera.restingFrame(
+                    subject: route[0], routeBounds: request.bodyBounds, spanM: bodySpanM, config: config
+                ),
                 config: config
             )
         } ?? false
@@ -339,7 +341,7 @@ extension CameraPath {
             : min(wideEnd + (closingZoomMoves ? config.zoomTransitionS : 0), total)
 
         // The closing reveal is its own beat after the journey, never a zoom
-        // during it: the body's span is fixed by product rule.
+        // during it: the body zooms only in reframe beats (ADR 2026-09-24).
         let reveal = builtPrologue == nil ? 0 : config.endRevealS
         let journeyEnd = max(total - request.journeyEndsBeforeS - reveal, opening)
 

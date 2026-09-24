@@ -25,7 +25,7 @@ import KamomeConfig
 /// - Past that edge the camera accelerates after it on a critically damped
 ///   spring — it leans into the move and settles out of it, like a dolly, and
 ///   (being critically damped) never overshoots and hunts.
-/// - Span is fixed for the whole body. No zoom, no rotation while travelling.
+/// - Span is fixed for the whole run (one area, ADR 2026-09-24). No zoom, no rotation.
 ///
 /// **Inertia lives here, in the simulation** — never as a smoothing pass over a
 /// finished track. A filter applied afterwards would push the camera while the
@@ -119,6 +119,51 @@ enum FollowCamera {
             frames.append(stepped.frame)
         }
         return frames
+    }
+
+    /// **How far the dolly travels over `route` at `spanM`**, in ground metres —
+    /// the camera's own path, not the subject's (ADR 2026-09-24).
+    ///
+    /// The same three rules `step` applies — the dead zone, the world clamp, the
+    /// safe zone — without the spring: the spring decides *when* the camera gets
+    /// somewhere, never *where*, so its path length is a property of the geometry
+    /// alone and can be known before the film's clock exists. A loop that fits
+    /// inside the frame costs nothing; a drive costs its length less a dead zone.
+    static func travelM(
+        route: [CameraPath.Point], routeBounds: CameraPath.Bounds, spanM: Double, config: TrackingConfig.Export
+    ) -> Double {
+        guard let first = route.first else { return 0 }
+        let aspect = Double(config.frameHeightPx) / Double(config.frameWidthPx)
+        let midLat = (routeBounds.minLat + routeBounds.maxLat) / 2
+        let perLat = 111_320.0, perLon = 111_320.0 * cos(midLat * .pi / 180)
+        let halfWindow = (east: spanM / 2, north: spanM * aspect / 2)
+        let latRange = clampRange(
+            low: routeBounds.minLat + halfWindow.north / perLat, high: routeBounds.maxLat - halfWindow.north / perLat,
+            fallback: midLat
+        )
+        let lonRange = clampRange(
+            low: routeBounds.minLon + halfWindow.east / perLon, high: routeBounds.maxLon - halfWindow.east / perLon,
+            fallback: (routeBounds.minLon + routeBounds.maxLon) / 2
+        )
+        func settle(_ centre: (lat: Double, lon: Double), on point: CameraPath.Point) -> (lat: Double, lon: Double) {
+            var lat = confine(centre: centre.lat, subject: point.lat,
+                              halfExtentM: halfWindow.north * config.cameraDeadZoneFraction, metresPerDegree: perLat)
+            var lon = confine(centre: centre.lon, subject: point.lon,
+                              halfExtentM: halfWindow.east * config.cameraDeadZoneFraction, metresPerDegree: perLon)
+            lat = confine(centre: min(max(lat, latRange.low), latRange.high), subject: point.lat,
+                          halfExtentM: halfWindow.north * config.cameraSafeZoneFraction, metresPerDegree: perLat)
+            lon = confine(centre: min(max(lon, lonRange.low), lonRange.high), subject: point.lon,
+                          halfExtentM: halfWindow.east * config.cameraSafeZoneFraction, metresPerDegree: perLon)
+            return (lat, lon)
+        }
+        var centre = settle((first.lat, first.lon), on: first)
+        var travelled = 0.0
+        for point in route.dropFirst() {
+            let next = settle(centre, on: point)
+            travelled += hypot((next.lat - centre.lat) * perLat, (next.lon - centre.lon) * perLon)
+            centre = next
+        }
+        return travelled
     }
 
     /// Where the dolly comes to rest while the subject stands still at `subject`.
@@ -267,15 +312,24 @@ enum FollowCamera {
         // of frame. So the clamp is applied only while the subject stays inside
         // the dead zone; past that the camera follows and shows a little
         // ground beyond the trip's own box, which nobody notices.
+        //
+        // **It absorbs the step that crossed it, and never more** (ADR 2026-09-24).
+        // Once `confine` below has dragged the camera well past the edge, snapping
+        // back the moment the subject re-entered the dead zone was a teleport:
+        // 1.6 km across a 1.9 km frame in one step on a town-sized area, where a
+        // window barely wider than its world makes the case routine. Held past
+        // the edge instead, the camera waits for the subject like anywhere else.
         let worldLat = min(max(state.centreLat, constants.latRange.low), constants.latRange.high)
         let worldLon = min(max(state.centreLon, constants.lonRange.low), constants.lonRange.high)
         if worldLat != state.centreLat,
-           abs(point.lat - worldLat) * constants.metresPerDegreeLat <= constants.halfHeightM {
+           abs(point.lat - worldLat) * constants.metresPerDegreeLat <= constants.halfHeightM,
+           abs(state.centreLat - worldLat) * constants.metresPerDegreeLat <= abs(state.velocityNorth) * dt * (1 + 1e-9) {
             state.velocityNorth = 0
             state.centreLat = worldLat
         }
         if worldLon != state.centreLon,
-           abs(point.lon - worldLon) * constants.metresPerDegreeLon <= constants.halfWidthM {
+           abs(point.lon - worldLon) * constants.metresPerDegreeLon <= constants.halfWidthM,
+           abs(state.centreLon - worldLon) * constants.metresPerDegreeLon <= abs(state.velocityEast) * dt * (1 + 1e-9) {
             state.velocityEast = 0
             state.centreLon = worldLon
         }
