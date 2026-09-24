@@ -69,7 +69,7 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
-- **Camera areas — judge the renders** (ADR 2026-09-24). → `Docs/camera-arcs.md` §5.
+- **Camera areas + floor (e): renders.** → `Docs/handoff-camera-context-floor.md`.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.

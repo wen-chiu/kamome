@@ -30,6 +30,7 @@ extension TrackingConfig.Export {
         case wideSpanPadding = "wide_span_padding"
         case targetZoomRatio = "target_zoom_ratio"
         case cameraAreaSplitRatio = "camera_area_split_ratio"
+        case cameraContext = "camera_context"
         case zoomTransitionS = "zoom_transition_s"
         case actSplitKm = "act_split_km"
         case crossingBeatS = "crossing_beat_s"

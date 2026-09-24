@@ -315,7 +315,8 @@ extension CameraPath {
     /// no area's camera crosses ground faster than
     /// `camera_pan_window_fraction_per_s`, and none wider than its own
     /// establishing framing — `RecapDurationPlan.bodySpanM`'s floor and ceiling,
-    /// over several areas at once.
+    /// over several areas at once — then held at its **context floor**, which
+    /// may exceed that ceiling on purpose (ADR 2026-09-24 (e)).
     ///
     /// ⚠️ **The floor is measured on the camera's travel, not the route's.** The
     /// one-span rule charges `routeDistance / span` windows, which is exact for a
@@ -333,8 +334,10 @@ extension CameraPath {
             )
         }
         let routes = groups.map { points(fromM: $0.fromM, toM: $0.toM, request: request) }
+        // Each area's own floor, never below `camera_span_m` (`CameraPathContext`).
+        let floors = contextFloorsM(groups, request: request)
         func spans(_ factor: Double) -> [Double] {
-            zip(asked, ceilings).map { max(min($0 * factor, $1), config.cameraSpanM) }
+            zip(zip(asked, ceilings), floors).map { max(min($0.0 * factor, $0.1), $1) }
         }
         /// The fastest any area's camera crosses its window, in windows per second,
         /// with the clock shared by screen distance (`buildTimeline`).
