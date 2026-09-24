@@ -1,6 +1,8 @@
 # Camera context floor — "too tight to know where you are"
 
-Status: **analysis + proposal, nothing built.** Every lever below changes what
+Status: **§6 approved by Chiu 2026-09-24 and BUILT as ADR 2026-09-24 (c), but
+not compiled** (no Swift toolchain in that session). Kept below as the analysis.
+Original status: analysis + proposal. Every lever below changes what
 the film looks like, so it waits for Chiu (CLAUDE.md hard rule 2).
 Raised 2026-09-24 by Chiu from a Miyakojima device film under ADR 2026-09-24
 (camera areas): *「宮古島的當地行程又有點zoom in得太近了……最少可以看得出來在哪裡，

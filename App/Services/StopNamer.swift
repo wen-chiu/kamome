@@ -27,7 +27,13 @@ final class StopNamer {
     private let geocoder: StopGeocoding
     private var policy: GeocodePolicy
     private let repository: TripRepository
-    private var queue: [StopRecord] = []
+    /// `townOnly` entries already have a name — the user's, or an earlier
+    /// lookup's — and are asked only for their town, which never touches the name
+    /// and never counts towards `progress` (ADR 2026-09-24 (c)).
+    private var queue: [(stop: StopRecord, townOnly: Bool)] = []
+    /// Towns by the name the lookup returned, so a stop answered from
+    /// `GeocodePolicy`'s name cache still gets its town.
+    private var localityByName: [String: String] = [:]
     private var isWorking = false
     private var onChange: ((Progress) -> Void)?
     private(set) var progress = Progress()
@@ -53,10 +59,26 @@ final class StopNamer {
     func nameUnnamedStops(_ stops: [StopRecord], onChange: ((Progress) -> Void)? = nil) {
         if let onChange { self.onChange = onChange }
         let pending = stops.filter(Self.needsName)
-        queue.append(contentsOf: pending)
+        // Before any town-only entry: names gate the export, towns do not.
+        let firstTownOnly = queue.firstIndex(where: { $0.townOnly }) ?? queue.endIndex
+        queue.insert(contentsOf: pending.map { (stop: $0, townOnly: false) }, at: firstTownOnly)
         progress.total += pending.count
         publish()
         drain()
+    }
+
+    /// Asks for the town of every stop that has a name but was named before
+    /// schema v9 kept towns. Fire-and-forget, behind any naming, on the same
+    /// throttle; the name is never rewritten — it may be the user's own.
+    func fillMissingLocalities(_ stops: [StopRecord]) {
+        queue.append(contentsOf: stops.filter(Self.needsLocality).map { (stop: $0, townOnly: true) })
+        drain()
+    }
+
+    /// Named, but never asked for its town. A stop that still needs a name gets
+    /// its town from that lookup instead.
+    static func needsLocality(_ stop: StopRecord) -> Bool {
+        stop.locality == nil && !needsName(stop)
     }
 
     /// Unnamed — or named with a bare coordinate, which is what the open-sea
@@ -79,48 +101,64 @@ final class StopNamer {
 
     private func drain() {
         guard !isWorking, !queue.isEmpty else { return }
-        let stop = queue.removeFirst()
+        let (stop, townOnly) = queue.removeFirst()
         let now = Date.now.timeIntervalSince1970
 
         switch policy.decision(lat: stop.lat, lon: stop.lon, now: now) {
-        case .cached(let name):
+        case .cached(let name) where !townOnly:
             try? repository.setStopName(stopId: stop.id, name: name)
+            if let town = localityByName[name] { try? repository.setStopLocality(stopId: stop.id, locality: town) }
             finish(named: true)
             drain()
+        case .cached(let name):
+            if let town = localityByName[name] { try? repository.setStopLocality(stopId: stop.id, locality: town) }
+            drain()
         case .throttled(let retryAfterS):
-            queue.insert(stop, at: 0)
+            queue.insert((stop: stop, townOnly: townOnly), at: 0)
             DispatchQueue.main.asyncAfter(deadline: .now() + retryAfterS) { [weak self] in
                 self?.drain()
             }
         case .lookup:
             isWorking = true
-            geocoder.reverseGeocode(lat: stop.lat, lon: stop.lon) { [weak self] name, error in
+            geocoder.reverseGeocodePlace(lat: stop.lat, lon: stop.lon) { [weak self] name, locality, error in
                 guard let self else { return }
                 self.isWorking = false
-                let finishedAt = Date.now.timeIntervalSince1970
-                if let name {
-                    self.policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
-                    try? self.repository.setStopName(stopId: stop.id, name: name)
-                    self.finish(named: true)
-                } else {
-                    // **Charge the throttle anyway.** Advancing the clock only on
-                    // success let one failure release the throttle for the whole
-                    // remaining queue, so CLGeocoder — which rate-limits per app —
-                    // got a burst instead of one request every `min_interval_s`,
-                    // and every stop after the first failure failed with it.
-                    self.policy.recordAttempt(at: finishedAt)
-                    // And say so. This was `_`, so a rate-limited trip produced a
-                    // film full of "Unnamed stop" with nothing anywhere naming a
-                    // cause (Chiu 2026-08-03).
-                    KamomeLog.geocode.error("""
-                        stop naming failed for \(stop.id, privacy: .public) — \
-                        \(error?.localizedDescription ?? "no placemark returned", privacy: .public). \
-                        The stop stays unnamed; reopening trip detail re-queues it.
-                        """)
-                    self.finish(named: false)
-                }
+                self.record(stop, townOnly: townOnly, name: name, locality: locality, error: error)
                 self.drain()
             }
         }
+    }
+
+    /// One lookup's answer, written back. Pulled out of `drain` for length.
+    private func record(_ stop: StopRecord, townOnly: Bool, name: String?, locality: String?, error: Error?) {
+        let finishedAt = Date.now.timeIntervalSince1970
+        guard let name else {
+            // **Charge the throttle anyway.** Advancing the clock only on
+            // success let one failure release the throttle for the whole
+            // remaining queue, so CLGeocoder — which rate-limits per app —
+            // got a burst instead of one request every `min_interval_s`,
+            // and every stop after the first failure failed with it.
+            policy.recordAttempt(at: finishedAt)
+            // A town-only miss stays NULL, so the next open asks again.
+            guard !townOnly else { return }
+            // And say so. This was `_`, so a rate-limited trip produced a
+            // film full of "Unnamed stop" with nothing anywhere naming a
+            // cause (Chiu 2026-08-03).
+            KamomeLog.geocode.error("""
+                stop naming failed for \(stop.id, privacy: .public) — \
+                \(error?.localizedDescription ?? "no placemark returned", privacy: .public). \
+                The stop stays unnamed; reopening trip detail re-queues it.
+                """)
+            finish(named: false)
+            return
+        }
+        policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
+        // "" = asked, no town here: recorded so it is not asked again.
+        let town = locality ?? ""
+        localityByName[name] = town
+        try? repository.setStopLocality(stopId: stop.id, locality: town)
+        guard !townOnly else { return }
+        try? repository.setStopName(stopId: stop.id, name: name)
+        finish(named: true)
     }
 }

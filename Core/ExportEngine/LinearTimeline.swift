@@ -348,7 +348,7 @@ public struct LinearTimeline {
         if time >= titleCardS, time < durationS - endCardS {
             contents.append(.hud(
                 dayLabel: dayLabel(atTime: time),
-                place: holdingStopIndex(atTime: time).flatMap(displayName(of:)),
+                place: hudPlace(atTime: time),
                 // **The local journey, never the flight** (Chiu 2026-09-02). The
                 // trail reveal still uses the whole route — the dashed leg has to
                 // be drawn while the sprite crosses it — so the two readers of

@@ -209,6 +209,14 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE photo_ref ADD COLUMN is_excluded INTEGER NOT NULL DEFAULT 0")
         }
 
+        // Schema v9 — the town a stop is in, for the film's HUD pill (ADR
+        // 2026-09-24 (c)). Nullable, and NULL means "never asked": every stop
+        // named before this is back-filled on its trip's next open
+        // (`StopNamer.fillMissingLocalities`). Forward-only.
+        migrator.registerMigration("v9") { db in
+            try db.execute(sql: "ALTER TABLE stop ADD COLUMN locality TEXT")
+        }
+
         return migrator
     }
 }

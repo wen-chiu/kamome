@@ -32,6 +32,19 @@ final class CameraPathAreasTests: XCTestCase {
         return try TrackingConfigLoader.load(from: Data(edited.utf8)).export
     }
 
+    /// The shipped config with the context floor off (ADR 2026-09-24 (c)): the
+    /// areas' own asks, which is what the area-splitting test pins. The floor on
+    /// top of them is pinned in `CameraPathContextTests`.
+    private func shippedWithoutContext() throws -> TrackingConfig.Export {
+        let json = try String(contentsOf: Self.configURL, encoding: .utf8)
+        let pattern = try NSRegularExpression(pattern: #""context_depth":\s*[0-9.]+"#)
+        let edited = pattern.stringByReplacingMatches(
+            in: json, range: NSRange(json.startIndex..., in: json), withTemplate: #""context_depth": 0"#
+        )
+        XCTAssertNotEqual(edited, json, "the key moved — this helper no longer turns the floor off")
+        return try TrackingConfigLoader.load(from: Data(edited.utf8)).export
+    }
+
     /// A ~1.3 km loop of 12 steps around `centre`, closed.
     private func town(lat: Double, lon: Double) -> [CameraPath.Point] {
         (0...12).map { step in
@@ -63,8 +76,12 @@ final class CameraPathAreasTests: XCTestCase {
     /// The towns get town-sized frames, the drive a wide one — the thing Chiu
     /// asked for — and the tight areas really are tighter than the one span the
     /// old rule gave the whole trip.
+    ///
+    /// Run with the context floor off: the floor deliberately widens the towns
+    /// past `oneSpan / 4` (Chiu, ADR 2026-09-24 (c)), and what this pins is the
+    /// split itself. `CameraPathContextTests` pins the same trip with it on.
     func testATownDriveTownTripIsFramedAtThreeScales() throws {
-        let config = try shipped()
+        let config = try shippedWithoutContext()
         let line = try path(config)
         XCTAssertEqual(line.areaSpansM.count, 3, "areas: \(line.areaSpansM.map { Int($0) })")
         guard line.areaSpansM.count == 3 else { return }

@@ -99,6 +99,23 @@ extension LinearTimeline {
         opensOnTheFlight && flightEndCoordinates != nil && stopIndex == 0
     }
 
+    /// What the HUD pill names beside the day. Parked, the stop itself, exactly
+    /// as before. On the road, **the town of the most recent stop reached**
+    /// (ADR 2026-09-24 (c), Chiu: *「也把地名加進 pill」*) — inherited the way the
+    /// day is, so it turns over on arrival and never flickers out on the road.
+    /// Nothing while a crossing plays: the boarding pass and the flight-end
+    /// marks own *where* there (ADR 2026-09-04 (b)).
+    func hudPlace(atTime time: Double) -> String? {
+        if let stopIndex = holdingStopIndex(atTime: time) { return displayName(of: stopIndex) }
+        if path.arcs.contains(where: { $0.contains(time) }) { return nil }
+        var town = stops.first?.locality
+        for hold in holds where hold.startS <= time {
+            guard stops.indices.contains(hold.stopIndex) else { continue }
+            town = stops[hold.stopIndex].locality
+        }
+        return town
+    }
+
     /// Which day of the trip the film is on: the day of the **most recent stop
     /// reached**, held until the next one is.
     ///

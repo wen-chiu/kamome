@@ -26,6 +26,23 @@ protocol StopGeocoding: AnyObject {
     func reverseGeocode(
         lat: Double, lon: Double, completion: @escaping (_ name: String?, _ error: Error?) -> Void
     )
+
+    /// The same lookup, also answering the **town** the stop is in
+    /// (`CLPlacemark.locality`) for the film's HUD pill (ADR 2026-09-24 (c)).
+    /// One request either way. Defaulted below to `reverseGeocode` with no town,
+    /// so a stub that only names stops still conforms.
+    func reverseGeocodePlace(
+        lat: Double, lon: Double,
+        completion: @escaping (_ name: String?, _ locality: String?, _ error: Error?) -> Void
+    )
+}
+
+extension StopGeocoding {
+    func reverseGeocodePlace(
+        lat: Double, lon: Double, completion: @escaping (String?, String?, Error?) -> Void
+    ) {
+        reverseGeocode(lat: lat, lon: lon) { name, error in completion(name, nil, error) }
+    }
 }
 
 /// The shipping implementation: CLGeocoder, honoring device locale so Chinese
@@ -38,6 +55,15 @@ final class CLGeocoderStopGeocoder: StopGeocoding {
     ) {
         geocoder.reverseGeocodeLocation(CLLocation(latitude: lat, longitude: lon)) { placemarks, error in
             completion(Self.displayName(from: placemarks?.first), error)
+        }
+    }
+
+    func reverseGeocodePlace(
+        lat: Double, lon: Double, completion: @escaping (String?, String?, Error?) -> Void
+    ) {
+        geocoder.reverseGeocodeLocation(CLLocation(latitude: lat, longitude: lon)) { placemarks, error in
+            let placemark = placemarks?.first
+            completion(Self.displayName(from: placemark), placemark?.locality, error)
         }
     }
 

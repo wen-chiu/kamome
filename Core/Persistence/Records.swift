@@ -130,9 +130,12 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     public var name: String?
     public var note: String?
     public var kind: String?
+    /// `CLPlacemark.locality` (schema v9, ADR 2026-09-24 (c)). NULL = never
+    /// asked; "" = asked, and the geocoder had no town for this spot.
+    public var locality: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, lat, lon, name, note, kind
+        case id, lat, lon, name, note, kind, locality
         case tripId = "trip_id"
         case arrivedAt = "arrived_at"
         case departedAt = "departed_at"
@@ -147,7 +150,8 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         departedAt: Double? = nil,
         name: String? = nil,
         note: String? = nil,
-        kind: String? = nil
+        kind: String? = nil,
+        locality: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -158,6 +162,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.name = name
         self.note = note
         self.kind = kind
+        self.locality = locality
     }
 }
 
