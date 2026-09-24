@@ -62,7 +62,7 @@ enum RecapComposer {
         if segment.matchedPolyline != nil { return .reconstructed }
         switch segment.segmentSource {
         case .gpsHifi, .gpsPassive: return .recorded
-        case .exif, .timeline: return .inferred
+        case .exif, .timeline, .mergeGap: return .inferred
         }
     }
 

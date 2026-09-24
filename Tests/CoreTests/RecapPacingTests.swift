@@ -284,9 +284,11 @@ final class RecapPacingTests: XCTestCase {
         XCTAssertGreaterThan(abs(moved.lat - start.lat), 1e-4)
     }
 
-    /// **The body never zooms, and never cuts** (Chiu 2026-08-01). The camera may
+    /// **The body never zooms, and never cuts** (Chiu 2026-08-01) — for a
+    /// one-area film, which this hand-built config always is. The camera may
     /// translate — that is the dolly following the journey — but the span is
-    /// fixed for the whole trip and consecutive frames always share their ground.
+    /// fixed and consecutive frames always share their ground. Several areas zoom
+    /// only in reframe beats (ADR 2026-09-24, `CameraPathAreasTests`).
     ///
     /// This replaced an assertion that the camera was *completely* still after
     /// the opening. That rule came from the act camera, where holding still was

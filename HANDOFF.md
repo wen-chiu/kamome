@@ -69,6 +69,7 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
+- **Camera areas — judge the renders** (ADR 2026-09-24). → `Docs/camera-arcs.md` §5.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
@@ -88,8 +89,8 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **Photo selection:** deck fix and picker done; Vision hero photos owed; no
-  film re-rendered, picker unseen with real photos. → ADR 2026-09-24.
+- 🟠 **Crash-safe recording and trip merge (ADR 2026-09-24 (b)); device checks owed.**
+  → `Docs/handoff-long-recording.md`.
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
   T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
   mode — and T5, the first-run notice that backgrounds the app, which did not
@@ -108,7 +109,7 @@ string stands. Do not reopen this from scratch.
   And `VehicleCatalog.resolve`
   still misses now and then and silently draws the fallback badge instead of the
   car (1 render in 5 on 2026-09-16; device rate **UNKNOWN**,
-  → `Docs/handoff-subject-lookup.md`). Content-derived pacing: closed, ADR 2026-09-19.
+  → `Docs/handoff-subject-lookup.md`).
   The question that catches the class: *"does the shipping path ever call this?"*
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
@@ -118,8 +119,7 @@ string stands. Do not reopen this from scratch.
   `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
   would satisfy. → `Docs/release-readiness.md` C4.
 - 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
-  re-export, and three crash-free exports. Every crossing flies a plane,
-  ferries too; beaches are no longer crossings (ADR (c)).
+  re-export + three crash-free exports.
   → `Docs/handoff-type2-round-trip.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).

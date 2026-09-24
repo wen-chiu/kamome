@@ -101,7 +101,7 @@ public extension TripRepository {
         return tripId
     }
 
-    private func insertSegment(_ segment: NewSegment, tripId: String, into db: Database) throws {
+    internal func insertSegment(_ segment: NewSegment, tripId: String, into db: Database) throws {
         let segmentId = UUID().uuidString
         try SegmentRecord(
             id: segmentId, tripId: tripId, mode: segment.mode,

@@ -229,15 +229,23 @@ public struct TrackingConfig: Decodable, Equatable {
         /// is a degenerate input for the §4.5 recap camera path.
         public let minDurationS: Double
         public let minDistanceM: Double
+        /// Merging trips (ADR 2026-09-24 (b)): when one part ends and the next
+        /// begins at least this far apart, a gap leg joins them; closer, and
+        /// the time between is an overnight stop where the first part ended.
+        /// **INFERRED**: 500 m covers a hotel and its car park, and anything
+        /// farther is a different place. Not measured on real merges.
+        public let mergeGapMinM: Double
 
-        public init(minDurationS: Double, minDistanceM: Double) {
+        public init(minDurationS: Double, minDistanceM: Double, mergeGapMinM: Double = 500) {
             self.minDurationS = minDurationS
             self.minDistanceM = minDistanceM
+            self.mergeGapMinM = mergeGapMinM
         }
 
         enum CodingKeys: String, CodingKey {
             case minDurationS = "min_duration_s"
             case minDistanceM = "min_distance_m"
+            case mergeGapMinM = "merge_gap_min_m"
         }
     }
 

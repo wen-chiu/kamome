@@ -3092,223 +3092,240 @@
         }
       }
     },
-    "stop_photos_row": {
+    "end_trip_confirm_title": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose photos for the film"
+            "value": "End this trip?"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "挑選影片的照片"
+            "value": "要結束這趟旅程嗎？"
           }
         }
       }
     },
-    "stop_photos_in_film": {
+    "end_trip_confirm_message": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld of %2$lld photos are in the film"
+            "value": "The trip is saved and can be turned into a film. An ended trip can't be continued — if you're only stopping for the night, keep recording."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "影片會用其中 %1$lld 張（共 %2$lld 張）"
+            "value": "旅程會儲存下來，可以做成影片。結束後就無法接續錄製；如果只是晚上休息，繼續錄製就好。"
           }
         }
       }
     },
-    "stop_photos_not_in_film": {
+    "end_trip_keep_recording": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This stop isn’t in the film yet. Star a photo to bring it in."
+            "value": "Keep Recording"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這一站目前不在影片裡。幫一張照片加星號，就會放進去。"
+            "value": "繼續錄製"
           }
         }
       }
     },
-    "stop_photos_hint": {
+    "recording_resumed_notice": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a photo to star it: starred photos always go in the film, up to %lld per stop. Press and hold to leave one out. Kamome picks the rest from across the whole visit."
+            "value": "Kamome was closed, so recording picked up again by itself. About %@ has no track."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點一下照片加星號：有星號的照片一定會放進影片，每站最多 %lld 張。長按可以把照片排除。其餘由 Kamome 從整段停留中挑選。"
+            "value": "Kamome 曾被關閉，已自動接續錄製。其間約 %@ 沒有軌跡。"
           }
         }
       }
     },
-    "stop_photos_include": {
+    "recording_resumed_dismiss": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use in Film"
+            "value": "Dismiss"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "可以放進影片"
+            "value": "關閉"
           }
         }
       }
     },
-    "stop_photos_exclude": {
+    "trip_merge_action": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Leave Out of Film"
+            "value": "Merge Trips…"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "不要放進影片"
+            "value": "合併旅程…"
           }
         }
       }
     },
-    "stop_photos_tile_hint": {
+    "trip_merge_title": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap to add or remove the star. Press and hold to leave it out of the film."
+            "value": "Merge Trips"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點一下加上或移除星號，長按可以排除在影片外。"
+            "value": "合併旅程"
           }
         }
       }
     },
-    "stop_photos_a11y_in_film": {
+    "trip_merge_confirm": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Photo %lld in the film"
+            "value": "Merge"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "影片第 %lld 張"
+            "value": "合併"
           }
         }
       }
     },
-    "stop_photos_a11y_starred": {
+    "trip_merge_empty": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Starred"
+            "value": "There are no other finished trips to merge with."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已加星號"
+            "value": "沒有其他已結束的旅程可以合併。"
           }
         }
       }
     },
-    "stop_photos_a11y_excluded": {
+    "trip_merge_overlap": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Left out of the film"
+            "value": "Overlaps this trip — can't be merged"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "不放進影片"
+            "value": "和這趟時間重疊，無法合併"
           }
         }
       }
     },
-    "stop_photos_a11y_not_in_film": {
+    "trip_merge_explainer": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not in the film"
+            "value": "Pick the trips to merge with this one. They become one trip and one film; films already made are kept. Road between the trips that nothing recorded is shown as inferred, the way photo-rebuilt legs are. If any part was rebuilt from photos, the whole trip is marked that way. Merging can't be undone."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "不在影片裡"
+            "value": "選擇要和這趟合併的旅程。合併後會變成一趟旅程、做成一支影片，已經做好的影片會保留。兩段之間沒有記錄到的路，會和照片重建的路段一樣以推測方式呈現；只要有一段是照片重建的，整趟就標示為照片重建。合併後無法復原。"
           }
         }
       }
     },
-    "recap_photos_section": {
+    "trip_merge_busy": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Photos in the film"
+            "value": "A film is being exported from one of these trips. Merge after it finishes."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "影片裡的照片"
+            "value": "其中一趟旅程正在匯出影片，請等匯出完成再合併。"
           }
         }
       }
     },
-    "recap_photos_section_footer": {
+    "trip_merge_failed_overlap": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tap a stop to change its photos. Starred photos always go in; you can leave any photo out."
+            "value": "Two of the picked trips overlap in time, so they can't be merged."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點一個站點來更換照片：有星號的一定會放進去，也可以排除不想要的照片。"
+            "value": "選取的旅程之間有時間重疊，無法合併。"
+          }
+        }
+      }
+    },
+    "trip_merge_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These trips couldn't be merged."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法合併這些旅程。"
           }
         }
       }
