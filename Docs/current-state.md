@@ -6,8 +6,9 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-24 (b)** and `main` at
-**PR #89** (**ADR 2026-09-24**: the body is framed per camera
+Last synced: 2026-09-24 against decisions.md **2026-09-24 (d)** and `main` at
+**PR #91** (the Stop Editor photo picker — star / leave out, schema v8
+`photo_ref.is_excluded`; **no ADR yet**). PR #92: ADR (b), below. PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
 renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PR #88: export perf §7. PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
@@ -32,6 +33,9 @@ no coordinate as a milestone.
 parts can mix, with provenance per segment and the whole marked reconstructed. A far
 gap between parts is an inferred `merge_gap` leg, a near one an overnight stop. Films are
 kept. PR #90 makes a recording survive the app being killed (`Docs/handoff-long-recording.md`).
+**ADRs 2026-09-24 (c)–(d)**: delete stops the export; Home's swipe asks;
+side-load off in Release; About exports diagnostics; the database stays in
+device backup. `Docs/handoff-arch-review-2026-09-24.md`.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims

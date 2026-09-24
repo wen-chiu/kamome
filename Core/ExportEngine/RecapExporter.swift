@@ -102,17 +102,27 @@ public struct RecapExporter {
         let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
         // With an MP4 every frame is used; without one, only the GIF's.
         let wanted: (Int) -> Bool = video != nil ? { _ in true } : { gif?.keeps(frame: $0) ?? false }
-        let stats = try await loop.renderFrames(only: wanted) { frame, image in
-            guard shouldContinue() else {
-                cancelled = true
-                return false
+        let stats: RecapRenderLoop.RenderStats
+        do {
+            stats = try await loop.renderFrames(only: wanted) { frame, image in
+                guard shouldContinue() else {
+                    cancelled = true
+                    return false
+                }
+                try video?.append(image, frame: frame)
+                try gif?.append(image, frame: frame)
+                progress?(Double(frame + 1) / Double(timeline.frameCount))
+                return true
             }
-            try video?.append(image, frame: frame)
-            try gif?.append(image, frame: frame)
-            progress?(Double(frame + 1) / Double(timeline.frameCount))
-            return true
+        } catch {
+            // Let the writer go on purpose; the caller deletes the partial file.
+            video?.cancel()
+            throw error
         }
-        guard !cancelled else { return nil }
+        guard !cancelled else {
+            video?.cancel()
+            return nil
+        }
 
         let finishStarted = ContinuousClock.now
         try await video?.finish()

@@ -35,6 +35,12 @@ public enum KamomeLog {
     /// terminated mid-trip — counts and durations only, never a position (§0).
     /// The drive-test CSV is DEBUG-only, so this is what a TestFlight build has.
     public static let recording = Logger(subsystem: subsystem, category: "recording")
+    /// Database reads and writes the app used to swallow with `try?` (arch
+    /// review 2026-09-24, P1-5). What failed is named by a fixed string, never
+    /// by the data being written.
+    public static let storage = Logger(subsystem: subsystem, category: "storage")
 
-    private static let subsystem = "com.chiu.kamome"
+    /// Public so the diagnostics export (About) can read back exactly these
+    /// lines and nothing else from the unified log.
+    public static let subsystem = "com.chiu.kamome"
 }

@@ -41,7 +41,7 @@ final class FilmPhotoChoices {
     }
 
     func reload() {
-        detail = try? repository.detail(tripId: tripId)
+        detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
         decks = detail.map { RecapComposer.filmDecks(detail: $0, config: config) } ?? [:]
     }
 
@@ -58,7 +58,7 @@ final class FilmPhotoChoices {
     func filmDeck(for stopId: String) -> [String] { decks[stopId] ?? [] }
 
     func setChoice(_ choice: PhotoRefRecord.FilmChoice, photo: PhotoRefRecord) {
-        try? repository.setPhotoFilmChoice(photoId: photo.id, choice: choice)
+        Stored.write("setPhotoFilmChoice") { try repository.setPhotoFilmChoice(photoId: photo.id, choice: choice) }
         reload()
         onChange()
     }

@@ -84,7 +84,7 @@ final class StopNamer {
 
         switch policy.decision(lat: stop.lat, lon: stop.lon, now: now) {
         case .cached(let name):
-            try? repository.setStopName(stopId: stop.id, name: name)
+            Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
             finish(named: true)
             drain()
         case .throttled(let retryAfterS):
@@ -100,7 +100,7 @@ final class StopNamer {
                 let finishedAt = Date.now.timeIntervalSince1970
                 if let name {
                     self.policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
-                    try? self.repository.setStopName(stopId: stop.id, name: name)
+                    Stored.write("setStopName") { try self.repository.setStopName(stopId: stop.id, name: name) }
                     self.finish(named: true)
                 } else {
                     // **Charge the throttle anyway.** Advancing the clock only on

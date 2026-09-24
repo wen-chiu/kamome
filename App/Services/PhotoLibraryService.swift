@@ -110,7 +110,7 @@ final class PhotoLibraryService: PhotoAccessProviding {
                 return
             }
             let refs = self.buildRefs(tripId: tripId, startedAt: startedAt, endedAt: endedAt, stops: stops)
-            try? self.repository.replacePhotoRefs(tripId: tripId, with: refs)
+            Stored.write("replacePhotoRefs") { try self.repository.replacePhotoRefs(tripId: tripId, with: refs) }
             DispatchQueue.main.async { completion(refs.count) }
         }
     }
@@ -142,7 +142,7 @@ final class PhotoLibraryService: PhotoAccessProviding {
         // seen keeps Kamome's own record, so a favourite the person un-starred
         // or left out here does not come back (ADR 2026-09-24).
         let known = Dictionary(
-            ((try? repository.photoRefs(tripId: tripId)) ?? []).map { ($0.phAssetId, $0) },
+            (Stored.read("photoRefs") { try repository.photoRefs(tripId: tripId) } ?? []).map { ($0.phAssetId, $0) },
             uniquingKeysWith: { first, _ in first }
         )
 

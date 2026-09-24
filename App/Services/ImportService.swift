@@ -98,7 +98,9 @@ struct ImportService {
         // The subject is recorded at creation, never at render: the row then
         // states what the film draws, so changing the default later cannot
         // restyle a trip someone already made.
-        try? repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
+        Stored.write("setTripVehicle") {
+            try repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
+        }
         return tripId
     }
 
@@ -110,9 +112,9 @@ struct ImportService {
     func existingTrip(for photos: [ImportPhoto]) -> String? {
         let plan = self.plan(for: photos)
         let kept = plan.stops.flatMap(\.photoAssetIds) + plan.routeAttachedAssetIds
-        return try? repository.tripHoldingMost(
-            assetIds: kept, minShare: config.photoImport.duplicatePhotoShare
-        )
+        return Stored.read("tripHoldingMost") {
+            try repository.tripHoldingMost(assetIds: kept, minShare: config.photoImport.duplicatePhotoShare)
+        }
     }
 
     private func plan(for photos: [ImportPhoto]) -> ImportedTripPlan {

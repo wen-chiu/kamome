@@ -40,7 +40,8 @@ extension TrackingConfig.Export {
             tierStandardPhotos: Int, tierTopPhotos: Int,
             earnedStopsFloor: Int, earnedStopsCap: Int,
             earnedStopsPerDoubling: Double, earnedStopsReferenceTripStops: Int,
-            recapMode: RecapMode
+            recapMode: RecapMode,
+            pipeline: TrackingConfig.ExportPipeline = .handBuilt
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
             self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
@@ -91,6 +92,6 @@ extension TrackingConfig.Export {
             self.earnedStopsCap = earnedStopsCap
             self.earnedStopsPerDoubling = earnedStopsPerDoubling
             self.earnedStopsReferenceTripStops = earnedStopsReferenceTripStops
-            self.recapMode = recapMode
+            self.recapMode = recapMode; self.pipeline = pipeline
         }
 }

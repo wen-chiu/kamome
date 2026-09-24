@@ -153,5 +153,28 @@ if [ -n "$plists" ]; then
   fi
 fi
 
+# 6. The map-region side-load is a testing feature (arch review 2026-09-24). With
+#    it on, the Documents folder is open in Finder and a .pmtiles file dropped
+#    there overrides OpenFreeMap in the film. KAMOME_SIDELOAD_REGIONS=YES is how a
+#    testing build is made on purpose; this is the check that such a build is
+#    never the one submitted.
+if [ -n "$plists" ]; then
+  sideload=0
+  while read -r plist; do
+    for entry in UIFileSharingEnabled LSSupportsOpeningDocumentsInPlace; do
+      if /usr/libexec/PlistBuddy -c "Print :$entry" "$plist" >/dev/null 2>&1; then
+        kamome_fail "$entry is set in ${plist#"$root"} — the map-region side-load is a testing switch"
+        sideload=1
+      fi
+    done
+  done <<< "$plists"
+  if [ "$sideload" -eq 0 ]; then
+    kamome_ok "no bundled Info.plist opens the side-load folder"
+  else
+    kamome_info "Was this archived with KAMOME_SIDELOAD_REGIONS=YES? project.yml, \"Switch: side-loaded map regions\"."
+    failures=$((failures + 1))
+  fi
+fi
+
 [ "$failures" -eq 0 ] && exit 0
 exit 1
