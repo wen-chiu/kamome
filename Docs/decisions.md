@@ -6067,3 +6067,95 @@ things proposed. This amends (e) points 1 and 3.
 
 **INFERRED:** that `transit` is always ground (a ferry routed as `road` would
 count). Cheapest check: a ferry trip's segment verdicts in `RecapTimelineReportTests`.
+
+## 2026-09-24 — The body is framed area by area: a town at town scale, a drive at drive scale
+
+**Decision (Chiu, 2026-09-24).** Reviewing his Vietnam and Miyakojima films:
+*「到當地之後zoom in的畫面不成比例 如果都只有在市區移動 應該放大到整個市區……目的地行程路線根本看不清楚」*.
+Shown the measurement below, he reopened by name the line this project had held
+since 2026-08-01/02 — **one span per trip, never adaptive, per-segment framing
+rejected** — and chose the design put to him: *「我重開這個決策，照你的設計做」*.
+Amends 2026-08-01 (one span), 2026-08-02 (per-act rejection) and 2026-08-09
+(`body = established / target_zoom_ratio`), which survives as the rule **each
+area applies to itself**.
+
+### 1. Why — measured, not inferred
+
+Desk probe over every fixture, offline routing, `establishing: nil` (VERIFIED
+2026-09-23): the body span was **0.60 × the fitting span of the whole
+destination's bounding box on all seven**, i.e. `wide_span_padding /
+target_zoom_ratio`; the pan floor bound none. A bounding box belongs to its
+farthest point — an out-of-town airport, one day trip — and that one number
+framed every stop. Chiu's Miyakojima dump: box 31.6 × 21.1 km, body 19.0 km,
+arrival day's stops inside 1.5 × 0.6 km. Vietnam: **UNKNOWN** — no dump exists
+at the desk (Chiu: no photos on the Mac); the mechanism is general.
+
+### 2. What was built (`CameraPathAreas`, `CameraPathAreaCamera`)
+
+1. **Areas.** The route is cut at every stop into stretches. Each stretch asks
+   for the old rule on its own extent and accepts any span within
+   `camera_area_split_ratio` (**1.5, INFERRED**, new key) of that, either way;
+   consecutive stretches share an area while those bands still overlap
+   (greedy, minimal). A crossing always closes an area — its arc carries the
+   change of scale, now even when the arc would otherwise collapse.
+2. **Two merges, to a fixed point.** A seam whose spans differ by less than
+   `opening_collapse_zoom_ratio` is not a zoom; an area held for less than
+   **2 × `zoom_transition_s`** (on screen for less than it took to arrive at
+   it) is absorbed by its nearer-span neighbour. No key of its own: a first cut
+   with an 8 s minimum absorbed the drive between two towns.
+3. **The reframe beat.** A change of area at a stop is its own beat of
+   `zoom_transition_s` (capped like a crossing beat), the vehicle **waiting**
+   (a `.travel(m, m)` entry): a pure contained zoom (`containedLerp`, apex when
+   neither frame contains the other). **A stop's scene is shown at the tighter
+   of its two framings** — the beat plays before the scene when zooming in,
+   after it when zooming out — and a scene never zooms.
+4. **Travel is paced by screen distance** (ground metres ÷ area span), so the
+   window crosses at one rate everywhere. The pan floor becomes one common
+   factor over all areas, and is charged on the **dolly's own travel**
+   (`FollowCamera.travelM`), not the route's: a loop inside the frame moves the
+   camera not at all. Charged by route length it floored Miyakojima's town at
+   2× its ask.
+5. **One area = the old film, bit for bit.** `AreaPlan.make` returns nil and
+   the one-span path runs unchanged (`testAOneAreaTripIsUnchangedByAreas`).
+   Hand-built test configs default the ratio to infinity for the same reason.
+
+### 3. A latent `FollowCamera` defect, fixed in passing
+
+The world clamp snapped the frame back into range the moment the subject
+re-entered the dead zone, however far `confine` had dragged it out: 1.6 km across
+a 1.9 km frame in one step (VERIFIED, round-trip fixture). The clamp now absorbs
+only the step that crossed it. Worst frame-to-frame overlap across the gate's
+fixtures rose from 68–70% to 93–99%.
+
+### 4. Measured after (VERIFIED at the desk, 2026-09-24)
+
+- `miyakojima-round-trip` lands on **1.9 km** (the one-span rule: 19.5 km);
+  Chiu's Miyakojima dump flown from Taoyuan: areas 8.7 / 18.5 / 8.5 / 4.7 km
+  against 19.0 km throughout (offline routing; the routed render differs).
+- Continuity, safe-zone, resting-frame and the new area gate pass on local dumps
+  **and** on the committed fixtures (CI parity).
+- Renders: `miyakojima-round-trip` areas on/off contact sheet, and Chiu's
+  Miyakojima flown film — local only, `~/Kamome-wt/renders-*`.
+
+### 5. The car before the plane — fixed (Chiu, reviewing the renders)
+
+*「開頭要出現飛機之前他還是會不小心跑出一個車子 一下子而已 但我希望改好」*. Pre-existing,
+not caused by §2: the subject's role was read off the crossing beat alone, so the
+departure airport's pull-away ramp drew the **car** for `subject_park_s` just
+before the flight, and the landing stop's park-in drew it again (VERIFIED on all
+three flight fixtures: 6.03–6.40 s and 10.43–10.77 s on the round trip).
+**Rule now** (`LinearTimeline.subjectRole`): moving, the role is the stretch's;
+standing still, it is the nearest movement's. A local film is unaffected — every
+movement there is a drive. Pinned by
+`testNoCarIsDrawnFromTheOpeningUntilTheFirstStopAfterLanding`, which fails on the
+old rule.
+
+### ⏳ Owed / open
+
+- **Chiu judges the renders**, including the road-trip case: Iceland's dump now
+  changes scale 11 times in 211 s (150 → 6.6 → 53 … km) and New Zealand's
+  spans 1.5–250 km. If that reads as pumping, the levers are
+  `camera_area_split_ratio` (wider band, fewer areas) and the 2-beat minimum.
+- **The film's pacing moved**: tight areas now get more travel seconds than
+  their kilometres did. Film length is unchanged (`RecapDurationPlan`).
+- Vietnam and a device export: UNKNOWN until re-exported on the phone.

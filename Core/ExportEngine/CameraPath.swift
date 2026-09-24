@@ -15,7 +15,7 @@ import KamomeTrackingEngine
 ///
 /// The **camera** (`cameraFrame`) is a separate concern from the vehicle
 /// (`position`). Since 2026-08-01 it is a **dead-zone dolly** (`FollowCamera`):
-/// one span fixed for the whole trip, translation only, and it moves solely when
+/// one span per **area** (`CameraPathAreas`, ADR 2026-09-24), translation only, moving solely when
 /// the journey's leading edge presses against the dead zone. It is never
 /// *placed* — only ever moved from where it already was — because two
 /// consecutive frames must always share meaningful geography.
@@ -78,11 +78,20 @@ public struct CameraPath {
     let timeline: [TimelineEntry]
 
     /// The body camera, pre-simulated once per frame (Chiu 2026-08-01). A
-    /// dead-zone dolly at a span fixed for the whole trip — see `FollowCamera`.
+    /// dead-zone dolly per area, each at its area's span — see `FollowCamera`.
     /// Acts no longer frame anything; they only report where the journey leaps.
     private let track: [CameraFrame]
-    /// The trip's one body span. Every frame of the body uses it.
+    /// The body span the opening hands to. On a one-area film every frame of the
+    /// body uses it; with several areas it is the first one's (`areaSpansM`).
     let bodySpanM: Double
+    /// Every area's span, in film order — one entry on a one-area film
+    /// (`CameraPathAreas`, ADR 2026-09-24).
+    let areaSpansM: [Double]
+    /// The moves over the reframe beats between areas. Empty on a one-area film.
+    let reframeArcs: [Arc]
+    /// The world the body camera starts in — the route's bounds on a one-area
+    /// film, the first area's otherwise. What the opening's handoff is predicted in.
+    let bodyStartBounds: Bounds
     /// The crossing moves, in film time (`Docs/camera-arcs.md` §3). Empty for
     /// every trip with a road under all of it, which is why a local trip's camera
     /// does not change at all (§4 Case A).
@@ -191,22 +200,20 @@ public struct CameraPath {
         let crossings = opening.crossings, span = opening.bodySpanM, plan = opening.plan
         let opensOnTheFlight = opening.opensOnTheFlight
         bodySpanM = span; wideEndS = plan.wideEndS; self.crossings = crossings
-        let journeyTimeline = Self.buildTimeline(
-            anchors: anchors, totalM: totalM, config: config,
-            stopHoldsS: stopHoldsS, crossings: crossings,
-            startS: plan.openingEndsS, targetS: plan.journeyEndS
-        )
-        timeline = journeyTimeline; self.fps = config.fps; cutConfig = config
-        durationS = total; frameCount = frames
-
-        zoomTransitionS = config.zoomTransitionS; followHeadingUp = config.followHeadingUp
-        prologue = plan.prologue; openingEndsS = plan.openingEndsS
-        titleCutS = plan.prologue?.cutTimeS
-
-        track = Self.simulatedTrack(TrackRequest(
-            route: route, cumulativeM: cumulative, journeyTimeline: journeyTimeline,
+        let areaPlan = opening.areaPlan; areaSpansM = areaPlan?.areas.map(\.spanM) ?? [span]
+        bodyStartBounds = areaPlan?.areas[0].bounds ?? Self.bounds(of: route)
+        let body = Self.bodyCamera(TrackRequest(
+            route: route, cumulativeM: cumulative, journeyTimeline: [],
             frameCount: frames, fps: config.fps, durationS: total, spanM: span, config: config
-        ))
+        ), journey: Journey(
+            anchors: anchors, totalM: totalM, stopHoldsS: stopHoldsS, crossings: crossings,
+            startS: plan.openingEndsS, endS: plan.journeyEndS
+        ), areaPlan: areaPlan)
+        let journeyTimeline = body.timeline
+        timeline = journeyTimeline; self.fps = config.fps; cutConfig = config; durationS = total; frameCount = frames
+        zoomTransitionS = config.zoomTransitionS; followHeadingUp = config.followHeadingUp
+        prologue = plan.prologue; openingEndsS = plan.openingEndsS; titleCutS = plan.prologue?.cutTimeS
+        track = body.track; reframeArcs = body.reframeArcs
         endRevealStartS = plan.revealS > 0 ? plan.journeyEndS : nil
         // The reveal opens out to the **destination** on a type-2 film — a reveal
         // fitted to the union would fly back out over the flight, and on a
@@ -277,8 +284,9 @@ public struct CameraPath {
     ///    beat into the live follow camera. The target is `track[frame]`, not a
     ///    stored copy of it, so at `openingS` the two are the same value by
     ///    construction and the handoff cannot drift.
-    /// 3. **Body.** The dead-zone dolly at a span fixed for the trip:
-    ///    translation only, never a zoom, never a rotation, never a cut.
+    /// 3. **Body.** The dead-zone dolly at its area's span: translation only,
+    ///    never a rotation, never a cut — and a zoom only in a reframe beat
+    ///    between two areas, while the vehicle waits (ADR 2026-09-24).
     /// 4. **End reveal.** After the journey, an eased pull-back to the whole
     ///    route — its own beat, which is why the body can stay fixed.
     ///
@@ -295,7 +303,7 @@ public struct CameraPath {
         let live = trackFrame(atTime: time)
 
         let composed: CameraFrame
-        if let arc = arcs.first(where: { $0.contains(time) }), time >= openingEndsS,
+        if let arc = (arcs + reframeArcs).first(where: { $0.contains(time) }), time >= openingEndsS,
            endRevealStartS.map({ time < $0 }) ?? true {
             // The crossing owns the frame while it plays. Checked before the body
             // and after the film's two edges: an arc that overlapped the opening

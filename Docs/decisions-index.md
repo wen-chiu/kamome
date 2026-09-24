@@ -55,7 +55,7 @@ does not.
 | 35 | `2026-07-31` | Day and distance become persistent HUD, not stop chrome |  |
 | 36 | `2026-08-06` | Stop presentation is budget-constrained — derive the count, never assume one |  |
 | 37 | `2026-08-08` | MVP substrate is OSRM + MapLibre, behind swappable boundaries | **amended by 2026-08-15** (`decisions.md`:1314) |
-| 38 | `2026-08-09` | The recap camera: a configured zoom, and a wider establishing shot |  |
+| 38 | `2026-08-09` | The recap camera: a configured zoom, and a wider establishing shot | Amended by `2026-09-24`: now the rule each camera area applies to itself |
 | 39 | `2026-08-13` | The Replay MVP gate splits: §6a the film (desk, Variant A), §6b the product (phone, Variant B) | closed by 2026-08-15 (Phase 3.5) |
 | 40 | `2026-08-15` | Phase 3.5 closes: §6a passed, §6b did not, and the phase map catches up |  |
 | 41 | `2026-08-15` | MapLibre is parked, Apple Maps is what ships, and routing moves behind an API |  |
@@ -111,3 +111,4 @@ does not.
 | 92 | `2026-09-23 (d)` | Home: import stays the hero, recording is one named button; a repeat import offers the trip that exists | **Chiu 2026-09-23.** S1's caption + segmented picker + "Start Journey" become one bordered 「記錄一趟旅程」 button opening `StartRecordingSheet`. Repeat imports: sheet offers the existing trip or a second copy; Discovery stops offering it. New key `import.duplicate_photo_share` 0.5, INFERRED |
 | 93 | `2026-09-23 (e)` | The beta timeline goes compact: place and date on one line, visits and time at home, provenance by exception | **Chiu 2026-09-23.** Discovery list only: three lines, no thumbnails; recorded journeys get a glyph, photo ones nothing (2026-07-20 not reopened); "3rd trip to Japan" abroad, overlaps one visit; "2 months at home" behind `discovery.show_home_gaps`; coordinates never milestones. INFERRED: visit wording within the lookback |
 | 94 | `2026-09-23 (f)` | The entry gets a drawer; kilometres are ground-only; the visit is a pill | **Chiu 2026-09-23.** Two collapsed lines (route + days + ground km); chevron opens photos (8), route, counts, 「相簿裡第2次到日本 · 上次是…」 and the diary link in place; km = ground modes with a road verdict, flights and unrouted legs out. INFERRED: transit is always ground |
+| 95 | `2026-09-24` | The body is framed area by area: a town at town scale, a drive at drive scale | **Chiu 2026-09-24**, reopening one-span-per-trip by name. Areas from stop-to-stop stretches within `camera_area_split_ratio` (1.5, INFERRED); zoom only in a reframe beat with the vehicle waiting, stop shown at the tighter framing; travel paced by screen distance; pan floor on dolly travel; one area = old film bit for bit; `FollowCamera` clamp snap fixed. Amends 2026-08-01, 2026-08-02, 2026-08-09 |

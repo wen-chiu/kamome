@@ -32,9 +32,10 @@ extension CameraPathTests {
         }
     }
 
-    /// The span is fixed for the whole trip, and the body never zooms. Only the
-    /// opening and the closing reveal may change it, and both are outside the
-    /// journey — this is the product rule that keeps the world measurable.
+    /// **A one-area film's body never zooms.** Only the opening and the closing
+    /// reveal may change its span. Since ADR 2026-09-24 a film with several areas
+    /// also zooms in its reframe beats — pinned in `CameraPathAreasTests`; this
+    /// hand-built config has areas off, so it pins the one-area case.
     func testBodySpanNeverChangesWhileTravelling() throws {
         let config = exportConfig()
         let path = try XCTUnwrap(CameraPath(route: longRoute, stops: [longRoute[5]], config: config))

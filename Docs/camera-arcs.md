@@ -292,6 +292,25 @@ lacked. Do not build it pre-emptively. If renders show short segments framed too
 wide, that is the evidence to reopen it, and it should be reopened as a product
 decision, not a tuning pass.
 
+> 📏 **MEASURED 2026-09-23 — the evidence this section asked for** (Chiu, Vietnam
+> and Miyakojima device films: *「到當地之後zoom in的畫面不成比例……目的地行程路線根本看不清楚」*).
+> Desk probe, offline routing, `establishing: nil`: body span ÷ fitting span of the
+> destination's whole bounding box = **0.60 on every fixture** (miyakojima-round-trip,
+> ishigaki-crossing, auckland-crossing, a local Miyakojima dump flown from Taoyuan,
+> iceland, new-zealand) — i.e. `wide_span_padding / target_zoom_ratio`. The pan floor
+> binds on none (Miyakojima: floor 11.8 km, body 19.0 km). VERIFIED at the desk.
+>
+> So the frame is set by the **bounding box**, a statistic owned by the single
+> farthest point — an out-of-town airport or one day trip — and then held for
+> every stop. On the local Miyakojima dump the box is 31.6 × 21.1 km and the body
+> 19.0 km wide, while one day's stops span 3.0 × 13.4 km and the arrival day's
+> 1.5 × 0.6 km: a town loop is ~8% of the frame width. Vietnam: UNKNOWN — no dump
+> at the desk; cheapest settle is `Tools/exif-to-fixture.sh` on its photo folder.
+>
+> Per the paragraph above, this reopens only as a product decision by Chiu.
+> **He reopened it on 2026-09-24; built as camera areas — ADR 2026-09-24,
+> `CameraPathAreas`.** Renders: `~/Kamome-wt/renders-{on,off,areas}` (local).
+
 ## 6 · What is NOT unified
 
 The camera is one primitive. **The narration is not**, and forcing it would be the
