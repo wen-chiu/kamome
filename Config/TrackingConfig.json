@@ -67,7 +67,8 @@
   },
   "trip": {
     "min_duration_s": 60,
-    "min_distance_m": 100
+    "min_distance_m": 100,
+    "merge_gap_min_m": 500
   },
   "sampling": {
     "recovery_gap_s": 60,
