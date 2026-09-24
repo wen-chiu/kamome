@@ -83,6 +83,9 @@ final class TripDetailModel {
                 self?.scheduleReload()
             }
         }
+        // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
+        // before schema v9 are asked once, behind any naming.
+        namer.fillMissingLocalities(detail.stops)
     }
 
     /// How far stop naming has got, for the S3 banner and the export gate.

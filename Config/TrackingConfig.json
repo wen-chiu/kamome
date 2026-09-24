@@ -127,6 +127,11 @@
     "wide_span_padding": 1.5,
     "target_zoom_ratio": 2.5,
     "camera_area_split_ratio": 1.5,
+    "camera_context": {
+      "context_depth": 5,
+      "context_span_max_m": 10000,
+      "context_level_break_ratio": 3
+    },
     "zoom_transition_s": 2.5,
     "act_split_km": 25,
     "crossing_beat_s": 4.0,
