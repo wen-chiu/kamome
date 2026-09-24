@@ -3108,6 +3108,91 @@
           }
         }
       }
+    },
+    "end_trip_confirm_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End this trip?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要結束這趟旅程嗎？"
+          }
+        }
+      }
+    },
+    "end_trip_confirm_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The trip is saved and can be turned into a film. An ended trip can't be continued — if you're only stopping for the night, keep recording."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程會儲存下來，可以做成影片。結束後就無法接續錄製；如果只是晚上休息，繼續錄製就好。"
+          }
+        }
+      }
+    },
+    "end_trip_keep_recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep Recording"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繼續錄製"
+          }
+        }
+      }
+    },
+    "recording_resumed_notice": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome was closed, so recording picked up again by itself. About %@ has no track."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome 曾被關閉，已自動接續錄製。其間約 %@ 沒有軌跡。"
+          }
+        }
+      }
+    },
+    "recording_resumed_dismiss": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

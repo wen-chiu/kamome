@@ -7,7 +7,8 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-24 against decisions.md **2026-09-23 (f)** and `main` at
-**PR #87** (ADRs (e), (f)). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
+**PR #88** (GIF-only export render, one compositing pool across stations; device
+figures owed, `Docs/handoff-export-performance.md` §7). PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
 its §7 is the second pass — GIF-only render, one pool across stations).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the

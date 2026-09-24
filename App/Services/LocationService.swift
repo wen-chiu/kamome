@@ -112,6 +112,11 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         isDwellRegionArmed = true
         lastDeliveryTs = nil
         manager.stopUpdatingLocation()
+        // An exit fires only on a crossing. A region armed with the phone
+        // already outside it — a recording recovered after the app was killed
+        // at a stop and the car has since driven off — would never fire, so
+        // ask where the phone is now; `didDetermineState` resumes on outside.
+        manager.requestState(for: region)
     }
 
     /// The engine left dwell-pause on its own (a fix escaped the region —
@@ -213,6 +218,11 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         #if DEBUG
         DriveTestLog.shared.regionExited()
         #endif
+        resumeAfterDwell()
+    }
+
+    func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
+        guard region.identifier == Self.dwellRegionIdentifier, state == .outside else { return }
         resumeAfterDwell()
     }
 
