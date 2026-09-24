@@ -122,6 +122,45 @@ final class RecapEncoderTests: XCTestCase {
         XCTAssertEqual(delay, 0.2, accuracy: 1e-6)
     }
 
+    /// A GIF-only export renders only the frames the GIF keeps and writes no
+    /// MP4 — and the GIF it writes is the one the two-encoder pass wrote.
+    func testGIFOnlyExportMatchesTheTwoEncoderGIF() async throws {
+        let config = exportConfig()
+        let (exporter, frameCount) = try makeExporter(config: config)
+        let videoURL = scratchURL("recap.mp4")
+        let bothGIF = scratchURL("both.gif")
+        let onlyGIF = scratchURL("only.gif")
+        defer {
+            [videoURL, bothGIF, onlyGIF].forEach { try? FileManager.default.removeItem(at: $0) }
+        }
+
+        _ = try await exporter.export(videoURL: videoURL, gifURL: bothGIF)
+        var progressCalls = 0
+        var lastProgress = 0.0
+        let output = try await exporter.exportGIF(gifURL: onlyGIF, progress: {
+            progressCalls += 1
+            lastProgress = $0
+        })
+
+        XCTAssertNil(output?.videoURL)
+        XCTAssertEqual(output?.gifURL, onlyGIF)
+        // fps 10 → gif 5 fps → stride 2: half the frames are never composited.
+        XCTAssertEqual(output?.stats.frames, frameCount / 2)
+        XCTAssertEqual(lastProgress, 1, "progress must finish even when the last frame is skipped")
+        XCTAssertEqual(progressCalls, frameCount / 2 + 1)
+        let both = try XCTUnwrap(CGImageSourceCreateWithURL(bothGIF as CFURL, nil))
+        let only = try XCTUnwrap(CGImageSourceCreateWithURL(onlyGIF as CFURL, nil))
+        XCTAssertEqual(CGImageSourceGetCount(only), CGImageSourceGetCount(both))
+        for index in 0..<CGImageSourceGetCount(both) {
+            let expected = try XCTUnwrap(CGImageSourceCreateImageAtIndex(both, index, nil))
+            let actual = try XCTUnwrap(CGImageSourceCreateImageAtIndex(only, index, nil))
+            XCTAssertEqual(
+                actual.dataProvider?.data as Data?, expected.dataProvider?.data as Data?,
+                "GIF frame \(index) must be the frame the two-encoder pass wrote"
+            )
+        }
+    }
+
     func testCancelledExportReturnsNilAndStopsRendering() async throws {
         let config = exportConfig()
         let (exporter, _) = try makeExporter(config: config)

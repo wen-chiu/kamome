@@ -227,17 +227,19 @@ extension RecapExportJob {
             // `progress` argument is still called every frame, unthrottled —
             // `RecapEncoderTests` reads that directly and sees no change.
             var lastEmitted: ContinuousClock.Instant?
-            return try await exporter.export(
-                videoURL: videoURL,
-                gifURL: gifURL,
-                progress: { fraction in
-                    let now = ContinuousClock.now
-                    if let lastEmitted, fraction < 1, now - lastEmitted < Self.progressInterval { return }
-                    lastEmitted = now
-                    Task { @MainActor in progress(fraction) }
-                },
-                shouldContinue: shouldContinue
-            )
+            let throttled: (Double) -> Void = { fraction in
+                let now = ContinuousClock.now
+                if let lastEmitted, fraction < 1, now - lastEmitted < Self.progressInterval { return }
+                lastEmitted = now
+                Task { @MainActor in progress(fraction) }
+            }
+            // A GIF export renders only the frames the GIF keeps, and no MP4.
+            if let gifURL {
+                return try await exporter.exportGIF(
+                    gifURL: gifURL, progress: throttled, shouldContinue: shouldContinue
+                )
+            }
+            return try await exporter.export(videoURL: videoURL, progress: throttled, shouldContinue: shouldContinue)
         }.value
     }
 
@@ -259,8 +261,10 @@ extension RecapExportJob {
     private func store(
         output: RecapExporter.Output, plan: Plan, seconds: Double
     ) throws -> RecapExportOutcome {
-        // The primary file: GIF when the user chose GIF, MP4 otherwise.
-        let primaryURL = output.gifURL ?? output.videoURL
+        // The one file written: GIF when the user chose GIF, MP4 otherwise.
+        guard let primaryURL = output.gifURL ?? output.videoURL else {
+            return .failed(message: String(localized: "recap_failed"))
+        }
         let record = try persistFilm(
             tempURL: primaryURL,
             format: output.gifURL != nil ? "gif" : "mp4",
@@ -268,11 +272,6 @@ extension RecapExportJob {
             durationS: plan.timeline.durationS,
             renderSeconds: seconds
         )
-        // The other format's tmp file, if any, is cleaned up — only the chosen
-        // format is stored.
-        if output.gifURL != nil {
-            try? FileManager.default.removeItem(at: output.videoURL)
-        }
         guard let fileURL = FilmStore.resolvedURL(relativePath: record.relativePath) else {
             return .failed(message: String(localized: "recap_failed"))
         }

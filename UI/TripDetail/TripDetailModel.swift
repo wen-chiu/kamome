@@ -256,18 +256,10 @@ final class TripDetailModel {
         return StoryLeg(id: "leg-\(id)", modes: modes, provenance: provenance, distanceM: distance, isCrossing: crossing)
     }
 
-    /// Along the road when one was matched, else along the raw points — the
-    /// same choice the film makes (`RecapComposer.legs`).
+    /// Along the road when one was matched, else along the raw points
+    /// (`LegLength`, shared with the Discovery timeline).
     private static func length(of item: (segment: SegmentRecord, points: [TrackpointRecord])) -> Double {
-        let coordinates: [(lat: Double, lon: Double)]
-        if let encoded = item.segment.matchedPolyline, case let decoded = EncodedPolyline.decode(encoded), decoded.count >= 2 {
-            coordinates = decoded.map { ($0.lat, $0.lon) }
-        } else {
-            coordinates = item.points.map { ($0.lat, $0.lon) }
-        }
-        return zip(coordinates, coordinates.dropFirst()).reduce(0.0) { sum, pair in
-            sum + Geo.distanceM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
-        }
+        LegLength.meters(segment: item.segment, points: item.points)
     }
 
     func photos(for stopId: String) -> [PhotoRefRecord] {

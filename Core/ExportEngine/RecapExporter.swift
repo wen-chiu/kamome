@@ -8,7 +8,8 @@ import KamomeConfig
 /// clean up.
 public struct RecapExporter {
     public struct Output {
-        public let videoURL: URL
+        /// nil for a GIF-only export (`exportGIF`), which writes no MP4 at all.
+        public let videoURL: URL?
         public let gifURL: URL?
         /// What the pass cost, stage by stage. `deliverS` is this pipeline's
         /// encoding — both encoders are fed from the loop's deliver closure — and
@@ -18,7 +19,7 @@ public struct RecapExporter {
         public let finishS: Double
 
         public init(
-            videoURL: URL, gifURL: URL?,
+            videoURL: URL?, gifURL: URL?,
             stats: RecapRenderLoop.RenderStats = RecapRenderLoop.RenderStats(), finishS: Double = 0
         ) {
             self.videoURL = videoURL
@@ -64,15 +65,49 @@ public struct RecapExporter {
         let gif = try gifURL.map {
             try RecapGIFEncoder(outputURL: $0, config: config, sourceFrameCount: timeline.frameCount)
         }
+        return try await run(
+            video: video, gif: gif, videoURL: videoURL, gifURL: gifURL,
+            progress: progress, shouldContinue: shouldContinue
+        )
+    }
 
+    /// Renders the recap into `gifURL` alone — **only the frames the GIF keeps**.
+    ///
+    /// A GIF keeps one frame in `fps / gif_fps` (`RecapGIFEncoder.keeps`), and
+    /// the S5 GIF export used to composite and H.264-encode every frame of the
+    /// film, then delete the MP4 (`Docs/handoff-export-performance.md` §7). The
+    /// frames it keeps come from the same station plan a full render uses
+    /// (`RecapRenderLoop.renderFrames(only:)`), so the GIF is the same file the
+    /// two-encoder pass wrote. `progress` reaches 1 on completion even though the
+    /// last kept frame may not be the film's last.
+    public func exportGIF(
+        gifURL: URL,
+        progress: ((Double) -> Void)? = nil,
+        shouldContinue: @escaping () -> Bool = { true }
+    ) async throws -> Output? {
+        let gif = try RecapGIFEncoder(outputURL: gifURL, config: config, sourceFrameCount: timeline.frameCount)
+        let output = try await run(
+            video: nil, gif: gif, videoURL: nil, gifURL: gifURL,
+            progress: progress, shouldContinue: shouldContinue
+        )
+        if output != nil { progress?(1) }
+        return output
+    }
+
+    private func run(
+        video: RecapVideoEncoder?, gif: RecapGIFEncoder?, videoURL: URL?, gifURL: URL?,
+        progress: ((Double) -> Void)?, shouldContinue: @escaping () -> Bool
+    ) async throws -> Output? {
         var cancelled = false
         let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
-        let stats = try await loop.renderFrames { frame, image in
+        // With an MP4 every frame is used; without one, only the GIF's.
+        let wanted: (Int) -> Bool = video != nil ? { _ in true } : { gif?.keeps(frame: $0) ?? false }
+        let stats = try await loop.renderFrames(only: wanted) { frame, image in
             guard shouldContinue() else {
                 cancelled = true
                 return false
             }
-            try video.append(image, frame: frame)
+            try video?.append(image, frame: frame)
             try gif?.append(image, frame: frame)
             progress?(Double(frame + 1) / Double(timeline.frameCount))
             return true
@@ -80,7 +115,7 @@ public struct RecapExporter {
         guard !cancelled else { return nil }
 
         let finishStarted = ContinuousClock.now
-        try await video.finish()
+        try await video?.finish()
         try gif?.finish()
         let elapsed = ContinuousClock.now - finishStarted
         return Output(

@@ -27,8 +27,10 @@ struct JourneySummary: Identifiable, Equatable {
     let photoCount: Int
     let stopCount: Int
     let coverAssetIds: [String]
-    /// Known only when the trip carries stats (recordings do; imports do not,
-    /// `HANDOFF.md` finding 8). Shown when known, never invented.
+    /// Kilometres on the ground: a recording's measured distance, or an
+    /// imported trip's routed ground legs with flights left out
+    /// (`LegLength.groundMeters`). nil for a journey not yet imported — it has
+    /// no routes to measure — and shown only when known, never invented.
     let distanceM: Double?
     /// `TransportMode` raw values the legs carry, **in trip order** — the
     /// timeline draws them between the places they join, so the order is the
@@ -44,6 +46,11 @@ struct JourneySummary: Identifiable, Equatable {
     let nameLookupLon: Double?
     /// Under `discovery.single_place_extent_m` — named after the town, not the country.
     let isSinglePlace: Bool
+    /// The country of the place the journey is named after, once looked up —
+    /// what "your 3rd trip to Japan" counts by. Kept apart from `name` because
+    /// a one-place journey is titled by its town and still happened in a country.
+    var countryCode: String?
+    var countryName: String?
 
     var headline: String { name?.title ?? fallbackTitle }
     var isImported: Bool { tripId != nil }

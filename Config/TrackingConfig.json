@@ -58,7 +58,8 @@
     "journey_gap_s": 172800,
     "min_photos": 8,
     "single_place_extent_m": 60000,
-    "cover_photos": 3
+    "cover_photos": 8,
+    "show_home_gaps": true
   },
   "geocode": {
     "min_interval_s": 2,
