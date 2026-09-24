@@ -28,7 +28,7 @@ protocol StopGeocoding: AnyObject {
     )
 
     /// The same lookup, also answering the **town** the stop is in
-    /// (`CLPlacemark.locality`) for the film's HUD pill (ADR 2026-09-24 (c)).
+    /// (`CLPlacemark.locality`) for the film's HUD pill (ADR 2026-09-24 (e)).
     /// One request either way. Defaulted below to `reverseGeocode` with no town,
     /// so a stub that only names stops still conforms.
     func reverseGeocodePlace(

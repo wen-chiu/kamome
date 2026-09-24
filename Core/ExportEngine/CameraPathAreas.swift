@@ -316,7 +316,7 @@ extension CameraPath {
     /// `camera_pan_window_fraction_per_s`, and none wider than its own
     /// establishing framing — `RecapDurationPlan.bodySpanM`'s floor and ceiling,
     /// over several areas at once — then held at its **context floor**, which
-    /// may exceed that ceiling on purpose (ADR 2026-09-24 (c)).
+    /// may exceed that ceiling on purpose (ADR 2026-09-24 (e)).
     ///
     /// ⚠️ **The floor is measured on the camera's travel, not the route's.** The
     /// one-span rule charges `routeDistance / span` windows, which is exact for a

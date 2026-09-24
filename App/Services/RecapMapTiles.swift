@@ -23,6 +23,11 @@ import Foundation
 /// 2. Documents — the Finder side-load target (`Docs/dogfood-infrastructure.md`).
 /// 3. Application Support — where a downloaded region would land (spec P7).
 /// 4. The app bundle — a region shipped with the build, if any.
+///
+/// **2 and 3 are behind the side-load switch** (arch review 2026-09-24): a
+/// testing feature does not ship unless a testing build is made on purpose.
+/// Off, a region file somewhere in the container can no longer take over the
+/// film from OpenFreeMap. See `sideloadEnabled`.
 enum RecapMapTiles {
     /// The theme whose map half these tiles feed (`Config/RecapThemes/`).
     static let styleResource = "modern-minimal"
@@ -107,9 +112,21 @@ enum RecapMapTiles {
         return nil
     }
 
-    private static func searchDirectories(bundle: Bundle) -> [URL] {
+    /// **The side-load switch, read from the one place it is set.** The
+    /// `KAMOME_SIDELOAD_REGIONS` build setting adds `UIFileSharingEnabled` to the
+    /// built plist (`project.yml`, "Switch: side-loaded map regions"); reading
+    /// that key back means the folder a user can reach in Finder and the folders
+    /// the export searches are switched together and cannot disagree.
+    static var sideloadEnabled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "UIFileSharingEnabled") as? Bool == true
+    }
+
+    static func searchDirectories(bundle: Bundle, sideload: Bool = sideloadEnabled) -> [URL] {
         var directories: [URL] = []
-        for domain in [FileManager.SearchPathDirectory.documentDirectory, .applicationSupportDirectory] {
+        let domains: [FileManager.SearchPathDirectory] = sideload
+            ? [.documentDirectory, .applicationSupportDirectory]
+            : []
+        for domain in domains {
             if let base = try? FileManager.default.url(
                 for: domain, in: .userDomainMask, appropriateFor: nil, create: false
             ) {

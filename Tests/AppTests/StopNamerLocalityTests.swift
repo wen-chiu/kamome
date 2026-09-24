@@ -5,7 +5,7 @@ import KamomePersistence
 import XCTest
 
 /// **Every stop learns its town, and no name is ever rewritten to get it**
-/// (ADR 2026-09-24 (c)): the town feeds the film's HUD pill. A stop named before
+/// (ADR 2026-09-24 (e)): the town feeds the film's HUD pill. A stop named before
 /// schema v9 is asked for its town alone — its name may be the user's own.
 final class StopNamerLocalityTests: XCTestCase {
     /// Answers a fixed name and town for every coordinate, on the main queue.

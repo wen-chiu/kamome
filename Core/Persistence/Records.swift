@@ -130,7 +130,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     public var name: String?
     public var note: String?
     public var kind: String?
-    /// `CLPlacemark.locality` (schema v9, ADR 2026-09-24 (c)). NULL = never
+    /// `CLPlacemark.locality` (schema v9, ADR 2026-09-24 (e)). NULL = never
     /// asked; "" = asked, and the geocoder had no town for this spot.
     public var locality: String?
 

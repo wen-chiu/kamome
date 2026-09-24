@@ -13,7 +13,7 @@ final class RecapEncoderTests: XCTestCase {
     }
 
     /// 2 s × 10 fps = 20 frames; GIF at 5 fps → stride 2 → 10 GIF frames.
-    private func exportConfig() -> TrackingConfig.Export {
+    private func exportConfig(pipeline: TrackingConfig.ExportPipeline = .handBuilt) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
             gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
@@ -39,11 +39,13 @@ final class RecapEncoderTests: XCTestCase {
             tierStandardPhotos: 3, tierTopPhotos: 5,
             earnedStopsFloor: 8, earnedStopsCap: 21,
             earnedStopsPerDoubling: 7, earnedStopsReferenceTripStops: 10,
-            recapMode: .highlight
+            recapMode: .highlight, pipeline: pipeline
         )
     }
 
-    private func makeExporter(config: TrackingConfig.Export) throws -> (exporter: RecapExporter, frameCount: Int) {
+    private func makeExporter(
+        config: TrackingConfig.Export, provider: MapRenderer = FlatSnapshotProvider()
+    ) throws -> (exporter: RecapExporter, frameCount: Int) {
         let stop = RecapTrip.Stop(
             coordinate: route[5], name: "Stop", dayLabel: "Day 1", detail: nil, photos: [], dwellS: config.stopHoldS
         )
@@ -65,7 +67,7 @@ final class RecapEncoderTests: XCTestCase {
             crossingSubject: nil, flightSubject: nil
         )
         let exporter = RecapExporter(
-            timeline: timeline, compositor: compositor, provider: FlatSnapshotProvider(), config: config
+            timeline: timeline, compositor: compositor, provider: provider, config: config
         )
         return (exporter, timeline.frameCount)
     }
@@ -176,6 +178,81 @@ final class RecapEncoderTests: XCTestCase {
 
         XCTAssertNil(output, "cancelled export must not report success")
         XCTAssertEqual(framesSeen, 5, "rendering should stop right after cancellation")
+    }
+
+    /// **A writer that has stopped writing never becomes ready again**, so an
+    /// append that only waits for readiness spins forever: Cancel cannot reach
+    /// it (the flag is read between frames), the coordinator never clears its
+    /// run, and every later export is refused until the process dies
+    /// (`Docs/handoff-arch-review-2026-09-24.md` P0-1). The failure must come
+    /// back as an error instead. Run on a plain thread with a deadline so the
+    /// regression fails this test rather than hanging the suite.
+    func testAppendAfterTheWriterStoppedThrowsInsteadOfWaitingForever() throws {
+        let videoURL = scratchURL("stopped.mp4")
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+        let encoder = try RecapVideoEncoder(outputURL: videoURL, widthPx: 64, heightPx: 64, fps: 10, bitrateMbps: 1)
+        let image = try XCTUnwrap(Self.blankImage(widthPx: 64, heightPx: 64))
+        try encoder.append(image, frame: 0)
+        encoder.cancel()
+
+        let returned = expectation(description: "append returned")
+        let failure = LockedBox<Error?>(nil)
+        Thread.detachNewThread {
+            do { try encoder.append(image, frame: 1) } catch { failure.value = error }
+            returned.fulfill()
+        }
+        wait(for: [returned], timeout: 5)
+        XCTAssertNotNil(failure.value, "an append to a writer that stopped writing must throw")
+    }
+
+    /// **A snapshot that never answers fails the export instead of holding it**
+    /// (arch review 2026-09-24, P1-10). Before `snapshot_timeout_s` the render
+    /// waited forever, and Cancel — read between frames — could not reach it.
+    func testASnapshotThatNeverAnswersFailsTheExportWithinItsDeadline() async throws {
+        let config = exportConfig(pipeline: TrackingConfig.ExportPipeline(
+            prefetchDepth: 2, compositeConcurrency: 2, snapshotTimeoutS: 0.3
+        ))
+        let (exporter, _) = try makeExporter(config: config, provider: SilentProvider())
+        let videoURL = scratchURL("silent.mp4")
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+
+        let started = ContinuousClock.now
+        do {
+            _ = try await exporter.export(videoURL: videoURL)
+            XCTFail("an export whose map never answers must not succeed")
+        } catch is SnapshotTimeout {
+            XCTAssertLessThan(ContinuousClock.now - started, .seconds(10), "the deadline did not bound the wait")
+        }
+    }
+
+    private static func blankImage(widthPx: Int, heightPx: Int) -> CGImage? {
+        CGContext(
+            data: nil, width: widthPx, height: heightPx, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+        )?.makeImage()
+    }
+}
+
+/// A value two threads hand over — the test's thread writes, the test reads
+/// after the expectation, and the lock makes that ordering explicit.
+private final class LockedBox<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+    init(_ value: Value) { stored = value }
+    var value: Value {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
+    }
+}
+
+/// A substrate whose snapshot never completes — a callback that never fires.
+private struct SilentProvider: MapRenderer {
+    var capabilities: MapRendererCapabilities {
+        MapRendererCapabilities(supportsBearing: false, supportsHeadingUp: false)
+    }
+
+    func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
+        try await withCheckedThrowingContinuation { (_: CheckedContinuation<MapSnapshot, Error>) in }
     }
 }
 

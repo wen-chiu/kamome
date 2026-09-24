@@ -32,7 +32,7 @@ final class CameraPathAreasTests: XCTestCase {
         return try TrackingConfigLoader.load(from: Data(edited.utf8)).export
     }
 
-    /// The shipped config with the context floor off (ADR 2026-09-24 (c)): the
+    /// The shipped config with the context floor off (ADR 2026-09-24 (e)): the
     /// areas' own asks, which is what the area-splitting test pins. The floor on
     /// top of them is pinned in `CameraPathContextTests`.
     private func shippedWithoutContext() throws -> TrackingConfig.Export {
@@ -78,7 +78,7 @@ final class CameraPathAreasTests: XCTestCase {
     /// old rule gave the whole trip.
     ///
     /// Run with the context floor off: the floor deliberately widens the towns
-    /// past `oneSpan / 4` (Chiu, ADR 2026-09-24 (c)), and what this pins is the
+    /// past `oneSpan / 4` (Chiu, ADR 2026-09-24 (e)), and what this pins is the
     /// split itself. `CameraPathContextTests` pins the same trip with it on.
     func testATownDriveTownTripIsFramedAtThreeScales() throws {
         let config = try shippedWithoutContext()

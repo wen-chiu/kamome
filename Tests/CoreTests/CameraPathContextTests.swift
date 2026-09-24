@@ -4,7 +4,7 @@ import KamomeTrackingEngine
 import XCTest
 
 /// **An area is never framed deeper than the place it sits in allows**
-/// (ADR 2026-09-24 (c), `CameraPathContext`).
+/// (ADR 2026-09-24 (e), `CameraPathContext`).
 ///
 /// Chiu, on the Miyakojima film framed area by area: the town fell to 1.9 km and
 /// *「太細部的行程會不知道自己在哪裡」*. These pin the ladder that finds the place

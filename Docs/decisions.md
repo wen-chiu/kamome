@@ -6209,7 +6209,88 @@ reminding the user to start recording. The reminder is deferred by Chiu.
 overnight stop reads well as a card. Cheapest check: merge two recorded days
 in the desk harness and read `RecapTimelineReportTests`.
 
-## 2026-09-24 (c) — An area is framed no deeper than the place it sits in; the pill names the town
+## 2026-09-24 (c) — Before TestFlight: deleting a trip stops its work, Home asks first, the side-load is a switch
+
+**Decision (Chiu, 2026-09-24).** From the architecture review before TestFlight
+(`Docs/handoff-arch-review-2026-09-24.md`), Chiu asked for these fixes:
+「開 branch 先修 P0 的 1 2 … 4 也需要 … 7 不應該測試版的功能跟著出貨，
+實際程式碼要改，改成開關，除非我們有確認現在正在測試」.
+
+1. **Deleting a trip stops everything still working on it first.** The export
+   outlives its screen (ADR 2026-09-10), so Home could delete a trip whose film
+   was rendering. The film then finished into a deleted trip and its file was
+   orphaned in `Films/`. `TripDeletion` is now the one delete for Home and
+   Discovery. It cancels that trip's export and routing, then deletes the trip
+   and its film files. The export re-checks its cancel flag on the main actor
+   before storing. A `film` insert that fails deletes the file it moved. Merging
+   already refused a rendering trip, and still does.
+2. **Home's swipe-to-delete asks first.** A full swipe used to delete outright.
+   A recorded trip is warned that it cannot be recovered
+   (`trip_delete_recorded_confirm`, **draft wording, Chiu's to finalise**). An
+   imported trip reuses Discovery's wording (`journey_delete_confirm`).
+3. **The Finder side-load of map regions is a testing switch, off in what
+   ships.** Build setting `KAMOME_SIDELOAD_REGIONS`: YES in Debug, NO in Release.
+   A testing archive passes `KAMOME_SIDELOAD_REGIONS=YES` on purpose. When it is
+   on, a post-build phase adds `UIFileSharingEnabled` and
+   `LSSupportsOpeningDocumentsInPlace`. The tile search reads the first key back
+   (`RecapMapTiles.sideloadEnabled`), so the folder a user can reach and the
+   folders the export searches cannot disagree. `check-archive.sh` fails an
+   archive that carries the keys, so a testing build is never the one
+   submitted. This amends the PD-7 dogfood side-load, which was on in every
+   configuration.
+
+**Also in this change, not a product decision.** The video encoder no longer
+waits forever on a writer that has stopped. Before this fix, one failed write
+locked out every later export until the app was killed.
+
+**Superseded in part before it landed.** Review finding P0-3 (a recording lived
+only in memory) was closed by PR #90 while this was written, and is not
+repeated here.
+
+## 2026-09-24 (d) — A tester can hand back the log; device backup is the user's own; the export has a time and memory budget
+
+**Decision (Chiu, 2026-09-24).** These close the rest of the pre-TestFlight
+review (`Docs/handoff-arch-review-2026-09-24.md`, P1-5 to P1-11). Asked two
+questions, Chiu took the recommendation on both:
+
+1. **About gets "Export diagnostics", in Release builds too (P1-8).** A
+   TestFlight build is a Release build, so `DriveTestLog` and the debug export
+   menu are compiled out, and D1–D5 could be read only with the phone attached
+   to a Mac. The row reads this launch's `subsystem:com.chiu.kamome` lines back
+   through `OSLogStore`, writes them to a text file, and opens the share sheet.
+   **§0:** `KamomeLog` lines carry counts, durations and fixed strings, never a
+   coordinate. Values logged without `privacy: .public` come back redacted.
+   Nothing is sent: sharing is the user's own act, one file at a time. **Limit:**
+   it holds this launch only, so a crash takes its lines with it. The wording is
+   a draft.
+2. **The database stays in the device's iCloud Backup (P1-11).** §0's "never
+   synced" governs what *Kamome* sends. An iOS device backup is the user's own
+   copy of their phone, made by the OS under the user's settings; it is not
+   Kamome syncing. Excluding `kamome.sqlite` would lose every trip on a phone
+   restore or migration, and would leave films (backed up since 2026-09-08 §5)
+   pointing at trips that no longer exist. The recording journal stays excluded
+   (PR #90): it is a crash buffer, not user data. No code changes.
+
+**Engineering, no product change:**
+
+- **P1-5.** Repository calls in App/UI no longer use a bare `try?`. They go
+  through `Stored.write` / `Stored.read`, which log what failed under a new
+  `KamomeLog.storage` category. The label is a `StaticString`, so no data can
+  reach the log line. A trip the database refuses on import now says so
+  (`import_error_save`, draft wording) instead of "no geotagged photos".
+  Deleting a film in Trip Detail removes the file only after its row is gone.
+- **P1-6.** A failed export is logged, with its full text kept private. The
+  screen shows the error's domain and code, not its description, because a
+  MapLibre error can carry a tile URL, and z/x/y is a place.
+- **P1-9 / P1-10.** New config keys under `export.pipeline`: `prefetch_depth`
+  (8) and `composite_concurrency` (4), which moved out of `RecapRenderLoop`
+  constants, and a new `snapshot_timeout_s` (60, **INFERRED**: about 40 times
+  the 0.72–1.55 s measured per snapshot on the simulator). A snapshot that never
+  answers now fails the export instead of holding it, and holding Cancel with
+  it, forever (`SnapshotDeadline`). No pixel changes. Device figures are owed
+  with D2/D3.
+
+## 2026-09-24 (e) — An area is framed no deeper than the place it sits in; the pill names the town
 
 **Decision (Chiu, 2026-09-24).** On the Miyakojima film after camera areas:
 *「宮古島的當地行程又有點zoom in得太近了……最少可以看得出來在哪裡，太細部的行程會不知道自己在哪裡」*,

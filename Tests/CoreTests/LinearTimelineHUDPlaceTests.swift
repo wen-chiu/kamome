@@ -3,7 +3,7 @@ import KamomeExportEngine
 import KamomeTrackingEngine
 import XCTest
 
-/// **The pill names the town on the road** (ADR 2026-09-24 (c), Chiu:
+/// **The pill names the town on the road** (ADR 2026-09-24 (e), Chiu:
 /// *「也把地名加進 pill」*). Parked, it names the stop, as it always did; between
 /// stops it names the town of the most recent stop reached, and turns over on
 /// arrival — the day counter's rule.

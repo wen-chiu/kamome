@@ -210,7 +210,7 @@ public final class AppDatabase {
         }
 
         // Schema v9 — the town a stop is in, for the film's HUD pill (ADR
-        // 2026-09-24 (c)). Nullable, and NULL means "never asked": every stop
+        // 2026-09-24 (e)). Nullable, and NULL means "never asked": every stop
         // named before this is back-filled on its trip's next open
         // (`StopNamer.fillMissingLocalities`). Forward-only.
         migrator.registerMigration("v9") { db in

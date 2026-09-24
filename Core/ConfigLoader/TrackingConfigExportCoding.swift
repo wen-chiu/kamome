@@ -79,5 +79,6 @@ extension TrackingConfig.Export {
         case earnedStopsPerDoubling = "earned_stops_per_doubling"
         case earnedStopsReferenceTripStops = "earned_stops_reference_trip_stops"
         case recapMode = "recap_mode"
+        case pipeline
     }
 }

@@ -22,8 +22,6 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 	<key>MLNIdeographicFontFamilyName</key>
 	<string>PingFang TC</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
@@ -40,8 +38,6 @@
 	<array>
 		<string>location</string>
 	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

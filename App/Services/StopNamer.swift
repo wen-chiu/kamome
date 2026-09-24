@@ -29,7 +29,7 @@ final class StopNamer {
     private let repository: TripRepository
     /// `townOnly` entries already have a name — the user's, or an earlier
     /// lookup's — and are asked only for their town, which never touches the name
-    /// and never counts towards `progress` (ADR 2026-09-24 (c)).
+    /// and never counts towards `progress` (ADR 2026-09-24 (e)).
     private var queue: [(stop: StopRecord, townOnly: Bool)] = []
     /// Towns by the name the lookup returned, so a stop answered from
     /// `GeocodePolicy`'s name cache still gets its town.
@@ -106,12 +106,12 @@ final class StopNamer {
 
         switch policy.decision(lat: stop.lat, lon: stop.lon, now: now) {
         case .cached(let name) where !townOnly:
-            try? repository.setStopName(stopId: stop.id, name: name)
-            if let town = localityByName[name] { try? repository.setStopLocality(stopId: stop.id, locality: town) }
+            Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
+            if let town = localityByName[name] { storeLocality(town, of: stop) }
             finish(named: true)
             drain()
         case .cached(let name):
-            if let town = localityByName[name] { try? repository.setStopLocality(stopId: stop.id, locality: town) }
+            if let town = localityByName[name] { storeLocality(town, of: stop) }
             drain()
         case .throttled(let retryAfterS):
             queue.insert((stop: stop, townOnly: townOnly), at: 0)
@@ -156,9 +156,13 @@ final class StopNamer {
         // "" = asked, no town here: recorded so it is not asked again.
         let town = locality ?? ""
         localityByName[name] = town
-        try? repository.setStopLocality(stopId: stop.id, locality: town)
+        storeLocality(town, of: stop)
         guard !townOnly else { return }
-        try? repository.setStopName(stopId: stop.id, name: name)
+        Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
         finish(named: true)
+    }
+
+    private func storeLocality(_ town: String, of stop: StopRecord) {
+        Stored.write("setStopLocality") { try repository.setStopLocality(stopId: stop.id, locality: town) }
     }
 }

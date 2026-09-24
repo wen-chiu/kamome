@@ -52,8 +52,18 @@ public final class RecapVideoEncoder {
     }
 
     public func append(_ image: CGImage, frame: Int) throws {
-        // Offline encode: the writer occasionally needs a beat to drain.
+        // Offline encode: the writer occasionally needs a beat to drain. A
+        // writer that has *stopped* writing — failed (on a phone, most likely an
+        // encoder session invalidated by backgrounding: INFERRED) or cancelled —
+        // never becomes ready again, so waiting on readiness alone spun forever
+        // and locked every later export out (arch review 2026-09-24, P0-1).
         while !input.isReadyForMoreMediaData {
+            guard writer.status == .writing else {
+                throw EncodeError(description: """
+                    writer stopped before frame \(frame) (status \(writer.status.rawValue)): \
+                    \(String(describing: writer.error))
+                    """)
+            }
             Thread.sleep(forTimeInterval: 0.002)
         }
         guard let pool = adaptor.pixelBufferPool else {
@@ -86,6 +96,14 @@ public final class RecapVideoEncoder {
         guard adaptor.append(buffer, withPresentationTime: time) else {
             throw EncodeError(description: "append failed at frame \(frame): \(String(describing: writer.error))")
         }
+    }
+
+    /// Abandons the file. What a cancelled export calls so the writer is let
+    /// go deliberately rather than dropped mid-session; the caller deletes the
+    /// partial file.
+    public func cancel() {
+        guard writer.status == .writing else { return }
+        writer.cancelWriting()
     }
 
     public func finish() async throws {

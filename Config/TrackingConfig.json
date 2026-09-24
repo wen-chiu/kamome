@@ -183,6 +183,11 @@
     "earned_stops_cap": 21,
     "earned_stops_per_doubling": 7.0,
     "earned_stops_reference_trip_stops": 10,
-    "recap_mode": "highlight"
+    "recap_mode": "highlight",
+    "pipeline": {
+      "prefetch_depth": 8,
+      "composite_concurrency": 4,
+      "snapshot_timeout_s": 60
+    }
   }
 }

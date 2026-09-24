@@ -69,9 +69,7 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
-- **Camera areas — judge the renders** (ADR 2026-09-24). → `Docs/camera-arcs.md` §5.
-- **Context floor, town pill** — uncompiled.
-  → `Docs/handoff-camera-context-floor.md`.
+- **Camera areas + floor (e): renders.** → `Docs/handoff-camera-context-floor.md`.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
@@ -93,6 +91,7 @@ string stands. Do not reopen this from scratch.
 
 - 🟠 **Crash-safe recording and trip merge (ADR 2026-09-24 (b)); device checks owed.**
   → `Docs/handoff-long-recording.md`.
+- 🟠 **Arch review 2026-09-24: to verify.** → `Docs/handoff-arch-review-2026-09-24.md`.
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
   T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
   mode — and T5, the first-run notice that backgrounds the app, which did not

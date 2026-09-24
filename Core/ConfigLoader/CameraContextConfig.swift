@@ -1,6 +1,6 @@
 import Foundation
 
-/// **The context floor for camera areas** (ADR 2026-09-24 (c)).
+/// **The context floor for camera areas** (ADR 2026-09-24 (e)).
 ///
 /// Chiu, on the Miyakojima film framed area by area: *「宮古島的當地行程又有點zoom
 /// in得太近了……最少可以看得出來在哪裡」*, then *「旅程地點不同 需要zoom的比例也不同」*.

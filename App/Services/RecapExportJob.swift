@@ -27,9 +27,11 @@ struct RecapExportJob: RecapExportRunning {
     func run(_ channel: RecapExportChannel) async -> RecapExportOutcome {
         await matchRoutes(channel)
         guard let composed = compose() else {
+            KamomeLog.recap.error("export failed — the trip could not be composed into a film")
             return .failed(message: String(localized: "recap_failed"))
         }
         guard let plan = plan(composed) else {
+            KamomeLog.recap.error("export failed — no film plan (base map or timeline)")
             return .failed(message: String(localized: "recap_failed"))
         }
         let resolver = PhotoLibraryPhotoResolver()
@@ -69,7 +71,7 @@ struct RecapExportJob: RecapExportRunning {
     }
 
     private func compose() -> Composed? {
-        guard let detail = try? repository.detail(tripId: request.tripId) else { return nil }
+        guard let detail = Stored.read("detail", { try repository.detail(tripId: request.tripId) }) else { return nil }
         let stats = TripStats.from(jsonString: detail.trip.statsJson)
         // Deck photo refs are selected here (data); the resolver loads the
         // bitmaps. Refs stay out of the render size.

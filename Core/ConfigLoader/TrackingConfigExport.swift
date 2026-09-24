@@ -35,9 +35,8 @@ public extension TrackingConfig {
         /// beat the viewer sees at t=0 — so the ratio holds whatever the geometry.
         /// Acceptable range 2.25–2.75x; 2.5 is the midpoint.
         public let targetZoomRatio: Double
-        /// How far a stretch's span may stray from its own need and still share a camera area (ADR 2026-09-24).
+        /// Camera areas (ADR 2026-09-24) and the context floor under them (ADR 2026-09-24 (e)).
         public let cameraAreaSplitRatio: Double
-        /// How deep an area may frame below the place it sits in (ADR 2026-09-24 (c)).
         public let cameraContext: CameraContextConfig
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
@@ -395,5 +394,7 @@ public extension TrackingConfig {
         /// **Which film this trip becomes** — one value, replacing the three
         /// booleans that used to encode it. See `RecapMode`.
         public let recapMode: RecapMode
+        /// Memory and time budget of the render (`ExportPipeline`).
+        public let pipeline: ExportPipeline
     }
 }

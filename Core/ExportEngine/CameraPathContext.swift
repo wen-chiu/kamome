@@ -3,7 +3,7 @@ import KamomeConfig
 import KamomeTrackingEngine
 
 /// **An area is never framed deeper than the place it sits in allows**
-/// (ADR 2026-09-24 (c)).
+/// (ADR 2026-09-24 (e)).
 ///
 /// ## Why
 ///

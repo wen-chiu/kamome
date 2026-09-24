@@ -101,7 +101,7 @@ extension LinearTimeline {
 
     /// What the HUD pill names beside the day. Parked, the stop itself, exactly
     /// as before. On the road, **the town of the most recent stop reached**
-    /// (ADR 2026-09-24 (c), Chiu: *「也把地名加進 pill」*) — inherited the way the
+    /// (ADR 2026-09-24 (e), Chiu: *「也把地名加進 pill」*) — inherited the way the
     /// day is, so it turns over on arrival and never flickers out on the road.
     /// Nothing while a crossing plays: the boarding pass and the flight-end
     /// marks own *where* there (ADR 2026-09-04 (b)).

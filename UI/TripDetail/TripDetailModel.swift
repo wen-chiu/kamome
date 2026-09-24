@@ -48,7 +48,7 @@ final class TripDetailModel {
     /// Writes the choice to the trip and remembers it for the next one. A column
     /// write, so changing subject never costs a re-import.
     func chooseVehicle(_ vehicleId: String) {
-        try? repository.setTripVehicle(tripId: tripId, vehicleId: vehicleId)
+        Stored.write("setTripVehicle") { try repository.setTripVehicle(tripId: tripId, vehicleId: vehicleId) }
         LastVehicleChoice.remember(vehicleId)
         reload()
     }
@@ -83,7 +83,7 @@ final class TripDetailModel {
                 self?.scheduleReload()
             }
         }
-        // The film's HUD pill names the town (ADR 2026-09-24 (c)); stops named
+        // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
         // before schema v9 are asked once, behind any naming.
         namer.fillMissingLocalities(detail.stops)
     }
@@ -100,14 +100,17 @@ final class TripDetailModel {
     var isNamingStops: Bool { naming.total > 0 && !naming.isFinished }
 
     func reload() {
-        detail = try? repository.detail(tripId: tripId)
-        films = (try? repository.films(tripId: tripId)) ?? []
+        detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
+        films = Stored.read("films") { try repository.films(tripId: tripId) } ?? []
     }
 
     /// Deletes a single film record and its file on disk.
     func deleteFilm(_ film: FilmRecord) {
-        try? repository.deleteFilm(filmId: film.id)
-        FilmStore.deleteFile(relativePath: film.relativePath)
+        // The file goes only once its row has: a row pointing at a deleted file
+        // is a film the list shows and cannot play (same rule as `RecapModel`).
+        if Stored.write("deleteFilm", { try repository.deleteFilm(filmId: film.id) }) {
+            FilmStore.deleteFile(relativePath: film.relativePath)
+        }
         reload()
     }
 
@@ -307,17 +310,17 @@ final class TripDetailModel {
     // MARK: - S4 editing
 
     func rename(stopId: String, to name: String) {
-        try? repository.setStopName(stopId: stopId, name: name)
+        Stored.write("setStopName") { try repository.setStopName(stopId: stopId, name: name) }
         reload()
     }
 
     func setNote(stopId: String, note: String) {
-        try? repository.setStopNote(stopId: stopId, note: note.isEmpty ? nil : note)
+        Stored.write("setStopNote") { try repository.setStopNote(stopId: stopId, note: note.isEmpty ? nil : note) }
         reload()
     }
 
     func deleteStop(stopId: String) {
-        try? repository.deleteStop(stopId: stopId)
+        Stored.write("deleteStop") { try repository.deleteStop(stopId: stopId) }
         reload()
     }
 
@@ -325,7 +328,7 @@ final class TripDetailModel {
         guard let detail,
               let index = detail.stops.firstIndex(where: { $0.id == stopId }),
               index > 0 else { return }
-        try? repository.mergeStops(keptId: detail.stops[index - 1].id, absorbedId: stopId)
+        Stored.write("mergeStops") { try repository.mergeStops(keptId: detail.stops[index - 1].id, absorbedId: stopId) }
         reload()
     }
 
