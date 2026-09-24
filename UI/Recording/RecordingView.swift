@@ -8,6 +8,7 @@ import SwiftUI
 struct RecordingView: View {
     @Environment(TrackingSession.self) private var session
     @State private var now = Date.now
+    @State private var confirmingEnd = false
 
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -45,6 +46,9 @@ struct RecordingView: View {
 
     private var hud: some View {
         VStack(spacing: 12) {
+            if let interruption = session.interruption {
+                resumedNotice(interruption)
+            }
             HStack(spacing: 24) {
                 Image(systemName: modeSymbol)
                     .font(.title2)
@@ -52,8 +56,11 @@ struct RecordingView: View {
                 stat(value: distanceText, label: "stat_distance")
                 stat(value: "\(session.stopCount)", label: "stat_stops")
             }
+            // One tap used to end the trip. On a phone in a car mount that is
+            // a brushed screen, and an ended recording cannot be continued —
+            // so End Trip asks first (2026-09-24).
             Button(role: .destructive) {
-                session.end()
+                confirmingEnd = true
             } label: {
                 Text("end_trip")
                     .font(.headline)
@@ -61,10 +68,47 @@ struct RecordingView: View {
                     .padding(.vertical, 10)
             }
             .buttonStyle(.borderedProminent)
+            .confirmationDialog("end_trip_confirm_title", isPresented: $confirmingEnd, titleVisibility: .visible) {
+                Button("end_trip", role: .destructive) { session.end() }
+                Button("end_trip_keep_recording", role: .cancel) {}
+            } message: {
+                Text("end_trip_confirm_message")
+            }
         }
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
         .padding()
+    }
+
+    /// Said once after a recording was recovered: the app had been closed,
+    /// recording carried on by itself, and this long has no track.
+    private func resumedNotice(_ interruption: TrackingSession.Interruption) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "arrow.clockwise.circle.fill")
+                .foregroundStyle(.tint)
+            Text(Self.resumedText(gapS: interruption.gapS))
+                .font(.footnote)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                session.interruption = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.footnote.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("recording_resumed_dismiss"))
+        }
+    }
+
+    static func resumedText(gapS: Double) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .short
+        formatter.maximumUnitCount = 2
+        formatter.allowedUnits = [.day, .hour, .minute]
+        // Under a minute still reads as a minute: "0 min" would claim no gap.
+        let gap = formatter.string(from: max(gapS, 60)) ?? ""
+        return String.localizedStringWithFormat(String(localized: "recording_resumed_notice"), gap)
     }
 
     private func stat(value: String, label: LocalizedStringKey) -> some View {

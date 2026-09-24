@@ -31,6 +31,10 @@ public enum KamomeLog {
     public static let geocode = Logger(subsystem: subsystem, category: "geocode")
     /// Photo import: how many photos, how they clustered.
     public static let importing = Logger(subsystem: subsystem, category: "import")
+    /// Live recording: the journal, and every recovery after the app was
+    /// terminated mid-trip — counts and durations only, never a position (§0).
+    /// The drive-test CSV is DEBUG-only, so this is what a TestFlight build has.
+    public static let recording = Logger(subsystem: subsystem, category: "recording")
 
     private static let subsystem = "com.chiu.kamome"
 }
