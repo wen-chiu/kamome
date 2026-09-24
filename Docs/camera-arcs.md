@@ -308,6 +308,8 @@ decision, not a tuning pass.
 > at the desk; cheapest settle is `Tools/exif-to-fixture.sh` on its photo folder.
 >
 > Per the paragraph above, this reopens only as a product decision by Chiu.
+> **He reopened it on 2026-09-24; built as camera areas — ADR 2026-09-24,
+> `CameraPathAreas`.** Renders: `~/Kamome-wt/renders-{on,off,areas}` (local).
 
 ## 6 · What is NOT unified
 
