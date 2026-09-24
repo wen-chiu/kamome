@@ -88,6 +88,13 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
+- 🟠 **Photo selection: the deck-cut defect is fixed; the manual picker and Vision
+  scoring are owed.** Decks are now picked at their final size, marked stops
+  always stay, and highlights lift a deck to 5. The Stop Editor is still a
+  72 pt strip with no exclude and no preview of what the film shows. Hero-photo
+  Vision work was reopened by Chiu but not started. No film has been re-rendered
+  since the fix. → ADR 2026-09-24.
+
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
   T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
   mode — and T5, the first-run notice that backgrounds the app, which did not

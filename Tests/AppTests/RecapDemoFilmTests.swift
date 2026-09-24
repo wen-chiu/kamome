@@ -286,6 +286,7 @@ final class RecapDemoFilmTests: XCTestCase {
             stopHoldS: config.stopHoldS,
             rawPhotoCounts: selections.rawPhotoCounts,
             favoriteCounts: selections.favoriteCounts,
+            highlightedAssets: selections.highlighted, highlightMaxPhotos: full.photoImport.deckHighlightMaxPhotos,
             weighting: config,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(film.segments)

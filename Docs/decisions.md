@@ -5990,3 +5990,49 @@ and Discovery skipped a journey only when a trip carried **its**
 on real libraries. **Not done:** existing duplicates are not merged or removed;
 Chiu deletes the extra by swipe. **UNKNOWN:** how the sheet's prompt looks —
 the simulator has no geotagged library to trigger it; a device screenshot is owed.
+
+## 2026-09-24 — A stop's photos are picked at their final size; a marked stop always stays; hero photos reopen
+
+**Decision (Chiu, 2026-09-24).** People reported the film choosing photos that
+were not the ones they wanted, and marking a photo in the Stop Editor appeared
+to do nothing. One defect caused both (VERIFIED by reading the code, pinned by
+`StopDeckPickTests`): each stop's deck was an eight-photo spread
+(`PhotoDeckSelector.evenlySpread`) cut to its first N by `prefix(allocated)`. At
+the standard three, only the first ~30% of a visit could reach the film, its
+first frame always did, and a highlight after the first was kept only if it
+landed on a sampled index.
+
+1. **Decks are picked after allocation, at their final size**
+   (`PhotoDeckSelector.pick`, called from `RecapComposer.deckPhotos`). Every
+   highlight the deck has room for comes first. The rest is centred-sampled
+   across the whole visit. `RecapComposer.photoCandidates` is the one input
+   builder, shared by the export and the demo harness.
+2. **A marked stop is always presented** (`StopPhotoAllocator.triage`). A
+   favourite or an in-app highlight says the place deserves the film. Chiu
+   rejected splitting the photo signal from the stop signal. Marking a photo
+   can only displace an **unmarked** stop; if marked stops outnumber the earned
+   count, all of them stay and the film grows. With no marks the cut is
+   unchanged.
+3. **Highlights lift a deck above its allocation, capped at
+   `import.deck_highlight_max_photos` = 5** (*「再怎麼喜歡就是一個站點五張」*). Past
+   the cap, the highlights themselves are sampled. The film pays for the lift:
+   `StopPhotoAllocator.earnedDurationS(photoCounts:)` keeps the expected-mix
+   price as a floor and charges each presented deck at its real size.
+   `RecapPacingTests.testMoreStopsBuyALongerFilmWithNoCeiling` is re-baselined
+   to the new rule ("denser, not longer" held only up to the mix). Unmarked
+   trips keep their current length.
+4. **Photos-app favourites and in-app highlights stay one signal**
+   (`is_highlight`). Kamome **never writes back** to the photo library. A like
+   in Kamome is Kamome's own record. It changes the user's library only if a
+   later decision says so.
+5. **Story Director's hero-photo work is reopened** (Chiu, explicitly;
+   deferred by the 2026-08-15 phase decision). It is on-device Vision within
+   the 2026-07-20 terms: deterministic, cached, no network. Not started.
+
+**Not done, owed next:** (a) a usable manual picker, with auto / picked /
+excluded per photo and pick-and-swap before export (`photo_ref.order_idx` has
+existed since v2 and is unused). (b) Vision scoring. (c) On a re-match
+(`PhotoLibraryService.buildRefs`), in-app highlights carry over, but a photo
+favourited in Photos after import is not picked up. **UNKNOWN:** whether step 1
+answers most of the reports. The cheapest check is one re-rendered film of a
+reported trip.

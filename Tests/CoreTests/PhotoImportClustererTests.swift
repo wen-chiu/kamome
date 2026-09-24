@@ -166,29 +166,3 @@ final class PhotoImportClustererTests: XCTestCase {
         XCTAssertTrue(plan.isRenderable)
     }
 }
-
-final class PhotoDeckSelectorTests: XCTestCase {
-    private let ids = (0..<20).map { "p\($0)" }
-
-    func testCapsAtMaxAndKeepsEndpoints() {
-        let deck = PhotoDeckSelector.evenlySpread(ids, min: 3, max: 8)
-        XCTAssertEqual(deck.count, 8)
-        XCTAssertEqual(deck.first, "p0")
-        XCTAssertEqual(deck.last, "p19")
-        XCTAssertEqual(deck, deck.sorted { ids.firstIndex(of: $0)! < ids.firstIndex(of: $1)! },
-                       "order preserved")
-        XCTAssertEqual(Set(deck).count, deck.count, "no repeats")
-    }
-
-    func testReturnsAllWhenFewerThanWanted() {
-        XCTAssertEqual(PhotoDeckSelector.evenlySpread(["a", "b"], min: 3, max: 8), ["a", "b"])
-        XCTAssertEqual(PhotoDeckSelector.evenlySpread(Array(ids.prefix(5)), min: 3, max: 8),
-                       Array(ids.prefix(5)))
-    }
-
-    func testDeterministicAndEmpty() {
-        XCTAssertEqual(PhotoDeckSelector.evenlySpread([], min: 3, max: 8), [])
-        XCTAssertEqual(PhotoDeckSelector.evenlySpread(ids, min: 3, max: 8),
-                       PhotoDeckSelector.evenlySpread(ids, min: 3, max: 8))
-    }
-}

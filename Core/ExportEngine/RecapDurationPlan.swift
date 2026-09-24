@@ -223,8 +223,9 @@ public struct RecapDurationPlan: Equatable {
         // the bound now. The floor stays — a very small trip still gets a
         // watchable minimum, and the camera needs travel time to cross the ground
         // between stops (see `uncapped` above, same reason).
-        let presented = photoCounts.filter { $0 > 0 }.count
-        let earnedTotal = StopPhotoAllocator.earnedDurationS(presentedStops: presented, config: config)
+        // Priced per presented deck, so a stop the person's highlights lifted
+        // past the expected mix pays for its extra photographs (Chiu 2026-09-24).
+        let earnedTotal = StopPhotoAllocator.earnedDurationS(photoCounts: photoCounts, config: config)
         let total = max(earnedTotal, config.totalDurationMinS)
 
         // What dwell actually fits, once the prologue and end card are paid for.

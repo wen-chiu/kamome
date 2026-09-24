@@ -103,9 +103,11 @@ public struct TrackingConfig: Decodable, Equatable {
         public let stopSplitGapS: Double
         /// A cluster becomes a stop only with at least this many photos.
         public let minPhotosPerStop: Int
-        /// Recap photo-deck size bounds (basic MVP presentation; §5).
-        public let deckMinPhotos: Int
-        public let deckMaxPhotos: Int
+        /// The most photographs a stop's own highlights can make it show
+        /// (Chiu 2026-09-24: "再怎麼喜歡就是一個站點五張"). Highlights raise a
+        /// stop's deck above its allocation up to this; past it, the highlights
+        /// themselves are sampled. `PhotoDeckSelector.deckCount`.
+        public let deckHighlightMaxPhotos: Int
         /// Past this gap between a leg's endpoints, its implied pace stops
         /// meaning anything and the leg is treated as a drive (Chiu 2026-08-02).
         ///
@@ -150,8 +152,7 @@ public struct TrackingConfig: Decodable, Equatable {
             case stopRadiusM = "stop_radius_m"
             case stopSplitGapS = "stop_split_gap_s"
             case minPhotosPerStop = "min_photos_per_stop"
-            case deckMinPhotos = "deck_min_photos"
-            case deckMaxPhotos = "deck_max_photos"
+            case deckHighlightMaxPhotos = "deck_highlight_max_photos"
             case paceUnknowableGapS = "pace_unknowable_gap_s"
             case defaultRangeDays = "default_range_days"
             case maxRangeDays = "max_range_days"

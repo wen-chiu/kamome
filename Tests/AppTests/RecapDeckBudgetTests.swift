@@ -51,11 +51,12 @@ final class RecapDeckBudgetTests: XCTestCase {
 
         var photosByStop: [String: [PhotoRef]] = [:]
         for stop in detail.stops {
+            // Every photograph at the stop, as given: this builder passes no
+            // weighting, so the composer shows the list unpicked. At the eight
+            // per stop used here that is what the retired `evenlySpread` (3–8)
+            // returned too, so the measured decks are unchanged by its removal.
             let ordered = detail.photos.filter { $0.stopId == stop.id }.map(\.phAssetId)
-            let selected = PhotoDeckSelector.evenlySpread(
-                ordered, min: config.photoImport.deckMinPhotos, max: config.photoImport.deckMaxPhotos
-            )
-            if !selected.isEmpty { photosByStop[stop.id] = selected.map(PhotoRef.asset) }
+            if !ordered.isEmpty { photosByStop[stop.id] = ordered.map(PhotoRef.asset) }
         }
         let legs = RecapComposer.legs(
             from: detail.segments, epsilonM: config.simplify.epsilonM,
@@ -70,6 +71,83 @@ final class RecapDeckBudgetTests: XCTestCase {
             ),
             stopHoldS: config.export.stopHoldS
         ))
+    }
+
+    /// The shipped path end to end (Chiu 2026-09-24): an imported trip whose
+    /// every stop carries `markedPerStop` favourites, through the app's own
+    /// candidates, triage and deck pick — so a marked photograph that the film
+    /// budget cannot afford shows up here as a short deck.
+    private func markedTrip(
+        stops: Int, photosPerStop: Int, markedPerStop: Int, config: TrackingConfig
+    ) async throws -> RecapTrip {
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let service = ImportService(repository: repository, config: config)
+        var photos: [ImportPhoto] = []
+        for stop in 0..<stops {
+            let base = Double(stop) * (config.photoImport.stopSplitGapS + 3_600)
+            for photo in 0..<photosPerStop {
+                photos.append(ImportPhoto(
+                    assetId: "s\(stop)-p\(photo)", timestamp: base + Double(photo) * 60,
+                    lat: 64.0 + Double(stop) * 0.2, lon: -20.0,
+                    // Marks sit late in the visit, where the old cut never reached.
+                    isFavorite: photo >= photosPerStop - markedPerStop
+                ))
+            }
+        }
+        let tripId = try await service.importTrip(title: "marked", photos: photos)
+        let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
+        let candidates = RecapComposer.photoCandidates(detail: detail)
+        var raw: [String: Int] = [:]
+        var marked: [String: Int] = [:]
+        for photo in detail.photos {
+            guard let stopId = photo.stopId else { continue }
+            raw[stopId, default: 0] += 1
+            if photo.isHighlight != 0 { marked[stopId, default: 0] += 1 }
+        }
+        let legs = RecapComposer.legs(
+            from: detail.segments, epsilonM: config.simplify.epsilonM,
+            matchedEpsilonM: config.matching.displayEpsilonM
+        )
+        return try XCTUnwrap(RecapComposer.trip(
+            trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
+            photosByStop: candidates.byStop,
+            deck: RecapDeck(
+                photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
+                labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
+            ),
+            stopHoldS: config.export.stopHoldS,
+            rawPhotoCounts: raw, favoriteCounts: marked,
+            highlightedAssets: candidates.highlighted,
+            highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
+            weighting: config.export
+        ))
+    }
+
+    /// **A marked photograph reaches the screen** (Chiu 2026-09-24). Every stop
+    /// marks eight photographs late in its visit; each deck is lifted to the
+    /// five-photograph cap, is made only of marked photographs, and the film is
+    /// long enough that the deck floor does not cut any of them back out. The
+    /// first stop is excluded from the count for the reason `testASmallTripShowsWholeDecks`
+    /// records: `first_stop_dwell_scale` shortens it on purpose.
+    func testMarkedPhotographsReachTheScreen() async throws {
+        let config = AppConfig.loadOrDie()
+        try XCTSkipIf(config.export.recapMode != .highlight, "measures the shipped Variant B path")
+        let cap = config.photoImport.deckHighlightMaxPhotos
+        let recap = try await markedTrip(stops: 10, photosPerStop: 30, markedPerStop: 8, config: config)
+        XCTAssertEqual(recap.stops.count, 10, "every marked stop is presented, past the earned 8")
+        for stop in recap.stops {
+            XCTAssertEqual(stop.photos.count, cap)
+            for case let .asset(id) in stop.photos {
+                let index = Int(id.split(separator: "p").last ?? "") ?? -1
+                XCTAssertGreaterThanOrEqual(index, 22, "\(id) is not a marked photograph")
+            }
+        }
+        let line = try timeline(recap, config: config.export)
+        let shown = photosShownPerStop(line, trip: recap)
+        print("KAMOME_DECK_BUDGET marked: film \(Int(line.durationS))s · shown "
+            + shown.map(String.init).joined(separator: "/"))
+        XCTAssertTrue(shown.dropFirst().allSatisfy { $0 == cap },
+                      "a marked deck the film cannot afford drops the person's own picks; shown \(shown)")
     }
 
     /// The largest deck each stop reaches, read off the timeline the renderer
@@ -145,6 +223,16 @@ final class RecapDeckBudgetTests: XCTestCase {
     /// So the expectation moved because the product rule moved, not to make a red
     /// test green, and the guard below still holds the rule that matters: every
     /// stop after the first still shows a real deck.
+    ///
+    /// **Re-baselined a third time 2026-09-24, [2, 5, 5, 5] → [4, 8, 8, 8]**
+    /// (Chiu: the film grows to show the decks it is given, ADR 2026-09-24). The
+    /// film was priced at the expected mix, ~3.3 photographs a stop, whatever
+    /// the decks held, so these eight-photo decks were cut back to five by the
+    /// deck floor. It is now priced per deck (`earnedDurationS(photoCounts:)`)
+    /// and every deck shows whole; the first stop still pays the dwell scale.
+    /// Eight-photo decks no longer occur on the shipped path — highlights cap a
+    /// deck at five — and this builder passes no weighting, which is why it
+    /// still exercises them.
     func testASmallTripShowsWholeDecks() async throws {
         let config = AppConfig.loadOrDie()
         let recap = try await trip(stops: 4, photosPerStop: 8, config: config)
@@ -163,8 +251,8 @@ final class RecapDeckBudgetTests: XCTestCase {
         ))
         XCTAssertEqual(shown.count, 4)
         XCTAssertEqual(
-            shown, [2, 5, 5, 5],
-            "a four-stop trip is a 60 s film: the first stop shows 2 and the rest show whole decks"
+            shown, [4, 8, 8, 8],
+            "every deck the film is given is paid for; only the first stop pays the dwell scale"
         )
         XCTAssertTrue(
             shown.dropFirst().allSatisfy { $0 >= 3 },

@@ -112,9 +112,12 @@ enum RecapComposer {
     }
 
     /// Maps one trip's records into the style-independent `RecapTrip` (S5).
-    /// `photosByStop` maps stop id → the stop's selected deck photo *refs*
-    /// (highlight first, ≤ `deck_max_photos`) — refs, not bitmaps; the render
-    /// layer resolves them. `deck` + `stopHoldS` size each stop's dwell from its
+    /// `photosByStop` maps stop id → the stop's deck photo *candidates*, in time
+    /// order — refs, not bitmaps; the render layer resolves them. With weighting,
+    /// each stop's deck is picked from these **after** allocation, at its final
+    /// size (`PhotoDeckSelector.pick`); `highlightedAssets` lead and, up to
+    /// `highlightMaxPhotos`, raise the size (Chiu 2026-09-24). Without weighting
+    /// the candidates are shown as given. `deck` + `stopHoldS` size each stop's dwell from its
     /// photo count. Returns nil for trips the phantom guard should have kept out
     /// anyway (no route points).
     static func trip(
@@ -127,6 +130,8 @@ enum RecapComposer {
         stopHoldS: Double = 1.5,
         rawPhotoCounts: [String: Int] = [:],
         favoriteCounts: [String: Int] = [:],
+        highlightedAssets: Set<String> = [],
+        highlightMaxPhotos: Int = 0,
         weighting: TrackingConfig.Export? = nil,
         everyLegRoutabilityEstablished: Bool = false
     ) -> RecapTrip? {
@@ -141,7 +146,8 @@ enum RecapComposer {
         let tripStops = kept.map { stop -> RecapTrip.Stop in
             var photos = photosByStop[stop.id] ?? []
             if let allocated = allocation[stop.id] {
-                photos = Array(photos.prefix(allocated))
+                photos = deckPhotos(photos, allocated: allocated,
+                                    highlightedAssets: highlightedAssets, highlightMaxPhotos: highlightMaxPhotos)
             }
             // Stop weighting: an independent legacy flag, shipping `false`, that
             // survives the mode migration by explicit decision (HANDOFF). Measured
@@ -253,6 +259,45 @@ enum RecapComposer {
         let along = min(max(-(startX * dx + startY * dy) / lengthSquared, 0), 1)
         return RecapCoordinate(lat: start.lat + (end.lat - start.lat) * along,
                                lon: start.lon + (end.lon - start.lon) * along)
+    }
+
+    /// One stop's deck at its final size: the allocation, lifted by the
+    /// person's highlights up to `highlightMaxPhotos`, picked across the whole
+    /// visit. This used to be `prefix(allocated)` of an eight-photo spread, which
+    /// could only ever reach the first third of a visit (Chiu 2026-09-24).
+    static func deckPhotos(
+        _ candidates: [PhotoRef], allocated: Int,
+        highlightedAssets: Set<String>, highlightMaxPhotos: Int
+    ) -> [PhotoRef] {
+        let marked = candidates.map { ref -> (ref: PhotoRef, isHighlight: Bool) in
+            guard case let .asset(id) = ref else { return (ref, false) }
+            return (ref, highlightedAssets.contains(id))
+        }
+        let count = PhotoDeckSelector.deckCount(
+            allocated: allocated, highlights: marked.filter(\.isHighlight).count,
+            highlightCap: highlightMaxPhotos
+        )
+        return PhotoDeckSelector.pick(marked, count: count)
+    }
+
+    /// Every stop's deck candidates in time order, and which assets the person
+    /// marked — the input `trip` picks decks from. Shared by the export and the
+    /// desk harnesses so a review render selects exactly what the app does.
+    static func photoCandidates(
+        detail: TripRepository.TripDetail
+    ) -> (byStop: [String: [PhotoRef]], highlighted: Set<String>) {
+        var byStop: [String: [PhotoRef]] = [:]
+        for stop in detail.stops {
+            let ordered = detail.photos
+                .filter { $0.stopId == stop.id }
+                // Asset id breaks a timestamp tie, so a burst lands in the same
+                // order on every export.
+                .sorted { ($0.takenAt ?? 0, $0.phAssetId) < ($1.takenAt ?? 0, $1.phAssetId) }
+                .map { PhotoRef.asset($0.phAssetId) }
+            if !ordered.isEmpty { byStop[stop.id] = ordered }
+        }
+        let highlighted = Set(detail.photos.filter { $0.isHighlight != 0 }.map(\.phAssetId))
+        return (byStop, highlighted)
     }
 
     /// Which stops the film presents, and how many photographs each shows.

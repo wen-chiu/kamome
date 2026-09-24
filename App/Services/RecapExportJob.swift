@@ -73,7 +73,8 @@ struct RecapExportJob: RecapExportRunning {
         let stats = TripStats.from(jsonString: detail.trip.statsJson)
         // Deck photo refs are selected here (data); the resolver loads the
         // bitmaps. Refs stay out of the render size.
-        let photoRefs = request.photosEnabled ? selectStopPhotoRefs(detail: detail) : [:]
+        let candidates = request.photosEnabled
+            ? RecapComposer.photoCandidates(detail: detail) : (byStop: [:], highlighted: [])
         let deck = RecapDeck(
             photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
             labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
@@ -105,9 +106,11 @@ struct RecapExportJob: RecapExportRunning {
         )
         guard let trip = RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: film.stops, stats: stats,
-            photosByStop: photoRefs, deck: deck, stopHoldS: config.export.stopHoldS,
+            photosByStop: candidates.byStop, deck: deck, stopHoldS: config.export.stopHoldS,
             rawPhotoCounts: rawPhotoCounts(detail: detail),
             favoriteCounts: favoriteCounts(detail: detail),
+            highlightedAssets: candidates.highlighted,
+            highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(film.segments)

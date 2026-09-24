@@ -38,8 +38,8 @@ public enum StopWeighting {
     /// Classifies one stop from data the importer already has.
     ///
     /// `photoCount` is the stop's **raw** photograph count, not its selected deck
-    /// size — the deck is capped at `deck_max_photos`, and a cap is a rendering
-    /// decision that must not feed back into a judgement about the place.
+    /// size — the deck is picked down to what the film shows, and that is a
+    /// rendering decision that must not feed back into a judgement about the place.
     public static func classify(
         photoCount: Int, dwellS: Double, config: TrackingConfig.Export
     ) -> StopWeight {
