@@ -31,6 +31,8 @@ final class ImportFlowModel {
     enum Failure: Equatable {
         case noGeotaggedPhotos
         case accessDenied
+        /// The photos were fine; storing the trip failed.
+        case saveFailed
     }
 
     /// Which set of photographs the trip is built from. **The date range is the
@@ -154,7 +156,7 @@ final class ImportFlowModel {
 
         let photos = await provider.photos(matching: query)
         if let tripId = service.existingTrip(for: photos),
-           let trip = try? repository.detail(tripId: tripId)?.trip {
+           let trip = Stored.read("detail", { try repository.detail(tripId: tripId)?.trip }) {
             pending = (tripTitle, photos)
             phase = .duplicate(Duplicate(tripId: tripId, title: trip.title))
             return
@@ -203,11 +205,16 @@ final class ImportFlowModel {
             // (Chiu 2026-09-22) — see `TripJourneyNaming`.
             TripJourneyNaming.nameIfNeeded(tripId: tripId, repository: repository)
             completedTripId = tripId
-        } catch {
-            // The only thrown error is `notEnoughGeotaggedPhotos`; an empty
-            // fetch from denied access lands here too, so prefer the access
-            // message when we can see permission is actually blocked.
+        } catch ImportService.ImportError.notEnoughGeotaggedPhotos {
+            // An empty fetch from denied access lands here too, so prefer the
+            // access message when we can see permission is actually blocked.
             phase = .failed(photoService.isDenied ? .accessDenied : .noGeotaggedPhotos)
+        } catch {
+            // The database refused the trip. This used to be reported as "no
+            // geotagged photos" — a wrong reason that sends the user off to
+            // fix their library (arch review 2026-09-24, P1-5).
+            KamomeLog.storage.error("import save failed: \(error)")
+            phase = .failed(.saveFailed)
         }
     }
 

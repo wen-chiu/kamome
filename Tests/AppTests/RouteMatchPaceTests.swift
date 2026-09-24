@@ -6,7 +6,7 @@ import KamomeTrackingEngine
 import XCTest
 
 /// **A leg too fast to drive is a crossing, and routing is never asked about
-/// it** (ADR 2026-09-24 (c)). The Vietnam film opened on a scooter riding a
+/// it** (ADR 2026-09-24 (e)). The Vietnam film opened on a scooter riding a
 /// dashed line over the Taiwan Strait because only routing could call a leg a
 /// crossing, and routing never said "no road" (`Docs/handoff-vietnam-crossing.md`).
 final class RouteMatchPaceTests: XCTestCase {

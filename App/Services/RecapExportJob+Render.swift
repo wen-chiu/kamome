@@ -146,7 +146,9 @@ extension RecapExportJob {
             let output = try await runDetached(
                 exporter: exporter, videoURL: videoURL, gifURL: gifURL, channel: channel
             )
-            guard let output else {
+            // Asked again on the main actor after the last frame: a trip deleted
+            // meanwhile (`TripDeletion`) stores nothing (arch review 2026-09-24).
+            guard let output, channel.shouldContinue() else {
                 cleanup(videoURL: videoURL, gifURL: gifURL)
                 return .cancelled
             }
@@ -155,8 +157,21 @@ extension RecapExportJob {
             return try store(output: output, plan: plan, seconds: seconds)
         } catch {
             cleanup(videoURL: videoURL, gifURL: gifURL)
-            return .failed(message: String(describing: error))
+            // Logged, so a TestFlight device run keeps it (arch review
+            // 2026-09-24, P1-6); the full text stays private because a MapLibre
+            // error can carry a tile URL, and z/x/y is a place (§0).
+            let code = Self.failureCode(error)
+            KamomeLog.recap.error("export failed — \(code, privacy: .public): \(error)")
+            return .failed(message: code)
         }
+    }
+
+    /// What the export screen shows under "failed": the error's domain and code
+    /// and nothing else — enough for a tester's screenshot to name the cause,
+    /// never the description, which may hold a tile URL.
+    nonisolated static func failureCode(_ error: Error) -> String {
+        let bridged = error as NSError
+        return "\(bridged.domain) · \(bridged.code)"
     }
 
     /// **Where the export's minutes went**, in one line, at the only altitude a
@@ -252,58 +267,6 @@ extension RecapExportJob {
         return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
     }
 
-    // MARK: - The record
-
-    /// Moves the rendered file out of tmp and inserts its record, then resolves
-    /// the stored path once. **This is what makes a completion nobody was
-    /// looking at lose nothing** — the film exists before the outcome is
-    /// published, so no screen has to be open for it to be kept.
-    private func store(
-        output: RecapExporter.Output, plan: Plan, seconds: Double
-    ) throws -> RecapExportOutcome {
-        // The one file written: GIF when the user chose GIF, MP4 otherwise.
-        guard let primaryURL = output.gifURL ?? output.videoURL else {
-            return .failed(message: String(localized: "recap_failed"))
-        }
-        let record = try persistFilm(
-            tempURL: primaryURL,
-            format: output.gifURL != nil ? "gif" : "mp4",
-            appearance: plan.appearance,
-            durationS: plan.timeline.durationS,
-            renderSeconds: seconds
-        )
-        guard let fileURL = FilmStore.resolvedURL(relativePath: record.relativePath) else {
-            return .failed(message: String(localized: "recap_failed"))
-        }
-        return .finished(film: record, fileURL: fileURL)
-    }
-
-    private func persistFilm(
-        tempURL: URL, format: String, appearance: RecapAppearance,
-        durationS: Double, renderSeconds: Double
-    ) throws -> FilmRecord {
-        let relativePath = try FilmStore.moveToStore(from: tempURL)
-        let fileURL = FilmStore.resolvedURL(relativePath: relativePath)
-        let fileBytes = fileURL.flatMap(FilmStore.fileSize(at:))
-        let record = FilmRecord(
-            id: UUID().uuidString,
-            tripId: request.tripId,
-            relativePath: relativePath,
-            format: format,
-            createdAt: Date.now.timeIntervalSince1970,
-            durationS: durationS,
-            renderSeconds: renderSeconds,
-            appearance: appearance.rawValue,
-            recapMode: config.export.recapMode.rawValue,
-            fileBytes: fileBytes
-        )
-        try repository.saveFilm(record)
-        KamomeLog.recap.notice(
-            "film stored: \(record.relativePath, privacy: .public) · \(fileBytes ?? 0) bytes"
-        )
-        return record
-    }
-
     private func cleanup(videoURL: URL, gifURL: URL?) {
         try? FileManager.default.removeItem(at: videoURL)
         if let gifURL { try? FileManager.default.removeItem(at: gifURL) }
@@ -359,11 +322,10 @@ extension RecapExportJob {
     /// `RecordingView` are sanctioned use: MapKit draws its own logo and legal
     /// link there. The licence problem is the *exported video*, not the live map.
     ///
-    /// The `.pmtiles` path is dormant: `RecapMapRegion` still resolves and the
-    /// souvenir style still works, but the export path no longer falls through
-    /// to it or to Apple. The souvenir regions would override the OpenFreeMap
-    /// style when present (a region carries its own tiles), which is the
-    /// correct behaviour for a future self-hosted substrate.
+    /// **The `.pmtiles` path is checked first, not dormant** (corrected
+    /// 2026-09-24): a covering region overrides OpenFreeMap (fixed dark, OSM
+    /// credit only). No region is bundled, and the side-load folders are searched
+    /// only behind `RecapMapTiles.sideloadEnabled`. Never an Apple fallback.
     private static func snapshotProvider(
         for region: RecapMapRegion?, appearance: RecapAppearance, tripBox: GeoBox?
     ) throws -> MapRenderer {

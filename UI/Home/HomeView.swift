@@ -22,6 +22,10 @@ struct HomeView: View {
     @State private var showingDiscovery = false
     @State private var showingAbout = false
     @State private var showingFirstRunNotice = false
+    /// The trip a swipe asked to delete, held until the user confirms. A full
+    /// swipe used to delete outright — a recording, films and all, gone for
+    /// good with no way back (arch review 2026-09-24, P0-4).
+    @State private var tripPendingDeletion: TripRecord?
     #if DEBUG
     @State private var debugShareFile: DebugShareFile?
     #endif
@@ -149,6 +153,16 @@ struct HomeView: View {
         }
     }
 
+    /// A recording cannot be made again; an imported trip can, from the same
+    /// photos — so the two are warned differently. The imported wording is
+    /// Discovery's own, the same delete seen from another screen.
+    private var deletionPrompt: LocalizedStringKey {
+        guard let trip = tripPendingDeletion, !trip.tripSource.isReconstructed else {
+            return "journey_delete_confirm"
+        }
+        return "trip_delete_recorded_confirm"
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "photo.on.rectangle.angled")
@@ -189,13 +203,23 @@ struct HomeView: View {
             }
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) {
-                    session.deleteTrip(trip.id)
+                    tripPendingDeletion = trip
                 } label: {
                     Label("trip_delete", systemImage: "trash")
                 }
             }
         }
         .listStyle(.plain)
+        .confirmationDialog(
+            deletionPrompt, isPresented: Binding(
+                get: { tripPendingDeletion != nil }, set: { if !$0 { tripPendingDeletion = nil } }
+            ), titleVisibility: .visible
+        ) {
+            Button("trip_delete", role: .destructive) {
+                if let tripPendingDeletion { session.deleteTrip(tripPendingDeletion.id) }
+                tripPendingDeletion = nil
+            }
+        }
         .navigationDestination(for: String.self) { tripId in
             TripDetailView(tripId: tripId, session: session)
         }
@@ -338,7 +362,7 @@ struct HomeView: View {
 
     private static func exportLatestTripGPX(session: TrackingSession) -> DebugShareFile? {
         guard let trip = session.trips.first,
-              let detail = try? session.repository.detail(tripId: trip.id) else { return nil }
+              let detail = Stored.read("detail", { try session.repository.detail(tripId: trip.id) }) else { return nil }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("kamome-trip-\(Self.timestamp()).gpx")
         do {

@@ -2,7 +2,7 @@ import KamomeConfig
 @testable import KamomeRouteMatching
 import XCTest
 
-/// The offline half of the crossing verdict (ADR 2026-09-24 (c)): a leg covered
+/// The offline half of the crossing verdict (ADR 2026-09-24 (e)): a leg covered
 /// faster than any drive averages is a crossing, judged on the phone — and a
 /// clock that jumped a time zone must never be what makes it one.
 final class LegPaceTests: XCTestCase {

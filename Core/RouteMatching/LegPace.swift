@@ -2,7 +2,7 @@ import Foundation
 import KamomeConfig
 import KamomeTrackingEngine
 
-/// **Was this leg too fast to have been driven?** (ADR 2026-09-24 (c)).
+/// **Was this leg too fast to have been driven?** (ADR 2026-09-24 (e)).
 ///
 /// The offline half of the crossing verdict. Routing can only say "no road"
 /// when the provider's search concludes, and a leg from Taiwan to Vietnam may

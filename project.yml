@@ -87,14 +87,15 @@ targets:
         NSPhotoLibraryUsageDescription: Kamome reads photos taken during your trips to place them on your route. Selected-photos access works too. Photos are never copied or uploaded.
         NSPhotoLibraryAddUsageDescription: Kamome can save a finished recap film to your photo library when you tap Save. Films are never saved automatically.
         UIBackgroundModes: [location]
-        # Map-region side-load for the Replay MVP dogfood gate (PD-7,
-        # Docs/dogfood-infrastructure.md): a `.pmtiles` region is dragged into
-        # the app's Documents folder over Finder, so the three gate trips can be
-        # given tiles without a rebuild and without bloating the binary. Tile
-        # provisioning proper is a backend problem (spec P7); this is the
-        # deliberately boring stand-in until it exists.
-        UIFileSharingEnabled: true
-        LSSupportsOpeningDocumentsInPlace: true
+        # ⚠️ **No file-sharing keys in this list, on purpose** (arch review
+        # 2026-09-24, Chiu: a testing feature must not ship unless we have
+        # confirmed we are testing). `UIFileSharingEnabled` and
+        # `LSSupportsOpeningDocumentsInPlace` used to live here for every
+        # configuration, so the Finder side-load of `.pmtiles` regions (PD-7,
+        # the Replay MVP dogfood gate) shipped too: a file dropped into
+        # Documents overrode OpenFreeMap in the film. They now come only from
+        # the post-build phase "Switch: side-loaded map regions", governed by
+        # the `KAMOME_SIDELOAD_REGIONS` build setting below.
         # **CJK place names on the MapLibre export** (ADR 2026-09-09; shipping
         # since the production switch, ADR 2026-09-16).
         #
@@ -178,6 +179,25 @@ targets:
           plutil -replace NSLocalNetworkUsageDescription \
             -string "Debug build: Kamome may contact a routing service on your local network while you import or export a trip." \
             "$plist"
+      # **The side-load switch** (arch review 2026-09-24). `KAMOME_SIDELOAD_REGIONS`
+      # is YES in Debug and NO in Release; a testing archive that needs Finder
+      # side-loaded regions passes `KAMOME_SIDELOAD_REGIONS=YES` to xcodebuild
+      # on purpose. Added when on, never removed when off — the same safe
+      # failure direction as the phase above: if this stops running, nothing is
+      # exposed. The app reads `UIFileSharingEnabled` back as the one switch
+      # (`RecapMapTiles.sideloadEnabled`), so the folder a user can reach and
+      # the folder the export searches cannot disagree.
+      # `Scripts/release/check-archive.sh` fails an archive that carries it.
+      - name: "Switch: side-loaded map regions"
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)"
+        script: |
+          [ "${KAMOME_SIDELOAD_REGIONS:-NO}" = "YES" ] || exit 0
+          set -eu
+          plist="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          plutil -replace UIFileSharingEnabled -bool YES "$plist"
+          plutil -replace LSSupportsOpeningDocumentsInPlace -bool YES "$plist"
     settings:
       base:
         # Placeholder until the trademark check clears (spec §11.1).
@@ -190,6 +210,12 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+      # The side-load switch (see "Switch: side-loaded map regions" above).
+      configs:
+        Debug:
+          KAMOME_SIDELOAD_REGIONS: "YES"
+        Release:
+          KAMOME_SIDELOAD_REGIONS: "NO"
 
   KamomeTests:
     type: bundle.unit-test

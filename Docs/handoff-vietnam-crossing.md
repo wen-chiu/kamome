@@ -55,7 +55,7 @@ This container's egress policy blocks the relay, so neither check has been run.
   `isCrossing` is deliberately "one stored verdict and nothing else, no distance
   and no mode", so a pace-based crossing reopens that rule. That needs an ADR.
 
-## Status: layer 1 built (ADR 2026-09-24 (c), DRAFT)
+## Status: layer 1 built (ADR 2026-09-24 (e), DRAFT)
 
 Chiu reopened `isCrossing` and asked for layer 1. `LegPace` now judges every
 imported leg before routing. A leg too fast to have been driven is stored as

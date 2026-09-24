@@ -36,24 +36,10 @@ import KamomeConfig
 /// CPU-bound compositing; prefetch only changes timing, never pixels, and frames
 /// are delivered strictly in order so encoders consume them as a stream.
 public struct RecapRenderLoop {
-    /// Stations requested ahead of the one being composited. Bounds both
-    /// provider concurrency and cache memory (~8 MB per 1080×1920 snapshot,
-    /// so 8 deep is a further ~64 MB peak over depth 4 — named, not measured
-    /// on device). Raised from 4 (`Docs/handoff-export-performance.md` §4):
-    /// whether this buys anything depends on whether `MLNMapSnapshotter`
-    /// actually renders more than one snapshot at a time, which is exactly
-    /// what the `wait` vs `snapshots` reading in the "render cost" log line
-    /// settles — read it against this value, not assumed from it.
-    private static let prefetchDepth = 8
-
-    /// Frames composited at once, across station boundaries. Reprojection is a
-    /// pure function of each frame's own camera (`Docs/camera-arcs.md` §7) — two
-    /// frames never read or write anything the other touches — so compositing
-    /// them is embarrassingly parallel. Bounded for
-    /// the same reason `prefetchDepth` is: each in-flight frame is a fresh
-    /// ~8 MB RGBA bitmap, so this number times ~8 MB is the peak this stage
-    /// adds on top of the station snapshot(s) already live.
-    public static let compositeConcurrency = 4
+    // Prefetch depth and compositing concurrency were constants here; they are
+    // `export.pipeline` now (arch review 2026-09-24, P1-9) — the memory budget
+    // D2 prices on a device, so a config value rather than a code change.
+    // What each bounds, and why: `TrackingConfig.ExportPipeline`.
 
     /// What a snapshot is a function of. Two stations with equal keys are the
     /// same picture, so they share one fetch — a trip that returns to a framing
@@ -122,10 +108,15 @@ public struct RecapRenderLoop {
         private let provider: MapRenderer
         private let widthPx: Int
         private let heightPx: Int
+        private let timeoutS: Double
         private var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
 
-        init(stations: [RecapSnapshotStations.Station], provider: MapRenderer, widthPx: Int, heightPx: Int) {
+        init(
+            stations: [RecapSnapshotStations.Station], provider: MapRenderer,
+            widthPx: Int, heightPx: Int, timeoutS: Double
+        ) {
             self.stations = stations
+            self.timeoutS = timeoutS
             self.provider = provider
             self.widthPx = widthPx
             self.heightPx = heightPx
@@ -160,13 +151,13 @@ public struct RecapRenderLoop {
 
         private func fetch(_ key: SnapshotKey) -> Task<MapSnapshot, Error> {
             if let running = fetches[key] { return running }
-            let (provider, meter, widthPx, heightPx) = (provider, meter, widthPx, heightPx)
+            let (provider, meter, widthPx, heightPx, timeoutS) = (provider, meter, widthPx, heightPx, timeoutS)
             let task = Task {
                 let started = ContinuousClock.now
                 defer { meter.record(RecapRenderLoop.seconds(since: started)) }
-                return try await provider.snapshot(
-                    key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx
-                )
+                return try await SnapshotDeadline.run(seconds: timeoutS) {
+                    try await provider.snapshot(key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx)
+                }
             }
             fetches[key] = task
             return task
@@ -260,7 +251,8 @@ public struct RecapRenderLoop {
         guard !plan.isEmpty else { return stats }
         let fetcher = StationFetcher(
             stations: plan.map(\.station), provider: provider,
-            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx
+            widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+            timeoutS: config.pipeline.snapshotTimeoutS
         )
         defer { fetcher.cancelAll() }
         try await composite(plan, fetcher: fetcher, stats: &stats, deliver: deliver)
@@ -295,12 +287,12 @@ public struct RecapRenderLoop {
             var pending: [Int: CompositedFrame] = [:]
             var carryOn = true
             while carryOn {
-                while inFlight < Self.compositeConcurrency, stationIndex < plan.count {
+                while inFlight < config.pipeline.compositeConcurrency, stationIndex < plan.count {
                     if stationIndex < 0 || frameIndex >= plan[stationIndex].frames.count {
                         stationIndex += 1
                         frameIndex = 0
                         guard stationIndex < plan.count else { break }
-                        let entered = try await fetcher.enter(stationIndex, prefetchDepth: Self.prefetchDepth)
+                        let entered = try await fetcher.enter(stationIndex, prefetchDepth: config.pipeline.prefetchDepth)
                         snapshot = entered.snapshot
                         stats.waitS += entered.waitS
                     }

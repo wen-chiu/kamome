@@ -300,6 +300,7 @@ struct ImportSheet: View {
         switch failure {
         case .noGeotaggedPhotos: return "import_error_no_photos"
         case .accessDenied: return "import_error_access"
+        case .saveFailed: return "import_error_save"
         }
     }
 }

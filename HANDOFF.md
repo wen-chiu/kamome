@@ -89,14 +89,13 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **Vietnam crossing: device owed** → `Docs/handoff-vietnam-crossing.md`.
-
 - 🟠 **Crash-safe recording and trip merge (ADR 2026-09-24 (b)); device checks owed.**
   → `Docs/handoff-long-recording.md`.
+- 🟠 **Arch review 2026-09-24: to verify.** → `Docs/handoff-arch-review-2026-09-24.md`.
+- 🟠 **Vietnam crossing: device owed** → `Docs/handoff-vietnam-crossing.md`.
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
-  T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
-  mode — and T5, the first-run notice that backgrounds the app, which did not
-  reproduce on the simulator and needs a device. → `Docs/handoff-testflight.md`.
+  T4's captures (screens × light/dark, one film per mode) and T5, the first-run
+  notice, which needs a device. → `Docs/handoff-testflight.md`.
 - ⚠️ **The film's EU-DEM credit is shortened, and ADR 2026-09-18 (f) says the
   Copernicus wording "may not shorten".** PR #77 ships `EU-DEM (Copernicus)`
   (Iceland, Europe) on a reading of Delegated Regulation 1159/2013 Art. 3 that
