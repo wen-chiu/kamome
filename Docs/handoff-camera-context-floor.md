@@ -84,13 +84,88 @@ It brings back the bounding-box failure that ADR 2026-09-24 removed. Iceland's
 vector tiles. Both work, and neither is boring technology. The anchor search
 also puts tile queries inside Core, which crosses the Story/Rendering line.
 
-**Recommendation: A at 6 km as the first render, with B designed alongside it.**
-A alone probably fixes Miyakojima. B is what keeps a dense city, where 6 km
-is still just streets, from having the same problem.
+**Recommendation: superseded by §6.** Use the dynamic context floor instead
+of A's fixed number, and keep B.
 
-## 5. Owed
+## 5. Owed (as of §4; §6 replaces A)
 
 - Chiu: pick A's value from the 4 / 6 / 9 km sheet. Decide on B.
 - Engineering, after that: the new key goes in `TrackingConfig.json` with no
   magic numbers. `testAOneAreaTripIsUnchangedByAreas` still has to hold. Run
   `./check.sh`, then re-render Miyakojima and Vietnam (both device-only).
+
+## 6. Dynamic: each area's floor comes from the place around it
+
+Chiu, 2026-09-24: *「旅程地點不同 需要zoom的比例也不同」*. The right floor
+depends on where you are. A fixed metre floor cannot give an island town
+enough context and still leave a road-trip town readable.
+
+### Judged, in relative terms
+
+Relative to the place the stops sit in (the island), both of Chiu's verdicts
+are depths:
+- 19 km is about 1.7× inside Miyakojima's 31.6 km box: **too wide**.
+- 1.9 km is about 17× inside it: **too tight**.
+The geometric mean is about **5×**. So the rule to try: *never frame an area
+more than about 5× deeper than the place it sits in.* "The place" has to be
+found per area, not taken from the trip's box (§4 C).
+
+### Finding "the place it sits in": the trip's own scale ladder
+
+Link stops by single-linkage (the minimum spanning tree over stop positions).
+The joining distance jumps wherever the trip moves up a level (town →
+island → country). Measured on the committed fixtures
+(`Tools/stop-scale-ladder.py`: photos within 300 m merged into stops, a break at a
+link more than 3× the largest link so far). VERIFIED at the desk; that stops
+≈ photo clusters is INFERRED:
+
+| fixture | natural levels (cluster span) | parent of a town area | floor = parent ÷ 5, ≤ 10 km |
+|---|---|---|---|
+| miyakojima-round-trip | town → **32.5 km** (island) → Taiwan | 32.5 km | **6.5 km** |
+| ishigaki-crossing | 0.6 km → **34 km** (island) → 312 km | 34 km | **6.8 km** |
+| auckland-crossing | 1 km → **34 km** → 158 km → 7038 km | 34 km | **6.8 km** |
+| miyakojima (local) | 0.3 km → whole 25.5 km | 25.5 km | **5.1 km** |
+| finland | 2 km → whole 64 km | 64 km | 12.8 → **10 km** (cap) |
+| new-zealand | 1.1 → 4.8 km → whole 205 km | 4.8 / 205 km | 1.5 km / **10 km** (cap) |
+| margaret-river | one level, 13.4 km | 13.4 km | 2.7 km |
+
+On islands and city regions, the parent level is the island or the region
+itself: the thing a viewer recognises. On a road trip, the level above a town
+is the whole route, which is a line rather than a place. That is what the cap
+is for.
+
+### The rule
+
+    floor(area) = clamp(parent(area).span ÷ camera_context_depth,
+                        camera_span_m, camera_context_span_max_m)
+    span(area)  = max(existing ask, floor(area)), then the existing ceilings
+
+- `parent(area)`: the smallest ladder cluster that strictly contains the
+  area's stops and whose link is a level break. It is computed once per film
+  in Core, is deterministic, and uses no new data. That leaves the
+  Story/Rendering boundary and §0 alone.
+- `camera_context_depth` = **5** (INFERRED, the relative midpoint above).
+  `camera_context_span_max_m` = **10 km** (INFERRED, about city scale).
+  Both go in `TrackingConfig.json`.
+- Every area gets its own floor, so as the trip moves between places and
+  days, the scale changes with it. Seams that end up closer than
+  `opening_collapse_zoom_ratio` still merge.
+
+### What it does not solve
+
+- **A dense city.** At 6–10 km, Tokyo is still all streets. The anchor there
+  has to be text: B, the place name in the pill. At that point the name
+  (locality or prefecture) can follow the same ladder: one name per level,
+  and the area shows its parent's name. The field choice is UNKNOWN (§4 B).
+- **Vietnam and Chiu's own dump:** UNKNOWN. What would settle it: run the
+  ladder on the local dumps and add a desk test that pins each area's floor.
+
+### Owed
+
+1. Chiu: approve the rule. It is a framing change (hard rule 2).
+2. Build: `CameraPath` ladder + floor, two keys, tests pinning the table
+   above. `testAOneAreaTripIsUnchangedByAreas` needs care, because the floor
+   applies to one-area films too; that is a deliberate behaviour change, so
+   the baseline gets re-pinned with Chiu's approval and the test is not
+   weakened. Then `./check.sh`.
+3. Render Chiu's Miyakojima Day 1 at depth 4 / 5 / 6 so he can pick the value.
