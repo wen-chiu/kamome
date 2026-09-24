@@ -128,10 +128,10 @@ final class JourneyDiscoveryModel {
 
     /// Reads every stored trip into a summary. Cheap: one read per trip.
     func loadTrips() {
-        let trips = (try? repository.allTrips()) ?? []
+        let trips = Stored.read("allTrips") { try repository.allTrips() } ?? []
         var summaries: [JourneySummary] = []
         for trip in trips {
-            guard let facts = try? repository.journeyCardFacts(tripId: trip.id) else { continue }
+            guard let facts = Stored.read("journeyCardFacts", { try repository.journeyCardFacts(tripId: trip.id) }) else { continue }
             summaries.append(summary(trip: trip, facts: facts))
         }
         // Discovered journeys that are still only in memory stay on the list.
@@ -156,7 +156,7 @@ final class JourneyDiscoveryModel {
         var found: [String: DiscoveredJourney] = [:]
         var fresh: [JourneySummary] = []
         for journey in detection.journeys where !hidden.contains(journey.key) {
-            if (try? repository.trip(discoveryKey: journey.key)) != nil { continue }
+            if Stored.read("trip(discoveryKey:)", { try repository.trip(discoveryKey: journey.key) }) != nil { continue }
             // A trip made through the import sheet has no discovery key, so it
             // is matched by its photographs instead (Chiu 2026-09-23). It is
             // already on this list as a stored trip; offering the journey
@@ -323,7 +323,7 @@ final class JourneyDiscoveryModel {
     /// measured along its routed legs, flights left out.
     private func groundDistance(trip: TripRecord, stats: TripStats?) -> Double? {
         if !trip.tripSource.isReconstructed, let measured = stats?.distanceM { return measured }
-        guard let detail = try? repository.detail(tripId: trip.id) else { return nil }
+        guard let detail = Stored.read("detail", { try repository.detail(tripId: trip.id) }) else { return nil }
         return LegLength.groundMeters(detail.segments)
     }
 

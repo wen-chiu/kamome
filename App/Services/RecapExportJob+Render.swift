@@ -157,8 +157,21 @@ extension RecapExportJob {
             return try store(output: output, plan: plan, seconds: seconds)
         } catch {
             cleanup(videoURL: videoURL, gifURL: gifURL)
-            return .failed(message: String(describing: error))
+            // Logged, so a TestFlight device run keeps it (arch review
+            // 2026-09-24, P1-6); the full text stays private because a MapLibre
+            // error can carry a tile URL, and z/x/y is a place (§0).
+            let code = Self.failureCode(error)
+            KamomeLog.recap.error("export failed — \(code, privacy: .public): \(error)")
+            return .failed(message: code)
         }
+    }
+
+    /// What the export screen shows under "failed": the error's domain and code
+    /// and nothing else — enough for a tester's screenshot to name the cause,
+    /// never the description, which may hold a tile URL.
+    nonisolated static func failureCode(_ error: Error) -> String {
+        let bridged = error as NSError
+        return "\(bridged.domain) · \(bridged.code)"
     }
 
     /// **Where the export's minutes went**, in one line, at the only altitude a

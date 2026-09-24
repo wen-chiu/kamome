@@ -58,7 +58,7 @@ final class TrackingSession {
     }
 
     func refreshTrips() {
-        trips = (try? repository.allTrips()) ?? []
+        trips = Stored.read("allTrips") { try repository.allTrips() } ?? []
     }
 
     /// Swipe-to-delete on the home list — the same `TripDeletion` Journey
@@ -145,19 +145,28 @@ final class TrackingSession {
                 kind: $0.kind.rawValue
             )
         }
-        guard let tripId = try? repository.saveCompletedTrip(
-            title: title,
-            startedAt: startedAt.timeIntervalSince1970,
-            endedAt: now.timeIntervalSince1970,
-            segments: segments,
-            stops: stops
-        ) else { return .failed }
+        let tripId: String
+        do {
+            tripId = try repository.saveCompletedTrip(
+                title: title,
+                startedAt: startedAt.timeIntervalSince1970,
+                endedAt: now.timeIntervalSince1970,
+                segments: segments,
+                stops: stops
+            )
+        } catch {
+            // Why, not just that: `finishJournal` says the journal is kept.
+            KamomeLog.storage.error("saveCompletedTrip failed: \(error)")
+            return .failed
+        }
 
         if let json = stats.jsonString() {
-            try? repository.updateTripStats(tripId: tripId, statsJson: json)
+            Stored.write("updateTripStats") { try repository.updateTripStats(tripId: tripId, statsJson: json) }
         }
         // Recorded at creation for the same reason the importer does it.
-        try? repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
+        Stored.write("setTripVehicle") {
+            try repository.setTripVehicle(tripId: tripId, vehicleId: LastVehicleChoice.forNewTrip())
+        }
         // Home's card can show a place + flag without S3 ever being opened
         // (Chiu 2026-09-22) — see `TripJourneyNaming`.
         TripJourneyNaming.nameIfNeeded(tripId: tripId, repository: repository)

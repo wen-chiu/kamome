@@ -362,7 +362,7 @@ struct HomeView: View {
 
     private static func exportLatestTripGPX(session: TrackingSession) -> DebugShareFile? {
         guard let trip = session.trips.first,
-              let detail = try? session.repository.detail(tripId: trip.id) else { return nil }
+              let detail = Stored.read("detail", { try session.repository.detail(tripId: trip.id) }) else { return nil }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("kamome-trip-\(Self.timestamp()).gpx")
         do {

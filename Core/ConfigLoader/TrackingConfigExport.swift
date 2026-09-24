@@ -394,5 +394,7 @@ public extension TrackingConfig {
         /// **Which film this trip becomes** — one value, replacing the three
         /// booleans that used to encode it. See `RecapMode`.
         public let recapMode: RecapMode
+        /// Memory and time budget of the render (`ExportPipeline`).
+        public let pipeline: ExportPipeline
     }
 }

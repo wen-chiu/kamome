@@ -183,7 +183,7 @@ struct RouteMatchService {
     ) async -> RouteMatchReport {
         var report = RouteMatchReport()
         report.isDisabled = config.baseURL.isEmpty
-        guard let detail = try? repository.detail(tripId: tripId) else { return report }
+        guard let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) else { return report }
         let routable = detail.segments.filter { shouldReconstruct($0.segment, points: $0.points) }
         // **A stored "no road" or "implausible" is an answer, not a gap**
         // (2026-09-12). Neither verdict writes a polyline, so filtering on the
@@ -283,10 +283,10 @@ struct RouteMatchService {
                 report.notEstablished += 1
                 return
             }
-            try? repository.setMatchedPolyline(
-                segmentId: segmentId, encodedPolyline: outcome.encodedPolyline
-            )
-            try? repository.setRoutability(segmentId: segmentId, .road)
+            Stored.write("setMatchedPolyline") {
+                try repository.setMatchedPolyline(segmentId: segmentId, encodedPolyline: outcome.encodedPolyline)
+            }
+            Stored.write("setRoutability") { try repository.setRoutability(segmentId: segmentId, .road) }
             report.reconstructed += 1
         } catch let failure as RouteProviderFailure {
             switch failure {
@@ -316,17 +316,17 @@ struct RouteMatchService {
         case .noRoadHere:
             // The one verdict that is a fact about the ground, and the only one a
             // crossing beat may be built on.
-            try? repository.setRoutability(segmentId: segmentId, .noRoad)
+            Stored.write("setRoutability") { try repository.setRoutability(segmentId: segmentId, .noRoad) }
             report.noPlausibleRoute += 1
         case .offTheRoadNetwork:
             // A beach, a cape, a trail: a fact about the ground, stored so it is
             // not asked again — and never a crossing (ADR 2026-09-23 (c)).
-            try? repository.setRoutability(segmentId: segmentId, .offRoadNetwork)
+            Stored.write("setRoutability") { try repository.setRoutability(segmentId: segmentId, .offRoadNetwork) }
             report.offRoadNetwork += 1
         case .implausible:
             // A road exists and this route is not it. Stored so a later reader
             // cannot mistake the dashed line for water.
-            try? repository.setRoutability(segmentId: segmentId, .implausibleRoute)
+            Stored.write("setRoutability") { try repository.setRoutability(segmentId: segmentId, .implausibleRoute) }
             report.implausibleRoute += 1
         case let .notEstablished(reason):
             KamomeLog.routing.notice(

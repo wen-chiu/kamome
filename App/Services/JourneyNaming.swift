@@ -132,7 +132,7 @@ enum TripJourneyNaming {
         cache: JourneyNameCache = JourneyNameCache()
     ) {
         guard cache.place(for: tripId) == nil,
-              let detail = try? repository.detail(tripId: tripId),
+              let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }),
               let first = detail.stops.first
         else { return }
         Task {

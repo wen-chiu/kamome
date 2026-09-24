@@ -7,7 +7,9 @@ paths the tests did not exercise.
 **Status, branch `claude/p0-stability-fixes` (Chiu 2026-09-24: fix P0 1, 2, 4 and
 P1 7):** P0-1, P0-2, P0-4 and P1-7 are **fixed** there, each with a test.
 P0-3 and P2-12 were **closed by PR #90** (recording journal, End Trip confirm),
-which merged while this review was being written. The rest is open.
+which merged while this review was being written. **Second round (Chiu: 「剩下的5 6
+8-11你也一起把他妥善處理」):** P1-5, 6, 8, 9, 10 fixed, P1-11 decided (ADR
+2026-09-24 (d)). **What is left is device-only**, listed at the end.
 
 Evidence labels (`CLAUDE.md` rule 4): **VERIFIED** = read in the code at the
 line named, **INFERRED** = follows from the code but not provoked, **UNKNOWN**.
@@ -68,7 +70,11 @@ line named, **INFERRED** = follows from the code but not provoked, **UNKNOWN**.
 
 ## P1 — before or during TestFlight
 
-5. **48 swallowed repository errors in App/UI**, against `Arch.md` §5 ("no silent
+5. ✅ **Fixed** — `Stored.write` / `Stored.read` log every repository failure under
+   `KamomeLog.storage` (fixed-string labels only); import says `import_error_save`
+   (draft wording) when the database refuses; Trip Detail deletes a film's file only
+   after its row. `ImportSaveFailureTests`. DemoSeeder (DEBUG) left as it was.
+   **48 swallowed repository errors in App/UI**, against `Arch.md` §5 ("no silent
    fallbacks"). The ones that mislead:
    - `ImportFlowModel.save`: its comment says the only thrown error is
      `notEnoughGeotaggedPhotos`. That is false, because `saveImportedTrip` throws
@@ -76,7 +82,9 @@ line named, **INFERRED** = follows from the code but not provoked, **UNKNOWN**.
    - Two `deleteFilm` implementations with opposite semantics:
      `TripDetailModel.deleteFilm` ignores a DB failure and deletes the file anyway
      (the row outlives its file), while `RecapModel.deleteFilm` logs and keeps the file.
-6. **An export failure reaches the screen as raw `String(describing: error)` and
+6. ✅ **Fixed** — logged (text private), screen shows `domain · code`.
+   `ExportFailureCodeTests`.
+   **An export failure reaches the screen as raw `String(describing: error)` and
    is never logged** (`RecapExportJob+Render.swift:158`). TestFlight exists to run
    D1–D5, and this is the one failure a device session most needs recorded. Log it
    `privacy: .private`, because a MapLibre error can carry a tile URL whose z/x/y is
@@ -95,18 +103,27 @@ line named, **INFERRED** = follows from the code but not provoked, **UNKNOWN**.
    "no longer falls through to it", but the code checks the region **first**
    (VERIFIED, `RecapExportJob+Render.swift` `snapshotProvider`). The comment and the
    code disagree. Whether the side-load ships is a product decision.
-8. **TestFlight is a Release build, so `DriveTestLog` and the debug export menu
+8. ✅ **Decided and built** (ADR (d)) — About → "Export diagnostics": this
+   launch's Kamome log lines as a shared text file. `DiagnosticsLogTests`.
+   **TestFlight is a Release build, so `DriveTestLog` and the debug export menu
    (`#if DEBUG`) are absent.** What a D1–D5 run leaves behind is `KamomeLog`
    (os_log), readable only through Console or a sysdiagnose. Decide how the data
    comes off the phone *before* the device session, not during it.
-9. **Render-loop tunables are hard-coded.** `RecapRenderLoop.prefetchDepth = 8`
+9. ✅ **Fixed** — `export.pipeline.prefetch_depth` / `composite_concurrency`.
+   `ExportPipelineConfigTests` (every copy helper keeps them).
+   **Render-loop tunables are hard-coded.** `RecapRenderLoop.prefetchDepth = 8`
    and `compositeConcurrency = 4` (about 100 MB peak "named, not measured") are
    tunables under rule 7, and memory on older phones is the jetsam risk D2 is
    meant to price.
-10. **`MLNMapSnapshotter` has no completion timeout, and a stuck snapshot makes
+10. ✅ **Fixed** — `export.pipeline.snapshot_timeout_s` (60, INFERRED) via
+    `SnapshotDeadline`, for any substrate. `SnapshotDeadlineTests`, and an export
+    over a provider that never answers fails instead of hanging (`RecapEncoderTests`).
+    **`MLNMapSnapshotter` has no completion timeout, and a stuck snapshot makes
     Cancel inert** (the flag is read only at frame delivery). INFERRED:
     MapLibre's own HTTP timeouts probably bound it. UNKNOWN on device.
-11. **`kamome.sqlite` (every trackpoint) goes into the device's iCloud Backup.**
+11. ✅ **Decided, no code** (ADR (d)): stays in device backup — the user's own
+    backup, not Kamome syncing; the journal stays excluded.
+    **`kamome.sqlite` (every trackpoint) goes into the device's iCloud Backup.**
     It lives in Application Support, and no exclusion is set. The ADR (2026-09-08 §5)
     decided backup for *films* only. Whether device backup counts as "synced"
     under §0 is Chiu's call, not an implementation detail.
@@ -139,3 +156,15 @@ line named, **INFERRED** = follows from the code but not provoked, **UNKNOWN**.
   on one exit path.
 - No coordinate reaches a log with `.public` (grep of every `KamomeLog` call).
 - Migrations are forward-only, and v7 is data-only and idempotent.
+
+## Still owed — needs a phone, no session can do it
+
+- **P0-1's trigger.** Background the app mid-export on a device and confirm the
+  export now *fails* (and a second export can start) rather than hanging.
+- **`snapshot_timeout_s` = 60** against real per-snapshot times (D3), and
+  **`prefetch_depth` / `composite_concurrency`** against peak memory (D2). The
+  diagnostics export carries the `render cost` line both are read from.
+- **The diagnostics file on a Release build.** Confirm what `OSLogStore` returns
+  outside a debugger (redaction of private values) before relying on it.
+- **Draft wording, Chiu's:** `trip_delete_recorded_confirm`, `import_error_save`,
+  `about_export_diagnostics*`.

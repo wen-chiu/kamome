@@ -64,7 +64,7 @@ final class RecapModel {
         self.config = config
         self.repository = repository
         self.coordinator = coordinator
-        vehicleId = (try? repository.detail(tripId: tripId))?.trip.vehicleId ?? VehicleCatalog.defaultSubjectId
+        vehicleId = Stored.read("detail") { try repository.detail(tripId: tripId) }?.trip.vehicleId ?? VehicleCatalog.defaultSubjectId
     }
 
     // MARK: - Vehicle
@@ -95,7 +95,7 @@ final class RecapModel {
     }
 
     func chooseVehicle(_ id: String) {
-        try? repository.setTripVehicle(tripId: tripId, vehicleId: id)
+        Stored.write("setTripVehicle") { try repository.setTripVehicle(tripId: tripId, vehicleId: id) }
         LastVehicleChoice.remember(id)
         vehicleId = id
     }

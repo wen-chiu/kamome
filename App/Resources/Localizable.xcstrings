@@ -219,6 +219,60 @@
         }
       }
     },
+    "about_export_diagnostics": {
+      "comment": "About: diagnostics export for TestFlight testers (ADR 2026-09-24 (d)). Draft wording.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export diagnostics"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出診斷紀錄"
+          }
+        }
+      }
+    },
+    "about_export_diagnostics_failed": {
+      "comment": "About: diagnostics export for TestFlight testers (ADR 2026-09-24 (d)). Draft wording.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The diagnostics could not be read."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取診斷紀錄。"
+          }
+        }
+      }
+    },
+    "about_export_diagnostics_note": {
+      "comment": "About: diagnostics export for TestFlight testers (ADR 2026-09-24 (d)). Draft wording.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A text file of Kamome's own log from this session — timings and counts, never a location. Nothing is sent: you choose where to share it."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這次開啟 App 以來 Kamome 自己的紀錄，存成文字檔：只有耗時和次數，不含任何位置。不會自動傳送，由你決定分享給誰。"
+          }
+        }
+      }
+    },
     "about_title": {
       "extractionState": "manual",
       "localizations": {
@@ -862,6 +916,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "這段期間找不到有定位的相片。試著調整日期，或確認相片含有位置資訊。"
+          }
+        }
+      }
+    },
+    "import_error_save": {
+      "comment": "Import: the photos were fine but storing the trip failed (arch review 2026-09-24). Draft wording.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The trip could not be saved. Please try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法儲存這趟旅程，請再試一次。"
           }
         }
       }

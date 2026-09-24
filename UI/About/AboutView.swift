@@ -53,6 +53,7 @@ struct AboutView: View {
             List {
                 attributionSection
                 privacySection
+                DiagnosticsSection()
                 acknowledgementsSection
             }
             .navigationTitle("about_title")

@@ -57,7 +57,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: recapMode
+            recapMode: recapMode, pipeline: pipeline
         )
     }
 
@@ -114,7 +114,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: recapMode
+            recapMode: recapMode, pipeline: pipeline
         )
     }
 
@@ -164,7 +164,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: mode
+            recapMode: mode, pipeline: pipeline
         )
     }
 
@@ -212,7 +212,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: recapMode
+            recapMode: recapMode, pipeline: pipeline
         )
     }
 
@@ -280,7 +280,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: recapMode
+            recapMode: recapMode, pipeline: pipeline
         )
     }
 
@@ -332,7 +332,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: recapMode
+            recapMode: recapMode, pipeline: pipeline
         )
     }
 
@@ -384,7 +384,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
-            recapMode: recapMode
+            recapMode: recapMode, pipeline: pipeline
         )
     }
 

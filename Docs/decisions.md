@@ -6246,3 +6246,46 @@ locked out every later export until the app was killed.
 **Superseded in part before it landed.** Review finding P0-3 (a recording lived
 only in memory) was closed by PR #90 while this was written, and is not
 repeated here.
+
+## 2026-09-24 (d) — A tester can hand back the log; device backup is the user's own; the export has a time and memory budget
+
+**Decision (Chiu, 2026-09-24).** These close the rest of the pre-TestFlight
+review (`Docs/handoff-arch-review-2026-09-24.md`, P1-5 to P1-11). Asked two
+questions, Chiu took the recommendation on both:
+
+1. **About gets "Export diagnostics", in Release builds too (P1-8).** A
+   TestFlight build is a Release build, so `DriveTestLog` and the debug export
+   menu are compiled out, and D1–D5 could be read only with the phone attached
+   to a Mac. The row reads this launch's `subsystem:com.chiu.kamome` lines back
+   through `OSLogStore`, writes them to a text file, and opens the share sheet.
+   **§0:** `KamomeLog` lines carry counts, durations and fixed strings, never a
+   coordinate. Values logged without `privacy: .public` come back redacted.
+   Nothing is sent: sharing is the user's own act, one file at a time. **Limit:**
+   it holds this launch only, so a crash takes its lines with it. The wording is
+   a draft.
+2. **The database stays in the device's iCloud Backup (P1-11).** §0's "never
+   synced" governs what *Kamome* sends. An iOS device backup is the user's own
+   copy of their phone, made by the OS under the user's settings; it is not
+   Kamome syncing. Excluding `kamome.sqlite` would lose every trip on a phone
+   restore or migration, and would leave films (backed up since 2026-09-08 §5)
+   pointing at trips that no longer exist. The recording journal stays excluded
+   (PR #90): it is a crash buffer, not user data. No code changes.
+
+**Engineering, no product change:**
+
+- **P1-5.** Repository calls in App/UI no longer use a bare `try?`. They go
+  through `Stored.write` / `Stored.read`, which log what failed under a new
+  `KamomeLog.storage` category. The label is a `StaticString`, so no data can
+  reach the log line. A trip the database refuses on import now says so
+  (`import_error_save`, draft wording) instead of "no geotagged photos".
+  Deleting a film in Trip Detail removes the file only after its row is gone.
+- **P1-6.** A failed export is logged, with its full text kept private. The
+  screen shows the error's domain and code, not its description, because a
+  MapLibre error can carry a tile URL, and z/x/y is a place.
+- **P1-9 / P1-10.** New config keys under `export.pipeline`: `prefetch_depth`
+  (8) and `composite_concurrency` (4), which moved out of `RecapRenderLoop`
+  constants, and a new `snapshot_timeout_s` (60, **INFERRED**: about 40 times
+  the 0.72–1.55 s measured per snapshot on the simulator). A snapshot that never
+  answers now fails the export instead of holding it, and holding Cancel with
+  it, forever (`SnapshotDeadline`). No pixel changes. Device figures are owed
+  with D2/D3.
