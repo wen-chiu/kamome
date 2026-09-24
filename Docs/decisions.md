@@ -6106,10 +6106,20 @@ landed on a sampled index.
    deferred by the 2026-08-15 phase decision). It is on-device Vision within
    the 2026-07-20 terms: deterministic, cached, no network. Not started.
 
-**Not done, owed next:** (a) a usable manual picker, with auto / picked /
-excluded per photo and pick-and-swap before export (`photo_ref.order_idx` has
-existed since v2 and is unused). (b) Vision scoring. (c) On a re-match
-(`PhotoLibraryService.buildRefs`), in-app highlights carry over, but a photo
-favourited in Photos after import is not picked up. **UNKNOWN:** whether step 1
-answers most of the reports. The cheapest check is one re-rendered film of a
-reported trip.
+6. **The photo picker** (Chiu 2026-09-24, same session). Each photo is
+   **starred** (tap), **left out** (press and hold) or the app's pick, stored as
+   `is_highlight` plus the new `is_excluded` (schema v8). The two are written
+   together (`setPhotoFilmChoice`), so a photo is never both. A left-out photo
+   is never a candidate and does not count towards its stop's rank.
+   `StopPhotoPickerView` replaces the Stop Editor's 72 pt strip. The export
+   sheet lists each presented stop's deck before rendering, and each row opens
+   the same picker. The numbers on the tiles come from `RecapComposer.filmDecks`,
+   which is the export's own plan (`FilmPhotoChoicesTests` compares the two).
+   **Re-match:** an asset Kamome has seen keeps Kamome's choice. A new asset
+   takes its star from the Photos favourite.
+
+**Not done:** manual deck order (`order_idx`, unused since v2); Vision scoring.
+**UNKNOWN:** whether this answers most of the reports. The cheapest check is one
+re-rendered film of a reported trip. The picker is rendered on the simulator
+with the demo trip's placeholder tiles only; real thumbnails need a device or a
+granted library.

@@ -137,29 +137,13 @@ enum RecapComposer {
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
 
-        let selection = select(stops: stops, photosByStop: photosByStop,
-                               rawPhotoCounts: rawPhotoCounts, favoriteCounts: favoriteCounts,
-                               weighting: weighting)
-        let kept = selection.kept
-        let allocation = selection.allocation
-
-        let tripStops = kept.map { stop -> RecapTrip.Stop in
-            var photos = photosByStop[stop.id] ?? []
-            if let allocated = allocation[stop.id] {
-                photos = deckPhotos(photos, allocated: allocated,
-                                    highlightedAssets: highlightedAssets, highlightMaxPhotos: highlightMaxPhotos)
-            }
-            // Stop weighting: an independent legacy flag, shipping `false`, that
-            // survives the mode migration by explicit decision (HANDOFF). Measured
-            // as having no reachable effect beyond what the modes already do.
-            if let weighting, weighting.stopWeightingEnabled {
-                let raw = rawPhotoCounts[stop.id] ?? photos.count
-                let dwell = (stop.departedAt ?? stop.arrivedAt) - stop.arrivedAt
-                if StopWeighting.classify(photoCount: raw, dwellS: dwell, config: weighting) == .waypoint {
-                    photos = []
-                }
-            }
-            return RecapTrip.Stop(
+        let inputs = PhotoInputs(
+            byStop: photosByStop, highlighted: highlightedAssets,
+            rawCounts: rawPhotoCounts, starredCounts: favoriteCounts
+        )
+        let plan = deckPlan(stops: stops, inputs: inputs, highlightMaxPhotos: highlightMaxPhotos, weighting: weighting)
+        let tripStops = plan.map { stop, photos -> RecapTrip.Stop in
+            RecapTrip.Stop(
                 coordinate: snapped(lat: stop.lat, lon: stop.lon, to: legs),
                 name: stop.name ?? String(localized: "stop_unnamed"),
                 dayLabel: dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt),
@@ -259,89 +243,6 @@ enum RecapComposer {
         let along = min(max(-(startX * dx + startY * dy) / lengthSquared, 0), 1)
         return RecapCoordinate(lat: start.lat + (end.lat - start.lat) * along,
                                lon: start.lon + (end.lon - start.lon) * along)
-    }
-
-    /// One stop's deck at its final size: the allocation, lifted by the
-    /// person's highlights up to `highlightMaxPhotos`, picked across the whole
-    /// visit. This used to be `prefix(allocated)` of an eight-photo spread, which
-    /// could only ever reach the first third of a visit (Chiu 2026-09-24).
-    static func deckPhotos(
-        _ candidates: [PhotoRef], allocated: Int,
-        highlightedAssets: Set<String>, highlightMaxPhotos: Int
-    ) -> [PhotoRef] {
-        let marked = candidates.map { ref -> (ref: PhotoRef, isHighlight: Bool) in
-            guard case let .asset(id) = ref else { return (ref, false) }
-            return (ref, highlightedAssets.contains(id))
-        }
-        let count = PhotoDeckSelector.deckCount(
-            allocated: allocated, highlights: marked.filter(\.isHighlight).count,
-            highlightCap: highlightMaxPhotos
-        )
-        return PhotoDeckSelector.pick(marked, count: count)
-    }
-
-    /// Every stop's deck candidates in time order, and which assets the person
-    /// marked — the input `trip` picks decks from. Shared by the export and the
-    /// desk harnesses so a review render selects exactly what the app does.
-    static func photoCandidates(
-        detail: TripRepository.TripDetail
-    ) -> (byStop: [String: [PhotoRef]], highlighted: Set<String>) {
-        var byStop: [String: [PhotoRef]] = [:]
-        for stop in detail.stops {
-            let ordered = detail.photos
-                .filter { $0.stopId == stop.id }
-                // Asset id breaks a timestamp tie, so a burst lands in the same
-                // order on every export.
-                .sorted { ($0.takenAt ?? 0, $0.phAssetId) < ($1.takenAt ?? 0, $1.phAssetId) }
-                .map { PhotoRef.asset($0.phAssetId) }
-            if !ordered.isEmpty { byStop[stop.id] = ordered }
-        }
-        let highlighted = Set(detail.photos.filter { $0.isHighlight != 0 }.map(\.phAssetId))
-        return (byStop, highlighted)
-    }
-
-    /// Which stops the film presents, and how many photographs each shows.
-    ///
-    /// **One switch, one decision.** This used to be three conditionals over three
-    /// booleans, each carrying a negation of the others. Exhaustive with no
-    /// `default:` on purpose: adding a `RecapMode` case must break the build here
-    /// rather than fall silently into an existing branch.
-    private static func select(
-        stops: [StopRecord],
-        photosByStop: [String: [PhotoRef]],
-        rawPhotoCounts: [String: Int],
-        favoriteCounts: [String: Int],
-        weighting: TrackingConfig.Export?
-    ) -> (kept: [StopRecord], allocation: [String: Int]) {
-        guard let weighting else { return (stops, [:]) }
-        let signals = stops.map { stop in
-            StopPhotoAllocator.Signal(
-                photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
-                favoriteCount: favoriteCounts[stop.id] ?? 0
-            )
-        }
-        var allocation: [String: Int] = [:]
-        switch weighting.recapMode {
-        case .highlight:
-            // A skipped stop leaves the film entirely — no pin, no name, no pause,
-            // no park beat.
-            // The trip earns its stop count from its own size (Chiu 2026-08-14).
-            // This used to pass `totalDurationMaxS`, which is why every trip
-            // presented the same 8 stops whether it had 10 or 65: the duration
-            // ceiling was the same for all of them.
-            let tiers = StopPhotoAllocator.triage(signals, config: weighting)
-            let kept = zip(stops, tiers).compactMap { stop, tier -> StopRecord? in
-                guard let tier else { return nil }
-                allocation[stop.id] = tier
-                return stop
-            }
-            return (kept, allocation)
-        case .full:
-            // Every stop survives; rank decides how many photographs it shows.
-            let counts = StopPhotoAllocator.allocate(signals, config: weighting)
-            for (stop, count) in zip(stops, counts) { allocation[stop.id] = count }
-            return (stops, allocation)
-        }
     }
 
     /// Same day math as S3's filter chips (TripDetailModel.dayIndex).

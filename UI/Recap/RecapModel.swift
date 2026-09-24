@@ -88,6 +88,12 @@ final class RecapModel {
     /// Writes the choice to the trip and remembers it for the next new trip's
     /// default. A column write, same as before the move — it never costs a
     /// re-import, and the export job reads it at render time.
+    /// The next film's photographs, stop by stop, and the person's choices
+    /// over them (ADR 2026-09-24) — the export composes exactly this plan.
+    func filmPhotoChoices() -> FilmPhotoChoices {
+        FilmPhotoChoices(tripId: tripId, config: config, repository: repository)
+    }
+
     func chooseVehicle(_ id: String) {
         try? repository.setTripVehicle(tripId: tripId, vehicleId: id)
         LastVehicleChoice.remember(id)

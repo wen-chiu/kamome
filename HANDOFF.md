@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-23.** `main` carries PRs #16–#84. Everything closed has been
+**Updated 2026-09-24.** `main` carries PRs #16–#88. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -88,13 +88,8 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **Photo selection: the deck-cut defect is fixed; the manual picker and Vision
-  scoring are owed.** Decks are now picked at their final size, marked stops
-  always stay, and highlights lift a deck to 5. The Stop Editor is still a
-  72 pt strip with no exclude and no preview of what the film shows. Hero-photo
-  Vision work was reopened by Chiu but not started. No film has been re-rendered
-  since the fix. → ADR 2026-09-24.
-
+- 🟠 **Photo selection:** deck fix and picker done; Vision hero photos owed; no
+  film re-rendered, picker unseen with real photos. → ADR 2026-09-24.
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
   T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
   mode — and T5, the first-run notice that backgrounds the app, which did not
@@ -113,8 +108,7 @@ string stands. Do not reopen this from scratch.
   And `VehicleCatalog.resolve`
   still misses now and then and silently draws the fallback badge instead of the
   car (1 render in 5 on 2026-09-16; device rate **UNKNOWN**,
-  → `Docs/handoff-subject-lookup.md`). The third, content-derived pacing, is
-  **closed — VERIFIED 2026-09-19** (ADR 2026-09-19).
+  → `Docs/handoff-subject-lookup.md`). Content-derived pacing: closed, ADR 2026-09-19.
   The question that catches the class: *"does the shipping path ever call this?"*
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
@@ -188,8 +182,7 @@ film (`Docs/handoff-crop-scaling.md`).
 
 ## iCloud photo download — code done, never run against iCloud
 
-The film's iCloud-only photos are fetched before the render (local pass first,
-progress, per-photo timeout, Cancel). **Unmeasured:** derivative-vs-original
-transfer size, peak memory of a full-mode film, cellular cost of previews. One
-device, Optimize Storage on, Instruments (Allocations + Network).
+iCloud-only photos are fetched before the render. **Unmeasured:**
+derivative-vs-original transfer size, peak memory of a full-mode film, cellular
+cost of previews. One device, Optimize Storage on, Instruments.
 → ADR 2026-09-19 (b).

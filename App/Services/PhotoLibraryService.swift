@@ -135,12 +135,15 @@ final class PhotoLibraryService: PhotoAccessProviding {
             PhotoMatcher.Stop(id: $0.id, lat: $0.lat, lon: $0.lon, arrivedAt: $0.arrivedAt, departedAt: $0.departedAt)
         }
 
-        // Re-matching replaces all refs with fresh ids; carry is_highlight
-        // over by asset so a grown limited selection doesn't drop user edits.
-        let highlighted = Set(
-            ((try? repository.photoRefs(tripId: tripId)) ?? [])
-                .filter { $0.isHighlight == 1 }
-                .map(\.phAssetId)
+        // Re-matching replaces all refs with fresh ids; carry the film choice
+        // (star / left out) over by asset so a grown limited selection doesn't
+        // drop user edits. A photograph Kamome has **never seen** takes its
+        // star from Photos' favourite, exactly as an import does; one it has
+        // seen keeps Kamome's own record, so a favourite the person un-starred
+        // or left out here does not come back (ADR 2026-09-24).
+        let known = Dictionary(
+            ((try? repository.photoRefs(tripId: tripId)) ?? []).map { ($0.phAssetId, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
 
         var refs: [PhotoRefRecord] = []
@@ -162,7 +165,8 @@ final class PhotoLibraryService: PhotoAccessProviding {
                 takenAt: photo.takenAt,
                 lat: photo.lat,
                 lon: photo.lon,
-                isHighlight: highlighted.contains(asset.localIdentifier) ? 1 : 0
+                isHighlight: known[asset.localIdentifier].map(\.isHighlight) ?? (asset.isFavorite ? 1 : 0),
+                isExcluded: known[asset.localIdentifier]?.isExcluded ?? 0
             ))
         }
         return refs

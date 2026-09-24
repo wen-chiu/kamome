@@ -326,8 +326,12 @@ final class TripDetailModel {
         reload()
     }
 
-    func toggleHighlight(photo: PhotoRefRecord) {
-        try? repository.setPhotoHighlight(photoId: photo.id, isHighlight: photo.isHighlight == 0)
-        reload()
+    /// The film's photo plan for the Stop Editor's picker. A change there
+    /// re-reads this trip so the timeline's stars follow.
+    @MainActor
+    func filmPhotoChoices() -> FilmPhotoChoices {
+        FilmPhotoChoices(tripId: tripId, config: config, repository: repository) { [weak self] in
+            self?.reload()
+        }
     }
 }

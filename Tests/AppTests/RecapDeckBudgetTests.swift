@@ -96,28 +96,21 @@ final class RecapDeckBudgetTests: XCTestCase {
         }
         let tripId = try await service.importTrip(title: "marked", photos: photos)
         let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
-        let candidates = RecapComposer.photoCandidates(detail: detail)
-        var raw: [String: Int] = [:]
-        var marked: [String: Int] = [:]
-        for photo in detail.photos {
-            guard let stopId = photo.stopId else { continue }
-            raw[stopId, default: 0] += 1
-            if photo.isHighlight != 0 { marked[stopId, default: 0] += 1 }
-        }
+        let inputs = RecapComposer.photoInputs(detail: detail)
         let legs = RecapComposer.legs(
             from: detail.segments, epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM
         )
         return try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: detail.stops, stats: nil,
-            photosByStop: candidates.byStop,
+            photosByStop: inputs.byStop,
             deck: RecapDeck(
                 photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
                 labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
             ),
             stopHoldS: config.export.stopHoldS,
-            rawPhotoCounts: raw, favoriteCounts: marked,
-            highlightedAssets: candidates.highlighted,
+            rawPhotoCounts: inputs.rawCounts, favoriteCounts: inputs.starredCounts,
+            highlightedAssets: inputs.highlighted,
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export
         ))

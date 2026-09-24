@@ -54,27 +54,4 @@ extension RecapExportJob {
             render blank cards. The route is unaffected: EXIF place and time need no download.
             """)
     }
-
-    /// Every stop's **raw** photograph count — what `StopWeighting` judges the
-    /// place on, before the deck is picked down to what the film can show.
-    func rawPhotoCounts(detail: TripRepository.TripDetail) -> [String: Int] {
-        var counts: [String: Int] = [:]
-        for photo in detail.photos {
-            guard let stopId = photo.stopId else { continue }
-            counts[stopId, default: 0] += 1
-        }
-        return counts
-    }
-
-    /// Marked photographs per stop — `PHAsset.isFavorite` at import time and
-    /// in-app highlights, both stored in `is_highlight`. A stop with any is
-    /// always kept (`StopPhotoAllocator.triage`, Chiu 2026-09-24).
-    func favoriteCounts(detail: TripRepository.TripDetail) -> [String: Int] {
-        var counts: [String: Int] = [:]
-        for photo in detail.photos where photo.isHighlight != 0 {
-            guard let stopId = photo.stopId else { continue }
-            counts[stopId, default: 0] += 1
-        }
-        return counts
-    }
 }

@@ -6,8 +6,9 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-23 (f)** and `main` at
-**PR #87** (ADRs (e), (f)). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
+Last synced: 2026-09-24 against decisions.md **2026-09-24** and `main` at
+**PR #88** (export perf §7: GIF renders only kept frames, one pool across
+stations; no ADR). PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
 its §7 is the second pass — GIF-only render, one pool across stations).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
@@ -26,6 +27,11 @@ compact — two lines (place, visit pill, date; route, days, ground-only km),
 photos and details in a drawer that opens in place, provenance marked by
 exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
 no coordinate as a milestone.
+**ADR 2026-09-24** (this branch): each stop's photos are picked at their final
+size across the whole visit; a marked stop is always presented; highlights lift
+a deck to `import.deck_highlight_max_photos` (5) and the film pays for it. Chiu
+reopened Story Director's hero photos (Vision). Star / leave-out picker in the
+Stop Editor and export sheet (schema v8).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
@@ -132,7 +138,8 @@ is not to be tuned** — Variant A is harness-only env overrides.
 
 MapLibre substrate work beyond the frozen styles (custom tiles, tile server, map
 labels, pixel art) — the production switch landed (ADR 2026-09-16) · Story
-Director's remaining content (hero photos, chapters, music, video beads) ·
+Director's remaining content (chapters, music, video beads — hero photos
+reopened, ADR 2026-09-24) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·

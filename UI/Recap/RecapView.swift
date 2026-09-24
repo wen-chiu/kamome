@@ -28,6 +28,8 @@ struct RecapView: View {
     @State private var player: AVPlayer?
     @State private var photosSaveState: PhotosSaveState = .idle
     @State private var showDeleteConfirmation = false
+    /// The next film's photographs; built once when the sheet appears.
+    @State private var filmPhotos: FilmPhotoChoices?
     @Environment(\.dismiss) private var dismiss
     /// Captured at the tap, not during the render — see `RecapModel.startExport`.
     @Environment(\.colorScheme) private var colorScheme
@@ -53,6 +55,7 @@ struct RecapView: View {
                     finishedContent(fileURL: fileURL)
                 } else {
                     exportForm
+                        .onAppear { if filmPhotos == nil { filmPhotos = model.filmPhotoChoices() } }
                 }
             }
             .navigationTitle("recap_title")
@@ -94,6 +97,8 @@ struct RecapView: View {
                 // The load-bearing sentence: photos ≠ chrome.
                 Text("recap_photos_note")
             }
+
+            filmPhotosSection
 
             if let shortfall = model.photoShortfall {
                 Section {
@@ -149,6 +154,29 @@ struct RecapView: View {
                         .foregroundStyle(.secondary)
                     Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
                 }
+            }
+        }
+    }
+
+    /// What the film will show at each stop, before it is rendered (ADR
+    /// 2026-09-24). This is where someone notices a photograph they did not
+    /// want, so it is where they can change it: each row opens that stop's
+    /// picker. Hidden while rendering — the film in flight has already chosen.
+    @ViewBuilder
+    private var filmPhotosSection: some View {
+        if model.photosEnabled, !model.isRendering, let filmPhotos, !filmPhotos.filmStops.isEmpty {
+            Section {
+                ForEach(filmPhotos.filmStops, id: \.id) { stop in
+                    NavigationLink {
+                        StopPhotoPickerView(choices: filmPhotos, stop: stop)
+                    } label: {
+                        FilmDeckRow(choices: filmPhotos, stop: stop)
+                    }
+                }
+            } header: {
+                Text("recap_photos_section")
+            } footer: {
+                Text("recap_photos_section_footer")
             }
         }
     }

@@ -177,6 +177,9 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
     public var lat: Double?
     public var lon: Double?
     public var isHighlight: Int
+    /// Left out of the film by the person (schema v8, ADR 2026-09-24). Never
+    /// set together with `isHighlight` — see `filmChoice`.
+    public var isExcluded: Int
     /// Manual display order within a stop (schema v2 — the deferred S4 reorder).
     /// Nullable; NULL means "order by `takenAt`", the prior behavior.
     public var orderIdx: Int?
@@ -188,6 +191,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         case phAssetId = "ph_asset_id"
         case takenAt = "taken_at"
         case isHighlight = "is_highlight"
+        case isExcluded = "is_excluded"
         case orderIdx = "order_idx"
     }
 
@@ -200,6 +204,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         lat: Double? = nil,
         lon: Double? = nil,
         isHighlight: Int = 0,
+        isExcluded: Int = 0,
         orderIdx: Int? = nil
     ) {
         self.id = id
@@ -210,7 +215,22 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         self.lat = lat
         self.lon = lon
         self.isHighlight = isHighlight
+        self.isExcluded = isExcluded
         self.orderIdx = orderIdx
+    }
+
+    /// What the film does with this photograph (ADR 2026-09-24). A star is the
+    /// person saying "this one" — a Photos favourite at import, or a tap in
+    /// Kamome; excluded is "never this one"; anything else is the app's pick.
+    public enum FilmChoice: Equatable, Sendable {
+        case auto
+        case starred
+        case excluded
+    }
+
+    public var filmChoice: FilmChoice {
+        if isExcluded != 0 { return .excluded }
+        return isHighlight != 0 ? .starred : .auto
     }
 }
 

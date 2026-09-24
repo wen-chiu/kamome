@@ -2735,23 +2735,6 @@
         }
       }
     },
-    "stop_editor_highlight_hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap a photo to mark it as a highlight."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "點一下照片即可標記為精選。"
-          }
-        }
-      }
-    },
     "stop_editor_photos": {
       "extractionState": "manual",
       "localizations": {
@@ -3105,6 +3088,227 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在從 iCloud 下載"
+          }
+        }
+      }
+    },
+    "stop_photos_row": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose photos for the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑選影片的照片"
+          }
+        }
+      }
+    },
+    "stop_photos_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld photos are in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片會用其中 %1$lld 張（共 %2$lld 張）"
+          }
+        }
+      }
+    },
+    "stop_photos_not_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This stop isn’t in the film yet. Star a photo to bring it in."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這一站目前不在影片裡。幫一張照片加星號，就會放進去。"
+          }
+        }
+      }
+    },
+    "stop_photos_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a photo to star it: starred photos always go in the film, up to %lld per stop. Press and hold to leave one out. Kamome picks the rest from across the whole visit."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下照片加星號：有星號的照片一定會放進影片，每站最多 %lld 張。長按可以把照片排除。其餘由 Kamome 從整段停留中挑選。"
+          }
+        }
+      }
+    },
+    "stop_photos_include": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use in Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_exclude": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave Out of Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不要放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_tile_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to add or remove the star. Press and hold to leave it out of the film."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下加上或移除星號，長按可以排除在影片外。"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo %lld in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片第 %lld 張"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starred"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加星號"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_excluded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left out of the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_not_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在影片裡"
+          }
+        }
+      }
+    },
+    "recap_photos_section": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片裡的照片"
+          }
+        }
+      }
+    },
+    "recap_photos_section_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a stop to change its photos. Starred photos always go in; you can leave any photo out."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一個站點來更換照片：有星號的一定會放進去，也可以排除不想要的照片。"
           }
         }
       }
