@@ -64,7 +64,7 @@ VERIFIED from code.
 - **S2 redraws the whole path every second** (`RecordingView`'s 1 s clock plus
   a full `MapPolyline`). Across two weeks that is tens of thousands of
   coordinates. INFERRED heat and lag; decimate the display path.
-- **Trip merge: built** (ADR 2026-09-24, "Merge Trips…" in Trip Detail's
+- **Trip merge: built** (ADR 2026-09-24 (b), "Merge Trips…" in Trip Detail's
   overflow menu). Owed: how a multi-day `merge_gap` leg paces in the film, and
   whether `merge_gap_min_m = 500` is right. Both are INFERRED. Also owed: a look
   at the sheet on a simulator.

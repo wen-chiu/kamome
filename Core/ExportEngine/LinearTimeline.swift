@@ -240,7 +240,7 @@ public struct LinearTimeline {
         return SubjectState(
             lat: position.lat, lon: position.lon, heading: position.heading,
             emphasis: presence, isVisible: presence > 0.001,
-            role: path.isCrossing(atTime: time) ? .crossing : .vehicle
+            role: subjectRole(atTime: time)
         )
     }
 

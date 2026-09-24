@@ -6,7 +6,7 @@ import KamomeTripComposer
 
 /// Merges several trips into one, so a journey recorded day by day, or partly
 /// recorded and partly rebuilt from photographs, becomes one film
-/// (ADR 2026-09-24, Chiu's three calls):
+/// (ADR 2026-09-24 (b), Chiu's three calls):
 ///
 /// 1. **A recording may merge with a photo reconstruction.** Provenance stays
 ///    per segment, so the film still draws each leg as what it is. The merged

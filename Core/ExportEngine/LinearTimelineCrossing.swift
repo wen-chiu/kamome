@@ -277,4 +277,41 @@ extension LinearTimeline {
     private func crossingIsPutAway(atTime time: Double) -> Bool {
         time < durationS - endCardS
     }
+
+    /// **Which subject is on screen — the one that moves next to it.**
+    ///
+    /// Moving, the role is the stretch's: the crossing role over a leg with no
+    /// road, the trip's vehicle over any other. **Standing still** — at a stop,
+    /// or waiting through the opening or a reframe beat — it is the role of the
+    /// nearest movement in time, and of the only one when just one side moves.
+    ///
+    /// 🔴 **Fixed 2026-09-24, from Chiu's review of the camera-areas films:**
+    /// *「開頭要出現飛機之前他還是會不小心跑出一個車子 一下子而已」.* The role used to be
+    /// read off the crossing beat alone, so the departure airport's pull-away ramp —
+    /// the subject fading in over the stop's last `subject_park_s`, just before
+    /// the flight — drew the **car** for that fade, and the landing's park-in drew
+    /// it again as the plane settled. A subject that is about to fly, or has just
+    /// landed, is the plane.
+    func subjectRole(atTime time: Double) -> SubjectState.SubjectRole {
+        let entries = path.timeline
+        let clamped = min(max(time, 0), durationS)
+        guard let index = entries.lastIndex(where: { $0.startS <= clamped }) else { return .vehicle }
+        func moving(_ entry: CameraPath.TimelineEntry) -> SubjectState.SubjectRole? {
+            switch entry.phase {
+            case .crossing where entry.endS > entry.startS: return .crossing
+            case let .travel(fromM, toM) where toM > fromM: return .vehicle
+            default: return nil
+            }
+        }
+        if let role = moving(entries[index]) { return role }
+        let before = entries[..<index].last { moving($0) != nil }
+        let after = entries[(index + 1)...].first { moving($0) != nil }
+        switch (before, after) {
+        case let (before?, after?):
+            return (clamped - before.endS <= after.startS - clamped ? moving(before) : moving(after)) ?? .vehicle
+        case let (before?, nil): return moving(before) ?? .vehicle
+        case let (nil, after?): return moving(after) ?? .vehicle
+        case (nil, nil): return .vehicle
+        }
+    }
 }

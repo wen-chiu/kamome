@@ -6,9 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-24** and `main` at
-**PR #88** (GIF-only export render, one compositing pool across stations; device
-figures owed, `Docs/handoff-export-performance.md` §7). PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
+Last synced: 2026-09-24 against decisions.md **2026-09-24 (b)** and `main` at
+**PR #89** (**ADR 2026-09-24**: the body is framed per camera
+area — a town at town scale, a drive wide; zoom only while the vehicle waits;
+renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PR #88: export perf §7. PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
 its §7 is the second pass — GIF-only render, one pool across stations).
 PR #82: log-only diagnosis of the Miyakojima `UNKNOWN`. PR #83: UI polish; the
@@ -27,7 +28,7 @@ compact — two lines (place, visit pill, date; route, days, ground-only km),
 photos and details in a drawer that opens in place, provenance marked by
 exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
 no coordinate as a milestone.
-**ADR 2026-09-24**: trips merge into one trip and one film. Recorded and photo-rebuilt
+**ADR 2026-09-24 (b)**: trips merge into one trip and one film. Recorded and photo-rebuilt
 parts can mix, with provenance per segment and the whole marked reconstructed. A far
 gap between parts is an inferred `merge_gap` leg, a near one an overnight stop. Films are
 kept. PR #90 makes a recording survive the app being killed (`Docs/handoff-long-recording.md`).
@@ -107,7 +108,8 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
   Cloudflare Worker. Detour-ratio gate 2.5. **No snap radius exists or is needed**
   (ADR 2026-08-20 (d) — read it before citing any older snap-radius text).
   Bounded, cancellable, and it reports which of four causes dashed a film.
-- **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per trip.
+- **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per **area**
+  (`CameraPathAreas`, ADR 2026-09-24); scale changes only in a reframe beat.
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
 - **Export:** one film at a time, app-wide; `RecapExportCoordinator` outlives
@@ -141,7 +143,7 @@ Director's remaining content (hero photos, chapters, music, video beads) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·
-per-act / per-segment camera framing (rejected 2026-08-02) · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
+per-act camera framing (rejected 2026-08-02; per-**area** framing built 2026-09-24) · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
 
 ## Authoritative sources — higher wins; newest wins within a level
 

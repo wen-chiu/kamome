@@ -39,7 +39,7 @@ public enum SegmentSource: String, CaseIterable, Sendable {
     /// Points reconstructed from photo EXIF — the Replay MVP importer.
     case exif
     /// The stretch between two merged trips that ended and began far apart
-    /// (ADR 2026-09-24): two points, the end of one and the start of the next,
+    /// (ADR 2026-09-24 (b)): two points, the end of one and the start of the next,
     /// and nothing observed in between. Treated as `exif` is — routed, and
     /// dashed when no road comes back — never as a recording.
     case mergeGap = "merge_gap"

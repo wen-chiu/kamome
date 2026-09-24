@@ -1,7 +1,7 @@
 import KamomePersistence
 import SwiftUI
 
-/// Picks the trips to merge with this one (ADR 2026-09-24). Reached from Trip
+/// Picks the trips to merge with this one (ADR 2026-09-24 (b)). Reached from Trip
 /// Detail's overflow menu, so Home is not restyled.
 ///
 /// A trip whose time overlaps this one is listed but cannot be picked, so the

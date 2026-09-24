@@ -3,7 +3,7 @@ import KamomePersistence
 import XCTest
 
 /// `applyMerge` moves every row a trip owns onto the survivor, in one
-/// transaction (ADR 2026-09-24).
+/// transaction (ADR 2026-09-24 (b)).
 final class TripMergeRepositoryTests: XCTestCase {
     private func recordedTrip(_ repository: TripRepository, start: Double, lon: Double) throws -> String {
         try repository.saveCompletedTrip(

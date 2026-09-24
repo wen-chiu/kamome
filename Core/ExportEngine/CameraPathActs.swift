@@ -28,18 +28,30 @@ extension CameraPath {
         startS: Double = 0,
         targetS: Double
     ) -> [TimelineEntry] {
-        var holds = anchors.map { anchor -> Double in
-            if let stopHoldsS, anchor.stopIndex < stopHoldsS.count {
-                return max(0, stopHoldsS[anchor.stopIndex])
-            }
-            return config.stopHoldS
-        }
-        let totalHold = holds.reduce(0, +)
-        let cap = max(targetS - startS, 0) * config.maxHoldFraction
-        if totalHold > cap, totalHold > 0 {
-            let factor = cap / totalHold
-            holds = holds.map { $0 * factor }
-        }
+        buildTimelineWithReframes(
+            anchors: anchors, totalM: totalM, config: config, stopHoldsS: stopHoldsS,
+            crossings: crossings, startS: startS, targetS: targetS
+        ).entries
+    }
+
+    /// `buildTimeline`, plus the film's **reframe beats** (`CameraPathAreas`):
+    /// one per change of area at a stop, each a wait at that stop placed before
+    /// its scene when the next area is tighter and after it when it is wider, and
+    /// paid for out of the travel budget like a crossing. `areas` shares the
+    /// travel clock by screen distance; nil keeps ground distance — the one-area
+    /// film, bit for bit.
+    static func buildTimelineWithReframes(
+        anchors: [(stopIndex: Int, distanceM: Double)],
+        totalM: Double,
+        config: TrackingConfig.Export,
+        stopHoldsS: [Double]?,
+        crossings: [Crossing] = [],
+        startS: Double = 0,
+        targetS: Double,
+        reframes: [Reframe] = [],
+        areas: AreaPlan? = nil
+    ) -> (entries: [TimelineEntry], reframes: [ReframeWindow]) {
+        let holds = cappedHolds(anchors: anchors, config: config, stopHoldsS: stopHoldsS, windowS: targetS - startS)
         let budgetS = max(targetS - startS - holds.reduce(0, +), 0)
 
         // **A crossing is paid for out of the travel budget, at a fixed price.**
@@ -49,7 +61,12 @@ extension CameraPath {
         // (`Docs/cross-region-journeys.md`, symptom 2).
         let beatS = crossingBeatS(count: crossings.count, travelS: budgetS, config: config)
         let localM = localDistanceM(totalM: totalM, crossings: crossings)
-        let localTravelS = max(budgetS - beatS * Double(crossings.count), 0)
+        let afterCrossingsS = max(budgetS - beatS * Double(crossings.count), 0)
+        // A reframe is the opening's closing zoom at a stop, so it asks for the
+        // same `zoom_transition_s`, capped the way a crossing beat is.
+        let reframeS = reframes.isEmpty ? 0
+            : max(min(config.zoomTransitionS, afterCrossingsS * config.maxHoldFraction / Double(reframes.count)), 0)
+        let localTravelS = max(afterCrossingsS - reframeS * Double(reframes.count), 0)
         var timeline: [TimelineEntry] = []
         var clock = startS
         if startS > 0 {
@@ -58,8 +75,19 @@ extension CameraPath {
             timeline.append(.init(startS: 0, endS: startS, phase: .travel(fromM: 0, toM: 0)))
         }
         let pricing = TravelPricing(
-            crossings: crossings, beatS: beatS, localM: localM, localTravelS: localTravelS
+            crossings: crossings, beatS: beatS, localM: localM, localTravelS: localTravelS, areas: areas
         )
+
+        var windows: [ReframeWindow] = []
+        var pending = reframes
+        /// The vehicle waits at `atM` while the camera changes area.
+        func reframe(atM: Double, zoomsIn: Bool) {
+            guard let index = pending.firstIndex(where: { $0.atM == atM && $0.zoomsIn == zoomsIn }) else { return }
+            pending.remove(at: index)
+            timeline.append(.init(startS: clock, endS: clock + reframeS, phase: .travel(fromM: atM, toM: atM)))
+            windows.append(ReframeWindow(startS: clock, endS: clock + reframeS))
+            clock += reframeS
+        }
 
         var legStartM = 0.0
         for (index, anchor) in anchors.enumerated() {
@@ -67,15 +95,40 @@ extension CameraPath {
                 fromM: legStartM, toM: max(anchor.distanceM, legStartM), clock: clock
             )
             clock = timeline.last?.endS ?? clock
+            // A stop's scene plays at the tighter of its two framings: zoom in
+            // before it, out after it. Never during it — a stop is a still beat.
+            reframe(atM: anchor.distanceM, zoomsIn: true)
             let holdS = holds[index]
             timeline.append(
                 .init(startS: clock, endS: clock + holdS, phase: .hold(stopIndex: anchor.stopIndex, atM: anchor.distanceM))
             )
             clock += holdS
+            if index + 1 == anchors.count || anchors[index + 1].distanceM != anchor.distanceM {
+                reframe(atM: anchor.distanceM, zoomsIn: false)
+            }
             legStartM = anchor.distanceM
         }
         timeline += pricing.entries(fromM: legStartM, toM: totalM, clock: clock, landingS: targetS)
-        return timeline
+        return (timeline, windows)
+    }
+
+    /// Each anchor's hold, all scaled by one factor so their sum stays within
+    /// `max_hold_fraction` of `windowS`.
+    static func cappedHolds(
+        anchors: [(stopIndex: Int, distanceM: Double)], config: TrackingConfig.Export,
+        stopHoldsS: [Double]?, windowS: Double
+    ) -> [Double] {
+        let holds = anchors.map { anchor -> Double in
+            if let stopHoldsS, anchor.stopIndex < stopHoldsS.count {
+                return max(0, stopHoldsS[anchor.stopIndex])
+            }
+            return config.stopHoldS
+        }
+        let totalHold = holds.reduce(0, +)
+        let cap = max(windowS, 0) * config.maxHoldFraction
+        guard totalHold > cap, totalHold > 0 else { return holds }
+        let factor = cap / totalHold
+        return holds.map { $0 * factor }
     }
 
     /// **What one stretch of route costs in film seconds**, split at every
@@ -95,6 +148,8 @@ extension CameraPath {
         let beatS: Double
         let localM: Double
         let localTravelS: Double
+        /// Shares the clock by screen distance when the film has several areas.
+        var areas: AreaPlan?
 
         /// `landingS` pins the final entry's end, which the last stretch of the
         /// film uses so it lands exactly on the plan's clock rather than on
@@ -115,7 +170,13 @@ extension CameraPath {
 
             func local(to markM: Double, endingAt endS: Double?) {
                 guard markM > cursorM else { return }
-                let legS = localM > 0 ? localTravelS * (markM - cursorM) / localM : 0
+                let legS: Double
+                if let areas {
+                    let screenLocalM = areas.screenLocalM
+                    legS = screenLocalM > 0 ? localTravelS * areas.screenM(fromM: cursorM, toM: markM) / screenLocalM : 0
+                } else {
+                    legS = localM > 0 ? localTravelS * (markM - cursorM) / localM : 0
+                }
                 let landing = endS ?? cursorS + legS
                 built.append(.init(startS: cursorS, endS: landing, phase: .travel(fromM: cursorM, toM: markM)))
                 cursorS = landing

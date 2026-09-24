@@ -5,7 +5,7 @@ import KamomePersistence
 import KamomeTripComposer
 import XCTest
 
-/// Chiu's three calls on trip merge (ADR 2026-09-24): a recording may merge
+/// Chiu's three calls on trip merge (ADR 2026-09-24 (b)): a recording may merge
 /// with a photo reconstruction and the whole is then marked reconstructed; the
 /// gap between parts is an inferred leg, never a recorded one; films are kept.
 /// Positions are synthetic.

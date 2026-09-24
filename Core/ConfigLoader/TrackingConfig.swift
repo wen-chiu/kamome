@@ -228,7 +228,7 @@ public struct TrackingConfig: Decodable, Equatable {
         /// is a degenerate input for the §4.5 recap camera path.
         public let minDurationS: Double
         public let minDistanceM: Double
-        /// Merging trips (ADR 2026-09-24): when one part ends and the next
+        /// Merging trips (ADR 2026-09-24 (b)): when one part ends and the next
         /// begins at least this far apart, a gap leg joins them; closer, and
         /// the time between is an overnight stop where the first part ended.
         /// **INFERRED**: 500 m covers a hotel and its car park, and anything

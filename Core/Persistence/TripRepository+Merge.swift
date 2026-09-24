@@ -1,7 +1,7 @@
 import Foundation
 import GRDB
 
-/// Trip merge (ADR 2026-09-24): several trips become one, so a journey that
+/// Trip merge (ADR 2026-09-24 (b)): several trips become one, so a journey that
 /// was recorded day by day, or partly recorded and partly rebuilt from
 /// photographs, can be one film.
 ///
