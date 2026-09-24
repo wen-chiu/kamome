@@ -6290,67 +6290,93 @@ questions, Chiu took the recommendation on both:
   it, forever (`SnapshotDeadline`). No pixel changes. Device figures are owed
   with D2/D3.
 
-## 2026-09-24 (e) — A leg too fast to have been driven is a crossing (DRAFT)
+## 2026-09-24 (e) — An area is framed no deeper than the place it sits in; the pill names the town
 
-**Status: draft, implemented for review.** Chiu reopened `isCrossing` by name
-on 2026-09-24 (「reopen isCrossing，先寫 ADR 草稿並實作第 1 層」). The
-numbers below are still owed his sign-off.
+**Decision (Chiu, 2026-09-24).** On the Miyakojima film after camera areas:
+*「宮古島的當地行程又有點zoom in得太近了……最少可以看得出來在哪裡，太細部的行程會不知道自己在哪裡」*,
+then *「旅程地點不同 需要zoom的比例也不同 你能不能思考分析一個動態的好方法」*. Shown
+the analysis (`Docs/handoff-camera-context-floor.md` §6), he approved it:
+*「批准，照你的設計實作，也把地名加進 pill」*. Amends ADR 2026-09-24 §2.1: an
+area's span is now its own ask **or its context floor, whichever is wider**.
 
-**Why.** The Vietnam film opened on the scooter riding a dashed line across the
-Taiwan Strait. Until now, only routing could make a leg a crossing, and only
-with one answer: `400 No path could be found`. Once OSM's cross-strait ferries
-connect Taiwan to the continent, that answer may never arrive before
-`timeout_s`. Asking also sends the leg's coordinates off the phone for a
-question physics already answers (`Docs/handoff-vietnam-crossing.md`).
+### 1. The context floor (`CameraPathContext`)
 
-**Decision.**
+- **Ladder.** Single-linkage (Prim's spanning tree) over the film's stops, cut
+  into levels wherever a link is more than `context_level_break_ratio` (**3,
+  INFERRED**) × the longest link below it, or × `camera_span_m` when that is
+  larger. On the committed fixtures the levels are town → island/region →
+  country (VERIFIED at the desk by `Tools/stop-scale-ladder.py`. It works on
+  photo clusters; the Swift ladder works on stop anchors).
+- **Parent.** The smallest level holding all of an area's stops **and at least
+  one more**. When none does, the parent is the whole trip.
+- **Floor** = parent's fitting span ÷ `context_depth` (**5, INFERRED**: the
+  geometric mean of the two depths Chiu judged, 1.7× too wide and 17× too
+  tight). The floor is never below `camera_span_m` and never above
+  `context_span_max_m` (**10 km, INFERRED**, about city scale; on a road trip
+  the level above a town is the whole route). It is capped to the region like
+  every span. It is allowed to exceed the area's own establishing ceiling:
+  that is the point of it.
+- **A one-area film cannot move.** It never reaches `spansM` (`AreaPlan.make`
+  returns nil). Even if it did, its parent would be the whole trip, and
+  fitting ÷ 5 is below its own 0.6 × fitting ask.
+- Keys: `export.camera_context.{context_depth, context_span_max_m,
+  context_level_break_ratio}`. Hand-built configs default to
+  `CameraContextConfig.off`.
 
-1. **Pace is judged before routing, on the phone.** An imported leg (`exif`,
-   `timeline`, `merge_gap`) with no stored `road` or `no_road` is tested. If its
-   straight-line pace between its two ends is at least
-   `matching.crossing_pace_min_kmh` over at least
-   `matching.crossing_pace_min_distance_m`, it is stored as the new verdict
-   `beyond_driving` and is **never sent to routing**. The test also runs when
-   routing is disabled. Recorded legs are never judged.
-2. **`isCrossing` = `no_road` or `beyond_driving`.** This replaces "one stored
-   verdict and nothing else". Both values are still stored and still judged
-   once; the film never judges the pace itself. `beyond_driving` stays separate
-   from `no_road` because it is a different fact: the leg was not driven, which
-   does not mean no road exists (rule 5).
-3. **One-sided.** A slow leg proves nothing (a night's gap hides a flight), and
-   it still goes to routing.
-4. **Clocks are not trusted across time zones** (Chiu's requirement). A photo
-   whose capture time was read in the wrong zone, such as a camera without an
-   offset or a clock reset on landing, shifts one end of the leg by up to the
-   zone difference between the two ends. A constant error on both ends cancels
-   out. So the elapsed time is padded by `|Δlon| / 15` hours plus
-   `crossing_pace_clock_margin_s`, and by a whole day if the leg crosses the
-   antimeridian. The padding can only make a leg look slower: a clock error can
-   hide a flight but never invent one.
-5. A stored `implausible_route` or `off_road_network` on a leg now judged too
-   fast is **overwritten**, because both came from asking a road router about a
-   leg nobody drove.
+**Predicted, not measured (INFERRED — no Swift toolchain in the session that
+built it):** a Miyakojima town area ≈ 5–7 km (was 1.9 km). An area that already
+holds every stop of its place takes the next level up as its parent. That is
+harmless when the place is wide, because its own ask wins. For a small-town-only
+destination after a flight, it means the 10 km cap. More seams now fall under
+`opening_collapse_zoom_ratio`, which means fewer reframes. A film whose areas
+all merge into one takes the one-span path, and that path is unchanged.
+**What settles it:** the `KAMOME_AREAS` lines of `RecapCameraAreaTests`, plus
+a render of Chiu's Miyakojima Day 1.
 
-**Numbers (INFERRED).** `crossing_pace_min_kmh` 150,
-`crossing_pace_min_distance_m` 100 km, and `crossing_pace_clock_margin_s` 2 h
-(China runs one clock across about 60° of longitude, and India is half an hour
-off). Worked cases, all in `LegPaceTests`:
-- Taoyuan → Hanoi (1,634 km) is judged a crossing when the photos are at most
-  about 8 h apart.
-- Taipei → Zuoying high-speed rail in 1.5 h is not.
-- A real 777 km drive whose arriving clock reads 2 h early is not.
+### 2. The town in the HUD pill
 
-**Cheapest check:** run the rule over the local real-trip dumps
-(`Tests/Fixtures/trips/local/`) and count legs judged beyond driving that were
-really driven (want 0) and flights it misses.
+- **Parked:** the stop's name, exactly as before.
+- **On the road:** the `CLPlacemark.locality` of the most recent stop reached.
+  It turns over on arrival, like the day counter
+  (`LinearTimeline.hudPlace`).
+- **During a crossing:** nothing. The boarding pass and the flight-end marks
+  own *where* there, and 2026-09-04 (b)'s boundary is not widened.
+- **Not** "place names as narrative rhythm". That icebox entry is timed title
+  cards between beats, and it says itself that "where am I right now" is a
+  different question. It stays frozen. The base map's labels are untouched.
+- **Schema v9:** `stop.locality` TEXT. NULL means never asked; "" means asked,
+  and the geocoder had no town. The town comes from the same `CLGeocoder`
+  request that names the stop (`StopGeocoding.reverseGeocodePlace`).
+- **Back-fill:** stops named before v9 get their town when their trip is next
+  opened (`StopNamer.fillMissingLocalities`). It runs behind any naming, on
+  the same throttle, never rewrites a name (a name may be the user's own), and
+  never holds the export gate.
+- **§0:** the only party contacted is Apple, which is the decided exception
+  for stop names (Chiu 2026-09-17). New *timing*: an already-named stop's
+  coordinate is sent once more when its trip is opened. The town is never
+  logged.
 
-**Known costs.**
-- Once stored, the verdict is never re-judged: `setRoutability` never writes
-  NULL, so retuning the numbers does not change legs already judged.
-- A flight with a long gap on both sides still depends on routing.
-- A fast train over a long enough distance would fly the plane. Shinkansen
-  Tokyo → Hakata needs under about 3.2 h of photo gap to trip it, and the train
-  takes about 5 h.
+### 3. Tests
 
-**Not done.** Layer 2 (`avoid=ferries` on the routing request) waits for a live
-measurement. Layer 3 (an offline land mask) is deferred.
+- `CameraPathContextTests`: ladder levels and parents, the car-park rule, a
+  town at exactly its floor, a road-trip town at the cap, and every config copy
+  carrying the floor.
+- `LinearTimelineHUDPlaceTests`: stop when parked, town on the road, turning
+  over on arrival.
+- `StopNamerLocalityTests`: a new name brings its town; back-fill keeps the
+  user's name; "" is asked once.
+- `CameraPathAreasTests.testATownDriveTownTripIsFramedAtThreeScales` now runs
+  with the floor off. Its `oneSpan / 4` assertion pins the area split, and the
+  floor deliberately widens those towns past it. Every assertion is unchanged,
+  and `CameraPathContextTests` pins the same trip with the floor on. **Flagged
+  for Chiu under hard rule 3.**
+
+### ⏳ Owed
+
+- `./check.sh` on the Mac. **Nothing here has been compiled** (the session had
+  no Swift toolchain).
+- Renders at depth 4 / 5 / 6 of Chiu's Miyakojima Day 1, and a device
+  re-export. Vietnam: UNKNOWN.
+- Which field names the town is UNKNOWN until seen on device: `locality` may
+  read 宮古島市, Hirara, or nothing. What would settle it: one device export,
+  checking the pill.

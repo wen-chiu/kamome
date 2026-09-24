@@ -194,6 +194,13 @@ public struct TripRepository {
         }
     }
 
+    /// "" records that the geocoder was asked and had no town (`StopRecord.locality`).
+    public func setStopLocality(stopId: String, locality: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE stop SET locality = ? WHERE id = ?", arguments: [locality, stopId])
+        }
+    }
+
     public func setStopNote(stopId: String, note: String?) throws {
         try database.writer.write { db in
             try db.execute(sql: "UPDATE stop SET note = ? WHERE id = ?", arguments: [note, stopId])
