@@ -69,6 +69,7 @@ string stands. Do not reopen this from scratch.
 
 ## ⏳ Awaiting Chiu
 
+- **Reopen "one span per trip"?** Route too small after landing. → `Docs/camera-arcs.md` §5.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
 - **Film length rule** — direction decided 2026-08-14, **rule not**.
@@ -118,8 +119,7 @@ string stands. Do not reopen this from scratch.
   `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
   would satisfy. → `Docs/release-readiness.md` C4.
 - 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
-  re-export, and three crash-free exports. Every crossing flies a plane,
-  ferries too; beaches are no longer crossings (ADR (c)).
+  re-export + three crash-free exports.
   → `Docs/handoff-type2-round-trip.md`.
 - **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).

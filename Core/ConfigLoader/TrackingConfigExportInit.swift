@@ -9,6 +9,9 @@ extension TrackingConfig.Export {
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
             gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, targetZoomRatio: Double = 2.5,
+            // Defaulted to infinity for hand-built test configs: one area, which is
+            // the film every such config was written against. The JSON key is required.
+            cameraAreaSplitRatio: Double = .infinity,
             zoomTransitionS: Double,
             actSplitKm: Double, crossingBeatS: Double, crossingApexPadding: Double,
             // Defaulted for the same reason `targetZoomRatio` is: the synthesized
@@ -45,6 +48,7 @@ extension TrackingConfig.Export {
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
             self.targetZoomRatio = targetZoomRatio
+            self.cameraAreaSplitRatio = cameraAreaSplitRatio
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
             self.departureStopMaxPhotos = departureStopMaxPhotos; self.followHeadingUp = followHeadingUp

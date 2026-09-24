@@ -26,6 +26,9 @@ extension CameraPath {
         let establishing: RecapBounds?
         let config: TrackingConfig.Export
         let bodySpanM: Double
+        /// The world the body camera starts in — the route's on a one-area film,
+        /// the first area's otherwise — for where the closing zoom lands.
+        let bodyBounds: Bounds
         let totalDurationS: Double
         let journeyEndsBeforeS: Double
         /// The opening is a single held frame containing both ends of a flight,
@@ -71,6 +74,9 @@ extension CameraPath {
         /// local trip, and the stretch after the crossing on a type-2 one. Both
         /// the body span and the end reveal are fitted to it.
         let destinationJourney: [Point]
+        /// The areas the body is framed in — nil for a one-area film, whose body
+        /// is `bodySpanM` throughout (`CameraPathAreas`).
+        let areaPlan: AreaPlan?
     }
 
     static func openingAndBodySpan(_ request: OpeningAssembly) -> AssembledOpening {
@@ -97,14 +103,31 @@ extension CameraPath {
                 : nil
         ))
 
+        // The areas, when there is more than one: then the first area's span is
+        // what the opening hands to, and the one-span `span` above is not used.
+        let areaPlan = AreaPlan.make(AreaRequest(
+            route: route, cumulativeM: request.cumulativeM, anchors: request.anchors,
+            crossings: crossings, establishing: request.establishing, config: config,
+            durationS: request.totalDurationS,
+            timeline: { reframes, areas in
+                buildTimelineWithReframes(
+                    anchors: request.anchors, totalM: request.totalM, config: config,
+                    stopHoldsS: request.stopHoldsS, crossings: crossings,
+                    startS: 0, targetS: request.totalDurationS, reframes: reframes, areas: areas
+                )
+            }
+        ))
+        let firstSpan = areaPlan?.areas[0].spanM ?? span
+
         let plan = openingPlan(OpeningRequest(
             prologue: builtPrologue, route: route, establishing: request.establishing, config: config,
-            bodySpanM: span, totalDurationS: request.totalDurationS,
+            bodySpanM: firstSpan, bodyBounds: areaPlan?.areas[0].bounds ?? bounds(of: route),
+            totalDurationS: request.totalDurationS,
             journeyEndsBeforeS: request.journeyEndsBeforeS, opensOnTheFlight: opensOnTheFlight
         ))
         return AssembledOpening(
-            crossings: crossings, bodySpanM: span, plan: plan,
-            opensOnTheFlight: opensOnTheFlight, destinationJourney: destination
+            crossings: crossings, bodySpanM: firstSpan, plan: plan,
+            opensOnTheFlight: opensOnTheFlight, destinationJourney: destination, areaPlan: areaPlan
         )
     }
 }

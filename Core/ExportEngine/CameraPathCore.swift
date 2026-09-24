@@ -218,7 +218,7 @@ extension CameraPath {
     /// destination to render as a smudge — symptom 2 of
     /// `Docs/cross-region-journeys.md` in exact code terms.
     ///
-    /// **This is still one span per trip, not a span per segment.** With travel
+    /// **One span per trip here; per area since ADR 2026-09-24** (`CameraPathAreas`). With travel
     /// time shared in proportion to distance (`buildTimeline`), every local
     /// journey crosses ground at the same rate, so "derived from the largest
     /// local journey" and "derived from the union of the local journeys" are the

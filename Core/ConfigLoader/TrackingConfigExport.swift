@@ -35,6 +35,9 @@ public extension TrackingConfig {
         /// beat the viewer sees at t=0 — so the ratio holds whatever the geometry.
         /// Acceptable range 2.25–2.75x; 2.5 is the midpoint.
         public let targetZoomRatio: Double
+        /// How far a stretch's span may stray from its own need, either way, and
+        /// still share a camera **area** (ADR 2026-09-24, `CameraPathAreas`).
+        public let cameraAreaSplitRatio: Double
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
         /// Split the film into a new fixed camera frame when consecutive route
