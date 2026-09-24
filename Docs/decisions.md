@@ -6137,6 +6137,19 @@ fixtures rose from 68–70% to 93–99%.
 - Renders: `miyakojima-round-trip` areas on/off contact sheet, and Chiu's
   Miyakojima flown film — local only, `~/Kamome-wt/renders-*`.
 
+### 5. The car before the plane — fixed (Chiu, reviewing the renders)
+
+*「開頭要出現飛機之前他還是會不小心跑出一個車子 一下子而已 但我希望改好」*. Pre-existing,
+not caused by §2: the subject's role was read off the crossing beat alone, so the
+departure airport's pull-away ramp drew the **car** for `subject_park_s` just
+before the flight, and the landing stop's park-in drew it again (VERIFIED on all
+three flight fixtures: 6.03–6.40 s and 10.43–10.77 s on the round trip).
+**Rule now** (`LinearTimeline.subjectRole`): moving, the role is the stretch's;
+standing still, it is the nearest movement's. A local film is unaffected — every
+movement there is a drive. Pinned by
+`testNoCarIsDrawnFromTheOpeningUntilTheFirstStopAfterLanding`, which fails on the
+old rule.
+
 ### ⏳ Owed / open
 
 - **Chiu judges the renders**, including the road-trip case: Iceland's dump now
