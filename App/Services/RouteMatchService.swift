@@ -253,7 +253,7 @@ struct RouteMatchService {
         do {
             let outcome: RouteMatchOutcome?
             switch source {
-            case .exif, .timeline:
+            case .exif, .timeline, .mergeGap:
                 outcome = reconstructed(
                     try await reconstructor.route(trace), segmentId: segmentId, into: &report
                 )
@@ -353,7 +353,7 @@ struct RouteMatchService {
         // routing failure; it is not one — the leg already draws solid on the
         // trace the phone recorded.
         switch segment.segmentSource {
-        case .exif, .timeline: return true
+        case .exif, .timeline, .mergeGap: return true
         case .gpsHifi, .gpsPassive: return matcher != nil
         }
     }

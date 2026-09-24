@@ -6067,3 +6067,52 @@ things proposed. This amends (e) points 1 and 3.
 
 **INFERRED:** that `transit` is always ground (a ferry routed as `road` would
 count). Cheapest check: a ferry trip's segment verdicts in `RecapTimelineReportTests`.
+
+## 2026-09-24 — Trips can be merged: one journey, one film, whatever recorded it
+
+**Decision (Chiu, 2026-09-24).** A tester is setting off on a two-week New
+Zealand drive, and one recording is one film. A trip that ends each night, or
+misses a day, used to leave a pile of separate films and no film of the whole
+journey. So trips can now be merged. Asked three questions, Chiu took the
+recommendation on each (「合併旅程三個問題都照你建議做」).
+
+1. **A recording may merge with a photo reconstruction.** This is the fallback
+   for a forgotten day: import that day from photographs, then merge it in.
+   Provenance stays **per segment** (`segment.source`, schema v2), so the film
+   still draws every leg as what it is. The merged trip *as a whole* is marked
+   reconstructed (`trip.source = imported_photos`) if any part is, and its
+   measured `TripStats` are cleared. This follows rule 5: a partly recorded trip
+   shown as "from photos" understates, and the reverse would claim a recording
+   that never happened.
+2. **The gap between two parts is drawn the way an imported leg is.** When one
+   part ends and the next begins at least `trip.merge_gap_min_m` apart, a
+   `merge_gap` leg joins them. It has two points, the end of one part and the
+   start of the next, and nothing observed in between. It is routed like an
+   `exif` leg and drawn dashed when no road comes back, never as a recording
+   (`SegmentSource.mergeGap`, a new on-disk value, no migration). When the two
+   ends are closer than that, the time between is an overnight stop at the place
+   the first part ended: its last stop is stretched, or a stop is added.
+   `merge_gap_min_m = 500` is **INFERRED** (a hotel and its car park) and was
+   not measured.
+3. **Films of the parts are kept** and re-parented to the merged trip.
+
+**Mechanics.** The earliest trip survives, keeping its id, title, vehicle and
+place name. The other trips' segments, stops, photos and films move to it in
+one transaction (`TripRepository.applyMerge`), and the emptied trip rows are
+deleted. Merged segments keep their routing verdicts, so no road is asked for
+twice. A recorded part that was never matched to its photographs is matched
+first, because matching is lazy and only runs for a trip with no photos at all.
+Trips whose times overlap are refused, since two records of the same hours
+would draw the road twice. Merging cannot be undone, and the sheet says so.
+
+**Where it lives.** "Merge Trips…" is in Trip Detail's overflow menu, which
+opens a picker sheet (`TripMergeSheet`). Home is not restyled: it stays the
+home (ADR 2026-09-18 (b)).
+
+**Not done, on purpose.** Two things were proposed and not decided:
+suggesting a merge automatically ("these look like one journey"), and
+reminding the user to start recording. The reminder is deferred by Chiu.
+
+**UNKNOWN.** How a multi-day gap leg paces in the film, and whether the
+overnight stop reads well as a card. Cheapest check: merge two recorded days
+in the desk harness and read `RecapTimelineReportTests`.

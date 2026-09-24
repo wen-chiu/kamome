@@ -64,10 +64,8 @@ VERIFIED from code.
 - **S2 redraws the whole path every second** (`RecordingView`'s 1 s clock plus
   a full `MapPolyline`). Across two weeks that is tens of thousands of
   coordinates. INFERRED heat and lag; decimate the display path.
-- **No trip merge.** One recording is one film. A tester who ends a recording
-  each night gets 14 films and no film of the whole journey. Chiu wants a merge
-  feature (2026-09-24). Its open questions are product decisions:
-  ① merging a recorded trip with a photo-reconstructed one, where provenance is
-  per segment (`segment.source` exists since v2); ② how the gap between two
-  merged trips is drawn; ③ what happens to films already made of the parts.
+- **Trip merge: built** (ADR 2026-09-24, "Merge Trips…" in Trip Detail's
+  overflow menu). Owed: how a multi-day `merge_gap` leg paces in the film, and
+  whether `merge_gap_min_m = 500` is right. Both are INFERRED. Also owed: a look
+  at the sheet on a simulator.
 - **Reminders** (forgot to start recording) — deferred by Chiu 2026-09-24.

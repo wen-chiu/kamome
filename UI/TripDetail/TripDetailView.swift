@@ -15,6 +15,11 @@ struct TripDetailView: View {
     @State private var playingFilm: FilmRecord?
     @State private var showingAllFilms = false
     @State private var showingProvenance = false
+    @State private var showingMerge = false
+    /// Set when a merge folded this trip into an earlier one: the screen leaves
+    /// once the sheet is gone, since two dismissals in one pass race.
+    @State private var mergedAway = false
+    @Environment(\.dismiss) private var dismiss
     /// The export outlives the sheet, so the trip screen has to be able to draw
     /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
     /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
@@ -55,6 +60,30 @@ struct TripDetailView: View {
                 // (Chiu 2026-08-04). The banner above says why the button is off.
                 .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
             }
+            // The overflow menu, not a second trailing button: merging is rare,
+            // and Home's two-trailing-items bug (2026-09-02) is not worth risking.
+            ToolbarItem(placement: .secondaryAction) {
+                Button {
+                    showingMerge = true
+                } label: {
+                    Label("trip_merge_action", systemImage: "arrow.triangle.merge")
+                }
+                .disabled(model.detail?.trip.endedAt == nil)
+            }
+        }
+        .sheet(isPresented: $showingMerge) {
+            TripMergeSheet(tripId: model.tripId, session: session) { keptId in
+                // This trip survives when it is the earliest; otherwise it no
+                // longer exists, and Home shows the merged one.
+                if keptId == model.tripId {
+                    model.reload()
+                } else {
+                    mergedAway = true
+                }
+            }
+        }
+        .onChange(of: showingMerge) {
+            if !showingMerge, mergedAway { dismiss() }
         }
         .sheet(item: $editingStop) { stop in
             StopEditorView(model: model, stop: stop)

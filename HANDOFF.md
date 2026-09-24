@@ -88,7 +88,7 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🟠 **Recording survives an app kill; device checks and trip merge owed.**
+- 🟠 **Recording survives an app kill; trips merge (2026-09-24); device checks owed.**
   → `Docs/handoff-long-recording.md`.
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
   T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per

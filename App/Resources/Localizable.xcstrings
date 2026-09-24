@@ -3193,6 +3193,159 @@
           }
         }
       }
+    },
+    "trip_merge_action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Trips…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合併旅程…"
+          }
+        }
+      }
+    },
+    "trip_merge_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Trips"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合併旅程"
+          }
+        }
+      }
+    },
+    "trip_merge_confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合併"
+          }
+        }
+      }
+    },
+    "trip_merge_empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no other finished trips to merge with."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有其他已結束的旅程可以合併。"
+          }
+        }
+      }
+    },
+    "trip_merge_overlap": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overlaps this trip — can't be merged"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和這趟時間重疊，無法合併"
+          }
+        }
+      }
+    },
+    "trip_merge_explainer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick the trips to merge with this one. They become one trip and one film; films already made are kept. Road between the trips that nothing recorded is shown as inferred, the way photo-rebuilt legs are. If any part was rebuilt from photos, the whole trip is marked that way. Merging can't be undone."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇要和這趟合併的旅程。合併後會變成一趟旅程、做成一支影片，已經做好的影片會保留。兩段之間沒有記錄到的路，會和照片重建的路段一樣以推測方式呈現；只要有一段是照片重建的，整趟就標示為照片重建。合併後無法復原。"
+          }
+        }
+      }
+    },
+    "trip_merge_busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A film is being exported from one of these trips. Merge after it finishes."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其中一趟旅程正在匯出影片，請等匯出完成再合併。"
+          }
+        }
+      }
+    },
+    "trip_merge_failed_overlap": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two of the picked trips overlap in time, so they can't be merged."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選取的旅程之間有時間重疊，無法合併。"
+          }
+        }
+      }
+    },
+    "trip_merge_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These trips couldn't be merged."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法合併這些旅程。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

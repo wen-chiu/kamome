@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-23 (f)** and `main` at
+Last synced: 2026-09-24 against decisions.md **2026-09-24** and `main` at
 **PR #88** (GIF-only export render, one compositing pool across stations; device
 figures owed, `Docs/handoff-export-performance.md` §7). PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
@@ -27,6 +27,10 @@ compact — two lines (place, visit pill, date; route, days, ground-only km),
 photos and details in a drawer that opens in place, provenance marked by
 exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
 no coordinate as a milestone.
+**ADR 2026-09-24**: trips merge into one trip and one film. Recorded and photo-rebuilt
+parts can mix, with provenance per segment and the whole marked reconstructed. A far
+gap between parts is an inferred `merge_gap` leg, a near one an overnight stop. Films are
+kept. PR #90 makes a recording survive the app being killed (`Docs/handoff-long-recording.md`).
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
