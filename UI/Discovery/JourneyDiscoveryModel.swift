@@ -220,8 +220,7 @@ final class JourneyDiscoveryModel {
     /// the photographs.
     func delete(_ summary: JourneySummary) {
         guard let tripId = summary.tripId else { return }
-        let films = (try? repository.deleteTrip(tripId: tripId)) ?? []
-        for film in films { FilmStore.deleteFile(relativePath: film.relativePath) }
+        guard TripDeletion.delete(tripId: tripId, repository: repository) else { return }
         journeys.removeAll { $0.id == summary.id }
     }
 

@@ -61,12 +61,12 @@ final class TrackingSession {
         trips = (try? repository.allTrips()) ?? []
     }
 
-    /// Swipe-to-delete on the home list — same shape as Journey Discovery's own
-    /// delete (`JourneyDiscoveryModel.delete`): the trip row and its stored
-    /// films go, the photographs never do.
+    /// Swipe-to-delete on the home list — the same `TripDeletion` Journey
+    /// Discovery uses: the trip's export and routing stop, the trip row and its
+    /// stored films go, the photographs never do.
+    @MainActor
     func deleteTrip(_ tripId: String) {
-        let films = (try? repository.deleteTrip(tripId: tripId)) ?? []
-        for film in films { FilmStore.deleteFile(relativePath: film.relativePath) }
+        TripDeletion.delete(tripId: tripId, repository: repository)
         refreshTrips()
     }
 

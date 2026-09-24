@@ -91,6 +91,7 @@ string stands. Do not reopen this from scratch.
 
 - 🟠 **Crash-safe recording and trip merge (ADR 2026-09-24 (b)); device checks owed.**
   → `Docs/handoff-long-recording.md`.
+- 🟠 **Arch review 2026-09-24: P1s open.** → `Docs/handoff-arch-review-2026-09-24.md`.
 - 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
   T4's captures — S3, recap screen, Discovery beta, repeat-import prompt, light + dark, one film per
   mode — and T5, the first-run notice that backgrounds the app, which did not

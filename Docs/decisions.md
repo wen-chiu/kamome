@@ -6208,3 +6208,41 @@ reminding the user to start recording. The reminder is deferred by Chiu.
 **UNKNOWN.** How a multi-day gap leg paces in the film, and whether the
 overnight stop reads well as a card. Cheapest check: merge two recorded days
 in the desk harness and read `RecapTimelineReportTests`.
+
+## 2026-09-24 (c) — Before TestFlight: deleting a trip stops its work, Home asks first, the side-load is a switch
+
+**Decision (Chiu, 2026-09-24).** From the architecture review before TestFlight
+(`Docs/handoff-arch-review-2026-09-24.md`), Chiu asked for these fixes:
+「開 branch 先修 P0 的 1 2 … 4 也需要 … 7 不應該測試版的功能跟著出貨，
+實際程式碼要改，改成開關，除非我們有確認現在正在測試」.
+
+1. **Deleting a trip stops everything still working on it first.** The export
+   outlives its screen (ADR 2026-09-10), so Home could delete a trip whose film
+   was rendering. The film then finished into a deleted trip and its file was
+   orphaned in `Films/`. `TripDeletion` is now the one delete for Home and
+   Discovery. It cancels that trip's export and routing, then deletes the trip
+   and its film files. The export re-checks its cancel flag on the main actor
+   before storing. A `film` insert that fails deletes the file it moved. Merging
+   already refused a rendering trip, and still does.
+2. **Home's swipe-to-delete asks first.** A full swipe used to delete outright.
+   A recorded trip is warned that it cannot be recovered
+   (`trip_delete_recorded_confirm`, **draft wording, Chiu's to finalise**). An
+   imported trip reuses Discovery's wording (`journey_delete_confirm`).
+3. **The Finder side-load of map regions is a testing switch, off in what
+   ships.** Build setting `KAMOME_SIDELOAD_REGIONS`: YES in Debug, NO in Release.
+   A testing archive passes `KAMOME_SIDELOAD_REGIONS=YES` on purpose. When it is
+   on, a post-build phase adds `UIFileSharingEnabled` and
+   `LSSupportsOpeningDocumentsInPlace`. The tile search reads the first key back
+   (`RecapMapTiles.sideloadEnabled`), so the folder a user can reach and the
+   folders the export searches cannot disagree. `check-archive.sh` fails an
+   archive that carries the keys, so a testing build is never the one
+   submitted. This amends the PD-7 dogfood side-load, which was on in every
+   configuration.
+
+**Also in this change, not a product decision.** The video encoder no longer
+waits forever on a writer that has stopped. Before this fix, one failed write
+locked out every later export until the app was killed.
+
+**Superseded in part before it landed.** Review finding P0-3 (a recording lived
+only in memory) was closed by PR #90 while this was written, and is not
+repeated here.

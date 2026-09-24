@@ -177,6 +177,50 @@ final class RecapEncoderTests: XCTestCase {
         XCTAssertNil(output, "cancelled export must not report success")
         XCTAssertEqual(framesSeen, 5, "rendering should stop right after cancellation")
     }
+
+    /// **A writer that has stopped writing never becomes ready again**, so an
+    /// append that only waits for readiness spins forever: Cancel cannot reach
+    /// it (the flag is read between frames), the coordinator never clears its
+    /// run, and every later export is refused until the process dies
+    /// (`Docs/handoff-arch-review-2026-09-24.md` P0-1). The failure must come
+    /// back as an error instead. Run on a plain thread with a deadline so the
+    /// regression fails this test rather than hanging the suite.
+    func testAppendAfterTheWriterStoppedThrowsInsteadOfWaitingForever() throws {
+        let videoURL = scratchURL("stopped.mp4")
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+        let encoder = try RecapVideoEncoder(outputURL: videoURL, widthPx: 64, heightPx: 64, fps: 10, bitrateMbps: 1)
+        let image = try XCTUnwrap(Self.blankImage(widthPx: 64, heightPx: 64))
+        try encoder.append(image, frame: 0)
+        encoder.cancel()
+
+        let returned = expectation(description: "append returned")
+        let failure = LockedBox<Error?>(nil)
+        Thread.detachNewThread {
+            do { try encoder.append(image, frame: 1) } catch { failure.value = error }
+            returned.fulfill()
+        }
+        wait(for: [returned], timeout: 5)
+        XCTAssertNotNil(failure.value, "an append to a writer that stopped writing must throw")
+    }
+
+    private static func blankImage(widthPx: Int, heightPx: Int) -> CGImage? {
+        CGContext(
+            data: nil, width: widthPx, height: heightPx, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue
+        )?.makeImage()
+    }
+}
+
+/// A value two threads hand over — the test's thread writes, the test reads
+/// after the expectation, and the lock makes that ordering explicit.
+private final class LockedBox<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value
+    init(_ value: Value) { stored = value }
+    var value: Value {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
+    }
 }
 
 /// The encoder gates render a route-only trip; no deck photos to resolve.

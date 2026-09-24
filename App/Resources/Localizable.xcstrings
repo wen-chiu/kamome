@@ -457,6 +457,24 @@
         }
       }
     },
+    "trip_delete_recorded_confirm": {
+      "comment": "Home swipe-to-delete on a recorded trip (arch review 2026-09-24). Draft wording — Chiu's to finalise.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this trip and its films? A recorded route cannot be recovered."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除這趟行程和它的影片嗎？錄下的路線刪除後無法復原。"
+          }
+        }
+      }
+    },
     "delete_stop": {
       "extractionState": "manual",
       "localizations": {
