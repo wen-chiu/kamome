@@ -99,7 +99,7 @@ composite + encode + GIF on the Mac.
 
 - **No-look-change optimisation — landed 2026-09-22, desk-measured, device
   unmeasured.** All five items:
-  1. **Parallel compositing** (`RecapRenderLoop.renderStation`) — a station's
+  1. **Parallel compositing** (`RecapRenderLoop.renderFrames`; per station until §7) — a station's
      frames now composite on a bounded pool (`compositeConcurrency = 4`,
      ~8 MB/frame named the same way `prefetchDepth` already was) and deliver
      to the encoder strictly in order regardless of completion order.
@@ -163,3 +163,40 @@ composite + encode + GIF on the Mac.
   1:1 instead of by magnification — §5 says it is ~10× cheaper per frame *and*
   sharper, and it changes what a longer station costs from picture quality to
   snapshot pixels. Not started.
+
+## 7. Second pass, 2026-09-23 — where the next minutes are (desk reading, no device)
+
+- **Every snapshot rebuilds MapLibre from scratch (VERIFIED from source).**
+  `MLNMapSnapshotter.mm` at `ios-v6.27.0`, `-startWithCompletionHandler:` →
+  `configureWithOptions:` does `std::make_unique<mbgl::MapSnapshotter>(…)` and
+  `setStyleURL(…)` on **every** start. So each station pays a new renderer
+  backend, a style parse, sprite/glyph load and a re-decode of every tile from
+  the ambient cache — reusing the Objective-C object would not avoid it. The
+  lever is a **persistent renderer** (a pool of offscreen `MLNMapView`s that
+  keep style and parsed tiles, camera moved per station). How much of a
+  snapshot's cost is setup: **UNKNOWN** — settle with one device export that
+  also times `mapSnapshotter:didFinishLoadingStyle:` against completion.
+- **Ambient tile cache is never sized (VERIFIED: no `MLNOfflineStorage` call in
+  the app).** MapLibre's default is 50 MB (INFERRED from its docs); whether a
+  multi-region film evicts and refetches mid-export is UNKNOWN — same device
+  run, Network instrument.
+- **A GIF export rendered and encoded the full 30 fps MP4 and threw it away.**
+  `RecapGIFEncoder` keeps one frame in `fps / gif_fps` (stride **2** at the
+  shipped 30/12, so half the frames). **Landed 2026-09-23:**
+  `RecapExporter.exportGIF` + `RecapRenderLoop.renderFrames(only:)` composite
+  only the kept frames, write no MP4, and never fetch a station none of whose
+  frames is kept. The plan is still made over every frame, so kept frames are
+  byte-identical (`RecapEncoderTests.testGIFOnlyExportMatchesTheTwoEncoderGIF`,
+  `RecapRenderPipelineTests`). `Output.videoURL` is now optional.
+- **Compositing parallelism stopped at every station boundary** (the old
+  `renderStation` drained its task group per station; crossing arcs run ~2
+  frames per station). **Landed 2026-09-23:** one worker pool for the whole
+  film, frames submitted in film order across boundaries, the next station's
+  snapshot awaited while the previous station's frames still composite,
+  delivery still strictly in order. Device gain UNKNOWN — read `composite` and
+  `wait` in the `render cost` line on a crossing film.
+- **Stations are snapshotted at frame pixel size while covering a wider span
+  (VERIFIED, `renderFrames` passes `frameWidthPx/HeightPx`).** A pure pan is
+  paid as magnification. Snapshotting at `frame × station/tightest span` pixels
+  would make pans cost pixels instead of stations *and* be sharper — this is §6's
+  structural item, a look change, Chiu's ADR.

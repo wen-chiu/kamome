@@ -113,9 +113,8 @@ string stands. Do not reopen this from scratch.
   And `VehicleCatalog.resolve`
   still misses now and then and silently draws the fallback badge instead of the
   car (1 render in 5 on 2026-09-16; device rate **UNKNOWN**,
-  → `Docs/handoff-subject-lookup.md`). The third of the class, content-derived
-  pacing, is **closed — VERIFIED 2026-09-19**: it is `LinearTimeline`'s default
-  and the shipping `plan(_:)` never overrides it, so no tile condition gates it.
+  → `Docs/handoff-subject-lookup.md`). The third, content-derived pacing, is
+  **closed — VERIFIED 2026-09-19** (ADR 2026-09-19).
   The question that catches the class: *"does the shipping path ever call this?"*
 - **`stop_weighting_enabled`** — reachable in both modes; the containment argument
   is empirical and untested on a flat distribution. The removal criterion was
@@ -132,6 +131,7 @@ string stands. Do not reopen this from scratch.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
 - **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
+- ⚠️ `provenance_recorded` is defined twice in the string catalogue → ADR 2026-09-23 (e).
 
 ---
 
