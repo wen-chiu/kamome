@@ -110,7 +110,9 @@ final class RoutingKeyTests: XCTestCase {
         {"base_url":"https://routing.example.com","chunk_size":100,"confidence_min":0.5,
          "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
          "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
-         "route_waypoint_radius_m":500,"api_key_required":true,"api_key":"leaked-into-git"}
+         "route_waypoint_radius_m":500,"api_key_required":true,"api_key":"leaked-into-git",
+         "crossing_pace_min_kmh":150,"crossing_pace_min_distance_m":100000,
+         "crossing_pace_clock_margin_s":7200}
         """
         let matching = try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
         XCTAssertEqual(matching.apiKey, "", "a key in the committed file must be ignored, not honoured")
@@ -153,7 +155,9 @@ final class RoutingKeyTests: XCTestCase {
         {"base_url":"https://api.geoapify.com","chunk_size":100,"confidence_min":0.5,
          "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
          "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
-         "route_waypoint_radius_m":500,"api_key_required":true}
+         "route_waypoint_radius_m":500,"api_key_required":true,
+         "crossing_pace_min_kmh":150,"crossing_pace_min_distance_m":100000,
+         "crossing_pace_clock_margin_s":7200}
         """
         return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }
@@ -165,7 +169,9 @@ final class RoutingKeyTests: XCTestCase {
         {"base_url":"https://kamome-routing.example.workers.dev","chunk_size":100,"confidence_min":0.5,
          "radius_m":25,"timeout_s":10,"trip_budget_s":60,"display_epsilon_m":5,
          "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
-         "route_waypoint_radius_m":500,"api_key_required":false}
+         "route_waypoint_radius_m":500,"api_key_required":false,
+         "crossing_pace_min_kmh":150,"crossing_pace_min_distance_m":100000,
+         "crossing_pace_clock_margin_s":7200}
         """
         return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }

@@ -66,15 +66,20 @@ enum RecapComposer {
         }
     }
 
-    /// Whether this segment is a **crossing**: routing answered, and the answer
-    /// was that no road joins its ends (`Docs/camera-arcs.md` §0).
+    /// Whether this segment is a **crossing**: routing answered that no road
+    /// joins its ends (`Docs/camera-arcs.md` §0), **or** the leg was covered too
+    /// fast to have been driven (`beyondDriving`, ADR 2026-09-24 (f), which
+    /// reopened "one verdict and nothing else").
     ///
-    /// One stored verdict and nothing else — no distance, no mode, no endpoint
-    /// name. NULL (nobody asked, routing disabled, the provider never answered)
-    /// is `false`, because the honest reading of "we do not know" is "do not fly
-    /// a sprite over it".
+    /// Stored verdicts only — the pace is judged once, in `RouteMatchService`,
+    /// never here. NULL (nobody asked, routing disabled, the provider never
+    /// answered) is still `false`, because the honest reading of "we do not
+    /// know" is "do not fly a sprite over it".
     static func isCrossing(_ segment: SegmentRecord) -> Bool {
-        segment.routeVerdict == .noRoad
+        switch segment.routeVerdict {
+        case .noRoad?, .beyondDriving?: return true
+        case .road?, .implausibleRoute?, .offRoadNetwork?, nil: return false
+        }
     }
 
     /// Whether routing answered — with any of its three verdicts — for **every**

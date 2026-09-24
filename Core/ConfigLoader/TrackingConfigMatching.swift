@@ -107,6 +107,23 @@ public extension TrackingConfig {
         /// all and says why.
         public let apiKeyRequired: Bool
 
+        /// **A leg too fast to have been driven is a crossing** (ADR 2026-09-24 (f)).
+        /// Straight-line pace between an imported leg's two ends at or above this
+        /// is not a road trip: no sustained drive averages it in a straight line,
+        /// so the leg is judged `beyond_driving` offline and never sent to routing.
+        /// One-sided by design: a slow leg proves nothing (an overnight gap hides
+        /// a flight), and it still goes to routing as before.
+        public let crossingPaceMinKmh: Double
+        /// Legs shorter than this are never judged by pace. A wrong camera clock
+        /// or one stale EXIF fix can make a short hop look impossibly fast; a
+        /// long one needs a much larger error to fake the same pace.
+        public let crossingPaceMinDistanceM: Double
+        /// Added to a leg's elapsed time, on top of the time-zone allowance its
+        /// longitude span implies, before the pace is taken (`LegPace`). Covers
+        /// zones that sit off their longitude (China spans five on one clock,
+        /// India is half an hour off) so a clock that jumped a zone never makes a
+        /// leg look faster than it was.
+        public let crossingPaceClockMarginS: Double
         /// The routing provider's API key — **deliberately not a JSON key, and
         /// never supplied by the app** (ADR 2026-09-12).
         ///
@@ -133,6 +150,9 @@ public extension TrackingConfig {
             case routeWaypointMinSpacingM = "route_waypoint_min_spacing_m"
             case routeWaypointRadiusM = "route_waypoint_radius_m"
             case apiKeyRequired = "api_key_required"
+            case crossingPaceMinKmh = "crossing_pace_min_kmh"
+            case crossingPaceMinDistanceM = "crossing_pace_min_distance_m"
+            case crossingPaceClockMarginS = "crossing_pace_clock_margin_s"
         }
 
         public init(
@@ -146,7 +166,10 @@ public extension TrackingConfig {
             routeMaxDetourRatio: Double,
             routeWaypointMinSpacingM: Double,
             routeWaypointRadiusM: Double,
-            apiKeyRequired: Bool = true
+            apiKeyRequired: Bool = true,
+            crossingPaceMinKmh: Double = 150,
+            crossingPaceMinDistanceM: Double = 100_000,
+            crossingPaceClockMarginS: Double = 7_200
         ) {
             self.baseURL = baseURL
             self.chunkSize = chunkSize
@@ -159,6 +182,9 @@ public extension TrackingConfig {
             self.routeWaypointMinSpacingM = routeWaypointMinSpacingM
             self.routeWaypointRadiusM = routeWaypointRadiusM
             self.apiKeyRequired = apiKeyRequired
+            self.crossingPaceMinKmh = crossingPaceMinKmh
+            self.crossingPaceMinDistanceM = crossingPaceMinDistanceM
+            self.crossingPaceClockMarginS = crossingPaceClockMarginS
         }
 
         /// Whether this endpoint may ship in a build that leaves this Mac.

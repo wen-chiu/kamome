@@ -36,6 +36,10 @@ struct RouteMatchReport: Equatable {
     /// Legs with a waypoint no road reaches — a beach, a cape (ADR 2026-09-23
     /// (c)). Dashed like a crossing, but not one.
     var offRoadNetwork = 0
+    /// Legs judged on the phone as **too fast to have been driven** — a flight
+    /// or a sea crossing (ADR 2026-09-24 (f), `LegPace`). Never sent to routing,
+    /// so they are not in `attempted`; a crossing, and the film working.
+    var beyondDriving = 0
     /// Nothing was established about the ground at all — routing disabled, too
     /// few waypoints, or an answer the client could not read. Not a claim about
     /// the geography and not a provider failure either.
@@ -184,7 +188,18 @@ struct RouteMatchService {
         var report = RouteMatchReport()
         report.isDisabled = config.baseURL.isEmpty
         guard let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) else { return report }
-        let routable = detail.segments.filter { shouldReconstruct($0.segment, points: $0.points) }
+        // **Physics before the network** (ADR 2026-09-24 (f)). A leg no drive
+        // could have covered is a crossing whatever routing would say, and
+        // asking anyway sends its coordinates off the phone (§0) for an answer
+        // that may never come back inside `timeout_s`. Runs with routing
+        // disabled too: it needs nothing but the leg's own two ends.
+        let flown = Set(detail.segments.filter {
+            BeyondDrivingJudge.judge($0.segment, points: $0.points, config: config, repository: repository)
+        }.map(\.segment.id))
+        report.beyondDriving = flown.count
+        let routable = detail.segments.filter {
+            !flown.contains($0.segment.id) && shouldReconstruct($0.segment, points: $0.points)
+        }
         // **A stored "no road" or "implausible" is an answer, not a gap**
         // (2026-09-12). Neither verdict writes a polyline, so filtering on the
         // polyline alone re-sent those legs on every export — spending the
@@ -229,7 +244,7 @@ struct RouteMatchService {
             matchTrip \(tripId, privacy: .public): \(report.reconstructed)/\(report.attempted) legs reconstructed; \
             \(report.noPlausibleRoute) have NO ROAD (crossings), \
             \(report.offRoadNetwork) off the road network (beaches — not crossings), \
-            \(report.implausibleRoute) implausible, \
+            \(report.implausibleRoute) implausible, \(report.beyondDriving) too fast to drive (crossings, never asked), \
             \(report.notEstablished) not established, \(report.unreachable) unreachable, \
             \(report.rateLimited) rate-limited, \(report.skipped) never asked — the rest draw dashed (PD-1)
             """)
@@ -372,7 +387,7 @@ struct RouteMatchService {
     /// stored verdict today.
     private static func storedVerdict(of segment: SegmentRecord) -> SegmentRoutability? {
         switch segment.routeVerdict {
-        case .noRoad?, .implausibleRoute?, .offRoadNetwork?: return segment.routeVerdict
+        case .noRoad?, .implausibleRoute?, .offRoadNetwork?, .beyondDriving?: return segment.routeVerdict
         case .road?, nil: return nil
         }
     }
