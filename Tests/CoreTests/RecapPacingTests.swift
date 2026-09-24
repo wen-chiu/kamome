@@ -98,8 +98,8 @@ final class RecapPacingTests: XCTestCase {
     }
 
     /// More presented stops always buy a longer film — with **no ceiling** to stop
-    /// at. Photo count per stop does not change the length: the cost model prices
-    /// a stop, and what its photographs buy is dwell *within* that stop.
+    /// at. Photo count per stop changes the length only above the expected mix
+    /// the stop price already covers (Chiu 2026-09-24, see below).
     func testMoreStopsBuyALongerFilmWithNoCeiling() {
         let export = config()
         // Counts chosen above the duration floor: below it every film is
@@ -119,11 +119,23 @@ final class RecapPacingTests: XCTestCase {
         XCTAssertGreaterThan(many.totalS, export.totalDurationMaxS,
                              "the old ceiling must no longer bind — it is what hid trip size")
 
-        // A photo-heavy trip is not a longer film, it is a denser one.
+        // **Re-baselined 2026-09-24 because the rule changed** (Chiu: a person's
+        // highlights may lift a deck to `deck_highlight_max_photos`, and the film
+        // grows to show them rather than cutting them back out). This asserted a
+        // photo-heavy trip is the *same* length — "denser, not longer". That still
+        // holds up to the expected mix the stop price already covers (asserted in
+        // `StopDeckPickTests.testDurationPaysForLiftedDecks`); above it, the film is
+        // now exactly as long as the deck slots it has to show, at the same
+        // per-slot price, and no longer.
         let heavy = RecapDurationPlan.plan(
             photoCounts: Array(repeating: 8, count: 16), config: export, deck: deck
         )
-        XCTAssertEqual(heavy.totalS, sixteen.totalS, accuracy: 0.01)
+        XCTAssertEqual(
+            heavy.totalS,
+            StopPhotoAllocator.earnedDurationS(photoCounts: Array(repeating: 8, count: 16), config: export),
+            accuracy: 0.01
+        )
+        XCTAssertGreaterThan(heavy.totalS, sixteen.totalS)
     }
 
     /// A route-only trip is not padded out with stops it does not have.

@@ -62,7 +62,7 @@ public struct ImportedStop: Equatable, Sendable {
     /// 1-based day from trip start — same math as `RecapComposer.dayLabel`.
     public let dayIndex: Int
     /// Every photo in the cluster, in time order (the full group; the render
-    /// deck picks a 3–8 subset via `PhotoDeckSelector`).
+    /// deck picks its subset via `PhotoDeckSelector.pick`).
     public let photoAssetIds: [String]
 
     public init(lat: Double, lon: Double, arrivedAt: Double, departedAt: Double,

@@ -100,8 +100,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.stopRadiusM, 4000)
         XCTAssertEqual(config.photoImport.stopSplitGapS, 10_800)
         XCTAssertEqual(config.photoImport.minPhotosPerStop, 2)
-        XCTAssertEqual(config.photoImport.deckMinPhotos, 3)
-        XCTAssertEqual(config.photoImport.deckMaxPhotos, 8)
+        XCTAssertEqual(config.photoImport.deckHighlightMaxPhotos, 5)
         XCTAssertEqual(config.photoImport.paceUnknowableGapS, 14_400)
         // Inclusive of both ends: 7 means a seven-day range, seeded at now − 6.
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)

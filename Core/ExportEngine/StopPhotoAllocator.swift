@@ -147,6 +147,28 @@ public enum StopPhotoAllocator {
         return opening + config.endCardS + dwell / Swift.max(config.maxHoldFraction, 0.01)
     }
 
+    /// The film length a set of presented decks buys: the expected-mix price
+    /// above as a **floor**, raised when the decks actually ask for more
+    /// (Chiu 2026-09-24).
+    ///
+    /// The expected mix prices every stop at ~3.3 photographs. That holds while
+    /// only the allocator decides deck sizes; once a person's highlights can lift
+    /// a stop to `deck_highlight_max_photos`, a film of marked stops asks for more
+    /// than the mix bought, the plan scales every dwell down to fit, and
+    /// `affordablePhotoCount` drops photographs the person chose. Charging each
+    /// presented deck at its real size — the same overhead and the same
+    /// `deck_photo_min_hold_s` slot — buys exactly that. A trip with no marks asks
+    /// for at most the mix, so its length is unchanged.
+    public static func earnedDurationS(photoCounts: [Int], config: TrackingConfig.Export) -> Double {
+        let presented = photoCounts.filter { $0 > 0 }
+        let priced = earnedDurationS(presentedStops: presented.count, config: config)
+        let overhead = config.deckLabelLeadS + 2 * config.deckZoomS + 2 * config.subjectParkS
+        let dwell = presented.reduce(0.0) { $0 + overhead + Double($1) * config.deckPhotoMinHoldS }
+        let opening = config.openingCountryS + config.openingRegionalS + 2 * config.zoomTransitionS
+        let asked = opening + config.endCardS + dwell / Swift.max(config.maxHoldFraction, 0.01)
+        return Swift.max(priced, asked)
+    }
+
     /// What one presented stop costs in **dwell** seconds.
     ///
     /// Derived, not configured, because every term is already a tunable and a
@@ -211,10 +233,25 @@ public enum StopPhotoAllocator {
         let topCut = 1.0 - clampedShare(config.tierTopShare)
         let count = Double(signals.count)
 
+        // **A stop the person marked is always kept** (Chiu 2026-09-24). A
+        // favourite or an in-app highlight says the place deserves the film, and
+        // marking a photo at one stop must never silently drop another stop that
+        // was marked too. So marked stops all stay — past the earned count if
+        // there are more of them, and the film grows to fit — and only the
+        // remaining places are filled by rank from the unmarked stops. With no
+        // marks anywhere this is exactly the ranked cut it replaced.
+        let marked = signals.filter { $0.favoriteCount > 0 }.count
+        let unmarkedRoom = Swift.max(keep - marked, 0)
+        var unmarkedKept = 0
+
         var result = [Int?](repeating: nil, count: signals.count)
-        for (rank, entry) in scored.enumerated() where rank < keep {
-            let fraction = 1.0 - Double(rank) / count
+        for (rank, entry) in scored.enumerated() {
             let signal = signals[entry.index]
+            if signal.favoriteCount == 0 {
+                guard unmarkedKept < unmarkedRoom else { continue }
+                unmarkedKept += 1
+            }
+            let fraction = 1.0 - Double(rank) / count
             let wanted = (fraction > topCut && signal.favoriteCount > 0)
                 ? config.tierTopPhotos
                 : config.tierStandardPhotos

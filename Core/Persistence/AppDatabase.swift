@@ -201,6 +201,14 @@ public final class AppDatabase {
             try db.execute(sql: "UPDATE segment SET routability = NULL WHERE routability = 'no_road'")
         }
 
+        // Schema v8 — a photograph can be left out of the film (ADR 2026-09-24).
+        // The third state beside `is_highlight`'s star: excluded photos are never
+        // a deck candidate and do not count towards their stop. Defaults to 0 so
+        // every existing photograph stays the app's to choose. Forward-only.
+        migrator.registerMigration("v8") { db in
+            try db.execute(sql: "ALTER TABLE photo_ref ADD COLUMN is_excluded INTEGER NOT NULL DEFAULT 0")
+        }
+
         return migrator
     }
 }

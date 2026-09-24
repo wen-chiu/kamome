@@ -275,17 +275,18 @@ final class RecapDemoFilmTests: XCTestCase {
         // TEMPORARY (2026-08-04, duration-ratio experiment): pin the film length
         // for a review render without editing the config between runs.
         let config = try Self.reviewConfig(full.export)
-        let selections = Self.stopPhotoSelections(detail: detail, full: full)
+        let selections = Self.stopPhotoSelections(detail: detail)
         let recap = try XCTUnwrap(RecapComposer.trip(
             trip: detail.trip, legs: legs, stops: film.stops, stats: nil,
-            photosByStop: selections.photosByStop,
+            photosByStop: selections.byStop,
             deck: RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,
             labelLeadS: config.deckLabelLeadS, photoMinHoldS: config.deckPhotoMinHoldS
         ),
             stopHoldS: config.stopHoldS,
-            rawPhotoCounts: selections.rawPhotoCounts,
-            favoriteCounts: selections.favoriteCounts,
+            rawPhotoCounts: selections.rawCounts,
+            favoriteCounts: selections.starredCounts,
+            highlightedAssets: selections.highlighted, highlightMaxPhotos: full.photoImport.deckHighlightMaxPhotos,
             weighting: config,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(film.segments)

@@ -139,7 +139,8 @@ is not to be tuned** — Variant A is harness-only env overrides.
 
 MapLibre substrate work beyond the frozen styles (custom tiles, tile server, map
 labels, pixel art) — the production switch landed (ADR 2026-09-16) · Story
-Director's remaining content (hero photos, chapters, music, video beads) ·
+Director's remaining content (chapters, music, video beads — hero photos
+reopened, ADR 2026-09-24) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·

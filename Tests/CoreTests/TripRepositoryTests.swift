@@ -158,6 +158,31 @@ final class TripRepositoryTests: XCTestCase {
         XCTAssertEqual(detail.photos.first { $0.id == "ph1" }?.isHighlight, 1)
     }
 
+    /// A photograph is starred, left out, or the app's — never two at once
+    /// (ADR 2026-09-24). Leaving out a starred photo clears the star; starring
+    /// a left-out one brings it back.
+    func testFilmChoiceIsOneOfThreeStates() throws {
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let tripId = try repository.saveCompletedTrip(
+            title: "Choices", startedAt: 0, endedAt: 1_000, segments: [], stops: []
+        )
+        try repository.replacePhotoRefs(tripId: tripId, with: [
+            PhotoRefRecord(id: "ph1", tripId: tripId, stopId: nil, phAssetId: "asset-1", isHighlight: 1)
+        ])
+        func choice() throws -> PhotoRefRecord.FilmChoice? {
+            try repository.detail(tripId: tripId)?.photos.first?.filmChoice
+        }
+        XCTAssertEqual(try choice(), .starred, "a Photos favourite arrives starred")
+        try repository.setPhotoFilmChoice(photoId: "ph1", choice: .excluded)
+        XCTAssertEqual(try choice(), .excluded)
+        XCTAssertEqual(try repository.detail(tripId: tripId)?.photos.first?.isHighlight, 0,
+                       "left out clears the star, so the two can never disagree")
+        try repository.setPhotoFilmChoice(photoId: "ph1", choice: .starred)
+        XCTAssertEqual(try choice(), .starred)
+        try repository.setPhotoFilmChoice(photoId: "ph1", choice: .auto)
+        XCTAssertEqual(try choice(), .auto)
+    }
+
     func testMergeStops() throws {
         let database = try AppDatabase.inMemory()
         let repository = TripRepository(database: database)

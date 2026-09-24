@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-23.** `main` carries PRs #16–#84. Everything closed has been
+**Updated 2026-09-24.** `main` carries PRs #16–#88. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -182,8 +182,7 @@ film (`Docs/handoff-crop-scaling.md`).
 
 ## iCloud photo download — code done, never run against iCloud
 
-The film's iCloud-only photos are fetched before the render (local pass first,
-progress, per-photo timeout, Cancel). **Unmeasured:** derivative-vs-original
-transfer size, peak memory of a full-mode film, cellular cost of previews. One
-device, Optimize Storage on, Instruments (Allocations + Network).
+iCloud-only photos are fetched before the render. **Unmeasured:**
+derivative-vs-original transfer size, peak memory of a full-mode film, cellular
+cost of previews. One device, Optimize Storage on, Instruments.
 → ADR 2026-09-19 (b).

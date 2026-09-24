@@ -2735,23 +2735,6 @@
         }
       }
     },
-    "stop_editor_highlight_hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap a photo to mark it as a highlight."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "點一下照片即可標記為精選。"
-          }
-        }
-      }
-    },
     "stop_editor_photos": {
       "extractionState": "manual",
       "localizations": {
