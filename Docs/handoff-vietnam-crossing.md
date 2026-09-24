@@ -54,3 +54,18 @@ This container's egress policy blocks the relay, so neither check has been run.
   leg as a flight today, so a 1,700 km leg across a few hours is a "drive". But
   `isCrossing` is deliberately "one stored verdict and nothing else, no distance
   and no mode", so a pace-based crossing reopens that rule. That needs an ADR.
+
+## Status: layer 1 built (ADR 2026-09-24 (c), DRAFT)
+
+Chiu reopened `isCrossing` and asked for layer 1. `LegPace` now judges every
+imported leg before routing. A leg too fast to have been driven is stored as
+`beyond_driving`, is a crossing, and is never sent to Geoapify. The time-zone
+allowance keeps a clock error from faking a flight.
+
+**Owed:**
+- Compile and run `./check.sh` on a Mac. This was written in a container with
+  no Swift toolchain, so the code has not been built.
+- Re-export the Vietnam film on the device. Expect a plane over the strait,
+  and `N too fast to drive` in the `routing` log.
+- If the Taiwan and Vietnam photos are more than about 8 h apart, pace cannot
+  fire, and the leg still depends on routing (layer 2, `avoid=ferries`).

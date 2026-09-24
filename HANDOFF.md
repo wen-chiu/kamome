@@ -89,7 +89,7 @@ string stands. Do not reopen this from scratch.
 
 ## 🟠 Open — nobody is on these
 
-- 🔴 **Taiwan→Vietnam: no crossing** → `Docs/handoff-vietnam-crossing.md`.
+- 🟠 **Vietnam crossing: device owed** → `Docs/handoff-vietnam-crossing.md`.
 
 - 🟠 **Crash-safe recording and trip merge (ADR 2026-09-24 (b)); device checks owed.**
   → `Docs/handoff-long-recording.md`.

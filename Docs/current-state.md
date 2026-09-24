@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-24 (b)** and `main` at
-**PR #89** (**ADR 2026-09-24**: the body is framed per camera
+Last synced: 2026-09-24 against decisions.md **2026-09-24 (c)** and `main` at
+**PR #89** (**(c)**, DRAFT: a leg too fast to drive is a crossing; PRs #90–#92 not yet synced. **ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
 renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PR #88: export perf §7. PR #87: ADRs (e), (f). PR #86: ADR (d). PR #85: ADRs (b), (c). PR #81: no-look-change export speed (parallel compositing, trail
 memo, throttled progress; device figures owed, `Docs/handoff-export-performance.md`;
