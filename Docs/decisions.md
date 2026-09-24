@@ -6380,3 +6380,68 @@ a render of Chiu's Miyakojima Day 1.
 - Which field names the town is UNKNOWN until seen on device: `locality` may
   read 宮古島市, Hirara, or nothing. What would settle it: one device export,
   checking the pill.
+
+## 2026-09-24 (f) — A leg too fast to have been driven is a crossing (DRAFT)
+
+**Status: draft, implemented for review.** Chiu reopened `isCrossing` by name
+on 2026-09-24 (「reopen isCrossing，先寫 ADR 草稿並實作第 1 層」). The
+numbers below are still owed his sign-off.
+
+**Why.** The Vietnam film opened on the scooter riding a dashed line across the
+Taiwan Strait. Until now, only routing could make a leg a crossing, and only
+with one answer: `400 No path could be found`. Once OSM's cross-strait ferries
+connect Taiwan to the continent, that answer may never arrive before
+`timeout_s`. Asking also sends the leg's coordinates off the phone for a
+question physics already answers (`Docs/handoff-vietnam-crossing.md`).
+
+**Decision.**
+
+1. **Pace is judged before routing, on the phone.** An imported leg (`exif`,
+   `timeline`, `merge_gap`) with no stored `road` or `no_road` is tested. If its
+   straight-line pace between its two ends is at least
+   `matching.crossing_pace_min_kmh` over at least
+   `matching.crossing_pace_min_distance_m`, it is stored as the new verdict
+   `beyond_driving` and is **never sent to routing**. The test also runs when
+   routing is disabled. Recorded legs are never judged.
+2. **`isCrossing` = `no_road` or `beyond_driving`.** This replaces "one stored
+   verdict and nothing else". Both values are still stored and still judged
+   once; the film never judges the pace itself. `beyond_driving` stays separate
+   from `no_road` because it is a different fact: the leg was not driven, which
+   does not mean no road exists (rule 5).
+3. **One-sided.** A slow leg proves nothing (a night's gap hides a flight), and
+   it still goes to routing.
+4. **Clocks are not trusted across time zones** (Chiu's requirement). A photo
+   whose capture time was read in the wrong zone, such as a camera without an
+   offset or a clock reset on landing, shifts one end of the leg by up to the
+   zone difference between the two ends. A constant error on both ends cancels
+   out. So the elapsed time is padded by `|Δlon| / 15` hours plus
+   `crossing_pace_clock_margin_s`, and by a whole day if the leg crosses the
+   antimeridian. The padding can only make a leg look slower: a clock error can
+   hide a flight but never invent one.
+5. A stored `implausible_route` or `off_road_network` on a leg now judged too
+   fast is **overwritten**, because both came from asking a road router about a
+   leg nobody drove.
+
+**Numbers (INFERRED).** `crossing_pace_min_kmh` 150,
+`crossing_pace_min_distance_m` 100 km, and `crossing_pace_clock_margin_s` 2 h
+(China runs one clock across about 60° of longitude, and India is half an hour
+off). Worked cases, all in `LegPaceTests`:
+- Taoyuan → Hanoi (1,634 km) is judged a crossing when the photos are at most
+  about 8 h apart.
+- Taipei → Zuoying high-speed rail in 1.5 h is not.
+- A real 777 km drive whose arriving clock reads 2 h early is not.
+
+**Cheapest check:** run the rule over the local real-trip dumps
+(`Tests/Fixtures/trips/local/`) and count legs judged beyond driving that were
+really driven (want 0) and flights it misses.
+
+**Known costs.**
+- Once stored, the verdict is never re-judged: `setRoutability` never writes
+  NULL, so retuning the numbers does not change legs already judged.
+- A flight with a long gap on both sides still depends on routing.
+- A fast train over a long enough distance would fly the plane. Shinkansen
+  Tokyo → Hakata needs under about 3.2 h of photo gap to trip it, and the train
+  takes about 5 h.
+
+**Not done.** Layer 2 (`avoid=ferries` on the routing request) waits for a live
+measurement. Layer 3 (an offline land mask) is deferred.

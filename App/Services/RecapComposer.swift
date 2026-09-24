@@ -68,7 +68,7 @@ enum RecapComposer {
 
     /// Whether this segment is a **crossing**: routing answered that no road
     /// joins its ends (`Docs/camera-arcs.md` §0), **or** the leg was covered too
-    /// fast to have been driven (`beyondDriving`, ADR 2026-09-24 (e), which
+    /// fast to have been driven (`beyondDriving`, ADR 2026-09-24 (f), which
     /// reopened "one verdict and nothing else").
     ///
     /// Stored verdicts only — the pace is judged once, in `RouteMatchService`,

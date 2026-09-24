@@ -4,7 +4,7 @@ import KamomePersistence
 import KamomeRouteMatching
 
 /// Whether a stored leg is **too fast to have been driven**, storing the verdict
-/// when it is (ADR 2026-09-24 (e)). `RouteMatchService` asks this before it asks
+/// when it is (ADR 2026-09-24 (f)). `RouteMatchService` asks this before it asks
 /// routing, and a leg it answers `true` for is never sent.
 ///
 /// Its own file because the rule is `LegPace`'s physics plus the storage policy

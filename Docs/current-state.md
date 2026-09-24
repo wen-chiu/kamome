@@ -6,10 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-24 (e)** and `main` at
-**PR #91** (the Stop Editor photo picker — star / leave out, schema v8
-`photo_ref.is_excluded`; **no ADR yet**). PR #92: ADR (b); (e) draft. PR #89 (**ADR 2026-09-24**: the body is framed per camera
-**PR #93** (**ADR (e)**, uncompiled: per-area context floor, town in the pill,
+Last synced: 2026-09-24 against decisions.md **2026-09-24 (f)** and `main` at
+**PR #93** ((f) draft: pace crossing. **ADR (e)**, uncompiled: per-area context floor, town in the pill,
 schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). PR #91: the Stop Editor photo picker — star / leave out, schema v8
 `photo_ref.is_excluded`; **no ADR yet**). PR #92: ADR (b), below. PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;

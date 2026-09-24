@@ -71,7 +71,7 @@ public enum SegmentRoutability: String, CaseIterable, Sendable {
     case road
     /// The provider answered and there is **no road** joining these places.
     /// One of the two verdicts a crossing is built on — the other is
-    /// `beyondDriving` (ADR 2026-09-24 (e))
+    /// `beyondDriving` (ADR 2026-09-24 (f))
     /// (`Docs/camera-arcs.md` §0).
     case noRoad = "no_road"
     /// A road route came back and the PD-3 detour gate refused it. A road
@@ -83,7 +83,7 @@ public enum SegmentRoutability: String, CaseIterable, Sendable {
     /// no arc. Before v7 these were stored as `no_road`, and v7 clears those
     /// rows so each is asked once more and lands in the right one of the two.
     case offRoadNetwork = "off_road_network"
-    /// **Nobody drove this** (ADR 2026-09-24 (e)): the straight line between the
+    /// **Nobody drove this** (ADR 2026-09-24 (f)): the straight line between the
     /// leg's ends was covered faster than any drive averages, even with the
     /// clocks given every benefit of the doubt (`LegPace`). Judged on the phone,
     /// never asked of routing, and **a crossing** — the plane flies it. Kept apart

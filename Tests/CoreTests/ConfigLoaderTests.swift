@@ -85,7 +85,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)
         XCTAssertEqual(config.matching.routeWaypointMinSpacingM, 250)
         XCTAssertEqual(config.matching.routeWaypointRadiusM, 500)
-        // The pace verdict (ADR 2026-09-24 (e)). `LegPaceTests` builds its config
+        // The pace verdict (ADR 2026-09-24 (f)). `LegPaceTests` builds its config
         // from the memberwise defaults, so they must be these.
         let paceDefaults = TrackingConfig.Matching(
             baseURL: "", chunkSize: 0, confidenceMin: 0, radiusM: 0, timeoutS: 0, tripBudgetS: 0,

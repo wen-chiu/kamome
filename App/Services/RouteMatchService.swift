@@ -37,7 +37,7 @@ struct RouteMatchReport: Equatable {
     /// (c)). Dashed like a crossing, but not one.
     var offRoadNetwork = 0
     /// Legs judged on the phone as **too fast to have been driven** — a flight
-    /// or a sea crossing (ADR 2026-09-24 (e), `LegPace`). Never sent to routing,
+    /// or a sea crossing (ADR 2026-09-24 (f), `LegPace`). Never sent to routing,
     /// so they are not in `attempted`; a crossing, and the film working.
     var beyondDriving = 0
     /// Nothing was established about the ground at all — routing disabled, too
@@ -188,7 +188,7 @@ struct RouteMatchService {
         var report = RouteMatchReport()
         report.isDisabled = config.baseURL.isEmpty
         guard let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) else { return report }
-        // **Physics before the network** (ADR 2026-09-24 (e)). A leg no drive
+        // **Physics before the network** (ADR 2026-09-24 (f)). A leg no drive
         // could have covered is a crossing whatever routing would say, and
         // asking anyway sends its coordinates off the phone (§0) for an answer
         // that may never come back inside `timeout_s`. Runs with routing

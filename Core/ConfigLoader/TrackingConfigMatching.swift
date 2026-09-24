@@ -107,7 +107,7 @@ public extension TrackingConfig {
         /// all and says why.
         public let apiKeyRequired: Bool
 
-        /// **A leg too fast to have been driven is a crossing** (ADR 2026-09-24 (e)).
+        /// **A leg too fast to have been driven is a crossing** (ADR 2026-09-24 (f)).
         /// Straight-line pace between an imported leg's two ends at or above this
         /// is not a road trip: no sustained drive averages it in a straight line,
         /// so the leg is judged `beyond_driving` offline and never sent to routing.
