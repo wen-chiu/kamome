@@ -21,12 +21,12 @@ where the Export button went missing below the photo list.
 - The iCloud and routing warnings are specific and give the user something to do.
 - The rendering copy promises exactly what `ExportLifecycleGuard` delivers.
 
-### Blocking (fixed, PRs #96 and the one after it)
+### Blocking (fixed — PRs #96, #98, #99)
 
 | # | finding | status |
 |---|---|---|
 | B1 | Export was the form's last row, below every stop's photos, so on a real trip it sat off screen | fixed #96: a pinned bottom bar. VERIFIED by render |
-| B2 | Raw keys on screen: `recap_photos_section`, its footer, and **all 11 `stop_photos_*` keys**, including the only sentence explaining tap = star / hold = leave out | fixed; `LocalizationCoverageTests` now fails on any key the UI uses that has no string. VERIFIED by render |
+| B2 | Raw keys on screen: `recap_photos_section`, its footer, and **all 11 `stop_photos_*` keys**, including the only sentence explaining tap = star / hold = leave out | strings: #98, which reworked the picker in parallel (its wording is the one kept). #99 adds `LocalizationCoverageTests`, which fails on any key the UI uses that has no string. VERIFIED by render |
 | B3 | A GIF film could not be previewed (AVPlayer shows a struck-through play glyph), and Save to Photos always failed, showing `PHPhotosErrorDomain error 3302` inside the primary button | fixed: `AnimatedGIFView` (streamed through ImageIO); the GIF is saved as a photo; failures show a sentence and log domain · code. VERIFIED by render: it animates and it saves |
 | B4 | "Export again" started a render immediately, although its doc comment said it returned to the form, so changing the vehicle or photos between films meant deleting the first film | fixed: back to the form, settings kept. VERIFIED by render and by `RecapExportFindingsTests` |
 | B5 | The photo-shortfall and routing notices lived only in `Running`, so the finished film came back with blank cards and no reason given, to the very person the copy had invited to leave | fixed: `RecapExportCoordinator.Findings` are kept with a finished outcome and cleared with it. VERIFIED by render |
@@ -57,10 +57,9 @@ where the Export button went missing below the photo list.
    before the selected one is clipped. INFERRED; settle it by choosing the last
    vehicle, closing the sheet and reopening it. The fix is a `ScrollViewReader`
    scroll to the selected chip on appear.
-6. **Stops outside the film are invisible here.** Variant B caps the film at 8
-   stops, and a photo stop that did not make the cut cannot be seen or added,
-   and the screen never says why. INFERRED; settle it with a trip that has more
-   than 8 photo stops.
+6. ~~**Stops outside the film are invisible here.**~~ Resolved by #98
+   (`FilmStopsSections`, "Other stops"), which landed while this review was in
+   flight.
 
 ### Kamome Identity: Partially
 
@@ -70,4 +69,4 @@ yet: no warmth at completion, no anticipation while waiting.
 ### My Recommendation
 
 Ship B1–B5. Take 1–4 as one S5 pass, which is most of D5's desk half. Settle 5
-and 6 with one render each before building anything.
+with one render before building anything.
