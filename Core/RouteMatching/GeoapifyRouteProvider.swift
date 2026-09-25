@@ -109,7 +109,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
 
     /// **Is "no drive path" the sea, or land a car cannot reach?** Asked once,
     /// on the walk profile, after the drive profile said `No path could be
-    /// found` (ADR 2026-09-25 (b)).
+    /// found` (ADR 2026-09-25 (c)).
     ///
     /// `No path` only means the snapped ends sit on road pieces that do not
     /// join. The sea does that. So does a photograph on a footpath that snaps

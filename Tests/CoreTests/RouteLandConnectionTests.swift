@@ -2,7 +2,7 @@ import KamomeConfig
 @testable import KamomeRouteMatching
 import XCTest
 
-/// **"No drive path" is asked again on foot** (ADR 2026-09-25 (b)).
+/// **"No drive path" is asked again on foot** (ADR 2026-09-25 (c)).
 ///
 /// The Iceland film flew a plane from Skógar to the Seljavallalaug pool. The
 /// drive profile answered `No path could be found`, and that message was read

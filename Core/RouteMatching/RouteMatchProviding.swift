@@ -96,7 +96,7 @@ public enum RouteReconstruction: Equatable, Sendable {
     /// before the split below, kept so nothing that used to be a crossing
     /// silently stops being one.
     ///
-    /// Since ADR 2026-09-25 (b), `No path` is asked once more on foot. It stays
+    /// Since ADR 2026-09-25 (c), `No path` is asked once more on foot. It stays
     /// this verdict only when walking needs a ferry or finds nothing. A leg
     /// that can be walked on land becomes `offTheRoadNetwork`.
     case noRoadHere
@@ -109,7 +109,7 @@ public enum RouteReconstruction: Equatable, Sendable {
     /// the film flew a plane to it. **Not a crossing**: the leg draws dashed,
     /// with the trip's own vehicle, inside the journey it belongs to.
     ///
-    /// Also the answer for **land no car reaches** (ADR 2026-09-25 (b)): no drive
+    /// Also the answer for **land no car reaches** (ADR 2026-09-25 (c)): no drive
     /// path, but a walk path with no ferry on it. Measured: Skógafoss →
     /// Seljavallalaug pool, a photo on a footpath.
     case offTheRoadNetwork

@@ -19,9 +19,9 @@ from Skógar up to the Seljavallalaug pool.
 (VERIFIED with public landmark coordinates). The pool photo snaps to a road stub
 that connects to nothing. ADR 2026-09-23 (c) read `No path` as the sea.
 
-**Fix: ADR 2026-09-25 (b).** A drive `No path` is asked again on the walk profile.
+**Fix: ADR 2026-09-25 (c).** A drive `No path` is asked again on the walk profile.
 A walk route with no ferry means land, stored as `off_road_network`, so no
-plane flies. Schema v10 clears stored `no_road` so this leg is asked again.
+plane flies. Schema v11 clears stored `no_road` so this leg is asked again.
 
 **Owed, device only:** re-export the Iceland trip. The routing summary must
 count the leg under "off the road network", and day 12 must show no plane.

@@ -201,7 +201,7 @@ final class RouteReconstructionTests: XCTestCase {
     /// **The crossing verdict, and the wording it is built on** — measured
     /// 2026-09-23 through the Worker, Taoyuan airport → Miyako airport: both
     /// ends on the road network, and nothing joins them. The transport answers
-    /// the walk question the same way (ADR 2026-09-25 (b)), so no land path is
+    /// the walk question the same way (ADR 2026-09-25 (c)), so no land path is
     /// found and the crossing stands; `RouteLandConnectionTests` covers the rest.
     func testNoPathCouldBeFoundIsTheCrossingVerdict() async throws {
         let provider = GeoapifyRouteProvider(config: routingConfig) { request in

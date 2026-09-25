@@ -46,7 +46,14 @@ struct TripDetailView: View {
         }
         .navigationTitle(model.detail?.trip.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { model.load() }
+        .onAppear {
+            model.load()
+            #if DEBUG
+            // The export sheet's own shot (Chiu 2026-09-25): with
+            // `-demo-open-trip`, straight on to the film's stops and photos.
+            if ProcessInfo.processInfo.arguments.contains("-demo-open-recap") { showingRecap = true }
+            #endif
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 // S5 entry: only completed trips have a recap to render.

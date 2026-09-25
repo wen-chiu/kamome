@@ -138,14 +138,14 @@ final class SchemaTests: XCTestCase {
         }
     }
 
-    // MARK: - Schema v10 ("no drive path" is asked again on foot, ADR 2026-09-25 (b))
+    // MARK: - Schema v11 ("no drive path" is asked again on foot, ADR 2026-09-25 (c))
 
-    /// A stored `no_road` may be land a car cannot reach, so v10 clears exactly
+    /// A stored `no_road` may be land a car cannot reach, so v11 clears exactly
     /// those rows again. The verdicts it cannot have mislabelled are kept,
     /// `beyond_driving` included: that one was never asked of routing.
-    func testMigrationToV10ClearsOnlyNoRoadSoItIsAskedOnFoot() throws {
+    func testMigrationToV11ClearsOnlyNoRoadSoItIsAskedOnFoot() throws {
         let queue = try DatabaseQueue()
-        try AppDatabase.migrator.migrate(queue, upTo: "v9")
+        try AppDatabase.migrator.migrate(queue, upTo: "v10")
         let stored = [("pool", "'no_road'"), ("road", "'road'"), ("detour", "'implausible_route'"),
                       ("beach", "'off_road_network'"), ("flight", "'beyond_driving'"), ("never", "NULL")]
         try queue.write { db in
