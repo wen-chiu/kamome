@@ -2854,40 +2854,6 @@
         }
       }
     },
-    "recap_photos_section": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Photos in the film"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "影片裡的照片"
-          }
-        }
-      }
-    },
-    "recap_photos_section_footer": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tap a stop to choose which of its photos the film shows."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "點一個停留點，挑選影片要放哪幾張照片。"
-          }
-        }
-      }
-    },
     "recap_photos_toggle": {
       "extractionState": "manual",
       "localizations": {
