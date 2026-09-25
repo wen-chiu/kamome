@@ -115,47 +115,74 @@ struct RecapView: View {
 
             routingSection
             busySection
+        }
+        // **The action is pinned, not scrolled to** (Chiu 2026-09-25). As the
+        // form's last section, Export sat below every stop's photo row — on a
+        // trip of any size it was off screen, and nothing on the first screen
+        // said the film was one tap away. The bar stays visible over the form
+        // in every phase that has one: idle, rendering and failed.
+        .safeAreaInset(edge: .bottom) { exportBar }
+    }
 
-            Section {
-                switch model.phase {
-                case .idle:
-                    Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
+    /// Export / progress / retry, docked to the bottom of the form.
+    @ViewBuilder
+    private var exportBar: some View {
+        let content = VStack(alignment: .leading, spacing: 8) {
+            switch model.phase {
+            case .idle:
+                exportButton
 
-                case let .rendering(progress):
-                    VStack(alignment: .leading, spacing: 8) {
-                        if let preload = model.photoPreload {
-                            photoPreloadProgress(preload)
-                        } else {
-                            ProgressView(value: progress) {
-                                Text("recap_rendering")
-                            }
-                        }
-                        // The promise, and its exact bounds (Chiu 2026-09-10):
-                        // leave this SCREEN, stay in the APP. `AVAssetWriter`
-                        // cannot resume across process death, so this copy may
-                        // never say the export continues in the background —
-                        // `ExportLifecycleGuard` is what makes the narrower
-                        // promise true, and `LocalizationTests` holds the copy
-                        // to it in both languages.
-                        Text("recap_rendering_leave_note")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        Button("recap_cancel", role: .cancel) { model.cancel() }
+            case let .rendering(progress):
+                if let preload = model.photoPreload {
+                    photoPreloadProgress(preload)
+                } else {
+                    ProgressView(value: progress) {
+                        Text("recap_rendering")
                     }
-
-                case .finished:
-                    EmptyView() // handled by finishedContent
-
-                case let .failed(message):
-                    Label("recap_failed", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.red)
-                    Text(message)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Button("recap_export") { model.startExport(appearance: RecapAppearance(colorScheme)) }
                 }
+                // The promise, and its exact bounds (Chiu 2026-09-10):
+                // leave this SCREEN, stay in the APP. `AVAssetWriter`
+                // cannot resume across process death, so this copy may
+                // never say the export continues in the background —
+                // `ExportLifecycleGuard` is what makes the narrower
+                // promise true, and `LocalizationTests` holds the copy
+                // to it in both languages.
+                Text("recap_rendering_leave_note")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("recap_cancel", role: .cancel) { model.cancel() }
+                    .frame(maxWidth: .infinity)
+
+            case .finished:
+                EmptyView() // handled by finishedContent
+
+            case let .failed(message):
+                Label("recap_failed", systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.red)
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                exportButton
             }
         }
+        content
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .background(.bar)
+    }
+
+    private var exportButton: some View {
+        Button {
+            model.startExport(appearance: RecapAppearance(colorScheme))
+        } label: {
+            Label("recap_export", systemImage: "film")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+        }
+        .buttonStyle(.borderedProminent)
     }
 
     /// Which stops the film presents and what each shows, before it is
