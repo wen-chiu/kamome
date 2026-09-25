@@ -185,6 +185,17 @@ public struct TrackingConfig: Decodable, Equatable {
         /// A journey whose photographs all lie within this extent is one place
         /// ("Whitehorse"); wider, and it is named after the country ("Japan").
         public let singlePlaceExtentM: Double
+        /// **The country rule** (ADR 2026-09-25): back in the home country after
+        /// a photograph abroad ends a journey only if the step from that last
+        /// photograph abroad is at least this long — a flight or ferry home, not
+        /// a drive back over a land border. INFERRED: Japan → Taiwan is ~2,000 km,
+        /// a border drive photographed every few tens of km stays under it.
+        public let homecomingMinJumpM: Double
+        /// A photograph this far off a country's ~1 km outline still counts as in
+        /// it (a beach, a harbour); further, at sea, it is no evidence. INFERRED:
+        /// three times the outline's simplification, and under the 5 km between
+        /// Lieyu (Taiwan) and Xiamen, where the nearest outline wins anyway.
+        public let countryCoastBufferM: Double
         /// How many photographs a journey's drawer shows on the Discovery
         /// timeline (a scrolling row since 2026-09-23; the collapsed entry shows none).
         public let coverPhotos: Int
@@ -201,6 +212,8 @@ public struct TrackingConfig: Decodable, Equatable {
             case journeyGapS = "journey_gap_s"
             case minPhotos = "min_photos"
             case singlePlaceExtentM = "single_place_extent_m"
+            case homecomingMinJumpM = "homecoming_min_jump_m"
+            case countryCoastBufferM = "country_coast_buffer_m"
             case coverPhotos = "cover_photos"
             case showHomeGaps = "show_home_gaps"
         }

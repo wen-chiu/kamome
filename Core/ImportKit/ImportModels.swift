@@ -59,7 +59,7 @@ public struct ImportedStop: Equatable, Sendable {
     /// First / last photo time in the cluster.
     public let arrivedAt: Double
     public let departedAt: Double
-    /// 1-based day from trip start — same math as `RecapComposer.dayLabel`.
+    /// 1-based calendar day of the trip (`TripDay`) — same as `RecapComposer.dayLabel`.
     public let dayIndex: Int
     /// Every photo in the cluster, in time order (the full group; the render
     /// deck picks its subset via `PhotoDeckSelector.pick`).

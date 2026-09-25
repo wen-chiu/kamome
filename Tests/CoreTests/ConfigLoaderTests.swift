@@ -55,6 +55,19 @@ final class ConfigLoaderTests: XCTestCase {
         try assertExportDefaults(config)
     }
 
+    /// The pace verdict (ADR 2026-09-24 (f)). `LegPaceTests` builds its config
+    /// from the memberwise defaults, so they must be these.
+    private func assertPaceDefaults(_ config: TrackingConfig) {
+        let paceDefaults = TrackingConfig.Matching(
+            baseURL: "", chunkSize: 0, confidenceMin: 0, radiusM: 0, timeoutS: 0, tripBudgetS: 0,
+            displayEpsilonM: 0, routeMaxDetourRatio: 0, routeWaypointMinSpacingM: 0, routeWaypointRadiusM: 0
+        )
+        XCTAssertEqual(config.matching.crossingPaceMinKmh, 150)
+        XCTAssertEqual(config.matching.crossingPaceMinKmh, paceDefaults.crossingPaceMinKmh)
+        XCTAssertEqual(config.matching.crossingPaceMinDistanceM, paceDefaults.crossingPaceMinDistanceM)
+        XCTAssertEqual(config.matching.crossingPaceClockMarginS, paceDefaults.crossingPaceClockMarginS)
+    }
+
     /// Capture / matching / import tunables.
     private func assertTrackingDefaults(_ config: TrackingConfig) throws {
         // Defaults named in the spec (§2.3, §4.1, §4.2, §4.4, §4.5).
@@ -85,16 +98,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)
         XCTAssertEqual(config.matching.routeWaypointMinSpacingM, 250)
         XCTAssertEqual(config.matching.routeWaypointRadiusM, 500)
-        // The pace verdict (ADR 2026-09-24 (f)). `LegPaceTests` builds its config
-        // from the memberwise defaults, so they must be these.
-        let paceDefaults = TrackingConfig.Matching(
-            baseURL: "", chunkSize: 0, confidenceMin: 0, radiusM: 0, timeoutS: 0, tripBudgetS: 0,
-            displayEpsilonM: 0, routeMaxDetourRatio: 0, routeWaypointMinSpacingM: 0, routeWaypointRadiusM: 0
-        )
-        XCTAssertEqual(config.matching.crossingPaceMinKmh, 150)
-        XCTAssertEqual(config.matching.crossingPaceMinKmh, paceDefaults.crossingPaceMinKmh)
-        XCTAssertEqual(config.matching.crossingPaceMinDistanceM, paceDefaults.crossingPaceMinDistanceM)
-        XCTAssertEqual(config.matching.crossingPaceClockMarginS, paceDefaults.crossingPaceClockMarginS)
+        assertPaceDefaults(config)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)
@@ -118,13 +122,21 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.maxRangeDays, 21)
         // Repeat-import detection (2026-09-23) — a first guess, INFERRED.
         XCTAssertEqual(config.photoImport.duplicatePhotoShare, 0.5)
-        // Journey discovery (2026-09-17) — first guesses, INFERRED not measured.
+        assertDiscoveryDefaults(config)
+    }
+
+    /// Journey discovery (2026-09-17) — first guesses, INFERRED not measured.
+    private func assertDiscoveryDefaults(_ config: TrackingConfig) {
         XCTAssertEqual(config.discovery.lookbackYears, 5)
         XCTAssertEqual(config.discovery.homeCellDeg, 0.5)
         XCTAssertEqual(config.discovery.awayRadiusM, 40_000)
         XCTAssertEqual(config.discovery.journeyGapS, 172_800)
         XCTAssertEqual(config.discovery.minPhotos, 8)
         XCTAssertEqual(config.discovery.singlePlaceExtentM, 60_000)
+        // The country rule (ADR 2026-09-25). `CountryBoundariesTests` and the
+        // build script's checks resolve coastlines with this buffer.
+        XCTAssertEqual(config.discovery.homecomingMinJumpM, 100_000)
+        XCTAssertEqual(config.discovery.countryCoastBufferM, 3_000)
         // The drawer's scrolling row since 2026-09-23 (was 3 on the card).
         XCTAssertEqual(config.discovery.coverPhotos, 8)
         XCTAssertTrue(config.discovery.showHomeGaps)
