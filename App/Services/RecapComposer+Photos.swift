@@ -15,7 +15,8 @@ extension RecapComposer {
     /// could only ever reach the first third of a visit (Chiu 2026-09-24).
     static func deckPhotos(
         _ candidates: [PhotoRef], allocated: Int,
-        highlightedAssets: Set<String>, highlightMaxPhotos: Int
+        highlightedAssets: Set<String>, highlightMaxPhotos: Int,
+        analysis: PhotoAnalysisInputs? = nil
     ) -> [PhotoRef] {
         let marked = candidates.map { ref -> (ref: PhotoRef, isHighlight: Bool) in
             guard case let .asset(id) = ref else { return (ref, false) }
@@ -25,7 +26,16 @@ extension RecapComposer {
             allocated: allocated, highlights: marked.filter(\.isHighlight).count,
             highlightCap: highlightMaxPhotos
         )
-        return PhotoDeckSelector.pick(marked, count: count)
+        guard let analysis else { return PhotoDeckSelector.pick(marked, count: count) }
+        // The trip's analysis is complete (ADR 2026-09-25 (d)): the app looks
+        // at the photographs. A photograph with no row plays with no signal.
+        let signals = candidates.map { ref -> PhotoSignal in
+            guard case let .asset(id) = ref else { return PhotoSignal() }
+            return analysis.signals[id] ?? PhotoSignal()
+        }
+        return PhotoDeckSelector.pick(
+            marked, count: count, signals: signals, duplicateDistance: analysis.duplicateDistance
+        )
     }
 
     /// A stop's deck when the person picked it (Chiu 2026-09-25): exactly the
@@ -59,13 +69,28 @@ extension RecapComposer {
         /// Stop id → picked photographs; any at all keeps the stop and makes
         /// its deck exactly its picks.
         var pickedCounts: [String: Int] = [:]
+        /// What Vision found, **only once every photograph at a stop has been
+        /// analysed** (ADR 2026-09-25 (d)); `nil` until then, and the film picks
+        /// exactly as it did before. A trip switches once, never stop by stop.
+        var analysis: PhotoAnalysisInputs?
+    }
+
+    /// The analysis half of `PhotoInputs`.
+    struct PhotoAnalysisInputs {
+        /// Asset id → its signal, for every analysed photograph.
+        var signals: [String: PhotoSignal]
+        /// `photo_analysis.duplicate_distance`.
+        var duplicateDistance: Double
     }
 
     /// Builds `PhotoInputs` — the one place the export, the photo picker's
     /// preview and the desk harnesses read a trip's photographs from, so all
     /// three select exactly the same decks.
-    static func photoInputs(detail: TripRepository.TripDetail) -> PhotoInputs {
+    static func photoInputs(
+        detail: TripRepository.TripDetail, analysis config: TrackingConfig.PhotoAnalysis? = nil
+    ) -> PhotoInputs {
         var inputs = PhotoInputs()
+        inputs.analysis = config.flatMap { analysisInputs(detail: detail, config: $0) }
         let usable = detail.photos
             .filter { $0.isExcluded == 0 }
             // Asset id breaks a timestamp tie, so a burst lands in the same
@@ -74,7 +99,13 @@ extension RecapComposer {
         for photo in usable {
             guard let stopId = photo.stopId else { continue }
             inputs.byStop[stopId, default: []].append(.asset(photo.phAssetId))
-            inputs.rawCounts[stopId, default: 0] += 1
+            // A receipt is not evidence the person cared about a place: once
+            // the trip is analysed, utility photographs do not earn their stop
+            // a place in the film (ADR 2026-09-25 (d)). A starred one still does.
+            // The key is written even at zero: a missing count falls back to
+            // the candidate count in `rankedSelection`, receipts included.
+            let isUtility = inputs.analysis?.signals[photo.phAssetId]?.isUtility == true
+            inputs.rawCounts[stopId, default: 0] += isUtility ? 0 : 1
             if photo.isHighlight != 0 {
                 inputs.highlighted.insert(photo.phAssetId)
                 inputs.starredCounts[stopId, default: 0] += 1
@@ -85,6 +116,24 @@ extension RecapComposer {
             }
         }
         return inputs
+    }
+
+    /// The trip's signals, or `nil` while any photograph at a stop is still
+    /// waiting for Vision (a row from an older analyser counts as waiting).
+    /// `unavailable` rows count as done: they carry what metadata alone said.
+    static func analysisInputs(
+        detail: TripRepository.TripDetail, config: TrackingConfig.PhotoAnalysis
+    ) -> PhotoAnalysisInputs? {
+        var signals: [String: PhotoSignal] = [:]
+        for photo in detail.photos where photo.stopId != nil {
+            guard let row = detail.analyses[photo.phAssetId], row.version >= PhotoAnalysisVersion.current
+            else { return nil }
+            signals[photo.phAssetId] = PhotoSignal(
+                isUtility: row.isUtility == 1, quality: row.quality, featurePrint: row.featurePrintFloats
+            )
+        }
+        guard !signals.isEmpty else { return nil }
+        return PhotoAnalysisInputs(signals: signals, duplicateDistance: config.duplicateDistance)
     }
 
     /// The stops the film presents, each with its final deck, in trip order —
@@ -106,7 +155,8 @@ extension RecapComposer {
             }
             if let allocated = selection.allocation[stop.id] {
                 photos = deckPhotos(photos, allocated: allocated,
-                                    highlightedAssets: inputs.highlighted, highlightMaxPhotos: highlightMaxPhotos)
+                                    highlightedAssets: inputs.highlighted, highlightMaxPhotos: highlightMaxPhotos,
+                                    analysis: inputs.analysis)
             }
             // Stop weighting: an independent legacy flag, shipping `false`, that
             // survives the mode migration by explicit decision (HANDOFF). Measured
@@ -140,7 +190,11 @@ extension RecapComposer {
         var decks: [String: [String]] = [:]
     }
 
-    static func filmPlan(detail: TripRepository.TripDetail, config: TrackingConfig) -> FilmPlan {
+    /// `useAnalysis: false` is the DEBUG probe's "before": the same plan with
+    /// the trip's analysis ignored. Every shipping caller takes the default.
+    static func filmPlan(
+        detail: TripRepository.TripDetail, config: TrackingConfig, useAnalysis: Bool = true
+    ) -> FilmPlan {
         let film = filmRecords(
             segments: detail.segments, stops: detail.stops,
             epsilonM: config.simplify.epsilonM,
@@ -148,7 +202,7 @@ extension RecapComposer {
             homeRadiusM: config.discovery.awayRadiusM
         )
         let plan = deckPlan(
-            stops: film.stops, inputs: photoInputs(detail: detail),
+            stops: film.stops, inputs: photoInputs(detail: detail, analysis: useAnalysis ? config.photoAnalysis : nil),
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos, weighting: config.export
         )
         var result = FilmPlan(stops: film.stops)

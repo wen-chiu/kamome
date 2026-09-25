@@ -125,7 +125,8 @@ string stands. Do not reopen this from scratch.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
 - **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
-- 🟠 **Picks (ADR 2026-09-25 (b)): device check owed**; next, Vision auto-pick (its "Not done").
+- 🟠 **Picks (b): device check owed. Auto-pick (d): phone probe owed.**
+  → `Docs/handoff-photo-analysis.md`.
 - ⚠️ `provenance_recorded` is defined twice in the string catalogue → ADR 2026-09-23 (e).
 
 ---

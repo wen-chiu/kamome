@@ -18,7 +18,7 @@ import XCTest
 final class FilmPhotoChoicesTests: XCTestCase {
     /// Ten stops, 30 photographs down to 12 so they rank in trip order, imported
     /// through the real pipeline.
-    private func importedTrip(
+    func importedTrip(
         config: TrackingConfig
     ) async throws -> (TripRepository, TripRepository.TripDetail) {
         let repository = TripRepository(database: try AppDatabase.inMemory())
@@ -38,12 +38,12 @@ final class FilmPhotoChoicesTests: XCTestCase {
     }
 
     /// The film as the export composes it, as asset ids per presented stop.
-    private func filmDecks(
+    func filmDecks(
         _ detail: TripRepository.TripDetail, config: TrackingConfig
     ) throws -> [[String]] {
         // The export's own path (`RecapExportJob.compose`): the film ends at the
         // destination, then legs, then the trip.
-        let inputs = RecapComposer.photoInputs(detail: detail)
+        let inputs = RecapComposer.photoInputs(detail: detail, analysis: config.photoAnalysis)
         let film = RecapComposer.filmRecords(
             segments: detail.segments, stops: detail.stops,
             epsilonM: config.simplify.epsilonM, matchedEpsilonM: config.matching.displayEpsilonM,
@@ -59,6 +59,7 @@ final class FilmPhotoChoicesTests: XCTestCase {
             rawPhotoCounts: inputs.rawCounts, favoriteCounts: inputs.starredCounts,
             highlightedAssets: inputs.highlighted,
             pickedAssets: inputs.picked, pickedCounts: inputs.pickedCounts,
+            analysis: inputs.analysis,
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export
         ))

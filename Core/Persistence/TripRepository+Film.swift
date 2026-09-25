@@ -58,6 +58,11 @@ extension TripRepository {
             try db.execute(sql: "DELETE FROM stop WHERE trip_id = ?", arguments: [tripId])
             try db.execute(sql: "DELETE FROM film WHERE trip_id = ?", arguments: [tripId])
             try db.execute(sql: "DELETE FROM trip WHERE id = ?", arguments: [tripId])
+            // What Vision found goes with the last trip holding the photograph.
+            try db.execute(sql: """
+                DELETE FROM photo_analysis
+                WHERE ph_asset_id NOT IN (SELECT ph_asset_id FROM photo_ref)
+                """)
             return films
         }
     }

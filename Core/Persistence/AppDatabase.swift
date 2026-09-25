@@ -238,6 +238,22 @@ public final class AppDatabase {
             try db.execute(sql: "UPDATE segment SET routability = NULL WHERE routability = 'no_road'")
         }
 
+        // Schema v12 — what on-device Vision found in each photograph (ADR
+        // 2026-09-25 (d)): utility, quality, feature print. Keyed by asset, so a
+        // re-match or a merge keeps it; a trip's delete sweeps rows no trip
+        // references. Nothing here leaves the device (§0). Forward-only.
+        migrator.registerMigration("v12") { db in
+            try db.create(table: "photo_analysis") { table in
+                table.primaryKey("ph_asset_id", .text)
+                table.column("version", .integer).notNull()
+                table.column("outcome", .text).notNull()
+                table.column("is_utility", .integer)
+                table.column("quality", .double)
+                table.column("feature_print", .blob)
+                table.column("analyzed_at", .double).notNull()
+            }
+        }
+
         return migrator
     }
 }

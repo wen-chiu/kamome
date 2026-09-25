@@ -6643,3 +6643,66 @@ crossing, and every crossing flies the plane (ADR 2026-09-23 (b) §3).
 
 **Owed:** a device export of the Iceland trip. Its routing summary must count
 this leg under "off the road network", and day 12 must show no plane.
+
+## 2026-09-25 (d) — The app looks at the photographs before it picks them, on the phone, and never makes the film wait
+
+**Decision (engineering, inside ADR 2026-09-25 (b)'s "Not done", which Chiu approved as the next PR).**
+The person's picks, stars, leave-outs and stop choices are untouched; this changes only what the app
+picks when nobody has.
+
+1. **Vision runs on the phone, in the background, per photograph.** After an import and whenever a
+   trip is opened (which also reaches every trip imported before this), `PhotoAnalysisCoordinator`
+   analyses each photograph at a stop: `PHAsset.mediaSubtypes` for screenshots,
+   `VNGenerateImageFeaturePrintRequest` revision 2 for near-duplicates, and from iOS 18
+   `VNCalculateImageAestheticsScoresRequest` for `isUtility` and `overallScore`. Schema v12
+   `photo_analysis`, keyed by **asset** (a re-match rewrites `photo_ref` and would lose it; a merge
+   or re-import would redo it). One row per photograph, written as it lands, so a killed run resumes.
+   Background priority, cancelled with the trip's delete; a trip's delete sweeps rows no trip still
+   references. Nothing starts without photo-library access, so a denied read is never stored as
+   "no pixels".
+2. **Nothing waits for it.** The export and the picker read whatever rows exist. **A trip switches
+   once**: until every photograph at a stop has a row from the current analyser, the film picks by
+   time exactly as before (`PhotoInputs.analysis == nil`). Not stop by stop — a film half one way
+   and half the other is harder to judge than either. The export logs which pick it used, and the
+   export sheet re-reads its decks when a run finishes, so it never shows a pick the export won't use.
+3. **The pick** (`PhotoDeckSelector.pick(_:count:signals:duplicateDistance:)`, pure): highlights
+   first as before; then utility photographs are never picked; consecutive photographs within
+   `duplicate_distance` of their group's *first* frame are one moment (anchored, so a pan cannot
+   chain across a visit); a moment repeating a starred photograph is dropped; each slot takes the
+   best-scored moment among those nearest its centre, the centre on a tie or with no scores.
+   **With no signal it is the old pick, index for index.**
+4. **Stops**: once a trip is analysed, a utility photograph no longer counts towards its stop's
+   rank (a receipt is not attention). A starred one still does. Quality does **not** enter stop
+   ranking — it would move whole stops in and out on the one signal nobody has measured on travel
+   photographs yet. Revisit with the probe's numbers.
+5. **iCloud: never downloaded by the background run** (`photo_analysis.allow_network` false). A
+   photograph whose original is only in iCloud is analysed from the thumbnail Photos keeps on the
+   phone, or recorded `unavailable` and retried on the next run. Downloading a trip's originals on
+   cellular, unasked, is a product call, not a default.
+6. **§0**: pixels are read from PhotoKit at `target_px` and dropped; only the row is kept, in the
+   local database (device backup per ADR 2026-09-24 (d)). Logs carry counts and durations only.
+7. **The measurement is a DEBUG screen**: Trip Detail → ⋯ → "Photo analysis probe", on the phone.
+   → `Docs/handoff-photo-analysis.md`.
+
+| Claim | Status | Cheapest thing that settles it |
+|---|---|---|
+| Aesthetics needs iOS 18; feature print revision 2 needs iOS 17 | **VERIFIED** — iPhoneOS 26.5 SDK headers | — |
+| With no signal the analysed pick equals the time-based pick | **VERIFIED** — `PhotoSignalPickTests`, 61 × 8 × 4 cases | — |
+| Preview and export agree once a trip is analysed | **VERIFIED** — `FilmPhotoAnalysisTests` | — |
+| Imported trips rarely hold screenshots (import needs GPS); recorded trips can (matched by time) | **VERIFIED** — `PhotoLibraryImportSource.fetchPhotos`, `PhotoMatcher.stopId` | — |
+| Seconds per photograph on a phone; share of a trip only in iCloud; download time | **UNKNOWN** | Probe, Iceland trip, both buttons |
+| Feature print rev 2 is 768 unit-length floats (distance 0…2) | **VERIFIED** on macOS 26, not on a phone | Probe prints on the phone |
+| `duplicate_distance` 0.3 separates a burst from a new view | **INFERRED** — synthetic images: nudged scene 0.07, different scenes 0.45; set low because too high loses views | Probe's consecutive-distance histogram + its before/after decks |
+| Aesthetics scores rank travel photographs the way Chiu would | **UNKNOWN** | Probe's before/after on Iceland, Chiu's judgement |
+| A thumbnail is enough pixels for a meaningful score and print | **UNKNOWN** | Probe on a trip with Optimise Storage on, compare to "allow iCloud" |
+| Background priority keeps an export in parallel from slowing | **INFERRED** | Export once while the probe runs, compare `export` stage timings |
+| `target_px` 512 | **INFERRED** | Probe at 512 vs 1024 on the same trip |
+
+**Determinism.** The pick is a pure function of stored rows, so the same trip exported twice picks
+the same photographs. It changes when rows change: once when a run completes, and again if a
+photograph once `unavailable` is later analysed.
+
+**Rejected:** a per-stop switch (the film would change stop by stop while the run proceeds);
+downloading iCloud originals in the background (point 5); quality in stop ranking now (point 4);
+columns on `photo_ref` (lost on every re-match); a custom Core ML model or any server (a dependency,
+and §0).

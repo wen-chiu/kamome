@@ -77,7 +77,11 @@ struct RecapExportJob: RecapExportRunning {
         // bitmaps. Refs stay out of the render size.
         // The counts are read either way: which stops the film presents must not
         // change because photo cards are switched off, only whether they show.
-        let photos = RecapComposer.photoInputs(detail: detail)
+        let photos = RecapComposer.photoInputs(detail: detail, analysis: config.photoAnalysis)
+        // Which pick the film used — never waited for (ADR 2026-09-25 (d)).
+        KamomeLog.recap.notice(
+            "recap: photo pick — \(photos.analysis == nil ? "by time (analysis not complete)" : "analysed")"
+        )
         let deck = RecapDeck(
             photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
             labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
@@ -114,6 +118,7 @@ struct RecapExportJob: RecapExportRunning {
             favoriteCounts: photos.starredCounts,
             highlightedAssets: photos.highlighted,
             pickedAssets: photos.picked, pickedCounts: photos.pickedCounts,
+            analysis: photos.analysis,
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export,
             everyLegRoutabilityEstablished:

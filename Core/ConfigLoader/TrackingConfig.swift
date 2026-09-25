@@ -325,11 +325,13 @@ public struct TrackingConfig: Decodable, Equatable {
     public let trip: Trip
     public let sampling: Sampling
     public let export: Export
+    public let photoAnalysis: PhotoAnalysis
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
         case filter, segmentation, dwell, simplify, matching, photos, discovery, geocode, trip, sampling, export
         case photoImport = "import"
+        case photoAnalysis = "photo_analysis"
     }
 
     /// The loaded config with a different `matching` block — the only value the
