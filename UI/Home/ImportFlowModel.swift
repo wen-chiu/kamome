@@ -205,7 +205,7 @@ final class ImportFlowModel {
             // (Chiu 2026-09-22) — see `TripJourneyNaming`.
             TripJourneyNaming.nameIfNeeded(tripId: tripId, repository: repository)
             // Vision looks at the photographs in the background; the film never
-            // waits for it (ADR 2026-09-25 (c)).
+            // waits for it (ADR 2026-09-25 (d)).
             PhotoAnalysisCoordinator.shared.start(
                 tripId: tripId, repository: repository, config: config.photoAnalysis
             )

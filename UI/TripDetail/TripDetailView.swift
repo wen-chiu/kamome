@@ -16,7 +16,7 @@ struct TripDetailView: View {
     @State private var showingAllFilms = false
     @State private var showingProvenance = false
     @State private var showingMerge = false
-    /// DEBUG: the photo analysis probe (ADR 2026-09-25 (c)).
+    /// DEBUG: the photo analysis probe (ADR 2026-09-25 (d)).
     @State private var showingProbe = false
     /// Set when a merge folded this trip into an earlier one: the screen leaves
     /// once the sheet is gone, since two dismissals in one pass race.

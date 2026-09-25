@@ -27,7 +27,7 @@ extension RecapComposer {
             highlightCap: highlightMaxPhotos
         )
         guard let analysis else { return PhotoDeckSelector.pick(marked, count: count) }
-        // The trip's analysis is complete (ADR 2026-09-25 (c)): the app looks
+        // The trip's analysis is complete (ADR 2026-09-25 (d)): the app looks
         // at the photographs. A photograph with no row plays with no signal.
         let signals = candidates.map { ref -> PhotoSignal in
             guard case let .asset(id) = ref else { return PhotoSignal() }
@@ -70,7 +70,7 @@ extension RecapComposer {
         /// its deck exactly its picks.
         var pickedCounts: [String: Int] = [:]
         /// What Vision found, **only once every photograph at a stop has been
-        /// analysed** (ADR 2026-09-25 (c)); `nil` until then, and the film picks
+        /// analysed** (ADR 2026-09-25 (d)); `nil` until then, and the film picks
         /// exactly as it did before. A trip switches once, never stop by stop.
         var analysis: PhotoAnalysisInputs?
     }
@@ -101,7 +101,7 @@ extension RecapComposer {
             inputs.byStop[stopId, default: []].append(.asset(photo.phAssetId))
             // A receipt is not evidence the person cared about a place: once
             // the trip is analysed, utility photographs do not earn their stop
-            // a place in the film (ADR 2026-09-25 (c)). A starred one still does.
+            // a place in the film (ADR 2026-09-25 (d)). A starred one still does.
             // The key is written even at zero: a missing count falls back to
             // the candidate count in `rankedSelection`, receipts included.
             let isUtility = inputs.analysis?.signals[photo.phAssetId]?.isUtility == true

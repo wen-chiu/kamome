@@ -1,6 +1,6 @@
 import Foundation
 
-/// What on-device analysis learned about one photograph (ADR 2026-09-25 (c)).
+/// What on-device analysis learned about one photograph (ADR 2026-09-25 (d)).
 /// Read from the database, never computed here: this module stays pure, so the
 /// same stored analysis always picks the same deck.
 public struct PhotoSignal: Equatable, Sendable {

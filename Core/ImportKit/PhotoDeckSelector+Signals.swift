@@ -1,6 +1,6 @@
 import Foundation
 
-/// **The app's pick, once it has looked at the photographs** (ADR 2026-09-25 (c)).
+/// **The app's pick, once it has looked at the photographs** (ADR 2026-09-25 (d)).
 ///
 /// Same shape as `pick`: highlights first, spread among themselves; the rest
 /// spread across the whole visit. Three things change, and only for the

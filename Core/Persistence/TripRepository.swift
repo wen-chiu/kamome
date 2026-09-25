@@ -139,7 +139,7 @@ public struct TripRepository {
         public let segments: [(segment: SegmentRecord, points: [TrackpointRecord])]
         public let stops: [StopRecord]
         public let photos: [PhotoRefRecord]
-        /// Vision's findings for the trip's photographs, by asset (schema v11).
+        /// Vision's findings for the trip's photographs, by asset (schema v12).
         public let analyses: [String: PhotoAnalysisRecord]
     }
 

@@ -5,7 +5,7 @@ import KamomePersistence
 import Photos
 import SwiftUI
 
-/// **The device measurement ADR 2026-09-25 (c) is waiting on** — DEBUG only,
+/// **The device measurement ADR 2026-09-25 (d) is waiting on** — DEBUG only,
 /// from Trip Detail's overflow menu. ⚠️ Needs the physical device: the
 /// simulator has no trip's photographs and refuses the aesthetics request.
 ///

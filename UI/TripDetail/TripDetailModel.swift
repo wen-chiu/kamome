@@ -93,7 +93,7 @@ final class TripDetailModel {
     }
 
     /// Resumes Vision over this trip's photographs — every trip imported
-    /// before it existed, and any run the system cut short (ADR 2026-09-25 (c)).
+    /// before it existed, and any run the system cut short (ADR 2026-09-25 (d)).
     private func startPhotoAnalysis() {
         let (tripId, repository, config) = (tripId, repository, config.photoAnalysis)
         Task { @MainActor in

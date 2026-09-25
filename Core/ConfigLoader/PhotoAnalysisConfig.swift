@@ -2,7 +2,7 @@ import Foundation
 
 extension TrackingConfig {
     /// **The app looks at the photographs before it picks them** (ADR
-    /// 2026-09-25 (c)). On-device Vision only: pixels and results never leave
+    /// 2026-09-25 (d)). On-device Vision only: pixels and results never leave
     /// the phone (§0). Every value is a first guess, **INFERRED**, until the
     /// Trip Detail probe (DEBUG) is run on a device — see
     /// `Docs/handoff-photo-analysis.md`.

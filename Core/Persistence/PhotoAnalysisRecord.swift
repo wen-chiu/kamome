@@ -1,8 +1,8 @@
 import Foundation
 import GRDB
 
-/// What on-device Vision found in one photograph (schema v11, ADR 2026-09-25
-/// (c)). Keyed by **asset**, not by trip: a photograph re-matched, merged into
+/// What on-device Vision found in one photograph (schema v12, ADR 2026-09-25
+/// (d)). Keyed by **asset**, not by trip: a photograph re-matched, merged into
 /// another trip or imported twice is analysed once. Derived from pixels that
 /// never leave the device, and it never leaves the device either (§0).
 public struct PhotoAnalysisRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
@@ -74,7 +74,7 @@ public struct PhotoAnalysisRecord: Codable, Equatable, FetchableRecord, Persista
 }
 
 extension TripRepository {
-    // MARK: - Photo analysis (schema v11)
+    // MARK: - Photo analysis (schema v12)
 
     /// The trip's photographs at a stop that still need Vision: never
     /// analysed, analysed by an older version, or unavailable last time (a

@@ -1,7 +1,7 @@
 import KamomeImportKit
 import XCTest
 
-/// **The app's pick once it has looked at the photographs** (ADR 2026-09-25 (c)).
+/// **The app's pick once it has looked at the photographs** (ADR 2026-09-25 (d)).
 ///
 /// The first test is the one that makes the rest safe to ship: with no signal,
 /// the analysed pick is the time-based pick, index for index. A trip whose

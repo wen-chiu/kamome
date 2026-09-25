@@ -13,7 +13,7 @@ enum PhotoAnalysisVersion {
     static let current = 1
 }
 
-/// **Vision looks at one photograph, on the device** (ADR 2026-09-25 (c)).
+/// **Vision looks at one photograph, on the device** (ADR 2026-09-25 (d)).
 ///
 /// Three facts per photograph, each the cheapest request that gives it:
 ///  - *utility* — `PHAsset.mediaSubtypes` says screenshot without any pixels;

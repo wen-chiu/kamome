@@ -3,7 +3,7 @@ import XCTest
 
 @testable import KamomePersistence
 
-/// Schema v11 — what Vision found, per asset (ADR 2026-09-25 (c)).
+/// Schema v12 — what Vision found, per asset (ADR 2026-09-25 (d)).
 final class PhotoAnalysisStoreTests: XCTestCase {
     /// One trip, one stop, three photographs at it and one on the route.
     private func seeded() throws -> (TripRepository, AppDatabase) {
@@ -28,7 +28,7 @@ final class PhotoAnalysisStoreTests: XCTestCase {
         )
     }
 
-    func testMigrationToV11CreatesTheAnalysisTable() throws {
+    func testMigrationToV12CreatesTheAnalysisTable() throws {
         let database = try AppDatabase.inMemory()
         try database.writer.read { db in
             let columns = try db.columns(in: "photo_analysis").map(\.name)

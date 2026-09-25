@@ -4,7 +4,7 @@ import KamomePersistence
 import Observation
 import Photos
 
-/// **One background analysis run per trip** (ADR 2026-09-25 (c)) — the same
+/// **One background analysis run per trip** (ADR 2026-09-25 (d)) — the same
 /// single-flight shape as `RouteMatchCoordinator`, with the opposite contract:
 /// **nothing ever waits for it.** The export and the photo picker read whatever
 /// rows exist; until every photograph at a stop has one, the trip picks by

@@ -228,11 +228,21 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE stop ADD COLUMN film_choice TEXT")
         }
 
-        // Schema v11 — what on-device Vision found in each photograph (ADR
-        // 2026-09-25 (c)): utility, quality, feature print. Keyed by asset, so a
+        // Schema v11 — "no drive path" is asked again on foot (ADR 2026-09-25 (c)).
+        // A stored `no_road` may be land a car cannot reach (the Iceland film
+        // flew a plane to the Seljavallalaug pool), and a stored verdict is
+        // never re-asked. So it is cleared to NULL once more, exactly as v7 did,
+        // and the next routing run settles it with the walk question.
+        // Forward-only, and data-only: no column changes.
+        migrator.registerMigration("v11") { db in
+            try db.execute(sql: "UPDATE segment SET routability = NULL WHERE routability = 'no_road'")
+        }
+
+        // Schema v12 — what on-device Vision found in each photograph (ADR
+        // 2026-09-25 (d)): utility, quality, feature print. Keyed by asset, so a
         // re-match or a merge keeps it; a trip's delete sweeps rows no trip
         // references. Nothing here leaves the device (§0). Forward-only.
-        migrator.registerMigration("v11") { db in
+        migrator.registerMigration("v12") { db in
             try db.create(table: "photo_analysis") { table in
                 table.primaryKey("ph_asset_id", .text)
                 table.column("version", .integer).notNull()

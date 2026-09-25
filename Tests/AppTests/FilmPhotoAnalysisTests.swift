@@ -4,7 +4,7 @@ import KamomePersistence
 import XCTest
 
 /// **The analysed pick reaches the film the way the time-based one did**
-/// (ADR 2026-09-25 (c)): all at once, never stop by stop, and the export sheet
+/// (ADR 2026-09-25 (d)): all at once, never stop by stop, and the export sheet
 /// still shows exactly what the export plays.
 extension FilmPhotoChoicesTests {
     /// Stop 0's thirty photographs are one burst; every other photograph is

@@ -1,4 +1,4 @@
-# Handoff — Vision auto-pick (ADR 2026-09-25 (c))
+# Handoff — Vision auto-pick (ADR 2026-09-25 (d))
 
 **State, 2026-09-25.** Code done, `./check.sh` green on the simulator. **Never run on a phone.**
 Every device number in the ADR's table is UNKNOWN until the steps below are run. The pick itself
@@ -10,7 +10,7 @@ picks exactly as before (VERIFIED, `PhotoSignalPickTests`).
 | Piece | Where |
 |---|---|
 | Pure pick with signals | `Core/ImportKit/PhotoDeckSelector+Signals.swift`, `PhotoSignal.swift` |
-| Schema v11 `photo_analysis`, reads, delete sweep | `Core/Persistence/PhotoAnalysisRecord.swift` |
+| Schema v12 `photo_analysis`, reads, delete sweep | `Core/Persistence/PhotoAnalysisRecord.swift` |
 | Vision on one photograph | `App/Services/PhotoAnalyzer.swift` |
 | Background run, per trip, single flight | `App/Services/PhotoAnalysisCoordinator.swift` |
 | Trip switch + utility-not-counted | `RecapComposer.photoInputs` / `analysisInputs` |

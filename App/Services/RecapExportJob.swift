@@ -78,7 +78,7 @@ struct RecapExportJob: RecapExportRunning {
         // The counts are read either way: which stops the film presents must not
         // change because photo cards are switched off, only whether they show.
         let photos = RecapComposer.photoInputs(detail: detail, analysis: config.photoAnalysis)
-        // Which pick the film used — never waited for (ADR 2026-09-25 (c)).
+        // Which pick the film used — never waited for (ADR 2026-09-25 (d)).
         KamomeLog.recap.notice(
             "recap: photo pick — \(photos.analysis == nil ? "by time (analysis not complete)" : "analysed")"
         )
