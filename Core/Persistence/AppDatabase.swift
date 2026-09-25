@@ -217,6 +217,17 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE stop ADD COLUMN locality TEXT")
         }
 
+        // Schema v10 — the person picks a stop's photographs and whether the stop
+        // is in the film at all (Chiu 2026-09-25). `film_pick` marks a
+        // photograph the person put in their stop's deck: a stop with any picks
+        // shows exactly those, 1 to `deck_highlight_max_photos`. `film_choice`
+        // is NULL (the app decides), 'in' or 'out'. Defaults leave every
+        // existing trip the app's to choose. Forward-only.
+        migrator.registerMigration("v10") { db in
+            try db.execute(sql: "ALTER TABLE photo_ref ADD COLUMN film_pick INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "ALTER TABLE stop ADD COLUMN film_choice TEXT")
+        }
+
         return migrator
     }
 }

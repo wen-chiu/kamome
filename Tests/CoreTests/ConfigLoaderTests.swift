@@ -55,19 +55,9 @@ final class ConfigLoaderTests: XCTestCase {
         try assertExportDefaults(config)
     }
 
-    /// Capture / matching / import tunables.
-    private func assertTrackingDefaults(_ config: TrackingConfig) throws {
-        // Defaults named in the spec (§2.3, §4.1, §4.2, §4.4, §4.5).
-        XCTAssertEqual(config.segmentation.modeConfirmS, 60)
-        XCTAssertEqual(config.segmentation.speedTransitMinKmh, 130)
-        XCTAssertEqual(config.dwell.windowS, 180)
-        XCTAssertEqual(config.dwell.radiusM, 80)
-        XCTAssertEqual(config.dwell.regionRadiusM, 150)
-        // Trip-end stop derivation (ADR 2026-07-18).
-        XCTAssertEqual(config.dwell.gapMinS, 300)
-        XCTAssertEqual(config.dwell.visitMinS, 300)
-        XCTAssertEqual(config.dwell.visitReturnRadiusM, 300)
-        XCTAssertEqual(config.simplify.epsilonM, 15)
+    /// Routing and the pace verdict — split out of `assertTrackingDefaults` for
+    /// its length budget; every assertion is unchanged.
+    private func assertMatchingDefaults(_ config: TrackingConfig) throws {
         // Routing (§4.4). Empty until 2026-09-08, when the config flip pointed the
         // app at the Cloudflare Worker that holds the key (ADR 2026-09-08). This
         // asserts a **shipped value that changed by decision**, not a rule — the
@@ -95,6 +85,22 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.crossingPaceMinKmh, paceDefaults.crossingPaceMinKmh)
         XCTAssertEqual(config.matching.crossingPaceMinDistanceM, paceDefaults.crossingPaceMinDistanceM)
         XCTAssertEqual(config.matching.crossingPaceClockMarginS, paceDefaults.crossingPaceClockMarginS)
+    }
+
+    /// Capture / matching / import tunables.
+    private func assertTrackingDefaults(_ config: TrackingConfig) throws {
+        // Defaults named in the spec (§2.3, §4.1, §4.2, §4.4, §4.5).
+        XCTAssertEqual(config.segmentation.modeConfirmS, 60)
+        XCTAssertEqual(config.segmentation.speedTransitMinKmh, 130)
+        XCTAssertEqual(config.dwell.windowS, 180)
+        XCTAssertEqual(config.dwell.radiusM, 80)
+        XCTAssertEqual(config.dwell.regionRadiusM, 150)
+        // Trip-end stop derivation (ADR 2026-07-18).
+        XCTAssertEqual(config.dwell.gapMinS, 300)
+        XCTAssertEqual(config.dwell.visitMinS, 300)
+        XCTAssertEqual(config.dwell.visitReturnRadiusM, 300)
+        XCTAssertEqual(config.simplify.epsilonM, 15)
+        try assertMatchingDefaults(config)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)
         XCTAssertEqual(config.sampling.vehicles.car.fastMinKmh, 20)

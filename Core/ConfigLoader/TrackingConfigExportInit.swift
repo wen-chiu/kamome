@@ -65,8 +65,7 @@ extension TrackingConfig.Export {
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckPhotoMinHoldS = deckPhotoMinHoldS
             self.deckZoomS = deckZoomS; self.deckLabelLeadS = deckLabelLeadS
             self.subjectParkS = subjectParkS
-            self.openingCountryS = openingCountryS
-            self.openingRegionalS = openingRegionalS
+            self.openingCountryS = openingCountryS; self.openingRegionalS = openingRegionalS
             self.countryViewPadding = countryViewPadding
             self.openingCollapseZoomRatio = openingCollapseZoomRatio
             self.openingCollapseDriftFraction = openingCollapseDriftFraction

@@ -1,6 +1,477 @@
 {
   "sourceLanguage": "zh-Hant",
   "strings": {
+    "recap_stop_no_photos": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有照片"
+          }
+        }
+      }
+    },
+    "stop_photos_row": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose photos for the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "挑選影片的照片"
+          }
+        }
+      }
+    },
+    "stop_photos_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld photos in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片會用 %1$lld 張（共 %2$lld 張）"
+          }
+        }
+      }
+    },
+    "stop_photos_not_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This stop isn’t in the film. Tap a photo, or turn the switch on, to put it in."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這一站不在影片裡。點一張照片，或打開上面的開關，就會放進去。"
+          }
+        }
+      }
+    },
+    "stop_photos_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a photo to put it in the film or take it out — 1 to %lld per stop. Press and hold to never use a photo. ★ marks a Photos favourite; Kamome picks those first."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點照片就能放進影片或拿掉，每站 1 到 %lld 張。長按可以設定永遠不用這張。★ 是「照片」App 裡的收藏，卡摸咩會優先挑選。"
+          }
+        }
+      }
+    },
+    "stop_photos_include": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow in Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_exclude": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never Use This Photo"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永遠不用這張"
+          }
+        }
+      }
+    },
+    "stop_photos_tile_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to put it in the film or take it out. Press and hold for more."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下放進影片或拿掉，長按有更多選項。"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo %lld in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片第 %lld 張"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos favourite"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片收藏"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_excluded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never used"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永遠不用"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_not_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在影片裡"
+          }
+        }
+      }
+    },
+    "stop_photos_reset": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改回自動"
+          }
+        }
+      }
+    },
+    "stop_photos_mode_picked": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your pick"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你挑的"
+          }
+        }
+      }
+    },
+    "stop_photos_mode_auto": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動挑選"
+          }
+        }
+      }
+    },
+    "stop_photos_full": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That’s %lld already — take one out first."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已經 %lld 張了，先拿掉一張再加。"
+          }
+        }
+      }
+    },
+    "stop_photos_last_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take this stop out of the film?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把這一站移出影片？"
+          }
+        }
+      }
+    },
+    "stop_photos_last_message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is its last photo. You can put the stop back from Other Stops."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這是這一站最後一張照片。之後可以從「其他站點」再加回來。"
+          }
+        }
+      }
+    },
+    "stop_in_film_toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放進影片"
+          }
+        }
+      }
+    },
+    "stop_take_out": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take Out"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移出影片"
+          }
+        }
+      }
+    },
+    "stop_put_in": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入影片"
+          }
+        }
+      }
+    },
+    "recap_stops_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the film · %lld stops"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片裡的站點 · %lld 站"
+          }
+        }
+      }
+    },
+    "recap_stops_in_film_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome chose these. Tap a stop to change its photos; swipe left to take it out."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些是卡摸咩幫你挑的。點一站可以換照片，往左滑可以移出影片。"
+          }
+        }
+      }
+    },
+    "recap_stops_other": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other stops"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他站點"
+          }
+        }
+      }
+    },
+    "recap_stops_other_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap ＋ to add a stop. It appears in trip order, and the film gets longer."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點＋加入站點，會依旅程順序出現，影片也會跟著變長。"
+          }
+        }
+      }
+    },
+    "recap_stop_taken_out": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taken out"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已移出"
+          }
+        }
+      }
+    },
+    "recap_stop_photo_count": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld photos"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 張"
+          }
+        }
+      }
+    },
     "journey_collapse": {
       "extractionState": "manual",
       "localizations": {

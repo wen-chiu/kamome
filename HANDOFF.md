@@ -126,6 +126,7 @@ string stands. Do not reopen this from scratch.
   VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
   Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
 - **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
+- 🟠 **Picks (ADR 2026-09-25): device check owed**; next, Vision auto-pick (its "Not done").
 - ⚠️ `provenance_recorded` is defined twice in the string catalogue → ADR 2026-09-23 (e).
 
 ---
@@ -140,11 +141,9 @@ string stands. Do not reopen this from scratch.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.
-- **The production KV counter lies to your first read.** A day's key returned
-  **404 while holding 4**, and a read straight after a render shows the pre-render
-  value. Read twice, tens of seconds apart, believe the second. Same cache is why
-  `wrangler dev` at ceiling 1 measures **zero** overshoot — miniflare's KV has no
-  read cache, so that test is **retired, not pending** (ADRs 2026-09-05, -09-08).
+- **The production KV counter lies to your first read** (404 while holding 4;
+  stale right after a render). Read twice, tens of seconds apart. `wrangler dev`
+  measures zero overshoot — that test is **retired** (ADRs 2026-09-05, -09-08).
 - **Continuity passing is not the film being right.** A camera wrong in a way that
   does not *move* scores 100%: a body span from the wrong beat measured 177.3 km
   against 13.3 km and scored perfectly. When a change re-derives a span, a frame
@@ -160,6 +159,7 @@ string stands. Do not reopen this from scratch.
 - **Two sessions contaminate each other's counts** (one checkout) **and each
   other's simulator** (one bundle id — a screenshot can show *their* build's
   wording). Confirm your branch. → `Docs/environment-gotchas.md`.
+- **A merge can drop catalogue keys**: 4058b92 lost PR #91's 13 picker strings.
 - **MapKit saturates at ~109° of longitude** — Taiwan→Iceland has no frame at any
   padding, so the frozen country card is a **main path**, not a fallback.
 

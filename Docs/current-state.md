@@ -6,12 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-24 (f)** and `main` at
-**PR #93** ((f) draft: pace crossing. **ADR (e)**, uncompiled: per-area context floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). PR #91: the Stop Editor photo picker — star / leave out, schema v8
-`photo_ref.is_excluded`; **no ADR yet**). PR #92: ADR (b), below. PR #89 (**ADR 2026-09-24**: the body is framed per camera
+Last synced: 2026-09-25 against decisions.md **2026-09-25** and `main` at
+**PR #94** (**ADR 2026-09-25**, this branch: the person picks 1–5 photos per stop and puts stops in or
+out, schema v10; it replaces PR #91's star picker. #94: (f) draft, pace crossing. #95: **(e)**, per-area context
+floor, town in the pill, schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #92: ADR (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
-renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed, no look change; device figures owed
+renders owed, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed, no look change; device figures owed
 (`Docs/handoff-export-performance.md`, §7 the second pass). PR #82: log-only. PR #83: UI polish; the
 vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
 yet — Chiu's). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
