@@ -32,6 +32,80 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// The one owner of every snapshotter this process has in flight.
     static let snapshotters = MainThreadLeases<MLNMapSnapshotter>()
 
+    /// What the current export has asked of MapLibre: counts and durations only
+    /// (`MapSubstrateMeter`). Reset and read by the export job.
+    static let meter = MapSubstrateMeter()
+
+    /// MapLibre's network hook holds its delegate weakly, so this is its owner.
+    private static let networkProbe = NetworkProbe(meter: meter)
+
+    /// **Sizes the tile cache and starts counting requests.** Called on the main
+    /// queue before an export's first snapshot. MapLibre asks for the cache size
+    /// to be set before a style loads, and its completion runs synchronously on
+    /// main. Setting the same size again is cheap, so every export calls this.
+    /// It changes when a tile is downloaded, never what is drawn.
+    @MainActor
+    static func prepareForExport(cacheMb: Int) async -> Error? {
+        MLNNetworkConfiguration.sharedManager.delegate = networkProbe
+        meter.reset()
+        return await withCheckedContinuation { continuation in
+            MLNOfflineStorage.shared.setMaximumAmbientCacheSize(UInt(max(0, cacheMb)) * 1_048_576) { error in
+                continuation.resume(returning: error)
+            }
+        }
+    }
+
+    /// Counts the requests MapLibre sends and hands each back **unchanged**:
+    /// this only observes. Called on MapLibre's own background threads; the
+    /// meter is lock-guarded. (There is no response side: MapLibre 6.27 never
+    /// calls `didReceiveResponse:`, `MapSubstrateMeter`.)
+    private final class NetworkProbe: NSObject, MLNNetworkConfigurationDelegate {
+        let meter: MapSubstrateMeter
+
+        init(meter: MapSubstrateMeter) {
+            self.meter = meter
+        }
+
+        // Selector pinned: this is an optional requirement, and a Swift name
+        // that missed the Objective-C one would compile and silently never run.
+        @objc(willSendRequest:)
+        func willSend(_ request: NSMutableURLRequest) -> NSMutableURLRequest {
+            let conditional = request.value(forHTTPHeaderField: "If-None-Match") != nil
+                || request.value(forHTTPHeaderField: "If-Modified-Since") != nil
+            meter.requestSent(url: request.url, conditional: conditional)
+            return request
+        }
+    }
+
+    /// Times one snapshot from start to style-loaded and to completion. The
+    /// snapshotter holds its delegate weakly; the completion block owns this.
+    private final class SnapshotTiming: NSObject, MLNMapSnapshotterDelegate {
+        private let lock = NSLock()
+        private let started = ContinuousClock.now
+        private var styleLoadedS: Double?
+
+        @objc(mapSnapshotter:didFinishLoadingStyle:)
+        func mapSnapshotter(_ snapshotter: MLNMapSnapshotter, didFinishLoading style: MLNStyle) {
+            lock.lock()
+            defer { lock.unlock() }
+            styleLoadedS = Self.seconds(since: started)
+        }
+
+        func finish(succeeded: Bool) {
+            lock.lock()
+            let style = styleLoadedS
+            lock.unlock()
+            MapLibreSnapshotProvider.meter.snapshotFinished(
+                totalS: Self.seconds(since: started), styleS: style, succeeded: succeeded
+            )
+        }
+
+        private static func seconds(since instant: ContinuousClock.Instant) -> Double {
+            let elapsed = ContinuousClock.now - instant
+            return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
+        }
+    }
+
     /// A style file already resolved against its tiles (see `RecapMapStyle`).
     private let styleURL: URL
 
@@ -140,15 +214,23 @@ public struct MapLibreSnapshotProvider: MapRenderer {
                 options.showsLogo = false
                 let snapshotter = MLNMapSnapshotter(options: options)
                 let lease = Self.snapshotters.hold(snapshotter)
+                // Owned by the block below, not by the snapshotter (its delegate
+                // is weak). Unlike the snapshotter it has no teardown, so being
+                // released off the main queue with the block is harmless.
+                let timing = SnapshotTiming()
+                snapshotter.delegate = timing
+                Self.meter.snapshotStarted()
                 // The block must not mention `snapshotter` — see above. It ends
                 // the lease instead, which drops the last reference on the main
                 // queue, one turn after this callback has returned into MapLibre.
                 snapshotter.start { snapshot, error in
                     Self.snapshotters.end(lease)
                     guard let snapshot, let cgImage = snapshot.image.cgImage else {
+                        timing.finish(succeeded: false)
                         continuation.resume(throwing: error ?? SnapshotError())
                         return
                     }
+                    timing.finish(succeeded: true)
                     continuation.resume(returning: (cgImage, snapshot))
                 }
             }
