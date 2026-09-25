@@ -1,7 +1,10 @@
+# UI was missing until 2026-09-26 (arch review round 2): the SwiftUI layer was
+# never linted, and the export sheet had grown to 549 lines unseen.
 included:
   - App
   - Core
   - Tests
+  - UI
 
 excluded:
   - Tests/Fixtures

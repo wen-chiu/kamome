@@ -313,10 +313,8 @@ enum JourneyRouteText {
                 + Text(verbatim: "  ")
                 + Text(verbatim: shown[index])
         }
-        if named.count > shown.count {
-            result = result + Text(verbatim: "  +\(named.count - shown.count)")
-        }
-        return result
+        guard named.count > shown.count else { return result }
+        return result + Text(verbatim: "  +\(named.count - shown.count)")
     }
 
     /// Three stops around one town all answer "Whitehorse", and a line reading

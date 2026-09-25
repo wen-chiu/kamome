@@ -254,6 +254,15 @@ public final class AppDatabase {
             }
         }
 
+        // Schema v13 — which routing rules a verdict was reached under (arch
+        // review 2026-09-26). A rule change used to need a data migration that
+        // cleared verdicts (v7, v11); now it bumps
+        // `SegmentRoutability.rulesVersion` and only the verdicts it revises read
+        // as unasked. NULL is version 1: every verdict stored so far. Forward-only.
+        migrator.registerMigration("v13") { db in
+            try db.execute(sql: "ALTER TABLE segment ADD COLUMN routability_version INTEGER")
+        }
+
         return migrator
     }
 }
