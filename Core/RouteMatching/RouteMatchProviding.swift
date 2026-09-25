@@ -95,6 +95,10 @@ public enum RouteReconstruction: Equatable, Sendable {
     /// Also what an unrecognised 400 maps to — the behaviour every 400 had
     /// before the split below, kept so nothing that used to be a crossing
     /// silently stops being one.
+    ///
+    /// Since ADR 2026-09-25 (b), `No path` is asked once more on foot. It stays
+    /// this verdict only when walking needs a ferry or finds nothing. A leg
+    /// that can be walked on land becomes `offTheRoadNetwork`.
     case noRoadHere
     /// **The provider answered, and a waypoint has no road anywhere near it** —
     /// a photograph on a beach, a cape, a trail. Geoapify's `400 No suitable
@@ -104,6 +108,10 @@ public enum RouteReconstruction: Equatable, Sendable {
     /// then both were one verdict, so a beach photograph became a crossing and
     /// the film flew a plane to it. **Not a crossing**: the leg draws dashed,
     /// with the trip's own vehicle, inside the journey it belongs to.
+    ///
+    /// Also the answer for **land no car reaches** (ADR 2026-09-25 (b)): no drive
+    /// path, but a walk path with no ferry on it. Measured: Skógafoss →
+    /// Seljavallalaug pool, a photo on a footpath.
     case offTheRoadNetwork
     /// A route came back and `RoutePlausibility` refused it. **A road exists**;
     /// this particular route is not trustworthy, usually because one EXIF fix is

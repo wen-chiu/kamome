@@ -175,8 +175,8 @@ budget and costs sharpness — Chiu's call, judged against renders.
 
 ## 🐛 Known bugs and accepted costs
 
-The import date range clips at timezone edges; `RecapMode` may be two axes, not
-one; the glacier renders flat. All three, in full, with workarounds:
+**⏳ Iceland plane on land (device).** The import date range clips at timezone edges; `RecapMode` may be two axes, not
+one; the glacier renders flat. All four, in full, with workarounds:
 → `Docs/handoff-known-bugs.md`. And the **0.747 sharpness step at hold
 boundaries**, accepted as it stands — revisit only if someone notices it in a
 film (`Docs/handoff-crop-scaling.md`).

@@ -82,6 +82,8 @@ public enum SegmentRoutability: String, CaseIterable, Sendable {
     /// so it is stored and never re-asked; **not a crossing**, so no plane and
     /// no arc. Before v7 these were stored as `no_road`, and v7 clears those
     /// rows so each is asked once more and lands in the right one of the two.
+    /// Since v10 it also holds land a car cannot reach but a walk can, with no
+    /// ferry (ADR 2026-09-25 (b)); v10 cleared `no_road` a second time for it.
     case offRoadNetwork = "off_road_network"
     /// **Nobody drove this** (ADR 2026-09-24 (f)): the straight line between the
     /// leg's ends was covered faster than any drive averages, even with the
