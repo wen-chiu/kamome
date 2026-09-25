@@ -6,15 +6,14 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-24 against decisions.md **2026-09-24 (f)** and `main` at
-**PR #93** ((f) draft: pace crossing. **ADR (e)**, uncompiled: per-area context floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). PR #91: the Stop Editor photo picker — star / leave out, schema v8
-`photo_ref.is_excluded`; **no ADR yet**). PR #92: ADR (b), below. PR #89 (**ADR 2026-09-24**: the body is framed per camera
+Last synced: 2026-09-25 against decisions.md **2026-09-25 (c)** and `main` at
+**PR #98** (2026-09-25: days are dates, home ends a journey. **(b)** #98:
+1–5 photos per stop, stops in/out, v10. **(c)**: walk-only land, no plane, v11. #94: (f) draft.
+#95: (e) per-area context floor, town in the pill,
+schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
-renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed, no look change; device figures owed
-(`Docs/handoff-export-performance.md`, §7 the second pass). PR #82: log-only. PR #83: UI polish; the
-vehicle picker moves to the export sheet (its first-stop trip naming has no ADR
-yet — Chiu's). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
+renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed; device figures owed
+(`Docs/handoff-export-performance.md` §7). PR #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
 names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
 airport-only home is type 2, the film ends at the destination (2026-09-01 built),
 every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the
@@ -90,7 +89,7 @@ scoped to **stop points** (#72). **Journey Discovery ships as an added feature
 in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
 restored untouched, the feature lives behind one toolbar button, and home is
 never looked up. Discovery's thresholds ship INFERRED and its lookup timing is accepted
-(2026-09-18 (e)). S1's dark override is lifted and the light style approved
+(2026-09-18 (e)); a photo at home ends a journey (2026-09-25). S1's dark override is lifted and the light style approved
 (2026-09-18 (d) and addendum) — films follow the device. The terrain credit is
 owed only where a licence requires it (2026-09-18 (f)).
 

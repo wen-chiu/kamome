@@ -28,6 +28,20 @@ extension RecapComposer {
         return PhotoDeckSelector.pick(marked, count: count)
     }
 
+    /// A stop's deck when the person picked it (Chiu 2026-09-25): exactly the
+    /// picks, never topped up, in the same order an app-chosen deck plays —
+    /// starred first, then time — so a number does not jump when a pick is
+    /// added or removed. More picks than the cap (two stops merged) are spread.
+    static func pickedDeck(
+        _ candidates: [PhotoRef], picked: Set<String>, highlightedAssets: Set<String>, cap: Int
+    ) -> [PhotoRef] {
+        let marked = candidates.compactMap { ref -> (ref: PhotoRef, isHighlight: Bool)? in
+            guard case let .asset(id) = ref, picked.contains(id) else { return nil }
+            return (ref, highlightedAssets.contains(id))
+        }
+        return PhotoDeckSelector.pick(marked, count: Swift.min(marked.count, Swift.max(cap, 1)))
+    }
+
     /// What the film's photo selection reads from one trip (ADR 2026-09-24).
     /// Photographs the person left out are gone from all of it: never a
     /// candidate, and not counted towards their stop.
@@ -40,6 +54,11 @@ extension RecapComposer {
         var rawCounts: [String: Int] = [:]
         /// Stop id → starred photographs at the stop; any at all keeps the stop.
         var starredCounts: [String: Int] = [:]
+        /// Assets the person picked into their stop's deck (Chiu 2026-09-25).
+        var picked: Set<String> = []
+        /// Stop id → picked photographs; any at all keeps the stop and makes
+        /// its deck exactly its picks.
+        var pickedCounts: [String: Int] = [:]
     }
 
     /// Builds `PhotoInputs` — the one place the export, the photo picker's
@@ -60,6 +79,10 @@ extension RecapComposer {
                 inputs.highlighted.insert(photo.phAssetId)
                 inputs.starredCounts[stopId, default: 0] += 1
             }
+            if photo.filmPick != 0 {
+                inputs.picked.insert(photo.phAssetId)
+                inputs.pickedCounts[stopId, default: 0] += 1
+            }
         }
         return inputs
     }
@@ -72,9 +95,15 @@ extension RecapComposer {
     ) -> [(stop: StopRecord, photos: [PhotoRef])] {
         let selection = select(stops: stops, photosByStop: inputs.byStop,
                                rawPhotoCounts: inputs.rawCounts, favoriteCounts: inputs.starredCounts,
-                               weighting: weighting)
+                               pickedCounts: inputs.pickedCounts, weighting: weighting)
         return selection.kept.map { stop in
             var photos = inputs.byStop[stop.id] ?? []
+            if (inputs.pickedCounts[stop.id] ?? 0) > 0 {
+                // The person's deck is theirs: no allocation, no weighting.
+                let deck = pickedDeck(photos, picked: inputs.picked,
+                                      highlightedAssets: inputs.highlighted, cap: highlightMaxPhotos)
+                return (stop, deck)
+            }
             if let allocated = selection.allocation[stop.id] {
                 photos = deckPhotos(photos, allocated: allocated,
                                     highlightedAssets: inputs.highlighted, highlightMaxPhotos: highlightMaxPhotos)
@@ -99,6 +128,19 @@ extension RecapComposer {
     /// 2026-09-24). Same records (`filmRecords`: the film ends at the
     /// destination), same inputs, same plan as `RecapExportJob.compose`.
     static func filmDecks(detail: TripRepository.TripDetail, config: TrackingConfig) -> [String: [String]] {
+        filmPlan(detail: detail, config: config).decks
+    }
+
+    /// What the film can present and what it will. `stops` is every stop the
+    /// film could show, in trip order — the ones after the flight home are not
+    /// among them — so a screen can offer the ones left out to be put back.
+    struct FilmPlan {
+        var stops: [StopRecord] = []
+        /// Stop id → the asset ids shown there, for each presented stop.
+        var decks: [String: [String]] = [:]
+    }
+
+    static func filmPlan(detail: TripRepository.TripDetail, config: TrackingConfig) -> FilmPlan {
         let film = filmRecords(
             segments: detail.segments, stops: detail.stops,
             epsilonM: config.simplify.epsilonM,
@@ -109,23 +151,56 @@ extension RecapComposer {
             stops: film.stops, inputs: photoInputs(detail: detail),
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos, weighting: config.export
         )
-        var decks: [String: [String]] = [:]
+        var result = FilmPlan(stops: film.stops)
         for (stop, photos) in plan {
-            decks[stop.id] = photos.compactMap { ref in
+            result.decks[stop.id] = photos.compactMap { ref in
                 if case let .asset(id) = ref { return id }
                 return nil
             }
         }
-        return decks
+        return result
     }
 
-    /// Which stops the film presents, and how many photographs each shows.
+    /// Which stops the film presents, and how many photographs each shows:
+    /// the app's ranking, then the person's word on top of it.
+    private static func select(
+        stops: [StopRecord],
+        photosByStop: [String: [PhotoRef]],
+        rawPhotoCounts: [String: Int],
+        favoriteCounts: [String: Int],
+        pickedCounts: [String: Int],
+        weighting: TrackingConfig.Export?
+    ) -> (kept: [StopRecord], allocation: [String: Int]) {
+        let ranked = rankedSelection(stops: stops, photosByStop: photosByStop, rawPhotoCounts: rawPhotoCounts,
+                                     favoriteCounts: favoriteCounts, weighting: weighting)
+        // **The person's word lands on top of the app's** (Chiu 2026-09-25).
+        // A stop put in — or whose photographs were picked — joins the film
+        // and the film grows; a stop taken out leaves, and nothing takes its
+        // place. Neither changes the ranking, so editing one stop never moves
+        // another in or out.
+        let rankedIds = Set(ranked.kept.map(\.id))
+        var allocation = ranked.allocation
+        let kept = stops.filter { stop in
+            if stop.stopFilmChoice == .excluded { return false }
+            if rankedIds.contains(stop.id) { return true }
+            let pinned = stop.stopFilmChoice == .included || (pickedCounts[stop.id] ?? 0) > 0
+            guard pinned else { return false }
+            if let weighting {
+                let photos = rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0)
+                allocation[stop.id] = Swift.min(weighting.tierStandardPhotos, photos)
+            }
+            return true
+        }
+        return (kept, allocation)
+    }
+
+    /// The app's own choice of stops, before the person's word is applied.
     ///
     /// **One switch, one decision.** This used to be three conditionals over three
     /// booleans, each carrying a negation of the others. Exhaustive with no
     /// `default:` on purpose: adding a `RecapMode` case must break the build here
     /// rather than fall silently into an existing branch.
-    private static func select(
+    private static func rankedSelection(
         stops: [StopRecord],
         photosByStop: [String: [PhotoRef]],
         rawPhotoCounts: [String: Int],

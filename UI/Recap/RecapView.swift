@@ -180,26 +180,13 @@ struct RecapView: View {
         .buttonStyle(.borderedProminent)
     }
 
-    /// What the film will show at each stop, before it is rendered (ADR
-    /// 2026-09-24). This is where someone notices a photograph they did not
-    /// want, so it is where they can change it: each row opens that stop's
-    /// picker. Hidden while rendering — the film in flight has already chosen.
+    /// Which stops the film presents and what each shows, before it is
+    /// rendered (ADR 2026-09-24, Chiu 2026-09-25) — `FilmStopsSections`.
+    /// Hidden while rendering — the film in flight has already chosen.
     @ViewBuilder
     private var filmPhotosSection: some View {
-        if model.photosEnabled, !model.isRendering, let filmPhotos, !filmPhotos.filmStops.isEmpty {
-            Section {
-                ForEach(filmPhotos.filmStops, id: \.id) { stop in
-                    NavigationLink {
-                        StopPhotoPickerView(choices: filmPhotos, stop: stop)
-                    } label: {
-                        FilmDeckRow(choices: filmPhotos, stop: stop)
-                    }
-                }
-            } header: {
-                Text("recap_photos_section")
-            } footer: {
-                Text("recap_photos_section_footer")
-            }
+        if model.photosEnabled, !model.isRendering, let filmPhotos {
+            FilmStopsSections(choices: filmPhotos)
         }
     }
 

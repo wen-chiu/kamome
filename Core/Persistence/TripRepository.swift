@@ -241,34 +241,6 @@ public struct TripRepository {
         }
     }
 
-    // MARK: - Photos
-
-    public func photoRefs(tripId: String) throws -> [PhotoRefRecord] {
-        try database.writer.read { db in
-            try PhotoRefRecord
-                .filter(sql: "trip_id = ?", arguments: [tripId])
-                .fetchAll(db)
-        }
-    }
-
-    public func replacePhotoRefs(tripId: String, with photos: [PhotoRefRecord]) throws {
-        try database.writer.write { db in
-            try db.execute(sql: "DELETE FROM photo_ref WHERE trip_id = ?", arguments: [tripId])
-            for photo in photos {
-                try photo.insert(db)
-            }
-        }
-    }
-
-    public func setPhotoHighlight(photoId: String, isHighlight: Bool) throws {
-        try database.writer.write { db in
-            try db.execute(
-                sql: "UPDATE photo_ref SET is_highlight = ? WHERE id = ?",
-                arguments: [isHighlight ? 1 : 0, photoId]
-            )
-        }
-    }
-
     /// Self-contained database copy for the debug export path
     /// (Docs/device-test-P1.md post-drive verification).
     public func snapshotDatabase(to path: String) throws {
