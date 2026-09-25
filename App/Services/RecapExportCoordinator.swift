@@ -66,11 +66,22 @@ final class RecapExportCoordinator {
         case refused(busyTripId: String)
     }
 
+    /// What a run learned that its film cannot say for itself, kept with the
+    /// finished outcome. Both used to die with `running`, so a film whose cards
+    /// were blank or whose legs were dashed came back with no reason given — to
+    /// exactly the person the "you can leave this screen" copy invited to leave.
+    struct Findings: Equatable {
+        var routing: RouteMatchReport?
+        var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
+    }
+
     private(set) var running: Running?
     /// The last finished export per trip. This is what makes reopening a trip
     /// after its film landed show the film rather than an idle Export button —
     /// nothing is lost because nobody was looking.
     private(set) var outcomes: [String: RecapExportOutcome] = [:]
+    /// Held for a `.finished` outcome only, and cleared with it.
+    private var findings: [String: Findings] = [:]
 
     private var task: Task<Void, Never>?
     private var cancelFlag = ExportCancelFlag()
@@ -98,11 +109,15 @@ final class RecapExportCoordinator {
 
     func outcome(tripId: String) -> RecapExportOutcome? { outcomes[tripId] }
 
+    /// What the finished film's run found, or nil when there is no finished film.
+    func findings(tripId: String) -> Findings? { findings[tripId] }
+
     /// Forgets a finished outcome, returning the trip to idle — what "Export
     /// again" and a film deletion do. Never touches a run in flight.
     func clearOutcome(tripId: String) {
         guard !isRendering(tripId: tripId) else { return }
         outcomes[tripId] = nil
+        findings[tripId] = nil
     }
 
     /// Forgets a finished outcome whose film has been deleted **somewhere else**.
@@ -112,6 +127,7 @@ final class RecapExportCoordinator {
     func forget(film: FilmRecord) {
         guard case let .finished(stored, _) = outcomes[film.tripId], stored.id == film.id else { return }
         outcomes[film.tripId] = nil
+        findings[film.tripId] = nil
     }
 
     // MARK: - Single flight
@@ -132,6 +148,7 @@ final class RecapExportCoordinator {
         }
 
         outcomes[request.tripId] = nil
+        findings[request.tripId] = nil
         cancelFlag = ExportCancelFlag()
         running = Running(request: request)
         let flag = cancelFlag
@@ -182,6 +199,9 @@ final class RecapExportCoordinator {
     /// remembering to.
     private func finish(tripId: String, outcome: RecapExportOutcome) {
         lifecycle.end()
+        if case .finished = outcome, let running {
+            findings[tripId] = Findings(routing: running.routing, photoShortfall: running.photoShortfall)
+        }
         running = nil
         task = nil
         outcomes[tripId] = outcome
