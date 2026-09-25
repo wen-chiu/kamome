@@ -166,7 +166,7 @@ struct TripDetailView: View {
                 chip(label: Text("day_all"), selected: model.selectedDay == nil) { model.selectDay(nil) }
                 ForEach(0..<model.dayCount, id: \.self) { day in
                     chip(
-                        label: Text(String.localizedStringWithFormat(String(localized: "day_chip"), day + 1)),
+                        label: Text(dayChipLabel(day)),
                         selected: model.selectedDay == day
                     ) { model.selectDay(day) }
                 }
@@ -174,6 +174,17 @@ struct TripDetailView: View {
             .padding(.horizontal)
         }
         .padding(.vertical, 8)
+    }
+
+    /// "Day 5 · 8/26": the number the film uses, and the date it stands for, so
+    /// a chip can be checked against the photos' own dates.
+    private func dayChipLabel(_ day: Int) -> String {
+        guard let date = model.date(ofDay: day) else {
+            return String.localizedStringWithFormat(String(localized: "day_chip"), day + 1)
+        }
+        return String.localizedStringWithFormat(
+            String(localized: "day_chip_dated"), day + 1, date.formatted(.dateTime.month(.defaultDigits).day())
+        )
     }
 
     private func chip(label: Text, selected: Bool, action: @escaping () -> Void) -> some View {

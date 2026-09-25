@@ -46,7 +46,10 @@ final class PhotoImportClustererTests: XCTestCase {
     }
 
     func testStopsAreTimeOrderedWithDayIndexAndSpan() {
-        let plan = PhotoImportClusterer.plan(photos: icelandLikeTrip(), config: config)
+        // Iceland keeps UTC, so the calendar days are the fixture's own dates.
+        var iceland = Calendar(identifier: .gregorian)
+        iceland.timeZone = TimeZone(identifier: "Atlantic/Reykjavik")!
+        let plan = PhotoImportClusterer.plan(photos: icelandLikeTrip(), config: config, calendar: iceland)
 
         XCTAssertEqual(plan.stops.map(\.arrivedAt), [0, 7_200, 90_000])
         XCTAssertEqual(plan.stops.map(\.departedAt), [120, 7_440, 90_060])

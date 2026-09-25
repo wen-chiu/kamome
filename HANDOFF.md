@@ -76,11 +76,11 @@ string stands. Do not reopen this from scratch.
   → `Docs/handoff-pacing.md`.
 - **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
   → `Docs/release-readiness.md` S2/S3.
-- **The end card's wordmark** — Chiu's layout reads `KAMOME かもめ`; the film
-  ships `"Kamome"`. What the product is called, and in which scripts, is yours.
+- **End-card wordmark** — layout `KAMOME かもめ`, film ships `"Kamome"`.
   → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **`privacy_intro` wording awaiting Chiu** — interim draft installed; he writes
-  the final text (「給我建議的寫法我再修正」).
+- **Country rule: scan time on a phone** — Mac 0.32 s/50k photos, device UNKNOWN.
+  → `Docs/decisions.md` 2026-09-25.
+- **`privacy_intro` wording** — interim draft installed; Chiu writes the final.
   → `Docs/decisions.md` 2026-09-17 §6.
 - **TestFlight films in Application Support/Films/** — rendered on Apple Maps,
   still present (§2.5). Chiu's call.
