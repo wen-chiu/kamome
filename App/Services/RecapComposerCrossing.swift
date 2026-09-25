@@ -1,6 +1,7 @@
 import Foundation
 import KamomeConfig
 import KamomeExportEngine
+import KamomeImportKit
 import KamomePersistence
 import KamomeTrackingEngine
 import KamomeTripComposer
@@ -205,11 +206,10 @@ extension RecapComposer {
     }
 
     /// How many days the trip covered, by the **same arithmetic as the HUD's day
-    /// chip** (`dayLabel`): elapsed 24-hour blocks since the start, plus one. Two
+    /// chip** (`dayLabel`): calendar dates, both ends counted (`TripDay`). Two
     /// day counters on one film that disagree by one is worse than either answer.
-    static func dayCount(trip: TripRecord) -> Int {
-        let ended = trip.endedAt ?? trip.startedAt
-        return max(Int((ended - trip.startedAt) / 86_400) + 1, 1)
+    static func dayCount(trip: TripRecord, calendar: Calendar = .current) -> Int {
+        TripDay.count(startedAt: trip.startedAt, endedAt: trip.endedAt ?? trip.startedAt, calendar: calendar)
     }
 
     /// **The journey the film tells** — the whole trip, or, when the film opens on

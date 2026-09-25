@@ -150,7 +150,15 @@ final class JourneyDiscoveryModel {
         let photos = await provider.photos(matching: .dateRange(from: start, to: end))
         // Home is estimated on device to decide what is "away", and that is all
         // it is used for: the estimate never leaves this function.
-        let detection = JourneyDetector.detect(photos: photos, config: detectionConfig)
+        // Off the main actor: with the country rule a scan is ~0.3 s per 50,000
+        // photographs on a Mac (measured 2026-09-25, release), more on a phone,
+        // and the scanning spinner must keep turning. The outlines are read for
+        // this scan only (≈0.8 MB, released after); nothing loads at launch.
+        // Unreadable → the country rule is off.
+        let detectionConfig = self.detectionConfig
+        let detection = await Task.detached(priority: .userInitiated) {
+            JourneyDetector.detect(photos: photos, config: detectionConfig, countries: CountryBoundaries.bundled())
+        }.value
 
         let hidden = dismissed.keys
         var found: [String: DiscoveredJourney] = [:]
@@ -239,7 +247,9 @@ final class JourneyDiscoveryModel {
             homeCellDeg: config.discovery.homeCellDeg,
             awayRadiusM: config.discovery.awayRadiusM,
             journeyGapS: config.discovery.journeyGapS,
-            minPhotos: config.discovery.minPhotos
+            minPhotos: config.discovery.minPhotos,
+            homecomingMinJumpM: config.discovery.homecomingMinJumpM,
+            countryCoastBufferM: config.discovery.countryCoastBufferM
         )
     }
 

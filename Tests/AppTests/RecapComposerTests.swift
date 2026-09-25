@@ -279,9 +279,15 @@ final class RecapComposerTests: XCTestCase {
     }
 
     func testDayLabelsUseS3DayMath() {
-        // Same-day arrival → day 1; 25 h in → day 2.
-        XCTAssertTrue(RecapComposer.dayLabel(for: tripStart + 600, tripStartedAt: tripStart).contains("1"))
-        XCTAssertTrue(RecapComposer.dayLabel(for: tripStart + 90_000, tripStartedAt: tripStart).contains("2"))
+        // Same-day arrival → day 1; 25 h in → day 2. A fixed zone, because a
+        // calendar day depends on one (TripDay, Chiu 2026-09-25).
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        XCTAssertTrue(RecapComposer.dayLabel(for: tripStart + 600, tripStartedAt: tripStart, calendar: utc).contains("1"))
+        XCTAssertTrue(RecapComposer.dayLabel(for: tripStart + 90_000, tripStartedAt: tripStart, calendar: utc).contains("2"))
+        // `tripStart` is 17:20 UTC: the next morning is under 24 h away and is
+        // still Day 2 — the film and S3's chips count dates, not 24-hour blocks.
+        XCTAssertTrue(RecapComposer.dayLabel(for: tripStart + 16 * 3_600, tripStartedAt: tripStart, calendar: utc).contains("2"))
     }
 
     func testWalkVisitGetsDetailLineOthersDoNot() throws {

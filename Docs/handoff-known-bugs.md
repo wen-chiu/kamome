@@ -1,12 +1,30 @@
 # Known bugs and accepted cosmetic costs
 
-Three standing items: an import bug that is understood and not worth fixing yet,
+Four standing items: a plane over land (fixed, device check owed), an import bug that is understood and not worth fixing yet,
 an open modelling question about `RecapMode`, and one cosmetic tradeoff Chiu has
 seen and chosen to keep.
 
 *Moved verbatim out of `HANDOFF.md` on 2026-08-31 when that file was put on a
 300-line budget (`Scripts/check-doc-budget.sh`). Nothing was edited; `HANDOFF.md`
 carries the live summary and points here.*
+
+---
+
+## ⏳ Fixed, device check owed — a plane flew over land: Iceland day 12, Skógar → Seljavallalaug (2026-09-25)
+
+**Symptom.** The Iceland film flew the plane over a 6 km dashed leg on land,
+from Skógar up to the Seljavallalaug pool.
+
+**Cause.** The drive profile answers `No path could be found` for this leg
+(VERIFIED with public landmark coordinates). The pool photo snaps to a road stub
+that connects to nothing. ADR 2026-09-23 (c) read `No path` as the sea.
+
+**Fix: ADR 2026-09-25 (c).** A drive `No path` is asked again on the walk profile.
+A walk route with no ferry means land, stored as `off_road_network`, so no
+plane flies. Schema v11 clears stored `no_road` so this leg is asked again.
+
+**Owed, device only:** re-export the Iceland trip. The routing summary must
+count the leg under "off the road network", and day 12 must show no plane.
 
 ---
 

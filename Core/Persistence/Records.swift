@@ -133,9 +133,13 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// `CLPlacemark.locality` (schema v9, ADR 2026-09-24 (e)). NULL = never
     /// asked; "" = asked, and the geocoder had no town for this spot.
     public var locality: String?
+    /// Whether the film presents this stop (schema v10, Chiu 2026-09-25):
+    /// NULL is the app's choice, `StopFilmChoice` names the person's.
+    public var filmChoice: String?
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lon, name, note, kind, locality
+        case filmChoice = "film_choice"
         case tripId = "trip_id"
         case arrivedAt = "arrived_at"
         case departedAt = "departed_at"
@@ -151,7 +155,8 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         name: String? = nil,
         note: String? = nil,
         kind: String? = nil,
-        locality: String? = nil
+        locality: String? = nil,
+        filmChoice: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -163,7 +168,19 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.note = note
         self.kind = kind
         self.locality = locality
+        self.filmChoice = filmChoice
     }
+
+    /// The person's word on whether the film presents this stop. `nil` —
+    /// the app ranks it with the rest.
+    public enum StopFilmChoice: String, Equatable, Sendable {
+        /// Always presented, past the trip's earned stop count: the film grows.
+        case included = "in"
+        /// Never presented, and nothing is pulled in to take its place.
+        case excluded = "out"
+    }
+
+    public var stopFilmChoice: StopFilmChoice? { filmChoice.flatMap(StopFilmChoice.init(rawValue:)) }
 }
 
 extension TripRecord: Identifiable {}
@@ -185,6 +202,9 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
     /// Left out of the film by the person (schema v8, ADR 2026-09-24). Never
     /// set together with `isHighlight` — see `filmChoice`.
     public var isExcluded: Int
+    /// In its stop's deck by the person's own pick (schema v10, Chiu
+    /// 2026-09-25). A stop with any picks shows exactly its picks.
+    public var filmPick: Int
     /// Manual display order within a stop (schema v2 — the deferred S4 reorder).
     /// Nullable; NULL means "order by `takenAt`", the prior behavior.
     public var orderIdx: Int?
@@ -197,6 +217,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         case takenAt = "taken_at"
         case isHighlight = "is_highlight"
         case isExcluded = "is_excluded"
+        case filmPick = "film_pick"
         case orderIdx = "order_idx"
     }
 
@@ -210,6 +231,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         lon: Double? = nil,
         isHighlight: Int = 0,
         isExcluded: Int = 0,
+        filmPick: Int = 0,
         orderIdx: Int? = nil
     ) {
         self.id = id
@@ -221,6 +243,7 @@ public struct PhotoRefRecord: Codable, Equatable, FetchableRecord, PersistableRe
         self.lon = lon
         self.isHighlight = isHighlight
         self.isExcluded = isExcluded
+        self.filmPick = filmPick
         self.orderIdx = orderIdx
     }
 
