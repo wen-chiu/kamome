@@ -59,6 +59,11 @@ struct RecapView: View {
                 } else {
                     exportForm
                         .onAppear { if filmPhotos == nil { filmPhotos = model.filmPhotoChoices() } }
+                        // Analysis landing while the sheet is open changes the
+                        // app's pick; the list must show the one the export uses.
+                        .onChange(of: PhotoAnalysisCoordinator.shared.finishedRuns[model.tripId]) {
+                            filmPhotos?.reload()
+                        }
                 }
             }
             .navigationTitle("recap_title")

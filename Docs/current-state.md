@@ -6,13 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-26 against decisions.md **2026-09-25 (c)** and `main` at
-**PR #100** (#96, #99: S5 export sheet fixes, no ADR. Export perf §8: why a snapshot
-costs what it does, tile cache 256 MB; device line owed.
-2026-09-25: days are dates, home ends a journey. **(b)** #98:
-1–5 photos per stop, stops in/out, v10. **(c)** #100: walk-only land, no plane, v11. #94: (f) draft.
+Last synced: 2026-09-26 against decisions.md **2026-09-25 (d)** and `main` at
+**PR #101** (**(d)** #101: background Vision auto-pick, v12, probe owed.
+#99, #96: S5 sheet. #100: (c) walk-only land, v11. #98: (b) picks, v10.
+Export §8: snapshot cost logged, cache 256 MB; run owed.
 #95: (e) per-area context floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
+schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #91: superseded by (b)). #92: 09-24 (b). #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
 renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed; device figures owed
 (`Docs/handoff-export-performance.md` §7). PR #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate

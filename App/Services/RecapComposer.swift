@@ -138,6 +138,7 @@ enum RecapComposer {
         highlightedAssets: Set<String> = [],
         pickedAssets: Set<String> = [],
         pickedCounts: [String: Int] = [:],
+        analysis: PhotoAnalysisInputs? = nil,
         highlightMaxPhotos: Int = 0,
         weighting: TrackingConfig.Export? = nil,
         everyLegRoutabilityEstablished: Bool = false
@@ -147,7 +148,7 @@ enum RecapComposer {
         let inputs = PhotoInputs(
             byStop: photosByStop, highlighted: highlightedAssets,
             rawCounts: rawPhotoCounts, starredCounts: favoriteCounts,
-            picked: pickedAssets, pickedCounts: pickedCounts
+            picked: pickedAssets, pickedCounts: pickedCounts, analysis: analysis
         )
         let plan = deckPlan(stops: stops, inputs: inputs, highlightMaxPhotos: highlightMaxPhotos, weighting: weighting)
         let tripStops = plan.map { stop, photos -> RecapTrip.Stop in

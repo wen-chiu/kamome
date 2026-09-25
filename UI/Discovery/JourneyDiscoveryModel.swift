@@ -205,6 +205,9 @@ final class JourneyDiscoveryModel {
                 tripId: tripId,
                 service: RouteMatchService(repository: repository, matching: config.matching)
             )
+            PhotoAnalysisCoordinator.shared.start(
+                tripId: tripId, repository: repository, config: config.photoAnalysis
+            )
             detected[journey.key] = nil
             loadTrips()
             return tripId
