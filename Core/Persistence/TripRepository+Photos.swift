@@ -5,34 +5,6 @@ import GRDB
 /// 2026-09-25), split out of `TripRepository` for its size budget, like the
 /// other extension files.
 extension TripRepository {
-    // MARK: - Photo rows (moved from `TripRepository` for its length budget)
-
-    public func photoRefs(tripId: String) throws -> [PhotoRefRecord] {
-        try database.writer.read { db in
-            try PhotoRefRecord
-                .filter(sql: "trip_id = ?", arguments: [tripId])
-                .fetchAll(db)
-        }
-    }
-
-    public func replacePhotoRefs(tripId: String, with photos: [PhotoRefRecord]) throws {
-        try database.writer.write { db in
-            try db.execute(sql: "DELETE FROM photo_ref WHERE trip_id = ?", arguments: [tripId])
-            for photo in photos {
-                try photo.insert(db)
-            }
-        }
-    }
-
-    public func setPhotoHighlight(photoId: String, isHighlight: Bool) throws {
-        try database.writer.write { db in
-            try db.execute(
-                sql: "UPDATE photo_ref SET is_highlight = ? WHERE id = ?",
-                arguments: [isHighlight ? 1 : 0, photoId]
-            )
-        }
-    }
-
     // MARK: - Film choices
 
     /// Sets what the film does with one photograph (ADR 2026-09-24). The two
@@ -80,6 +52,34 @@ extension TripRepository {
             try db.execute(
                 sql: "UPDATE stop SET film_choice = ? WHERE id = ?",
                 arguments: [choice?.rawValue, stopId]
+            )
+        }
+    }
+
+    // MARK: - Reading and replacing (moved from `TripRepository`, size budget)
+
+    public func photoRefs(tripId: String) throws -> [PhotoRefRecord] {
+        try database.writer.read { db in
+            try PhotoRefRecord
+                .filter(sql: "trip_id = ?", arguments: [tripId])
+                .fetchAll(db)
+        }
+    }
+
+    public func replacePhotoRefs(tripId: String, with photos: [PhotoRefRecord]) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "DELETE FROM photo_ref WHERE trip_id = ?", arguments: [tripId])
+            for photo in photos {
+                try photo.insert(db)
+            }
+        }
+    }
+
+    public func setPhotoHighlight(photoId: String, isHighlight: Bool) throws {
+        try database.writer.write { db in
+            try db.execute(
+                sql: "UPDATE photo_ref SET is_highlight = ? WHERE id = ?",
+                arguments: [isHighlight ? 1 : 0, photoId]
             )
         }
     }

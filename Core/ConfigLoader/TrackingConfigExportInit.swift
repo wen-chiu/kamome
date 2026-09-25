@@ -50,8 +50,7 @@ extension TrackingConfig.Export {
             self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
-            self.targetZoomRatio = targetZoomRatio
-            self.cameraAreaSplitRatio = cameraAreaSplitRatio
+            self.targetZoomRatio = targetZoomRatio; self.cameraAreaSplitRatio = cameraAreaSplitRatio
             self.cameraContext = cameraContext
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding

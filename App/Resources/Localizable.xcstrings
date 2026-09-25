@@ -965,6 +965,23 @@
         }
       }
     },
+    "day_chip_dated": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day %1$lld · %2$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第 %1$lld 天 · %2$@"
+          }
+        }
+      }
+    },
     "trip_delete": {
       "extractionState": "manual",
       "localizations": {

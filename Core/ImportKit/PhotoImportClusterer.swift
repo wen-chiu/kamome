@@ -11,8 +11,12 @@ import Foundation
 public enum PhotoImportClusterer {
 
     /// Builds the plan. Photos are sorted by time (ties broken by `assetId` so
-    /// two photos in the same second cluster deterministically).
-    public static func plan(photos: [ImportPhoto], config: ImportClusteringConfig) -> ImportedTripPlan {
+    /// two photos in the same second cluster deterministically). `calendar`
+    /// decides only the stops' `dayIndex` (`TripDay`); pass a fixed zone for a
+    /// result that does not depend on where the phone is.
+    public static func plan(
+        photos: [ImportPhoto], config: ImportClusteringConfig, calendar: Calendar = .current
+    ) -> ImportedTripPlan {
         let ordered = photos.sorted { lhs, rhs in
             lhs.timestamp != rhs.timestamp ? lhs.timestamp < rhs.timestamp : lhs.assetId < rhs.assetId
         }
@@ -25,7 +29,7 @@ public enum PhotoImportClusterer {
         var routeAttached: [String] = []
         for cluster in clusters {
             if cluster.count >= config.minPhotosPerStop {
-                stops.append(makeStop(cluster, tripStartedAt: startedAt))
+                stops.append(makeStop(cluster, tripStartedAt: startedAt, calendar: calendar))
             } else {
                 routeAttached.append(contentsOf: cluster.map(\.assetId))
             }
@@ -157,14 +161,14 @@ public enum PhotoImportClusterer {
         return clusters
     }
 
-    private static func makeStop(_ cluster: [ImportPhoto], tripStartedAt: Double) -> ImportedStop {
+    private static func makeStop(_ cluster: [ImportPhoto], tripStartedAt: Double, calendar: Calendar) -> ImportedStop {
         let count = Double(cluster.count)
         let lat = cluster.reduce(0.0) { $0 + $1.lat } / count
         let lon = cluster.reduce(0.0) { $0 + $1.lon } / count
         let arrivedAt = cluster.first!.timestamp
         let departedAt = cluster.last!.timestamp
         // Same day math as RecapComposer.dayLabel / S3 filter chips.
-        let dayIndex = Int((arrivedAt - tripStartedAt) / 86_400) + 1
+        let dayIndex = TripDay.index(of: arrivedAt, tripStartedAt: tripStartedAt, calendar: calendar) + 1
         return ImportedStop(
             lat: lat, lon: lon,
             arrivedAt: arrivedAt, departedAt: departedAt,
