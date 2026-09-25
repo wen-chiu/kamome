@@ -6586,3 +6586,60 @@ drop screenshots/receipts, prefer sharper, better-composed frames and collapse n
 Aesthetics scoring needs iOS 18 against a 17.0 target (VERIFIED); its cost on a few hundred iCloud
 photographs and whether it suits travel photographs are **UNKNOWN** — cheapest check: time it on the
 device on the Iceland trip.
+
+## 2026-09-25 (c) — "No drive path" is asked again on foot: land a car cannot reach is not a crossing
+
+**Decision (Chiu, 2026-09-25):** 「照 walk 再問一次的方案做」. This amends ADR
+2026-09-23 (c), which read `No path could be found` as "the sea".
+
+**Why.** The Iceland film flew the plane on day 12, from Skógar to the
+Seljavallalaug pool. The leg is 6 km, all on land. The pool photo sits on a
+footpath. The provider snaps it to a road stub that connects to nothing, so the
+drive profile answers `No path`. That leg was stored `no_road`, which makes it a
+crossing, and every crossing flies the plane (ADR 2026-09-23 (b) §3).
+- The provider's answer is **VERIFIED** with public landmark coordinates.
+- That the device stored `no_road` is **INFERRED**: the pace rule cannot reach
+  a 6 km leg, and `No suitable edges` would have stored `off_road_network`.
+
+**Measured through the Worker on 2026-09-25** (public landmarks):
+
+| request | answer |
+|---|---|
+| drive, Skógafoss → Seljavallalaug pool | `400 No path could be found` |
+| drive, Skógafoss → Seljavellir hamlet | 200, 11.4 km |
+| walk, Skógafoss → pool | 200, 12.4 km, no `ferry` |
+| walk, Ishigaki port → Taketomi port | 200, `properties.ferry: true` |
+| walk, Taoyuan → Miyako | `400 Too long distance` (walk is capped at 100 km) |
+
+**Decision.**
+
+1. When the drive profile answers `No path` (or an unrecognised 400), the
+   provider asks once more on the **walk profile**, with the same waypoints
+   (`GeoapifyRouteProvider.landConnection`).
+2. A walk route with **no ferry** on it means land: the leg becomes
+   `.offTheRoadNetwork` (`off_road_network`). It draws dashed with the trip's
+   vehicle, gets no plane and splits no journey. No new verdict is added: the
+   film treats this land the same way as a beach or a trail.
+3. A walk route **with a ferry**, any walk 400, or an unreadable walk answer
+   keeps `.noRoadHere`, the crossing. That is what the leg was before this
+   question existed.
+4. If **nobody answered** the walk request, the provider **throws**. The leg
+   stays NULL and is asked again on the next export. Storing `no_road` instead
+   would make the plane permanent.
+5. **Schema v11** clears stored `no_road` to NULL again, as v7 did. Otherwise
+   the Iceland leg keeps its plane forever.
+
+**Costs.**
+- Each `No path` leg sends its waypoints once more to the same decided provider
+  (§0). No walk geometry is kept or logged.
+- Every `no_road` leg on a phone is asked again on its next export.
+- A walk-only island joined by a pedestrian bridge would now draw the trip's
+  vehicle instead of the plane. That is the honest reading.
+
+**Rejected.**
+- A straight-line length threshold: Ishigaki → Taketomi (7 km) and Skógar → the
+  pool (6 km) are the same size.
+- Walking whenever drive fails: `No suitable edges` is already not a crossing.
+
+**Owed:** a device export of the Iceland trip. Its routing summary must count
+this leg under "off the road network", and day 12 must show no plane.

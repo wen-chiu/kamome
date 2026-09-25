@@ -43,6 +43,9 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
     /// profile when spec v1.8 §4.4.1 is built — `mode=walk` answers today — and
     /// that is the point at which this becomes a parameter.
     private static let driveProfile = "drive"
+    /// The profile the land question is asked on (`landConnection(through:)`).
+    /// Never used to draw a leg: its geometry is thrown away.
+    private static let walkProfile = "walk"
 
     private let config: TrackingConfig.Matching
     private let transport: Transport
@@ -67,7 +70,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         let thinned = RouteWaypoints.thinned(
             waypoints, minSpacingM: config.routeWaypointMinSpacingM, limit: config.chunkSize
         )
-        guard thinned.count >= 2, let url = requestURL(for: thinned) else {
+        guard thinned.count >= 2, let url = requestURL(for: thinned, profile: Self.driveProfile) else {
             KamomeLog.routing.notice("route: skipped — \(thinned.count) usable waypoints after thinning")
             return .notEstablished(.tooFewWaypoints)
         }
@@ -75,7 +78,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         let data: Data
         switch try await fetch(url) {
         case let .body(body): data = body
-        case .noRoadHere: return .noRoadHere
+        case .noRoadHere: return try await landConnection(through: thinned)
         case .offTheRoadNetwork: return .offTheRoadNetwork
         }
         let body = try JSONDecoder().decode(Response.self, from: data)
@@ -102,6 +105,43 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         // verdict: the caller stores the geometry, which is what marks the leg
         // reconstructed rather than inferred.
         return .routed(RouteMatchOutcome(geometry: geometry, confidence: 1))
+    }
+
+    /// **Is "no drive path" the sea, or land a car cannot reach?** Asked once,
+    /// on the walk profile, after the drive profile said `No path could be
+    /// found` (ADR 2026-09-25 (c)).
+    ///
+    /// `No path` only means the snapped ends sit on road pieces that do not
+    /// join. The sea does that. So does a photograph on a footpath that snaps
+    /// to a stub of track connected to nothing. The Iceland film flew a plane
+    /// from Skógar to the Seljavallalaug pool this way. The walk profile tells
+    /// them apart, measured through the Worker on 2026-09-25 with public
+    /// landmark coordinates:
+    ///
+    /// | request (`mode=walk`) | answer | verdict |
+    /// |---|---|---|
+    /// | Skógafoss → Seljavallalaug pool | 200, 12.4 km, no `ferry` | land, `.offTheRoadNetwork` |
+    /// | Ishigaki port → Taketomi port | 200, `properties.ferry: true` | sea, `.noRoadHere` |
+    /// | Taoyuan airport → Miyako airport | `400 Too long distance` (walk cap 100 km) | `.noRoadHere` |
+    ///
+    /// **Only a walk route with no ferry on it moves the verdict.** Any 400 and
+    /// any unreadable 200 keep `.noRoadHere`, which is what the leg was before
+    /// this question existed. A walk request that nobody answered **throws**: the
+    /// drive answer alone can no longer settle the leg, and a leg stored as a
+    /// crossing is never asked again, so leaving it unestablished is the
+    /// failure that heals. The same waypoints go to the same decided provider
+    /// (CLAUDE.md §0), and no geometry is kept.
+    private func landConnection(through waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction {
+        guard let url = requestURL(for: waypoints, profile: Self.walkProfile) else { return .noRoadHere }
+        guard case let .body(data) = try await fetch(url),
+              let route = (try? JSONDecoder().decode(Response.self, from: data))?.features?.first
+        else { return .noRoadHere }
+        if route.properties.ferry == true {
+            KamomeLog.routing.notice("route: no drive path, and walking needs a ferry — a crossing")
+            return .noRoadHere
+        }
+        KamomeLog.routing.notice("route: no drive path, but it can be walked — land, not a crossing")
+        return .offTheRoadNetwork
     }
 
     /// What one HTTP exchange produced. A two-case enum rather than `Data?` for
@@ -188,6 +228,9 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
     private struct RouteProperties: Decodable {
         /// Road distance in metres — the detour gate's input.
         let distance: Double
+        /// `true` when the route rides a ferry. Absent otherwise (measured
+        /// 2026-09-25): the sea/land answer in `landConnection(through:)`.
+        let ferry: Bool?
     }
 
     /// GeoJSON geometry, flattened to the trace order Kamome stores.
@@ -264,7 +307,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         message.replacing(#/-?\d+\.\d{3,}/#, with: "…")
     }
 
-    private func requestURL(for waypoints: [RouteMatchPoint]) -> URL? {
+    private func requestURL(for waypoints: [RouteMatchPoint], profile: String) -> URL? {
         guard var components = URLComponents(string: "\(config.baseURL)/v1/routing") else { return nil }
         // Latitude first — the opposite of the OSRM path this replaces.
         let coordinates = waypoints
@@ -272,7 +315,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             .joined(separator: "|")
         var items = [
             URLQueryItem(name: "waypoints", value: coordinates),
-            URLQueryItem(name: "mode", value: Self.driveProfile)
+            URLQueryItem(name: "mode", value: profile)
         ]
         // Empty is a legitimate state, and the one the pre-launch Cloudflare
         // Worker ships in: the key lives in the Worker and the app sends none.
