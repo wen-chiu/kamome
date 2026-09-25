@@ -6499,16 +6499,54 @@ before the trip, and no assertion changed. Two suites (`library()` in
 **Manual split: on hold** (Chiu: a control between every pair of days would be
 annoying). Merge stays the fix for a split that was wrong.
 
-**Proposed, awaiting Chiu: the country rule.** Split automatically, because
-the user can merge. Inside a journey, the first photograph back in the **home
-country** after one taken abroad ends the journey. Going from home country to
-abroad does not: Taiwan then Japan stays one trip, Japan then Taiwan is two.
-- **The home country comes from the home estimate**, which never leaves the
-  device. The device region is the fallback, since a phone set to US English
-  may live in Taipei.
-- **Deciding each photo's country needs offline boundaries.** Apple
-  geocoding is ruled out: §0 scopes it to stop points (PR #72), and the scan
-  runs before any stop exists. That means a bundled public-domain dataset
-  (Natural Earth admin-0) and a pure point-in-polygon test in
-  `KamomeImportKit`. **A new dependency, so Chiu decides.** The same data is
-  the "offline land mask" that ADR 2026-09-24 (f) deferred as Layer 3.
+**The country rule: decided and built** (Chiu 2026-09-25: 「你想好限制了，就去做
+吧」, having asked for side effects to be thought through first). Auto-splitting
+is fine because the user can merge.
+- **The rule** (`JourneyDetector`, when given `CountryBoundaries`): the first
+  photograph back in the **home country** after one taken abroad ends the
+  journey, if the step from that last photograph abroad is at least
+  `discovery.homecoming_min_jump_m` (100 km, INFERRED). Home country → abroad
+  never cuts: Taiwan then Japan is one trip, Japan then Taiwan is two.
+- **The home country** is the one holding the home estimate, which never
+  leaves the phone. No estimate, or one at sea, turns the rule off.
+- **Three answers, not two.** A photograph inside an outline, or within
+  `discovery.country_coast_buffer_m` (3 km, INFERRED; the nearest outline
+  wins), has a country. One at sea, on a plane, or off any outline has **none,
+  and that is no evidence either way**. A beach or a ferry photo cannot fake
+  "abroad" and then "home".
+- **The minimum step** stops a drive back over a land border (Paris home →
+  Geneva → Annecy → Turin) from cutting. Taiwan's returns are all by air or
+  sea, so this never holds back a Taiwanese homecoming.
+- **Taiwan and China are two countries, with a definite border** (Chiu:
+  「台灣跟中國不管爭議就是兩個國家 這在我的app是要明確界線的」). Countries are
+  keyed by `ADM0_A3` (`TWN`), because Natural Earth's `ISO_A2` for Taiwan is
+  "CN-TW". The 1:10m layer lacks Matsu (Nangan, Beigan, Dongju, Xiju, Dongyin),
+  Lieyu, Wuqiu and Xiaoliuqiu. Their outlines come from Natural Earth's
+  minor-islands layer, assigned to Taiwan **by name**, never by nearest country,
+  which would give Matsu to China. China's islands in that layer (Dadeng,
+  Nanri, Pingtan) are left out. `CountryBoundariesTests` pins every Taiwan
+  island, Fuzhou and Xiamen as China, and that no code contains "-". Known
+  gap: Dongsha and Taiping have no outline in either layer.
+- **The data:** Natural Earth v5.1.2, public domain, pinned by tag and built by
+  `Scripts/build-country-boundaries.py`.
+  - Outlines are simplified to about 1 km (finer for small islands) and stored
+    as varint deltas at about 11 m precision.
+  - The build fails unless 16 named points resolve as expected, using the same
+    coast buffer the app uses.
+  - Source SHA-256: countries `239eec57…`, minor islands `8c933ca7…`.
+- **Measured costs** (Mac, release, 2026-09-25):
+  - **Size:** 798 KB in the bundle, about 694 KB compressed.
+  - **Load:** 4 ms, only when a scan runs, never at launch.
+  - **Scan:** 0.32 s for 50,000 photographs with the rule, against 0.01 s
+    without. The test set was worst case, a third of it at random positions
+    mostly at sea, which forces the coast-buffer search.
+  - **UNKNOWN:** the cost on a phone. Cheapest check: one Discovery scan on the
+    device with a stopwatch. Detection now runs off the main actor because of
+    this, so the scanning spinner keeps turning.
+- **Accepted:**
+  - Natural Earth draws other disputed borders its own way. The codes are
+    compared, never shown.
+  - Hong Kong and Macau are their own entries, so for a home in mainland China
+    they count as abroad.
+  - A continental border drive photographed more than 100 km apart can still
+    cut. Merge fixes it.

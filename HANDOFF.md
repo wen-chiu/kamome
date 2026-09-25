@@ -78,7 +78,7 @@ string stands. Do not reopen this from scratch.
   → `Docs/release-readiness.md` S2/S3.
 - **End-card wordmark** — layout `KAMOME かもめ`, film ships `"Kamome"`.
   → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **Country rule** — needs a bundled boundaries dataset (a dependency).
+- **Country rule: scan time on a phone** — Mac 0.32 s/50k photos, device UNKNOWN.
   → `Docs/decisions.md` 2026-09-25.
 - **`privacy_intro` wording** — interim draft installed; Chiu writes the final.
   → `Docs/decisions.md` 2026-09-17 §6.

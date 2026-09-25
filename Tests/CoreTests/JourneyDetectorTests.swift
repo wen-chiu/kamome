@@ -7,7 +7,8 @@ import XCTest
 final class JourneyDetectorTests: XCTestCase {
     // ~55 km cells, 40 km "away", a two-day gap splits, eight photographs make a journey.
     private let config = JourneyDetectionConfig(
-        homeCellDeg: 0.5, awayRadiusM: 40_000, journeyGapS: 2 * 86_400, minPhotos: 8
+        homeCellDeg: 0.5, awayRadiusM: 40_000, journeyGapS: 2 * 86_400, minPhotos: 8,
+        homecomingMinJumpM: 100_000, countryCoastBufferM: 3_000
     )
 
     private func photo(_ id: String, _ ts: Double, _ lat: Double, _ lon: Double, favorite: Bool = false) -> ImportPhoto {
@@ -89,15 +90,76 @@ final class JourneyDetectorTests: XCTestCase {
         XCTAssertEqual(detection.journeys.map(\.photoCount), [10, 12], "Yilan, then Japan — two journeys")
     }
 
-    /// R1's limit, pinned so it is not mistaken for a guarantee: with no
-    /// photograph at home in between, only the gap can cut, and a trip under
-    /// two days after the last stays joined. The user separates those by hand.
+    /// R1 alone, with no country outlines: with no photograph at home in
+    /// between, only the gap can cut, and a trip under two days after the last
+    /// stays joined. The country rule below is what separates those.
     func testWithoutAPhotographAtHomeOnlyTheGapCuts() {
         let start = 10 * week + 3_600
         let japan = burst("jp", start: start, count: 12, lat: 35.68, lon: 139.65)
         let yilan = burst("yilan", start: start + 86_400, count: 10, lat: 24.60, lon: 121.66)
         let detection = JourneyDetector.detect(photos: homeYear() + japan + yilan, config: config)
 
+        XCTAssertEqual(detection.journeys.map(\.photoCount), [22])
+    }
+
+    // MARK: - The country rule (ADR 2026-09-25)
+
+    private static let countries = CountryBoundaries.bundled()
+
+    private func detect(_ photos: [ImportPhoto]) throws -> JourneyDetection {
+        let countries = try XCTUnwrap(Self.countries, "the outlines ship in KamomeImportKit")
+        return JourneyDetector.detect(photos: photos, config: config, countries: countries)
+    }
+
+    /// The Japan import, as it happened: nobody photographed home between the
+    /// flight back and Yilan, so R1 had nothing to cut on. Back in the home
+    /// country after Japan ends the journey. The photograph from the plane is at
+    /// sea and decides nothing.
+    func testFlyingBackIntoTheHomeCountryEndsAJourney() throws {
+        let start = 10 * week
+        let japan = burst("jp", start: start, count: 12, lat: 35.68, lon: 139.65)
+        let plane = photo("plane", start + 12 * 1_800, 29.0, 125.0)
+        let yilan = burst("yilan", start: start + 86_400, count: 10, lat: 24.60, lon: 121.66)
+        let detection = try detect(homeYear() + japan + [plane] + yilan)
+
+        XCTAssertEqual(detection.journeys.map(\.photoCount), [10, 13], "Yilan, then Japan with the plane photo")
+    }
+
+    /// Leaving the home country does not cut: Yilan, then Japan, is one trip.
+    func testLeavingTheHomeCountryDoesNot() throws {
+        let start = 10 * week
+        let yilan = burst("yilan", start: start, count: 10, lat: 24.60, lon: 121.66)
+        let japan = burst("jp", start: start + 86_400, count: 12, lat: 35.68, lon: 139.65)
+        XCTAssertEqual(try detect(homeYear() + yilan + japan).journeys.map(\.photoCount), [22])
+    }
+
+    /// **Kinmen is Taiwan** (Chiu 2026-09-25): two kilometres off Xiamen, and
+    /// still home country. Kinmen, then Yilan, is a trip that never left.
+    func testKinmenIsTheHomeCountryNotAbroad() throws {
+        let start = 10 * week
+        let kinmen = burst("kinmen", start: start, count: 10, lat: 24.44, lon: 118.37)
+        let yilan = burst("yilan", start: start + 86_400, count: 10, lat: 24.60, lon: 121.66)
+        XCTAssertEqual(try detect(homeYear() + kinmen + yilan).journeys.map(\.photoCount), [20])
+    }
+
+    /// A drive back over a land border is not a homecoming: Paris home, Geneva,
+    /// then Annecy 35 km away in France, then on to Italy — one trip. The step
+    /// home is under `homecomingMinJumpM`.
+    func testADriveBackOverALandBorderDoesNotCut() throws {
+        let home = (0..<52).map { photo("home-\($0)", Double($0) * week - 3 * 3_600, 48.86, 2.35) }
+        let start = 10 * week
+        let geneva = burst("geneva", start: start, count: 8, lat: 46.20, lon: 6.14)
+        let annecy = burst("annecy", start: start + 86_400, count: 8, lat: 45.90, lon: 6.13)
+        let turin = burst("turin", start: start + 2 * 86_400, count: 8, lat: 45.07, lon: 7.69)
+        XCTAssertEqual(try detect(home + geneva + annecy + turin).journeys.map(\.photoCount), [24])
+    }
+
+    /// Without the outlines the rule is off, and detection is what it was.
+    func testWithoutOutlinesTheCountryRuleIsOff() {
+        let start = 10 * week
+        let japan = burst("jp", start: start, count: 12, lat: 35.68, lon: 139.65)
+        let yilan = burst("yilan", start: start + 86_400, count: 10, lat: 24.60, lon: 121.66)
+        let detection = JourneyDetector.detect(photos: homeYear() + japan + yilan, config: config)
         XCTAssertEqual(detection.journeys.map(\.photoCount), [22])
     }
 

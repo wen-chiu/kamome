@@ -122,13 +122,21 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.maxRangeDays, 21)
         // Repeat-import detection (2026-09-23) — a first guess, INFERRED.
         XCTAssertEqual(config.photoImport.duplicatePhotoShare, 0.5)
-        // Journey discovery (2026-09-17) — first guesses, INFERRED not measured.
+        assertDiscoveryDefaults(config)
+    }
+
+    /// Journey discovery (2026-09-17) — first guesses, INFERRED not measured.
+    private func assertDiscoveryDefaults(_ config: TrackingConfig) {
         XCTAssertEqual(config.discovery.lookbackYears, 5)
         XCTAssertEqual(config.discovery.homeCellDeg, 0.5)
         XCTAssertEqual(config.discovery.awayRadiusM, 40_000)
         XCTAssertEqual(config.discovery.journeyGapS, 172_800)
         XCTAssertEqual(config.discovery.minPhotos, 8)
         XCTAssertEqual(config.discovery.singlePlaceExtentM, 60_000)
+        // The country rule (ADR 2026-09-25). `CountryBoundariesTests` and the
+        // build script's checks resolve coastlines with this buffer.
+        XCTAssertEqual(config.discovery.homecomingMinJumpM, 100_000)
+        XCTAssertEqual(config.discovery.countryCoastBufferM, 3_000)
         // The drawer's scrolling row since 2026-09-23 (was 3 on the card).
         XCTAssertEqual(config.discovery.coverPhotos, 8)
         XCTAssertTrue(config.discovery.showHomeGaps)
