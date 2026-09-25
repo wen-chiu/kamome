@@ -1,5 +1,6 @@
 import BackgroundTasks
 import Foundation
+import KamomeConfig
 
 /// **What the phone and the map renderer did during a render** (2026-09-25, the
 /// 859 s Iceland film). `render cost` says how long snapshots took; these lines
