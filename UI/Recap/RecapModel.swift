@@ -129,13 +129,20 @@ final class RecapModel {
     /// route exists, the provider could not be reached, it refused for load, or
     /// the budget ran out — need four different responses from the user. Only
     /// one of them means "this is simply what the journey looks like".
-    var routing: RouteMatchReport? { running?.routing }
+    ///
+    /// Read from the finished film's findings once the run is over, so the
+    /// finished screen can still say why — see `RecapExportCoordinator.Findings`.
+    var routing: RouteMatchReport? {
+        running?.routing ?? coordinator.findings(tripId: tripId)?.routing
+    }
 
     /// Set when warming could not load every deck photo — see
     /// `PhotoLibraryPhotoResolver.WarmSummary`. Surfaced rather than swallowed:
     /// the symptom is blank cards in a finished film, which reads as a rendering
     /// bug rather than as photos that are not on this device.
-    var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary? { running?.photoShortfall }
+    var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary? {
+        running?.photoShortfall ?? coordinator.findings(tripId: tripId)?.photoShortfall
+    }
 
     /// Set while photos that live only in iCloud are being downloaded for the
     /// film, ahead of the render. nil when every photo the film needs is already
@@ -185,10 +192,11 @@ final class RecapModel {
     }
 
     /// Returns the screen to idle so a new export can be configured. Never
-    /// touches a run in flight.
-    func exportAgain(appearance: RecapAppearance) {
+    /// touches a run in flight. **It does not start one** (2026-09-25): it used
+    /// to, which left no way to change the vehicle or the photos between films
+    /// short of deleting the one just made. Export is one more tap, on the form.
+    func exportAgain() {
         coordinator.clearOutcome(tripId: tripId)
-        startExport(appearance: appearance)
     }
 
     /// Deletes a film's row and its file. Called from the finished screen's

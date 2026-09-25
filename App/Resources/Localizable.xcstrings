@@ -2604,6 +2604,23 @@
         }
       }
     },
+    "recap_save_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save to Photos this time. Try again, or use Share to keep the film somewhere else."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這次沒能儲存到照片。可以再試一次，或用「分享」把影片存到別的地方。"
+          }
+        }
+      }
+    },
     "recap_save_to_photos": {
       "extractionState": "manual",
       "localizations": {
@@ -2923,6 +2940,193 @@
           "stringUnit": {
             "state": "translated",
             "value": "備註"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_excluded": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left out of the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已排除，不會放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo %d in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片中的第 %d 張"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_not_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在影片裡"
+          }
+        }
+      }
+    },
+    "stop_photos_a11y_starred": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starred"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加星號"
+          }
+        }
+      }
+    },
+    "stop_photos_exclude": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave Out of Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不要放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a photo to star it — starred photos always go in, up to %d. Touch and hold to leave one out. Kamome picks the rest."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下照片加星號，加星的照片一定會放進影片（最多 %d 張）。長按可以把照片排除。其餘由 Kamome 挑選。"
+          }
+        }
+      }
+    },
+    "stop_photos_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$d of %2$d photos are in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片會用 %2$d 張中的 %1$d 張"
+          }
+        }
+      }
+    },
+    "stop_photos_include": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow in Film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許放進影片"
+          }
+        }
+      }
+    },
+    "stop_photos_not_in_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This stop isn’t in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個停留點不在影片裡"
+          }
+        }
+      }
+    },
+    "stop_photos_row": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photos in the film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片裡的照片"
+          }
+        }
+      }
+    },
+    "stop_photos_tile_hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap to star or unstar. Touch and hold to leave it out."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點兩下可加上或取消星號。長按可以排除。"
           }
         }
       }

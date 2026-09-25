@@ -1,4 +1,5 @@
 import AVKit
+import KamomeConfig
 import KamomeExportEngine
 import KamomePersistence
 import Photos
@@ -39,7 +40,9 @@ struct RecapView: View {
         case saving
         case saved
         case denied
-        case failed(String)
+        /// The reason is logged, never shown — `PHPhotosErrorDomain 3302` is
+        /// not a sentence (DESIGNER.md UX rule 5).
+        case failed
     }
 
     init(tripId: String, session: TrackingSession) {
@@ -100,20 +103,12 @@ struct RecapView: View {
 
             filmPhotosSection
 
-            if let shortfall = model.photoShortfall {
-                Section {
-                    Label("recap_photos_missing", systemImage: "icloud.slash")
-                        .foregroundStyle(.orange)
-                    Text(String.localizedStringWithFormat(
-                        String(localized: "recap_photos_missing_detail"),
-                        shortfall.missing, shortfall.requested
-                    ))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                }
+            if model.photoShortfall != nil {
+                Section { photoShortfallNotice }
             }
-
-            routingSection
+            if model.routing?.isWorthReporting == true {
+                Section { routingNotice }
+            }
             busySection
         }
         // **The action is pinned, not scrolled to** (Chiu 2026-09-25). As the
@@ -305,8 +300,15 @@ struct RecapView: View {
     /// again. The render-time readout stays — it is the §4.5 budget readout.
     private func finishedContent(fileURL: URL) -> some View {
         VStack(spacing: 0) {
-            // Inline player — starts immediately.
-            if let player {
+            // Inline preview — starts immediately. A GIF is not a video:
+            // `AVPlayer` shows a struck-through play glyph for one, so it gets
+            // its own view (2026-09-25).
+            if isGIF(fileURL) {
+                AnimatedGIFView(url: fileURL)
+                    .aspectRatio(9 / 16, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding()
+            } else if let player {
                 VideoPlayer(player: player)
                     .aspectRatio(9 / 16, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -324,6 +326,18 @@ struct RecapView: View {
                 ))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+                .padding(.bottom, 8)
+            }
+
+            // What the run found, kept past its end: without this a film with
+            // blank cards or dashed legs came back with no reason given.
+            if model.photoShortfall != nil || model.routing?.isWorthReporting == true {
+                VStack(alignment: .leading, spacing: 6) {
+                    photoShortfallNotice
+                    routingNotice
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
                 .padding(.bottom, 8)
             }
 
@@ -358,9 +372,12 @@ struct RecapView: View {
                     }
                 }
 
+                // Back to the form, not straight into a render: the next film
+                // may want a different vehicle or different photos.
                 Button("recap_export_again") {
                     player = nil
-                    model.exportAgain(appearance: RecapAppearance(colorScheme))
+                    photosSaveState = .idle
+                    model.exportAgain()
                 }
                 .buttonStyle(.bordered)
             }
@@ -368,6 +385,7 @@ struct RecapView: View {
             .padding(.bottom)
         }
         .onAppear {
+            guard !isGIF(fileURL) else { return }
             let newPlayer = AVPlayer(url: fileURL)
             player = newPlayer
             newPlayer.play()
@@ -380,11 +398,25 @@ struct RecapView: View {
 
     @ViewBuilder
     private func photosSaveButton(fileURL: URL) -> some View {
+        VStack(spacing: 6) {
+            photosSaveButtonBody(fileURL: fileURL)
+            // Said beside the button, not inside it: a sentence on a prominent
+            // button reads as the button's action.
+            if photosSaveState == .failed {
+                Text("recap_save_failed")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private func photosSaveButtonBody(fileURL: URL) -> some View {
         Button {
             saveToPhotos(fileURL: fileURL)
         } label: {
             switch photosSaveState {
-            case .idle:
+            case .idle, .failed:
                 Label("recap_save_to_photos", systemImage: "photo.on.rectangle.angled")
                     .frame(maxWidth: .infinity)
             case .saving:
@@ -395,9 +427,6 @@ struct RecapView: View {
                     .frame(maxWidth: .infinity)
             case .denied:
                 Label("recap_photos_access_denied", systemImage: "exclamationmark.triangle")
-                    .frame(maxWidth: .infinity)
-            case let .failed(message):
-                Label(message, systemImage: "exclamationmark.triangle")
                     .frame(maxWidth: .infinity)
             }
         }
@@ -415,6 +444,7 @@ struct RecapView: View {
     /// payloads and one user-initiated share. This tap is that share.
     private func saveToPhotos(fileURL: URL) {
         photosSaveState = .saving
+        let savesAsPhoto = isGIF(fileURL)
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else {
                 Task { @MainActor in
@@ -423,19 +453,45 @@ struct RecapView: View {
                 return
             }
             PHPhotoLibrary.shared().performChanges {
-                PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                // A GIF goes in as a photo — Photos plays an animated GIF — and
+                // the video request refuses it (`PHPhotosErrorDomain` 3302).
+                if savesAsPhoto {
+                    PHAssetCreationRequest.forAsset().addResource(with: .photo, fileURL: fileURL, options: nil)
+                } else {
+                    PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
+                }
             } completionHandler: { success, error in
+                if let error {
+                    let nsError = error as NSError
+                    KamomeLog.recap.error(
+                        "save to Photos failed: \(nsError.domain, privacy: .public) · \(nsError.code, privacy: .public)"
+                    )
+                }
                 Task { @MainActor in
-                    if success {
-                        photosSaveState = .saved
-                    } else {
-                        photosSaveState = .failed(
-                            error?.localizedDescription ?? String(localized: "recap_failed")
-                        )
-                    }
+                    photosSaveState = success ? .saved : .failed
                 }
             }
         }
+    }
+
+    /// Blank cards in the film, and why. Shown while rendering and again on the
+    /// finished film — the person who left the screen reads it there.
+    @ViewBuilder
+    private var photoShortfallNotice: some View {
+        if let shortfall = model.photoShortfall {
+            Label("recap_photos_missing", systemImage: "icloud.slash")
+                .foregroundStyle(.orange)
+            Text(String.localizedStringWithFormat(
+                String(localized: "recap_photos_missing_detail"),
+                shortfall.missing, shortfall.requested
+            ))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        }
+    }
+
+    private func isGIF(_ fileURL: URL) -> Bool {
+        fileURL.pathExtension.lowercased() == RecapExportFormat.gif.rawValue
     }
 
     /// Why the film's legs draw dashed, when there is a reason worth giving.
@@ -447,28 +503,26 @@ struct RecapView: View {
     /// indistinguishable from it in the finished film. A fully routed film and a
     /// disabled endpoint say nothing at all: there is nothing to act on.
     @ViewBuilder
-    private var routingSection: some View {
+    private var routingNotice: some View {
         if let routing = model.routing, routing.isWorthReporting {
             // How many legs draw dashed — the one number the copy uses. It sits
             // in the *headline* ("有 X 段還沒畫"), and only the rate-limit body
             // repeats it, so both strings are formatted with it and the three
             // bodies that do not mention it simply ignore the argument.
             let dashed = routing.attempted - routing.reconstructed
-            Section {
-                Label {
-                    Text(String.localizedStringWithFormat(
-                        String(localized: routingHeadlineKey(routing)), dashed
-                    ))
-                } icon: {
-                    Image(systemName: routingSymbol(routing))
-                }
-                .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
+            Label {
                 Text(String.localizedStringWithFormat(
-                    String(localized: routingDetailKey(routing)), dashed
+                    String(localized: routingHeadlineKey(routing)), dashed
                 ))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: routingSymbol(routing))
             }
+            .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
+            Text(String.localizedStringWithFormat(
+                String(localized: routingDetailKey(routing)), dashed
+            ))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
     }
 
