@@ -60,6 +60,8 @@
     "journey_gap_s": 172800,
     "min_photos": 8,
     "single_place_extent_m": 60000,
+    "homecoming_min_jump_m": 100000,
+    "country_coast_buffer_m": 3000,
     "cover_photos": 8,
     "show_home_gaps": true
   },

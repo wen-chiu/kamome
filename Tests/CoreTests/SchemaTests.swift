@@ -138,6 +138,40 @@ final class SchemaTests: XCTestCase {
         }
     }
 
+    // MARK: - Schema v11 ("no drive path" is asked again on foot, ADR 2026-09-25 (c))
+
+    /// A stored `no_road` may be land a car cannot reach, so v11 clears exactly
+    /// those rows again. The verdicts it cannot have mislabelled are kept,
+    /// `beyond_driving` included: that one was never asked of routing.
+    func testMigrationToV11ClearsOnlyNoRoadSoItIsAskedOnFoot() throws {
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v10")
+        let stored = [("pool", "'no_road'"), ("road", "'road'"), ("detour", "'implausible_route'"),
+                      ("beach", "'off_road_network'"), ("flight", "'beyond_driving'"), ("never", "NULL")]
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO trip (id, title, started_at, status) VALUES ('t1', 'Iceland', 0, 'done')")
+            for (id, verdict) in stored {
+                try db.execute(sql: """
+                    INSERT INTO segment (id, trip_id, mode, started_at, routability)
+                    VALUES ('\(id)', 't1', 'drive', 0, \(verdict))
+                    """)
+            }
+        }
+        try AppDatabase.migrator.migrate(queue)
+
+        try queue.read { db in
+            func verdict(_ id: String) throws -> String? {
+                try String.fetchOne(db, sql: "SELECT routability FROM segment WHERE id = ?", arguments: [id])
+            }
+            XCTAssertNil(try verdict("pool"), "a no_road may be walk-only land, so it is asked again")
+            XCTAssertEqual(try verdict("road"), "road")
+            XCTAssertEqual(try verdict("detour"), "implausible_route")
+            XCTAssertEqual(try verdict("beach"), "off_road_network")
+            XCTAssertEqual(try verdict("flight"), "beyond_driving")
+            XCTAssertNil(try verdict("never"))
+        }
+    }
+
     func testTheOffRoadNetworkVerdictRoundTrips() throws {
         XCTAssertEqual(SegmentRoutability(storage: "off_road_network"), .offRoadNetwork)
         let database = try AppDatabase.inMemory()

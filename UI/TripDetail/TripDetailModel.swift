@@ -1,6 +1,7 @@
 import Foundation
 import KamomeConfig
 import KamomeExportEngine
+import KamomeImportKit
 import KamomePersistence
 import KamomeRouteMatching
 import KamomeTrackingEngine
@@ -129,9 +130,16 @@ final class TripDetailModel {
 
     // MARK: - Days (S3 filter chips)
 
+    /// Calendar days (`TripDay`, Chiu 2026-09-25): chip N is the trip's Nth date.
     var dayCount: Int {
         guard let detail, let endedAt = detail.trip.endedAt else { return 1 }
-        return max(1, Int((endedAt - detail.trip.startedAt) / 86_400) + 1)
+        return TripDay.count(startedAt: detail.trip.startedAt, endedAt: endedAt)
+    }
+
+    /// The date chip `day` (0-based) stands for.
+    func date(ofDay day: Int) -> Date? {
+        guard let detail else { return nil }
+        return TripDay.date(ofDay: day, tripStartedAt: detail.trip.startedAt)
     }
 
     func selectDay(_ day: Int?) {
@@ -140,7 +148,7 @@ final class TripDetailModel {
 
     func dayIndex(of timestamp: Double) -> Int {
         guard let detail else { return 0 }
-        return Int((timestamp - detail.trip.startedAt) / 86_400)
+        return TripDay.index(of: timestamp, tripStartedAt: detail.trip.startedAt)
     }
 
     var visibleStops: [StopRecord] {
@@ -236,7 +244,7 @@ final class TripDetailModel {
         return grouped.keys.sorted().map { day in
             StoryDay(
                 index: day,
-                date: Date(timeIntervalSince1970: detail.trip.startedAt + Double(day) * 86_400),
+                date: TripDay.date(ofDay: day, tripStartedAt: detail.trip.startedAt),
                 entries: grouped[day] ?? []
             )
         }
@@ -273,9 +281,16 @@ final class TripDetailModel {
     }
 
     /// §4.3 route-attached photos (stop_id NULL — taken mid-drive, away from
-    /// any stop): they get their own timeline strip instead of a stop's.
+    /// any stop): they get their own timeline strip instead of a stop's. With a
+    /// day chip selected, only that day's (Chiu 2026-09-25); a photograph with
+    /// no capture time belongs to no day and shows under "All" alone.
     var routePhotos: [PhotoRefRecord] {
-        detail?.photos.filter { $0.stopId == nil } ?? []
+        guard let detail else { return [] }
+        let unattached = detail.photos.filter { $0.stopId == nil }
+        guard let selectedDay else { return unattached }
+        return unattached.filter { photo in
+            photo.takenAt.map { dayIndex(of: $0) == selectedDay } ?? false
+        }
     }
 
     var photoAccessIsLimited: Bool {

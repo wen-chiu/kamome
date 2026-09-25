@@ -136,6 +136,8 @@ enum RecapComposer {
         rawPhotoCounts: [String: Int] = [:],
         favoriteCounts: [String: Int] = [:],
         highlightedAssets: Set<String> = [],
+        pickedAssets: Set<String> = [],
+        pickedCounts: [String: Int] = [:],
         highlightMaxPhotos: Int = 0,
         weighting: TrackingConfig.Export? = nil,
         everyLegRoutabilityEstablished: Bool = false
@@ -144,7 +146,8 @@ enum RecapComposer {
 
         let inputs = PhotoInputs(
             byStop: photosByStop, highlighted: highlightedAssets,
-            rawCounts: rawPhotoCounts, starredCounts: favoriteCounts
+            rawCounts: rawPhotoCounts, starredCounts: favoriteCounts,
+            picked: pickedAssets, pickedCounts: pickedCounts
         )
         let plan = deckPlan(stops: stops, inputs: inputs, highlightMaxPhotos: highlightMaxPhotos, weighting: weighting)
         let tripStops = plan.map { stop, photos -> RecapTrip.Stop in
@@ -252,9 +255,9 @@ enum RecapComposer {
                                lon: start.lon + (end.lon - start.lon) * along)
     }
 
-    /// Same day math as S3's filter chips (TripDetailModel.dayIndex).
-    static func dayLabel(for timestamp: Double, tripStartedAt: Double) -> String {
-        let day = Int((timestamp - tripStartedAt) / 86_400) + 1
+    /// Same day math as S3's filter chips: a calendar day (`TripDay`).
+    static func dayLabel(for timestamp: Double, tripStartedAt: Double, calendar: Calendar = .current) -> String {
+        let day = TripDay.index(of: timestamp, tripStartedAt: tripStartedAt, calendar: calendar) + 1
         return String.localizedStringWithFormat(String(localized: "day_chip"), day)
     }
 

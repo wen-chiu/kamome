@@ -32,8 +32,11 @@ final class RepeatImportTests: XCTestCase {
     }
 
     /// A year of weekly photographs at home, and one Tokyo → Kyoto journey.
+    /// Home is photographed the evening before each week mark, never at it: a
+    /// photograph at home ends a journey (R1, 2026-09-25), and one sharing the
+    /// trip's first second would be ordered by asset id alone.
     private func library() -> [ImportPhoto] {
-        var photos = (0..<52).map { photo("home-\($0)", Double($0) * week, 25.04, 121.56) }
+        var photos = (0..<52).map { photo("home-\($0)", Double($0) * week - 3 * 3_600, 25.04, 121.56) }
         photos += (0..<12).map { photo("jp-\($0)", 10 * week + Double($0) * 1_800, 35.68, 139.65) }
         photos += (0..<6).map { photo("kyoto-\($0)", 10 * week + 2 * 86_400 + Double($0) * 1_800, 35.01, 135.77) }
         return photos

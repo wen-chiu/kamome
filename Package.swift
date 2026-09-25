@@ -76,9 +76,12 @@ let package = Package(
         ),
         // Pure photo-EXIF import clustering (spec §4.7). No PhotoKit/GRDB — the
         // adapters live in the app; this stays deterministically testable.
+        // Ships the country outlines journey discovery reads offline (ADR
+        // 2026-09-25), built by `Scripts/build-country-boundaries.py`.
         .target(
             name: "KamomeImportKit",
-            path: "Core/ImportKit"
+            path: "Core/ImportKit",
+            resources: [.copy("Resources/country-boundaries.bin")]
         ),
         .testTarget(
             name: "KamomeCoreTests",

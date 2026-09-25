@@ -140,7 +140,8 @@ final class PhotoLibraryService: PhotoAccessProviding {
         // drop user edits. A photograph Kamome has **never seen** takes its
         // star from Photos' favourite, exactly as an import does; one it has
         // seen keeps Kamome's own record, so a favourite the person un-starred
-        // or left out here does not come back (ADR 2026-09-24).
+        // or left out here does not come back (ADR 2026-09-24), and a pick
+        // stays picked (Chiu 2026-09-25).
         let known = Dictionary(
             (Stored.read("photoRefs") { try repository.photoRefs(tripId: tripId) } ?? []).map { ($0.phAssetId, $0) },
             uniquingKeysWith: { first, _ in first }
@@ -166,7 +167,8 @@ final class PhotoLibraryService: PhotoAccessProviding {
                 lat: photo.lat,
                 lon: photo.lon,
                 isHighlight: known[asset.localIdentifier].map(\.isHighlight) ?? (asset.isFavorite ? 1 : 0),
-                isExcluded: known[asset.localIdentifier]?.isExcluded ?? 0
+                isExcluded: known[asset.localIdentifier]?.isExcluded ?? 0,
+                filmPick: known[asset.localIdentifier]?.filmPick ?? 0
             ))
         }
         return refs

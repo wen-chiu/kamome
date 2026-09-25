@@ -1,27 +1,31 @@
 import KamomePersistence
 import SwiftUI
 
-/// Every photograph at one stop, and what the film does with each (ADR
-/// 2026-09-24). Replaces the Stop Editor's 72 pt strip, where a tap marked a
-/// highlight that — for a photo-dense stop — usually never reached the film.
+/// Every photograph at one stop, and which of them the film shows (ADR
+/// 2026-09-24, reworked by Chiu 2026-09-25).
 ///
-/// Three states, one gesture each: **tap** stars a photo (it always goes in, up
-/// to `deck_highlight_max_photos`), **press and hold** leaves one out (it never
-/// does), and anything untouched is the app's to choose. A number on a tile is
-/// its place in this stop's deck, read from the same plan the export composes —
-/// so what this screen promises is what the film shows.
+/// **What is numbered is what plays.** The numbers are the stop's deck, read
+/// from the same plan the export composes. A tap on a numbered photograph takes
+/// it out; a tap on any other puts it in — 1 to `maxPhotos`. The first tap turns
+/// the app's choice into the person's, and "Automatic" hands it back. Press and
+/// hold leaves a photograph out of anything the app picks. A star is a Photos
+/// favourite: the app picks those first, and it is shown, not set, here.
 struct StopPhotoPickerView: View {
     let choices: FilmPhotoChoices
     let stop: StopRecord
+
+    @State private var confirmingTakeOut = false
+    @State private var fullNotice = 0
 
     private let columns = [GridItem(.adaptive(minimum: 84), spacing: 4)]
 
     var body: some View {
         let photos = choices.photos(for: stop.id)
         let deck = choices.filmDeck(for: stop.id)
+        let inFilm = choices.isInFilm(stopId: stop.id)
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                summary(deck: deck, total: photos.count)
+                header(deck: deck, total: photos.count, inFilm: inFilm)
                     .padding(.horizontal, 16)
                 LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(photos, id: \.id) { photo in
@@ -29,39 +33,81 @@ struct StopPhotoPickerView: View {
                     }
                 }
                 .padding(.horizontal, 4)
-                Text(String.localizedStringWithFormat(
-                    String(localized: "stop_photos_hint"), choices.highlightMaxPhotos
-                ))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
+                Text(String.localizedStringWithFormat(String(localized: "stop_photos_hint"), choices.maxPhotos))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
             }
         }
         .navigationTitle(stop.name ?? String(localized: "stop_unnamed"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if choices.isPicked(stopId: stop.id) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("stop_photos_reset") { choices.resetToAuto(stopId: stop.id) }
+                }
+            }
+        }
+        .sensoryFeedback(.warning, trigger: fullNotice)
+        .confirmationDialog("stop_photos_last_title", isPresented: $confirmingTakeOut, titleVisibility: .visible) {
+            Button("stop_take_out", role: .destructive) {
+                choices.takeOut(stopId: stop.id, clearPicks: true)
+            }
+        } message: {
+            Text("stop_photos_last_message")
+        }
     }
 
-    /// "3 of 48 photos are in the film", or why this stop is not in it at all.
-    @ViewBuilder
-    private func summary(deck: [String], total: Int) -> some View {
-        if choices.isInFilm(stopId: stop.id) {
-            Label(
-                String.localizedStringWithFormat(String(localized: "stop_photos_in_film"), deck.count, total),
-                systemImage: "film"
-            )
-            .font(.subheadline.weight(.medium))
-        } else {
-            Label("stop_photos_not_in_film", systemImage: "film.slash")
+    /// Whether the stop is in the film, how many photographs it shows, and who
+    /// chose them.
+    private func header(deck: [String], total: Int, inFilm: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: Binding(
+                get: { inFilm },
+                set: { $0 ? choices.putIn(stopId: stop.id) : choices.takeOut(stopId: stop.id) }
+            )) {
+                Label("stop_in_film_toggle", systemImage: "film")
+                    .font(.subheadline.weight(.medium))
+            }
+            if inFilm {
+                HStack(spacing: 6) {
+                    Text(String.localizedStringWithFormat(
+                        String(localized: "stop_photos_in_film"), deck.count, total
+                    ))
+                    Text(choices.isPicked(stopId: stop.id) ? "stop_photos_mode_picked" : "stop_photos_mode_auto")
+                        .font(.caption.weight(.medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                }
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+            } else {
+                Text("stop_photos_not_in_film")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            if fullNotice > 0 {
+                Text(String.localizedStringWithFormat(String(localized: "stop_photos_full"), choices.maxPhotos))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private func tap(_ photo: PhotoRefRecord) {
+        switch choices.toggle(photo, stopId: stop.id) {
+        case .changed: fullNotice = 0
+        case .full: fullNotice += 1
+        case .wouldEmptyStop: confirmingTakeOut = true
         }
     }
 
     private func tile(_ photo: PhotoRefRecord, filmPosition: Int?) -> some View {
-        let choice = photo.filmChoice
+        let excluded = photo.isExcluded != 0
         return Button {
-            choices.setChoice(choice == .starred ? .auto : .starred, photo: photo)
+            tap(photo)
         } label: {
             // A square cell the thumbnail fills: `Color.clear` fixes the shape,
             // the photo is cropped into it rather than sizing it.
@@ -69,9 +115,9 @@ struct StopPhotoPickerView: View {
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
                     PhotoThumbnail(assetId: photo.phAssetId, targetPx: 240)
-                        .opacity(choice == .excluded ? 0.35 : 1)
+                        .opacity(excluded ? 0.35 : 1)
                 }
-                .overlay { badges(choice: choice, filmPosition: filmPosition) }
+                .overlay { badges(photo: photo, filmPosition: filmPosition) }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay {
                     if filmPosition != nil {
@@ -81,17 +127,17 @@ struct StopPhotoPickerView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            if choice == .excluded {
+            if excluded {
                 Button("stop_photos_include", systemImage: "eye") { choices.setChoice(.auto, photo: photo) }
             } else {
                 Button("stop_photos_exclude", systemImage: "eye.slash") { choices.setChoice(.excluded, photo: photo) }
             }
         }
-        .accessibilityLabel(Text(accessibilityState(choice: choice, filmPosition: filmPosition)))
+        .accessibilityLabel(Text(accessibilityState(photo: photo, filmPosition: filmPosition)))
         .accessibilityHint(Text("stop_photos_tile_hint"))
     }
 
-    private func badges(choice: PhotoRefRecord.FilmChoice, filmPosition: Int?) -> some View {
+    private func badges(photo: PhotoRefRecord, filmPosition: Int?) -> some View {
         VStack {
             HStack {
                 if let filmPosition {
@@ -100,9 +146,16 @@ struct StopPhotoPickerView: View {
                         .foregroundStyle(.white)
                         .frame(minWidth: 20, minHeight: 20)
                         .background(Circle().fill(Color.accentColor))
+                } else {
+                    // An empty ring says "tap to add", as in a multi-select.
+                    Circle()
+                        .strokeBorder(.white, lineWidth: 1.5)
+                        .background(Circle().fill(.black.opacity(0.2)))
+                        .frame(width: 20, height: 20)
+                        .shadow(radius: 1)
                 }
                 Spacer()
-                if choice == .starred {
+                if photo.isHighlight != 0 {
                     Image(systemName: "star.fill")
                         .font(.caption)
                         .foregroundStyle(.yellow)
@@ -110,7 +163,7 @@ struct StopPhotoPickerView: View {
                 }
             }
             Spacer()
-            if choice == .excluded {
+            if photo.isExcluded != 0 {
                 HStack {
                     Spacer()
                     Image(systemName: "eye.slash.fill")
@@ -124,17 +177,15 @@ struct StopPhotoPickerView: View {
         .padding(5)
     }
 
-    private func accessibilityState(choice: PhotoRefRecord.FilmChoice, filmPosition: Int?) -> String {
+    private func accessibilityState(photo: PhotoRefRecord, filmPosition: Int?) -> String {
         var parts: [String] = []
         if let filmPosition {
             parts.append(String.localizedStringWithFormat(String(localized: "stop_photos_a11y_in_film"), filmPosition + 1))
+        } else {
+            parts.append(String(localized: "stop_photos_a11y_not_in_film"))
         }
-        switch choice {
-        case .starred: parts.append(String(localized: "stop_photos_a11y_starred"))
-        case .excluded: parts.append(String(localized: "stop_photos_a11y_excluded"))
-        case .auto: break
-        }
-        if parts.isEmpty { parts.append(String(localized: "stop_photos_a11y_not_in_film")) }
+        if photo.isHighlight != 0 { parts.append(String(localized: "stop_photos_a11y_starred")) }
+        if photo.isExcluded != 0 { parts.append(String(localized: "stop_photos_a11y_excluded")) }
         return parts.joined(separator: ", ")
     }
 }
@@ -157,7 +208,18 @@ struct FilmDeckRow: View {
                     Text("stop_photos_row")
                 }
                 Spacer()
-                if choices.isInFilm(stopId: stop.id) {
+                if choices.isPicked(stopId: stop.id) {
+                    Image(systemName: "hand.tap")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(Text("stop_photos_mode_picked"))
+                }
+                if choices.photos(for: stop.id).isEmpty {
+                    // A pin in the film: a count of "0 / 0" would read as broken.
+                    Text("recap_stop_no_photos")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else if choices.isInFilm(stopId: stop.id) {
                     Text(verbatim: "\(deck.count) / \(choices.photos(for: stop.id).count)")
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)

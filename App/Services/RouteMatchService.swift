@@ -243,7 +243,7 @@ struct RouteMatchService {
         KamomeLog.routing.notice("""
             matchTrip \(tripId, privacy: .public): \(report.reconstructed)/\(report.attempted) legs reconstructed; \
             \(report.noPlausibleRoute) have NO ROAD (crossings), \
-            \(report.offRoadNetwork) off the road network (beaches — not crossings), \
+            \(report.offRoadNetwork) off the road network (beaches, walk-only land — not crossings), \
             \(report.implausibleRoute) implausible, \(report.beyondDriving) too fast to drive (crossings, never asked), \
             \(report.notEstablished) not established, \(report.unreachable) unreachable, \
             \(report.rateLimited) rate-limited, \(report.skipped) never asked — the rest draw dashed (PD-1)

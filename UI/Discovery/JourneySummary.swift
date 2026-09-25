@@ -1,4 +1,5 @@
 import Foundation
+import KamomeImportKit
 
 /// One journey as the home screen shows it — whether it is a stored trip or a
 /// journey discovered in the library and not yet imported. The card draws this
@@ -56,12 +57,10 @@ struct JourneySummary: Identifiable, Equatable {
     var isImported: Bool { tripId != nil }
     var modes: Set<String> { Set(legModes) }
 
-    /// Calendar days the journey covers, both ends counted, in the current zone.
+    /// Calendar days the journey covers, both ends counted, in the current zone
+    /// — `TripDay`, the definition S3's chips and the film count by.
     var dayCount: Int {
-        let calendar = Calendar.current
-        let from = calendar.startOfDay(for: Date(timeIntervalSince1970: startedAt))
-        let to = calendar.startOfDay(for: Date(timeIntervalSince1970: endedAt))
-        return max(1, (calendar.dateComponents([.day], from: from, to: to).day ?? 0) + 1)
+        TripDay.count(startedAt: startedAt, endedAt: endedAt)
     }
 
     var year: Int {
