@@ -24,7 +24,9 @@ TestFlight build is the vehicle for D1–D5 (→ `Docs/handoff-testflight.md`).
 
 1. **D1–D5 — one device session, never run.** Export survives a screen lock;
    per-trip export time and memory; seconds per snapshot on current hardware;
-   Limited Photo Library; the S5 UX pass. D2 feeds a mandatory submission item.
+   Limited Photo Library; the S5 UX pass (desk half begun 2026-09-25, five items
+   open → `Docs/design-reviews/2026-09-25-s5-export-sheet.md`). D2 feeds a
+   mandatory submission item.
    ⚠️ **Deferred behind the substrate evaluation, not dropped** (ADR 2026-09-10);
    **step 2 did NOT settle D1** — it survives a *screen*, not a *locked device*.
    → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
@@ -103,10 +105,7 @@ string stands. Do not reopen this from scratch.
   implementation detail. → `Core/ExportEngine/RecapMapAttribution.swift`.
 - 🔴 **Two features built and never reached — one class, one sweep owed.**
   Imported trips carry no `TripStats` (`ImportService` writes no `stats_json`,
-  → `Docs/handoff-audit-2026-08-30.md` finding 8). **The title card now measures
-  the drawn journey itself (ADR 2026-09-19); Home and Trip Detail stay empty by
-  Chiu's choice** — showing them needs a distance-only field (an interface
-  change, rule 2), and Trip Detail's other three stats cannot honestly be claimed.
+  → `Docs/handoff-audit-2026-08-30.md` finding 8, status as of ADR 2026-09-19).
   And `VehicleCatalog.resolve`
   still misses now and then and silently draws the fallback badge instead of the
   car (1 render in 5 on 2026-09-16; device rate **UNKNOWN**,

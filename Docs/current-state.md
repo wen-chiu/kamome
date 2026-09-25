@@ -6,9 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-25 against decisions.md **2026-09-25 (c)** and `main` at
-**PR #98** (2026-09-25: days are dates, home ends a journey. **(b)** #98:
-1–5 photos per stop, stops in/out, v10. **(c)**: walk-only land, no plane, v11. #94: (f) draft.
+Last synced: 2026-09-26 against decisions.md **2026-09-25 (c)** and `main` at
+**PR #100** (#96, #99: S5 export sheet fixes, no ADR. Export perf §8: why a snapshot
+costs what it does, tile cache 256 MB; device line owed.
+2026-09-25: days are dates, home ends a journey. **(b)** #98:
+1–5 photos per stop, stops in/out, v10. **(c)** #100: walk-only land, no plane, v11. #94: (f) draft.
 #95: (e) per-area context floor, town in the pill,
 schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;

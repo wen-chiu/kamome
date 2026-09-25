@@ -3058,6 +3058,23 @@
         }
       }
     },
+    "recap_save_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t save to Photos this time. Try again, or use Share to keep the film somewhere else."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這次沒能儲存到照片。可以再試一次，或用「分享」把影片存到別的地方。"
+          }
+        }
+      }
+    },
     "recap_save_to_photos": {
       "extractionState": "manual",
       "localizations": {

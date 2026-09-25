@@ -295,3 +295,9 @@ photo timestamps are not a recorded speed (`CLAUDE.md` rule 5). **UNKNOWN**, and
 the cheapest thing that settles it is deciding which of the five fields an
 imported trip can honestly claim.
 
+**Status as of ADR 2026-09-19** (moved here from `HANDOFF.md` 2026-09-25, to
+keep that file within budget; wording unchanged). The title card now measures
+the drawn journey itself (ADR 2026-09-19); Home and Trip Detail stay empty by
+Chiu's choice — showing them needs a distance-only field (an interface change,
+rule 2), and Trip Detail's other three stats cannot honestly be claimed.
+
