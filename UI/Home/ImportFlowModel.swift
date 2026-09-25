@@ -204,6 +204,11 @@ final class ImportFlowModel {
             // Home's card can show a place + flag without S3 ever being opened
             // (Chiu 2026-09-22) — see `TripJourneyNaming`.
             TripJourneyNaming.nameIfNeeded(tripId: tripId, repository: repository)
+            // Vision looks at the photographs in the background; the film never
+            // waits for it (ADR 2026-09-25 (c)).
+            PhotoAnalysisCoordinator.shared.start(
+                tripId: tripId, repository: repository, config: config.photoAnalysis
+            )
             completedTripId = tripId
         } catch ImportService.ImportError.notEnoughGeotaggedPhotos {
             // An empty fetch from denied access lands here too, so prefer the

@@ -71,9 +71,12 @@ final class TripDetailModel {
                 endedAt: endedAt,
                 stops: detail.stops
             ) { [weak self] matched in
-                if matched > 0 { self?.reload() }
+                guard let self, matched > 0 else { return }
+                reload()
+                startPhotoAnalysis()
             }
         }
+        startPhotoAnalysis()
         let unnamed = detail.stops.filter(StopNamer.needsName)
         if !unnamed.isEmpty {
             // Reload as each name lands, not once on a timer: a photo-dense
@@ -87,6 +90,15 @@ final class TripDetailModel {
         // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
         // before schema v9 are asked once, behind any naming.
         namer.fillMissingLocalities(detail.stops)
+    }
+
+    /// Resumes Vision over this trip's photographs — every trip imported
+    /// before it existed, and any run the system cut short (ADR 2026-09-25 (c)).
+    private func startPhotoAnalysis() {
+        let (tripId, repository, config) = (tripId, repository, config.photoAnalysis)
+        Task { @MainActor in
+            PhotoAnalysisCoordinator.shared.start(tripId: tripId, repository: repository, config: config)
+        }
     }
 
     /// How far stop naming has got, for the S3 banner and the export gate.

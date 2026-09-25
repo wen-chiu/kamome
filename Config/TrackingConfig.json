@@ -53,6 +53,11 @@
     "max_range_days": 21,
     "duplicate_photo_share": 0.5
   },
+  "photo_analysis": {
+    "target_px": 512,
+    "allow_network": false,
+    "duplicate_distance": 0.3
+  },
   "discovery": {
     "lookback_years": 5,
     "home_cell_deg": 0.5,

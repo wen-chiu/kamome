@@ -139,6 +139,8 @@ public struct TripRepository {
         public let segments: [(segment: SegmentRecord, points: [TrackpointRecord])]
         public let stops: [StopRecord]
         public let photos: [PhotoRefRecord]
+        /// Vision's findings for the trip's photographs, by asset (schema v11).
+        public let analyses: [String: PhotoAnalysisRecord]
     }
 
     public func detail(tripId: String) throws -> TripDetail? {
@@ -161,7 +163,10 @@ public struct TripRepository {
             let photos = try PhotoRefRecord
                 .filter(sql: "trip_id = ?", arguments: [tripId])
                 .fetchAll(db)
-            return TripDetail(trip: trip, segments: withPoints, stops: stops, photos: photos)
+            return TripDetail(
+                trip: trip, segments: withPoints, stops: stops, photos: photos,
+                analyses: try Self.photoAnalyses(db, tripId: tripId)
+            )
         }
     }
 

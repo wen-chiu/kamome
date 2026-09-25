@@ -16,6 +16,8 @@ struct TripDetailView: View {
     @State private var showingAllFilms = false
     @State private var showingProvenance = false
     @State private var showingMerge = false
+    /// DEBUG: the photo analysis probe (ADR 2026-09-25 (c)).
+    @State private var showingProbe = false
     /// Set when a merge folded this trip into an earlier one: the screen leaves
     /// once the sheet is gone, since two dismissals in one pass race.
     @State private var mergedAway = false
@@ -78,6 +80,16 @@ struct TripDetailView: View {
                 .disabled(model.detail?.trip.endedAt == nil)
             }
         }
+        #if DEBUG
+        .toolbar {
+            ToolbarItem(placement: .secondaryAction) {
+                Button { showingProbe = true } label: { Text(verbatim: "Photo analysis probe") }
+            }
+        }
+        .sheet(isPresented: $showingProbe) {
+            PhotoAnalysisProbeView(tripId: model.tripId, repository: session.repository, config: session.config)
+        }
+        #endif
         .sheet(isPresented: $showingMerge) {
             TripMergeSheet(tripId: model.tripId, session: session) { keptId in
                 // This trip survives when it is the earliest; otherwise it no

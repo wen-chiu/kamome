@@ -6,9 +6,9 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-25 against decisions.md **2026-09-25 (b)** and `main` at
-**PR #97** (2026-09-25: days are dates, home ends a journey. **(b)**, this branch:
-1–5 photos per stop, stops in/out, schema v10. #94: (f) draft.
+Last synced: 2026-09-25 against decisions.md **2026-09-25 (c)** and `main` at
+**PR #98** (**(c)**, this branch: background Vision auto-pick, v11, probe owed.
+#98: (b) 1–5 photos/stop, stops in/out, v10. #97: days are dates. #94: (f) draft.
 #95: (e) per-area context floor, town in the pill,
 schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
