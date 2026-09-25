@@ -50,8 +50,7 @@ extension TrackingConfig.Export {
             self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
-            self.targetZoomRatio = targetZoomRatio
-            self.cameraAreaSplitRatio = cameraAreaSplitRatio
+            self.targetZoomRatio = targetZoomRatio; self.cameraAreaSplitRatio = cameraAreaSplitRatio
             self.cameraContext = cameraContext
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
@@ -65,8 +64,7 @@ extension TrackingConfig.Export {
             self.deckPhotoHoldS = deckPhotoHoldS; self.deckPhotoMinHoldS = deckPhotoMinHoldS
             self.deckZoomS = deckZoomS; self.deckLabelLeadS = deckLabelLeadS
             self.subjectParkS = subjectParkS
-            self.openingCountryS = openingCountryS
-            self.openingRegionalS = openingRegionalS
+            self.openingCountryS = openingCountryS; self.openingRegionalS = openingRegionalS
             self.countryViewPadding = countryViewPadding
             self.openingCollapseZoomRatio = openingCollapseZoomRatio
             self.openingCollapseDriftFraction = openingCollapseDriftFraction

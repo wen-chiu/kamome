@@ -16,9 +16,13 @@ final class JourneyDetectorTests: XCTestCase {
 
     private let week = 7.0 * 86_400
 
-    /// One photograph a week at home for a year — invented suburb coordinates.
+    /// One photograph a week at home for a year — invented suburb coordinates —
+    /// taken the evening before each week mark, where every trip here departs.
+    /// Never *at* the mark: since a photograph at home ends a journey (R1), one
+    /// sharing the trip's first second would be ordered by asset id alone, and
+    /// "at home and in Helsinki at once" would decide the test by the alphabet.
     private func homeYear() -> [ImportPhoto] {
-        (0..<52).map { photo("home-\($0)", Double($0) * week, 25.04, 121.56) }
+        (0..<52).map { photo("home-\($0)", Double($0) * week - 3 * 3_600, 25.04, 121.56) }
     }
 
     /// `count` photographs half an hour apart, starting at `start`, at one place.
@@ -69,6 +73,45 @@ final class JourneyDetectorTests: XCTestCase {
 
         XCTAssertEqual(detection.journeys.count, 1)
         XCTAssertFalse(detection.journeys[0].photos.contains { $0.assetId == "home-evening" })
+    }
+
+    /// **R1 (Chiu 2026-09-25): coming home ends a journey.** The Japan import:
+    /// home again on the evening of the flight, Yilan (≈50 km, so away) the next
+    /// afternoon — well inside the two-day gap. Before R1 the home photograph was
+    /// dropped before cutting and the two trips were one.
+    func testComingHomeEndsAJourney() {
+        let start = 10 * week + 3_600
+        let japan = burst("jp", start: start, count: 12, lat: 35.68, lon: 139.65)
+        let atHome = photo("home-evening", start + 12 * 1_800, 25.04, 121.56)
+        let yilan = burst("yilan", start: start + 86_400, count: 10, lat: 24.60, lon: 121.66)
+        let detection = JourneyDetector.detect(photos: homeYear() + japan + [atHome] + yilan, config: config)
+
+        XCTAssertEqual(detection.journeys.map(\.photoCount), [10, 12], "Yilan, then Japan — two journeys")
+    }
+
+    /// R1's limit, pinned so it is not mistaken for a guarantee: with no
+    /// photograph at home in between, only the gap can cut, and a trip under
+    /// two days after the last stays joined. The user separates those by hand.
+    func testWithoutAPhotographAtHomeOnlyTheGapCuts() {
+        let start = 10 * week + 3_600
+        let japan = burst("jp", start: start, count: 12, lat: 35.68, lon: 139.65)
+        let yilan = burst("yilan", start: start + 86_400, count: 10, lat: 24.60, lon: 121.66)
+        let detection = JourneyDetector.detect(photos: homeYear() + japan + yilan, config: config)
+
+        XCTAssertEqual(detection.journeys.map(\.photoCount), [22])
+    }
+
+    /// A homecoming makes two journeys on one day possible; their keys must
+    /// still differ, and the first keeps the bare key stored trips were made with.
+    func testTwoJourneysStartingOnOneDayHaveDistinctKeys() {
+        let morning = 20 * week + 3_600
+        let first = burst("am", start: morning, count: 8, lat: 24.50, lon: 121.56)
+        let lunch = photo("home-lunch", morning + 8 * 1_800, 25.04, 121.56)
+        let second = burst("pm", start: morning + 9 * 1_800, count: 8, lat: 24.50, lon: 121.56)
+        let detection = JourneyDetector.detect(photos: homeYear() + first + [lunch] + second, config: config)
+
+        let base = JourneyDetector.key(startedAt: morning)
+        XCTAssertEqual(detection.journeys.map(\.key), ["\(base)-2", base], "newest first")
     }
 
     /// The key is the journey's first UTC day, so adding photographs to the

@@ -50,8 +50,16 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         ImportPhoto(assetId: id, timestamp: ts, lat: lat, lon: lon)
     }
 
+    /// A photograph at home every week, the evening before each week mark where
+    /// the trips below depart. Never *at* the mark: a photograph at home ends a
+    /// journey (R1, 2026-09-25), and one sharing a trip's first second would be
+    /// ordered by asset id — the alphabet, not the fixture, would decide.
+    private func homeYear() -> [ImportPhoto] {
+        (0..<52).map { photo("home-\($0)", Double($0) * week - 3 * 3_600, 25.04, 121.56) }
+    }
+
     private func library() -> [ImportPhoto] {
-        var photos = (0..<52).map { photo("home-\($0)", Double($0) * week, 25.04, 121.56) }
+        var photos = homeYear()
         // Japan: Tokyo then Kyoto, twelve and six photographs.
         photos += (0..<12).map { photo("jp-\($0)", 10 * week + Double($0) * 1_800, 35.68, 139.65) }
         photos += (0..<6).map { photo("kyoto-\($0)", 10 * week + 2 * 86_400 + Double($0) * 1_800, 35.01, 135.77) }
@@ -166,7 +174,7 @@ final class JourneyDiscoveryModelTests: XCTestCase {
     /// keeps the month title it had.
     func testAJourneyWithNoStopIsNeverLookedUp() async throws {
         let harness = try makeHarness()
-        let home = (0..<52).map { photo("home-\($0)", Double($0) * week, 25.04, 121.56) }
+        let home = homeYear()
         // Eight photographs, each ~11 km from the last: every cluster holds one,
         // so none reaches `min_photos_per_stop` and the journey has no stop.
         let scattered = (0..<8).map {

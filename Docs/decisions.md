@@ -6445,3 +6445,70 @@ really driven (want 0) and flights it misses.
 
 **Not done.** Layer 2 (`avoid=ferries` on the routing request) waits for a live
 measurement. Layer 3 (an offline land mask) is deferred.
+
+## 2026-09-25 — "Day N" is a calendar date; coming home ends a journey
+
+**Decisions (Chiu, 2026-09-25)**, on the Japan journey imported from the
+Discovery beta: its 8/26 stops were missing from Day 5, which showed only the
+"Along the route" photos, and Days 6–9, in Taiwan, belonged to a separate trip.
+
+1. **A day is a calendar date** in the phone's current zone (*「Days OK」*).
+   `TripDay` (`KamomeImportKit`) is the one definition, and S3's chips, the
+   diary, the Discovery card, the stops' `dayIndex`, the film's HUD `dayLabel`
+   and the end card's DAYS figure all read it. Before this, every surface except
+   the Discovery card counted **24-hour blocks from the first photograph**. The
+   Japan trip's first away photograph was taken in the afternoon, so an 8/26
+   morning stop landed in Day 4 (INFERRED from the code; Chiu can confirm by
+   checking that Day 4 held the 8/26 stops before this change). S3's chips now
+   read "Day 5 · 8/26". **Changes the film:** a trip that starts in the evening
+   gains a day on the HUD and the end card.
+   ⚠️ Accepted: the photograph's own zone is unknown, so a trip in Japan (+9)
+   has its day boundary at 01:00 local when the phone is set to Taipei (+8).
+2. **"Along the route" follows the selected chip** (*「filter it by the selected
+   day」*). A route photograph with no capture time shows under "All" only.
+   Chiu: these photographs are not useful yet; where they belong in the film is
+   undecided, and this does not decide it.
+3. **R1: a photograph taken at home ends the journey it follows.** Before this,
+   `JourneyDetector` dropped home photographs *before* cutting, so coming home
+   never ended anything, and Japan plus a Yilan weekend (≈50 km out, so away)
+   inside the 48 h gap became one journey. **R2 was proposed and declined**
+   (a flight over ~500 km that lands within ~200 km of home also ends one).
+   Chiu judged it unlikely to change results much. What remains, pinned by
+   `testWithoutAPhotographAtHomeOnlyTheGapCuts`: with no home photograph in
+   between, two trips under 48 h apart stay one. The country rule below is
+   the proposed fix for that case.
+   - Two journeys can now start on one UTC day, so the second and later ones
+     that day are keyed `journey-<day>-2`, `-3`, and the first keeps the bare
+     key. No stored trip loses its `discovery_key` match.
+   - ⚠️ A trip that passes back through home with the camera out is cut in two.
+     Merge (ADR 2026-09-24 (b)) puts it back together.
+   - **Already-imported trips do not re-split.** The rescan's photo-share check
+     (`tripHoldingMost`, ≥ 0.5) maps the new, smaller journeys onto the old
+     trip. To see the split, delete the trip and scan again; the photographs
+     are untouched.
+
+**Test fixtures (Chiu approved the fix, 2026-09-25).** Three suites took their
+weekly home photograph at exactly the second a trip began. Photos taken at the
+same second are ordered by asset id, so under R1 the alphabet decided which
+came first. `fi-0` sorts before `home-30`, and Finland lost its first photo.
+Every home photograph now sits three hours before its week mark, the evening
+before the trip, and no assertion changed. Two suites (`library()` in
+`JourneyDiscoveryModelTests` and `RepeatImportTests`) had passed only because
+`home-` sorts before `jp-`/`yt-`.
+
+**Manual split: on hold** (Chiu: a control between every pair of days would be
+annoying). Merge stays the fix for a split that was wrong.
+
+**Proposed, awaiting Chiu: the country rule.** Split automatically, because
+the user can merge. Inside a journey, the first photograph back in the **home
+country** after one taken abroad ends the journey. Going from home country to
+abroad does not: Taiwan then Japan stays one trip, Japan then Taiwan is two.
+- **The home country comes from the home estimate**, which never leaves the
+  device. The device region is the fallback, since a phone set to US English
+  may live in Taipei.
+- **Deciding each photo's country needs offline boundaries.** Apple
+  geocoding is ruled out: §0 scopes it to stop points (PR #72), and the scan
+  runs before any stop exists. That means a bundled public-domain dataset
+  (Natural Earth admin-0) and a pure point-in-polygon test in
+  `KamomeImportKit`. **A new dependency, so Chiu decides.** The same data is
+  the "offline land mask" that ADR 2026-09-24 (f) deferred as Layer 3.
