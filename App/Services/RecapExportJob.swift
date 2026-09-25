@@ -113,6 +113,7 @@ struct RecapExportJob: RecapExportRunning {
             rawPhotoCounts: photos.rawCounts,
             favoriteCounts: photos.starredCounts,
             highlightedAssets: photos.highlighted,
+            pickedAssets: photos.picked, pickedCounts: photos.pickedCounts,
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export,
             everyLegRoutabilityEstablished:

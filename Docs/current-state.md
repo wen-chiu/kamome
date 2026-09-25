@@ -6,11 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-25 against decisions.md **2026-09-25** and `main` at
-**PR #94** (2026-09-25: days are dates, home ends a journey. #94: (f) draft.
+Last synced: 2026-09-25 against decisions.md **2026-09-25 (b)** and `main` at
+**PR #97** (2026-09-25: days are dates, home ends a journey. **(b)**, this branch:
+1–5 photos per stop, stops in/out, schema v10. #94: (f) draft.
 #95: (e) per-area context floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). PR #91: the Stop Editor photo picker — star / leave out, schema v8
-`photo_ref.is_excluded`; **no ADR yet**). PR #92: ADR (b), below. PR #89 (**ADR 2026-09-24**: the body is framed per camera
+schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
 renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed; device figures owed
 (`Docs/handoff-export-performance.md` §7). PR #82: log-only. PR #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate

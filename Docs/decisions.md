@@ -6550,3 +6550,39 @@ is fine because the user can merge.
     they count as abroad.
   - A continental border drive photographed more than 100 km apart can still
     cut. Merge fixes it.
+
+## 2026-09-25 (b) — The person picks a stop's photographs, 1 to 5, and says which stops the film shows
+
+**Decision (Chiu, 2026-09-25).** On the export sheet: *「沒辦法減少最少就是三張…應該可以減少到最少一張，最多五張」*, a stop
+could not be taken out intuitively, and *「沒辦法新增站點」*. Shown the proposal, he reopened PR #91's
+star / leave-out picker by name (*「重開」*), kept the Photos favourite as the app's first pick, chose
+*「點沒編號的就加進來，點有編號的就拿掉，最多 5 張」*, and for added stops *「先讓它變長」*.
+This is also the ADR PR #91 never had.
+
+1. **What is numbered is what plays.** In `StopPhotoPickerView` a tap on a numbered photograph takes
+   it out of the stop's deck and a tap on any other puts it in, from 1 to
+   `deck_highlight_max_photos` (5). The first tap turns the app's deck into the person's without
+   moving the photographs they did not touch; a picked deck is never topped up. "Automatic" hands it
+   back. Removing the last photograph asks, then takes the stop out. Schema v10
+   `photo_ref.film_pick`; a re-match keeps picks.
+2. **The star is a Photos favourite, shown, not set.** Import still maps `isFavorite` to
+   `is_highlight`: the app picks those first and a starred stop is always kept. There is no in-app
+   star gesture any more. Press and hold still leaves a photograph out of anything the app picks
+   (`is_excluded`, schema v8); leaving out a pick unpicks it, and picking a left-out one lets it back.
+3. **Stops: the person's word lands on top of the app's ranking, never inside it.** Schema v10
+   `stop.film_choice` — NULL (the app's), `in`, `out`. Presented = the app's ranked stops ∪ stops put
+   in or with picks − stops taken out. Putting a stop in grows the film; taking one out shrinks it and
+   **nothing takes its place**; picking photographs never moves another stop. An added stop gets
+   `tier_standard_photos` until picked. `in` applies in both recap modes.
+4. **The export sheet has two lists.** "In the film · N stops" (tap to pick, swipe to take out) and
+   "Other stops" (the ones ranked out and the ones taken out, ＋ to put in, trip order). A stop after
+   the flight home is never offered.
+
+**Rejected:** a per-stop count stepper beside the stars — two controls for one idea; letting a
+taken-out stop be replaced by the next-ranked one — the list would change under the person's hand.
+
+**Not done — the smarter automatic pick** (proposed, approved as the next PR): on-device Vision to
+drop screenshots/receipts, prefer sharper, better-composed frames and collapse near-duplicates.
+Aesthetics scoring needs iOS 18 against a 17.0 target (VERIFIED); its cost on a few hundred iCloud
+photographs and whether it suits travel photographs are **UNKNOWN** — cheapest check: time it on the
+device on the Iceland trip.
