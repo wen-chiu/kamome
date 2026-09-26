@@ -125,7 +125,9 @@ private struct Report {
     let lines: [String]
 
     init(results: [PhotoAnalyzer.Result], wallS: Double, allowNetwork: Bool) {
-        var lines = ["photos \(results.count) · wall \(Int(wallS)) s · iCloud \(allowNetwork ? "allowed" : "off") · p50 / p90 / max"]
+        var lines = [
+            "photos \(results.count) · wall \(Int(wallS)) s · iCloud \(allowNetwork ? "allowed" : "off") · p50 / p90 / max"
+        ]
         for source in PhotoAnalyzer.Source.allCases {
             let fetches = results.filter { $0.source == source }.map(\.fetchMs)
             guard !fetches.isEmpty else { continue }

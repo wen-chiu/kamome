@@ -30,7 +30,7 @@ extension RecapExportJob {
         // Progress hops to main as fire-and-forget tasks; without this, one still
         // queued when the warm ends could land after `preload(nil)` and leave
         // "Downloading from iCloud" on screen for the whole render.
-        let warmEnded = ExportCancelFlag()
+        let warmEnded = SharedFlag()
         let warmed = await resolver.warm(
             trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1),
             timeoutS: config.photos.icloudFetchTimeoutS,

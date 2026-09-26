@@ -80,9 +80,13 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
     /// (schema v4). Nullable, and NULL means **nothing was established** — never
     /// "no road". Use `routeVerdict` for the typed value.
     public var routability: String?
+    /// The routing rules the verdict was reached under (schema v13). NULL is
+    /// rules version 1 — every verdict stored before versions existed.
+    public var routabilityVersion: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, mode, source, routability
+        case routabilityVersion = "routability_version"
         case tripId = "trip_id"
         case startedAt = "started_at"
         case endedAt = "ended_at"
@@ -97,7 +101,8 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
         endedAt: Double? = nil,
         matchedPolyline: String? = nil,
         source: String? = nil,
-        routability: String? = nil
+        routability: String? = nil,
+        routabilityVersion: Int? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -107,6 +112,7 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
         self.matchedPolyline = matchedPolyline
         self.source = source
         self.routability = routability
+        self.routabilityVersion = routabilityVersion
     }
 
     /// Typed source; NULL/unknown reads as `.gpsHifi`.
@@ -115,7 +121,16 @@ public struct SegmentRecord: Codable, Equatable, FetchableRecord, PersistableRec
     /// Typed routability, or **nil when routing never established anything**.
     /// The nil is the point: a leg nobody asked about must not read as a leg
     /// with no road (`SegmentRoutability`).
-    public var routeVerdict: SegmentRoutability? { SegmentRoutability(storage: routability) }
+    ///
+    /// **Also nil when the rule that produced it has changed since**
+    /// (`SegmentRoutability.rulesVersion`): such a verdict is no longer an
+    /// answer, so every reader treats the leg as not yet asked and the next
+    /// routing run settles it again.
+    public var routeVerdict: SegmentRoutability? {
+        guard let verdict = SegmentRoutability(storage: routability),
+              verdict.stillHolds(storedUnder: routabilityVersion) else { return nil }
+        return verdict
+    }
 }
 
 public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord {
@@ -133,6 +148,10 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// `CLPlacemark.locality` (schema v9, ADR 2026-09-24 (e)). NULL = never
     /// asked; "" = asked, and the geocoder had no town for this spot.
     public var locality: String?
+    /// The zone the stop's reverse-geocode reported, as an IANA identifier
+    /// (schema v14): what its local day is counted in (`TripClock`). NULL =
+    /// never asked; "" = asked, and no zone came back.
+    public var timeZone: String?
     /// Whether the film presents this stop (schema v10, Chiu 2026-09-25):
     /// NULL is the app's choice, `StopFilmChoice` names the person's.
     public var filmChoice: String?
@@ -140,6 +159,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     enum CodingKeys: String, CodingKey {
         case id, lat, lon, name, note, kind, locality
         case filmChoice = "film_choice"
+        case timeZone = "time_zone"
         case tripId = "trip_id"
         case arrivedAt = "arrived_at"
         case departedAt = "departed_at"
@@ -156,7 +176,8 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         note: String? = nil,
         kind: String? = nil,
         locality: String? = nil,
-        filmChoice: String? = nil
+        filmChoice: String? = nil,
+        timeZone: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -169,6 +190,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.kind = kind
         self.locality = locality
         self.filmChoice = filmChoice
+        self.timeZone = timeZone
     }
 
     /// The person's word on whether the film presents this stop. `nil` —

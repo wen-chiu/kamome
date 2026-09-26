@@ -6706,3 +6706,91 @@ photograph once `unavailable` is later analysed.
 downloading iCloud originals in the background (point 5); quality in stop ranking now (point 4);
 columns on `photo_ref` (lost on every re-match); a custom Core ML model or any server (a dependency,
 and §0).
+
+## 2026-09-26 — A day is the local date where it happened; UI/ is linted; a routing verdict carries its rules
+
+**Decisions (Chiu, 2026-09-26)**, from the second architecture review
+(`Docs/handoff-arch-review-2026-09-24.md`, Round 2): 「第一二項都同意…其他的都照你建議的做」.
+
+1. **"Day N" is the local date where it happened.** This amends ADR 2026-09-25
+   §1, which counted calendar days in the phone's *current* zone. That rule
+   accepted the +1 h case (Japan read from Taipei), but Iceland read from Taipei
+   put the day boundary at 16:00 local. It also made the same trip draw different
+   `Day N`, DAYS and boarding-pass dates depending on where the phone was at
+   export.
+   - **Source.** Each stop keeps the zone its reverse-geocode reported
+     (`CLPlacemark.timeZone`, schema v14 `stop.time_zone`). It comes from the same
+     lookup that names the stop, so nothing new leaves the phone (§0). Stops named
+     earlier are back-filled on the trip's next open, like v9's towns.
+   - **The rule** (`TripClock`, `KamomeImportKit`):
+     - A moment at a stop uses that stop's zone.
+     - Any other moment uses the zone of the stop nearest to it in time.
+     - Day N is that local date minus the trip's first local date, plus one.
+     - An overnight flight east lands on the next local date.
+   - **One clock, every surface.** The film's HUD, its end-card DAYS and its
+     boarding-pass dates, S3's chips and their dates, the diary and a stored
+     trip's Discovery card all read it.
+   - **With no zone known** it is exactly the old count, in the phone's zone.
+     That holds for a journey not yet imported, a trip whose stops are not yet
+     named, or a lookup that returned no zone ("").
+   - **Accepted:**
+     - For a trip named before v14, the export's naming gate waits for names,
+       not zones. So a film exported before the back-fill lands still counts
+       those stops in the phone's zone.
+     - A trip spanning zones can show a local date twice, or skip one. That is
+       what the traveller's calendar did.
+2. **`UI/` is linted.** `.swiftlint.yml` had covered only App, Core and Tests
+   since 2026-07-12. The 12 violations are fixed:
+   - `RecapView` (549 lines) became the form, `RecapFinishedView` and
+     `RecapNotices`.
+   - `TripDetailView`, `HomeView` and `JourneyDiscoveryModel` moved cohesive
+     parts into `+Map`, `+TripRow` and `+Summaries` extensions, as written.
+3. **A routing verdict carries the rules it was reached under** (schema v13
+   `segment.routability_version`, `SegmentRoutability.rulesVersion`).
+   - A verdict older than its rule's `lastRevised` reads as unasked, so the next
+     routing run settles it again.
+   - A rule change is now a version bump, not a data migration clearing rows
+     (v7, v11).
+   - NULL is version 1, so nothing changes today. This also makes ADR
+     2026-09-24 (f)'s pace numbers retunable after the fact.
+4. **Photo analysis steps aside while a film renders** and resumes when it ends
+   (`RecapExportCoordinator.rendering`, `whenIdle`). ADR 2026-09-25 (d) left the
+   question of slowing the render INFERRED; the pause means it no longer needs
+   measuring.
+5. **One `SharedFlag`** replaces three identical lock-guarded flags.
+
+**Not decided here:** ADR 2026-09-24 (f)'s pace numbers. The review measured
+them against the local real-trip dumps: no driven leg was judged a crossing.
+They are still Chiu's to sign off.
+
+## 2026-09-26 (b) — ADR 2026-09-24 (f) is decided: 160 km/h
+
+**Decision (Chiu, 2026-09-26):** 「ADR (f) 門檻改成160 km/h 定案」. ADR 2026-09-24
+(f) leaves draft status with one change: `crossing_pace_min_kmh` becomes **160**
+(the draft had 150). `crossing_pace_min_distance_m` 100 km and
+`crossing_pace_clock_margin_s` 2 h stand as drafted. The rest of (f) is
+unchanged.
+
+**Why 160.** This is Chiu's number. The measurement put in front of him
+(`Docs/handoff-arch-review-2026-09-24.md`, Round 2) has two parts:
+- **Driving.** Across the three local real-trip dumps, no driven pair judged
+  faster than 24 km/h.
+- **High-speed rail.** When photos bracket the ride tightly, a train can judge
+  near the line, for example Paris → Marseille at about 147 and Beijing →
+  Shanghai at about 176 (INFERRED). 160 moves the line further from rail and
+  still flies the worked flight: Taoyuan → Hanoi 1,634 km, with photos five
+  hours apart, judges about 203.
+
+**Legs already judged.** This is routing rules version 2
+(`SegmentRoutability.rulesVersion`, ADR 2026-09-26 §3). Only `beyond_driving`
+verdicts are revised:
+- A leg stored under the draft is judged again on the phone at its next
+  routing run.
+- It is sent to routing only if it is no longer too fast.
+- No other verdict is re-asked.
+
+**Worked cases at 160** (`LegPaceTests`, unchanged):
+- Taoyuan → Hanoi is judged a crossing when the photos are at most about 7.3 h
+  apart (8 h at 150).
+- Taipei → Zuoying rail is not.
+- The 777 km drive with a clock two hours early is not.

@@ -29,7 +29,9 @@ struct Acknowledgement: Identifiable {
     /// change — without this list and the bundled text being revisited with it.
     static let all: [Acknowledgement] = [
         Acknowledgement(id: "grdb.swift", name: "GRDB.swift", version: "6.29.3", licence: "MIT"),
-        Acknowledgement(id: "maplibre-gl-native-distribution", name: "MapLibre Native", version: "6.27.0", licence: "BSD-2-Clause")
+        Acknowledgement(
+            id: "maplibre-gl-native-distribution", name: "MapLibre Native", version: "6.27.0", licence: "BSD-2-Clause"
+        )
     ]
 
     /// The licence, verbatim, from `App/Resources/Acknowledgements/<id>.txt` in the

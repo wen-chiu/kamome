@@ -200,6 +200,13 @@ public struct TripRepository {
     }
 
     /// "" records that the geocoder was asked and had no town (`StopRecord.locality`).
+    /// "" records that the geocoder was asked and had no zone (`StopRecord.timeZone`).
+    public func setStopTimeZone(stopId: String, timeZone: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE stop SET time_zone = ? WHERE id = ?", arguments: [timeZone, stopId])
+        }
+    }
+
     public func setStopLocality(stopId: String, locality: String) throws {
         try database.writer.write { db in
             try db.execute(sql: "UPDATE stop SET locality = ? WHERE id = ?", arguments: [locality, stopId])

@@ -51,7 +51,7 @@ struct RecapExportChannel {
     /// The iCloud download phase before the render: nil when there is nothing to
     /// download or the phase is over.
     var photoPreload: (PhotoLibraryPhotoResolver.PreloadProgress?) -> Void
-    /// Read from the render thread every frame — see `ExportCancelFlag`.
+    /// Read from the render thread every frame — see `SharedFlag`.
     var shouldContinue: @Sendable () -> Bool
 }
 
@@ -67,15 +67,4 @@ struct RecapExportChannel {
 @MainActor
 protocol RecapExportRunning {
     func run(_ channel: RecapExportChannel) async -> RecapExportOutcome
-}
-
-/// Set on main, read from the render thread every frame — a plain `Bool` would
-/// need actor hops the render loop cannot make. The same shape
-/// `RouteMatchCoordinator` uses between legs, for the same reason.
-final class ExportCancelFlag: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value = false
-
-    func set() { lock.withLock { value = true } }
-    var isSet: Bool { lock.withLock { value } }
 }
