@@ -225,7 +225,7 @@ struct RecapView: View {
             if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
                 Image(decorative: thumbnail, scale: 1)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: 26, height: 26)
             }
             Text(subject.displayName(language: language))
