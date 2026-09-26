@@ -263,6 +263,15 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE segment ADD COLUMN routability_version INTEGER")
         }
 
+        // Schema v14 — the zone a stop happened in (arch review 2026-09-26):
+        // `CLPlacemark.timeZone` from the lookup that already names it, so
+        // `Day N` is the local date where it happened, not the phone's date.
+        // NULL = never asked; back-filled on the trip's next open like v9's
+        // towns (`StopNamer.fillMissingLocalities`). Forward-only.
+        migrator.registerMigration("v14") { db in
+            try db.execute(sql: "ALTER TABLE stop ADD COLUMN time_zone TEXT")
+        }
+
         return migrator
     }
 }

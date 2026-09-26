@@ -45,7 +45,8 @@ extension JourneyDiscoveryModel {
             nameLookupLon: facts.nameLookupLon,
             isSinglePlace: isSinglePlace,
             countryCode: place?.countryCode,
-            countryName: place?.country
+            countryName: place?.country,
+            clock: TripClock(stops: facts.stops)
         )
     }
 

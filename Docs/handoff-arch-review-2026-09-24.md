@@ -168,3 +168,79 @@ line named, **INFERRED** = follows from the code but not provoked, **UNKNOWN**.
   outside a debugger (redaction of private values) before relying on it.
 - **Draft wording, Chiu's:** `trip_delete_recorded_confirm`, `import_error_save`,
   `about_export_diagnostics*`.
+
+## Round 2 — review of PRs #94–#101, 2026-09-26
+
+Against `main` at PR #101 (`19040af`): `./check.sh` exit 0, 718 tests, 30 skipped.
+Staleness passes (synced to PR #99; one behind is the floor). Nothing below is a
+test failure: these are the gaps the gates do not see.
+
+1. **`UI/` is never linted.** `.swiftlint.yml` includes App, Core and Tests only,
+   and it has done so since 2026-07-12. Linting `UI/` under the same rules finds
+   12 errors (VERIFIED, run with a temporary config):
+   - `RecapView.swift` 549 lines and `TripDetailView.swift` 420, both over
+     `file_length` 400
+   - four `type_body_length` (including `TripDetailView` at 340 of 250, and
+     `JourneyDiscoveryModel` at 281)
+   - four `line_length`, one `function_body_length`, one `shorthand_operator`
+
+   Fix: add `UI` to `included` and split the export sheet (`RecapView`) by
+   section. That is a build-gate change (rule 2) → Chiu.
+2. **"Day N" follows the phone's current zone, so the film depends on where the
+   phone is at export time** (VERIFIED: `RecapComposer.dayLabel` and `dayCount`
+   use `Calendar.current`). ADR 2026-09-25 accepted only the +1 h case (Japan
+   seen from Taipei).
+   - Iceland seen from Taipei puts the day boundary at 16:00 local.
+   - The same trip exported in Taipei and in Reykjavík gets different HUD days
+     and a different DAYS figure.
+
+   Proposal: keep the zone that `CLGeocoder`'s placemark already returns in the
+   stop lookup Kamome already makes (an allowed §0 flow, no new data leaves), and
+   store it on the stop. Needs a product decision and a schema change → Chiu.
+3. **Routing verdicts can only be revised by a data migration.** v7 and v11 each
+   cleared `no_road` because a stored verdict is never re-asked. ADR (f) says
+   retuning the pace numbers will not re-judge `beyond_driving`. The photo
+   analysis already solves this shape with `PhotoAnalysisVersion`. Proposal:
+   store a rules version next to `routability`, so a rule change becomes a
+   version bump that re-asks only the legs it affects.
+4. **ADR 2026-09-24 (f) is implemented, merged and marked DRAFT.**
+   - Its three numbers (150 km/h, 100 km, a 2 h clock margin) still need Chiu's
+     sign-off.
+   - It is absent from HANDOFF's "Awaiting Chiu".
+   - Because of point 3, the numbers a TestFlight build writes are permanent on
+     the phone.
+5. **Photo analysis can run during an export.** Vision runs at background
+   priority, and whether that slows a render is **INFERRED** (ADR (d)'s own
+   table). Cheap guard: don't start or continue a photo-analysis run while
+   `RecapExportCoordinator.running` is set. The rows resume on their own.
+6. **Three copies of one lock-guarded cancel flag** (`RouteMatchCoordinator`,
+   `PhotoAnalysisCoordinator`, `ExportCancelFlag`). Low value on its own;
+   consolidate the next time one of these files is touched.
+
+Held up (read, not re-derived):
+- PR #93's fixes survived every later merge, and `TripDeletion` now also cancels
+  photo analysis.
+- The walk re-ask throws when nobody answers, rather than storing a crossing.
+- The analysis pick falls back to the old pick exactly when there is no signal
+  (`PhotoSignalPickTests`).
+- The probe screen is `#if DEBUG`.
+- No bare `try? repository` has come back.
+
+**Round 2 status (branch `claude/arch-review-2`, ADR 2026-09-26).** Points 1, 2,
+3, 5 and 6 are built, each with tests. Point 4, ADR (f)'s pace numbers, was
+measured and is still Chiu's to sign off:
+- **The measurement.** The rule was replayed over the three local real-trip
+  dumps (Iceland 2,300 photos, New Zealand 160, Miyakojima 53), taking every
+  consecutive photo pair ≥ 30 km apart. That is a superset of the real legs.
+- **No false positives.** The fastest driven pair judged 24 km/h (raw 63)
+  against the 150 threshold.
+- **What the dumps cannot test.** They hold no flight, so a missed flight is
+  untested here.
+- **Worked cases, INFERRED.** High-speed rail trips the plane when photos
+  bracket the ride tightly:
+  - Beijing → Shanghai, 1,200 km in 4.5 h, judges about 176 km/h.
+  - Paris → Marseille by TGV, 750 km in 3 h, judges about 147 km/h, just under.
+
+Owed on a phone: a trip opened after v14 shows each stop's zone filled (the
+back-fill), and an Iceland film exported in Taipei draws the same `Day N` as the
+Reykjavík count.

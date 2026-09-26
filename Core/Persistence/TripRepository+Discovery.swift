@@ -67,6 +67,9 @@ extension TripRepository {
         public let nameLookupLon: Double?
         /// The stops' bounding box; the caller turns it into metres. nil with no stops.
         public let stopSpan: StopSpan?
+        /// The stops themselves, in trip order — what the card's day count reads
+        /// each stop's zone from, so it counts as the film does (`TripClock`).
+        public var stops: [StopRecord] = []
     }
 
     /// A bounding box in degrees — the persistence layer does no geodesy.
@@ -121,7 +124,8 @@ extension TripRepository {
                 stopNames: stops.compactMap(\.name),
                 nameLookupLat: busiest?["lat"],
                 nameLookupLon: busiest?["lon"],
-                stopSpan: stopSpan
+                stopSpan: stopSpan,
+                stops: stops
             )
         }
     }

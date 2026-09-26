@@ -148,6 +148,10 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// `CLPlacemark.locality` (schema v9, ADR 2026-09-24 (e)). NULL = never
     /// asked; "" = asked, and the geocoder had no town for this spot.
     public var locality: String?
+    /// The zone the stop's reverse-geocode reported, as an IANA identifier
+    /// (schema v14): what its local day is counted in (`TripClock`). NULL =
+    /// never asked; "" = asked, and no zone came back.
+    public var timeZone: String?
     /// Whether the film presents this stop (schema v10, Chiu 2026-09-25):
     /// NULL is the app's choice, `StopFilmChoice` names the person's.
     public var filmChoice: String?
@@ -155,6 +159,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     enum CodingKeys: String, CodingKey {
         case id, lat, lon, name, note, kind, locality
         case filmChoice = "film_choice"
+        case timeZone = "time_zone"
         case tripId = "trip_id"
         case arrivedAt = "arrived_at"
         case departedAt = "departed_at"
@@ -171,7 +176,8 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         note: String? = nil,
         kind: String? = nil,
         locality: String? = nil,
-        filmChoice: String? = nil
+        filmChoice: String? = nil,
+        timeZone: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -184,6 +190,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.kind = kind
         self.locality = locality
         self.filmChoice = filmChoice
+        self.timeZone = timeZone
     }
 
     /// The person's word on whether the film presents this stop. `nil` —
