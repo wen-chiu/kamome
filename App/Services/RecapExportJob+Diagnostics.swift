@@ -75,10 +75,19 @@ extension RecapExportJob {
     /// Whether this phone could keep rendering the map with the app in the
     /// background (iOS 26 continued-processing tasks with GPU). Logged, not
     /// used: it decides whether that option is worth building at all.
+    ///
+    /// Compile-time guarded as well: CI builds against the iOS 18 SDK
+    /// (Xcode 16, `macos-15`), which has no such API. Swift 6.2 ships only with
+    /// Xcode 26, so the guard is the SDK. A build from the old SDK logs
+    /// "unknown (built without the iOS 26 SDK)" rather than a false "no".
     private static var backgroundGPU: String {
+        #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             return BGTaskScheduler.supportedResources.contains(.gpu) ? "supported" : "not supported"
         }
         return "n/a (iOS < 26)"
+        #else
+        return "unknown (built without the iOS 26 SDK)"
+        #endif
     }
 }
