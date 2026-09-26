@@ -45,15 +45,27 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// main. Setting the same size again is cheap, so every export calls this.
     /// It changes when a tile is downloaded, never what is drawn.
     @MainActor
-    static func prepareForExport(cacheMb: Int) async -> Error? {
+    static func prepareForExport(
+        cacheMb: Int, coalesce: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int
+    ) async -> Error? {
         MLNNetworkConfiguration.sharedManager.delegate = networkProbe
+        // Hosts empty = the coalescer passes everything through, so switching
+        // it off in config needs no second path through MapLibre's session.
+        TileRequestCoalescer.configure(
+            terrainMaxAgeS: terrainMaxAgeS, hosts: coalesce ? tileHosts : [], memoryMb: tileMemoryMb
+        )
         meter.reset()
+        TileRequestCoalescer.shared.resetReading()
         return await withCheckedContinuation { continuation in
             MLNOfflineStorage.shared.setMaximumAmbientCacheSize(UInt(max(0, cacheMb)) * 1_048_576) { error in
                 continuation.resume(returning: error)
             }
         }
     }
+
+    /// The hosts the export's style fetches from — the only ones the
+    /// coalescer touches (`TileRequestCoalescer`).
+    static let tileHosts = ["openfreemap.org", "amazonaws.com"]
 
     /// Counts the requests MapLibre sends and hands each back **unchanged**:
     /// this only observes. Called on MapLibre's own background threads; the
@@ -64,6 +76,26 @@ public struct MapLibreSnapshotProvider: MapRenderer {
 
         init(meter: MapSubstrateMeter) {
             self.meter = meter
+        }
+
+        /// **How `TileRequestCoalescer` gets in front of MapLibre.** MapLibre
+        /// asks this for the session to send each request on (VERIFIED from the
+        /// 6.27 binary: `sessionForNetworkConfiguration:` behind its native
+        /// `sessionForNetworkManager:`). Asked per request rather than read once,
+        /// so it holds whatever touched MapLibre first. The session is MapLibre's
+        /// own configuration with the coalescer in front; a host the coalescer
+        /// does not handle goes straight through to the system.
+        private lazy var session: URLSession = {
+            let base = MLNNetworkConfiguration.sharedManager.sessionConfiguration
+            let configuration = (base?.copy() as? URLSessionConfiguration) ?? .default
+            configuration.protocolClasses = [TileRequestCoalescer.self] + (configuration.protocolClasses ?? [])
+            return URLSession(configuration: configuration)
+        }()
+        private let sessionLock = NSLock()
+
+        @objc(sessionForNetworkConfiguration:)
+        func session(for configuration: MLNNetworkConfiguration) -> URLSession {
+            sessionLock.withLock { session }
         }
 
         // Selector pinned: this is an optional requirement, and a Swift name

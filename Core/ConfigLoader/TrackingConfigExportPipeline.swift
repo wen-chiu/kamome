@@ -32,19 +32,43 @@ extension TrackingConfig {
         /// against distinct tiles, and a gap between the two is the reading that
         /// says whether this is big enough. Timing only; no pixel changes.
         public let mapCacheMb: Int
+        /// Whether identical tile requests in flight at once share one download
+        /// (`TileRequestCoalescer`, 2026-09-26). A kill switch, not a dial: the
+        /// bytes MapLibre receives are the same either way, only how many times
+        /// they cross the network changes.
+        public let coalesceTileRequests: Bool
+        /// The lifetime given to a terrain tile whose host sent none. AWS's
+        /// terrain tiles carry an ETag and no `Cache-Control` (VERIFIED by curl,
+        /// 2026-09-26), so MapLibre re-checked them on every use. 30 days is
+        /// INFERRED: the DEM's `Last-Modified` is 2017, so any lifetime longer
+        /// than one export removes the round trips; 0 turns this off.
+        public let terrainMaxAgeS: Int
+        /// Tiles this export already downloaded, kept in memory so MapLibre's
+        /// queued repeats are answered without a second download
+        /// (`TileRequestCoalescer`). 64 MB is INFERRED: the desk bench's repeats
+        /// came a median ~6 s after the first ask, a window that holds far
+        /// fewer tiles than this. Memory, not pixels: 0 turns it off.
+        public let tileMemoryMb: Int
 
-        public init(prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double, mapCacheMb: Int) {
+        public init(
+            prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double, mapCacheMb: Int,
+            coalesceTileRequests: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int
+        ) {
             self.prefetchDepth = prefetchDepth
             self.compositeConcurrency = compositeConcurrency
             self.snapshotTimeoutS = snapshotTimeoutS
             self.mapCacheMb = mapCacheMb
+            self.coalesceTileRequests = coalesceTileRequests
+            self.terrainMaxAgeS = terrainMaxAgeS
+            self.tileMemoryMb = tileMemoryMb
         }
 
         /// For hand-built test configs only, like `targetZoomRatio`'s default:
         /// the JSON block is still required, so a config file missing it fails
         /// loudly. Mirrors the shipped values.
         public static let handBuilt = ExportPipeline(
-            prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256
+            prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256,
+            coalesceTileRequests: true, terrainMaxAgeS: 2_592_000, tileMemoryMb: 64
         )
 
         enum CodingKeys: String, CodingKey {
@@ -52,6 +76,9 @@ extension TrackingConfig {
             case compositeConcurrency = "composite_concurrency"
             case snapshotTimeoutS = "snapshot_timeout_s"
             case mapCacheMb = "map_cache_mb"
+            case coalesceTileRequests = "coalesce_tile_requests"
+            case terrainMaxAgeS = "terrain_max_age_s"
+            case tileMemoryMb = "tile_memory_mb"
         }
     }
 }

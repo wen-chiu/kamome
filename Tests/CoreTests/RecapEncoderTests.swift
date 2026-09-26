@@ -210,7 +210,8 @@ final class RecapEncoderTests: XCTestCase {
     /// waited forever, and Cancel — read between frames — could not reach it.
     func testASnapshotThatNeverAnswersFailsTheExportWithinItsDeadline() async throws {
         let config = exportConfig(pipeline: TrackingConfig.ExportPipeline(
-            prefetchDepth: 2, compositeConcurrency: 2, snapshotTimeoutS: 0.3, mapCacheMb: 1
+            prefetchDepth: 2, compositeConcurrency: 2, snapshotTimeoutS: 0.3, mapCacheMb: 1,
+            coalesceTileRequests: false, terrainMaxAgeS: 0, tileMemoryMb: 0
         ))
         let (exporter, _) = try makeExporter(config: config, provider: SilentProvider())
         let videoURL = scratchURL("silent.mp4")
