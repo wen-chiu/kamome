@@ -141,9 +141,14 @@ enum RecapComposer {
         analysis: PhotoAnalysisInputs? = nil,
         highlightMaxPhotos: Int = 0,
         weighting: TrackingConfig.Export? = nil,
-        everyLegRoutabilityEstablished: Bool = false
+        everyLegRoutabilityEstablished: Bool = false,
+        clock: TripClock? = nil
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
+        // Every day and date the film draws is local to where it happened
+        // (`TripClock`); the export passes the whole trip's stops so the trip's
+        // last moment, after the film's own end, is counted in its own zone.
+        let clock = clock ?? TripClock(stops: stops)
 
         let inputs = PhotoInputs(
             byStop: photosByStop, highlighted: highlightedAssets,
@@ -155,7 +160,7 @@ enum RecapComposer {
             RecapTrip.Stop(
                 coordinate: snapped(lat: stop.lat, lon: stop.lon, to: legs),
                 name: stop.name ?? String(localized: "stop_unnamed"),
-                dayLabel: dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt),
+                dayLabel: dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt, clock: clock),
                 detail: walkDetail(for: stop),
                 photos: photos,
                 dwellS: photos.isEmpty ? stopHoldS : deck.dwellS(photoCount: photos.count),
@@ -190,10 +195,10 @@ enum RecapComposer {
             title: trip.title,
             subtitle: titleSubtitle(trip: trip, distanceM: titleM),
             endCardFigures: endCardFigures(
-                trip: trip, distanceM: drawnM, stopCount: film.stops.count
+                trip: trip, distanceM: drawnM, stopCount: film.stops.count, clock: clock
             ),
             shareURL: nil,
-            journeyDates: journeyDates(trip),
+            journeyDates: journeyDates(trip, clock: clock),
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
         )
     }
@@ -256,10 +261,16 @@ enum RecapComposer {
                                lon: start.lon + (end.lon - start.lon) * along)
     }
 
-    /// Same day math as S3's filter chips: a calendar day (`TripDay`).
-    static func dayLabel(for timestamp: Double, tripStartedAt: Double, calendar: Calendar = .current) -> String {
-        let day = TripDay.index(of: timestamp, tripStartedAt: tripStartedAt, calendar: calendar) + 1
+    /// Same day math as S3's filter chips: the local date where it happened
+    /// (`TripClock`).
+    static func dayLabel(for timestamp: Double, tripStartedAt: Double, clock: TripClock) -> String {
+        let day = clock.dayIndex(of: timestamp, tripStartedAt: tripStartedAt) + 1
         return String.localizedStringWithFormat(String(localized: "day_chip"), day)
+    }
+
+    /// Every moment counted in one calendar's zone — a trip with no stop zones.
+    static func dayLabel(for timestamp: Double, tripStartedAt: Double, calendar: Calendar = .current) -> String {
+        dayLabel(for: timestamp, tripStartedAt: tripStartedAt, clock: .uniform(calendar.timeZone))
     }
 
     /// stop.kind hook (ADR 2026-07-18): walk visits carry their walking

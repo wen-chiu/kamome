@@ -142,16 +142,23 @@ final class TripDetailModel {
 
     // MARK: - Days (S3 filter chips)
 
-    /// Calendar days (`TripDay`, Chiu 2026-09-25): chip N is the trip's Nth date.
+    /// What days are counted by: each stop's own zone (`TripClock`, arch review
+    /// 2026-09-26), so chip N is the Nth local date of the trip — the same count
+    /// the film's HUD and end card draw.
+    private var clock: TripClock {
+        TripClock(stops: detail?.stops ?? [])
+    }
+
+    /// Calendar days (Chiu 2026-09-25): chip N is the trip's Nth date.
     var dayCount: Int {
         guard let detail, let endedAt = detail.trip.endedAt else { return 1 }
-        return TripDay.count(startedAt: detail.trip.startedAt, endedAt: endedAt)
+        return clock.dayCount(startedAt: detail.trip.startedAt, endedAt: endedAt)
     }
 
     /// The date chip `day` (0-based) stands for.
     func date(ofDay day: Int) -> Date? {
         guard let detail else { return nil }
-        return TripDay.date(ofDay: day, tripStartedAt: detail.trip.startedAt)
+        return clock.date(ofDay: day, tripStartedAt: detail.trip.startedAt)
     }
 
     func selectDay(_ day: Int?) {
@@ -160,7 +167,7 @@ final class TripDetailModel {
 
     func dayIndex(of timestamp: Double) -> Int {
         guard let detail else { return 0 }
-        return TripDay.index(of: timestamp, tripStartedAt: detail.trip.startedAt)
+        return clock.dayIndex(of: timestamp, tripStartedAt: detail.trip.startedAt)
     }
 
     var visibleStops: [StopRecord] {
@@ -256,7 +263,7 @@ final class TripDetailModel {
         return grouped.keys.sorted().map { day in
             StoryDay(
                 index: day,
-                date: TripDay.date(ofDay: day, tripStartedAt: detail.trip.startedAt),
+                date: clock.date(ofDay: day, tripStartedAt: detail.trip.startedAt),
                 entries: grouped[day] ?? []
             )
         }

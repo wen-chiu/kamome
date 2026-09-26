@@ -64,7 +64,8 @@ final class RecapModel {
         self.config = config
         self.repository = repository
         self.coordinator = coordinator
-        vehicleId = Stored.read("detail") { try repository.detail(tripId: tripId) }?.trip.vehicleId ?? VehicleCatalog.defaultSubjectId
+        vehicleId = Stored.read("detail") { try repository.detail(tripId: tripId) }?.trip.vehicleId
+            ?? VehicleCatalog.defaultSubjectId
     }
 
     // MARK: - Vehicle

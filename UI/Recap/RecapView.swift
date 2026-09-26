@@ -26,24 +26,11 @@ private extension RecapAppearance {
 /// (decisions.md 2026-07-18 recap-chrome, Chiu).
 struct RecapView: View {
     @State private var model: RecapModel
-    @State private var player: AVPlayer?
-    @State private var photosSaveState: PhotosSaveState = .idle
-    @State private var showDeleteConfirmation = false
     /// The next film's photographs; built once when the sheet appears.
     @State private var filmPhotos: FilmPhotoChoices?
     @Environment(\.dismiss) private var dismiss
     /// Captured at the tap, not during the render — see `RecapModel.startExport`.
     @Environment(\.colorScheme) private var colorScheme
-
-    enum PhotosSaveState: Equatable {
-        case idle
-        case saving
-        case saved
-        case denied
-        /// The reason is logged, never shown — `PHPhotosErrorDomain 3302` is
-        /// not a sentence (DESIGNER.md UX rule 5).
-        case failed
-    }
 
     init(tripId: String, session: TrackingSession) {
         _model = State(initialValue: RecapModel(
@@ -55,7 +42,7 @@ struct RecapView: View {
         NavigationStack {
             Group {
                 if case let .finished(_, fileURL) = model.phase {
-                    finishedContent(fileURL: fileURL)
+                    RecapFinishedView(model: model, fileURL: fileURL)
                 } else {
                     exportForm
                         .onAppear { if filmPhotos == nil { filmPhotos = model.filmPhotoChoices() } }
@@ -109,10 +96,10 @@ struct RecapView: View {
             filmPhotosSection
 
             if model.photoShortfall != nil {
-                Section { photoShortfallNotice }
+                Section { RecapPhotoShortfallNotice(model: model) }
             }
             if model.routing?.isWorthReporting == true {
-                Section { routingNotice }
+                Section { RecapRoutingNotice(model: model) }
             }
             busySection
         }
@@ -238,7 +225,7 @@ struct RecapView: View {
             if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
                 Image(decorative: thumbnail, scale: 1)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: 26, height: 26)
             }
             Text(subject.displayName(language: language))
@@ -282,268 +269,6 @@ struct RecapView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
-        }
-    }
-
-    // MARK: - Finished: inline player + actions
-
-    /// On finish the film plays immediately, inline, on this screen (Chiu
-    /// 2026-09-05). Four actions: save to Photos / share / delete / export
-    /// again. The render-time readout stays — it is the §4.5 budget readout.
-    private func finishedContent(fileURL: URL) -> some View {
-        VStack(spacing: 0) {
-            // Inline preview — starts immediately. A GIF is not a video:
-            // `AVPlayer` shows a struck-through play glyph for one, so it gets
-            // its own view (2026-09-25).
-            if isGIF(fileURL) {
-                AnimatedGIFView(url: fileURL)
-                    .aspectRatio(9 / 16, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding()
-            } else if let player {
-                VideoPlayer(player: player)
-                    .aspectRatio(9 / 16, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding()
-            }
-
-            if case let .finished(film, _) = model.phase, let renderSeconds = film.renderSeconds {
-                // Actual number, visible on device — this is the §4.5
-                // render-budget readout (< 90 s bar). Read off the stored
-                // record rather than off the phase, so it is the same number
-                // whether the film finished with this screen open or not.
-                Text(String.localizedStringWithFormat(
-                    String(localized: "recap_render_time"),
-                    String(format: "%.1f", renderSeconds)
-                ))
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.bottom, 8)
-            }
-
-            // What the run found, kept past its end: without this a film with
-            // blank cards or dashed legs came back with no reason given.
-            if model.photoShortfall != nil || model.routing?.isWorthReporting == true {
-                VStack(alignment: .leading, spacing: 6) {
-                    photoShortfallNotice
-                    routingNotice
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-            }
-
-            // Action buttons
-            VStack(spacing: 12) {
-                // Save to Photos — explicit user tap, never automatic (§0).
-                photosSaveButton(fileURL: fileURL)
-
-                if case let .finished(film, _) = model.phase {
-                    ShareLink(item: fileURL) {
-                        Label("recap_share", systemImage: "square.and.arrow.up")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Label("recap_film_delete", systemImage: "trash")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .confirmationDialog(
-                        "recap_film_delete_confirm",
-                        isPresented: $showDeleteConfirmation,
-                        titleVisibility: .visible
-                    ) {
-                        Button("recap_film_delete", role: .destructive) {
-                            model.deleteFilm(film)
-                            player = nil
-                        }
-                    }
-                }
-
-                // Back to the form, not straight into a render: the next film
-                // may want a different vehicle or different photos.
-                Button("recap_export_again") {
-                    player = nil
-                    photosSaveState = .idle
-                    model.exportAgain()
-                }
-                .buttonStyle(.bordered)
-            }
-            .padding(.horizontal)
-            .padding(.bottom)
-        }
-        .onAppear {
-            guard !isGIF(fileURL) else { return }
-            let newPlayer = AVPlayer(url: fileURL)
-            player = newPlayer
-            newPlayer.play()
-        }
-        .onDisappear {
-            player?.pause()
-            player = nil
-        }
-    }
-
-    @ViewBuilder
-    private func photosSaveButton(fileURL: URL) -> some View {
-        VStack(spacing: 6) {
-            photosSaveButtonBody(fileURL: fileURL)
-            // Said beside the button, not inside it: a sentence on a prominent
-            // button reads as the button's action.
-            if photosSaveState == .failed {
-                Text("recap_save_failed")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-    }
-
-    private func photosSaveButtonBody(fileURL: URL) -> some View {
-        Button {
-            saveToPhotos(fileURL: fileURL)
-        } label: {
-            switch photosSaveState {
-            case .idle, .failed:
-                Label("recap_save_to_photos", systemImage: "photo.on.rectangle.angled")
-                    .frame(maxWidth: .infinity)
-            case .saving:
-                ProgressView()
-                    .frame(maxWidth: .infinity)
-            case .saved:
-                Label("recap_saved_to_photos", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
-            case .denied:
-                Label("recap_photos_access_denied", systemImage: "exclamationmark.triangle")
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .buttonStyle(.borderedProminent)
-        .disabled(photosSaveState == .saving || photosSaveState == .saved)
-    }
-
-    /// `PHPhotoLibrary.requestAuthorization(for: .addOnly)` — NOT `.readWrite`.
-    /// The app already holds read access for import, and conflating the two
-    /// muddies D4 (Limited Photo Library), still open.
-    ///
-    /// Saving to the Photos library is an explicit user tap, never automatic
-    /// (Chiu 2026-09-05). With iCloud Photos on, a write to the library
-    /// uploads off-device — §0's decided exceptions are the Geoapify routing
-    /// payloads and one user-initiated share. This tap is that share.
-    private func saveToPhotos(fileURL: URL) {
-        photosSaveState = .saving
-        let savesAsPhoto = isGIF(fileURL)
-        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-            guard status == .authorized || status == .limited else {
-                Task { @MainActor in
-                    photosSaveState = .denied
-                }
-                return
-            }
-            PHPhotoLibrary.shared().performChanges {
-                // A GIF goes in as a photo — Photos plays an animated GIF — and
-                // the video request refuses it (`PHPhotosErrorDomain` 3302).
-                if savesAsPhoto {
-                    PHAssetCreationRequest.forAsset().addResource(with: .photo, fileURL: fileURL, options: nil)
-                } else {
-                    PHAssetCreationRequest.creationRequestForAssetFromVideo(atFileURL: fileURL)
-                }
-            } completionHandler: { success, error in
-                if let error {
-                    let nsError = error as NSError
-                    KamomeLog.recap.error(
-                        "save to Photos failed: \(nsError.domain, privacy: .public) · \(nsError.code, privacy: .public)"
-                    )
-                }
-                Task { @MainActor in
-                    photosSaveState = success ? .saved : .failed
-                }
-            }
-        }
-    }
-
-    /// Blank cards in the film, and why. Shown while rendering and again on the
-    /// finished film — the person who left the screen reads it there.
-    @ViewBuilder
-    private var photoShortfallNotice: some View {
-        if let shortfall = model.photoShortfall {
-            Label("recap_photos_missing", systemImage: "icloud.slash")
-                .foregroundStyle(.orange)
-            Text(String.localizedStringWithFormat(
-                String(localized: "recap_photos_missing_detail"),
-                shortfall.missing, shortfall.requested
-            ))
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    private func isGIF(_ fileURL: URL) -> Bool {
-        fileURL.pathExtension.lowercased() == RecapExportFormat.gif.rawValue
-    }
-
-    /// Why the film's legs draw dashed, when there is a reason worth giving.
-    ///
-    /// **Four causes, one symptom** (2026-08-15). A dashed leg can mean no road
-    /// route exists, the provider could not be reached, it refused for load, or
-    /// the trip budget ran out — and only the first is the journey being drawn
-    /// honestly. The other three are worth a retry, and used to be
-    /// indistinguishable from it in the finished film. A fully routed film and a
-    /// disabled endpoint say nothing at all: there is nothing to act on.
-    @ViewBuilder
-    private var routingNotice: some View {
-        if let routing = model.routing, routing.isWorthReporting {
-            // How many legs draw dashed — the one number the copy uses. It sits
-            // in the *headline* ("有 X 段還沒畫"), and only the rate-limit body
-            // repeats it, so both strings are formatted with it and the three
-            // bodies that do not mention it simply ignore the argument.
-            let dashed = routing.attempted - routing.reconstructed
-            Label {
-                Text(String.localizedStringWithFormat(
-                    String(localized: routingHeadlineKey(routing)), dashed
-                ))
-            } icon: {
-                Image(systemName: routingSymbol(routing))
-            }
-            .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
-            Text(String.localizedStringWithFormat(
-                String(localized: routingDetailKey(routing)), dashed
-            ))
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-        }
-    }
-
-    private func routingHeadlineKey(_ report: RouteMatchReport) -> String.LocalizationValue {
-        switch report.headline {
-        case .providerUnreachable: return "recap_routing_unreachable"
-        case .rateLimited: return "recap_routing_rate_limited"
-        case .budgetExhausted: return "recap_routing_budget"
-        case .someLegsHaveNoRoad, .disabled, .allRouted: return "recap_routing_no_road"
-        }
-    }
-
-    private func routingDetailKey(_ report: RouteMatchReport) -> String.LocalizationValue {
-        switch report.headline {
-        case .providerUnreachable: return "recap_routing_unreachable_detail"
-        case .rateLimited: return "recap_routing_rate_limited_detail"
-        case .budgetExhausted: return "recap_routing_budget_detail"
-        case .someLegsHaveNoRoad, .disabled, .allRouted: return "recap_routing_no_road_detail"
-        }
-    }
-
-    /// A road that genuinely is not there is not a warning — it gets the map
-    /// glyph and secondary colour, while the three retryable causes get the
-    /// network glyph and the same orange the photo shortfall uses.
-    private func routingSymbol(_ report: RouteMatchReport) -> String {
-        switch report.headline {
-        case .someLegsHaveNoRoad, .disabled, .allRouted: return "point.topleft.down.curvedto.point.bottomright.up"
-        case .rateLimited, .budgetExhausted: return "clock.badge.exclamationmark"
-        case .providerUnreachable: return "wifi.slash"
         }
     }
 }

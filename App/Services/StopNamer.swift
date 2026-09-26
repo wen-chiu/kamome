@@ -34,6 +34,8 @@ final class StopNamer {
     /// Towns by the name the lookup returned, so a stop answered from
     /// `GeocodePolicy`'s name cache still gets its town.
     private var localityByName: [String: String] = [:]
+    /// Zones by the same name, for the same reason (`TripClock`).
+    private var zoneByName: [String: String] = [:]
     private var isWorking = false
     private var onChange: ((Progress) -> Void)?
     private(set) var progress = Progress()
@@ -75,10 +77,11 @@ final class StopNamer {
         drain()
     }
 
-    /// Named, but never asked for its town. A stop that still needs a name gets
-    /// its town from that lookup instead.
+    /// Named, but never asked for its town — or for its zone, which schema v14
+    /// added later (arch review 2026-09-26). A stop that still needs a name gets
+    /// both from that lookup instead.
     static func needsLocality(_ stop: StopRecord) -> Bool {
-        stop.locality == nil && !needsName(stop)
+        (stop.locality == nil || stop.timeZone == nil) && !needsName(stop)
     }
 
     /// Unnamed — or named with a bare coordinate, which is what the open-sea
@@ -107,11 +110,11 @@ final class StopNamer {
         switch policy.decision(lat: stop.lat, lon: stop.lon, now: now) {
         case .cached(let name) where !townOnly:
             Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
-            if let town = localityByName[name] { storeLocality(town, of: stop) }
+            storeCachedPlace(named: name, of: stop)
             finish(named: true)
             drain()
         case .cached(let name):
-            if let town = localityByName[name] { storeLocality(town, of: stop) }
+            storeCachedPlace(named: name, of: stop)
             drain()
         case .throttled(let retryAfterS):
             queue.insert((stop: stop, townOnly: townOnly), at: 0)
@@ -120,17 +123,26 @@ final class StopNamer {
             }
         case .lookup:
             isWorking = true
-            geocoder.reverseGeocodePlace(lat: stop.lat, lon: stop.lon) { [weak self] name, locality, error in
+            geocoder.reverseGeocodeZoned(lat: stop.lat, lon: stop.lon) { [weak self] name, locality, zone, error in
                 guard let self else { return }
                 self.isWorking = false
-                self.record(stop, townOnly: townOnly, name: name, locality: locality, error: error)
+                let place = Place(name: name, locality: locality, zone: zone)
+                self.record(stop, townOnly: townOnly, place: place, error: error)
                 self.drain()
             }
         }
     }
 
     /// One lookup's answer, written back. Pulled out of `drain` for length.
-    private func record(_ stop: StopRecord, townOnly: Bool, name: String?, locality: String?, error: Error?) {
+    /// What one lookup answered about a stop.
+    private struct Place {
+        let name: String?
+        let locality: String?
+        let zone: String?
+    }
+
+    private func record(_ stop: StopRecord, townOnly: Bool, place: Place, error: Error?) {
+        let (name, locality) = (place.name, place.locality)
         let finishedAt = Date.now.timeIntervalSince1970
         guard let name else {
             // **Charge the throttle anyway.** Advancing the clock only on
@@ -153,10 +165,13 @@ final class StopNamer {
             return
         }
         policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
-        // "" = asked, no town here: recorded so it is not asked again.
+        // "" = asked, no town (or zone) here: recorded so it is not asked again.
         let town = locality ?? ""
+        let zone = place.zone ?? ""
         localityByName[name] = town
+        zoneByName[name] = zone
         storeLocality(town, of: stop)
+        storeTimeZone(zone, of: stop)
         guard !townOnly else { return }
         Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
         finish(named: true)
@@ -164,5 +179,16 @@ final class StopNamer {
 
     private func storeLocality(_ town: String, of stop: StopRecord) {
         Stored.write("setStopLocality") { try repository.setStopLocality(stopId: stop.id, locality: town) }
+    }
+
+    private func storeTimeZone(_ zone: String, of stop: StopRecord) {
+        Stored.write("setStopTimeZone") { try repository.setStopTimeZone(stopId: stop.id, timeZone: zone) }
+    }
+
+    /// A stop answered from `GeocodePolicy`'s name cache gets the town and zone
+    /// the lookup behind that name returned, when this session made it.
+    private func storeCachedPlace(named name: String, of stop: StopRecord) {
+        if let town = localityByName[name] { storeLocality(town, of: stop) }
+        if let zone = zoneByName[name] { storeTimeZone(zone, of: stop) }
     }
 }

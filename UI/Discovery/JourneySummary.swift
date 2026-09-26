@@ -52,15 +52,19 @@ struct JourneySummary: Identifiable, Equatable {
     /// a one-place journey is titled by its town and still happened in a country.
     var countryCode: String?
     var countryName: String?
+    /// What the card's days are counted by. A stored trip's stops carry their
+    /// zones (`TripClock`), so the card says what the film's end card says; a
+    /// journey not yet imported has no stops and counts in the phone's zone.
+    var clock: TripClock = .uniform()
 
     var headline: String { name?.title ?? fallbackTitle }
     var isImported: Bool { tripId != nil }
     var modes: Set<String> { Set(legModes) }
 
-    /// Calendar days the journey covers, both ends counted, in the current zone
-    /// — `TripDay`, the definition S3's chips and the film count by.
+    /// Local dates the journey covers, both ends counted — `TripClock`, the
+    /// definition S3's chips and the film count by.
     var dayCount: Int {
-        TripDay.count(startedAt: startedAt, endedAt: endedAt)
+        clock.dayCount(startedAt: startedAt, endedAt: endedAt)
     }
 
     var year: Int {

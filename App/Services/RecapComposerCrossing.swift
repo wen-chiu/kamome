@@ -122,9 +122,10 @@ extension RecapComposer {
     ///
     /// Collapses to one date when the trip begins and ends on the same day: a
     /// range with the same value twice reads as a bug.
-    static func journeyDates(_ trip: TripRecord) -> String {
-        let started = boardingPassDate(trip.startedAt)
-        let ended = boardingPassDate(trip.endedAt ?? trip.startedAt)
+    static func journeyDates(_ trip: TripRecord, clock: TripClock = .uniform()) -> String {
+        let endedAt = trip.endedAt ?? trip.startedAt
+        let started = boardingPassDate(trip.startedAt, zone: clock.zone(at: trip.startedAt))
+        let ended = boardingPassDate(endedAt, zone: clock.zone(at: endedAt))
         return started == ended ? started : "\(started) – \(ended)"
     }
 
@@ -134,10 +135,12 @@ extension RecapComposer {
     /// A boarding pass is an English artefact and its field labels are English
     /// literals by decision; a date rendered through the device locale would put
     /// one localized token in the middle of that and make two machines render
-    /// different frames. The *time zone* stays the device's, because the date a
-    /// traveller would recognise is their own local one.
-    static func boardingPassDate(_ timestamp: Double) -> String {
+    /// different frames. The *time zone* is where the moment happened
+    /// (`TripClock`, arch review 2026-09-26) — the date a traveller would
+    /// recognise is the local one there, not whatever zone the phone is in now.
+    static func boardingPassDate(_ timestamp: Double, zone: TimeZone = .current) -> String {
         let formatter = DateFormatter()
+        formatter.timeZone = zone
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "d MMM yyyy"
         return formatter.string(from: Date(timeIntervalSince1970: timestamp)).uppercased()
@@ -182,9 +185,9 @@ extension RecapComposer {
     ///   counts, so the film cannot say "3 DAYS" over a frame reading `Day 4`.
     /// - `stopCount` — the stops of the film's own journey (`filmJourney`).
     static func endCardFigures(
-        trip: TripRecord, distanceM: Double, stopCount: Int
+        trip: TripRecord, distanceM: Double, stopCount: Int, clock: TripClock = .uniform()
     ) -> [RecapEndCardFigure] {
-        let days = dayCount(trip: trip)
+        let days = dayCount(trip: trip, clock: clock)
         return [
             RecapEndCardFigure(
                 value: RecapOverlayRenderer.grouped(Int((distanceM / 1000).rounded())),
@@ -208,8 +211,13 @@ extension RecapComposer {
     /// How many days the trip covered, by the **same arithmetic as the HUD's day
     /// chip** (`dayLabel`): calendar dates, both ends counted (`TripDay`). Two
     /// day counters on one film that disagree by one is worse than either answer.
+    static func dayCount(trip: TripRecord, clock: TripClock) -> Int {
+        clock.dayCount(startedAt: trip.startedAt, endedAt: trip.endedAt ?? trip.startedAt)
+    }
+
+    /// Every moment counted in one calendar's zone — a trip with no stop zones.
     static func dayCount(trip: TripRecord, calendar: Calendar = .current) -> Int {
-        TripDay.count(startedAt: trip.startedAt, endedAt: trip.endedAt ?? trip.startedAt, calendar: calendar)
+        dayCount(trip: trip, clock: .uniform(calendar.timeZone))
     }
 
     /// **The journey the film tells** — the whole trip, or, when the film opens on

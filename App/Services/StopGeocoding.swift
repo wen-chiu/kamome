@@ -35,6 +35,15 @@ protocol StopGeocoding: AnyObject {
         lat: Double, lon: Double,
         completion: @escaping (_ name: String?, _ locality: String?, _ error: Error?) -> Void
     )
+
+    /// The same one lookup, also returning the placemark's time zone
+    /// identifier — what a stop's local day is counted in (`TripClock`, arch
+    /// review 2026-09-26). Nothing more leaves the phone than the lookup that
+    /// names the stop already sends.
+    func reverseGeocodeZoned(
+        lat: Double, lon: Double,
+        completion: @escaping (_ name: String?, _ locality: String?, _ timeZone: String?, _ error: Error?) -> Void
+    )
 }
 
 extension StopGeocoding {
@@ -42,6 +51,12 @@ extension StopGeocoding {
         lat: Double, lon: Double, completion: @escaping (String?, String?, Error?) -> Void
     ) {
         reverseGeocode(lat: lat, lon: lon) { name, error in completion(name, nil, error) }
+    }
+
+    func reverseGeocodeZoned(
+        lat: Double, lon: Double, completion: @escaping (String?, String?, String?, Error?) -> Void
+    ) {
+        reverseGeocodePlace(lat: lat, lon: lon) { name, locality, error in completion(name, locality, nil, error) }
     }
 }
 
@@ -61,9 +76,15 @@ final class CLGeocoderStopGeocoder: StopGeocoding {
     func reverseGeocodePlace(
         lat: Double, lon: Double, completion: @escaping (String?, String?, Error?) -> Void
     ) {
+        reverseGeocodeZoned(lat: lat, lon: lon) { name, locality, _, error in completion(name, locality, error) }
+    }
+
+    func reverseGeocodeZoned(
+        lat: Double, lon: Double, completion: @escaping (String?, String?, String?, Error?) -> Void
+    ) {
         geocoder.reverseGeocodeLocation(CLLocation(latitude: lat, longitude: lon)) { placemarks, error in
             let placemark = placemarks?.first
-            completion(Self.displayName(from: placemark), placemark?.locality, error)
+            completion(Self.displayName(from: placemark), placemark?.locality, placemark?.timeZone?.identifier, error)
         }
     }
 
