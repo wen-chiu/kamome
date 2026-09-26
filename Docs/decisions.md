@@ -6734,11 +6734,15 @@ and §0).
    now use the bundle's chosen localization (`VehicleSubject.screenName`), pinned by
    `VehicleScreenNameTests`.
 
-**Not done:** the preview line above Export (review item 3) — Chiu's answer arrived incomplete and
-is asked again. `LinearTimeline` needs a composed trip, and compose runs after routing.
+7. **Above Export, counts only: "N stops · M photos" / 「N 個停留點 · M 張照片」** (review item 3,
+   UX rule 3). Read off `FilmPhotoChoices` — the plan the export composes and the list above
+   draws — so it moves as stops go in and out. With photo cards off, stops only: the film then
+   shows no photographs. **No duration**: `LinearTimeline` needs a composed trip, compose runs
+   after routing, and a length guessed before routing can disagree with the film.
 
 | Claim | Status | Cheapest thing that settles it |
 |---|---|---|
 | The job reports the three stages in order | **VERIFIED** by reading `run`; the coordinator plumbing by `RecapExportCoordinatorTests` | — |
 | 「正在準備你的照片…」 then 「算圖中…」 with a percentage appear on screen | **VERIFIED** by render (simulator, seeded Perth trip) | — |
+| The line's counts are the film's decks and follow a stop taken out | **VERIFIED** — `FilmPhotoChoicesTests`; by render, 4 · 4 → 3 · 2 → 3 with cards off | — |
 | 「正在找出你走過的路…」 appears on screen | **UNKNOWN** — the seeded trip passes the stage in under a second | An import with routing live, on a phone |

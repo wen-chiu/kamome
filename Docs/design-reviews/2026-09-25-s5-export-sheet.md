@@ -33,7 +33,7 @@ where the Export button went missing below the photo list.
 
 ### Recommendations (fix before the milestone)
 
-**Status 2026-09-26 (PR #103, ADR 2026-09-26):** 1, 2 and 4 resolved; 3 waits on Chiu.
+**Status 2026-09-26 (PR #103, ADR 2026-09-26):** 1–4 resolved; polish 5 open.
 Evidence and screenshots are in the PR description; all renders are the seeded
 Perth trip on a simulator.
 
@@ -41,7 +41,7 @@ Perth trip on a simulator.
 |---|---|
 | 1 | ✅ #103: title line (Chiu's copy, drawn verbatim), Save + Share paired, Delete in ⋯ (confirmation kept), Export again a text button. "Rendered in X s" stays in Release (Chiu). VERIFIED by render, en + zh-Hant, light + dark |
 | 2 | ✅ #103: `RecapExportChannel.stage` (Chiu: option a), percentage while drawing, the form folds away. "Preparing photos" and "Rendering n%" VERIFIED by render; "Finding roads" UNKNOWN on screen (the seeded trip passes it in under a second). The sheet's middle is empty while rendering |
-| 3 | ⏸ Chiu's answer arrived incomplete ("so the"); asked again. `LinearTimeline` needs a composed trip, and compose runs after routing; stop and photo counts are cheap via `FilmPhotoChoices` |
+| 3 | ✅ #103: "N 個停留點 · M 張照片" above Export, counts only (Chiu), from `FilmPhotoChoices`; stops only with photo cards off. No duration: the timeline needs compose, which runs after routing. VERIFIED by render (4 · 4 → take a stop out → 3 · 2 → cards off → 3) and `FilmPhotoChoicesTests` |
 | 4 | ✅ #103: the toggle and its note form one section; Format follows the stops. GIF kept. VERIFIED by render |
 | 5 | now **VERIFIED** by render: with the last vehicle (海鷗) selected, the sheet opens with it off screen. Fix still to build |
 

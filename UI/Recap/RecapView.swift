@@ -140,6 +140,7 @@ struct RecapView: View {
         let content = VStack(alignment: .leading, spacing: 8) {
             switch model.phase {
             case .idle:
+                filmSummary
                 exportButton
 
             case let .rendering(progress):
@@ -179,6 +180,7 @@ struct RecapView: View {
                 Text(message)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                filmSummary
                 exportButton
             }
         }
@@ -188,6 +190,28 @@ struct RecapView: View {
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity)
             .background(.bar)
+    }
+
+    /// **What the tap will make, said before it** (DESIGNER.md UX rule 3, S5
+    /// review item 3): "N stops · M photos", counts only (Chiu 2026-09-26).
+    /// Read off the same plan the export composes and the list above draws, so
+    /// it moves as stops go in and out. No duration: the timeline needs a
+    /// composed trip, and composing waits on routing. With photo cards off the
+    /// film shows none, so the photos half is not said.
+    @ViewBuilder
+    private var filmSummary: some View {
+        if let filmPhotos {
+            let stops = String.localizedStringWithFormat(
+                String(localized: "recap_film_stop_count"), filmPhotos.filmStops.count
+            )
+            let photos = String.localizedStringWithFormat(
+                String(localized: "recap_film_photo_count"), filmPhotos.filmPhotoCount
+            )
+            Text(verbatim: model.photosEnabled ? "\(stops) · \(photos)" : stops)
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     /// The stage's name. The two later ones reuse the sentences the screen
