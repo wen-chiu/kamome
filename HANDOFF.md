@@ -168,11 +168,10 @@ string stands. Do not reopen this from scratch.
 
 ## ⏱ Export time is measured now, and a crossing arc is half the bill
 
-A film with a transit stop took **1,859 s**. The export logs its plan up front
-and its cost by stage at the end. Measured offline: `auckland-crossing` spends
-**54 of 102 stations on ~4 s of arc**; magnification 1.10 → 1.25 halves the
-budget and costs sharpness — Chiu's call, judged against renders.
-→ `Docs/handoff-export-performance.md`.
+Plan and per-stage cost are logged. Offline, a crossing arc is **54 of 102
+stations**; magnification 1.10 → 1.25 halves that (Chiu's look call). **Iceland
+859 s:** new lines say why a snapshot costs what it does; tile cache 50 → 256 MB.
+**Owed: one device `render substrate` line** → `Docs/handoff-export-performance.md` §8.
 
 ## 🐛 Known bugs and accepted costs
 

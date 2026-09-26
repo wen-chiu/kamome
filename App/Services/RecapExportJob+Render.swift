@@ -135,6 +135,10 @@ extension RecapExportJob {
         KamomeLog.recap.notice(
             "render plan: \(stationCount) stations for \(plan.timeline.frameCount) frames"
         )
+        // What the phone brought to this render, and — at every exit — what
+        // the map renderer did with it (`RecapExportJob+Diagnostics`).
+        let conditions = await beginConditions(plan: plan)
+        defer { reportConditions(conditions) }
         let scratch = FileManager.default.temporaryDirectory
         let stamp = Int(Date.now.timeIntervalSince1970)
         let videoURL = scratch.appendingPathComponent("kamome-recap-\(stamp).mp4")

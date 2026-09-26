@@ -197,7 +197,8 @@
     "pipeline": {
       "prefetch_depth": 8,
       "composite_concurrency": 4,
-      "snapshot_timeout_s": 60
+      "snapshot_timeout_s": 60,
+      "map_cache_mb": 256
     }
   }
 }
