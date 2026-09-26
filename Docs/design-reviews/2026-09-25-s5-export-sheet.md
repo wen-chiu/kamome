@@ -33,16 +33,17 @@ where the Export button went missing below the photo list.
 
 ### Recommendations (fix before the milestone)
 
-**Status 2026-09-26 (PR #103):** 1 and 4 resolved; 2 resolved except the named
-stage; 3 stopped, not built. Evidence, screenshots and the open questions are in
-the PR description; all renders are the seeded Perth trip on a simulator.
+**Status 2026-09-26 (PR #103, ADR 2026-09-26):** 1, 2 and 4 resolved; 3 waits on Chiu.
+Evidence and screenshots are in the PR description; all renders are the seeded
+Perth trip on a simulator.
 
 | # | status |
 |---|---|
-| 1 | ✅ resolved #103: title line, Save + Share paired, Delete in ⋯ (confirmation kept), Export again a text button. VERIFIED by render, en + zh-Hant, light + dark. Title wording and hiding the render time in Release are **Chiu's** |
-| 2 | ◐ #103: percentage and the folded form, VERIFIED by render. **Stage name open**: the channel reports frames only, and the stages as suggested do not match the pipeline (routing → compose → photos → frames; tiles are per frame). Needs either a `RecapExportChannel` change (rule 2) or an inference; **Chiu's**. The folded form leaves the sheet's middle empty while rendering |
-| 3 | ⏸ stopped: `LinearTimeline` needs a composed trip. Compose is local-only (VERIFIED by reading) but runs after routing, so a pre-export estimate may differ (INFERRED). Stop and photo counts are cheap via `FilmPhotoChoices`; **Chiu's** call on which line to show |
-| 4 | ✅ resolved #103: the toggle and its note form one section; Format follows the stops. GIF kept. VERIFIED by render |
+| 1 | ✅ #103: title line (Chiu's copy, drawn verbatim), Save + Share paired, Delete in ⋯ (confirmation kept), Export again a text button. "Rendered in X s" stays in Release (Chiu). VERIFIED by render, en + zh-Hant, light + dark |
+| 2 | ✅ #103: `RecapExportChannel.stage` (Chiu: option a), percentage while drawing, the form folds away. "Preparing photos" and "Rendering n%" VERIFIED by render; "Finding roads" UNKNOWN on screen (the seeded trip passes it in under a second). The sheet's middle is empty while rendering |
+| 3 | ⏸ Chiu's answer arrived incomplete ("so the"); asked again. `LinearTimeline` needs a composed trip, and compose runs after routing; stop and photo counts are cheap via `FilmPhotoChoices` |
+| 4 | ✅ #103: the toggle and its note form one section; Format follows the stops. GIF kept. VERIFIED by render |
+| 5 | now **VERIFIED** by render: with the last vehicle (海鷗) selected, the sheet opens with it off screen. Fix still to build |
 
 1. **The finished screen is not yet a moment (UX rule 6).** Delete is a
    full-width red button with the same weight as Share. Suggest: Save and Share

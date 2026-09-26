@@ -6706,3 +6706,39 @@ photograph once `unavailable` is later analysed.
 downloading iCloud originals in the background (point 5); quality in stop ranking now (point 4);
 columns on `photo_ref` (lost on every re-match); a custom Core ML model or any server (a dependency,
 and §0).
+
+## 2026-09-26 — The finished film is a moment, the wait says where it is, and a stop is 停留點
+
+**Decision (Chiu 2026-09-26, answering the S5 review's questions; PR #103).**
+
+1. **The finished screen's four actions keep their existence and change their weight** (Chiu
+   2026-09-05 still governs *which* actions). Save to Photos and Share are the primary pair, side
+   by side; Export again is a text button; Delete Film is in the ⋯ menu and keeps its confirmation.
+2. **"Rendered in X s" stays in Release.** It is the §4.5 readout, and Chiu keeps it visible on
+   every build.
+3. **The completion title is Chiu's copy**: "Kamome made your trip into a film" /
+   「卡摸咩~卡膜咩嘛飛來~影片完成」 — 卡膜咩 and both `~` as written. It is drawn **verbatim**
+   (`String(localized:)`), never as a `Text` key: a key is parsed as Markdown, and the two `~`
+   rendered as a strikethrough (VERIFIED by render, fixed in the same PR).
+4. **The export says which stage it is in** — option (a), a `CLAUDE.md` rule-2 interface change
+   Chiu approved. `RecapExportChannel` gains `stage`, set by `RecapExportJob.run`:
+   `findingRoads` → `preparingPhotos` (compose, plan, photo warm) → `drawing` (frames). Three,
+   because map tiles are fetched *inside* the frame loop, so "drawing the route" is not a stage.
+   The percentage shows only while drawing — it measures frames. Rejected: (b), inferring the
+   stage in `RecapModel` from which findings have arrived, which makes `run`'s call order an
+   unwritten contract with a view.
+5. **Traditional Chinese calls a stop 停留點**, everywhere. #98's picker strings (站點, 一站,
+   每站) are rewritten to it; the film's space-limited figure labels keep 停留.
+6. **Vehicle names follow the screen's language.** The pickers looked names up by
+   `languageCode` ("zh") in a manifest keyed "zh-Hant", so a Chinese screen showed "Red car". They
+   now use the bundle's chosen localization (`VehicleSubject.screenName`), pinned by
+   `VehicleScreenNameTests`.
+
+**Not done:** the preview line above Export (review item 3) — Chiu's answer arrived incomplete and
+is asked again. `LinearTimeline` needs a composed trip, and compose runs after routing.
+
+| Claim | Status | Cheapest thing that settles it |
+|---|---|---|
+| The job reports the three stages in order | **VERIFIED** by reading `run`; the coordinator plumbing by `RecapExportCoordinatorTests` | — |
+| 「正在準備你的照片…」 then 「算圖中…」 with a percentage appear on screen | **VERIFIED** by render (simulator, seeded Perth trip) | — |
+| 「正在找出你走過的路…」 appears on screen | **UNKNOWN** — the seeded trip passes the stage in under a second | An import with routing live, on a phone |

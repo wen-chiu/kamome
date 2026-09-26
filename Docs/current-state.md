@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-26 against decisions.md **2026-09-25 (d)** and `main` at
-**PR #101** (#103: S5 UX 1, 4, part of 2. **(d)**, #101: background Vision auto-pick, v12, probe owed.
+Last synced: 2026-09-26 against decisions.md **2026-09-26** and `main` at
+**PR #101** (#103: **2026-09-26**, S5 UX. **(d)**, #101: background Vision auto-pick, v12, probe owed.
 #99, #96: S5 sheet fixes. #100: (c) walk-only land, v11. #98: (b) picks, v10.
 #95: (e) per-area context floor, town in the pill,
 schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
