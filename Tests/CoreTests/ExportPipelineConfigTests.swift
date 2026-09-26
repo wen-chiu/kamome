@@ -20,12 +20,15 @@ final class ExportPipelineConfigTests: XCTestCase {
         XCTAssertGreaterThan(pipeline.prefetchDepth, 0)
         XCTAssertGreaterThan(pipeline.compositeConcurrency, 0)
         XCTAssertGreaterThan(pipeline.snapshotTimeoutS, 0)
+        XCTAssertGreaterThan(pipeline.mapCacheMb, 0)
     }
 
     func testEveryCopyKeepsThePipeline() throws {
         // The shipped values equal `.handBuilt`, so a reset would not show on
         // them: load a copy of the file whose pipeline no default could produce.
-        let base = try shipped(pipeline: ["prefetch_depth": 3, "composite_concurrency": 2, "snapshot_timeout_s": 7])
+        let base = try shipped(pipeline: [
+            "prefetch_depth": 3, "composite_concurrency": 2, "snapshot_timeout_s": 7, "map_cache_mb": 9
+        ])
         XCTAssertNotEqual(base.pipeline, .handBuilt, "precondition: the marked pipeline differs from the default")
         let copies: [TrackingConfig.Export] = [
             base.withFollowHeadingUp(!base.followHeadingUp),

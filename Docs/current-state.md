@@ -9,11 +9,11 @@ way — this file rotted twice by growing its own reasoning.
 Last synced: 2026-09-26 against decisions.md **2026-09-26 (b)** and `main` at
 **PR #101** (**ADRs 2026-09-26, (b)**: (f) 160 km/h, stop-zone days v14, UI/
 lint, verdict v13. #101: (d) Vision, v12, probe owed; #99, #96: S5. #100: (c) walk land, v11. #98: (b) picks, v10.
+Export §8 (`Docs/handoff-export-performance.md`): snapshot cost logged, cache 256 MB.
 #95: (e) area floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. PR #93: ADRs (c), (d). #91: star picker, superseded by (b)). #92: 2026-09-24 (b). PR #89 (**ADR 2026-09-24**: the body is framed per camera
+schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #91: superseded by (b)). #92: 09-24 (b). #89 (**ADR 2026-09-24**: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
-renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). PRs #85–#88: 2026-09-23 ADRs (b)–(f), export perf §7. PR #81: export speed; device figures owed
-(`Docs/handoff-export-performance.md` §7). PR #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
+renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). #85–#88: 09-23 ADRs (b)–(f), export perf §7. #81: export speed (device run: §8). #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). PR #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
 names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
 airport-only home is type 2, the film ends at the destination (2026-09-01 built),
 every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the

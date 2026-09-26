@@ -23,22 +23,35 @@ extension TrackingConfig {
         /// 60 s is ~40× the 0.72–1.55 s measured per snapshot on the simulator
         /// (`Docs/handoff-export-performance.md`); INFERRED, device figure owed.
         public let snapshotTimeoutS: Double
+        /// The on-device tile cache the map renderer may keep, in MB (2026-09-25).
+        /// MapLibre's default is 50 MB (VERIFIED, `MLNOfflineStorage.h`), and a
+        /// film that covers a whole island at several zooms, with a terrain DEM
+        /// under it, may need more than that. If it does, tiles are evicted and
+        /// downloaded again partway through the export. 256 is INFERRED, not
+        /// measured: the `render substrate` log line counts tile requests
+        /// against distinct tiles, and a gap between the two is the reading that
+        /// says whether this is big enough. Timing only; no pixel changes.
+        public let mapCacheMb: Int
 
-        public init(prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double) {
+        public init(prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double, mapCacheMb: Int) {
             self.prefetchDepth = prefetchDepth
             self.compositeConcurrency = compositeConcurrency
             self.snapshotTimeoutS = snapshotTimeoutS
+            self.mapCacheMb = mapCacheMb
         }
 
         /// For hand-built test configs only, like `targetZoomRatio`'s default:
         /// the JSON block is still required, so a config file missing it fails
         /// loudly. Mirrors the shipped values.
-        public static let handBuilt = ExportPipeline(prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60)
+        public static let handBuilt = ExportPipeline(
+            prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256
+        )
 
         enum CodingKeys: String, CodingKey {
             case prefetchDepth = "prefetch_depth"
             case compositeConcurrency = "composite_concurrency"
             case snapshotTimeoutS = "snapshot_timeout_s"
+            case mapCacheMb = "map_cache_mb"
         }
     }
 }

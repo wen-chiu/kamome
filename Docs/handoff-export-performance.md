@@ -200,3 +200,47 @@ composite + encode + GIF on the Mac.
   paid as magnification. Snapshotting at `frame × station/tightest span` pixels
   would make pans cost pixels instead of stations *and* be sharper — this is §6's
   structural item, a look change, Chiu's ADR.
+
+## 8. Third pass, 2026-09-25 — why a snapshot costs what it does (Iceland, 859 s)
+
+Chiu's trigger: the Iceland film (4+ min of film, 14 days, 26 stops) rendered
+in **859.3 s** on device. `render cost` says *how long* the snapshots took.
+It cannot say why. Three log lines now say it, on **every** exit, including
+cancel and failure (`RecapExportJob+Diagnostics`, counts and fixed words only):
+
+    render device: thermal <state> · low power on|off · background GPU supported|not supported|n/a (iOS < 26)
+    map cache: <n> MB ambient
+    render thermal: <start> → <end> · worst <state> · <s>s at serious or above
+    render substrate: <n> snapshots (<f> failed) · mean <x>s, style <y>s|n/a ·
+      peak in flight <p> · requests <r> / <d> distinct · <v> revalidated · <t> refetched
+
+How to read them, and what each reading decides:
+
+| reading | means | lever |
+|---|---|---|
+| `style` a small share of `mean` | setup is cheap, tiles are the cost | **not** a persistent renderer (§7) |
+| `refetched` well above 0 | the cache dropped tiles mid-film | raise `map_cache_mb` |
+| `revalidated` ≈ `requests − distinct` | expired tiles re-checked, one round trip each | tile prefetch / freshness, not cache size |
+| `peak in flight` 1 | snapshots never overlapped | `prefetch_depth` buys nothing |
+| worst `serious`, many seconds hot | the phone throttled | the figure measures heat as well as code |
+| `background GPU` not supported | iOS 26 continued processing cannot keep MapLibre running | pause/resume, not background render |
+
+**Landed, no pixel changes:** `export.pipeline.map_cache_mb` (256, INFERRED)
+sizes MapLibre's ambient cache before the first snapshot. The default is
+**50 MB** (VERIFIED, `MLNOfflineStorage.h`). **Not done:** a bounding-box tile
+pre-download. Iceland's box at z14 is ~130,000 tiles (INFERRED from tile
+geometry at 64°N), and the film needs only the ones along its camera path, which
+is what the render fetches anyway. Revisit only if `revalidated` says round
+trips are the cost.
+
+**Measured on the simulator, 2026-09-26** (`MapSubstrateMeterTests`, opt-in
+`TEST_RUNNER_KAMOME_LIVE_TILES=1`, one 256 px frame of Tokyo, **not a device
+figure**): style load **0.02 s** of a **2.2 s** cold snapshot. An identical second
+snapshot cost **0.08 s**, sent 2 requests, both **revalidations**, and refetched
+nothing. So the §7 hypothesis that setup is the bill is **weakened**. The cost
+looks like tile fetching and decoding. Settled by the device line above.
+
+**VERIFIED:** MapLibre 6.27 never calls `MLNNetworkConfigurationDelegate`'s
+`didReceiveResponse:`, neither on success nor on DNS failure. Status codes and
+bytes cannot be measured that way. The request side (`willSendRequest:` with
+its conditional headers) is what the meter counts.
