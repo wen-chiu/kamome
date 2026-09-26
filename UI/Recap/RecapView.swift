@@ -91,22 +91,32 @@ struct RecapView: View {
 
     private var exportForm: some View {
         Form {
-            vehicleSection
+            // **The settings fold away while rendering** (S5 review 2026-09-25,
+            // item 2). They used to stay on screen disabled, which is a form that
+            // looks editable and is not; the film in flight has already chosen.
+            if !model.isRendering {
+                vehicleSection
 
-            Section {
-                Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
-                    .disabled(model.isRendering)
-                Picker("recap_format", selection: $model.format) {
-                    Text("recap_format_mp4").tag(RecapModel.Format.mp4)
-                    Text("recap_format_gif").tag(RecapModel.Format.gif)
+                // Its own section so the note reads as the toggle's, not as a
+                // caption under Format (S5 review item 4).
+                Section {
+                    Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
+                } footer: {
+                    // The load-bearing sentence: photos ≠ chrome.
+                    Text("recap_photos_note")
                 }
-                .disabled(model.isRendering)
-            } footer: {
-                // The load-bearing sentence: photos ≠ chrome.
-                Text("recap_photos_note")
-            }
 
-            filmPhotosSection
+                filmPhotosSection
+
+                // After the stops: GIF is a minority choice and MP4 the default
+                // (UX rule 2), so Format is the last setting, not the second.
+                Section {
+                    Picker("recap_format", selection: $model.format) {
+                        Text("recap_format_mp4").tag(RecapModel.Format.mp4)
+                        Text("recap_format_gif").tag(RecapModel.Format.gif)
+                    }
+                }
+            }
 
             if model.photoShortfall != nil {
                 Section { photoShortfallNotice }
@@ -136,8 +146,11 @@ struct RecapView: View {
                 if let preload = model.photoPreload {
                     photoPreloadProgress(preload)
                 } else {
+                    // A 1–3 minute wait owes a number (S5 review item 2).
                     ProgressView(value: progress) {
                         Text("recap_rendering")
+                    } currentValueLabel: {
+                        Text(progress, format: .percent.precision(.fractionLength(0)))
                     }
                 }
                 // The promise, and its exact bounds (Chiu 2026-09-10):
@@ -187,10 +200,10 @@ struct RecapView: View {
 
     /// Which stops the film presents and what each shows, before it is
     /// rendered (ADR 2026-09-24, Chiu 2026-09-25) — `FilmStopsSections`.
-    /// Hidden while rendering — the film in flight has already chosen.
+    /// Hidden while rendering, with the rest of the settings — `exportForm`.
     @ViewBuilder
     private var filmPhotosSection: some View {
-        if model.photosEnabled, !model.isRendering, let filmPhotos {
+        if model.photosEnabled, let filmPhotos {
             FilmStopsSections(choices: filmPhotos)
         }
     }
@@ -199,7 +212,7 @@ struct RecapView: View {
     /// 2026-09-22): the choice only ever affected the film — nothing on the
     /// trip screen read it — so it belongs where the film is actually
     /// configured. A mid-render edit is safe (`RecapExportJob` snapshots the
-    /// subject once at compose time); it is still disabled while rendering so
+    /// subject once at compose time); it is still hidden while rendering so
     /// the picker never reads as "this changes the film in progress".
     ///
     /// The plane is deliberately absent: the app picks it from the journey for
@@ -222,7 +235,6 @@ struct RecapView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                .disabled(model.isRendering)
                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 0))
             }
         }
@@ -290,8 +302,20 @@ struct RecapView: View {
     /// On finish the film plays immediately, inline, on this screen (Chiu
     /// 2026-09-05). Four actions: save to Photos / share / delete / export
     /// again. The render-time readout stays — it is the §4.5 budget readout.
+    ///
+    /// **Completion is a moment** (DESIGNER.md UX rule 6, S5 review item 1).
+    /// The four actions are unchanged; only their weight is: Save and Share are
+    /// the pair, Export again is a text button, and Delete lives in the ⋯ menu,
+    /// still behind its confirmation — it was a full-width red button as heavy
+    /// as Share.
     private func finishedContent(fileURL: URL) -> some View {
         VStack(spacing: 0) {
+            Text("recap_finished_title")
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .padding(.top, 8)
+
             // Inline preview — starts immediately. A GIF is not a video:
             // `AVPlayer` shows a struck-through play glyph for one, so it gets
             // its own view (2026-09-25).
@@ -335,33 +359,23 @@ struct RecapView: View {
 
             // Action buttons
             VStack(spacing: 12) {
-                // Save to Photos — explicit user tap, never automatic (§0).
-                photosSaveButton(fileURL: fileURL)
+                HStack(spacing: 12) {
+                    // Save to Photos — explicit user tap, never automatic (§0).
+                    photosSaveButton(fileURL: fileURL)
 
-                if case let .finished(film, _) = model.phase {
                     ShareLink(item: fileURL) {
                         Label("recap_share", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
-
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Label("recap_film_delete", systemImage: "trash")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .confirmationDialog(
-                        "recap_film_delete_confirm",
-                        isPresented: $showDeleteConfirmation,
-                        titleVisibility: .visible
-                    ) {
-                        Button("recap_film_delete", role: .destructive) {
-                            model.deleteFilm(film)
-                            player = nil
-                        }
-                    }
+                }
+                // Said beside the buttons, not inside one: a sentence on a
+                // prominent button reads as the button's action.
+                if photosSaveState == .failed {
+                    Text("recap_save_failed")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                 }
 
                 // Back to the form, not straight into a render: the next film
@@ -371,10 +385,35 @@ struct RecapView: View {
                     photosSaveState = .idle
                     model.exportAgain()
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderless)
             }
             .padding(.horizontal)
             .padding(.bottom)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("recap_film_delete", systemImage: "trash")
+                    }
+                } label: {
+                    Label("recap_more_actions", systemImage: "ellipsis.circle")
+                }
+            }
+        }
+        .confirmationDialog(
+            "recap_film_delete_confirm",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("recap_film_delete", role: .destructive) {
+                if case let .finished(film, _) = model.phase {
+                    model.deleteFilm(film)
+                    player = nil
+                }
+            }
         }
         .onAppear {
             guard !isGIF(fileURL) else { return }
@@ -388,22 +427,7 @@ struct RecapView: View {
         }
     }
 
-    @ViewBuilder
     private func photosSaveButton(fileURL: URL) -> some View {
-        VStack(spacing: 6) {
-            photosSaveButtonBody(fileURL: fileURL)
-            // Said beside the button, not inside it: a sentence on a prominent
-            // button reads as the button's action.
-            if photosSaveState == .failed {
-                Text("recap_save_failed")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-    }
-
-    private func photosSaveButtonBody(fileURL: URL) -> some View {
         Button {
             saveToPhotos(fileURL: fileURL)
         } label: {
