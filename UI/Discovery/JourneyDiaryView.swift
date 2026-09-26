@@ -256,7 +256,7 @@ private struct RideChip: View {
             if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
                 Image(decorative: thumbnail, scale: 1)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .scaledToFit()
                     .frame(width: 24, height: 24)
             }
             Text(subject.screenName).font(.subheadline)

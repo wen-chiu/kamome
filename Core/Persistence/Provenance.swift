@@ -101,4 +101,36 @@ public enum SegmentRoutability: String, CaseIterable, Sendable {
         guard let storage, let value = SegmentRoutability(rawValue: storage) else { return nil }
         self = value
     }
+
+    // MARK: - Which rules a verdict was reached under (schema v13)
+
+    /// **Bump this when a rule that produces a verdict changes**, and raise that
+    /// verdict's `lastRevised` to the new number (arch review 2026-09-26, round
+    /// 2 point 3). Until this existed, a stored verdict was never re-asked, so
+    /// v7 and v11 each had to clear `no_road` with a data migration, and ADR
+    /// 2026-09-24 (f) had to accept that retuning the pace numbers would not
+    /// touch a leg already judged. Now a rule change re-asks exactly the legs
+    /// whose verdict it could change, and no others — a `road` stays road.
+    public static let rulesVersion = 2
+
+    /// The rules version in which this verdict's rule last changed.
+    ///
+    /// - 1: everything up to and including ADR 2026-09-25 (c); v7 and v11
+    ///   already brought stored rows up to it.
+    /// - 2: `crossing_pace_min_kmh` 150 → 160 (ADR 2026-09-26 (b)). Only
+    ///   `beyondDriving` can change under it — a raised threshold makes a leg
+    ///   judged at 150–160 km/h no longer a crossing, and makes nothing else
+    ///   one — so only those legs are judged again (on the phone, and sent to
+    ///   routing only if they are no longer too fast).
+    public var lastRevised: Int {
+        switch self {
+        case .road, .noRoad, .implausibleRoute, .offRoadNetwork: return 1
+        case .beyondDriving: return 2
+        }
+    }
+
+    /// Whether a verdict stored under `version` (NULL = 1) is still an answer.
+    public func stillHolds(storedUnder version: Int?, lastRevised: Int? = nil) -> Bool {
+        (version ?? 1) >= (lastRevised ?? self.lastRevised)
+    }
 }

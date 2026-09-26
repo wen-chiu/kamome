@@ -86,7 +86,13 @@ final class RecapExportCoordinator {
     private var findings: [String: Findings] = [:]
 
     private var task: Task<Void, Never>?
-    private var cancelFlag = ExportCancelFlag()
+    /// Set for as long as a film renders — read off the main actor by background
+    /// work that should step aside for it (photo analysis, arch review
+    /// 2026-09-26 round 2 point 5). Per instance, so a test's coordinator never
+    /// leaves the app's flag set.
+    let rendering = SharedFlag()
+    private var idleObservers: [() -> Void] = []
+    private var cancelFlag = SharedFlag()
     private let lifecycle: ExportLifecycleGuard
 
     /// `shared` is the app's one owner. The initialiser is reachable so tests
@@ -151,7 +157,8 @@ final class RecapExportCoordinator {
 
         outcomes[request.tripId] = nil
         findings[request.tripId] = nil
-        cancelFlag = ExportCancelFlag()
+        rendering.set()
+        cancelFlag = SharedFlag()
         running = Running(request: request)
         let flag = cancelFlag
         // Taken before the render starts and released in `finish` below, which
@@ -208,6 +215,14 @@ final class RecapExportCoordinator {
         running = nil
         task = nil
         outcomes[tripId] = outcome
+        rendering.clear()
+        idleObservers.forEach { $0() }
+    }
+
+    /// Called each time a render ends, however it ended — how work that stepped
+    /// aside for the film picks up again.
+    func whenIdle(_ action: @escaping () -> Void) {
+        idleObservers.append(action)
     }
 
     /// Whether the screen is currently pinned awake — read by the exit-path

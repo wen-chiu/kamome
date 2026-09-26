@@ -42,18 +42,7 @@ final class RouteMatchCoordinator {
     private(set) var reports: [String: RouteMatchReport] = [:]
 
     private var running: [String: Task<RouteMatchReport, Never>] = [:]
-    private var flags: [String: CancelFlag] = [:]
-
-    /// Set on main, read from the routing task between legs — the same
-    /// lock-guarded shape `RecapModel` uses for the render, and for the same
-    /// reason: the worker cannot make an actor hop mid-loop.
-    private final class CancelFlag: @unchecked Sendable {
-        private let lock = NSLock()
-        private var value = false
-
-        func set() { lock.withLock { value = true } }
-        var isSet: Bool { lock.withLock { value } }
-    }
+    private var flags: [String: SharedFlag] = [:]
 
     private init() {}
 
@@ -88,7 +77,7 @@ final class RouteMatchCoordinator {
     private func run(tripId: String, service: RouteMatchService) -> Task<RouteMatchReport, Never> {
         if let existing = running[tripId] { return existing }
 
-        let flag = CancelFlag()
+        let flag = SharedFlag()
         flags[tripId] = flag
         progress[tripId] = Progress(completed: 0, total: 0)
 

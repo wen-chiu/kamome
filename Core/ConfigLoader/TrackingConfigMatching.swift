@@ -167,7 +167,7 @@ public extension TrackingConfig {
             routeWaypointMinSpacingM: Double,
             routeWaypointRadiusM: Double,
             apiKeyRequired: Bool = true,
-            crossingPaceMinKmh: Double = 150,
+            crossingPaceMinKmh: Double = 160,
             crossingPaceMinDistanceM: Double = 100_000,
             crossingPaceClockMarginS: Double = 7_200
         ) {

@@ -22,8 +22,8 @@ public extension TripRepository {
     func setRoutability(segmentId: String, _ verdict: SegmentRoutability) throws {
         try database.writer.write { db in
             try db.execute(
-                sql: "UPDATE segment SET routability = ? WHERE id = ?",
-                arguments: [verdict.rawValue, segmentId]
+                sql: "UPDATE segment SET routability = ?, routability_version = ? WHERE id = ?",
+                arguments: [verdict.rawValue, SegmentRoutability.rulesVersion, segmentId]
             )
         }
     }

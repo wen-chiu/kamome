@@ -125,7 +125,8 @@ struct RecapExportJob: RecapExportRunning {
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export,
             everyLegRoutabilityEstablished:
-                RecapComposer.everyLegRoutabilityEstablished(film.segments)
+                RecapComposer.everyLegRoutabilityEstablished(film.segments),
+            clock: TripClock(stops: detail.stops)
         ) else { return nil }
         announceFilmType(trip)
         return Composed(trip: trip, detail: detail)

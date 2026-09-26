@@ -33,7 +33,7 @@ where the Export button went missing below the photo list.
 
 ### Recommendations (fix before the milestone)
 
-**Status 2026-09-26 (PR #103, ADR 2026-09-26):** 1–4 resolved; polish 5 open.
+**Status 2026-09-26 (PR #103, ADR 2026-09-26 (c)):** 1–4 resolved; polish 5 open.
 Evidence and screenshots are in the PR description; all renders are the seeded
 Perth trip on a simulator.
 
