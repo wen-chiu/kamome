@@ -309,6 +309,12 @@ schemes:
         - { variable: KAMOME_RENDER_OUT, value: "$(TEST_RUNNER_KAMOME_RENDER_OUT)", isEnabled: true }
         - { variable: KAMOME_RENDER_STILLS, value: "$(TEST_RUNNER_KAMOME_RENDER_STILLS)", isEnabled: true }
         - { variable: KAMOME_SNAPSHOT_AUDIT, value: "$(TEST_RUNNER_KAMOME_SNAPSHOT_AUDIT)", isEnabled: true }
+        - { variable: KAMOME_TILE_BENCH, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH)", isEnabled: true }
+        - { variable: KAMOME_TILE_BENCH_COLD, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_COLD)", isEnabled: true }
+        - { variable: KAMOME_TILE_BENCH_COMPARE, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_COMPARE)", isEnabled: true }
+        - { variable: KAMOME_TILE_BENCH_FIX, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_FIX)", isEnabled: true }
+        - { variable: KAMOME_TILE_BENCH_LIMIT, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_LIMIT)", isEnabled: true }
+        - { variable: KAMOME_TILE_BENCH_OUT, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_OUT)", isEnabled: true }
         - { variable: KAMOME_STOP_PHOTOS, value: "$(TEST_RUNNER_KAMOME_STOP_PHOTOS)", isEnabled: true }
         - { variable: KAMOME_STOP_STILL, value: "$(TEST_RUNNER_KAMOME_STOP_STILL)", isEnabled: true }
         - { variable: KAMOME_SUBJECT_STILL, value: "$(TEST_RUNNER_KAMOME_SUBJECT_STILL)", isEnabled: true }

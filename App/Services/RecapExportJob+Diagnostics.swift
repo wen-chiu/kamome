@@ -28,7 +28,11 @@ extension RecapExportJob {
         let measuresSubstrate = plan.provider is MapLibreSnapshotProvider
         if measuresSubstrate {
             let cacheMb = plan.config.pipeline.mapCacheMb
-            if let error = await MapLibreSnapshotProvider.prepareForExport(cacheMb: cacheMb) {
+            if let error = await MapLibreSnapshotProvider.prepareForExport(
+                cacheMb: cacheMb, coalesce: plan.config.pipeline.coalesceTileRequests,
+                terrainMaxAgeS: plan.config.pipeline.terrainMaxAgeS,
+                tileMemoryMb: plan.config.pipeline.tileMemoryMb
+            ) {
                 // Not fatal: the render still works on the old cache size, only
                 // slower if it evicts. Full text private, as for a failed export.
                 KamomeLog.recap.error("map cache: could not set \(cacheMb) MB — \(error)")

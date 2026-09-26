@@ -99,7 +99,7 @@ final class MapSubstrateMeterTests: XCTestCase {
     /// notice.
     @MainActor
     func testTheNetworkHookAndSnapshotTimingSeeARealSnapshot() async throws {
-        let error = await MapLibreSnapshotProvider.prepareForExport(cacheMb: 64)
+        let error = await MapLibreSnapshotProvider.prepareForExport(cacheMb: 64, coalesce: true, terrainMaxAgeS: 60, tileMemoryMb: 8)
         XCTAssertNil(error, "setting the ambient cache size must succeed")
         let provider = MapLibreSnapshotProvider(
             styleURL: try unresolvableStyle(), attribution: RecapMapAttribution.openFreeMapBase
@@ -131,7 +131,7 @@ final class MapSubstrateMeterTests: XCTestCase {
             ProcessInfo.processInfo.environment["KAMOME_LIVE_TILES"] == "1",
             "Live network test — set KAMOME_LIVE_TILES=1."
         )
-        _ = await MapLibreSnapshotProvider.prepareForExport(cacheMb: 64)
+        _ = await MapLibreSnapshotProvider.prepareForExport(cacheMb: 64, coalesce: true, terrainMaxAgeS: 60, tileMemoryMb: 8)
         let provider = MapLibreSnapshotProvider(
             styleURL: try RecapMapStyle.resolvedNetworkStyleURL(styleResource: "openfreemap-liberty-dark"),
             attribution: RecapMapAttribution.openFreeMapBase

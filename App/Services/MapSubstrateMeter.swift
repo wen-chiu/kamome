@@ -45,15 +45,62 @@ final class MapSubstrateMeter: @unchecked Sendable {
         var distinctRequests = 0
         var revalidations = 0
         var refetches = 0
+        /// The same counts, split by what was asked for — which host's caching
+        /// behaviour a repeat comes from is the whole diagnosis (2026-09-26:
+        /// OpenFreeMap's vector tiles say `max-age` ten years, AWS's terrain
+        /// tiles say nothing at all).
+        var byKind: [TileKind: KindCounts] = [:]
+
+        func counts(_ kind: TileKind) -> KindCounts { byKind[kind] ?? KindCounts() }
 
         var meanStyleS: Double? { styled > 0 ? styleS / Double(styled) : nil }
         var meanSnapshotS: Double { snapshots > 0 ? snapshotS / Double(snapshots) : 0 }
     }
 
+    /// What a request was for. Named from the URL's host and extension only,
+    /// never its path — the path is z/x/y, a place.
+    enum TileKind: String, CaseIterable {
+        case vector, terrain, other
+
+        init(_ url: URL) {
+            let host = url.host ?? ""
+            if host.hasSuffix("openfreemap.org"), url.pathExtension == "pbf", !url.path.contains("/fonts/") {
+                self = .vector
+            } else if host.hasSuffix("amazonaws.com"), url.pathExtension == "png" {
+                self = .terrain
+            } else {
+                self = .other
+            }
+        }
+    }
+
+    struct KindCounts: Equatable {
+        var requests = 0
+        var distinct = 0
+        var revalidations = 0
+        var refetches = 0
+        /// Seconds between a URL's first request and each repeat of it, in
+        /// the order they happened. A repeat seconds after the first is several
+        /// snapshotters racing for one tile; a repeat minutes later is the
+        /// cache failing to keep it.
+        var repeatGapsS: [Double] = []
+
+        var medianRepeatGapS: Double? {
+            guard !repeatGapsS.isEmpty else { return nil }
+            return repeatGapsS.sorted()[repeatGapsS.count / 2]
+        }
+    }
+
     private let lock = NSLock()
+    private let clock: () -> Double
+    private var firstSeenS: [Int: Double] = [:]
     private var reading = Reading()
     private var inFlight = 0
     private var seen = Set<Int>()
+
+    init(clock: @escaping () -> Double = { ProcessInfo.processInfo.systemUptime }) {
+        self.clock = clock
+    }
 
     func reset() {
         lock.lock()
@@ -61,6 +108,7 @@ final class MapSubstrateMeter: @unchecked Sendable {
         reading = Reading()
         inFlight = 0
         seen = []
+        firstSeenS = [:]
     }
 
     func read() -> Reading {
@@ -99,12 +147,25 @@ final class MapSubstrateMeter: @unchecked Sendable {
         defer { lock.unlock() }
         reading.requests += 1
         guard let url else { return }
-        if seen.insert(url.absoluteString.hashValue).inserted {
+        let kind = TileKind(url)
+        var counts = reading.counts(kind)
+        counts.requests += 1
+        let key = url.absoluteString.hashValue
+        let now = clock()
+        if seen.insert(key).inserted {
             reading.distinctRequests += 1
-        } else if conditional {
-            reading.revalidations += 1
+            counts.distinct += 1
+            firstSeenS[key] = now
         } else {
-            reading.refetches += 1
+            if conditional {
+                reading.revalidations += 1
+                counts.revalidations += 1
+            } else {
+                reading.refetches += 1
+                counts.refetches += 1
+            }
+            counts.repeatGapsS.append(now - (firstSeenS[key] ?? now))
         }
+        reading.byKind[kind] = counts
     }
 }
