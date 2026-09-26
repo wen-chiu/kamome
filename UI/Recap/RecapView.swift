@@ -78,22 +78,32 @@ struct RecapView: View {
 
     private var exportForm: some View {
         Form {
-            vehicleSection
+            // **The settings fold away while rendering** (S5 review 2026-09-25,
+            // item 2). They used to stay on screen disabled, which is a form that
+            // looks editable and is not; the film in flight has already chosen.
+            if !model.isRendering {
+                vehicleSection
 
-            Section {
-                Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
-                    .disabled(model.isRendering)
-                Picker("recap_format", selection: $model.format) {
-                    Text("recap_format_mp4").tag(RecapModel.Format.mp4)
-                    Text("recap_format_gif").tag(RecapModel.Format.gif)
+                // Its own section so the note reads as the toggle's, not as a
+                // caption under Format (S5 review item 4).
+                Section {
+                    Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
+                } footer: {
+                    // The load-bearing sentence: photos ≠ chrome.
+                    Text("recap_photos_note")
                 }
-                .disabled(model.isRendering)
-            } footer: {
-                // The load-bearing sentence: photos ≠ chrome.
-                Text("recap_photos_note")
-            }
 
-            filmPhotosSection
+                filmPhotosSection
+
+                // After the stops: GIF is a minority choice and MP4 the default
+                // (UX rule 2), so Format is the last setting, not the second.
+                Section {
+                    Picker("recap_format", selection: $model.format) {
+                        Text("recap_format_mp4").tag(RecapModel.Format.mp4)
+                        Text("recap_format_gif").tag(RecapModel.Format.gif)
+                    }
+                }
+            }
 
             if model.photoShortfall != nil {
                 Section { RecapPhotoShortfallNotice(model: model) }
@@ -117,14 +127,22 @@ struct RecapView: View {
         let content = VStack(alignment: .leading, spacing: 8) {
             switch model.phase {
             case .idle:
+                filmSummary
                 exportButton
 
             case let .rendering(progress):
                 if let preload = model.photoPreload {
                     photoPreloadProgress(preload)
                 } else {
+                    // A 1–3 minute wait owes a name and a number (S5 review
+                    // item 2). The number only while drawing: `progress`
+                    // measures frames, so before them it would sit at 0%.
                     ProgressView(value: progress) {
-                        Text("recap_rendering")
+                        Text(stageTitle(model.stage ?? .findingRoads))
+                    } currentValueLabel: {
+                        if model.stage == .drawing {
+                            Text(progress, format: .percent.precision(.fractionLength(0)))
+                        }
                     }
                 }
                 // The promise, and its exact bounds (Chiu 2026-09-10):
@@ -149,6 +167,7 @@ struct RecapView: View {
                 Text(message)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                filmSummary
                 exportButton
             }
         }
@@ -158,6 +177,38 @@ struct RecapView: View {
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity)
             .background(.bar)
+    }
+
+    /// **What the tap will make, said before it** (DESIGNER.md UX rule 3, S5
+    /// review item 3): "N stops · M photos", counts only (Chiu 2026-09-26).
+    /// Read off the same plan the export composes and the list above draws, so
+    /// it moves as stops go in and out. No duration: the timeline needs a
+    /// composed trip, and composing waits on routing. With photo cards off the
+    /// film shows none, so the photos half is not said.
+    @ViewBuilder
+    private var filmSummary: some View {
+        if let filmPhotos {
+            let stops = String.localizedStringWithFormat(
+                String(localized: "recap_film_stop_count"), filmPhotos.filmStops.count
+            )
+            let photos = String.localizedStringWithFormat(
+                String(localized: "recap_film_photo_count"), filmPhotos.filmPhotoCount
+            )
+            Text(verbatim: model.photosEnabled ? "\(stops) · \(photos)" : stops)
+                .font(.footnote.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// The stage's name. The two later ones reuse the sentences the screen
+    /// already said at those moments.
+    private func stageTitle(_ stage: RecapExportStage) -> LocalizedStringKey {
+        switch stage {
+        case .findingRoads: return "recap_stage_roads"
+        case .preparingPhotos: return "recap_photos_preparing"
+        case .drawing: return "recap_rendering"
+        }
     }
 
     private var exportButton: some View {
@@ -174,10 +225,10 @@ struct RecapView: View {
 
     /// Which stops the film presents and what each shows, before it is
     /// rendered (ADR 2026-09-24, Chiu 2026-09-25) — `FilmStopsSections`.
-    /// Hidden while rendering — the film in flight has already chosen.
+    /// Hidden while rendering, with the rest of the settings — `exportForm`.
     @ViewBuilder
     private var filmPhotosSection: some View {
-        if model.photosEnabled, !model.isRendering, let filmPhotos {
+        if model.photosEnabled, let filmPhotos {
             FilmStopsSections(choices: filmPhotos)
         }
     }
@@ -186,7 +237,7 @@ struct RecapView: View {
     /// 2026-09-22): the choice only ever affected the film — nothing on the
     /// trip screen read it — so it belongs where the film is actually
     /// configured. A mid-render edit is safe (`RecapExportJob` snapshots the
-    /// subject once at compose time); it is still disabled while rendering so
+    /// subject once at compose time); it is still hidden while rendering so
     /// the picker never reads as "this changes the film in progress".
     ///
     /// The plane is deliberately absent: the app picks it from the journey for
@@ -196,27 +247,34 @@ struct RecapView: View {
         let subjects = model.pickableSubjects
         if subjects.count > 1 {
             Section("recap_vehicle_header") {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(subjects, id: \.id) { subject in
-                            Button {
-                                model.chooseVehicle(subject.id)
-                            } label: {
-                                vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(subjects, id: \.id) { subject in
+                                Button {
+                                    model.chooseVehicle(subject.id)
+                                } label: {
+                                    vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                                }
+                                .buttonStyle(.plain)
+                                .id(subject.id)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    // **The chosen vehicle opens in view** (S5 review item 5).
+                    // With a chip late in the row chosen, the sheet opened on
+                    // the first three and nothing said which was selected.
+                    // Centred, so its neighbours show and the row still reads
+                    // as scrollable; on appear only — a tapped chip is in view.
+                    .onAppear { proxy.scrollTo(model.vehicleId, anchor: .center) }
                 }
-                .disabled(model.isRendering)
                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 0))
             }
         }
     }
 
     private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
-        let language = Locale.current.language.languageCode?.identifier ?? "en"
         // A subject with no thumbnail yet shows its name alone. Deliberately not
         // a grey box or a "missing image" glyph: those read as broken, and this
         // is not broken — the set works in a film and simply has no picture yet.
@@ -228,7 +286,7 @@ struct RecapView: View {
                     .scaledToFit()
                     .frame(width: 26, height: 26)
             }
-            Text(subject.displayName(language: language))
+            Text(subject.screenName)
                 .font(.subheadline)
         }
         .padding(.horizontal, 12)

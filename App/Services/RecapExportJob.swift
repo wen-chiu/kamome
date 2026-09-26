@@ -25,7 +25,9 @@ struct RecapExportJob: RecapExportRunning {
     let repository: TripRepository
 
     func run(_ channel: RecapExportChannel) async -> RecapExportOutcome {
+        channel.stage(.findingRoads)
         await matchRoutes(channel)
+        channel.stage(.preparingPhotos)
         guard let composed = compose() else {
             KamomeLog.recap.error("export failed — the trip could not be composed into a film")
             return .failed(message: String(localized: "recap_failed"))
@@ -38,6 +40,7 @@ struct RecapExportJob: RecapExportRunning {
         await warmDeckPhotos(trip: composed.trip, style: plan.style, resolver: resolver, channel: channel)
         // Cancel during the download phase ends here, before a frame is drawn.
         guard channel.shouldContinue() else { return .cancelled }
+        channel.stage(.drawing)
         return await render(composed: composed, plan: plan, resolver: resolver, channel: channel)
     }
 

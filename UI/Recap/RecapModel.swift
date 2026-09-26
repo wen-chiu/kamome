@@ -150,6 +150,9 @@ final class RecapModel {
     /// on the device — the common case, and the one that shows no extra UI.
     var photoPreload: PhotoLibraryPhotoResolver.PreloadProgress? { running?.photoPreload }
 
+    /// Which wait the render is in, as the job reports it. nil when idle.
+    var stage: RecapExportStage? { running?.stage }
+
     private var running: RecapExportCoordinator.Running? {
         coordinator.running(tripId: tripId)
     }

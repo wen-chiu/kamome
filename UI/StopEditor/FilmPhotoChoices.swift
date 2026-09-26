@@ -45,6 +45,12 @@ final class FilmPhotoChoices {
         eligibleStops.filter { decks[$0.id] != nil }
     }
 
+    /// How many photographs the film shows, across every stop it presents —
+    /// the "M photos" of the line above Export (Chiu 2026-09-26).
+    var filmPhotoCount: Int {
+        filmStops.reduce(0) { $0 + filmDeck(for: $1.id).count }
+    }
+
     /// The stops the film could present and does not: the app ranked them out,
     /// or the person took them out. A stop with no photographs is only listed
     /// when the person took it out — otherwise it would be noise (a fuel stop),

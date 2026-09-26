@@ -40,11 +40,30 @@ enum RecapExportOutcome: Equatable, Sendable {
     case failed(message: String)
 }
 
+/// Where a running export is, in the order `RecapExportJob.run` goes through
+/// them (Chiu 2026-09-26, S5 review item 2). Said by the job, never inferred by
+/// the screen from which findings have arrived — that would be the call order
+/// of `run` leaking into a view as an unwritten contract.
+///
+/// Three, because those are the waits a person can feel. Map tiles are fetched
+/// *inside* the frame loop, interleaved with compositing, so "drawing the map"
+/// is not a stage of its own; compose and plan are local and brief, so they
+/// belong to the photos step that follows them.
+enum RecapExportStage: Equatable, Sendable {
+    /// Road reconstruction — the one step that may wait on the network.
+    case findingRoads
+    /// Composing the film and loading its photographs, iCloud included.
+    case preparingPhotos
+    /// Frames: the only stage `progress` measures.
+    case drawing
+}
+
 /// What a running export tells its owner. A struct of closures rather than a
 /// delegate: the coordinator is the only owner there will ever be, and this
-/// keeps the job's dependency on it to five functions.
+/// keeps the job's dependency on it to six functions.
 @MainActor
 struct RecapExportChannel {
+    var stage: (RecapExportStage) -> Void
     var progress: (Double) -> Void
     var routing: (RouteMatchReport) -> Void
     var photoShortfall: (PhotoLibraryPhotoResolver.WarmSummary?) -> Void

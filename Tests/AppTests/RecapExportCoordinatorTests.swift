@@ -259,6 +259,29 @@ final class RecapExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.running?.fraction, 0.1, "a finished run must not write into the live one")
     }
 
+    /// **The screen names the stage the job says, and only the live job's**
+    /// (S5 review item 2, Chiu 2026-09-26). A run starts by finding roads;
+    /// a stale run's stage must not land in the next one, same as its progress.
+    func testTheStageIsTheLiveJobsAndStartsAtFindingRoads() async throws {
+        let coordinator = RecapExportCoordinator()
+        let stale = SpyExportJob()
+        coordinator.start(request: request("trip-a"), job: stale)
+        await waitUntil("the first job to start") { stale.hasStarted }
+        XCTAssertEqual(coordinator.running?.stage, .findingRoads)
+        stale.report(stage: .drawing)
+        XCTAssertEqual(coordinator.running?.stage, .drawing)
+        coordinator.cancel(tripId: "trip-a")
+        stale.complete(.cancelled)
+        await waitUntil("the first export to end") { coordinator.running == nil }
+
+        let fresh = SpyExportJob()
+        coordinator.start(request: request("trip-b"), job: fresh)
+        await waitUntil("the second job to start") { fresh.hasStarted }
+        fresh.report(stage: .preparingPhotos)
+        stale.report(stage: .drawing)
+        XCTAssertEqual(coordinator.running?.stage, .preparingPhotos, "a finished run must not write into the live one")
+    }
+
     // MARK: - The lifecycle guard, on all four exits
 
     /// **Finish, cancel, failure, expiry — the screen is released on every one.**

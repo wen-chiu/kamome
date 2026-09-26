@@ -202,6 +202,22 @@ final class FilmPhotoChoicesTests: XCTestCase {
         XCTAssertEqual(choices.filmStops.map(\.id), stopsBefore)
     }
 
+    /// **"N stops · M photos" above Export counts the film** (Chiu 2026-09-26):
+    /// M is every deck of every stop the film presents, and it moves with them.
+    func testThePhotoCountIsTheFilmsDecksAndFollowsAStopOut() async throws {
+        let config = AppConfig.loadOrDie()
+        let (repository, imported) = try await importedTrip(config: config)
+        let choices = FilmPhotoChoices(tripId: imported.trip.id, config: config, repository: repository)
+        let total = choices.filmStops.reduce(0) { $0 + choices.filmDeck(for: $1.id).count }
+        XCTAssertGreaterThan(total, 0, "precondition: the fixture's film has photographs")
+        XCTAssertEqual(choices.filmPhotoCount, total)
+
+        let stop = try XCTUnwrap(choices.filmStops.first { !choices.filmDeck(for: $0.id).isEmpty })
+        let itsDeck = choices.filmDeck(for: stop.id).count
+        choices.takeOut(stopId: stop.id)
+        XCTAssertEqual(choices.filmPhotoCount, total - itsDeck, "a stop taken out takes its photographs with it")
+    }
+
     /// A tap on a photograph at a stop the film does not present puts the stop
     /// in with that one photograph — even a stop the person took out.
     func testTappingAPhotoAtAStopOutOfTheFilmPutsItIn() async throws {

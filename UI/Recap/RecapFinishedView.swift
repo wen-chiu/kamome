@@ -28,9 +28,23 @@ struct RecapFinishedView: View {
 
     /// On finish the film plays immediately, inline, on this screen (Chiu
     /// 2026-09-05). Four actions: save to Photos / share / delete / export
-    /// again. The render-time readout stays — it is the §4.5 budget readout.
+    /// again. The render-time readout stays — it is the §4.5 budget readout,
+    /// and it stays in Release (Chiu 2026-09-26).
+    ///
+    /// **Completion is a moment** (DESIGNER.md UX rule 6, ADR 2026-09-26 (c)).
+    /// The four actions are unchanged; only their weight is: Save and Share are
+    /// the pair, Export again is a text button, and Delete lives in the ⋯ menu,
+    /// still behind its confirmation — it was a full-width red button as heavy
+    /// as Share.
     var body: some View {
         VStack(spacing: 0) {
+            // Chiu's copy. Through `String`, not `Text("key")`: a key is parsed
+            // as Markdown, and the zh title's two `~` became a strikethrough.
+            Text(String(localized: "recap_finished_title"))
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .padding(.top, 8)
             preview
             renderReadout
             // What the run found, kept past its end: without this a film with
@@ -45,6 +59,31 @@ struct RecapFinishedView: View {
                 .padding(.bottom, 8)
             }
             actions
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("recap_film_delete", systemImage: "trash")
+                    }
+                } label: {
+                    Label("recap_more_actions", systemImage: "ellipsis.circle")
+                }
+            }
+        }
+        .confirmationDialog(
+            "recap_film_delete_confirm",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("recap_film_delete", role: .destructive) {
+                if case let .finished(film, _) = model.phase {
+                    model.deleteFilm(film)
+                    player = nil
+                }
+            }
         }
         .onAppear {
             guard !isGIF else { return }
@@ -94,35 +133,24 @@ struct RecapFinishedView: View {
     }
 
     private var actions: some View {
-        // Action buttons
         VStack(spacing: 12) {
-            // Save to Photos — explicit user tap, never automatic (§0).
-            photosSaveButton
+            HStack(spacing: 12) {
+                // Save to Photos — explicit user tap, never automatic (§0).
+                photosSaveButton
 
-            if case let .finished(film, _) = model.phase {
                 ShareLink(item: fileURL) {
                     Label("recap_share", systemImage: "square.and.arrow.up")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
-
-                Button(role: .destructive) {
-                    showDeleteConfirmation = true
-                } label: {
-                    Label("recap_film_delete", systemImage: "trash")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-                .confirmationDialog(
-                    "recap_film_delete_confirm",
-                    isPresented: $showDeleteConfirmation,
-                    titleVisibility: .visible
-                ) {
-                    Button("recap_film_delete", role: .destructive) {
-                        model.deleteFilm(film)
-                        player = nil
-                    }
-                }
+            }
+            // Said beside the buttons, not inside one: a sentence on a
+            // prominent button reads as the button's action.
+            if photosSaveState == .failed {
+                Text("recap_save_failed")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
 
             // Back to the form, not straight into a render: the next film
@@ -132,28 +160,13 @@ struct RecapFinishedView: View {
                 photosSaveState = .idle
                 model.exportAgain()
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.borderless)
         }
         .padding(.horizontal)
         .padding(.bottom)
     }
 
-    @ViewBuilder
     private var photosSaveButton: some View {
-        VStack(spacing: 6) {
-            photosSaveButtonBody
-            // Said beside the button, not inside it: a sentence on a prominent
-            // button reads as the button's action.
-            if photosSaveState == .failed {
-                Text("recap_save_failed")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-    }
-
-    private var photosSaveButtonBody: some View {
         Button {
             saveToPhotos()
         } label: {
