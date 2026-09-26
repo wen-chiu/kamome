@@ -252,7 +252,6 @@ private struct RideChip: View {
     let isSelected: Bool
 
     var body: some View {
-        let language = Locale.current.language.languageCode?.identifier ?? "en"
         HStack(spacing: 6) {
             if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
                 Image(decorative: thumbnail, scale: 1)
@@ -260,7 +259,7 @@ private struct RideChip: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 24, height: 24)
             }
-            Text(subject.displayName(language: language)).font(.subheadline)
+            Text(subject.screenName).font(.subheadline)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)

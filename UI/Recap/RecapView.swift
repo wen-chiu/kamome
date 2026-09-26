@@ -146,11 +146,15 @@ struct RecapView: View {
                 if let preload = model.photoPreload {
                     photoPreloadProgress(preload)
                 } else {
-                    // A 1–3 minute wait owes a number (S5 review item 2).
+                    // A 1–3 minute wait owes a name and a number (S5 review
+                    // item 2). The number only while drawing: `progress`
+                    // measures frames, so before them it would sit at 0%.
                     ProgressView(value: progress) {
-                        Text("recap_rendering")
+                        Text(stageTitle(model.stage ?? .findingRoads))
                     } currentValueLabel: {
-                        Text(progress, format: .percent.precision(.fractionLength(0)))
+                        if model.stage == .drawing {
+                            Text(progress, format: .percent.precision(.fractionLength(0)))
+                        }
                     }
                 }
                 // The promise, and its exact bounds (Chiu 2026-09-10):
@@ -184,6 +188,16 @@ struct RecapView: View {
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity)
             .background(.bar)
+    }
+
+    /// The stage's name. The two later ones reuse the sentences the screen
+    /// already said at those moments.
+    private func stageTitle(_ stage: RecapExportStage) -> LocalizedStringKey {
+        switch stage {
+        case .findingRoads: return "recap_stage_roads"
+        case .preparingPhotos: return "recap_photos_preparing"
+        case .drawing: return "recap_rendering"
+        }
     }
 
     private var exportButton: some View {
@@ -241,7 +255,6 @@ struct RecapView: View {
     }
 
     private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
-        let language = Locale.current.language.languageCode?.identifier ?? "en"
         // A subject with no thumbnail yet shows its name alone. Deliberately not
         // a grey box or a "missing image" glyph: those read as broken, and this
         // is not broken — the set works in a film and simply has no picture yet.
@@ -253,7 +266,7 @@ struct RecapView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 26, height: 26)
             }
-            Text(subject.displayName(language: language))
+            Text(subject.screenName)
                 .font(.subheadline)
         }
         .padding(.horizontal, 12)
@@ -310,7 +323,9 @@ struct RecapView: View {
     /// as Share.
     private func finishedContent(fileURL: URL) -> some View {
         VStack(spacing: 0) {
-            Text("recap_finished_title")
+            // Through `String`, not `Text("key")`: a key is parsed as Markdown,
+            // and the zh title's two `~` became a strikethrough (2026-09-26).
+            Text(String(localized: "recap_finished_title"))
                 .font(.title3.weight(.semibold))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)

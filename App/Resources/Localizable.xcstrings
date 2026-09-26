@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "zh-Hant",
   "strings": {
+    "recap_stage_roads": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding the roads you took…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在找出你走過的路…"
+          }
+        }
+      }
+    },
     "recap_stop_no_photos": {
       "extractionState": "manual",
       "localizations": {
@@ -64,7 +81,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這一站不在影片裡。點一張照片，或打開上面的開關，就會放進去。"
+            "value": "這個停留點不在影片裡。點一張照片，或打開上面的開關，就會放進去。"
           }
         }
       }
@@ -81,7 +98,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點照片就能放進影片或拿掉，每站 1 到 %lld 張。長按可以設定永遠不用這張。★ 是「照片」App 裡的收藏，卡摸咩會優先挑選。"
+            "value": "點照片就能放進影片或拿掉，每個停留點 1 到 %lld 張。長按可以設定永遠不用這張。★ 是「照片」App 裡的收藏，卡摸咩會優先挑選。"
           }
         }
       }
@@ -285,7 +302,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "把這一站移出影片？"
+            "value": "把這個停留點移出影片？"
           }
         }
       }
@@ -302,7 +319,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這是這一站最後一張照片。之後可以從「其他站點」再加回來。"
+            "value": "這是這個停留點最後一張照片。之後可以從「其他停留點」再加回來。"
           }
         }
       }
@@ -370,7 +387,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "影片裡的站點 · %lld 站"
+            "value": "影片裡的停留點 · %lld 個"
           }
         }
       }
@@ -387,7 +404,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些是卡摸咩幫你挑的。點一站可以換照片，往左滑可以移出影片。"
+            "value": "這些是卡摸咩幫你挑的。點一個停留點可以換照片，往左滑可以移出影片。"
           }
         }
       }
@@ -404,7 +421,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "其他站點"
+            "value": "其他停留點"
           }
         }
       }
@@ -421,7 +438,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點＋加入站點，會依旅程順序出現，影片也會跟著變長。"
+            "value": "點＋加入停留點，會依旅程順序出現，影片也會跟著變長。"
           }
         }
       }
@@ -2730,7 +2747,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩把這趟旅程做成了影片"
+            "value": "卡摸咩~卡膜咩嘛飛來~影片完成"
           }
         }
       }

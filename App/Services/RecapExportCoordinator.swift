@@ -45,6 +45,8 @@ final class RecapExportCoordinator {
     /// needs to draw it without owning it.
     struct Running: Equatable {
         let request: RecapExportRequest
+        /// Where the job says it is. Every run starts by finding roads.
+        var stage: RecapExportStage = .findingRoads
         var fraction: Double = 0
         /// Published as the run learns them rather than at the end: both are
         /// findings the export screen shows *while* rendering, and both used to
@@ -172,6 +174,7 @@ final class RecapExportCoordinator {
             }
         }
         let channel = RecapExportChannel(
+            stage: { stage in ifCurrent { $0.stage = stage }() },
             progress: { fraction in ifCurrent { $0.fraction = fraction }() },
             routing: { report in ifCurrent { $0.routing = report }() },
             photoShortfall: { summary in ifCurrent { $0.photoShortfall = summary }() },

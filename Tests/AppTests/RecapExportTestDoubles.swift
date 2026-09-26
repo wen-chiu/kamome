@@ -45,6 +45,8 @@ final class SpyExportJob: RecapExportRunning {
         return outcome
     }
 
+    func report(stage: RecapExportStage) { channel?.stage(stage) }
+
     func report(progress: Double) { channel?.progress(progress) }
 
     func report(preload: PhotoLibraryPhotoResolver.PreloadProgress?) { channel?.photoPreload(preload) }
