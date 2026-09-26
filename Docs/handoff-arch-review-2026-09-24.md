@@ -228,7 +228,7 @@ Held up (read, not re-derived):
 
 **Round 2 status (branch `claude/arch-review-2`, ADR 2026-09-26).** Points 1, 2,
 3, 5 and 6 are built, each with tests. Point 4, ADR (f)'s pace numbers, was
-measured and is still Chiu's to sign off:
+measured, and Chiu decided 160 km/h (ADR 2026-09-26 (b)):
 - **The measurement.** The rule was replayed over the three local real-trip
   dumps (Iceland 2,300 photos, New Zealand 160, Miyakojima 53), taking every
   consecutive photo pair ≥ 30 km apart. That is a superset of the real legs.

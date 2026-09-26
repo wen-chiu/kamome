@@ -62,7 +62,8 @@ final class ConfigLoaderTests: XCTestCase {
             baseURL: "", chunkSize: 0, confidenceMin: 0, radiusM: 0, timeoutS: 0, tripBudgetS: 0,
             displayEpsilonM: 0, routeMaxDetourRatio: 0, routeWaypointMinSpacingM: 0, routeWaypointRadiusM: 0
         )
-        XCTAssertEqual(config.matching.crossingPaceMinKmh, 150)
+        // 160, decided by Chiu 2026-09-26 (ADR 2026-09-26 (b)); the draft said 150.
+        XCTAssertEqual(config.matching.crossingPaceMinKmh, 160)
         XCTAssertEqual(config.matching.crossingPaceMinKmh, paceDefaults.crossingPaceMinKmh)
         XCTAssertEqual(config.matching.crossingPaceMinDistanceM, paceDefaults.crossingPaceMinDistanceM)
         XCTAssertEqual(config.matching.crossingPaceClockMarginS, paceDefaults.crossingPaceClockMarginS)

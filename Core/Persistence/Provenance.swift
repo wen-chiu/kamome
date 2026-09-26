@@ -111,14 +111,21 @@ public enum SegmentRoutability: String, CaseIterable, Sendable {
     /// 2026-09-24 (f) had to accept that retuning the pace numbers would not
     /// touch a leg already judged. Now a rule change re-asks exactly the legs
     /// whose verdict it could change, and no others — a `road` stays road.
-    public static let rulesVersion = 1
+    public static let rulesVersion = 2
 
-    /// The rules version in which this verdict's rule last changed. Version 1
-    /// is everything up to and including ADR 2026-09-25 (c); v7 and v11 already
-    /// brought stored rows up to it.
+    /// The rules version in which this verdict's rule last changed.
+    ///
+    /// - 1: everything up to and including ADR 2026-09-25 (c); v7 and v11
+    ///   already brought stored rows up to it.
+    /// - 2: `crossing_pace_min_kmh` 150 → 160 (ADR 2026-09-26 (b)). Only
+    ///   `beyondDriving` can change under it — a raised threshold makes a leg
+    ///   judged at 150–160 km/h no longer a crossing, and makes nothing else
+    ///   one — so only those legs are judged again (on the phone, and sent to
+    ///   routing only if they are no longer too fast).
     public var lastRevised: Int {
         switch self {
-        case .road, .noRoad, .implausibleRoute, .offRoadNetwork, .beyondDriving: return 1
+        case .road, .noRoad, .implausibleRoute, .offRoadNetwork: return 1
+        case .beyondDriving: return 2
         }
     }
 

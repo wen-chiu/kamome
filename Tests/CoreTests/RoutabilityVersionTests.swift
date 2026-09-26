@@ -20,6 +20,20 @@ final class RoutabilityVersionTests: XCTestCase {
         XCTAssertTrue(SegmentRoutability.road.stillHolds(storedUnder: 1))
     }
 
+    /// **Version 2 raised `crossing_pace_min_kmh` to 160** (ADR 2026-09-26 (b)).
+    /// A leg judged too fast to drive under 150 may not be under 160, so it is
+    /// judged again; no other verdict could change, so no other leg is asked.
+    func testRaisingThePaceThresholdReasksOnlyTooFastLegs() {
+        let judgedAt150 = SegmentRecord(id: "a", tripId: "t", mode: "drive", startedAt: 0, routability: "beyond_driving")
+        let judgedAt160 = SegmentRecord(
+            id: "b", tripId: "t", mode: "drive", startedAt: 0, routability: "beyond_driving", routabilityVersion: 2
+        )
+        let sea = SegmentRecord(id: "c", tripId: "t", mode: "drive", startedAt: 0, routability: "no_road")
+        XCTAssertNil(judgedAt150.routeVerdict, "a verdict under the 150 draft must be judged again")
+        XCTAssertEqual(judgedAt160.routeVerdict, .beyondDriving)
+        XCTAssertEqual(sea.routeVerdict, .noRoad, "a verdict the change cannot touch is not re-asked")
+    }
+
     func testStoringAVerdictRecordsTheCurrentRules() throws {
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let tripId = try repository.saveCompletedTrip(

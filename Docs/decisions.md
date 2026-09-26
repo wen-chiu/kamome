@@ -6762,3 +6762,35 @@ and §0).
 **Not decided here:** ADR 2026-09-24 (f)'s pace numbers. The review measured
 them against the local real-trip dumps: no driven leg was judged a crossing.
 They are still Chiu's to sign off.
+
+## 2026-09-26 (b) — ADR 2026-09-24 (f) is decided: 160 km/h
+
+**Decision (Chiu, 2026-09-26):** 「ADR (f) 門檻改成160 km/h 定案」. ADR 2026-09-24
+(f) leaves draft status with one change: `crossing_pace_min_kmh` becomes **160**
+(the draft had 150). `crossing_pace_min_distance_m` 100 km and
+`crossing_pace_clock_margin_s` 2 h stand as drafted. The rest of (f) is
+unchanged.
+
+**Why 160.** This is Chiu's number. The measurement put in front of him
+(`Docs/handoff-arch-review-2026-09-24.md`, Round 2) has two parts:
+- **Driving.** Across the three local real-trip dumps, no driven pair judged
+  faster than 24 km/h.
+- **High-speed rail.** When photos bracket the ride tightly, a train can judge
+  near the line, for example Paris → Marseille at about 147 and Beijing →
+  Shanghai at about 176 (INFERRED). 160 moves the line further from rail and
+  still flies the worked flight: Taoyuan → Hanoi 1,634 km, with photos five
+  hours apart, judges about 203.
+
+**Legs already judged.** This is routing rules version 2
+(`SegmentRoutability.rulesVersion`, ADR 2026-09-26 §3). Only `beyond_driving`
+verdicts are revised:
+- A leg stored under the draft is judged again on the phone at its next
+  routing run.
+- It is sent to routing only if it is no longer too fast.
+- No other verdict is re-asked.
+
+**Worked cases at 160** (`LegPaceTests`, unchanged):
+- Taoyuan → Hanoi is judged a crossing when the photos are at most about 7.3 h
+  apart (8 h at 150).
+- Taipei → Zuoying rail is not.
+- The 777 km drive with a clock two hours early is not.
