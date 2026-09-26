@@ -67,7 +67,6 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     /// coalescer touches (`TileRequestCoalescer`).
     static let tileHosts = ["openfreemap.org", "amazonaws.com"]
 
-
     /// Counts the requests MapLibre sends and hands each back **unchanged**:
     /// this only observes. Called on MapLibre's own background threads; the
     /// meter is lock-guarded. (There is no response side: MapLibre 6.27 never

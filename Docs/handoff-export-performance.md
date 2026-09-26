@@ -244,3 +244,59 @@ looks like tile fetching and decoding. Settled by the device line above.
 `didReceiveResponse:`, neither on success nor on DNS failure. Status codes and
 bytes cannot be measured that way. The request side (`willSendRequest:` with
 its conditional headers) is what the meter counts.
+
+## 9. The device reading, and the fix it pointed at (2026-09-26)
+
+**Device (VERIFIED, iPhone16,2, iOS 26.4.2, Iceland, 338 s film, 699 stations):**
+
+    render cost: 942.5s total · snapshots 6420.4s (mean 9.25s, wait 611.7s) · composite 1240.3s · encode 84.2s
+    render thermal: nominal → serious · 639s at serious or above
+    render substrate: 694 snapshots · mean 9.22s, style 0.03s · peak in flight 9 ·
+      requests 17216 / 1908 distinct · 8449 revalidated · 6859 refetched
+    background GPU not supported
+
+What it settled: the loop waited on snapshots for 65% of the render. Style setup
+is 0.3% of a snapshot, so **§7's persistent renderer is not the lever**. Each
+distinct tile was requested ~9 times. This iPhone cannot render MapLibre in the
+background (iOS 26 continued processing), so "keep going when locked" means
+pause/resume, not background rendering.
+
+**Cause (VERIFIED on the desk, `RecapTileRequestBenchTests`, `iceland` fixture):**
+- **Terrain.** AWS answers terrain tiles with an ETag and **no** `Cache-Control`
+  or `Expires` (curl, 2026-09-26). MapLibre revalidated one on every use: all
+  the bench's revalidations were terrain.
+- **Races.** OpenFreeMap's vector tiles carry `max-age=315360000` and were
+  still downloaded ~4× each. With nine snapshotters in flight, MapLibre queues
+  its requests, and a repeat leaves the queue after the first download has
+  landed but before it serves from cache (median repeat gap 2–6 s).
+
+**Fix, network only (`TileRequestCoalescer`, a `URLProtocol` behind MapLibre's
+`sessionForNetworkConfiguration:`):**
+1. Identical asks in flight share one download.
+2. A terrain response without a lifetime is handed on with
+   `max-age=terrain_max_age_s` (30 days, INFERRED; the DEM dates from 2017).
+3. Bodies this export already downloaded answer later identical asks from
+   memory (`tile_memory_mb`, 64).
+
+Status, body and validators are the server's. Keys: `coalesce_tile_requests`
+(kill switch), `terrain_max_age_s`, `tile_memory_mb`; all no-pixel.
+
+**Measured, simulator, whole `iceland` film (183 stations), cold cache each run:**
+
+| | before (2 runs) | after (2 runs) |
+|---|---|---|
+| wall | 219.0 s, 236.3 s | **64.2 s, 65.8 s** (3.1–3.7×) |
+| snapshot mean | 9.65 s, 10.22 s | 2.74 s, 2.91 s |
+| network downloads | ~5,100 requests | **638 = distinct** |
+
+**Pixels (VERIFIED, PNG diff against a before-run reference):** MapLibre is
+not byte-deterministic even unchanged: a second before run matched 106 of 182
+snapshots byte-for-byte, with its largest difference **1/255** on 0.00010% of
+pixels. After the fix: 90 of 182 byte-identical, largest difference **2/255** on
+0.00014% of pixels. No pixel moved by more than 8/255 in either. That is
+rendering noise, not a change in what is drawn.
+
+**Not measured:** the device gain. The phone's round trip to AWS us-east from
+Taiwan is longer than the Mac's, so it may be larger (INFERRED). Heat
+(68% of the render at `serious`) is untouched. → The next device export's
+`render network` line: `downloads` should equal `distinct`.

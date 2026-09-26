@@ -51,9 +51,9 @@ extension RecapExportJob {
     /// - `style` against `mean`: the share of each snapshot spent before its
     ///   style had loaded, which a persistent renderer would pay once. "n/a"
     ///   means MapLibre never reported a style load.
-    /// - `refetched`: tiles downloaded a second time because the cache had
-    ///   dropped them. Many of these mean `map_cache_mb` is too small;
-    ///   `revalidated` repeats are expired tiles checked, not re-downloaded.
+    /// - `revalidated` / `refetched`: repeats MapLibre *asked* for. Since
+    ///   2026-09-26 most never reach the network — `render network` says how
+    ///   many did.
     /// - `peak in flight` 1 means snapshots never overlapped, and
     ///   `prefetch_depth` bought no concurrency.
     func reportConditions(_ conditions: RenderConditions) {
@@ -73,6 +73,14 @@ extension RecapExportJob {
             peak in flight \(map.peakInFlight) · \
             requests \(map.requests) / \(map.distinctRequests) distinct · \
             \(map.revalidations) revalidated · \(map.refetches) refetched
+            """)
+        // What actually crossed the network (`TileRequestCoalescer`): with it on,
+        // `downloads` should equal `distinct` above, and every other request was
+        // joined to a download in flight or answered from one already landed.
+        let hub = TileRequestCoalescer.shared.read()
+        KamomeLog.recap.notice("""
+            render network: \(hub.downloads) downloads · \(hub.joined) joined · \
+            \(hub.remembered) remembered · \(hub.terrainAged) terrain given a lifetime
             """)
     }
 

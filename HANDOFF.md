@@ -170,8 +170,8 @@ string stands. Do not reopen this from scratch.
 
 Plan and per-stage cost are logged. Offline, a crossing arc is **54 of 102
 stations**; magnification 1.10 → 1.25 halves that (Chiu's look call). **Iceland
-859 s:** new lines say why a snapshot costs what it does; tile cache 50 → 256 MB.
-**Owed: one device `render substrate` line** → `Docs/handoff-export-performance.md` §8.
+942 s on device:** each tile was fetched ~9×; one download per tile now, desk 3.1–3.7×
+faster, pixels within noise. **Owed: device `render network` line** → export doc §9.
 
 ## 🐛 Known bugs and accepted costs
 

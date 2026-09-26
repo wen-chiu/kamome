@@ -64,9 +64,10 @@ final class MapSubstrateMeter: @unchecked Sendable {
 
         init(_ url: URL) {
             let host = url.host ?? ""
-            if host.hasSuffix("openfreemap.org"), url.pathExtension == "pbf", !url.path.contains("/fonts/") {
+            func on(_ domain: String) -> Bool { host == domain || host.hasSuffix("." + domain) }
+            if on("openfreemap.org"), url.pathExtension == "pbf", !url.path.contains("/fonts/") {
                 self = .vector
-            } else if host.hasSuffix("amazonaws.com"), url.pathExtension == "png" {
+            } else if on("amazonaws.com"), url.pathExtension == "png" {
                 self = .terrain
             } else {
                 self = .other

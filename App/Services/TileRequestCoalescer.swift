@@ -50,12 +50,12 @@ final class TileRequestCoalescer: URLProtocol {
 
     // MARK: URLProtocol
 
-    override class func canInit(with request: URLRequest) -> Bool {
+    override static func canInit(with request: URLRequest) -> Bool {
         guard request.httpMethod ?? "GET" == "GET", let host = request.url?.host else { return false }
         return shared.handles(host: host)
     }
 
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     private var ticket: Hub.Ticket?
     /// The loading thread. A `URLProtocol` must answer its client on the
@@ -134,6 +134,7 @@ final class TileRequestCoalescer: URLProtocol {
         private let landed = NSCache<NSString, Landed>()
         private var reading = Reading()
         private var terrainMaxAgeS = 0
+        private var remembers = false
         private var hosts: [String] = []
         private let session: URLSession
 
@@ -157,6 +158,9 @@ final class TileRequestCoalescer: URLProtocol {
                 self.terrainMaxAgeS = terrainMaxAgeS
                 self.hosts = hosts
             }
+            // `NSCache` reads a limit of 0 as *no limit*, so "off" is a flag of
+            // its own rather than a zero budget.
+            lock.withLock { remembers = memoryMb > 0 }
             landed.totalCostLimit = max(0, memoryMb) * 1_048_576
             // A new export starts from what the network says, not from what the
             // last one remembered.
@@ -230,7 +234,7 @@ final class TileRequestCoalescer: URLProtocol {
                 if aged { reading.terrainAged += 1 }
                 let body = data ?? Data()
                 outcome = .success(handed, body)
-                if handed.statusCode == 200, Self.mayBeKept(handed), key.hasSuffix("\u{1F}\u{1F}"),
+                if remembers, handed.statusCode == 200, Self.mayBeKept(handed), key.hasSuffix("\u{1F}\u{1F}"),
                    let url = handed.url?.absoluteString {
                     landed.setObject(Landed(response: handed, data: body), forKey: url as NSString, cost: body.count)
                 }

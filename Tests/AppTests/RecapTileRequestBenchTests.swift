@@ -96,72 +96,84 @@ final class RecapTileRequestBenchTests: XCTestCase {
         print("KAMOME_TILE_BENCH   \(provider.hashes.count) snapshots → \(directory.path)")
     }
 
+    /// One station's difference from its reference.
+    private struct PixelDiff {
+        var pixels = 0
+        var visiblyChanged = 0
+        var anyChanged = 0
+        var channelSum = 0
+        var worstChannel: UInt8 = 0
+    }
+
+    /// Per pixel, the largest of the three colour channels' absolute difference.
+    private static func diff(_ ours: Data, _ theirs: Data, visible: UInt8) -> PixelDiff {
+        var result = PixelDiff(pixels: ours.count / 4)
+        ours.withUnsafeBytes { rawOurs in
+            theirs.withUnsafeBytes { rawTheirs in
+                let lhs = rawOurs.bindMemory(to: UInt8.self), rhs = rawTheirs.bindMemory(to: UInt8.self)
+                var index = 0
+                while index < lhs.count {
+                    var worst: UInt8 = 0
+                    for channel in index..<(index + 3) {
+                        let delta = lhs[channel] > rhs[channel]
+                            ? lhs[channel] - rhs[channel] : rhs[channel] - lhs[channel]
+                        result.channelSum += Int(delta)
+                        worst = max(worst, delta)
+                    }
+                    if worst > visible { result.visiblyChanged += 1 }
+                    if worst > 0 { result.anyChanged += 1 }
+                    result.worstChannel = max(result.worstChannel, worst)
+                    index += 4
+                }
+            }
+        }
+        return result
+    }
+
     /// **How different is "different"?** For each station both runs share:
     /// the share of pixels whose largest channel difference exceeds 8 of 255
-    /// (a change an eye could plausibly see on a flat map area), and the mean
-    /// absolute channel difference. Printed as a distribution, because two
-    /// runs of the *unchanged* substrate already differ and a fix is judged
+    /// (a change an eye could plausibly see on a flat map area), the mean
+    /// absolute channel difference, and the largest difference anywhere.
+    /// Two runs of the *unchanged* substrate already differ, so a fix is judged
     /// against that floor, not against zero.
     private func compare(_ provider: HashingProvider, against directory: URL) throws {
-        let visible: UInt8 = 8
         var identical = 0
-        var rows: [(share: Double, mean: Double)] = []
+        var diffs: [PixelDiff] = []
         for (key, image) in provider.images {
             let url = directory.appendingPathComponent("png/\(key).png")
             guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                   let reference = CGImageSourceCreateImageAtIndex(source, 0, nil) else { continue }
-            let a = HashingProvider.bytes(of: image), b = HashingProvider.bytes(of: reference)
-            guard a.count == b.count else { continue }
-            if a == b {
-                identical += 1
-                rows.append((0, 0))
-                continue
-            }
-            var changed = 0, total = 0
-            a.withUnsafeBytes { pa in
-                b.withUnsafeBytes { pb in
-                    let x = pa.bindMemory(to: UInt8.self), y = pb.bindMemory(to: UInt8.self)
-                    var i = 0
-                    while i < x.count {
-                        var worst: UInt8 = 0
-                        for c in 0..<3 {
-                            let d = x[i + c] > y[i + c] ? x[i + c] - y[i + c] : y[i + c] - x[i + c]
-                            total += Int(d)
-                            worst = max(worst, d)
-                        }
-                        if worst > visible { changed += 1 }
-                        i += 4
-                    }
-                }
-            }
-            let pixels = Double(a.count / 4)
-            rows.append((Double(changed) / pixels, Double(total) / (pixels * 3)))
+            let ours = HashingProvider.bytes(of: image), theirs = HashingProvider.bytes(of: reference)
+            guard ours.count == theirs.count else { continue }
+            if ours == theirs { identical += 1 }
+            diffs.append(ours == theirs ? PixelDiff(pixels: ours.count / 4) : Self.diff(ours, theirs, visible: 8))
         }
-        let shares = rows.map(\.share).sorted(), means = rows.map(\.mean).sorted()
-        func pct(_ values: [Double], _ q: Double) -> Double {
-            values.isEmpty ? 0 : values[min(values.count - 1, Int(Double(values.count) * q))]
+        let shares = diffs.map { Double($0.visiblyChanged) / Double(max($0.pixels, 1)) }.sorted()
+        let means = diffs.map { Double($0.channelSum) / Double(max($0.pixels * 3, 1)) }.sorted()
+        func quantile(_ values: [Double], _ fraction: Double) -> Double {
+            values.isEmpty ? 0 : values[min(values.count - 1, Int(Double(values.count) * fraction))]
         }
         print(String(
             format: "KAMOME_TILE_BENCH   vs reference: %d stations compared, %d byte-identical · "
                 + "pixels visibly changed median %.4f%% p90 %.4f%% max %.4f%% · mean |Δ| median %.4f max %.4f",
-            rows.count, identical, 100 * pct(shares, 0.5), 100 * pct(shares, 0.9), 100 * (shares.last ?? 0),
-            pct(means, 0.5), means.last ?? 0
+            diffs.count, identical, 100 * quantile(shares, 0.5), 100 * quantile(shares, 0.9),
+            100 * (shares.last ?? 0), quantile(means, 0.5), means.last ?? 0
+        ))
+        let pixels = diffs.reduce(0) { $0 + $1.pixels }, changed = diffs.reduce(0) { $0 + $1.anyChanged }
+        print(String(
+            format: "KAMOME_TILE_BENCH   largest channel difference anywhere %d/255 · %.5f%% of all pixels differ at all",
+            Int(diffs.map(\.worstChannel).max() ?? 0), 100 * Double(changed) / Double(max(pixels, 1))
         ))
     }
 
-    @MainActor
-    func testTileRequestsAndPixelsForOneFilm() async throws {
-        let fixture = try XCTUnwrap(
-            HarnessEnv.value("KAMOME_TILE_BENCH") as String?,
-            "Measurement harness — set KAMOME_TILE_BENCH to a fixture name (e.g. iceland)."
-        )
-        let limit = try HarnessEnv.value("KAMOME_TILE_BENCH_LIMIT").map { raw in
-            guard let value = Int(raw), value > 0 else {
-                throw HarnessError("KAMOME_TILE_BENCH_LIMIT=\(raw) is not a positive integer")
-            }
-            return value
-        }
+    /// The loop the export runs, over the fixture, on the production substrate.
+    private struct Bench {
+        let loop: RecapRenderLoop
+        let provider: HashingProvider
+        let config: TrackingConfig.Export
+    }
 
+    private func bench(fixture: String) async throws -> Bench {
         let (trip, config) = try await RecapDemoFilmTests.importedRecap(
             named: fixture, baseURL: "", reconstructor: UnroutableSeaProvider.forFixture(fixture)
         )
@@ -188,16 +200,15 @@ final class RecapTileRequestBenchTests: XCTestCase {
         )
         let provider = HashingProvider(inner: mapLibre)
         let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
-        let stations = loop.stations
-        let used = limit.map { min($0, stations.count) } ?? stations.count
-        // One frame per station is composited: the bench is about the map, and
-        // a station none of whose frames is wanted is never fetched.
-        let wanted = Set(stations.prefix(used).map(\.frames.lowerBound))
+        return Bench(loop: loop, provider: provider, config: config)
+    }
 
-        // `KAMOME_TILE_BENCH_FIX=0` is the "before": no coalescing, no terrain
-        // lifetime — the network path the export had until 2026-09-26.
-        let fix = HarnessEnv.value("KAMOME_TILE_BENCH_FIX") != "0"
-        if HarnessEnv.value("KAMOME_TILE_BENCH_COLD") == "1" {
+    /// `KAMOME_TILE_BENCH_FIX=0` is the "before": no coalescing, no terrain
+    /// lifetime, nothing remembered — the network path the export had until
+    /// 2026-09-26.
+    @MainActor
+    private func prepare(config: TrackingConfig.Export, fix: Bool, cold: Bool) async {
+        if cold {
             let error: Error? = await withCheckedContinuation { continuation in
                 MLNOfflineStorage.shared.clearAmbientCache { continuation.resume(returning: $0) }
             }
@@ -208,19 +219,10 @@ final class RecapTileRequestBenchTests: XCTestCase {
             terrainMaxAgeS: fix ? config.pipeline.terrainMaxAgeS : 0,
             tileMemoryMb: fix ? config.pipeline.tileMemoryMb : 0
         )
+    }
 
-        let started = ContinuousClock.now
-        let stats = try await loop.renderFrames(only: { wanted.contains($0) }) { _, _ in true }
-        let elapsed = ContinuousClock.now - started
+    private func report(fix: Bool) {
         let map = MapLibreSnapshotProvider.meter.read()
-
-        print(String(
-            format: "KAMOME_TILE_BENCH %@ — %d of %d stations · %d fetches · %.1f s wall · "
-                + "snapshot mean %.2f s · wait %.1f s · peak in flight %d",
-            fixture, used, stations.count, stats.fetches,
-            Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18,
-            map.meanSnapshotS, stats.waitS, map.peakInFlight
-        ))
         let hub = TileRequestCoalescer.shared.read()
         print("KAMOME_TILE_BENCH   fix \(fix ? "on" : "off") · downloads \(hub.downloads) · "
               + "joined \(hub.joined) · remembered \(hub.remembered) · terrain aged \(hub.terrainAged)")
@@ -232,7 +234,42 @@ final class RecapTileRequestBenchTests: XCTestCase {
             print("KAMOME_TILE_BENCH   \(kind.rawValue): \(counts.requests) requests / \(counts.distinct) distinct · "
                   + "\(counts.revalidations) revalidated · \(counts.refetches) refetched · median repeat gap \(gap)")
         }
+    }
 
+    @MainActor
+    func testTileRequestsAndPixelsForOneFilm() async throws {
+        let fixture = HarnessEnv.value("KAMOME_TILE_BENCH") ?? ""
+        try XCTSkipUnless(
+            !fixture.isEmpty, "Measurement harness — set KAMOME_TILE_BENCH to a fixture name (e.g. iceland)."
+        )
+        let limit = try HarnessEnv.value("KAMOME_TILE_BENCH_LIMIT").map { raw in
+            guard let value = Int(raw), value > 0 else {
+                throw HarnessError("KAMOME_TILE_BENCH_LIMIT=\(raw) is not a positive integer")
+            }
+            return value
+        }
+        let bench = try await bench(fixture: fixture)
+        let (loop, provider, config) = (bench.loop, bench.provider, bench.config)
+        let stations = loop.stations
+        let used = limit.map { min($0, stations.count) } ?? stations.count
+        // One frame per station is composited: the bench is about the map, and
+        // a station none of whose frames is wanted is never fetched.
+        let wanted = Set(stations.prefix(used).map(\.frames.lowerBound))
+        let fix = HarnessEnv.value("KAMOME_TILE_BENCH_FIX") != "0"
+        await prepare(config: config, fix: fix, cold: HarnessEnv.value("KAMOME_TILE_BENCH_COLD") == "1")
+
+        let started = ContinuousClock.now
+        let stats = try await loop.renderFrames(only: { wanted.contains($0) }, { _, _ in true })
+        let elapsed = ContinuousClock.now - started
+        let map = MapLibreSnapshotProvider.meter.read()
+        print(String(
+            format: "KAMOME_TILE_BENCH %@ — %d of %d stations · %d fetches · %.1f s wall · "
+                + "snapshot mean %.2f s · wait %.1f s · peak in flight %d",
+            fixture, used, stations.count, stats.fetches,
+            Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18,
+            map.meanSnapshotS, stats.waitS, map.peakInFlight
+        ))
+        report(fix: fix)
         if let out = HarnessEnv.value("KAMOME_TILE_BENCH_OUT") {
             try write(provider, to: URL(fileURLWithPath: (out as NSString).expandingTildeInPath))
         }
