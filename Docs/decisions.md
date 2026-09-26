@@ -6828,6 +6828,9 @@ verdicts are revised:
    shows no photographs. **No duration**: `LinearTimeline` needs a composed trip, compose runs
    after routing, and a length guessed before routing can disagree with the film.
 
+8. **The chosen vehicle opens in view** (review polish 5, VERIFIED as a defect by render): the
+   chip row scrolls the chosen vehicle to its centre when the sheet appears, never on a tap.
+
 | Claim | Status | Cheapest thing that settles it |
 |---|---|---|
 | The job reports the three stages in order | **VERIFIED** by reading `run`; the coordinator plumbing by `RecapExportCoordinatorTests` | — |

@@ -247,18 +247,27 @@ struct RecapView: View {
         let subjects = model.pickableSubjects
         if subjects.count > 1 {
             Section("recap_vehicle_header") {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(subjects, id: \.id) { subject in
-                            Button {
-                                model.chooseVehicle(subject.id)
-                            } label: {
-                                vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(subjects, id: \.id) { subject in
+                                Button {
+                                    model.chooseVehicle(subject.id)
+                                } label: {
+                                    vehicleChip(subject, isSelected: subject.id == model.vehicleId)
+                                }
+                                .buttonStyle(.plain)
+                                .id(subject.id)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    // **The chosen vehicle opens in view** (S5 review item 5).
+                    // With a chip late in the row chosen, the sheet opened on
+                    // the first three and nothing said which was selected.
+                    // Centred, so its neighbours show and the row still reads
+                    // as scrollable; on appear only — a tapped chip is in view.
+                    .onAppear { proxy.scrollTo(model.vehicleId, anchor: .center) }
                 }
                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 0))
             }
