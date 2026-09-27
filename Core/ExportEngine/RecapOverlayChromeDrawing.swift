@@ -51,13 +51,10 @@ extension RecapOverlayRenderer {
         // viewer reads cold, and type running edge to edge reads as a caption
         // rather than as a title.
         let sideMargin = style.cardMarginPx * scale * style.titleSideMarginScale
-        let titleFontPx = fittedFontPx(
-            title, preferred: style.titleFontPx,
-            maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface
-        )
+        let layout = titleLayout(title, maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface)
         let markSide = style.titleMarkSidePx * scale * style.titleBandMarkScale
         let brandPx = style.subtitleFontPx
-        let titleH = titleFontPx * scale
+        let titleH = titleBlockHeight(layout, in: surface)
         let metaH = style.subtitleFontPx * scale
         let gap = style.cardPaddingPx * scale
         let centerX = CGFloat(surface.widthPx) / 2
@@ -81,10 +78,7 @@ extension RecapOverlayRenderer {
         )
 
         cursorY -= gap * 1.2 + titleH
-        drawCenteredText(
-            title, centerX: centerX, baselineY: cursorY + titleH * 0.22,
-            fontPx: titleFontPx, color: style.chromeTitleColor, in: surface
-        )
+        drawTitleBlock(layout, centerX: centerX, bottomY: cursorY, in: surface)
 
         cursorY -= gap * 0.8 + metaH
         drawCenteredText(
@@ -131,11 +125,8 @@ extension RecapOverlayRenderer {
 
         let markSide = shareURL == nil ? style.titleMarkSidePx * scale : style.qrSidePx * scale
         let sideMargin = style.cardMarginPx * scale * style.titleSideMarginScale
-        let titleFontPx = fittedFontPx(
-            title, preferred: style.titleFontPx,
-            maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface
-        )
-        let titleH = titleFontPx * scale
+        let layout = titleLayout(title, maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface)
+        let titleH = titleBlockHeight(layout, in: surface)
         let figuresH = (tokens.figureValueFontPx + tokens.figureLabelGapPx + tokens.figureLabelFontPx) * scale
         let wordmarkH = style.wordmarkFontPx * scale
         let taglineH = tokens.taglineFontPx * scale
@@ -150,10 +141,7 @@ extension RecapOverlayRenderer {
         drawEndMark(shareURL: shareURL, centerX: centerX, bottomY: cursorY, side: markSide, in: surface)
 
         cursorY -= gap * 1.2 + titleH
-        drawCenteredText(
-            title, centerX: centerX, baselineY: cursorY + titleH * 0.22,
-            fontPx: titleFontPx, color: style.chromeTitleColor, in: surface
-        )
+        drawTitleBlock(layout, centerX: centerX, bottomY: cursorY, in: surface)
 
         cursorY -= gap * 2 + figuresH
         drawFigureRow(figures, topY: cursorY + figuresH, in: surface)
@@ -260,8 +248,8 @@ extension RecapOverlayRenderer {
     }
 
     /// The largest size at or below `preferred` that fits `maxWidth`. Text in a
-    /// film cannot be truncated or wrapped away — it is on screen for seconds and
-    /// then gone — so it scales instead.
+    /// film cannot be truncated — it is on screen for seconds and then gone — so
+    /// it scales instead. The trip's name alone may also wrap (`RecapTitleLayout`).
     func fittedFontPx(
         _ text: String, preferred: CGFloat, maxWidth: CGFloat, in surface: RenderSurface
     ) -> CGFloat {

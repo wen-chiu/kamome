@@ -115,6 +115,12 @@ public struct RecapStyle {
     public var cardCornerPx: CGFloat = 32
     public var cardPaddingPx: CGFloat = 28
     public var titleFontPx: CGFloat = 104
+    /// The smallest a trip's name is drawn on one line before it takes two
+    /// (`RecapTitleLayout`, Chiu 2026-09-27). 52 is where a 19-character
+    /// Chinese name already sat — about 1.3× the date line, still a title.
+    public var titleMinFontPx: CGFloat = 52
+    /// Line advance for a two-line name, as a multiple of its size.
+    public var titleLineSpacing: CGFloat = 1.15
     public var subtitleFontPx: CGFloat = 40
     public var statFontPx: CGFloat = 44
     public var qrSidePx: CGFloat = 320
