@@ -2494,7 +2494,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "現場錄製"
+            "value": "即時記錄"
           }
         }
       }
@@ -2512,23 +2512,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "這趟旅程根據相片的位置與時間重建，並非實際記錄的軌跡。"
-          }
-        }
-      }
-    },
-    "provenance_recorded": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recorded"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "即時記錄"
           }
         }
       }
