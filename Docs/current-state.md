@@ -7,9 +7,9 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-09-27 against decisions.md **2026-09-27** and `main` at
-**PR #105** (09-27: Short ≤ 90 s default, Standard ≤ 300 s, length shown, export logs kept. ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
+**PR #107** (#107: xcstrings dup-key gate. 09-27: Short ≤ 90 s default, Standard ≤ 300 s, length shown, logs kept. #102: ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
 lint, verdict v13. #101: (d) Vision, v12, probe owed; #103, #99, #96: S5. #100: (c) walk land, v11. #98: (b) picks, v10.
-Export §9 (`Docs/handoff-export-performance.md`): 1 download/tile, desk 3×.
+#105: export §9 (`Docs/handoff-export-performance.md`): 1 download/tile, desk 3×.
 #95: (e) area floor, town in the pill,
 schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #91: superseded by (b)). #92: 09-24 (b). #89 (ADR 2026-09-24: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;

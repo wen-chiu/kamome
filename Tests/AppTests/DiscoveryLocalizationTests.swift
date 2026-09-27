@@ -58,6 +58,13 @@ final class DiscoveryLocalizationTests: XCTestCase {
             XCTAssertFalse(recorded.lowercased().contains("verified"), recorded)
             XCTAssertNotEqual(recorded, try localizedValue("provenance_badge", locale: locale))
         }
+        // The key was once defined twice (ADR 2026-09-23 (e)); the compiler kept
+        // PR #83's "Recorded live"/「現場錄製」. zh is 「即時記錄」 since PR #107,
+        // matching the diary's story_provenance_recorded (「由卡摸咩即時記錄」);
+        // 錄製 read as a media recording. Scripts/check-xcstrings-duplicates.sh
+        // keeps the key single.
+        XCTAssertEqual(try localizedValue("provenance_recorded", locale: "en"), "Recorded live")
+        XCTAssertEqual(try localizedValue("provenance_recorded", locale: "zh-Hant"), "即時記錄")
         // English inflects the card's counts; the catalogue's plurals must resolve.
         XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 1), "1 day")
         XCTAssertEqual(String.localizedStringWithFormat(try localizedValue("journey_days", locale: "en"), 12), "12 days")

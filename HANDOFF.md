@@ -128,7 +128,6 @@ string stands. Do not reopen this from scratch.
 - **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
 - 🟠 **Picks (b): device check owed. Auto-pick (d): phone probe owed.**
   → `Docs/handoff-photo-analysis.md`.
-- ⚠️ `provenance_recorded` is defined twice in the string catalogue → ADR 2026-09-23 (e).
 
 ---
 
