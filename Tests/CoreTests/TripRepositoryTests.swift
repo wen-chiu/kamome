@@ -144,6 +144,10 @@ final class TripRepositoryTests: XCTestCase {
         XCTAssertEqual(detail.stops[0].name, "咖啡店")
         XCTAssertEqual(detail.stops[0].note, "flat white")
 
+        // Trip rename (S3, 2026-09-27).
+        try repository.setTripTitle(tripId: tripId, title: "伯斯週末")
+        XCTAssertEqual(try repository.detail(tripId: tripId)?.trip.title, "伯斯週末")
+
         // Photos attach to stops; deleting a stop detaches, not deletes.
         try repository.replacePhotoRefs(tripId: tripId, with: [
             PhotoRefRecord(id: "ph1", tripId: tripId, stopId: firstStop.id, phAssetId: "asset-1"),

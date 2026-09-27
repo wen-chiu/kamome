@@ -6,12 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-26 against decisions.md **2026-09-26 (c)** and `main` at
-**PR #102** (ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
+Last synced: 2026-09-27 against decisions.md **2026-09-26 (c)** and `main` at
+**PR #105** (trip rename: 09-27. ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
 lint, verdict v13. #101: (d) Vision, v12, probe owed; #103, #99, #96: S5. #100: (c) walk land, v11. #98: (b) picks, v10.
 Export §9 (`Docs/handoff-export-performance.md`): 1 download/tile, desk 3×.
 #95: (e) area floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #91: superseded by (b)). #92: 09-24 (b). #89 (ADR 2026-09-24: the body is framed per camera
+schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #91: superseded). #92: 09-24 (b). #89 (ADR 2026-09-24: the body is framed per camera
 area — a town at town scale, a drive wide; zoom only while the vehicle waits;
 renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). #85–#88: 09-23 ADRs (b)–(f), export perf §7. #81: export speed (device run: §8). #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
 names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an

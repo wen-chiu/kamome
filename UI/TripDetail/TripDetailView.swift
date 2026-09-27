@@ -16,6 +16,8 @@ struct TripDetailView: View {
     @State var showingAllFilms = false
     @State var showingProvenance = false
     @State private var showingMerge = false
+    @State private var showingRename = false
+    @State private var renameText = ""
     /// DEBUG: the photo analysis probe (ADR 2026-09-25 (d)).
     @State private var showingProbe = false
     /// Set when a merge folded this trip into an earlier one: the screen leaves
@@ -32,6 +34,31 @@ struct TripDetailView: View {
         _model = State(initialValue: TripDetailModel(
             tripId: tripId, config: session.config, repository: session.repository
         ))
+    }
+
+    /// What can be changed about the trip itself. A pencil rather than the
+    /// system's "⋯" so it reads as "edit this trip" (Chiu 2026-09-27).
+    private var tripEditMenu: some View {
+        Menu {
+            Button {
+                renameText = model.detail?.trip.title ?? ""
+                showingRename = true
+            } label: {
+                Label("trip_rename_action", systemImage: "pencil")
+            }
+            .disabled(model.detail?.trip.endedAt == nil)
+            Button {
+                showingMerge = true
+            } label: {
+                Label("trip_merge_action", systemImage: "arrow.triangle.merge")
+            }
+            .disabled(model.detail?.trip.endedAt == nil)
+            #if DEBUG
+            Button { showingProbe = true } label: { Text(verbatim: "Photo analysis probe") }
+            #endif
+        } label: {
+            Label("trip_edit_menu", systemImage: "square.and.pencil")
+        }
     }
 
     var body: some View {
@@ -57,35 +84,37 @@ struct TripDetailView: View {
             #endif
         }
         .toolbar {
+            // **One trailing item, not two** — Home's two-trailing-items bug
+            // (2026-09-02): the second of two `ToolbarItem`s on the same side
+            // vanished on every clean relaunch. The edit menu and the film
+            // button share this slot for the same reason Home's two do.
             ToolbarItem(placement: .primaryAction) {
-                // S5 entry: only completed trips have a recap to render.
-                Button {
-                    showingRecap = true
-                } label: {
-                    Label("recap_export", systemImage: "film")
+                HStack(spacing: 2) {
+                    tripEditMenu
+                    // S5 entry: only completed trips have a recap to render.
+                    Button {
+                        showingRecap = true
+                    } label: {
+                        Label("recap_export", systemImage: "film")
+                    }
+                    // Naming is throttled and asynchronous; a film exported before it
+                    // finishes says "Unnamed stop" for every stop still in the queue
+                    // (Chiu 2026-08-04). The banner above says why the button is off.
+                    .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
                 }
-                // Naming is throttled and asynchronous; a film exported before it
-                // finishes says "Unnamed stop" for every stop still in the queue
-                // (Chiu 2026-08-04). The banner above says why the button is off.
-                .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
             }
-            // The overflow menu, not a second trailing button: merging is rare,
-            // and Home's two-trailing-items bug (2026-09-02) is not worth risking.
-            ToolbarItem(placement: .secondaryAction) {
-                Button {
-                    showingMerge = true
-                } label: {
-                    Label("trip_merge_action", systemImage: "arrow.triangle.merge")
-                }
-                .disabled(model.detail?.trip.endedAt == nil)
+        }
+        .alert("trip_rename_title", isPresented: $showingRename) {
+            TextField("trip_rename_placeholder", text: $renameText)
+            Button("recap_cancel", role: .cancel) {}
+            Button("save") {
+                model.renameTrip(to: renameText)
+                // Home's list is the session's copy, read once; the merge sheet
+                // refreshes it the same way.
+                session.refreshTrips()
             }
         }
         #if DEBUG
-        .toolbar {
-            ToolbarItem(placement: .secondaryAction) {
-                Button { showingProbe = true } label: { Text(verbatim: "Photo analysis probe") }
-            }
-        }
         .sheet(isPresented: $showingProbe) {
             PhotoAnalysisProbeView(tripId: model.tripId, repository: session.repository, config: session.config)
         }
