@@ -37,6 +37,49 @@ enum DemoSeeder {
         if ProcessInfo.processInfo.arguments.contains("-demo-seed-import") {
             seedImported(repository: repository)
         }
+        if ProcessInfo.processInfo.arguments.contains("-demo-seed-long") {
+            seedLong(repository: repository)
+        }
+    }
+
+    /// Twenty imported stops along the same road — enough that the short and
+    /// the standard film differ, so the export sheet's length picker shows
+    /// (2026-09-27). Photo refs dangle, as in `decorate`: the sheet counts
+    /// them and draws placeholders. More photographs at later stops, so the
+    /// ranking has something to rank.
+    private static func seedLong(repository: TripRepository) {
+        guard (try? repository.allTrips().isEmpty) == true else { return }
+        let count = 20
+        let end = Date.now.timeIntervalSince1970
+        let start = end - 3 * 86_400
+        let stepS = (end - start) / Double(count)
+        let first = route[0], last = route[route.count - 1]
+        let points = (0...count).map { index -> TripRepository.NewTrackpoint in
+            let fraction = Double(index) / Double(count)
+            return TripRepository.NewTrackpoint(
+                ts: start + Double(index) * stepS,
+                lat: first.lat + (last.lat - first.lat) * fraction,
+                lon: first.lon + (last.lon - first.lon) * fraction
+            )
+        }
+        let segment = TripRepository.NewSegment(
+            mode: "drive", startedAt: start, endedAt: end, points: points, source: SegmentSource.exif.rawValue
+        )
+        let stops = (0..<count).map { index -> TripRepository.NewStopWithPhotos in
+            let point = points[index]
+            return TripRepository.NewStopWithPhotos(
+                stop: TripRepository.NewStop(lat: point.lat, lon: point.lon, arrivedAt: point.ts, departedAt: point.ts + 1_800),
+                photos: (0..<(3 + index % 7)).map { TripRepository.NewPhoto(assetId: "demo-long-\(index)-\($0)") }
+            )
+        }
+        guard let tripId = try? repository.saveImportedTrip(TripRepository.ImportedTrip(
+            title: "South West WA, three days", startedAt: start, endedAt: end,
+            source: TripSource.importedPhotos.rawValue, segments: [segment], stopsWithPhotos: stops,
+            routeAttachedPhotos: []
+        )), let detail = try? repository.detail(tripId: tripId) else { return }
+        for (index, record) in detail.stops.enumerated() {
+            try? repository.setStopName(stopId: record.id, name: "Stop \(index + 1)")
+        }
     }
 
     private static func seedRecorded(repository: TripRepository) {

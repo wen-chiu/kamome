@@ -49,10 +49,16 @@ extension TrackingConfig {
         /// came a median ~6 s after the first ask, a window that holds far
         /// fewer tiles than this. Memory, not pixels: 0 turns it off.
         public let tileMemoryMb: Int
+        /// How many exports' own log lines are kept on the device past the
+        /// launch that wrote them (`ExportLogHistory`, 2026-09-27) — what a
+        /// tester's shared diagnostics can say about export time. Text only, a
+        /// few kilobytes an export (INFERRED); 0 keeps none. Bookkeeping, not
+        /// pixels.
+        public let keptExportLogs: Int
 
         public init(
             prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double, mapCacheMb: Int,
-            coalesceTileRequests: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int
+            coalesceTileRequests: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int, keptExportLogs: Int
         ) {
             self.prefetchDepth = prefetchDepth
             self.compositeConcurrency = compositeConcurrency
@@ -61,6 +67,7 @@ extension TrackingConfig {
             self.coalesceTileRequests = coalesceTileRequests
             self.terrainMaxAgeS = terrainMaxAgeS
             self.tileMemoryMb = tileMemoryMb
+            self.keptExportLogs = keptExportLogs
         }
 
         /// For hand-built test configs only, like `targetZoomRatio`'s default:
@@ -68,7 +75,7 @@ extension TrackingConfig {
         /// loudly. Mirrors the shipped values.
         public static let handBuilt = ExportPipeline(
             prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256,
-            coalesceTileRequests: true, terrainMaxAgeS: 2_592_000, tileMemoryMb: 64
+            coalesceTileRequests: true, terrainMaxAgeS: 2_592_000, tileMemoryMb: 64, keptExportLogs: 20
         )
 
         enum CodingKeys: String, CodingKey {
@@ -79,6 +86,7 @@ extension TrackingConfig {
             case coalesceTileRequests = "coalesce_tile_requests"
             case terrainMaxAgeS = "terrain_max_age_s"
             case tileMemoryMb = "tile_memory_mb"
+            case keptExportLogs = "kept_export_logs"
         }
     }
 }

@@ -21,6 +21,21 @@ struct RecapExportRequest: Equatable, Sendable {
     let photosEnabled: Bool
     let format: RecapExportFormat
     let appearance: RecapAppearance
+    /// How long a highlight film may run (Chiu 2026-09-27). Defaulted to
+    /// `.standard` — the film every existing caller was written against — so
+    /// only the export sheet has to say; it always does.
+    let length: FilmLength
+
+    init(
+        tripId: String, photosEnabled: Bool, format: RecapExportFormat, appearance: RecapAppearance,
+        length: FilmLength = .standard
+    ) {
+        self.tripId = tripId
+        self.photosEnabled = photosEnabled
+        self.format = format
+        self.appearance = appearance
+        self.length = length
+    }
 }
 
 enum RecapExportFormat: String, CaseIterable, Equatable, Sendable {

@@ -6837,3 +6837,52 @@ verdicts are revised:
 | 「正在準備你的照片…」 then 「算圖中…」 with a percentage appear on screen | **VERIFIED** by render (simulator, seeded Perth trip) | — |
 | The line's counts are the film's decks and follow a stop taken out | **VERIFIED** — `FilmPhotoChoicesTests`; by render, 4 · 4 → 3 · 2 → 3 with cards off | — |
 | 「正在找出你走過的路…」 appears on screen | **UNKNOWN** — the seeded trip passes the stage in under a second | An import with routing live, on a phone |
+
+## 2026-09-27 — A film is short or standard, short is the default and fits 90 s, and the sheet says how long
+
+**Decision (Chiu 2026-09-27).** A film has two lengths, chosen on the export sheet:
+**精華 / Short**, at most `total_duration_max_s` (90 s — the length a Reel or a Short
+takes whole), and **標準 / Standard**, the film that shipped before this entry (the
+trip earns 8–21 stops, ADR 2026-08-14; ≈ 88–212 s at the expected photo mix), now
+**at most `standard_duration_max_s` (300 s)** — Chiu: 標準預設不要超過三百秒，如果還是太長，要給提醒.
+**Short is the default.** A third, uncapped length (`.full`) was proposed and is
+**deferred until the export logs of other testers show what a long render costs** —
+the ADR 2026-08-11 rule that `.full` is harness-only stands.
+
+1. **`FilmLength` (`.short` / `.standard`) is a choice, not a tunable**: it travels in
+   `RecapExportRequest`, like the appearance, and is remembered app-wide
+   (`FilmLengthChoice`), so the Stop Editor draws the same plan the sheet does.
+2. **Short's room is counted, not tuned**: the most stops whose priced length stays
+   within the ceiling (`StopPhotoAllocator.shortStopCount`, 8 at shipped values). Marked
+   stops fill it first. Standard picks as before (every marked stop kept, ADR 2026-09-24).
+3. **Both lengths are then fitted to their ceiling, and the ceiling wins over the marks**
+   (Chiu, confirmed): at final deck size, highlight lifts are taken back, then whole
+   stops leave, lowest priority first, marked stops last (`fittedToCeiling`). This amends
+   ADR 2026-09-24's "a marked stop is always kept" — it holds only under the ceiling.
+4. **The fit binds the app's choice only, before the person's word** (Chiu 2026-09-25
+   stands, and Chiu confirmed): a stop put in never moves another. So a film the person
+   fills themselves can pass its ceiling; the sheet warns in orange and keeps their stops.
+5. **ADR 2026-09-26 (c) item 7 is reopened by Chiu and reversed: the sheet shows the
+   length** — "8 stops · 24 photos · about 1:28". It is `LinearTimeline.plannedDurationS`,
+   the plan the timeline itself uses, over the decks the sheet lists. The objection was
+   that the timeline needs a composed trip; its length does not.
+6. **`export.total_duration_max_s` is live again** as Short's ceiling, and leaves the
+   dead-config baseline; **`export.standard_duration_max_s`** (300) is Standard's. `RecapDurationPlan` still does not clamp to it: the ceiling is
+   met in the stops and decks, never by squeezing a deck under its photo floor.
+7. **Every export logs its stages and keeps its lines past the launch** (Chiu: testers'
+   logs are how render time gets analysed). `export stages: roads · compose · photos ·
+   drawing · total · outcome` on every exit; each export's `recap` and `routing` lines are
+   copied to `Application Support/Diagnostics/export-history.txt`, the newest
+   `export.pipeline.kept_export_logs` (20) kept, and About's diagnostics share appends
+   them. The same lines the share already carried (§0 unchanged); nothing is sent.
+
+| Claim | Status | Cheapest thing that settles it |
+|---|---|---|
+| Each length is within its ceiling on the timeline, every stop marked and every deck lifted | **VERIFIED** — `FilmLengthExportTests`, 30 stops: short 88.0 s, standard 298.7 s (382 s before the ceiling) | — |
+| The sheet's length is the film's length on a local trip | **VERIFIED** — `FilmLengthExportTests`, to the frame; simulator export: sheet "about 1:28", film 88.0 s | — |
+| A type-2 film can only come out **shorter** than the sheet says | **INFERRED** — the plan is monotone in its decks and the trim only removes | Export a type-2 trip, compare the sheet and the `film:` line |
+| The ceiling beats the marks; the person's own additions may pass it, warned | **DECIDED** — Chiu 2026-09-27, both | — |
+| A film the person filled past its ceiling keeps their stops and says so | **VERIFIED** — `FilmLengthExportTests` (30 stops put in, short) | — |
+| An export's lines reach the kept file | **VERIFIED** on the simulator (17 lines, `render cost` and `export stages` among them) | — |
+| They survive a relaunch and reach the shared file | **INFERRED** — Application Support persists, and `DiagnosticsLog.export` appends the file | Export, relaunch, share diagnostics on a phone |
+| 300 s is the right standard ceiling | **DECIDED** as a default (Chiu); tunable `standard_duration_max_s` | Chiu's judgement of a 5-minute film |

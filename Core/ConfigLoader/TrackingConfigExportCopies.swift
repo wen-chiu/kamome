@@ -58,6 +58,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: recapMode, pipeline: pipeline
         )
     }
@@ -116,6 +117,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: recapMode, pipeline: pipeline
         )
     }
@@ -167,6 +169,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: mode, pipeline: pipeline
         )
     }
@@ -216,18 +219,11 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: recapMode, pipeline: pipeline
         )
     }
 
-    /// A copy with a different keyframe interval. Measurement aid only
-    /// (2026-08-15): export time is snapshot-bound, and this is the one number
-    /// that changes the snapshot count without changing the film's content, so
-    /// an audit can price a film at several intervals in one run instead of
-    /// editing `TrackingConfig.json` between renders.
-    ///
-    /// Not a product switch. What a coarser interval buys in seconds it spends
-    /// on cross-fade quality, which is Chiu's call, made against renders.
     /// How long a crossing beat plays, for a review render.
     ///
     /// **A desk knob, not a tuning result.** `crossing_beat_s` ships at 4.0 —
@@ -285,17 +281,19 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: recapMode, pipeline: pipeline
         )
     }
 
-    /// A copy with the crop-scaling station budget replaced.
+    /// A copy with a different keyframe interval. Measurement aid only
+    /// (2026-08-15): export time is snapshot-bound, and this is the one number
+    /// that changes the snapshot count without changing the film's content, so
+    /// an audit can price a film at several intervals in one run instead of
+    /// editing `TrackingConfig.json` between renders.
     ///
-    /// Review-only, and it exists for one measurement: the interval-1 reference
-    /// the P0 is judged against (`Docs/camera-arcs.md` §7). At magnification 1.0
-    /// and padding 1.0 a station can hold exactly one camera value and its
-    /// transform is the identity — which *is* interval 1, produced by the shipped
-    /// loop rather than by a second code path kept alive to be compared with.
+    /// Not a product switch. What a coarser interval buys in seconds it spends
+    /// on cross-fade quality, which is Chiu's call, made against renders.
     public func withKeyframeIntervalFrames(_ frames: Int) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
@@ -338,6 +336,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: recapMode, pipeline: pipeline
         )
     }
@@ -391,6 +390,7 @@ extension TrackingConfig.Export {
             earnedStopsFloor: earnedStopsFloor, earnedStopsCap: earnedStopsCap,
             earnedStopsPerDoubling: earnedStopsPerDoubling,
             earnedStopsReferenceTripStops: earnedStopsReferenceTripStops,
+            standardDurationMaxS: standardDurationMaxS,
             recapMode: recapMode, pipeline: pipeline
         )
     }

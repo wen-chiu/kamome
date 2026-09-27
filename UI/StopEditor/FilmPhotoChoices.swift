@@ -1,4 +1,5 @@
 import KamomeConfig
+import KamomeExportEngine
 import KamomePersistence
 import Observation
 
@@ -21,6 +22,12 @@ final class FilmPhotoChoices {
     private(set) var decks: [String: [String]] = [:]
     /// Every stop the film could present, in trip order.
     private var eligibleStops: [StopRecord] = []
+    /// How long the film may run (Chiu 2026-09-27) — the plan above is made
+    /// for it. Remembered for the next sheet (`FilmLengthChoice`).
+    private(set) var length: FilmLength
+    /// Whether the other length would make a different film. A trip small
+    /// enough to fit either way has nothing to choose between.
+    private(set) var lengthsDiffer = false
 
     let tripId: String
     private let repository: TripRepository
@@ -29,11 +36,17 @@ final class FilmPhotoChoices {
     /// (Trip Detail's stars) can re-read it.
     private let onChange: () -> Void
 
-    init(tripId: String, config: TrackingConfig, repository: TripRepository, onChange: @escaping () -> Void = {}) {
+    /// `length` nil opens on the remembered choice (`FilmLengthChoice`); a test
+    /// passes one so the simulator's stored preference cannot decide it.
+    init(
+        tripId: String, config: TrackingConfig, repository: TripRepository, length: FilmLength? = nil,
+        onChange: @escaping () -> Void = {}
+    ) {
         self.tripId = tripId
         self.config = config
         self.repository = repository
         self.onChange = onChange
+        self.length = length ?? FilmLengthChoice.current()
         reload()
     }
 
@@ -64,9 +77,38 @@ final class FilmPhotoChoices {
 
     func reload() {
         detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
-        let plan = detail.map { RecapComposer.filmPlan(detail: $0, config: config) }
+        let plan = detail.map { RecapComposer.filmPlan(detail: $0, config: config, length: length) }
         decks = plan?.decks ?? [:]
         eligibleStops = plan?.stops ?? []
+        let other: FilmLength = length == .short ? .standard : .short
+        lengthsDiffer = detail.map { RecapComposer.filmPlan(detail: $0, config: config, length: other).decks != decks }
+            ?? false
+    }
+
+    /// Makes the next film `length` long, and remembers it.
+    func choose(_ length: FilmLength) {
+        guard length != self.length else { return }
+        self.length = length
+        FilmLengthChoice.remember(length)
+        reload()
+    }
+
+    /// **How long the film will run** (Chiu 2026-09-27) — the timeline's own
+    /// plan over the decks above (`RecapComposer.estimatedFilmS`). With photo
+    /// cards off every presented stop shows none, as the export composes it.
+    func estimatedFilmS(photosEnabled: Bool) -> Double {
+        let counts = filmStops.map { photosEnabled ? filmDeck(for: $0.id).count : 0 }
+        return RecapComposer.estimatedFilmS(photoCounts: counts, config: config)
+    }
+
+    /// The most this length may run before the person's own additions
+    /// (`durationCeilingS`: 90 s short, 300 s standard).
+    var ceilingS: Double { config.export.durationCeilingS(for: length) }
+
+    /// The person's own stops carried the film past its ceiling — compared as
+    /// the clock shows them, so 1:30 is never "over 1:30".
+    func isOverCeiling(photosEnabled: Bool) -> Bool {
+        estimatedFilmS(photosEnabled: photosEnabled).rounded() > ceilingS.rounded()
     }
 
     /// Every photograph at the stop, in time order — the grid shows all of them,

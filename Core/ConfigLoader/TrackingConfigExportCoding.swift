@@ -53,6 +53,7 @@ extension TrackingConfig.Export {
         case stopDwellMaxS = "stop_dwell_max_s"
         case totalDurationMinS = "total_duration_min_s"
         case totalDurationMaxS = "total_duration_max_s"
+        case standardDurationMaxS = "standard_duration_max_s"
         case keyframeIntervalFrames = "keyframe_interval_frames"
         case snapshotStationMaxMagnification = "snapshot_station_max_magnification"
         case crossingFlightMaxLongitudeDeg = "crossing_flight_max_longitude_deg"

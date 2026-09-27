@@ -25,9 +25,25 @@ struct RecapExportJob: RecapExportRunning {
     let repository: TripRepository
 
     func run(_ channel: RecapExportChannel) async -> RecapExportOutcome {
+        // **Where the wall-clock went, on every exit** (Chiu 2026-09-27): the
+        // `render cost` line covers the drawing alone and only a finished film,
+        // while routing and iCloud downloads can dominate a slow export. The
+        // lines are then kept past this launch (`ExportLogHistory`), so a
+        // tester can share them whenever they get round to it.
+        let clock = ExportStageClock()
+        KamomeLog.recap.notice("export: length \(request.length.rawValue, privacy: .public)")
+        let outcome = await runStages(channel, clock: clock)
+        clock.report(outcome: outcome)
+        ExportLogHistory.keep(since: clock.startedAt, keptExports: config.export.pipeline.keptExportLogs)
+        return outcome
+    }
+
+    private func runStages(_ channel: RecapExportChannel, clock: ExportStageClock) async -> RecapExportOutcome {
         channel.stage(.findingRoads)
+        clock.enter("roads")
         await matchRoutes(channel)
         channel.stage(.preparingPhotos)
+        clock.enter("compose")
         guard let composed = compose() else {
             KamomeLog.recap.error("export failed — the trip could not be composed into a film")
             return .failed(message: String(localized: "recap_failed"))
@@ -36,11 +52,13 @@ struct RecapExportJob: RecapExportRunning {
             KamomeLog.recap.error("export failed — no film plan (base map or timeline)")
             return .failed(message: String(localized: "recap_failed"))
         }
+        clock.enter("photos")
         let resolver = PhotoLibraryPhotoResolver()
         await warmDeckPhotos(trip: composed.trip, style: plan.style, resolver: resolver, channel: channel)
         // Cancel during the download phase ends here, before a frame is drawn.
         guard channel.shouldContinue() else { return .cancelled }
         channel.stage(.drawing)
+        clock.enter("drawing")
         return await render(composed: composed, plan: plan, resolver: resolver, channel: channel)
     }
 
@@ -124,6 +142,7 @@ struct RecapExportJob: RecapExportRunning {
             analysis: photos.analysis,
             highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
             weighting: config.export,
+            length: request.length,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(film.segments),
             clock: TripClock(stops: detail.stops)

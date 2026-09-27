@@ -168,6 +168,7 @@
     "stop_dwell_max_s": 25,
     "total_duration_min_s": 60,
     "total_duration_max_s": 90,
+    "standard_duration_max_s": 300,
     "keyframe_interval_frames": 15,
     "snapshot_station_max_magnification": 1.1,
     "crossing_flight_max_longitude_deg": 70,
@@ -201,7 +202,8 @@
       "map_cache_mb": 256,
       "coalesce_tile_requests": true,
       "terrain_max_age_s": 2592000,
-      "tile_memory_mb": 64
+      "tile_memory_mb": 64,
+      "kept_export_logs": 20
     }
   }
 }

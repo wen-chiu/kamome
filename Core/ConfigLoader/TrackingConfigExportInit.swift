@@ -42,6 +42,9 @@ extension TrackingConfig.Export {
             tierStandardPhotos: Int, tierTopPhotos: Int,
             earnedStopsFloor: Int, earnedStopsCap: Int,
             earnedStopsPerDoubling: Double, earnedStopsReferenceTripStops: Int,
+            // Defaulted to no ceiling for hand-built test configs, like
+            // `departureStopMaxPhotos`: the JSON key is still required.
+            standardDurationMaxS: Double = .infinity,
             recapMode: RecapMode,
             pipeline: TrackingConfig.ExportPipeline = .handBuilt
         ) {
@@ -71,6 +74,7 @@ extension TrackingConfig.Export {
             self.firstStopDwellScale = firstStopDwellScale
             self.stopDwellMinS = stopDwellMinS; self.stopDwellMaxS = stopDwellMaxS
             self.totalDurationMinS = totalDurationMinS; self.totalDurationMaxS = totalDurationMaxS
+            self.standardDurationMaxS = standardDurationMaxS
             self.keyframeIntervalFrames = keyframeIntervalFrames; self.snapshotStationPadding = snapshotStationPadding
             self.snapshotStationMaxMagnification = snapshotStationMaxMagnification
             self.crossingFlightMaxLongitudeDeg = crossingFlightMaxLongitudeDeg

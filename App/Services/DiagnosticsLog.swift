@@ -18,21 +18,38 @@ import UIKit
 /// `privacy: .public` come back redacted. Nothing is sent anywhere: the share
 /// sheet is the user's own action, one file at a time.
 ///
-/// **Only this launch.** `OSLogStore` in an app sees its own process, so a run
-/// that crashed took its lines with it — export right after the thing being
-/// measured, before leaving the app.
+/// **Only this launch — except exports.** `OSLogStore` in an app sees its own
+/// process, so a run that crashed took its lines with it. Exports are the one
+/// exception (2026-09-27): each export's lines are copied to a file as it ends
+/// (`ExportLogHistory`) and appended here, so a film rendered yesterday can
+/// still be analysed today. A crash mid-export still loses that export.
 enum DiagnosticsLog {
     struct Line: Equatable {
         let date: Date
         let category: String
         let level: String
         let message: String
+
+        init(date: Date, category: String, level: String, message: String) {
+            self.date = date
+            self.category = category
+            self.level = level
+            self.message = message
+        }
+
+        init(_ log: OSLogEntryLog) {
+            self.init(date: log.date, category: log.category, level: DiagnosticsLog.level(log.level),
+                      message: log.composedMessage)
+        }
     }
 
     /// The file to share, in tmp; nil when the log store cannot be opened.
     static func export(now: Date = .now) -> URL? {
         do {
-            let text = render(header: header(now: now), lines: try readThisLaunch())
+            var text = render(header: header(now: now), lines: try readThisLaunch())
+            if let history = ExportLogHistory.read() {
+                text += "\nEarlier exports, kept across launches (newest last)\n\n" + history
+            }
             let url = FileManager.default.temporaryDirectory
                 .appendingPathComponent("kamome-diagnostics-\(Int(now.timeIntervalSince1970)).txt")
             try text.write(to: url, atomically: true, encoding: .utf8)
@@ -65,8 +82,13 @@ enum DiagnosticsLog {
         return [
             "Kamome diagnostics — this launch only",
             "app \(version) (\(build)) · \(model) · iOS \(UIDevice.current.systemVersion)",
-            "exported \(ISO8601DateFormatter.string(from: now, timeZone: .current, formatOptions: .withInternetDateTime))"
+            "exported \(localStamp(now))"
         ]
+    }
+
+    /// Local time with its offset — the stamp every diagnostics header uses.
+    static func localStamp(_ date: Date) -> String {
+        ISO8601DateFormatter.string(from: date, timeZone: .current, formatOptions: .withInternetDateTime)
     }
 
     private static func readThisLaunch() throws -> [Line] {
@@ -76,11 +98,11 @@ enum DiagnosticsLog {
         )
         return entries.compactMap { entry in
             guard let log = entry as? OSLogEntryLog else { return nil }
-            return Line(date: log.date, category: log.category, level: level(log.level), message: log.composedMessage)
+            return Line(log)
         }
     }
 
-    private static func level(_ level: OSLogEntryLog.Level) -> String {
+    fileprivate static func level(_ level: OSLogEntryLog.Level) -> String {
         switch level {
         case .error: return "ERROR"
         case .fault: return "FAULT"

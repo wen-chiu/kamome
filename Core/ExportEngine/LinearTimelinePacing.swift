@@ -15,6 +15,15 @@ extension LinearTimeline {
     /// Two callers had the same four-line construction: the timeline's own
     /// `deck` and `pacing` below. One definition rather than two, so a fifth
     /// `deck_*` tunable cannot reach one of them and miss the other.
+    /// **The film's length from its decks alone** — what `pacing` will plan
+    /// for a content-derived film whose presented stops show `photoCounts`
+    /// photographs, in trip order. Public so the export sheet can say the
+    /// length before routing (Chiu 2026-09-27) with the very plan the timeline
+    /// uses, rather than a second estimate that could drift from it.
+    public static func plannedDurationS(photoCounts: [Int], config: TrackingConfig.Export) -> Double {
+        RecapDurationPlan.plan(photoCounts: photoCounts, config: config, deck: deck(config: config)).totalS
+    }
+
     static func deck(config: TrackingConfig.Export) -> RecapDeck {
         RecapDeck(
             photoHoldS: config.deckPhotoHoldS, zoomS: config.deckZoomS,

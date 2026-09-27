@@ -123,7 +123,8 @@ enum RecapComposer {
     /// size (`PhotoDeckSelector.pick`); `highlightedAssets` lead and, up to
     /// `highlightMaxPhotos`, raise the size (Chiu 2026-09-24). Without weighting
     /// the candidates are shown as given. `deck` + `stopHoldS` size each stop's dwell from its
-    /// photo count. Returns nil for trips the phantom guard should have kept out
+    /// photo count. `length` is the export sheet's choice (`FilmLength`).
+    /// Returns nil for trips the phantom guard should have kept out
     /// anyway (no route points).
     static func trip(
         trip: TripRecord,
@@ -141,6 +142,7 @@ enum RecapComposer {
         analysis: PhotoAnalysisInputs? = nil,
         highlightMaxPhotos: Int = 0,
         weighting: TrackingConfig.Export? = nil,
+        length: FilmLength = .standard,
         everyLegRoutabilityEstablished: Bool = false,
         clock: TripClock? = nil
     ) -> RecapTrip? {
@@ -155,7 +157,8 @@ enum RecapComposer {
             rawCounts: rawPhotoCounts, starredCounts: favoriteCounts,
             picked: pickedAssets, pickedCounts: pickedCounts, analysis: analysis
         )
-        let plan = deckPlan(stops: stops, inputs: inputs, highlightMaxPhotos: highlightMaxPhotos, weighting: weighting)
+        let plan = deckPlan(stops: stops, inputs: inputs, highlightMaxPhotos: highlightMaxPhotos,
+                            weighting: weighting, length: length)
         let tripStops = plan.map { stop, photos -> RecapTrip.Stop in
             RecapTrip.Stop(
                 coordinate: snapped(lat: stop.lat, lon: stop.lon, to: legs),

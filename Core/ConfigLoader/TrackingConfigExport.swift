@@ -233,11 +233,12 @@ public extension TrackingConfig {
         /// single-photo stop nor an eight-photo one should leave this window.
         public let stopDwellMinS: Double
         public let stopDwellMaxS: Double
-        /// The film's target length. Duration follows content rather than a fixed
-        /// number: a flat 30 s gave a six-stop trip 2.5 s per stop, which is a
-        /// montage, not a journey.
+        /// The floor. Duration follows content: a flat 30 s gave a six-stop trip 2.5 s a stop.
         public let totalDurationMinS: Double
+        /// The short film's ceiling (`FilmLength.short`, 2026-09-27).
         public let totalDurationMaxS: Double
+        /// The standard film's ceiling (`FilmLength.standard`, Chiu 2026-09-27: 預設不要超過三百秒).
+        public let standardDurationMaxS: Double
         /// One map snapshot per this many frames; in-between frames cross-fade (§4.5).
         ///
         /// ⚠️ **Not read by the reprojected render path** (`Docs/camera-arcs.md`
@@ -379,11 +380,8 @@ public extension TrackingConfig {
         /// `RecapDurationRuleReportTests` for what it does to trips it was never
         /// fitted to.
         public let earnedStopsFloor: Int
-        /// The ceiling, and the binding constraint for any trip past ~36 stops.
-        /// **21, not 22** — Iceland's approved film presents 21 stops, because the
-        /// old `keptStopCount` floored a division that evaluates to
-        /// `21.999999999999996`. A rule producing 22 would not be the film Chiu
-        /// watched and published.
+        /// The ceiling, binding past ~36 stops. **21, not 22**: Iceland's approved film has 21,
+        /// because the old `keptStopCount` floored `21.999999999999996`.
         public let earnedStopsCap: Int
         /// How many additional stops each doubling of trip size earns.
         public let earnedStopsPerDoubling: Double

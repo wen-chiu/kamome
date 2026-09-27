@@ -24,6 +24,7 @@ final class ExportPipelineConfigTests: XCTestCase {
         XCTAssertTrue(pipeline.coalesceTileRequests)
         XCTAssertGreaterThan(pipeline.terrainMaxAgeS, 0)
         XCTAssertGreaterThan(pipeline.tileMemoryMb, 0)
+        XCTAssertGreaterThan(pipeline.keptExportLogs, 0)
     }
 
     func testEveryCopyKeepsThePipeline() throws {
@@ -31,7 +32,8 @@ final class ExportPipelineConfigTests: XCTestCase {
         // them: load a copy of the file whose pipeline no default could produce.
         let base = try shipped(pipeline: [
             "prefetch_depth": 3, "composite_concurrency": 2, "snapshot_timeout_s": 7, "map_cache_mb": 9,
-            "coalesce_tile_requests": false, "terrain_max_age_s": 11, "tile_memory_mb": 13
+            "coalesce_tile_requests": false, "terrain_max_age_s": 11, "tile_memory_mb": 13,
+            "kept_export_logs": 17
         ])
         XCTAssertNotEqual(base.pipeline, .handBuilt, "precondition: the marked pipeline differs from the default")
         let copies: [TrackingConfig.Export] = [
