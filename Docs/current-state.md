@@ -6,10 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-28 against ADR **2026-09-28** (the ledger's last entry:
-it is frozen, one issue list replaces the handoff lists, one charter replaces
-three). `main` then carried PR #110 — film length Short ≤ 90 s (default) or
-Standard ≤ 300 s (ADR 2026-09-27).
+Last synced: 2026-09-28 against ADR **2026-09-28-sample-trip** (an empty
+Home offers a sample trip, Hualien to Taitung, with its road shipped and
+drawings for photographs). Before it: 2026-09-28, governance v2, the ledger's
+last entry.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
 work is GitHub Issues (`device`, `chiu`, `desk`); phone-only checks are

@@ -22,7 +22,7 @@ struct TripMergeSheet: View {
 
     private var candidates: [TripRecord] {
         session.trips
-            .filter { $0.id != tripId && $0.endedAt != nil }
+            .filter { $0.id != tripId && $0.endedAt != nil && !$0.tripSource.isSample }
             .sorted { $0.startedAt < $1.startedAt }
     }
 

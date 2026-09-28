@@ -99,7 +99,9 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
         for ref in refs {
             guard shouldContinue() else { break }
             let key = Self.key(for: ref)
-            switch await resolveLocally(ref, key: key, assets: assets, targetPx: targetPx) {
+            // The sample trip's drawings ship in the app, so they are read as
+            // the files they are — cached under the ref the film asks for.
+            switch await resolveLocally(SampleTrip.onDisk(ref), key: key, assets: assets, targetPx: targetPx) {
             case .resolved: resolved += 1
             case let .inCloud(asset): pending.append((key, asset))
             case .missing: break
