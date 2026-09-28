@@ -8,6 +8,17 @@ to catch the next occurrence, which is now instrumented.
 300-line budget (`Scripts/check-doc-budget.sh`). Nothing was edited; `HANDOFF.md`
 carries the live summary and points here.*
 
+**Status 2026-09-28 (#121):** the **consequence** is fixed. `VehicleCatalog.Store`
+cached a failed load, so one transient miss held for the whole process. It set
+`manifestLoaded` before the decode and cached nil artwork, and an empty manifest
+leaves every subject without a `kind`. That matches the 2026-09-16 symptom
+exactly: all three subjects missed in one process, the bundle was found, and a
+retry worked. A failure is now never cached, and the log names the failing step
+(`subject manifest: …` or `subject artwork: …`). `VehicleCatalogRetryTests` holds
+this; both tests went red when the old caching was put back.
+**Still UNKNOWN:** what makes the first read fail, and the rate on a phone
+(`Docs/device-runbook.md`, row "Subject lookup miss rate").
+
 ---
 
 ## 🟠 Open — the `KamomeCore_KamomeExportEngine` subject lookup still misses; it no longer crashes
