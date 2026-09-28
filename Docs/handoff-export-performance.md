@@ -58,7 +58,7 @@ well as more of them (INFERRED — see §4).
 | `nz-real` | 73 | **35** (2.1×) |
 | `auckland-crossing` | 102 (arc 54) | **43** (arc 21, 2.4×) |
 
-It buys that with **sharpness** — `Docs/handoff-crop-scaling.md` §1 prices 1.20
+It buys that with **sharpness** — `Docs/_archive/handoff-crop-scaling.md` §1 prices 1.20
 at mean error 0.905 against 1.10's 0.658, and 1.25 is past the measured table.
 **A look decision, Chiu's, judged against two renders — never a config edit.**
 

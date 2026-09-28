@@ -69,3 +69,15 @@ Citing one of these from live work is fine. Citing anything else here as current
 is the mistake this directory exists to prevent.
 | `Docs/design-reviews/2026-09-04-open-questions-type2-opening.md` | `_archive/2026-09-04-open-questions-type2-opening.md` | all five answered; the verdicts are in it and in ADR 2026-09-05 (b) (2026-09-05) |
 | `Docs/handoff-openfreemap-eval.md` | `_archive/handoff-openfreemap-eval.md` | concluded — the evaluation closed 2026-09-15 and the production switch landed (ADR 2026-09-16, PRs #71–#72). Moved 2026-09-18 |
+
+### Moved 2026-09-28 — governance cleanup (closed work, decisions already in the ledger)
+
+| cited as | now at | why it moved |
+|---|---|---|
+| `Docs/handoff-cross-region-crossing.md` | `_archive/handoff-cross-region-crossing.md` | the crossing beat was built and judged; decisions are ADRs 2026-09-01 → 2026-09-04 (b) |
+| `Docs/handoff-type2-films.md` | `_archive/handoff-type2-films.md` | the type-2 closeout. ⚠️ Its handed-over lever still holds: if the crossing reads rushed, shrink the sprite (`subject_length_px`), never lengthen `crossing_beat_s` |
+| `Docs/handoff-type2-opening-retime.md` | `_archive/handoff-type2-opening-retime.md` | built and measured; ADRs 2026-09-03 (b), 2026-09-04 (b) |
+| `Docs/handoff-crop-scaling.md` | `_archive/handoff-crop-scaling.md` | the P0 was fixed by reprojection and the country opening was built (#108 finished its §14 title item). ⚠️ Still true: the **0.747 sharpness step** at hold boundaries (§10), accepted; the worktree-renders-a-different-film trap (§3) also lives in `Docs/environment-gotchas.md` |
+| `Docs/phase4-reference.md` | `_archive/phase4-reference.md` | Phase 4 scope reasoning (Chiu 2026-08-15); nothing live cited it |
+| `Docs/po-recovery-audit.md` | `_archive/po-recovery-audit.md` | a one-time procedure, run 2026-08-30; nothing live cited it |
+| `Docs/handoff-arch-review-2026-09-24.md` | `_archive/handoff-arch-review-2026-09-24.md` | both rounds built or decided (ADRs 2026-09-24 (c)–(d), 2026-09-26, (b)). Its device-only remainder is rows in `Docs/device-runbook.md`. ⚠️ Known limit, INFERRED: high-speed rail can judge as a flight at 160 km/h (Beijing → Shanghai ≈ 176) |

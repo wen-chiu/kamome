@@ -34,7 +34,7 @@ Dependencies point one way; `Config/architecture.json` is the spec;
 `ExportEngine` index (36 files): camera (`CameraPath*`, `FollowCamera`) · pacing
 (`LinearTimeline*`, `RecapPacing`, `RecapDurationPlan`) · style (`RecapStyle`,
 `RecapStylePresets`, `RecapAppearance`) · drawing (`RecapOverlay*Drawing`,
-`FrameCompositor`) · base map (`RecapSnapshot`, `MapKitSnapshotProvider`) ·
+`FrameCompositor`) · base map (`RecapSnapshot`; the shipped provider is `App/Services/MapLibreSnapshotProvider.swift`, `MapKitSnapshotProvider` is now used only by tests) ·
 subject (`RecapSubjectRenderer`, `RecapVehicleMarker`, `VehicleCatalog`) · output
 (`RecapExporter`, `RecapVideoEncoder`, `RecapGIFEncoder`).
 

@@ -6,34 +6,15 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-27 against decisions.md **2026-09-27** and `main` at
-**PR #107** (#107: xcstrings dup-key gate. 09-27: Short ≤ 90 s default, Standard ≤ 300 s, length shown, logs kept. #102: ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
-lint, verdict v13. #101: (d) Vision, v12, probe owed; #103, #99, #96: S5. #100: (c) walk land, v11. #98: (b) picks, v10.
-#105: export §9 (`Docs/handoff-export-performance.md`): 1 download/tile, desk 3×.
-#95: (e) area floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). #91: superseded by (b)). #92: 09-24 (b). #89 (ADR 2026-09-24: the body is framed per camera
-area — a town at town scale, a drive wide; zoom only while the vehicle waits;
-renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). #85–#88: 09-23 ADRs (b)–(f), export perf §7. #81: export speed (device run: §8). #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
-names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
-airport-only home is type 2, the film ends at the destination (2026-09-01 built),
-every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the
-device re-export is owed (`Docs/handoff-type2-round-trip.md`). TestFlight's code
-is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
-**ADR 2026-09-23 (d)**: S1's record path is one named button and a sheet; a
-repeat import offers the trip already holding its photos, and Discovery stops
-offering it (`import.duplicate_photo_share`, INFERRED).
-**ADRs 2026-09-23 (e)–(f)** (#87): the Discovery beta's list goes
-compact — two lines (place, visit pill, date; route, days, ground-only km),
-photos and details in a drawer that opens in place, provenance marked by
-exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
-no coordinate as a milestone.
-**ADR 2026-09-24 (b)**: trips merge into one trip and one film. Recorded and photo-rebuilt
-parts can mix, with provenance per segment and the whole marked reconstructed. A far
-gap between parts is an inferred `merge_gap` leg, a near one an overnight stop. Films are
-kept. PR #90 makes a recording survive the app being killed (`Docs/handoff-long-recording.md`).
-**ADRs 2026-09-24 (c)–(d)**: delete stops the export; Home's swipe asks;
-side-load off in Release; About exports diagnostics; the database stays in
-device backup. `Docs/handoff-arch-review-2026-09-24.md`.
+Last synced: 2026-09-28 against decisions.md **2026-09-27** and `main` at
+**PR #110**. Last four: #106 trips can be renamed; #108 an unnamed trip's film
+opens on its country; #109 a long name wraps to two lines; #110 film length is
+Short ≤ 90 s (default) or Standard ≤ 300 s (ADR 2026-09-27). **This line is no
+longer a changelog** (2026-09-28): the per-PR history that grew here is
+`git log --merges`, and each PR's ADR is in the index.
+
+Open, in one place: **every phone-only check is `Docs/device-runbook.md`**; what
+waits on Chiu and the traps are `HANDOFF.md`.
 
 ⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
 (not PR number). Never "fix" a failure by bumping the number: the line claims
@@ -65,7 +46,7 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 4. **Closeout** — four steps, named 2026-09-10. ① ✅ film record (ADR
    2026-09-08). ② ✅ export outlives the screen (ADR 2026-09-10). ③ ⏸ D1–D5 and
    ④ ⏸ performance — the substrate evaluation is concluded and the production
-   switch is in flight; performance now prices `MLNMapSnapshotter`, not
+   switch has landed (ADR 2026-09-16); performance now prices `MLNMapSnapshotter`, not
    `MKMapSnapshotter`. Deferred, not dropped; **② does not settle D1**. Music is
    outside the closeout.
 

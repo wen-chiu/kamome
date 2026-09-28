@@ -37,7 +37,7 @@ he is reopening it — curiosity or enthusiasm about a better idea is not that.
   warm trail (2026-08-27).
 
 Find any other decision through `Docs/decisions-index.md` — one row per ADR.
-Never read the 141 KB ledger whole.
+Never read the ledger whole (413 KB on 2026-09-28).
 
 ## 1. Say which jurisdiction you are working in
 

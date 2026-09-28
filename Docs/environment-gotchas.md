@@ -14,6 +14,9 @@ carries the live summary and points here.*
 - ⚠️ **Routing is Geoapify since 2026-08-20** (`Docs/decisions.md` 2026-08-20).
   The OSRM entries below describe the parked local server (`Deploy/`), kept as
   the self-hosted fallback — they are not the shipped routing path.
+- ⚠️ **STALE, 2026-09-28:** the next entry predates the Worker. `matching.base_url`
+  now ships the Worker URL (`Scripts/check-routing-endpoint.sh`), and the desk
+  harness routes through it (ADR 2026-09-19). Kept for the OSRM fallback only.
 - **The desk render path and the app disagree about routing.** `matching.base_url`
   ships `""`, so the shipped app reconstructs **no** legs and draws everything
   dashed; the desk harness defaults to `http://127.0.0.1:5100` and reconstructs

@@ -38,10 +38,10 @@ a reopening condition or a governance warning — do not duplicate the index.
 
 | subject | state | reopening condition |
 |---|---|---|
-| **Rendering substrate** | ⚠️ **REOPENED for export** (2026-09-09) — evaluation only; Apple Maps still ships; in-app maps stay MapKit. | reopened |
+| **Rendering substrate** | **Decided (ADR 2026-09-16):** the export renders OpenFreeMap + MapLibre, two frozen Liberty styles, no Apple fallback; in-app maps stay MapKit. *(Row corrected 2026-09-28; it still said "Apple Maps still ships".)* | a new ADR |
 | **Routing** | **Geoapify**, behind a Worker. No snap radius. No second adapter. | — |
 | **Pixel art** | Parked with MapLibre. The export reopening does not carry it. | with the substrate |
-| **Map labels** | Off the roadmap. Labels ON for evaluation only; the lock did NOT move. | evaluation carve-out only |
+| **Map labels** | ⚠️ **CONFLICT, 2026-09-28, Chiu's call:** this row says labels are off the roadmap and ON only for the evaluation. Both shipped styles (`Config/RecapThemes/openfreemap-liberty-{dark,light}.json`) carry **14 visible label layers** (VERIFIED, style JSON). Either the shipping films are allowed labels, or the styles contradict the lock. | Chiu |
 
 ⚠️ **If you are enforcing a lock an ADR has amended, the ADR wins and the lock
 is the bug.**

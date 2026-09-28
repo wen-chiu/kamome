@@ -4,7 +4,7 @@ One row per ADR, newest last, in ledger order. **This is a finding aid, not a
 summary**: the ledger is the decision, and the newest entry on a subject wins
 over any older entry, any handoff, and `CLAUDE.md`.
 
-Use it to find the entry to read. `Docs/decisions.md` is ~2,900 lines and is
+Use it to find the entry to read. `Docs/decisions.md` is ~6,900 lines (413 KB, 2026-09-28) and is
 never read whole; grep the title from the row you want.
 
 **The "superseded / amended" column is not a currency claim.** A cell is filled
