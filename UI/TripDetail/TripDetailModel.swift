@@ -18,7 +18,8 @@ final class TripDetailModel {
     private(set) var films: [FilmRecord] = []
 
     let tripId: String
-    private let repository: TripRepository
+    /// Not `private`: the rename in `TripDetailModel+Title.swift` writes through it.
+    let repository: TripRepository
     private let config: TrackingConfig
     private let photoService: PhotoLibraryService
     private let namer: StopNamer

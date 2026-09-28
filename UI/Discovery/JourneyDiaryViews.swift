@@ -26,7 +26,7 @@ struct JourneyMasthead: View {
                 if let flag = model.journeyName?.flag {
                     Text(flag).font(.title)
                 }
-                Text(model.journeyName?.title ?? model.detail?.trip.title ?? "")
+                Text(model.storyTitle)
                     .font(.system(.largeTitle, design: .serif).weight(.semibold))
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)

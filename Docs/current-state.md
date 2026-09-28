@@ -6,8 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-27 against decisions.md **2026-09-26 (c)** and `main` at
-**PR #105** (#102: ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
+Last synced: 2026-09-28 against decisions.md **2026-09-26 (c)** and `main` at
+**PR #107** (#102: ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
 lint, verdict v13. #101: (d) Vision, v12, probe owed; #103, #99, #96: S5. #100: (c) walk land, v11. #98: (b) picks, v10.
 #105: export §9 (`Docs/handoff-export-performance.md`): 1 download/tile, desk 3×.
 #95: (e) area floor, town in the pill,
