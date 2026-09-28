@@ -16,6 +16,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Scripts/check-test-count.sh compares with the merge base against
+          # main, so the history has to be there. It fails, never skips, without it.
+          fetch-depth: 0
 
       - name: Install tools
         run: brew install xcodegen swiftlint

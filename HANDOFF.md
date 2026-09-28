@@ -1,191 +1,65 @@
-# HANDOFF — live findings only
+# HANDOFF — traps, and where the open work lives
 
-**Updated 2026-09-28.** `main` carries PRs #16–#110. Everything closed has been
-moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
+**Updated 2026-09-28** (ADR 2026-09-28). This file no longer lists open work.
 
-**Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
+| what | where |
+|---|---|
+| Open work | **GitHub Issues**: `gh issue list` — labels `device`, `chiu`, `desk` |
+| Phone-only checks | `Docs/device-runbook.md`, tracked by #112 |
+| Waiting on Chiu | `gh issue list --label chiu` |
+| The snapshot | `Docs/current-state.md` |
+| Closed findings, history | `Docs/_archive/` |
 
-- Every entry is **one summary and one pointer**. The reasoning lives in the
-  topic document it names, never here.
-- **Closing an entry archives its document in the same PR.** That is what kept
-  the corpus growing: findings closed, files stayed (ADR 2026-09-03).
-- Over budget never means delete — move detail to a `Docs/` topic document, or
-  move a closed section to `Docs/_archive/handoff-2026-08.md`.
+**The critical path to a release:** #112 (the device run), then Chiu's
+submission sequence — `./check.sh --release <.xcarchive>` with the real key in
+`KAMOME_ROUTING_API_KEY` (never a file, ADR 2026-09-12), **then** rotate the
+Geoapify key (S7). Never the other way round. → `Docs/release-readiness.md`.
+Before submitting, the App Store prerequisites A1–A7 are Chiu's (#126,
+`Docs/handoff-release-review-2026-09-28.md`).
 
-Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
+**Accepted risk, do not reopen (Chiu 2026-09-13):** the film's map credit omits
+`ODbL`; the six-character fix is costed and deliberately not built.
+`showsAttribution` is off because Kamome draws its own credit — if
+`RecapMapCreditTests` is ever removed, that line goes back first.
+→ ADRs 2026-09-12 (b), 2026-09-13.
 
----
-
-## 🔴 The critical path to a release — none is a document
-
-Everything else on this page can wait behind these three, and **no Claude session
-can do either**. Both gate the **App Store submission**, not TestFlight — a
-TestFlight build is the vehicle for D1–D5 (→ `Docs/handoff-testflight.md`).
-
-1. **D1–D5 — one device session, never run.** Export survives a screen lock;
-   per-trip export time and memory; seconds per snapshot on current hardware;
-   Limited Photo Library; the S5 UX pass (desk half done #103; device half owed
-   →
-   `Docs/design-reviews/2026-09-25-s5-export-sheet.md`). D2 feeds a
-   mandatory submission item.
-   ⚠️ **Deferred behind the substrate evaluation, not dropped** (ADR 2026-09-10);
-   **step 2 did NOT settle D1** — it survives a *screen*, not a *locked device*.
-   → `Docs/release-readiness.md` Tier 3, `Docs/device-test-P3.md`.
-2. **The submission sequence, and it is Chiu's in both halves.** ① Run
-   `./check.sh --release <.xcarchive>` — the **only** proof the built bundle
-   carries no key; `check-archive.sh` needs the real key — in `KAMOME_ROUTING_API_KEY`, never a
-   file (ADR 2026-09-12) — and refuses to degrade
-   into a shape scan, so a session can build the archive but never run the gate.
-   ② **Then rotate the Geoapify key** — S7. Every IPA already on someone's phone
-   still holds the current one, and the flip cannot reach those.
-   **Order matters**: rotating first would leave the check validating a bundle
-   nobody ships. → `Docs/release-readiness.md` S6, S7, Tier 1.
-3. **App Store prerequisites, Chiu's:** policy URL, privacy label, "Beta",
-   reviewer notes, quota, 0.1, recording.
-   → `Docs/handoff-release-review-2026-09-28.md`.
-
----
-
-## 🔵 The film carries its map credit
-
-**ADR 2026-09-12 (b)**, amending Chiu's 2026-08-17 "never in the rendered film".
-The substrate declares its attribution and the render loop draws it on every
-frame. With the production switch (ADR 2026-09-16), **every shipping film now
-draws a credit**. The terrain clause is region-conditional per ADR 2026-09-18 (f):
-only sources whose licence requires attribution AND whose coverage intersects the
-film's extent appear. Public-domain sources (USGS, NOAA, ArcticDEM) are never
-credited. The desk render harness (`ReviewSubstrate`) now threads the trip extent
-so rendered films show the same credit the export would.
-⚠️ **The reason it is Kamome's own credit and not the snapshotter's is
-measured**: crop-scaling puts `MLNMapSnapshotter`'s burned-in copy off the frame
-above magnification **1.026** (shipped padding 1.03), the title band covers the
-one beat that keeps it, and it renders at **2.07:1** on the dark fork.
-`showsAttribution` is now **off** — if `RecapMapCreditTests` is ever removed,
-that line goes back first.
-
-⚠️ **One ACCEPTABLE KNOWN RISK, and it is Chiu's, taken 2026-09-13 with the
-finding in front of him**: the shipped string does not state ODbL, and a film
-cannot carry the link the OSMF guideline prefers (`AboutView` does, but whoever
-receives the MP4 never opens it). **The remedy is already costed — six
-characters, `, ODbL`, in one constant — and is NOT to be implemented.** The
-string stands. Do not reopen this from scratch.
-→ `Docs/decisions.md` 2026-09-12 (b) and 2026-09-13.
-
----
-
-## ⏳ Awaiting Chiu
-
-- **Camera areas + floor (e): renders.** → `Docs/handoff-camera-context-floor.md`.
-- **Badge 0.60 size** — judged from a still; you reserved a film.
-  → `Docs/handoff-marker-badge.md` finding 6.
-- **Film length** — Short ≤ 90 s default, Standard ≤ 300 s (ADR 2026-09-27); is
-  300 s right? → its table; the rule → `handoff-pacing.md`.
-- **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
-  → `Docs/release-readiness.md` S2/S3.
-- **End-card wordmark** — layout `KAMOME かもめ`, film ships `"Kamome"`.
-  → `Docs/decisions.md` 2026-09-05 (d) §4.
-- **Country rule: scan time on a phone** — Mac 0.32 s/50k photos, device UNKNOWN.
-  → `Docs/decisions.md` 2026-09-25.
-- **`privacy_intro` wording** — interim draft installed; Chiu writes the final.
-  → `Docs/decisions.md` 2026-09-17 §6.
-- **TestFlight films in Application Support/Films/** — rendered on Apple Maps,
-  still present (§2.5). Chiu's call.
-
----
-
-## 🟠 Open — nobody is on these
-
-- 🟠 **Crash-safe recording and trip merge (ADR 2026-09-24 (b)); device checks owed.**
-  → `Docs/handoff-long-recording.md`.
-- 🟠 **Arch review 2026-09-24: to verify.** → `Docs/handoff-arch-review-2026-09-24.md`.
-- 🟠 **Vietnam crossing: device owed** → `Docs/handoff-vietnam-crossing.md`.
-- 🟠 **TestFlight: the code is done (PRs #76, #77); two verifications are owed.**
-  T4's captures (screens × light/dark, one film per mode) and T5, the first-run
-  notice, which needs a device. → `Docs/handoff-testflight.md`.
-- ⚠️ **The film's EU-DEM credit is shortened, and ADR 2026-09-18 (f) says the
-  Copernicus wording "may not shorten".** PR #77 ships `EU-DEM (Copernicus)`
-  (Iceland, Europe) on a reading of Delegated Regulation 1159/2013 Art. 3 that
-  is **INFERRED**. Two same-level sources disagree; a PO call, not an
-  implementation detail. → `Core/ExportEngine/RecapMapAttribution.swift`.
-- 🔴 **Two features built and never reached — one class, one sweep owed.**
-  Imported trips carry no `TripStats` (`ImportService` writes no `stats_json`,
-  → `Docs/handoff-audit-2026-08-30.md` finding 8, status as of ADR 2026-09-19).
-  And `VehicleCatalog.resolve`
-  still misses now and then and silently draws the fallback badge instead of the
-  car (1 render in 5 on 2026-09-16; device rate **UNKNOWN**,
-  → `Docs/handoff-subject-lookup.md`).
-  The question that catches the class: *"does the shipping path ever call this?"*
-- **`stop_weighting_enabled`** — reachable in both modes; the containment argument
-  is empirical and untested on a flat distribution. The removal criterion was
-  decided in advance, and **a removal PR must not cite "provably contained"**.
-  → `Docs/handoff-stop-weighting.md`.
-- **C4 — nothing asserts the end card's mark is the bird.** Only weakly held:
-  `RecapChromeTests` counts lit pixels on the end card, which the wordmark alone
-  would satisfy. → `Docs/release-readiness.md` C4.
-- 🟠 **Miyakojima film fixed in code, owed on the phone** (ADR 2026-09-23 (b)):
-  re-export + three crash-free exports.
-  → `Docs/handoff-type2-round-trip.md`.
-- **Simulator s/snapshot with terrain** — cold/warm timing SIMULATOR only.
-  VERIFIED 2026-09-18: terrain-only host failure also errors (path 3c).
-  Device timing joins D1–D5. → `RecapExportJob+Render.swift`, `TileFailureTests`.
-- **Failure paths 4 (5xx) and 5 (mid-export drop)** — INFERRED. → same file.
-- 🟠 **Picks (b): device check owed. Auto-pick (d): phone probe owed.**
-  → `Docs/handoff-photo-analysis.md`.
+This file holds only what an issue cannot: **traps** — things that will cost
+the next session an afternoon if nobody says them first. Add one when it has
+cost somebody time; keep each to a summary and a pointer.
 
 ---
 
 ## ⚠️ Traps — read before you touch these
 
 - **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
-  gitignored, so it reads different geometry. ⚠️ **No checkout routes with a key**
-  (ADR 2026-09-12): the desk harness defaults to the shipped Worker (ADR
-  2026-09-19); each render spends the 2000/day quota.
-  → `Docs/handoff-crop-scaling.md` §3.
+  gitignored. No checkout routes with a key (ADR 2026-09-12); the desk harness
+  uses the shipped Worker, and each render spends the 2000/day quota.
+  → `Docs/environment-gotchas.md`.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
-- **A dead CI run looks like a passing one** — the tell is ~3 s and `steps=0`.
-- **The production KV counter lies to your first read** (404 while holding 4;
-  stale right after a render). Read twice, tens of seconds apart. `wrangler dev`
-  measures zero overshoot — that test is **retired** (ADRs 2026-09-05, -09-08).
-- **Continuity passing is not the film being right.** A camera wrong in a way that
-  does not *move* scores 100%: a body span from the wrong beat measured 177.3 km
-  against 13.3 km and scored perfectly. When a change re-derives a span, a frame
-  or a padding, **read `span` on its own line, and render.**
-- **Do not restyle `VehicleMarker.seagull` in place** — it is also the wordmark's
-  bird. **Four** gull objects now; the table naming them is in
-  `Core/ExportEngine/Resources/Landmarks/README.md`.
+- **A dead CI run looks like a passing one**: the tell is ~3 s and `steps=0`.
+- **The production KV counter lies to your first read.** Read twice, tens of
+  seconds apart (ADRs 2026-09-05, -09-08).
+- **Continuity passing is not the film being right.** A wrong span that does not
+  *move* scores 100% (177.3 km against 13.3 km). Read `span`, and render.
+- **Do not restyle `VehicleMarker.seagull` in place**: it is also the wordmark's
+  bird. → `Core/ExportEngine/Resources/Landmarks/README.md`.
 - **`Docs/camera-arcs.md` §8 states an invariant no arc can satisfy.**
-  `permittedCutTimesS` is what does hold — 0 excused on all eight fixtures.
-- **Read a style value off the preset the app selects, never off the defaults.**
-  `RecapStyle`'s defaults are unrendered; the app selects `modernMinimal`. Got
-  wrong twice, cost a ledger correction both times.
-- **Two sessions contaminate each other's counts** (one checkout) **and each
-  other's simulator** (one bundle id — a screenshot can show *their* build's
-  wording). Confirm your branch. → `Docs/environment-gotchas.md`.
+  `permittedCutTimesS` is what holds.
+- **Read a style value off `modernMinimal`, never off `RecapStyle`'s defaults.**
+- **Two sessions share one checkout family and one simulator bundle id** — a
+  screenshot can show *their* build. One implementer at a time (`CHARTER.md` §1).
+  → `Docs/environment-gotchas.md`.
 - **A merge can drop catalogue keys**: 4058b92 lost PR #91's 13 picker strings.
-- **MapKit saturates at ~109° of longitude** — Taiwan→Iceland has no frame at any
-  padding, so the frozen country card is a **main path**, not a fallback.
+- **MapKit saturates at ~109° of longitude**: the frozen country card is a main
+  path, not a fallback.
 
 ---
 
-## ⏱ Export time is measured now, and a crossing arc is half the bill
-
-Plan and per-stage cost are logged. Offline, a crossing arc is **54 of 102
-stations**; magnification 1.10 → 1.25 halves that (Chiu's look call). **Iceland
-942 s on device:** each tile was fetched ~9×; one download per tile now, desk 3.1–3.7×
-faster, pixels within noise. **Owed: device `render network` line**; diagnostics keep 20 exports now → export doc §9.
-
 ## 🐛 Known bugs and accepted costs
 
-**⏳ Iceland plane on land (device).** The import date range clips at timezone edges; `RecapMode` may be two axes, not
-one; the glacier renders flat. All four, in full, with workarounds:
-→ `Docs/handoff-known-bugs.md`. And the **0.747 sharpness step at hold
-boundaries**, accepted as it stands — revisit only if someone notices it in a
-film (`Docs/handoff-crop-scaling.md`).
-
-## iCloud photo download — code done, never run against iCloud
-
-iCloud-only photos are fetched before the render. **Unmeasured:**
-derivative-vs-original transfer size, peak memory of a full-mode film, cellular
-cost of previews. One device, Optimize Storage on, Instruments.
-→ ADR 2026-09-19 (b).
+Import date range clips at timezone edges; `RecapMode` may be two axes; the
+glacier renders flat → `Docs/handoff-known-bugs.md`. The **0.747 sharpness step
+at hold boundaries** is accepted; revisit only if someone notices it in a film
+(`Docs/_archive/handoff-crop-scaling.md` §10). Export cost and its levers →
+`Docs/handoff-export-performance.md`.

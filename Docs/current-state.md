@@ -6,49 +6,22 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-28 against decisions.md **2026-09-27** and `main` at
-**PR #110** (#106/#108–#110: rename, country title, wrap, ADR 09-27 lengths.
-09-28 review → HANDOFF 🔴3. #107: xcstrings dup-key gate. #102: ADRs 2026-09-26, (b), (c): (f) 160 km/h, stop-zone days v14, UI/
-lint, verdict v13. #101: (d) Vision, v12, probe owed; #103, #99, #96: S5. #100: (c) walk land, v11. #98: (b) picks, v10.
-#105: export §9 (`Docs/handoff-export-performance.md`): 1 download/tile, desk 3×.
-#95: (e) area floor, town in the pill,
-schema v9 — `Docs/handoff-camera-context-floor.md`. #93: ADRs (c), (d). ). #92: 09-24 (b). #89 (ADR 2026-09-24: the body is framed per camera
-area — a town at town scale, a drive wide; zoom only while the vehicle waits;
-renders owed Chiu's judgement, `Docs/camera-arcs.md` §5). #85–#88: 09-23 ADRs (b)–(f), export perf §7. #81: export speed (device run: §8). #83: UI polish; vehicle picker in the export sheet (trip naming: no ADR). #84: ADR 2026-09-23 (Trip Detail overlays, no coordinate
-names). **ADR 2026-09-23 (b)** closes the Miyakojima film in code — an
-airport-only home is type 2, the film ends at the destination (2026-09-01 built),
-every crossing flies the plane, and the MapLibre snapshotter crash is fixed; **(c)** splits "no road" so a beach is never a crossing (schema v7); the
-device re-export is owed (`Docs/handoff-type2-round-trip.md`). TestFlight's code
-is done; T4's captures and T5's device check are owed (`Docs/handoff-testflight.md`).
-**ADR 2026-09-23 (d)**: S1's record path is one named button and a sheet; a
-repeat import offers the trip already holding its photos, and Discovery stops
-offering it (`import.duplicate_photo_share`, INFERRED).
-**ADRs 2026-09-23 (e)–(f)** (#87): the Discovery beta's list goes
-compact — two lines (place, visit pill, date; route, days, ground-only km),
-photos and details in a drawer that opens in place, provenance marked by
-exception (recorded only), "2 months at home" behind `discovery.show_home_gaps`,
-no coordinate as a milestone.
-**ADR 2026-09-24 (b)**: trips merge into one trip and one film. Recorded and photo-rebuilt
-parts can mix, with provenance per segment and the whole marked reconstructed. A far
-gap between parts is an inferred `merge_gap` leg, a near one an overnight stop. Films are
-kept. PR #90 makes a recording survive the app being killed (`Docs/handoff-long-recording.md`).
-**ADRs 2026-09-24 (c)–(d)**: delete stops the export; Home's swipe asks;
-side-load off in Release; About exports diagnostics; the database stays in
-device backup. `Docs/handoff-arch-review-2026-09-24.md`.
+Last synced: 2026-09-28 against ADR **2026-09-28** (the ledger's last entry:
+it is frozen, one issue list replaces the handoff lists, one charter replaces
+three). `main` then carried PR #110 — film length Short ≤ 90 s (default) or
+Standard ≤ 300 s (ADR 2026-09-27).
 
-⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
-(not PR number). Never "fix" a failure by bumping the number: the line claims
-someone re-read the ledger and `HANDOFF.md`, and that is the half that rotted
-twice while the number stayed right. → `Scripts/check-staleness.sh`, ADR
-2026-09-02 (b).
-
-Update this file when an ADR is appended, a PR merges, the phase changes, or
-Chiu decides anything that changes what is below.
+**This file is the snapshot of what is true, not a list of what is open.** Open
+work is GitHub Issues (`device`, `chiu`, `desk`); phone-only checks are
+`Docs/device-runbook.md`; traps are `HANDOFF.md`. Update this file in the PR
+that lands an ADR, and name that ADR in the line above —
+`Scripts/check-staleness.sh` fails if a newer one exists. Never bump the name
+without re-reading what the ADR changes here.
 
 ## Product
 
 Kamome (卡摸咩) is a **memory engine for road trips** (`CLAUDE.md` carries the
-sentence). Not a GPS visualizer. North star in `PO.md`; the original spec is
+sentence). Not a GPS visualizer. North star in `CHARTER.md` §7; the original spec is
 archived (`Docs/_archive/kamome-poc-spec.md`).
 
 **No release is in flight.** The current work proves the *artefact* ahead of
@@ -66,7 +39,7 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 4. **Closeout** — four steps, named 2026-09-10. ① ✅ film record (ADR
    2026-09-08). ② ✅ export outlives the screen (ADR 2026-09-10). ③ ⏸ D1–D5 and
    ④ ⏸ performance — the substrate evaluation is concluded and the production
-   switch is in flight; performance now prices `MLNMapSnapshotter`, not
+   switch has landed (ADR 2026-09-16); performance now prices `MLNMapSnapshotter`, not
    `MKMapSnapshotter`. Deferred, not dropped; **② does not settle D1**. Music is
    outside the closeout.
 
@@ -102,7 +75,7 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
 
 ## Architecture
 
-- **Story ↔ Rendering separation** (`PO.md`): the story layer never depends on the
+- **Story ↔ Rendering separation** (`CHARTER.md` §3): the story layer never depends on the
   rendering substrate.
 - **Rendering:** `RecapSnapshotProviding` is the boundary; each renderer confined
   to one file. **The export renders OpenFreeMap + MapLibre** (two frozen Liberty
@@ -129,8 +102,8 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
 
 ## Locked decisions
 
-`Docs/decisions-index.md` is the lookup; `PO.md` §3 carries the reopening
-conditions. Newest entry on a subject wins.
+`Docs/decisions-index.md` (frozen ledger) and `Docs/adr/` are the lookup;
+`CHARTER.md` §6 carries the reopening conditions. Newest entry on a subject wins.
 
 Two standing constraints that are **not** decisions: **film duration must scale
 with trip size — direction decided (Chiu 2026-08-14), rule NOT**; and **Variant B
@@ -152,10 +125,10 @@ per-act camera framing (rejected 2026-08-02; per-**area** framing built 2026-09-
 | what | where |
 |---|---|
 | Product intent & rules | `Docs/_archive/kamome-poc-spec.md` (v1.8 — §0 rules and §4 provenance still authoritative) |
-| Decisions (append-only) | `Docs/decisions.md`; find one via `Docs/decisions-index.md` |
-| Live findings & blockers | `HANDOFF.md` — **wins over this file on anything open** |
+| Decisions | `Docs/adr/` (one file each, from 2026-09-28); before that `Docs/decisions.md`, frozen, via `Docs/decisions-index.md` |
+| Open work | GitHub Issues — **win over this file on anything open**; traps in `HANDOFF.md` |
 | Current state | this file; `CLAUDE.md` is the boot file |
 | Release gate | `Docs/release-readiness.md` |
-| Governance / conduct | `PO.md`, `Arch.md`, `DESIGNER.md` — one per session |
+| Governance / conduct | `CHARTER.md` — one for every session |
 | Rule rationale | `Docs/rule-rationale.md` |
 | History | `Docs/_archive/` — and `Docs/_archive/README.md` resolves any path that moved there |

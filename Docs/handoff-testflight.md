@@ -2,7 +2,7 @@
 
 PO audit 2026-09-18 against `main` at PR #74. **The code is done**: Tasks 1–5 in
 PR #76, Task 6 in PR #77. What remains is two verifications and Chiu's steps
-outside the repository. Charter for any session picking this up: `Arch.md`.
+outside the repository. Charter: `CHARTER.md`.
 
 **TestFlight is not the App Store submission.** `Docs/release-readiness.md`
 gates the submission. The audience here is people Chiu knows — accepted
@@ -36,7 +36,7 @@ S7 do not block it; the TestFlight build is how D1–D5 get run.
    About light. Still owed: **S3 (Trip Detail), the recap screen, the Discovery beta
    (`-demo-discover` on the simulator), light and dark, and one film exported in
    each mode.** All need a trip with photos. Light-mode in-app screens have never
-   been looked at — **report what reads badly; do not restyle** (`DESIGNER.md`'s
+   been looked at — **report what reads badly; do not restyle** (`CHARTER.md` §7's
    call). The light film style is approved (addendum to ADR (d)).
 2. **T5 on a device.** Fresh install, dismiss the notice, watch whether the app
    backgrounds. The fix, if it exists, must keep: shown once, remembered, one

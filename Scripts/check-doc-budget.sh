@@ -6,8 +6,6 @@
 # line budget rewarded unwrapping rather than cutting. Bytes are roughly
 # proportional to what a session actually spends reading.
 #
-# One charter is read per session, so the charters do not add up — but each is a
-# whole session's governing document and has to fit in working memory.
 #
 # Over budget never means delete: move the detail into a Docs/ topic document
 # and leave a pointer, or move a closed section to Docs/_archive/.
@@ -44,9 +42,9 @@ budget HANDOFF.md  11000 "read at the start of every session"
 # and it was the ONLY unbudgeted one — it had reached 17,531 bytes, larger than
 # HANDOFF.md's cap, while claiming to be "an index, not a source of truth".
 budget Docs/current-state.md 10000 "read at the start of every session"
-budget Arch.md     10000 "the engineering charter"
-budget PO.md       12000 "the product-owner charter"
-budget DESIGNER.md  9000 "the visual charter"
+# One charter since 2026-09-28 (it replaced Arch.md, PO.md and DESIGNER.md,
+# whose budgets were 10,000 + 12,000 + 9,000 for one-per-session reading).
+budget CHARTER.md  12000 "the one charter, read by every session"
 
 # The live Docs/ corpus, as one number.
 #

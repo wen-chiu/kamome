@@ -1,6 +1,12 @@
 # The contained arc — how the camera crosses a gap
 
-**Status: design recommended by the PO/architecture session (2026-08-21), NOT
+⚠️ **STALE STATUS, corrected 2026-09-28:** the line below is how this document
+was written on 2026-08-21. Since then Pass 1 (crop-scaling reprojection, PR #26),
+the crossing arc and per-area framing (ADR 2026-09-24) were **built**, and ADRs
+now carry the decisions. Treat this file as the camera's design reference.
+Where it disagrees with `Docs/decisions.md`, the ledger wins.
+
+**Original status: design recommended by the PO/architecture session (2026-08-21), NOT
 decided, nothing built.** A scoped implementer guide in the shape of
 `Docs/cross-region-journeys.md`, not an ADR. **No entry goes into
 `Docs/decisions.md` until something has been rendered and judged** — the standing
@@ -256,7 +262,7 @@ than adding a tunable. Not decided.
 > The pan floor **binds nowhere**: across six `establishing` configurations the
 > ratio came out `target_zoom_ratio` in every one, so `bodySpanM`'s floor is not
 > what makes the destination a smudge. The actual cause is the **opening**.
-> `Docs/handoff-cross-region-crossing.md` finding 1 carries the measurement.
+> `Docs/_archive/handoff-cross-region-crossing.md` finding 1 carries the measurement.
 > The **recommendation** below — one span per trip, derived from the largest
 > local journey, never a span per segment — **still stands**; only its stated
 > mechanism was wrong.

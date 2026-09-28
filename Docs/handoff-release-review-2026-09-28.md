@@ -49,7 +49,7 @@ Run them in the same TestFlight session, and bring the data back with About → 
   simulator.
 - Already written elsewhere and collected here so one session runs them all:
   - `handoff-long-recording.md`: the swipe-away relaunch, and two-week replay time on a phone
-  - `handoff-arch-review-2026-09-24.md`: background mid-export
+  - `_archive/handoff-arch-review-2026-09-24.md`: background mid-export
   - `handoff-known-bugs.md`: Iceland day 12
   - `handoff-type2-round-trip.md`: Miyakojima ×3
   - `handoff-vietnam-crossing.md`

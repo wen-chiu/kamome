@@ -1,10 +1,13 @@
 # `Docs/decisions.md` — index
 
+**The ledger is frozen at its last row (ADR 2026-09-28).** Decisions after it
+are one file each in `Docs/adr/`; the newest entry on a subject wins across both.
+
 One row per ADR, newest last, in ledger order. **This is a finding aid, not a
 summary**: the ledger is the decision, and the newest entry on a subject wins
 over any older entry, any handoff, and `CLAUDE.md`.
 
-Use it to find the entry to read. `Docs/decisions.md` is ~2,900 lines and is
+Use it to find the entry to read. `Docs/decisions.md` is ~6,900 lines (413 KB, 2026-09-28) and is
 never read whole; grep the title from the row you want.
 
 **The "superseded / amended" column is not a currency claim.** A cell is filled
@@ -125,3 +128,4 @@ does not.
 | 106 | `2026-09-26 (b)` | ADR 2026-09-24 (f) is decided: 160 km/h | **Chiu 2026-09-26.** (f) leaves draft; `crossing_pace_min_kmh` 160 (draft 150), 100 km and 2 h stand. Routing rules version 2: only `beyond_driving` legs are judged again |
 | 107 | `2026-09-26 (c)` | The finished film is a moment, the wait says where it is, and a stop is 停留點 | **Chiu 2026-09-26**, S5 review answers. Finished screen: Save + Share paired, Export again text, Delete in ⋯ with confirmation; four actions unchanged. "Rendered in X s" stays in Release. Title is Chiu's copy, drawn verbatim (a `Text` key parses `~` as strikethrough). `RecapExportChannel.stage` (rule-2 change, option a): findingRoads → preparingPhotos → drawing; % only while drawing. zh-Hant: 停留點 everywhere. Vehicle names by bundle localization. Above Export: "N stops · M photos", counts only, from `FilmPhotoChoices`; stops only with cards off; no duration (reversed 2026-09-27) |
 | 108 | `2026-09-27` | A film is short or standard, short is the default and fits 90 s, and the sheet says how long | **Chiu 2026-09-27.** `FilmLength` on the export sheet: Short ≤ `total_duration_max_s` (90 s, live again) is the default; Standard is the earned-stop film ≤ `standard_duration_max_s` (300 s). Short counts its room (8); both are fitted to their ceiling, which beats the marks (amends 2026-09-24): lifts taken back, then stops, marked last; on the app's choice only, so a stop put in moves none and may carry the film past its ceiling (warned). Reopens 2026-09-26 (c) item 7: the length is shown, from `LinearTimeline.plannedDurationS`. `.full` stays harness-only until testers' logs price it. Every export logs `export stages` and keeps its lines across launches (`kept_export_logs` 20) for About's diagnostics |
+| 109 | `2026-09-28` | Governance v2: one session, one charter, issues for open work, and this ledger is frozen | **Chiu 2026-09-28. The ledger ends here**; new ADRs are files in `Docs/adr/`. `CHARTER.md` replaces Arch/PO/DESIGNER; open work → GitHub Issues (`device`/`chiu`/`desk`); staleness names the newest ADR only; test count vs merge base, `Test-Removed:` trailers |

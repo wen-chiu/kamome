@@ -6,7 +6,7 @@ one — not at session start.
 **Most of what was here has been deleted, deliberately.** The first draft
 retold seven incidents that `Docs/decisions.md` already records. That ledger is
 append-only and authoritative, and nothing kept this file in sync with it: a
-second, weaker account of a decision is exactly the failure `PO.md` warns about,
+second, weaker account of a decision is exactly the failure `CHARTER.md` §6 warns about,
 where the later-dated entry wins while being the worse one. What survives is
 what has **no other home**, plus pointers.
 
@@ -17,10 +17,10 @@ what has **no other home**, plus pointers.
 | `CLAUDE.md` rule | the incident behind it |
 |---|---|
 | §0 exceptions (Geoapify, one share) | `Docs/decisions.md` 2026-08-16, 2026-08-20 (b)/(c) — the trigger was a scaling trap: self-hosted OSRM only routes preloaded regions, and a friend's Tokyo trip had no routable legs because the Japan extract was Kyushu |
-| Mark VERIFIED / INFERRED / UNKNOWN | `Docs/decisions.md` 2026-08-20 (d) — a snap-radius claim written as fact, measured, and found backwards. `PO.md` carries the rule it produced, including that **a comparison table is where an inference launders into a fact** |
-| Never weaken or delete a test | `Arch.md`, "Tests", and `CLAUDE.md` rule 3 — both failure modes, 2026-08-16 |
-| A locked decision reopens only when Chiu names it | `PO.md`, *"a superseded lock is a governance hazard"* — twice a lock outlived the ADR that amended it |
-| The staleness check has two halves | `PO.md` — the ADR-only version **passed twice** while the file's blockers were weeks stale |
+| Mark VERIFIED / INFERRED / UNKNOWN | `Docs/decisions.md` 2026-08-20 (d) — a snap-radius claim written as fact, measured, and found backwards. `CHARTER.md` §4 carries the rule it produced, including that **a comparison table is where an inference launders into a fact** |
+| Never weaken or delete a test | `CHARTER.md` §4, "Tests", and `CLAUDE.md` rule 3 — both failure modes, 2026-08-16 |
+| A locked decision reopens only when Chiu names it | `CHARTER.md` §6 — twice a lock outlived the ADR that amended it, and on 2026-09-28 the substrate row still said "Apple Maps still ships" twelve days after ADR 2026-09-16 |
+| The staleness check names the newest ADR only | ADR 2026-09-28. The ADR-only version once **passed twice** while the file's blockers were weeks stale — so a PR half was added. It is gone because the blockers left the file: open work is issues now, and the PR half made every PR edit one line |
 | `TEST_RUNNER_<VAR>` must be declared | `project.yml`, the comment above `environmentVariables` — `xcodebuild` turns it into a *build setting*, so an undeclared variable silently reaches nothing and every env-gated harness skips while reporting success |
 | SwiftLint's toolchain override | `check.sh` sets it — Rosetta swiftlint cannot load Xcode 26's arm64-only SourceKit |
 
@@ -33,10 +33,16 @@ caught only because the count fell from **13 to 11**. Both suites were green
 with the tests missing, and every other signal said the change was fine. A suite
 that loses tests does not go red.
 
-`Scripts/check-test-count.sh` therefore fails on drift in **either** direction.
-Adding tests is deliberately a two-line change — write the test, raise
-`Scripts/test-count.baseline` in the same commit. That second line is the whole
-mechanism: it is what makes a silent deletion impossible.
+`Scripts/check-test-count.sh` therefore fails when the count **falls**.
+
+Until 2026-09-28 it compared against a committed baseline and failed on drift
+in *either* direction, so every test-adding PR edited `Scripts/test-count.baseline`.
+Parallel branches collided on that one number: #110 merged its branch's 771 over
+the 783 that #106/#108/#109 had brought, and `main` went red with no test
+missing. Now the reference is the count at the merge base with `origin/main`,
+adding a test needs no second edit, and a deliberate removal carries a
+`Test-Removed: <name> — <proof>` trailer per test (ADR 2026-09-28). The signal
+the 2026-08-16 incident needed — a fall — is exactly what is still caught.
 
 ## The document budgets exist because discipline did not hold
 
@@ -63,7 +69,7 @@ The promising alternative, if this is revisited: assert that every key in
 `Config/TrackingConfig.json` has a typed mirror and a `ConfigLoaderTests`
 assertion. That is a closed set, and checkable exactly.
 
-## Why staging is a rule (`Arch.md` §8)
+## Why staging is a rule (`CHARTER.md` §5)
 
 Four incidents, and the fourth is a different kind from the first three.
 
@@ -83,3 +89,13 @@ That is why the rule names three separate acts — confirm the branch, name the
 paths, do not squash onto a moved `main`. Each of them turns a silent overwrite
 into either a conflict or a diff you have to read.
 
+
+## Why one session implements at a time (ADR 2026-09-28)
+
+From 2026-09-01 to 2026-09-28, 488 of ~1,600 file touches on `main` were
+documents: `HANDOFF.md` changed 90 times, `current-state.md` 81, the ledger 77,
+its index 58. Every parallel PR edited the same five files, so parallel sessions
+bought merge conflicts and silent reverts (the staging incidents above, #110's
+baseline), not speed. The bottleneck of the remaining work is the phone and
+Chiu's judgement, which more sessions cannot widen. Subagents stay useful for
+read-only work, where they touch no shared file.

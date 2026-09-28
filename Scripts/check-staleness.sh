@@ -1,99 +1,55 @@
 #!/usr/bin/env bash
 # Docs/current-state.md's "Last synced" line, checked instead of remembered.
 #
-# The protocol was strengthened twice (2026-08-28, 2026-08-30) and failed again
-# on 2026-09-01, when the line read "PR #26" while `main` carried #28. Adding a
-# third clause to a rule a human has to remember would have been the same move a
-# third time, so it is a check now.
+# The line must name the NEWEST decision. When an ADR lands, the snapshot it
+# changes is updated in the same PR — that is the whole protocol.
 #
-# ⚠️ **READ THIS BEFORE "FIXING" A FAILURE BY BUMPING THE NUMBER.**
+# Until 2026-09-28 the line also had to name the newest merged PR (one behind
+# allowed). That half made every PR edit the same line, which is exactly the
+# conflict parallel sessions kept hitting, and the line grew into a changelog
+# nobody read (ADR 2026-09-28). The merge history is `git log --merges`; the
+# open work is GitHub Issues. Only the decision half survives, because a
+# snapshot that has not absorbed the newest decision is genuinely stale.
 #
-# The line can never name the PR that contains it — that PR is not merged when
-# the line is written. So on `main` this line is ALWAYS exactly one PR behind,
-# and that is correct, not stale. Every governance PR in the history shows it:
-# #20 named #16, #27 named #26, #29 named #28.
-#
-# So ONE merged PR after the named one is allowed, and two or more is a failure.
-#
-# ⚠️ **The first version of this check demanded equality, and that was a defect
-# — mine, and the same one this file documents.** It went red on `main` the
-# moment it merged, and would have stayed red forever: any PR bumping the number
-# becomes a newer PR and re-breaks it. `CLAUDE.md` says done means `./check.sh`
-# is green, so a check that cannot be green on `main` makes the definition of
-# done unsatisfiable and teaches everyone to ignore red. It also forced every
-# concurrent branch to edit the same line, which is exactly the conflict PR #32
-# hit.
-#
-# Two behind is the real failure, and it is the one that actually happened: PR
-# #28 changed the ledger without re-syncing the line, leaving the line at #26
-# while `main` carried #28.
-#
-# Counted by merge date, not PR number: a lower-numbered PR can merge after a
-# higher-numbered one, and only PRs merged into main count (--base main).
+# Decisions live in two places: Docs/decisions.md (frozen 2026-09-28) and one
+# file per ADR in Docs/adr/YYYY-MM-DD-<slug>.md. The newest is the later date;
+# on a tie between files, any file of that date counts as newest.
 set -uo pipefail
 source "$(dirname "$0")/lib.sh"
 cd "$(dirname "$0")/.."
 
 state="Docs/current-state.md"
-failures=0
 
-# The claim, parsed out of a line that wraps.
-claim=$(tr '\n' ' ' < "$state" | grep -oE 'Last synced: [0-9]{4}-[0-9]{2}-[0-9]{2} against decisions\.md \*\*[^*]+\*\* and `main` at +\*\*PR #[0-9]+\*\*' | head -1)
+claim=$(tr '\n' ' ' < "$state" | grep -oE 'Last synced: [0-9]{4}-[0-9]{2}-[0-9]{2} against ADR \*\*[^*]+\*\*' | head -1)
 if [ -z "$claim" ]; then
   kamome_fail "$state has no parsable \"Last synced\" line"
-  kamome_info 'Expected: Last synced: <date> against decisions.md **<date>** and `main` at **PR #<n>**'
+  kamome_info 'Expected: Last synced: <date> against ADR **<YYYY-MM-DD[ (x)] or YYYY-MM-DD-slug>**'
   exit 1
 fi
-claimed_adr=$(printf '%s' "$claim" | grep -oE 'decisions\.md \*\*[^*]+\*\*' | sed 's/decisions.md \*\*//; s/\*\*//')
-claimed_pr=$(printf '%s' "$claim"  | grep -oE 'PR #[0-9]+' | tr -d 'PR #')
+claimed=$(printf '%s' "$claim" | sed -E 's/.*against ADR \*\*([^*]+)\*\*.*/\1/')
+claimed_date=${claimed:0:10}
 
-# Half 1 — the ledger. Offline, deterministic, always enforced.
-newest_adr=$(grep -oE '^## [0-9]{4}-[0-9]{2}-[0-9]{2}( \([a-z]\))?' Docs/decisions.md | tail -1 | sed 's/^## //')
-if [ "$claimed_adr" = "$newest_adr" ]; then
-  kamome_ok "current-state is synced to the newest ADR ($newest_adr)"
-else
-  kamome_fail "current-state names ADR \"$claimed_adr\"; the newest is \"$newest_adr\""
-  kamome_info "Docs/decisions.md wins on decisions. Re-read it, then update the line."
-  failures=$((failures + 1))
-fi
-
-# Half 2 — the merge history. Needs the network and an authenticated gh.
-if ! command -v gh >/dev/null 2>&1 || ! gh auth status >/dev/null 2>&1; then
-  kamome_info "PR HALF DID NOT RUN — gh is missing or unauthenticated."
-  kamome_info "This is a gap, not a pass: run ./check.sh where gh works before merging."
-  exit $((failures > 0 ? 1 : 0))
-fi
-
-merged=$(gh pr list --state merged --base main --limit 50 --json number,mergedAt \
-  --jq '.[] | [.number, .mergedAt] | @tsv' 2>/dev/null)
-if [ -z "$merged" ]; then
-  kamome_info "PR HALF DID NOT RUN — gh could not list merged pull requests."
-  exit $((failures > 0 ? 1 : 0))
-fi
-
-claimed_merged_at=$(printf '%s\n' "$merged" | awk -F'\t' -v pr="$claimed_pr" '$1 == pr {print $2}')
-if [ -z "$claimed_merged_at" ]; then
-  claimed_merged_at=$(gh pr view "$claimed_pr" --json mergedAt --jq '.mergedAt' 2>/dev/null)
-fi
-
-if [ -z "$claimed_merged_at" ] || [ "$claimed_merged_at" = "null" ]; then
-  kamome_fail "current-state names PR #$claimed_pr, which is not merged into main"
-  failures=$((failures + 1))
-else
-  newest_pr=$(printf '%s\n' "$merged" | sort -t$'\t' -k2 | tail -1 | cut -f1)
-  since=$(printf '%s\n' "$merged" | awk -F'\t' -v cutoff="$claimed_merged_at" '$2 > cutoff' | wc -l | tr -d '[:space:]')
-
-  if [ "$since" -le 1 ]; then
-    kamome_ok "current-state is synced to PR #$claimed_pr ($since merged since; 1 is the floor)"
-  else
-    kamome_fail "current-state names PR #$claimed_pr; $since PRs have merged into main since (newest #$newest_pr)"
-    kamome_info "One behind is expected. $since is drift."
-    kamome_info "Re-read HANDOFF.md and Docs/decisions.md, update Active work and"
-    kamome_info "Blockers to match, THEN set the line to #$newest_pr. Bumping only the"
-    kamome_info "number is the failure this check exists to catch."
-    failures=$((failures + 1))
+ledger_newest=$(grep -oE '^## [0-9]{4}-[0-9]{2}-[0-9]{2}( \([a-z]\))?' Docs/decisions.md | tail -1 | sed 's/^## //')
+newest="$ledger_newest"
+adr_newest=""
+if ls Docs/adr/[0-9]*.md >/dev/null 2>&1; then
+  adr_newest=$(ls Docs/adr/[0-9]*.md | sed 's#Docs/adr/##; s#\.md$##' | sort | tail -1)
+  if [[ "${adr_newest:0:10}" > "${ledger_newest:0:10}" ]] || [[ "${adr_newest:0:10}" == "${ledger_newest:0:10}" ]]; then
+    newest="$adr_newest"
   fi
 fi
 
-[ "$failures" -eq 0 ] && exit 0
+if [ "$claimed" = "$newest" ]; then
+  kamome_ok "current-state is synced to the newest ADR ($newest)"
+  exit 0
+fi
+# Several ADR files on the newest date: naming any one of them is synced.
+if [ -n "$adr_newest" ] && [ "$claimed_date" = "${newest:0:10}" ] && [ -f "Docs/adr/$claimed.md" ]; then
+  kamome_ok "current-state is synced to the newest ADR date ($claimed)"
+  exit 0
+fi
+
+kamome_fail "current-state names ADR \"$claimed\"; the newest is \"$newest\""
+kamome_info "The newest decision wins. Re-read it, update what it changes in $state,"
+kamome_info "THEN set the line. Bumping only the name is the failure this check exists to catch."
 exit 1
