@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import KamomeConfig
 
 /// What kind of subject a folder holds. The two are **not interchangeable** —
 /// see `Resources/Vehicles/README.md`, which is the specification for both the
@@ -207,57 +208,100 @@ public enum VehicleCatalog {
 
     // MARK: - Loading
 
-    private final class Store: @unchecked Sendable {
+    /// **A failed load is never cached** (#121, 2026-09-28).
+    ///
+    /// The subject lookup has missed intermittently since 2026-08-13, and the
+    /// 2026-09-16 occurrence was *per process and all-or-nothing*: `car-red`,
+    /// `seagull` and `plane` all drew the badge in one run, with the resource
+    /// bundle found, and an immediate retry drew the car
+    /// (`Docs/handoff-subject-lookup.md`). This store used to set
+    /// `manifestLoaded` before knowing whether the manifest decoded, and cached
+    /// nil artwork: one transient miss became an empty manifest — so no subject
+    /// had a `kind` and every decode returned nil — for the rest of the process.
+    /// On a phone the process is the app, so every export until a relaunch.
+    ///
+    /// What made the first read fail is still UNKNOWN; the log line names the
+    /// step (`manifest:` / `artwork:`) so the next occurrence says which.
+    /// A retry costs nothing measurable: `resolve` runs three times an export,
+    /// never per frame.
+    final class Store: @unchecked Sendable {
         private let lock = NSLock()
-        private var manifestLoaded = false
-        private var cachedSubjects: [VehicleSubject] = []
-        private var artworkCache: [String: SubjectArtwork?] = [:]
-        private var thumbnailCache: [String: CGImage?] = [:]
+        private let bundle: () -> Bundle?
+        private var cachedSubjects: [VehicleSubject]?
+        private var artworkCache: [String: SubjectArtwork] = [:]
+        private var thumbnailCache: [String: CGImage] = [:]
+
+        init(bundle: @escaping () -> Bundle? = { VehicleResourceBundle.resolved }) {
+            self.bundle = bundle
+        }
 
         var subjects: [VehicleSubject] {
             lock.withLock {
-                if !manifestLoaded {
-                    manifestLoaded = true
-                    cachedSubjects = Self.decodeManifest()
+                if let cachedSubjects { return cachedSubjects }
+                switch Self.decodeManifest(bundle: bundle()) {
+                case let .success(subjects):
+                    cachedSubjects = subjects
+                    return subjects
+                case let .failure(step):
+                    KamomeLog.recap.error(
+                        "subject manifest: \(step.rawValue, privacy: .public) — not cached, the next lookup retries"
+                    )
+                    return []
                 }
-                return cachedSubjects
             }
         }
 
         func artwork(id: String) -> SubjectArtwork? {
-            _ = subjects
+            let kind = subjects.first { $0.id == id }?.kind
             return lock.withLock {
                 if let cached = artworkCache[id] { return cached }
-                let decoded = Self.decode(id: id, kind: cachedSubjects.first { $0.id == id }?.kind)
+                guard let kind, let bundle = bundle() else { return nil }
+                guard let decoded = Self.decode(id: id, kind: kind, bundle: bundle) else {
+                    KamomeLog.recap.error(
+                        "subject artwork: \(id, privacy: .public) is missing or partial — not cached, the next lookup retries"
+                    )
+                    return nil
+                }
                 artworkCache[id] = decoded
                 return decoded
             }
         }
 
         func thumbnail(id: String) -> CGImage? {
-            _ = subjects
-            return lock.withLock {
+            lock.withLock {
                 if let cached = thumbnailCache[id] { return cached }
-                let decoded = VehicleResourceBundle.resolved
-                    .flatMap { Self.image(named: "logo", in: "Vehicles/\(id)", bundle: $0) }
+                guard let bundle = bundle(),
+                      let decoded = Self.image(named: "logo", in: "Vehicles/\(id)", bundle: bundle)
+                else { return nil }
                 thumbnailCache[id] = decoded
                 return decoded
             }
         }
 
-        private static func decodeManifest() -> [VehicleSubject] {
-            guard let bundle = VehicleResourceBundle.resolved,
-                  let url = bundle.url(forResource: "vehicles", withExtension: "json", subdirectory: "Vehicles"),
-                  let data = try? Data(contentsOf: url),
-                  let manifest = try? JSONDecoder().decode(VehicleManifest.self, from: data)
-            else { return [] }
-            return manifest.subjects
+        /// Which step of the manifest read failed — the fact every earlier
+        /// occurrence lacked.
+        enum ManifestFailure: String, Error {
+            case noBundle = "no resource bundle"
+            case noFile = "Vehicles/vehicles.json not found in the bundle"
+            case unreadable = "Vehicles/vehicles.json could not be read"
+            case undecodable = "Vehicles/vehicles.json did not decode"
+            case empty = "Vehicles/vehicles.json declares no subjects"
+        }
+
+        static func decodeManifest(bundle: Bundle?) -> Result<[VehicleSubject], ManifestFailure> {
+            guard let bundle else { return .failure(.noBundle) }
+            guard let url = bundle.url(forResource: "vehicles", withExtension: "json", subdirectory: "Vehicles")
+            else { return .failure(.noFile) }
+            guard let data = try? Data(contentsOf: url) else { return .failure(.unreadable) }
+            guard let manifest = try? JSONDecoder().decode(VehicleManifest.self, from: data)
+            else { return .failure(.undecodable) }
+            guard !manifest.subjects.isEmpty else { return .failure(.empty) }
+            return .success(manifest.subjects)
         }
 
         /// All-or-nothing: a partial directional set never renders, because a
         /// missing file is otherwise a silent visual bug.
-        private static func decode(id: String, kind: VehicleKind?) -> SubjectArtwork? {
-            guard let kind, let bundle = VehicleResourceBundle.resolved else { return nil }
+        private static func decode(id: String, kind: VehicleKind, bundle: Bundle) -> SubjectArtwork? {
             let folder = "Vehicles/\(id)"
             switch kind {
             case .directional:
