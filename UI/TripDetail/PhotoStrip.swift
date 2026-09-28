@@ -67,6 +67,11 @@ struct PhotoThumbnail: View {
     /// serves a derivative at `targetPx`, not the original, and the request is
     /// cancelled with this task when the tile scrolls away.
     private func loadThumbnail() async {
+        // The sample trip's drawings ship in the app and need no library access.
+        if SampleTrip.isSampleAsset(assetId) {
+            image = SampleTrip.image(assetId: assetId).map { UIImage(cgImage: $0) }
+            return
+        }
         // A passive thumbnail must never trigger the system photos prompt;
         // asking is the matcher flow's job. Undetermined → placeholder.
         guard PHPhotoLibrary.authorizationStatus(for: .readWrite) != .notDetermined else { return }

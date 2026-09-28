@@ -34,7 +34,7 @@ struct HomeView: View {
         NavigationStack(path: $path) {
             VStack(spacing: 16) {
                 if session.trips.isEmpty {
-                    emptyState
+                    HomeEmptyState(openSample: openSample)
                 } else {
                     tripList
                 }
@@ -163,22 +163,12 @@ struct HomeView: View {
         return "trip_delete_recorded_confirm"
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 56))
-                .foregroundStyle(.tint)
-            Text("empty_state_pitch")
-                .font(.headline)
-                .multilineTextAlignment(.center)
-            Text("empty_state_import_hint")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 80)
-        .padding(.horizontal)
+    /// Creates the sample trip and opens it. Only offered while Home is empty,
+    /// so there is at most one unless the person deletes it and asks again.
+    private func openSample() throws {
+        let tripId = try SampleTrip.create(repository: session.repository, vehicleId: LastVehicleChoice.forNewTrip())
+        session.refreshTrips()
+        path = [tripId]
     }
 
     private var tripList: some View {

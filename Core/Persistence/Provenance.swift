@@ -13,11 +13,23 @@ public enum TripSource: String, CaseIterable, Sendable {
     /// Reserved forward-compat only: no Google Timeline importer is planned
     /// (dropped as redundant, `decisions.md` 2026-07-20).
     case importedTimeline = "imported_timeline"
+    /// Kamome's own sample trip, shipped in the app and created only when the
+    /// person asks for it on an empty Home (ADR 2026-09-28-sample-trip). Nobody
+    /// travelled it: public places, a route prepared from OpenStreetMap, and
+    /// drawings instead of photographs. It must never read as the person's trip,
+    /// and nothing that works over "their trips" (Discovery, merge, photo
+    /// matching, photo analysis) may touch it.
+    case sample
 
     /// True when the route is inferred from sparse data rather than recorded.
     /// Drives the "reconstructed from photos" labeling and inferred-leg
     /// rendering (spec §5/§6). Never claim a reconstructed trip as proof.
     public var isReconstructed: Bool { self != .recorded }
+
+    /// Kamome's sample, not a journey anyone took. Check this **before**
+    /// `isReconstructed`, which is also true for it: a "rebuilt from your photos"
+    /// label on the sample would be a false claim.
+    public var isSample: Bool { self == .sample }
 
     /// Legacy/unknown strings read as `recorded` — the schema-v1 default and
     /// the safe assumption for rows written before v2.
@@ -43,6 +55,10 @@ public enum SegmentSource: String, CaseIterable, Sendable {
     /// and nothing observed in between. Treated as `exif` is — routed, and
     /// dashed when no road comes back — never as a recording.
     case mergeGap = "merge_gap"
+    /// A leg of Kamome's sample trip: two public places and the road between
+    /// them, prepared once from OpenStreetMap and shipped with the app. Always
+    /// carries its `matched_polyline`, so routing never asks about it.
+    case sample
 
     /// NULL / unknown reads as `gpsHifi` (schema-v1 behavior).
     public init(storage: String?) {

@@ -52,7 +52,7 @@ struct TripDetailView: View {
             } label: {
                 Label("trip_merge_action", systemImage: "arrow.triangle.merge")
             }
-            .disabled(model.detail?.trip.endedAt == nil)
+            .disabled(model.detail?.trip.endedAt == nil || model.isSample)
             #if DEBUG
             Button { showingProbe = true } label: { Text(verbatim: "Photo analysis probe") }
             #endif
