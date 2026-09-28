@@ -1,6 +1,6 @@
 # HANDOFF — live findings only
 
-**Updated 2026-09-24.** `main` carries PRs #16–#88. Everything closed has been
+**Updated 2026-09-28.** `main` carries PRs #16–#110. Everything closed has been
 moved to `Docs/_archive/handoff-2026-08.md`; what is below is open.
 
 **Rules for this file** (`Scripts/check-doc-budget.sh` enforces the size):
@@ -16,9 +16,9 @@ Read `Docs/current-state.md` for the snapshot and `CLAUDE.md` for the rules.
 
 ---
 
-## 🔴 The critical path to a release — neither item is a document
+## 🔴 The critical path to a release — none is a document
 
-Everything else on this page can wait behind these two, and **no Claude session
+Everything else on this page can wait behind these three, and **no Claude session
 can do either**. Both gate the **App Store submission**, not TestFlight — a
 TestFlight build is the vehicle for D1–D5 (→ `Docs/handoff-testflight.md`).
 
@@ -40,6 +40,9 @@ TestFlight build is the vehicle for D1–D5 (→ `Docs/handoff-testflight.md`).
    still holds the current one, and the flip cannot reach those.
    **Order matters**: rotating first would leave the check validating a bundle
    nobody ships. → `Docs/release-readiness.md` S6, S7, Tier 1.
+3. **App Store prerequisites, Chiu's:** policy URL, privacy label, "Beta",
+   reviewer notes, quota, 0.1, recording.
+   → `Docs/handoff-release-review-2026-09-28.md`.
 
 ---
 
