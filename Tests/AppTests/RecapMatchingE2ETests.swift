@@ -47,7 +47,7 @@ final class RecapMatchingE2ETests: XCTestCase {
         // Pinned, not inherited from the simulator: this drives the shipped export
         // path end to end, and an end-to-end check whose output depends on a
         // machine's dark-mode setting is not a check.
-        model.startExport(appearance: .light)
+        model.startExport(appearance: .light, length: .standard)
 
         let deadline = Date.now.addingTimeInterval(600)
         while Date.now < deadline {

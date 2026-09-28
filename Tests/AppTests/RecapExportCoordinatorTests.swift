@@ -167,7 +167,7 @@ final class RecapExportCoordinatorTests: XCTestCase {
             repository: TripRepository(database: try AppDatabase.inMemory()),
             coordinator: coordinator
         )
-        otherTrip.startExport(appearance: .dark)
+        otherTrip.startExport(appearance: .dark, length: .standard)
         XCTAssertEqual(otherTrip.busyTripId, "trip-a")
         XCTAssertFalse(otherTrip.isRendering)
         XCTAssertEqual(SpyExportJob.runs, 1)

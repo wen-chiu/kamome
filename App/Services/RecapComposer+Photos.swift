@@ -139,13 +139,16 @@ extension RecapComposer {
     /// The stops the film presents, each with its final deck, in trip order —
     /// selection, allocation and the deck pick in one pass. `trip` builds the
     /// film from it; `filmDecks` shows it before the film exists.
+    ///
+    /// `length` is the person's choice on the export sheet; the app's part of
+    /// the plan is held to its ceiling (`durationCeilingS`, `fittedToCeiling`).
     static func deckPlan(
-        stops: [StopRecord], inputs: PhotoInputs, highlightMaxPhotos: Int, weighting: TrackingConfig.Export?
+        stops: [StopRecord], inputs: PhotoInputs, highlightMaxPhotos: Int, weighting: TrackingConfig.Export?,
+        length: FilmLength = .standard
     ) -> [(stop: StopRecord, photos: [PhotoRef])] {
-        let selection = select(stops: stops, photosByStop: inputs.byStop,
-                               rawPhotoCounts: inputs.rawCounts, favoriteCounts: inputs.starredCounts,
-                               pickedCounts: inputs.pickedCounts, weighting: weighting)
-        return selection.kept.map { stop in
+        let selection = select(stops: stops, inputs: inputs, weighting: weighting, length: length,
+                               highlightMaxPhotos: highlightMaxPhotos)
+        return selection.kept.map { stop -> (stop: StopRecord, photos: [PhotoRef]) in
             var photos = inputs.byStop[stop.id] ?? []
             if (inputs.pickedCounts[stop.id] ?? 0) > 0 {
                 // The person's deck is theirs: no allocation, no weighting.
@@ -157,6 +160,9 @@ extension RecapComposer {
                 photos = deckPhotos(photos, allocated: allocated,
                                     highlightedAssets: inputs.highlighted, highlightMaxPhotos: highlightMaxPhotos,
                                     analysis: inputs.analysis)
+                // The ceiling took this deck's lift back (`fitToCeiling`); the
+                // highlights lead, so the prefix keeps them.
+                if let ceiling = selection.deckCeiling[stop.id] { photos = Array(photos.prefix(ceiling)) }
             }
             // Stop weighting: an independent legacy flag, shipping `false`, that
             // survives the mode migration by explicit decision (HANDOFF). Measured
@@ -193,7 +199,8 @@ extension RecapComposer {
     /// `useAnalysis: false` is the DEBUG probe's "before": the same plan with
     /// the trip's analysis ignored. Every shipping caller takes the default.
     static func filmPlan(
-        detail: TripRepository.TripDetail, config: TrackingConfig, useAnalysis: Bool = true
+        detail: TripRepository.TripDetail, config: TrackingConfig, length: FilmLength = .standard,
+        useAnalysis: Bool = true
     ) -> FilmPlan {
         let film = filmRecords(
             segments: detail.segments, stops: detail.stops,
@@ -203,7 +210,8 @@ extension RecapComposer {
         )
         let plan = deckPlan(
             stops: film.stops, inputs: photoInputs(detail: detail, analysis: useAnalysis ? config.photoAnalysis : nil),
-            highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos, weighting: config.export
+            highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos, weighting: config.export,
+            length: length
         )
         var result = FilmPlan(stops: film.stops)
         for (stop, photos) in plan {
@@ -218,15 +226,21 @@ extension RecapComposer {
     /// Which stops the film presents, and how many photographs each shows:
     /// the app's ranking, then the person's word on top of it.
     private static func select(
-        stops: [StopRecord],
-        photosByStop: [String: [PhotoRef]],
-        rawPhotoCounts: [String: Int],
-        favoriteCounts: [String: Int],
-        pickedCounts: [String: Int],
-        weighting: TrackingConfig.Export?
-    ) -> (kept: [StopRecord], allocation: [String: Int]) {
-        let ranked = rankedSelection(stops: stops, photosByStop: photosByStop, rawPhotoCounts: rawPhotoCounts,
-                                     favoriteCounts: favoriteCounts, weighting: weighting)
+        stops: [StopRecord], inputs: PhotoInputs, weighting: TrackingConfig.Export?, length: FilmLength,
+        highlightMaxPhotos: Int
+    ) -> Selection {
+        let photosByStop = inputs.byStop, rawPhotoCounts = inputs.rawCounts, pickedCounts = inputs.pickedCounts
+        var ranked = rankedSelection(stops: stops, photosByStop: photosByStop, rawPhotoCounts: rawPhotoCounts,
+                                     favoriteCounts: inputs.starredCounts, weighting: weighting, length: length)
+        // **The film's ceiling binds the app's choice, before the person's
+        // word** (Chiu 2026-09-27, and 2026-09-25 below): fitted here, a stop
+        // put in or taken out can never move another one.
+        if let weighting, weighting.recapMode == .highlight {
+            ranked = fitToCeiling(
+                ranked, ceilingS: weighting.durationCeilingS(for: length),
+                inputs: inputs, highlightMaxPhotos: highlightMaxPhotos, weighting: weighting
+            )
+        }
         // **The person's word lands on top of the app's** (Chiu 2026-09-25).
         // A stop put in — or whose photographs were picked — joins the film
         // and the film grows; a stop taken out leaves, and nothing takes its
@@ -245,7 +259,7 @@ extension RecapComposer {
             }
             return true
         }
-        return (kept, allocation)
+        return Selection(kept: kept, allocation: allocation, priority: ranked.priority, deckCeiling: ranked.deckCeiling)
     }
 
     /// The app's own choice of stops, before the person's word is applied.
@@ -259,9 +273,10 @@ extension RecapComposer {
         photosByStop: [String: [PhotoRef]],
         rawPhotoCounts: [String: Int],
         favoriteCounts: [String: Int],
-        weighting: TrackingConfig.Export?
-    ) -> (kept: [StopRecord], allocation: [String: Int]) {
-        guard let weighting else { return (stops, [:]) }
+        weighting: TrackingConfig.Export?,
+        length: FilmLength
+    ) -> Selection {
+        guard let weighting else { return Selection(kept: stops, allocation: [:]) }
         let signals = stops.map { stop in
             StopPhotoAllocator.Signal(
                 photoCount: rawPhotoCounts[stop.id] ?? (photosByStop[stop.id]?.count ?? 0),
@@ -277,18 +292,22 @@ extension RecapComposer {
             // This used to pass `totalDurationMaxS`, which is why every trip
             // presented the same 8 stops whether it had 10 or 65: the duration
             // ceiling was the same for all of them.
-            let tiers = StopPhotoAllocator.triage(signals, config: weighting)
+            let tiers = StopPhotoAllocator.triage(signals, config: weighting, length: length)
             let kept = zip(stops, tiers).compactMap { stop, tier -> StopRecord? in
                 guard let tier else { return nil }
                 allocation[stop.id] = tier
                 return stop
             }
-            return (kept, allocation)
+            var priority: [String: Int] = [:]
+            for (rank, index) in StopPhotoAllocator.priorityOrder(signals, config: weighting).enumerated() {
+                priority[stops[index].id] = rank
+            }
+            return Selection(kept: kept, allocation: allocation, priority: priority)
         case .full:
             // Every stop survives; rank decides how many photographs it shows.
             let counts = StopPhotoAllocator.allocate(signals, config: weighting)
             for (stop, count) in zip(stops, counts) { allocation[stop.id] = count }
-            return (stops, allocation)
+            return Selection(kept: stops, allocation: allocation)
         }
     }
 }

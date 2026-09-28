@@ -75,8 +75,8 @@ string stands. Do not reopen this from scratch.
 - **Camera areas + floor (e): renders.** → `Docs/handoff-camera-context-floor.md`.
 - **Badge 0.60 size** — judged from a still; you reserved a film.
   → `Docs/handoff-marker-badge.md` finding 6.
-- **Film length rule** — direction decided 2026-08-14, **rule not**.
-  → `Docs/handoff-pacing.md`.
+- **Film length** — Short ≤ 90 s default, Standard ≤ 300 s (ADR 2026-09-27); is
+  300 s right? → its table; the rule → `handoff-pacing.md`.
 - **S2/S3 wording** — first-run card wording is ruled; `AboutView` is draft.
   → `Docs/release-readiness.md` S2/S3.
 - **End-card wordmark** — layout `KAMOME かもめ`, film ships `"Kamome"`.
@@ -170,7 +170,7 @@ string stands. Do not reopen this from scratch.
 Plan and per-stage cost are logged. Offline, a crossing arc is **54 of 102
 stations**; magnification 1.10 → 1.25 halves that (Chiu's look call). **Iceland
 942 s on device:** each tile was fetched ~9×; one download per tile now, desk 3.1–3.7×
-faster, pixels within noise. **Owed: device `render network` line** → export doc §9.
+faster, pixels within noise. **Owed: device `render network` line**; diagnostics keep 20 exports now → export doc §9.
 
 ## 🐛 Known bugs and accepted costs
 

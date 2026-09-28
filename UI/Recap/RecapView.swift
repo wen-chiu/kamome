@@ -82,6 +82,7 @@ struct RecapView: View {
             // item 2). They used to stay on screen disabled, which is a form that
             // looks editable and is not; the film in flight has already chosen.
             if !model.isRendering {
+                lengthSection
                 vehicleSection
 
                 // Its own section so the note reads as the toggle's, not as a
@@ -180,11 +181,16 @@ struct RecapView: View {
     }
 
     /// **What the tap will make, said before it** (DESIGNER.md UX rule 3, S5
-    /// review item 3): "N stops · M photos", counts only (Chiu 2026-09-26).
-    /// Read off the same plan the export composes and the list above draws, so
-    /// it moves as stops go in and out. No duration: the timeline needs a
-    /// composed trip, and composing waits on routing. With photo cards off the
-    /// film shows none, so the photos half is not said.
+    /// review item 3): "N stops · M photos · about 1:28". Read off the same
+    /// plan the export composes and the list above draws, so it moves as stops
+    /// go in and out. With photo cards off the film shows none, so the photos
+    /// half is not said.
+    ///
+    /// **The length is said now** (Chiu 2026-09-27, reopening ADR 2026-09-26
+    /// (c) item 7). It was left out because the timeline needs a composed trip;
+    /// the length does not — it is the timeline's own plan over these decks
+    /// (`RecapComposer.estimatedFilmS`). "About", because a type-2 film loses
+    /// its origin's stops after routing and can only come out shorter.
     @ViewBuilder
     private var filmSummary: some View {
         if let filmPhotos {
@@ -194,10 +200,56 @@ struct RecapView: View {
             let photos = String.localizedStringWithFormat(
                 String(localized: "recap_film_photo_count"), filmPhotos.filmPhotoCount
             )
-            Text(verbatim: model.photosEnabled ? "\(stops) · \(photos)" : stops)
+            let length = String.localizedStringWithFormat(
+                String(localized: "recap_film_length_estimate"),
+                Self.clock(filmPhotos.estimatedFilmS(photosEnabled: model.photosEnabled))
+            )
+            let counts = model.photosEnabled ? "\(stops) · \(photos)" : stops
+            Text(verbatim: "\(counts) · \(length)")
                 .font(.footnote.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// Film seconds as the clock a video player shows: 1:28, 3:32.
+    static func clock(_ seconds: Double) -> String {
+        Duration.seconds(seconds.rounded()).formatted(.time(pattern: .minuteSecond))
+    }
+
+    /// **Short or standard** (Chiu 2026-09-27). Short is the default and fits
+    /// a Reel whole; standard is the film the trip earns from its size, at most
+    /// 300 s. Hidden when both make the same film — a small trip has nothing to
+    /// choose — unless there is a warning to give: the person's own additions
+    /// carried the film past its ceiling, which the app never cuts for them.
+    @ViewBuilder
+    private var lengthSection: some View {
+        let isOver = filmPhotos?.isOverCeiling(photosEnabled: model.photosEnabled) ?? false
+        if let filmPhotos, filmPhotos.lengthsDiffer || isOver {
+            let ceiling = Self.clock(filmPhotos.ceilingS)
+            let estimate = filmPhotos.estimatedFilmS(photosEnabled: model.photosEnabled)
+            Section {
+                Picker("recap_length_header", selection: Binding(
+                    get: { filmPhotos.length }, set: { length in withAnimation { filmPhotos.choose(length) } }
+                )) {
+                    Text("recap_length_short").tag(FilmLength.short)
+                    Text("recap_length_standard").tag(FilmLength.standard)
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("recap_length_header")
+            } footer: {
+                if isOver {
+                    Text(verbatim: String.localizedStringWithFormat(
+                        String(localized: "recap_length_over"), Self.clock(estimate), ceiling
+                    ))
+                    .foregroundStyle(.orange)
+                } else {
+                    let footer: String.LocalizationValue = filmPhotos.length == .short
+                        ? "recap_length_short_footer" : "recap_length_standard_footer"
+                    Text(verbatim: String.localizedStringWithFormat(String(localized: footer), ceiling))
+                }
+            }
         }
     }
 
@@ -213,7 +265,9 @@ struct RecapView: View {
 
     private var exportButton: some View {
         Button {
-            model.startExport(appearance: RecapAppearance(colorScheme))
+            model.startExport(
+                appearance: RecapAppearance(colorScheme), length: filmPhotos?.length ?? FilmLengthChoice.current()
+            )
         } label: {
             Label("recap_export", systemImage: "film")
                 .font(.headline)

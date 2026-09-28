@@ -211,7 +211,7 @@ final class RecapEncoderTests: XCTestCase {
     func testASnapshotThatNeverAnswersFailsTheExportWithinItsDeadline() async throws {
         let config = exportConfig(pipeline: TrackingConfig.ExportPipeline(
             prefetchDepth: 2, compositeConcurrency: 2, snapshotTimeoutS: 0.3, mapCacheMb: 1,
-            coalesceTileRequests: false, terrainMaxAgeS: 0, tileMemoryMb: 0
+            coalesceTileRequests: false, terrainMaxAgeS: 0, tileMemoryMb: 0, keptExportLogs: 0
         ))
         let (exporter, _) = try makeExporter(config: config, provider: SilentProvider())
         let videoURL = scratchURL("silent.mp4")

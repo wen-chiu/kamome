@@ -22,7 +22,8 @@ import Foundation
 public enum RecapMode: String, Decodable, CaseIterable, Sendable {
     /// The slim cut. A budget-derived number of stops survive, each showing
     /// `tier_standard_photos`; the rest are dropped from the film entirely — no
-    /// pin, no name, no pause. Length is bounded by `total_duration_max_s`.
+    /// pin, no name, no pause. How many survive is `FilmLength`'s: the trip's
+    /// earned count, or what `total_duration_max_s` holds.
     case highlight
 
     /// The complete record. Every stop survives, photographs are allocated 0–3 by

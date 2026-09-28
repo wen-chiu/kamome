@@ -1,6 +1,125 @@
 {
   "sourceLanguage": "zh-Hant",
   "strings": {
+    "recap_length_header": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Film length"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片長度"
+          }
+        }
+      }
+    },
+    "recap_length_short": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精華"
+          }
+        }
+      }
+    },
+    "recap_length_standard": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準"
+          }
+        }
+      }
+    },
+    "recap_length_short_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to %@ — a Reel or a Short takes it whole. Kamome keeps the stops you photographed most."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 以內，剛好放進 Reels 或 Shorts。卡摸咩會留下你拍最多照片的停留點。"
+          }
+        }
+      }
+    },
+    "recap_length_standard_footer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The whole trip at its own pace, up to %@ — the more places you went, the longer the film."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照整趟行程的節奏走，最長 %@ —— 去的地方越多，影片越長。"
+          }
+        }
+      }
+    },
+    "recap_length_over": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The stops you added make this film %1$@ — past this length's %2$@. Kamome keeps them; take some out for a shorter film."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你自己加入的停留點讓影片變成 %1$@，超過這個長度的 %2$@。卡摸咩會保留它們；想要短一點，可以拿掉幾個。"
+          }
+        }
+      }
+    },
+    "recap_film_length_estimate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "about %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "約 %@"
+          }
+        }
+      }
+    },
     "recap_stage_roads": {
       "extractionState": "manual",
       "localizations": {

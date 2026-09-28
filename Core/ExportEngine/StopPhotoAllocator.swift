@@ -82,20 +82,6 @@ public enum StopPhotoAllocator {
         return result
     }
 
-    /// **Variant B triage** (Chiu 2026-08-06): skip / standard / top.
-    ///
-    /// Returns `nil` for a stop the film should **drop entirely** — no pin, no
-    /// name, no pause, no park beat. That is the decisive difference from
-    /// `allocate`, whose zero-photo stops still halt the story to name themselves.
-    /// Here the car drives straight past and the route is the only evidence the
-    /// journey went through.
-    ///
-    /// The top tier needs **both** signals: a rank inside `tier_top_share` *and* at
-    /// least one favourited photograph. Rank alone would just be "most photographs",
-    /// which is already what standard rewards; the favourite is the person saying so
-    /// out loud. Consequence worth knowing before reading any desk render: fixtures
-    /// carry no favourites, so **the top tier is empty in every pilot** and only a
-    /// real photo library can fill it.
     /// **How many stops a trip earns**, from how big the journey was
     /// (Chiu 2026-08-14 — inverts the 2026-08-06 ADR).
     ///
@@ -213,12 +199,30 @@ public enum StopPhotoAllocator {
         return overhead + photos * config.deckPhotoMinHoldS
     }
 
+    /// **Variant B triage** (Chiu 2026-08-06): skip / standard / top.
+    ///
+    /// Returns `nil` for a stop the film should **drop entirely** — no pin, no
+    /// name, no pause, no park beat. That is the decisive difference from
+    /// `allocate`, whose zero-photo stops still halt the story to name themselves.
+    /// Here the car drives straight past and the route is the only evidence the
+    /// journey went through.
+    ///
+    /// The top tier needs **both** signals: a rank inside `tier_top_share` *and* at
+    /// least one favourited photograph. Rank alone would just be "most photographs",
+    /// which is already what standard rewards; the favourite is the person saying so
+    /// out loud. Consequence worth knowing before reading any desk render: fixtures
+    /// carry no favourites, so **the top tier is empty in every pilot** and only a
+    /// real photo library can fill it.
+    ///
     /// **No `durationS` parameter any more.** It used to take the film's length and
     /// derive the stop count from it; the trip now earns the count and the length
     /// follows, so passing a duration here would reintroduce the circularity the
-    /// inversion removed.
+    /// inversion removed. `length` is the one exception, and it is a *choice*,
+    /// not a duration: `.short` keeps what `total_duration_max_s` can hold
+    /// (`shortStopCount`), and marked stops fill that room first rather than
+    /// growing past it.
     public static func triage(
-        _ signals: [Signal], config: TrackingConfig.Export
+        _ signals: [Signal], config: TrackingConfig.Export, length: FilmLength = .standard
     ) -> [Int?] {
         guard !signals.isEmpty else { return [] }
         // **Deterministic ranking.** Score descending, then original trip order for
@@ -228,36 +232,138 @@ public enum StopPhotoAllocator {
         let scored = signals.enumerated()
             .map { (index: $0.offset, score: score($0.element, config: config)) }
             .sorted { $0.score != $1.score ? $0.score > $1.score : $0.index < $1.index }
+            .map(\.index)
 
-        let keep = Swift.min(earnedStopCount(tripStopCount: signals.count, config: config), signals.count)
+        let chosen: Set<Int>
+        switch length {
+        case .standard:
+            chosen = standardChoice(signals, scored: scored, config: config)
+        case .short:
+            // **The ceiling wins over the marks** (Chiu 2026-09-27): a short film
+            // that grew past 90 s for every favourite would not be a short film.
+            // Marked stops still go first, so they are the last to be left out.
+            let room = Swift.min(shortStopCount(config: config), signals.count)
+            chosen = Set(priorityOrder(signals, config: config).prefix(room))
+        }
+
         let topCut = 1.0 - clampedShare(config.tierTopShare)
         let count = Double(signals.count)
-
-        // **A stop the person marked is always kept** (Chiu 2026-09-24). A
-        // favourite or an in-app highlight says the place deserves the film, and
-        // marking a photo at one stop must never silently drop another stop that
-        // was marked too. So marked stops all stay — past the earned count if
-        // there are more of them, and the film grows to fit — and only the
-        // remaining places are filled by rank from the unmarked stops. With no
-        // marks anywhere this is exactly the ranked cut it replaced.
-        let marked = signals.filter { $0.favoriteCount > 0 }.count
-        let unmarkedRoom = Swift.max(keep - marked, 0)
-        var unmarkedKept = 0
-
         var result = [Int?](repeating: nil, count: signals.count)
-        for (rank, entry) in scored.enumerated() {
-            let signal = signals[entry.index]
-            if signal.favoriteCount == 0 {
-                guard unmarkedKept < unmarkedRoom else { continue }
-                unmarkedKept += 1
-            }
+        for (rank, index) in scored.enumerated() where chosen.contains(index) {
+            let signal = signals[index]
             let fraction = 1.0 - Double(rank) / count
             let wanted = (fraction > topCut && signal.favoriteCount > 0)
                 ? config.tierTopPhotos
                 : config.tierStandardPhotos
-            result[entry.index] = Swift.min(wanted, signal.photoCount)
+            result[index] = Swift.min(wanted, signal.photoCount)
         }
         return result
+    }
+
+    /// The standard film's stops: the earned count, by rank.
+    ///
+    /// **A stop the person marked is always kept** (Chiu 2026-09-24). A
+    /// favourite or an in-app highlight says the place deserves the film, and
+    /// marking a photo at one stop must never silently drop another stop that
+    /// was marked too. So marked stops all stay — past the earned count if
+    /// there are more of them, and the film grows to fit — and only the
+    /// remaining places are filled by rank from the unmarked stops. With no
+    /// marks anywhere this is exactly the ranked cut it replaced. Since
+    /// 2026-09-27 the film then meets `standard_duration_max_s`
+    /// (`fittedToCeiling`), which gives up marked stops last, not never.
+    private static func standardChoice(
+        _ signals: [Signal], scored: [Int], config: TrackingConfig.Export
+    ) -> Set<Int> {
+        let keep = Swift.min(earnedStopCount(tripStopCount: signals.count, config: config), signals.count)
+        let marked = signals.filter { $0.favoriteCount > 0 }.count
+        let unmarkedRoom = Swift.max(keep - marked, 0)
+        var chosen = Set<Int>()
+        var unmarkedKept = 0
+        for index in scored {
+            if signals[index].favoriteCount == 0 {
+                guard unmarkedKept < unmarkedRoom else { continue }
+                unmarkedKept += 1
+            }
+            chosen.insert(index)
+        }
+        return chosen
+    }
+
+    /// Stop indices from the one the film should keep longest to the one it
+    /// should give up first: marked stops before unmarked, then score, then trip
+    /// order. `.short` fills its room in this order, and `fittedToCeiling`
+    /// gives stops up in the reverse of it.
+    public static func priorityOrder(_ signals: [Signal], config: TrackingConfig.Export) -> [Int] {
+        signals.enumerated()
+            .map { (index: $0.offset, marked: $0.element.favoriteCount > 0, score: score($0.element, config: config)) }
+            .sorted {
+                if $0.marked != $1.marked { return $0.marked }
+                return $0.score != $1.score ? $0.score > $1.score : $0.index < $1.index
+            }
+            .map(\.index)
+    }
+
+    /// **How many stops a short film holds**: the most whose priced length
+    /// (`earnedDurationS`) stays within `total_duration_max_s` — 8 at the
+    /// shipped values (12 + 8 × 9.5 = 88 s; a ninth would be 97.5 s).
+    ///
+    /// Counted up rather than divided, so there is no floor of a
+    /// `21.999999999999996` to land one short (the Iceland off-by-one), and never
+    /// more than the standard film's own cap.
+    public static func shortStopCount(config: TrackingConfig.Export) -> Int {
+        var count = 0
+        while count < config.earnedStopsCap,
+              earnedDurationS(presentedStops: count + 1, config: config) <= config.totalDurationMaxS {
+            count += 1
+        }
+        return count
+    }
+
+    /// One presented deck, as `fittedToCeiling` weighs it.
+    public struct PresentedDeck: Equatable {
+        /// Photographs the deck shows.
+        public let photos: Int
+        /// The app's priority — 0 is kept longest (`priorityOrder`).
+        public let priority: Int
+
+        public init(photos: Int, priority: Int) {
+            self.photos = photos
+            self.priority = priority
+        }
+    }
+
+    /// **Holds a film to its ceiling once the decks are final** (Chiu
+    /// 2026-09-27: 精華確定可以縮到一分半鐘; 標準預設不要超過三百秒).
+    ///
+    /// `triage` picks the stops at the expected photo mix, but highlights can
+    /// lift a deck to `deck_highlight_max_photos` afterwards, and the length
+    /// follows the decks (`earnedDurationS(photoCounts:)`). So the fit is made
+    /// here, on what will actually be shown. Returns each deck's photo count, or
+    /// nil for a stop that leaves the film.
+    ///
+    /// Two steps, lowest priority first in each: lifted decks go back to
+    /// `tier_standard_photos` — the stop stays, only its extra photographs
+    /// go — and only then do whole stops leave. Only ever given the **app's**
+    /// choice (`RecapComposer.fitToCeiling`): the person's own stops go on top
+    /// afterwards, so a film they filled themselves may still run long, and the
+    /// sheet says so rather than overruling them.
+    public static func fittedToCeiling(
+        _ decks: [PresentedDeck], ceilingS: Double, config: TrackingConfig.Export
+    ) -> [Int?] {
+        var counts: [Int?] = decks.map(\.photos)
+        func fits() -> Bool {
+            earnedDurationS(photoCounts: counts.compactMap { $0 }, config: config) <= ceilingS
+        }
+        let yielding = decks.indices.sorted { decks[$0].priority > decks[$1].priority }
+        for index in yielding where !fits() {
+            if let photos = counts[index], photos > config.tierStandardPhotos {
+                counts[index] = config.tierStandardPhotos
+            }
+        }
+        for index in yielding where !fits() {
+            counts[index] = nil
+        }
+        return counts
     }
 
     /// A stop's attention score: its photographs, plus each favourite counted

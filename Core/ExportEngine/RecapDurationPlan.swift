@@ -220,9 +220,11 @@ public struct RecapDurationPlan: Equatable {
         // as long as its content, and a 65-stop trip stops producing the same 90 s
         // as a 10-stop one.
         //
-        // `total_duration_max_s` deliberately does **not** apply here any more: it
-        // was the ceiling that made trip size invisible, and the earned-stop cap is
-        // the bound now. The floor stays — a very small trip still gets a
+        // `total_duration_max_s` deliberately does **not** apply here: it was the
+        // ceiling that made trip size invisible, and the earned-stop cap is the
+        // bound now. A film meets its ceiling (`durationCeilingS`) one step
+        // earlier, in the stops and decks it is given (`fittedToCeiling`), so the plan
+        // never has to squeeze a deck under its photo floor to honour it. The floor stays — a very small trip still gets a
         // watchable minimum, and the camera needs travel time to cross the ground
         // between stops (see `uncapped` above, same reason).
         // Priced per presented deck, so a stop the person's highlights lifted

@@ -173,12 +173,16 @@ final class RecapModel {
     /// reproduce. It arrives as a parameter from `RecapView`, which reads
     /// `@Environment(\.colorScheme)` on the main actor at the moment the button
     /// is pressed, and travels into `RecapExportRequest` unchanged.
-    func startExport(appearance: RecapAppearance) {
+    ///
+    /// `length` arrives the same way, from the sheet's `FilmPhotoChoices` — the
+    /// plan the person has been looking at is the one they asked for.
+    func startExport(appearance: RecapAppearance, length: FilmLength) {
         let request = RecapExportRequest(
             tripId: tripId,
             photosEnabled: requestedPhotosEnabled,
             format: requestedFormat,
-            appearance: appearance
+            appearance: appearance,
+            length: length
         )
         let job = RecapExportJob(request: request, config: config, repository: repository)
         switch coordinator.start(request: request, job: job) {
