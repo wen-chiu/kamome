@@ -60,6 +60,10 @@ what `OSLogStore` returns outside a debugger.
 | Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` |
 | Subject lookup miss rate | count fallback badges over ten exports (desk: 1 in 5) | `handoff-subject-lookup.md` |
 
+Also from the 2026-09-28 release review: an **iOS 17/18** pass (a simulator
+can settle it first, #127), and the two-week recording's replay time on a phone
+(`handoff-long-recording.md`).
+
 ## E. Chiu's own steps, in this order (`HANDOFF.md` 🔴)
 
 1. `./check.sh --release <.xcarchive>` with the real key in the environment.

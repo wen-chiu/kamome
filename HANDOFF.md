@@ -14,6 +14,8 @@
 submission sequence — `./check.sh --release <.xcarchive>` with the real key in
 `KAMOME_ROUTING_API_KEY` (never a file, ADR 2026-09-12), **then** rotate the
 Geoapify key (S7). Never the other way round. → `Docs/release-readiness.md`.
+Before submitting, the App Store prerequisites A1–A7 are Chiu's (#126,
+`Docs/handoff-release-review-2026-09-28.md`).
 
 **Accepted risk, do not reopen (Chiu 2026-09-13):** the film's map credit omits
 `ODbL`; the six-character fix is costed and deliberately not built.
