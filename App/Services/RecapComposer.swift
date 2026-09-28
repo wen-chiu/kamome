@@ -144,7 +144,8 @@ enum RecapComposer {
         weighting: TrackingConfig.Export? = nil,
         length: FilmLength = .standard,
         everyLegRoutabilityEstablished: Bool = false,
-        clock: TripClock? = nil
+        clock: TripClock? = nil,
+        title: String? = nil
     ) -> RecapTrip? {
         guard legs.reduce(0, { $0 + $1.coordinates.count }) >= 2 else { return nil }
         // Every day and date the film draws is local to where it happened
@@ -195,7 +196,8 @@ enum RecapComposer {
         return RecapTrip(
             legs: legs,
             stops: tripStops,
-            title: trip.title,
+            // The export passes `TripTitle.film` — the place for an unnamed trip.
+            title: title ?? trip.title,
             subtitle: titleSubtitle(trip: trip, distanceM: titleM),
             endCardFigures: endCardFigures(
                 trip: trip, distanceM: drawnM, stopCount: film.stops.count, clock: clock

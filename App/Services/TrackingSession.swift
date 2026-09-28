@@ -334,10 +334,8 @@ final class TrackingSession {
         )
     }
 
+    /// `TripTitle.fallback`: the one shape every unnamed trip's title has.
     private static func defaultTitle(for date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        TripTitle.fallback(for: date.timeIntervalSince1970)
     }
 }

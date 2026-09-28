@@ -193,6 +193,15 @@ public struct TripRepository {
 
     // MARK: - Stops (S4 Stop Editor)
 
+    /// The person's own name for the trip (S3 rename, 2026-09-27). The caller
+    /// trims it and never passes an empty one: `title` is NOT NULL, and an
+    /// empty title would put a blank opening card in the film.
+    public func setTripTitle(tripId: String, title: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE trip SET title = ? WHERE id = ?", arguments: [title, tripId])
+        }
+    }
+
     public func setStopName(stopId: String, name: String) throws {
         try database.writer.write { db in
             try db.execute(sql: "UPDATE stop SET name = ? WHERE id = ?", arguments: [name, stopId])

@@ -145,7 +145,8 @@ struct RecapExportJob: RecapExportRunning {
             length: request.length,
             everyLegRoutabilityEstablished:
                 RecapComposer.everyLegRoutabilityEstablished(film.segments),
-            clock: TripClock(stops: detail.stops)
+            clock: TripClock(stops: detail.stops),
+            title: TripTitle.film(detail.trip)
         ) else { return nil }
         announceFilmType(trip)
         return Composed(trip: trip, detail: detail)

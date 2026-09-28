@@ -295,12 +295,9 @@ final class ImportFlowModel {
         return (from, to)
     }
 
-    /// Same default-title shape as recorded trips (medium date, no time),
-    /// anchored to the range start; the user can rename in S3/S4.
+    /// `TripTitle.fallback`, anchored to the range start — the same shape as
+    /// recorded trips; the person can rename it from Trip Detail's edit menu.
     private func title(for bounds: (from: Date, to: Date)) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: bounds.from)
+        TripTitle.fallback(for: bounds.from.timeIntervalSince1970)
     }
 }
