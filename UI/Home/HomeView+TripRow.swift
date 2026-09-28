@@ -15,19 +15,11 @@ extension HomeView {
         return placeText(for: trip) ?? Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
     }
 
-    /// A trip whose stored title is still the plain fallback date — nobody
-    /// named it (no album title, no Discovery card, never renamed). The only
-    /// case this screen may show something else instead; a real name is never
-    /// replaced.
+    /// A trip whose stored title is still the plain fallback date (`TripTitle`).
+    /// The only case this screen may show something else instead; a real name
+    /// is never replaced.
     func hasFallbackTitle(_ trip: TripRecord) -> Bool {
-        trip.title == Self.fallbackTitle(for: trip.startedAt)
-    }
-
-    static func fallbackTitle(for startedAt: Double) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: Date(timeIntervalSince1970: startedAt))
+        TripTitle.isFallback(trip)
     }
 
     /// "Jun 21 – 22, 2026" — the same span format the Import sheet's own album
@@ -44,17 +36,9 @@ extension HomeView {
         return "\(from) – \(formatter.string(from: end))"
     }
 
-    /// Reads the place `TripJourneyNaming` cached at trip creation — the same
-    /// cache Journey Discovery writes, so a trip that came from the beta
-    /// already has an entry and costs no new lookup here. First stop's
-    /// country only (§0 scope, see `TripJourneyNaming`); nil until the
-    /// one-time lookup resolves, or if it never finds one.
+    /// The place found for the trip (`TripTitle.place`), nil until it resolves.
     func placeText(for trip: TripRecord) -> String? {
-        guard let place = JourneyNameCache().place(for: trip.discoveryKey ?? trip.id),
-              let country = place.country
-        else { return nil }
-        let flag = JourneyNaming.flag(countryCode: place.countryCode)
-        return [flag, country].compactMap { $0 }.joined(separator: " ")
+        TripTitle.place(for: trip)
     }
 
     /// A single small glyph, not a text pill — the distinction (reconstructed

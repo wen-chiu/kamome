@@ -19,7 +19,7 @@ extension TripDetailModel {
     /// this the cached place hid a rename on this screen.
     var storyTitle: String {
         guard let trip = detail?.trip else { return "" }
-        guard trip.title == HomeView.fallbackTitle(for: trip.startedAt) else { return trip.title }
+        guard TripTitle.isFallback(trip) else { return trip.title }
         return journeyName?.title ?? trip.title
     }
 }
