@@ -6,29 +6,22 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-28 against decisions.md **2026-09-27** and `main` at
-**PR #110**. Last four: #106 trips can be renamed; #108 an unnamed trip's film
-opens on its country; #109 a long name wraps to two lines; #110 film length is
-Short ≤ 90 s (default) or Standard ≤ 300 s (ADR 2026-09-27). **This line is no
-longer a changelog** (2026-09-28): the per-PR history that grew here is
-`git log --merges`, and each PR's ADR is in the index.
+Last synced: 2026-09-28 against ADR **2026-09-28** (the ledger's last entry:
+it is frozen, one issue list replaces the handoff lists, one charter replaces
+three). `main` then carried PR #110 — film length Short ≤ 90 s (default) or
+Standard ≤ 300 s (ADR 2026-09-27).
 
-Open, in one place: **every phone-only check is `Docs/device-runbook.md`**; what
-waits on Chiu and the traps are `HANDOFF.md`.
-
-⚠️ **One merged PR behind passes; two or more fails**, counted by merge date
-(not PR number). Never "fix" a failure by bumping the number: the line claims
-someone re-read the ledger and `HANDOFF.md`, and that is the half that rotted
-twice while the number stayed right. → `Scripts/check-staleness.sh`, ADR
-2026-09-02 (b).
-
-Update this file when an ADR is appended, a PR merges, the phase changes, or
-Chiu decides anything that changes what is below.
+**This file is the snapshot of what is true, not a list of what is open.** Open
+work is GitHub Issues (`device`, `chiu`, `desk`); phone-only checks are
+`Docs/device-runbook.md`; traps are `HANDOFF.md`. Update this file in the PR
+that lands an ADR, and name that ADR in the line above —
+`Scripts/check-staleness.sh` fails if a newer one exists. Never bump the name
+without re-reading what the ADR changes here.
 
 ## Product
 
 Kamome (卡摸咩) is a **memory engine for road trips** (`CLAUDE.md` carries the
-sentence). Not a GPS visualizer. North star in `PO.md`; the original spec is
+sentence). Not a GPS visualizer. North star in `CHARTER.md` §7; the original spec is
 archived (`Docs/_archive/kamome-poc-spec.md`).
 
 **No release is in flight.** The current work proves the *artefact* ahead of
@@ -82,7 +75,7 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
 
 ## Architecture
 
-- **Story ↔ Rendering separation** (`PO.md`): the story layer never depends on the
+- **Story ↔ Rendering separation** (`CHARTER.md` §3): the story layer never depends on the
   rendering substrate.
 - **Rendering:** `RecapSnapshotProviding` is the boundary; each renderer confined
   to one file. **The export renders OpenFreeMap + MapLibre** (two frozen Liberty
@@ -109,8 +102,8 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
 
 ## Locked decisions
 
-`Docs/decisions-index.md` is the lookup; `PO.md` §3 carries the reopening
-conditions. Newest entry on a subject wins.
+`Docs/decisions-index.md` (frozen ledger) and `Docs/adr/` are the lookup;
+`CHARTER.md` §6 carries the reopening conditions. Newest entry on a subject wins.
 
 Two standing constraints that are **not** decisions: **film duration must scale
 with trip size — direction decided (Chiu 2026-08-14), rule NOT**; and **Variant B
@@ -132,10 +125,10 @@ per-act camera framing (rejected 2026-08-02; per-**area** framing built 2026-09-
 | what | where |
 |---|---|
 | Product intent & rules | `Docs/_archive/kamome-poc-spec.md` (v1.8 — §0 rules and §4 provenance still authoritative) |
-| Decisions (append-only) | `Docs/decisions.md`; find one via `Docs/decisions-index.md` |
-| Live findings & blockers | `HANDOFF.md` — **wins over this file on anything open** |
+| Decisions | `Docs/adr/` (one file each, from 2026-09-28); before that `Docs/decisions.md`, frozen, via `Docs/decisions-index.md` |
+| Open work | GitHub Issues — **win over this file on anything open**; traps in `HANDOFF.md` |
 | Current state | this file; `CLAUDE.md` is the boot file |
 | Release gate | `Docs/release-readiness.md` |
-| Governance / conduct | `PO.md`, `Arch.md`, `DESIGNER.md` — one per session |
+| Governance / conduct | `CHARTER.md` — one for every session |
 | Rule rationale | `Docs/rule-rationale.md` |
 | History | `Docs/_archive/` — and `Docs/_archive/README.md` resolves any path that moved there |

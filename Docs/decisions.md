@@ -6886,3 +6886,55 @@ the ADR 2026-08-11 rule that `.full` is harness-only stands.
 | An export's lines reach the kept file | **VERIFIED** on the simulator (17 lines, `render cost` and `export stages` among them) | — |
 | They survive a relaunch and reach the shared file | **INFERRED** — Application Support persists, and `DiagnosticsLog.export` appends the file | Export, relaunch, share diagnostics on a phone |
 | 300 s is the right standard ceiling | **DECIDED** as a default (Chiu); tunable `standard_duration_max_s` | Chiu's judgement of a 5-minute film |
+
+## 2026-09-28 — Governance v2: one session, one charter, issues for open work, and this ledger is frozen
+
+**Context.** Phase 4 is in closeout, about 70% of the product built (Chiu's
+estimate). Measured on `main`, 2026-09-01 → 09-28 (VERIFIED, `git log`): 308
+commits, 488 document touches against 1,106 code touches. `HANDOFF.md` changed
+90 times, `Docs/current-state.md` 81, this ledger 77, its index 58. This file
+reached 413 KB and 108 entries, about 100k tokens that no session can read. On
+the morning of this entry `main` failed its static gates twice, and both came
+from parallel PRs editing the same files: the staleness line was four PRs behind,
+and #110 merged its branch's test baseline (771) over the 12 tests that
+#106/#108/#109 had added (783; no test was lost, counted per merge). Stale facts
+survived inside the charters themselves: `PO.md`'s lock table still said
+"Apple Maps still ships" twelve days after ADR 2026-09-16. What is left before a
+release waits on the phone and on Chiu's judgement (`Docs/device-runbook.md`),
+and more parallel sessions cannot speed up either one.
+
+**Decision (Chiu, 2026-09-28: 「同意你的建議，照你說的去改吧」).**
+
+1. **One session implements at a time**: one branch, one PR, merged before the
+   next one starts. Subagents are read-only.
+2. **One charter.** `CHARTER.md` replaces `Arch.md`, `PO.md` and `DESIGNER.md`
+   (archived, with a table mapping the old section numbers that source comments
+   cite).
+3. **Open work is GitHub Issues**, labelled `device`, `chiu` and `desk`.
+   `HANDOFF.md` keeps only the traps. Phone-only checks stay one list,
+   `Docs/device-runbook.md`, tracked by one `device` issue. The repository is
+   public, so §0 now names issues and PRs explicitly.
+4. **The gates stop forcing shared edits.** The staleness line names the newest
+   ADR only, not the newest PR. The test count compares with the merge base
+   against `origin/main` and fails only on a fall; a deliberate removal carries a
+   `Test-Removed:` trailer per test. `Scripts/test-count.baseline` is deleted and
+   CI checks out full history.
+5. **This ledger is frozen with this entry.** New decisions are one file each,
+   `Docs/adr/YYYY-MM-DD-<slug>.md`, about 40 lines (`Docs/adr/README.md`). The
+   newest entry on a subject still wins across both places.
+   `Scripts/check-decisions-index.sh` fails if this file gains an entry.
+
+**Kept unchanged:** every hard rule in `CLAUDE.md` (§0, stop-and-confirm, never
+weaken a test, evidence labels, honest provenance, locks, no magic numbers), the
+decision order, `./check.sh` as the definition of done, the staging rule, and
+the document budgets.
+
+**Rejected.**
+- **Keep parallel implementers and add more conflict-handling rules.** Three
+  rounds of such rules (staging, the PR half, budgets) did not stop the
+  collisions. The collisions come from the shared files, not from any
+  session's discipline.
+- **Rewrite this ledger into per-file ADRs.** That would edit history the
+  append-only rule protects, and old citations name this file.
+- **Delete the test-count gate.** A fall is still the signal the 2026-08-16
+  deletion needed.

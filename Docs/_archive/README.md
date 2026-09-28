@@ -81,3 +81,5 @@ is the mistake this directory exists to prevent.
 | `Docs/phase4-reference.md` | `_archive/phase4-reference.md` | Phase 4 scope reasoning (Chiu 2026-08-15); nothing live cited it |
 | `Docs/po-recovery-audit.md` | `_archive/po-recovery-audit.md` | a one-time procedure, run 2026-08-30; nothing live cited it |
 | `Docs/handoff-arch-review-2026-09-24.md` | `_archive/handoff-arch-review-2026-09-24.md` | both rounds built or decided (ADRs 2026-09-24 (c)–(d), 2026-09-26, (b)). Its device-only remainder is rows in `Docs/device-runbook.md`. ⚠️ Known limit, INFERRED: high-speed rail can judge as a flight at 160 km/h (Beijing → Shanghai ≈ 176) |
+| `Arch.md`, `PO.md`, `DESIGNER.md` | `_archive/Arch.md`, `_archive/PO.md`, `_archive/DESIGNER.md` | replaced by one `CHARTER.md` (ADR 2026-09-28). **`CHARTER.md`'s last table maps the old section numbers** — note that source comments cite `Arch.md` §5 and §6 for the same rule, "fail loudly" |
+| `Scripts/test-count.baseline` | deleted | the count is compared with the merge base against `origin/main` (ADR 2026-09-28) |

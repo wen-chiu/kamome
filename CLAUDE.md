@@ -5,34 +5,31 @@ journey once, then turn it into a cinematic recap film worth keeping and
 sharing. The spec (`Docs/_archive/kamome-poc-spec.md`) is the historical
 reference; ADRs and `Docs/current-state.md` are current.
 
-**Phase 4 — films worth keeping**: vehicle sprites → cross-region crossing →
-export that survives. Phase 3.5 closed 2026-08-15. Later: P5 Capture Beta,
-P6 Plans, P7 backend.
+**Phase 4 — films worth keeping**, in closeout: what remains is the device
+runbook, Chiu's judgement queue and bug fixes, all as issues. Phase 3.5 closed
+2026-08-15. Later: P5 Capture Beta, P6 Plans, P7 backend.
 
 ## Read at session start
 
-1. `Docs/current-state.md` — the snapshot. **Run its staleness check first**:
-   its "Last synced" line must name **both** the newest ADR in
-   `Docs/decisions.md` **and** the newest merged PR on `main`. If either is
-   behind, report the staleness before proceeding — `decisions.md` wins on
-   decisions, `HANDOFF.md` wins on live findings and blockers.
-2. `git status -sb` — confirm which branch you are on and your distance from
-   `origin/main` before trusting anything you read.
-3. Your charter, exactly one: `Arch.md` (engineering), `PO.md` (product owner /
-   governance), or `DESIGNER.md` (visual and UX).
-4. `HANDOFF.md` — live findings, open experiments, known bugs, each pointing at
-   its detail document.
-5. The task document your work names.
+1. `git status -sb` — your branch and distance from `origin/main`. **One
+   session implements at a time**; if another branch is mid-flight, say so.
+2. `CHARTER.md` — the one charter: work loop, verification, design rules.
+3. `Docs/current-state.md` — the snapshot. Its "Last synced" line must name the
+   newest ADR (`./check.sh --static` checks it); if not, report it first.
+4. `HANDOFF.md` (traps) and the open issues: `gh issue list` — labels
+   `device`, `chiu`, `desk`. Phone-only checks: `Docs/device-runbook.md`.
+5. The issue or task your work names.
 
-`Docs/decisions.md` is append-only: the newest entry on a subject wins over any
-older entry, any handoff, and this file. `Docs/_archive/` is history and is
-never a work instruction.
+New ADRs are one file each in `Docs/adr/`. `Docs/decisions.md` is frozen
+history (to 2026-09-28), found through `Docs/decisions-index.md`. The newest
+entry on a subject wins over any older one, any issue, and this file.
+`Docs/_archive/` is history, never a work instruction.
 
 ## Hard rules — a violation stops the work
 
 1. **§0 — real location data never leaves the device.** Never logged
-   off-device, synced, sent to analytics or crash reporting, or committed to
-   this repository. Real dumps live only in `Tests/Fixtures/trips/local/` and
+   off-device, synced, sent to analytics or crash reporting, committed to
+   this repository, or written into an issue or PR (the repository is public). Real dumps live only in `Tests/Fixtures/trips/local/` and
    `Docs/tests/`, both gitignored. `KamomeLog` may name *which* stop failed,
    never where it is. Decided exceptions, and only these: routing positions to
    Geoapify through Kamome's relay; map tiles to OpenFreeMap; terrain tiles to
@@ -54,7 +51,7 @@ never a work instruction.
    reconstructed-from-photos are different things, and a wrong road is never
    drawn as fact.
 6. **A locked decision reopens only when Chiu names it** and says he is
-   reopening it. Register: `Docs/current-state.md`. Procedure: `PO.md`.
+   reopening it. Register and procedure: `CHARTER.md` §6.
 7. **No magic numbers** — every tunable lives in `Config/TrackingConfig.json`.
    **Phase gates are hard gates**, each owing a demo artifact. **Boring
    technology.** Flag anything that needs the physical device.
@@ -65,7 +62,7 @@ Higher overrides lower:
 
 1. Explicit product decisions by Chiu
 2. Approved ADRs — `Docs/decisions.md`, newest entry on a subject wins
-3. Locked decisions — the register is in `PO.md`
+3. Locked decisions — the register is in `CHARTER.md` §6
 4. Existing tested behaviour and established conventions
 5. Your engineering or design judgement
 
@@ -73,8 +70,8 @@ Existing code is **evidence, not truth**: where it contradicts a higher
 authority, treat the implementation as potentially stale. Where two sources at
 the same level conflict, state the conflict — never silently pick one.
 
-**A finding that exists only in a conversation has not been delivered.** It goes
-to `HANDOFF.md` as a summary and a pointer, or it did not happen.
+**A finding that exists only in a conversation has not been delivered.** It
+becomes a GitHub issue (or a traps line in `HANDOFF.md`), or it did not happen.
 
 ## Done means `./check.sh` is green
 

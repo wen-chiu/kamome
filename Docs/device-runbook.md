@@ -8,8 +8,8 @@ work in `HANDOFF.md` waits on one of them.
 **How to use it:** one TestFlight or Debug build, one sitting, top to bottom.
 Tick a row by writing the date and the evidence (a log line, a screenshot path
 outside the repo, or "Chiu judged"). The detail document is where the full
-steps are. When every row in a group is ticked, archive the detail document in
-the same PR (`HANDOFF.md` rule).
+steps are. Tracked by issue #112. A row that fails becomes a `desk` issue;
+when every row in a group is ticked, archive the detail document in the same PR.
 
 §0 applies: screenshots and films of real trips stay in `~/Kamome-films/`, and
 no coordinate goes into this file. Numbers only.
