@@ -116,11 +116,11 @@ final class SampleTripTests: XCTestCase {
 
     // MARK: - Nothing mistakes it for the person's trip
 
-    func testTripDetailCallsItASampleNeverAReconstruction() throws {
+    func testTripDetailCallsItASampleNeverAReconstruction() async throws {
         let repository = try repository()
         let tripId = try SampleTrip.create(repository: repository, vehicleId: "car-red")
         let model = TripDetailModel(tripId: tripId, config: AppConfig.loadOrDie(), repository: repository)
-        model.reload()
+        await model.refresh()
 
         XCTAssertTrue(model.isSample)
         XCTAssertFalse(model.isReconstructed, "\"from your photos\" would be a false claim about the sample")
