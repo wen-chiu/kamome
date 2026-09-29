@@ -1,5 +1,5 @@
 {
- "_about": "Kamome's sample trip — Docs/adr/2026-09-28-sample-trip.md. Public places; the road is OpenStreetMap data (© OpenStreetMap contributors, ODbL), routed once through the public OSRM demo server on 2026-09-28. Nobody travelled it. The sample-*.png drawings are PLACEHOLDERS from Scripts/draw-sample-placeholders.swift.",
+ "_about": "Kamome's sample trip — Docs/adr/2026-09-28-sample-trip.md. Public places; the road is OpenStreetMap data (© OpenStreetMap contributors, ODbL), routed once through the public OSRM demo server on 2026-09-28. Nobody travelled it. The sample-*.png drawings are Kamome illustrations by Chiu (2026-09-29); Tiehua is a stop with no drawing, by his choice.",
  "version": 1,
  "titles": {
   "en": "Sample · Hualien to Taitung",
@@ -78,10 +78,7 @@
    "lon": 121.147,
    "arrive": "16:30",
    "depart": "18:00",
-   "photos": [
-    "tiehua-1",
-    "tiehua-2"
-   ]
+   "photos": []
   }
  ],
  "legs": [
