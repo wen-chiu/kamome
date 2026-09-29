@@ -61,3 +61,6 @@ node_modules/
 # check is "zero 32-hex hits over the pushed range". A permanent false positive
 # there trains people to ignore the check, which is how a real one gets through.
 .wrangler/
+
+# Scripts/release/archive.sh output (.ipa, logs)
+/build/
