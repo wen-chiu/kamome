@@ -42,6 +42,9 @@ final class TrackingSession {
     private var engine: TrackingEngine?
     private var locationService: LocationService?
     private var lastCoordinate: CLLocationCoordinate2D?
+    /// Where the S2 marker sits: the newest fix, which `traveledPath` may trail
+    /// by up to `simplify.live_path_min_spacing_m`.
+    var headCoordinate: CLLocationCoordinate2D? { lastCoordinate }
     private let journal: RecordingJournalFile?
 
     init(
@@ -272,12 +275,12 @@ final class TrackingSession {
 
     private func absorbIntoHUD(_ sample: LocationSample) {
         let coordinate = CLLocationCoordinate2D(latitude: sample.lat, longitude: sample.lon)
-        if let last = lastCoordinate {
-            let step = CLLocation(latitude: last.latitude, longitude: last.longitude)
-                .distance(from: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
-            distanceM += step
-        }
+        if let last = lastCoordinate { distanceM += last.meters(to: coordinate) }
         lastCoordinate = coordinate
+        // The drawn line thins itself: a vertex closer than the spacing to the
+        // last one drawn adds nothing the eye can see, and the path is redrawn
+        // in full on every new fix (#122).
+        if let kept = traveledPath.last, kept.meters(to: coordinate) < config.simplify.livePathMinSpacingM { return }
         traveledPath.append(coordinate)
     }
 
@@ -337,5 +340,12 @@ final class TrackingSession {
     /// `TripTitle.fallback`: the one shape every unnamed trip's title has.
     private static func defaultTitle(for date: Date) -> String {
         TripTitle.fallback(for: date.timeIntervalSince1970)
+    }
+}
+
+private extension CLLocationCoordinate2D {
+    func meters(to other: CLLocationCoordinate2D) -> Double {
+        CLLocation(latitude: latitude, longitude: longitude)
+            .distance(from: CLLocation(latitude: other.latitude, longitude: other.longitude))
     }
 }
