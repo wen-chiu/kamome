@@ -23,8 +23,14 @@ final class SampleTripTests: XCTestCase {
         for stop in manifest.stops {
             XCTAssertNotNil(stop.names["en"], "\(stop.id) needs an English name")
             XCTAssertNotNil(stop.names["zh-Hant"], "\(stop.id) needs a Chinese name")
-            XCTAssertFalse(stop.photos.isEmpty, "\(stop.id) has no drawing — its card would be blank")
         }
+    }
+
+    /// Chiu 2026-09-29: two drawings at each of the first four stops, and
+    /// Tiehua is a stop with none — the film arrives there and ends.
+    func testTiehuaIsTheOneStopWithoutADrawing() throws {
+        let drawings = Dictionary(uniqueKeysWithValues: try SampleTrip.manifest().stops.map { ($0.id, $0.photos.count) })
+        XCTAssertEqual(drawings, ["qixingtan": 2, "shitiping": 2, "sanxiantai": 2, "dulan": 2, "tiehua": 0])
     }
 
     func testEveryDrawingTheManifestNamesIsInTheApp() throws {

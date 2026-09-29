@@ -64,3 +64,18 @@ so nobody sees a film until they have imported something
 - **Rendered:** a 60 s film on the iOS 17.5 simulator, in 148 s (simulator
   time). The frames show the title card, the drawings and a solid coast road.
   The film is at `~/Kamome-films/2026-09-28-sample-trip/`.
+
+## Addendum — 2026-09-29 (Chiu)
+
+- **The drawings are Chiu's.** Eight illustrations replace the placeholders,
+  two each for 七星潭, 石梯坪, 三仙台 and 都蘭, at 543×724 (3:4).
+  - `Scripts/draw-sample-placeholders.swift` is deleted.
+  - The originals are kept outside the repository.
+- **鐵花村 is a stop with no drawing** (「鐵花村就只有停留點不要放照片」). The
+  sample now has 8 drawings for 5 stops, pinned by
+  `SampleTripTests.testTiehuaIsTheOneStopWithoutADrawing`.
+- **VERIFIED from a render**: 543 px is enough. On the iOS 17.5 simulator, the
+  三仙台 card at 36 s is sharp at full 1080×1920: the railing, the waves and the
+  bird's outline are all clean. The four stops show their cards, and the film
+  reaches 鐵花村 without one. The end card reads 179 KM · 1 DAY · 5 STOPS. The
+  film is at `~/Kamome-films/2026-09-29-sample-illustrations/`.
