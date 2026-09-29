@@ -67,7 +67,7 @@ final class ImportFlowModel {
     private let photoService: PhotoLibraryService
     /// The fetch a duplicate verdict paused on, so "import anyway" does not
     /// read the library a second time.
-    private var pending: (title: String, photos: [ImportPhoto])?
+    private var pending: (title: String?, photos: [ImportPhoto])?
 
     init(
         config: TrackingConfig,
@@ -138,11 +138,13 @@ final class ImportFlowModel {
         phase = .importing
         let bounds = dayBounds()
         let query: ImportQuery
-        let tripTitle: String
+        // Nil is "nobody named it": `ImportService` titles the trip from its
+        // own first photograph, never from the picked range (#131).
+        let tripTitle: String?
         switch source {
         case .dateRange:
             query = .dateRange(from: bounds.from, to: bounds.to)
-            tripTitle = title(for: bounds)
+            tripTitle = nil
         case .album:
             guard let album = selectedAlbum else {
                 phase = .failed(.noGeotaggedPhotos)
@@ -151,7 +153,7 @@ final class ImportFlowModel {
             query = .album(id: album.id)
             // The album's own name is the best title a reconstructed trip can
             // have — the user already named this journey.
-            tripTitle = album.title.isEmpty ? title(for: bounds) : album.title
+            tripTitle = album.title.isEmpty ? nil : album.title
         }
 
         let photos = await provider.photos(matching: query)
@@ -188,7 +190,7 @@ final class ImportFlowModel {
         phase = .idle
     }
 
-    private func save(title tripTitle: String, photos: [ImportPhoto]) async {
+    private func save(title tripTitle: String?, photos: [ImportPhoto]) async {
         do {
             let tripId = try await service.importTrip(title: tripTitle, photos: photos)
             // Road reconstruction starts here and is **not** waited on
@@ -293,11 +295,5 @@ final class ImportFlowModel {
         let lastDay = calendar.startOfDay(for: max(startDate, endDate))
         let to = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: lastDay) ?? lastDay
         return (from, to)
-    }
-
-    /// `TripTitle.fallback`, anchored to the range start — the same shape as
-    /// recorded trips; the person can rename it from Trip Detail's edit menu.
-    private func title(for bounds: (from: Date, to: Date)) -> String {
-        TripTitle.fallback(for: bounds.from.timeIntervalSince1970)
     }
 }

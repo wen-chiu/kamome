@@ -108,6 +108,14 @@ final class JourneyDiscoveryModelTests: XCTestCase {
 
     // MARK: - Discovery
 
+    /// The sample is Kamome's, not a journey anyone took (ADR 2026-09-28-sample-trip).
+    func testTheSampleTripIsNeverAJourney() throws {
+        let harness = try makeHarness()
+        try SampleTrip.create(repository: harness.repository, vehicleId: "car-red")
+        harness.model.loadTrips()
+        XCTAssertTrue(harness.model.journeys.isEmpty, "the sample must not appear among the person's journeys")
+    }
+
     func testAScanShowsJourneysByYearWithoutWritingATrip() async throws {
         let harness = try makeHarness()
         await harness.model.refresh()

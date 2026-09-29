@@ -65,6 +65,9 @@ final class TripDetailModel {
         reload()
         guard let detail else { return }
 
+        // The sample's drawings are its photographs: never matched against the
+        // person's library, never analysed (ADR 2026-09-28-sample-trip).
+        guard !isSample else { return }
         if detail.photos.isEmpty, let endedAt = detail.trip.endedAt {
             photoService.matchPhotos(
                 tripId: tripId,
@@ -314,12 +317,7 @@ final class TripDetailModel {
     }
 
     var photoAccessIsLimited: Bool {
-        photoService.isLimitedAccess
-    }
-
-    /// True for photo-reconstructed trips — drives the S3 provenance note (§3).
-    var isReconstructed: Bool {
-        detail?.trip.tripSource.isReconstructed ?? false
+        !isSample && photoService.isLimitedAccess
     }
 
     /// Opens the system picker so a limited selection can grow, then
@@ -331,7 +329,7 @@ final class TripDetailModel {
     }
 
     private func rematchPhotos() {
-        guard let detail, let endedAt = detail.trip.endedAt else { return }
+        guard let detail, !isSample, let endedAt = detail.trip.endedAt else { return }
         photoService.matchPhotos(
             tripId: tripId,
             startedAt: detail.trip.startedAt,

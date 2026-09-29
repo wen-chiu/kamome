@@ -4203,6 +4203,74 @@
           }
         }
       }
+    },
+    "sample_open_action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See a sample film first"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先看一支範例影片"
+          }
+        }
+      }
+    },
+    "sample_badge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sample"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範例"
+          }
+        }
+      }
+    },
+    "sample_note": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A sample from Kamome: public places, a road from OpenStreetMap, and drawings instead of photos. Nobody travelled it — delete it whenever you like."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome 準備的範例：公開景點、OpenStreetMap 的道路，照片換成插畫。這不是任何人的真實旅程，隨時可以刪除。"
+          }
+        }
+      }
+    },
+    "sample_failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sample couldn't be opened. Please try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範例暫時打不開，請再試一次。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
