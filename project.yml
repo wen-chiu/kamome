@@ -135,7 +135,42 @@ targets:
     # the built product, after the resources are in place, on every build
     # including archive. Nothing to remember, and no dependence on the state of
     # the source tree at the moment someone hits Archive.
+    # **The version is whatever Config/Version.xcconfig says.** A version typed
+    # into Xcode's General tab lands in the generated .xcodeproj, overrides the
+    # xcconfig for as long as that project lives, and vanishes at the next
+    # `xcodegen generate` — so the number that ships depended on whether a
+    # regeneration happened in between. This fails the build the moment Xcode's
+    # value and the file disagree, and says where to set it.
+    preBuildScripts:
+      - name: Version comes from Config/Version.xcconfig
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - "$(SRCROOT)/Config/Version.xcconfig"
+        script: |
+          set -eu
+          want=$(sed -n 's/^MARKETING_VERSION = //p' "$SRCROOT/Config/Version.xcconfig")
+          if [ "$MARKETING_VERSION" != "$want" ]; then
+            echo "error: Xcode says version $MARKETING_VERSION but Config/Version.xcconfig says $want. The version was edited in Xcode's General tab, which xcodegen throws away. Run Scripts/set-version.sh (or edit Config/Version.xcconfig), then Scripts/regen-project.sh."
+            exit 1
+          fi
     postBuildScripts:
+      # **The build number is the commit count of HEAD**, stamped on every build
+      # including archive, so no upload ever needs a hand-bumped number and
+      # App Store Connect never sees a repeat as long as releases come from
+      # `main`. A shallow clone would count only its depth, so a Release build
+      # from one fails rather than ship a low number.
+      - name: Build number = commit count
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - "$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)"
+        script: |
+          set -eu
+          if [ "$CONFIGURATION" = "Release" ] && [ "$(git -C "$SRCROOT" rev-parse --is-shallow-repository)" = "true" ]; then
+            echo "error: shallow clone — the commit count is not the real build number. Run: git fetch --unshallow"
+            exit 1
+          fi
+          build=$(git -C "$SRCROOT" rev-list --count HEAD)
+          plutil -replace CFBundleVersion -string "$build" "$TARGET_BUILD_DIR/$INFOPLIST_PATH"
       - name: Strip Finder junk from bundled resources
         basedOnDependencyAnalysis: false
         # The product directory does not always exist when this runs — the phase
@@ -204,8 +239,10 @@ targets:
         DEVELOPMENT_TEAM: B9U326WRA4
         CODE_SIGN_STYLE: Automatic
         PRODUCT_BUNDLE_IDENTIFIER: com.chiu.kamome.dev
-        MARKETING_VERSION: "0.1"
-        CURRENT_PROJECT_VERSION: 1
+        # MARKETING_VERSION and CURRENT_PROJECT_VERSION are NOT here: they live
+        # in Config/Version.xcconfig (set with Scripts/set-version.sh), and a
+        # value here would override that file. Scripts/check-version-source.sh
+        # fails if one comes back.
         SWIFT_VERSION: "5.10"
         TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

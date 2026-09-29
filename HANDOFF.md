@@ -53,6 +53,10 @@ cost somebody time; keep each to a summary and a pointer.
 - **A merge can drop catalogue keys**: 4058b92 lost PR #91's 13 picker strings.
 - **MapKit saturates at ~109° of longitude**: the frozen country card is a main
   path, not a fallback.
+- **Never set the version in Xcode's General tab** — xcodegen discards it. Use
+  `Scripts/set-version.sh minor|patch|major`; the build fails on a mismatch.
+  The build number is the commit count, stamped by every build. `Scripts/install-git-hooks.sh` once per clone regenerates the
+  project after every checkout, merge, pull and rebase.
 
 ---
 

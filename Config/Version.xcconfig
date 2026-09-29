@@ -1,0 +1,17 @@
+// The app's version — the ONE place it is set. Change it with
+//
+//   Scripts/set-version.sh minor      0.1 → 0.2      (also: patch, major, or 1.2.3)
+//
+// Never in Xcode's General tab: that writes the value into the generated
+// .xcodeproj, which `xcodegen generate` rebuilds from `project.yml` and silently
+// throws away — the version then "reverts" and an archive ships the old number.
+// The "Version comes from Config/Version.xcconfig" build phase fails any build
+// where Xcode's value and this file disagree.
+//
+// The BUILD number is not set here, or anywhere by hand: every build stamps
+// CFBundleVersion with `git rev-list --count HEAD` (the "Build number = commit
+// count" phase in project.yml). It rises with every commit on main, so App Store
+// Connect never sees a repeat. The value below only fills the build setting.
+
+MARKETING_VERSION = 0.1
+CURRENT_PROJECT_VERSION = 1
