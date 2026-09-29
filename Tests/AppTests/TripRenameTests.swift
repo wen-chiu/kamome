@@ -20,13 +20,14 @@ final class TripRenameTests: XCTestCase {
         let tripId = try await ImportService(repository: repository, config: config)
             .importTrip(title: title, photos: photos)
         let model = TripDetailModel(tripId: tripId, config: config, repository: repository)
-        model.reload()
+        await model.refresh()
         return model
     }
 
     func testRenameStoresTheTrimmedName() async throws {
         let model = try await importedModel(title: "Sep 20, 2026")
         model.renameTrip(to: "  北海道夏天 \n")
+        await model.refresh()
         XCTAssertEqual(model.detail?.trip.title, "北海道夏天")
     }
 
@@ -42,6 +43,7 @@ final class TripRenameTests: XCTestCase {
     func testTheStoryShowsTheRenamedTitle() async throws {
         let model = try await importedModel(title: "Iceland ring road")
         model.renameTrip(to: "Ring road with Mum")
+        await model.refresh()
         XCTAssertEqual(model.storyTitle, "Ring road with Mum")
     }
 }

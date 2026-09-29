@@ -62,7 +62,14 @@ final class TripDetailModel {
         // Once an export can finish with this screen not even in the hierarchy
         // (ADR 2026-09-10), first appearance is the *only* read there is, and a
         // stored film sat on disk with nothing listing it.
-        reload()
+        Task { @MainActor in
+            await refresh()
+            continueLoad()
+        }
+    }
+
+    /// What `load()` does once the trip is in hand.
+    private func continueLoad() {
         guard let detail else { return }
 
         // The sample's drawings are its photographs: never matched against the
@@ -116,9 +123,41 @@ final class TripDetailModel {
     /// (Chiu 2026-08-04).
     var isNamingStops: Bool { naming.total > 0 && !naming.isFinished }
 
+    /// Re-reads the trip and its films, off the main thread: `detail` carries
+    /// every trackpoint, and a two-week recording made the sync read a hitch
+    /// (#128). Fire-and-forget for the views; `refresh()` is the awaitable form.
     func reload() {
-        detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
-        films = Stored.read("films") { try repository.films(tripId: tripId) } ?? []
+        Task { @MainActor in await refresh() }
+    }
+
+    private var refreshTask: Task<Void, Never>?
+    private var refreshAgain = false
+
+    /// Reads run one at a time, so an older read can never land over a newer
+    /// one (a rename, a vehicle choice). A request that arrives mid-read is
+    /// coalesced into one more read that starts after it, and every caller
+    /// returns once that read has landed — never with stale rows.
+    @MainActor
+    func refresh() async {
+        if let running = refreshTask {
+            refreshAgain = true
+            await running.value
+            return
+        }
+        let (repository, tripId) = (repository, tripId)
+        let task = Task { @MainActor in
+            repeat {
+                refreshAgain = false
+                let read = await Task.detached(priority: .userInitiated) {
+                    (Stored.read("detail") { try repository.detail(tripId: tripId) },
+                     Stored.read("films") { try repository.films(tripId: tripId) } ?? [])
+                }.value
+                (detail, films) = read
+            } while refreshAgain
+            refreshTask = nil
+        }
+        refreshTask = task
+        await task.value
     }
 
     /// Deletes a single film record and its file on disk.
@@ -144,46 +183,8 @@ final class TripDetailModel {
         }
     }
 
-    // MARK: - Days (S3 filter chips)
-
-    /// What days are counted by: each stop's own zone (`TripClock`, arch review
-    /// 2026-09-26), so chip N is the Nth local date of the trip — the same count
-    /// the film's HUD and end card draw.
-    private var clock: TripClock {
-        TripClock(stops: detail?.stops ?? [])
-    }
-
-    /// Calendar days (Chiu 2026-09-25): chip N is the trip's Nth date.
-    var dayCount: Int {
-        guard let detail, let endedAt = detail.trip.endedAt else { return 1 }
-        return clock.dayCount(startedAt: detail.trip.startedAt, endedAt: endedAt)
-    }
-
-    /// The date chip `day` (0-based) stands for.
-    func date(ofDay day: Int) -> Date? {
-        guard let detail else { return nil }
-        return clock.date(ofDay: day, tripStartedAt: detail.trip.startedAt)
-    }
-
     func selectDay(_ day: Int?) {
         selectedDay = day
-    }
-
-    func dayIndex(of timestamp: Double) -> Int {
-        guard let detail else { return 0 }
-        return clock.dayIndex(of: timestamp, tripStartedAt: detail.trip.startedAt)
-    }
-
-    var visibleStops: [StopRecord] {
-        guard let detail else { return [] }
-        guard let selectedDay else { return detail.stops }
-        return detail.stops.filter { dayIndex(of: $0.arrivedAt) == selectedDay }
-    }
-
-    var visibleSegments: [(segment: SegmentRecord, points: [TrackpointRecord])] {
-        guard let detail else { return [] }
-        guard let selectedDay else { return detail.segments }
-        return detail.segments.filter { dayIndex(of: $0.segment.startedAt) == selectedDay }
     }
 
     /// Display polyline per segment, Douglas-Peucker-thinned (§4.4).

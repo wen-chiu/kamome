@@ -32,7 +32,7 @@ final class TripDetailDaysTests: XCTestCase {
             .importTrip(title: "days", photos: photos)
 
         let model = TripDetailModel(tripId: tripId, config: config, repository: repository)
-        model.reload()
+        await model.refresh()
         XCTAssertEqual(model.dayCount, 2)
         XCTAssertEqual(Set(model.routePhotos.map(\.phAssetId)), ["route1", "route2"], "All shows every route photo")
 
