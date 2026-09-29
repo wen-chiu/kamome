@@ -2,6 +2,9 @@
 #
 #   Scripts/release/archive.sh             archive → ./check.sh --release → export .ipa
 #   Scripts/release/archive.sh --upload    …then upload to App Store Connect (TestFlight)
+#   Scripts/release/archive.sh --upload --yes     skip the "type y" confirmation
+#   Scripts/release/archive.sh --upload patch     also choose the version: major, minor,
+#                                                 patch, or 1.4.2 (none = ask, with a suggestion)
 #
 # One command from a clean `main` to a signed build, no Xcode UI. Signing is
 # automatic with the team in project.yml (override: KAMOME_TEAM_ID=XXXXXXXXXX);
@@ -9,7 +12,10 @@
 # profiles through the Apple ID signed in to Xcode (Settings → Accounts) — the
 # same thing Organizer does, so nothing to configure beyond that.
 #
-# Version: Config/Version.xcconfig (Scripts/set-version.sh). Build number: the
+# Version: Config/Version.xcconfig. Choosing a different one here bumps the file,
+# commits "Version X" on main and pushes it (before an upload), so there is no
+# separate set-version / commit / PR step; a tag vX marks an uploaded version.
+# Build number: the
 # commit count, stamped by the build — which is why the tree must be clean (the
 # number would name code that was never committed) and why an upload must come
 # from `main` (a branch counts higher than the main it later merges into, and
@@ -22,12 +28,16 @@ set -euo pipefail
 source "$(dirname "$0")/../lib.sh"
 cd "$(dirname "$0")/../.."
 
-upload=0
-case "${1:-}" in
-  --upload) upload=1 ;;
-  "") ;;
-  *) sed -n '3,4p' "$0" | sed 's/^# //'; exit 2 ;;
-esac
+upload=0; yes=0; choice=""
+for arg in "$@"; do
+  case "$arg" in
+    --upload) upload=1 ;;
+    --yes) yes=1 ;;
+    -h | --help) sed -n '3,7p' "$0" | sed 's/^# //'; exit 0 ;;
+    -*) sed -n '3,7p' "$0" | sed 's/^# //'; exit 2 ;;
+    *) choice="$arg" ;;
+  esac
+done
 
 team=${KAMOME_TEAM_ID:-$(sed -n 's/^ *DEVELOPMENT_TEAM: *//p' project.yml | head -1)}
 [ -n "$team" ] || { kamome_fail "no DEVELOPMENT_TEAM in project.yml and no KAMOME_TEAM_ID"; exit 1; }
@@ -45,6 +55,34 @@ fi
 [ "$(git rev-parse --is-shallow-repository)" = "false" ] \
   || { kamome_fail "shallow clone — run: git fetch --unshallow"; exit 1; }
 
+current=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
+if [ -z "$choice" ] && [ -t 0 ]; then
+  # Suggest: a version already tagged as uploaded needs a new one; otherwise keep it.
+  if git rev-parse -q --verify "refs/tags/v$current" > /dev/null; then
+    suggest=patch; hint="v$current is already uploaded"
+  else
+    suggest=keep; hint="v$current not uploaded yet"
+  fi
+  n_patch=$(Scripts/set-version.sh --dry patch)
+  n_minor=$(Scripts/set-version.sh --dry minor)
+  n_major=$(Scripts/set-version.sh --dry major)
+  printf 'Version is %s (%s). Suggested: %s.\n' "$current" "$hint" "$suggest"
+  printf '  [Enter] %s   patch → %s   minor → %s   major → %s   or type a version: ' \
+    "$([ "$suggest" = keep ] && echo "keep $current" || echo "$suggest")" "$n_patch" "$n_minor" "$n_major"
+  read -r choice
+  choice=${choice:-$suggest}
+fi
+[ "$choice" = keep ] && choice=""
+
+if [ -n "$choice" ]; then
+  [ "$branch" = "main" ] || { kamome_fail "choosing a version commits to main — you are on '$branch'"; exit 1; }
+  git fetch -q origin main
+  [ "$(git rev-list --count HEAD..origin/main)" = 0 ] || { kamome_fail "main is behind origin — run: git pull"; exit 1; }
+  Scripts/set-version.sh "$choice"
+  version=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
+  git commit -qam "Version $version"
+  # The push waits until the checks have passed and the upload is confirmed.
+fi
 version=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
 build=$(git rev-list --count HEAD)
 name="Kamome $version ($build)"
@@ -84,6 +122,18 @@ KAMOME_ROUTING_API_KEY="$key" ./check.sh --release "$archive" > "$out/check.log"
 }
 kamome_ok "all checks passed, including the release gates on the archive"
 
+if [ "$upload" -eq 1 ]; then
+  stage "Upload"
+  if [ "$yes" -eq 0 ]; then
+    [ -t 0 ] || { kamome_fail "upload needs a confirmation and there is no terminal — pass --yes"; exit 1; }
+    printf '%s → App Store Connect. Cannot be undone; the build number is used up. Type y to upload: ' "$name"
+    read -r answer
+    [ "$answer" = y ] || { kamome_fail "not uploaded (the archive and checks are kept in $out)"; exit 1; }
+  fi
+  git fetch -q origin main
+  [ "$(git rev-list --count origin/main..HEAD)" = 0 ] || git push -q origin main
+fi
+
 stage "Export"
 destination=export; [ "$upload" -eq 1 ] && destination=upload
 cat > "$out/ExportOptions.plist" <<PLIST
@@ -105,6 +155,7 @@ run_logged "$out/export.log" xcodebuild -exportArchive \
   -exportOptionsPlist "$out/ExportOptions.plist" -allowProvisioningUpdates
 
 if [ "$upload" -eq 1 ]; then
+  git tag -f "v$version" > /dev/null && git push -q -f origin "v$version"
   kamome_ok "$name uploaded to App Store Connect — TestFlight lists it once processing finishes"
 else
   kamome_ok "$out/Kamome.ipa — not uploaded. To upload: Scripts/release/archive.sh --upload (from main)"
