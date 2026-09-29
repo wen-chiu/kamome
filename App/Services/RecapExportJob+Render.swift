@@ -311,16 +311,19 @@ extension RecapExportJob {
     ///      errors. A terrain host failure blocks the film.
     ///    All three rethrow via `MapLibreSnapshotProvider.snapshot` →
     ///    `RecapExporter` propagates → `render()` catches → `.failed(message:)`.
-    /// 4. *Tile host reachable but returns HTTP errors* (5xx, rate limit) — same
-    ///    path as (3); INFERRED from MapLibre source (non-200 tile → load error).
-    /// 5. *Partial tile failure* (some zoom levels cached, some not) — MapLibre
-    ///    renders cached tiles and leaves unfetched areas transparent. The
-    ///    snapshotter may complete *successfully* with a partially blank image. No
-    ///    error is thrown. INFERRED — this is the one silent degradation: the film
-    ///    would have blank map patches rather than failing. Mitigation: OpenFreeMap
-    ///    serves a full planet, and the style pins `minzoom`/`maxzoom` to the ranges
-    ///    the CDN covers, so partial failure requires a mid-render network drop —
-    ///    unlikely and self-correcting on retry.
+    /// 4. *Tile host reachable but returns HTTP errors* (5xx, rate limit) —
+    ///    VERIFIED 2026-09-29 (`TileHTTPFailureTests`, a loopback tile server):
+    ///    503 and 429 both end the snapshot with `MLNErrorDomain` code 6, so the
+    ///    path is (3)'s.
+    /// 5. *Partial tile failure* — VERIFIED 2026-09-29 (`TileHTTPFailureTests`)
+    ///    **not to be silent**, correcting an earlier INFERRED claim that the
+    ///    snapshotter would complete with blank patches. With the first tile of a
+    ///    frame served and the rest refused, with connections cut after two
+    ///    tiles, and with one tile cached and the host then down, every case
+    ///    ended in `MLNErrorDomain` code 6 and no image. A mid-export network
+    ///    drop therefore fails the export like (3) rather than shipping a film
+    ///    with blank map. Not measured: a *slow* host (timeouts) and a tile the
+    ///    server answers 200 with a corrupt body.
     ///
     /// **In-app maps stay MapKit and are not touched.** `TripDetailView` and
     /// `RecordingView` are sanctioned use: MapKit draws its own logo and legal
