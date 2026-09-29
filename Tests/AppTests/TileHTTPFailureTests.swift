@@ -19,6 +19,7 @@ final class TileHTTPFailureTests: XCTestCase {
         let server = try TileServer { _, _ in .ok }
         defer { server.stop() }
         let outcome = try await snapshot(server: server, sizePx: 512)
+        XCTAssertFalse(outcome.timedOut, "the control never finished: \(outcome)")
         XCTAssertNotNil(outcome.image, "the control failed, so the failures below prove nothing: \(outcome)")
         XCTAssertGreaterThan(server.tileRequests.count, 0, "the style never asked the loopback server for a tile")
     }
@@ -30,7 +31,7 @@ final class TileHTTPFailureTests: XCTestCase {
         let outcome = try await snapshot(server: server, sizePx: 512)
         print("TILE_HTTP 503: \(outcome)")
         XCTAssertGreaterThan(server.tileRequests.count, 0)
-        XCTAssertNil(outcome.image, "a 503 tile host produced an image")
+        assertFailed(outcome, "a 503 tile host produced an image")
     }
 
     /// Path 4, the other half: a rate limit.
@@ -40,7 +41,7 @@ final class TileHTTPFailureTests: XCTestCase {
         let outcome = try await snapshot(server: server, sizePx: 512)
         print("TILE_HTTP 429: \(outcome)")
         XCTAssertGreaterThan(server.tileRequests.count, 0)
-        XCTAssertNil(outcome.image, "a 429 tile host produced an image")
+        assertFailed(outcome, "a 429 tile host produced an image")
     }
 
     /// Path 5: the first tile of a frame arrives, the others are refused.
@@ -50,7 +51,7 @@ final class TileHTTPFailureTests: XCTestCase {
         let outcome = try await snapshot(server: server, sizePx: 1_024)
         print("TILE_HTTP partial: \(outcome) requests=\(server.tileRequests.map(\.description))")
         XCTAssertGreaterThan(server.tileRequests.count, 1, "the frame needed no more than the one tile served")
-        XCTAssertNil(outcome.image, "a frame with refused tiles came back as an image")
+        assertFailed(outcome, "a frame with refused tiles came back as an image")
     }
 
     /// Path 5, as written: the network drops during the export. The first
@@ -61,7 +62,7 @@ final class TileHTTPFailureTests: XCTestCase {
         let outcome = try await snapshot(server: server, sizePx: 1_024)
         print("TILE_HTTP drop: \(outcome) requests=\(server.tileRequests.count)")
         XCTAssertGreaterThan(server.tileRequests.count, 2, "the frame needed no more than the tiles served")
-        XCTAssertNil(outcome.image, "a frame with dropped tiles came back as an image")
+        assertFailed(outcome, "a frame with dropped tiles came back as an image")
     }
 
     /// Path 5's own wording: "renders cached tiles and leaves unfetched areas
@@ -79,16 +80,28 @@ final class TileHTTPFailureTests: XCTestCase {
         let second = try await snapshot(server: server, sizePx: 1_024)
         print("TILE_HTTP cached+down: \(second) warm=\(warmed) total=\(server.tileRequests.count)")
         XCTAssertGreaterThan(server.tileRequests.count, warmed, "the wider frame needed no new tile")
-        XCTAssertNil(second.image, "cached tiles hid a failing neighbour: the film would carry blank patches")
+        assertFailed(second, "cached tiles hid a failing neighbour: the film would carry blank patches")
+    }
+
+    /// An error, promptly: not an image, and not a snapshotter that never answered.
+    private func assertFailed(_ outcome: Outcome, _ message: String, line: UInt = #line) {
+        XCTAssertFalse(outcome.timedOut, "\(outcome)", line: line)
+        XCTAssertNil(outcome.image, message, line: line)
+        XCTAssertEqual(outcome.error?.domain, "MLNErrorDomain", line: line)
+        XCTAssertEqual(outcome.error?.code, 6, line: line)
     }
 
     // MARK: - Snapshot
 
+    static let timeoutS = 40.0
+
     private struct Outcome: CustomStringConvertible {
         let image: MLNMapSnapshot?
         let error: NSError?
+        var timedOut = false
         var description: String {
-            image != nil ? "image" : "error \(error?.domain ?? "?") \(error?.code ?? 0)"
+            if timedOut { return "no answer in \(TileHTTPFailureTests.timeoutS) s" }
+            return image != nil ? "image" : "error \(error?.domain ?? "?") \(error?.code ?? 0)"
         }
     }
 
@@ -101,14 +114,21 @@ final class TileHTTPFailureTests: XCTestCase {
         )
         options.zoomLevel = 10
         options.scale = 1
+        // Answered once, by whichever comes first: the snapshotter or the clock. A
+        // snapshot that never completes must fail the test, not hang the run.
+        let box = OnceBox<Outcome>()
         return await withCheckedContinuation { continuation in
+            box.onValue = { continuation.resume(returning: $0) }
             DispatchQueue.main.async {
                 let snapshotter = MLNMapSnapshotter(options: options)
                 let lease = MapLibreSnapshotProvider.snapshotters.hold(snapshotter)
                 snapshotter.start { image, error in
                     MapLibreSnapshotProvider.snapshotters.end(lease)
-                    continuation.resume(returning: Outcome(image: image, error: error as NSError?))
+                    box.put(Outcome(image: image, error: error as NSError?))
                 }
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + Self.timeoutS) {
+                box.put(Outcome(image: nil, error: nil, timedOut: true))
             }
         }
     }
@@ -124,6 +144,16 @@ final class TileHTTPFailureTests: XCTestCase {
             .appendingPathComponent("kamome-test-http-\(server.port).json")
         try json.write(to: out, atomically: true, encoding: .utf8)
         return out
+    }
+}
+
+private final class OnceBox<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    var onValue: ((Value) -> Void)?
+    func put(_ value: Value) {
+        let first = lock.withLock { () -> Bool in defer { done = true }; return !done }
+        if first { onValue?(value) }
     }
 }
 
