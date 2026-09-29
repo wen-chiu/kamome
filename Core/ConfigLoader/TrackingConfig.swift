@@ -68,9 +68,14 @@ public struct TrackingConfig: Decodable, Equatable {
     public struct Simplify: Decodable, Equatable {
         /// Douglas-Peucker epsilon for display polylines (§4.4).
         public let epsilonM: Double
+        /// The live recording map (S2) adds a vertex only once the fix is this far
+        /// from the last one it kept, so a two-week recording redraws a bounded
+        /// path rather than every sample (#122).
+        public let livePathMinSpacingM: Double
 
         enum CodingKeys: String, CodingKey {
             case epsilonM = "epsilon_m"
+            case livePathMinSpacingM = "live_path_min_spacing_m"
         }
     }
 

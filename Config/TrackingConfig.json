@@ -21,7 +21,8 @@
     "visit_return_radius_m": 300
   },
   "simplify": {
-    "epsilon_m": 15
+    "epsilon_m": 15,
+    "live_path_min_spacing_m": 25
   },
   "matching": {
     "base_url": "https://kamome-routing.kamome-site.workers.dev",

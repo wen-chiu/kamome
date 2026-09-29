@@ -74,6 +74,31 @@ final class RecordingRecoveryTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: file.url.path))
     }
 
+    /// #122: the S2 map redraws its whole path on every fix, so a long recording
+    /// must not hand it every sample. One fix a metre for 10 km, 10 000 samples.
+    func testTheLiveMapPathIsThinnedButTheHeadIsTheNewestFix() throws {
+        let file = RecordingJournalFile(url: directory.appendingPathComponent("journal.csv"))
+        let dense = (1 ... 10_000).map { index in
+            LocationSample(
+                ts: 1_000 + Double(index), lat: -44.0, lon: 168.0 + Double(index) * 1.25e-5, // ~1 m a step
+                hAccM: 5, speedMps: 1
+            )
+        }
+        writeJournal([.start(ts: 1_000, vehicle: .car)] + dense.map { .sample($0, nil) }, to: file)
+        let config = offlineConfig()
+        let session = TrackingSession(
+            config: config, repository: TripRepository(database: try AppDatabase.inMemory()), journal: file,
+            now: Date(timeIntervalSince1970: 1_000 + 10_000 + 60)
+        )
+
+        let spacing = config.simplify.livePathMinSpacingM
+        XCTAssertEqual(Double(session.traveledPath.count), session.distanceM / spacing, accuracy: 20,
+                       "one vertex per \(spacing) m, not one per fix")
+        XCTAssertLessThan(session.traveledPath.count, 1_000)
+        let last = try XCTUnwrap(dense.last)
+        XCTAssertEqual(session.headCoordinate?.longitude, last.lon, "the marker is never a vertex behind")
+    }
+
     /// End Trip was pressed, the save never completed: saved as it ended, not resumed.
     func testAnEndedJournalIsSavedNotResumed() throws {
         let file = RecordingJournalFile(url: directory.appendingPathComponent("journal.csv"))
