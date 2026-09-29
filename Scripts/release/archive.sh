@@ -2,6 +2,7 @@
 #
 #   Scripts/release/archive.sh             archive → ./check.sh --release → export .ipa
 #   Scripts/release/archive.sh --upload    …then upload to App Store Connect (TestFlight)
+#   Scripts/release/archive.sh --upload --yes     skip the "type y" confirmation
 #   Scripts/release/archive.sh --upload patch     also choose the version: major, minor,
 #                                                 patch, or 1.4.2 (none = ask, with a suggestion)
 #
@@ -27,12 +28,13 @@ set -euo pipefail
 source "$(dirname "$0")/../lib.sh"
 cd "$(dirname "$0")/../.."
 
-upload=0; choice=""
+upload=0; yes=0; choice=""
 for arg in "$@"; do
   case "$arg" in
     --upload) upload=1 ;;
-    -h | --help) sed -n '3,6p' "$0" | sed 's/^# //'; exit 0 ;;
-    -*) sed -n '3,6p' "$0" | sed 's/^# //'; exit 2 ;;
+    --yes) yes=1 ;;
+    -h | --help) sed -n '3,7p' "$0" | sed 's/^# //'; exit 0 ;;
+    -*) sed -n '3,7p' "$0" | sed 's/^# //'; exit 2 ;;
     *) choice="$arg" ;;
   esac
 done
@@ -79,13 +81,8 @@ if [ -n "$choice" ]; then
   Scripts/set-version.sh "$choice"
   version=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
   git commit -qam "Version $version"
-  # The push waits for --upload so an export-only run leaves nothing published.
+  # The push waits until the checks have passed and the upload is confirmed.
 fi
-if [ "$upload" -eq 1 ]; then
-  git fetch -q origin main
-  [ "$(git rev-list --count origin/main..HEAD)" = 0 ] || git push -q origin main
-fi
-
 version=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
 build=$(git rev-list --count HEAD)
 name="Kamome $version ($build)"
@@ -124,6 +121,18 @@ KAMOME_ROUTING_API_KEY="$key" ./check.sh --release "$archive" > "$out/check.log"
   exit 1
 }
 kamome_ok "all checks passed, including the release gates on the archive"
+
+if [ "$upload" -eq 1 ]; then
+  stage "Upload"
+  if [ "$yes" -eq 0 ]; then
+    [ -t 0 ] || { kamome_fail "upload needs a confirmation and there is no terminal — pass --yes"; exit 1; }
+    printf '%s → App Store Connect. Cannot be undone; the build number is used up. Type y to upload: ' "$name"
+    read -r answer
+    [ "$answer" = y ] || { kamome_fail "not uploaded (the archive and checks are kept in $out)"; exit 1; }
+  fi
+  git fetch -q origin main
+  [ "$(git rev-list --count origin/main..HEAD)" = 0 ] || git push -q origin main
+fi
 
 stage "Export"
 destination=export; [ "$upload" -eq 1 ] && destination=upload
