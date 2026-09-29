@@ -18,6 +18,7 @@ current=$(sed -n 's/^MARKETING_VERSION = //p' "$file")
 IFS=. read -r major minor patch <<< "$current"
 minor=${minor:-0}; patch=${patch:-0}
 
+dry=0; [ "${1:-}" = "--dry" ] && { dry=1; shift; }
 case "${1:-}" in
   "")
     kamome_info "version $current, next build $(git rev-list --count HEAD) (commit count of HEAD)"
@@ -35,5 +36,6 @@ if ! [[ "$version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]; then
   exit 1
 fi
 
+if [ "${dry:-0}" = 1 ]; then echo "$version"; exit 0; fi
 sed -i '' "s/^MARKETING_VERSION = .*/MARKETING_VERSION = $version/" "$file"
 kamome_ok "version $current → $version in $file (next build $(git rev-list --count HEAD))"
