@@ -11,8 +11,9 @@ runbook, Chiu's judgement queue and bug fixes, all as issues. Phase 3.5 closed
 
 ## Read at session start
 
-1. `git status -sb` — your branch and distance from `origin/main`. **One
-   session implements at a time**; if another branch is mid-flight, say so.
+1. `git status -sb` — your branch and distance from `origin/main`. **Sessions
+   run in parallel, one PR each** (`CHARTER.md` §1); if an open PR touches your
+   files, say so.
 2. `CHARTER.md` — the one charter: work loop, verification, design rules.
 3. `Docs/current-state.md` — the snapshot. Its "Last synced" line must name the
    newest ADR (`./check.sh --static` checks it); if not, report it first.

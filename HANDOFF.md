@@ -48,7 +48,7 @@ cost somebody time; keep each to a summary and a pointer.
   `permittedCutTimesS` is what holds.
 - **Read a style value off `modernMinimal`, never off `RecapStyle`'s defaults.**
 - **Two sessions share one checkout family and one simulator bundle id** — a
-  screenshot can show *their* build. One implementer at a time (`CHARTER.md` §1).
+  screenshot can show *their* build. Use your own device (`CHARTER.md` §1).
   → `Docs/environment-gotchas.md`.
 - **A merge can drop catalogue keys**: 4058b92 lost PR #91's 13 picker strings.
 - **MapKit saturates at ~109° of longitude**: the frozen country card is a main

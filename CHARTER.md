@@ -13,9 +13,14 @@ decision order.
 
 ## 1. The work loop
 
-- **One session implements at a time.** One branch, one PR, merged before the
-  next one starts. Parallel implementers collided on every shared file this
-  repository has (rationale: ADR 2026-09-28).
+- **Sessions run in parallel, like a team.** One session, one problem, one
+  branch, one PR — in its own worktree, never a shared checkout. Before you
+  start, `gh pr list` and `git fetch`: if an open PR touches your files, say so
+  and keep your change small. Shared files (`HANDOFF.md`, `current-state.md`)
+  get a line added, never a rewrite; merge `origin/main` before you open the PR
+  and read what came in. Use your own simulator device and check the installed
+  bundle is yours (`Docs/environment-gotchas.md`). A problem outside your PR is
+  an issue, not a detour.
 - **Subagents are read-only**: research, search, an independent review of a
   finished diff. They never write to the tree.
 - **Open work lives in GitHub Issues**, labelled:

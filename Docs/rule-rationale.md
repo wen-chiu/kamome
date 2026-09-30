@@ -90,12 +90,16 @@ paths, do not squash onto a moved `main`. Each of them turns a silent overwrite
 into either a conflict or a diff you have to read.
 
 
-## Why one session implements at a time (ADR 2026-09-28)
+## Why sessions were serialized, and why that ended (ADR 2026-09-28; Chiu 2026-09-30)
 
 From 2026-09-01 to 2026-09-28, 488 of ~1,600 file touches on `main` were
 documents: `HANDOFF.md` changed 90 times, `current-state.md` 81, the ledger 77,
 its index 58. Every parallel PR edited the same five files, so parallel sessions
 bought merge conflicts and silent reverts (the staging incidents above, #110's
-baseline), not speed. The bottleneck of the remaining work is the phone and
-Chiu's judgement, which more sessions cannot widen. Subagents stay useful for
-read-only work, where they touch no shared file.
+baseline). Governance v2 answered with one implementer at a time.
+
+Chiu reversed it on 2026-09-30: sessions run in parallel, one PR each, as a
+team does. The cause was shared *documents*, which v2 already removed (ADRs as
+files, issues for open work, the ledger frozen), so the remaining rules are the
+care — own worktree, add-a-line edits to shared files, merge `main` before the
+PR, own simulator device. Subagents stay read-only.
