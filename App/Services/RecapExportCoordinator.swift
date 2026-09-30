@@ -55,6 +55,12 @@ final class RecapExportCoordinator {
         var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
         /// Set only while iCloud-only photos are being fetched for this film.
         var photoPreload: PhotoLibraryPhotoResolver.PreloadProgress?
+        /// "About N minutes left" (Chiu 2026-09-30): set as drawing starts and
+        /// fed every progress report, silent until its warm-up has passed.
+        var timeLeft: RecapExportTimeLeft?
+        /// When drawing started — the estimate's clock, which is why road
+        /// finding and the iCloud download never count towards its pace.
+        var drawingStarted: ContinuousClock.Instant?
 
         var tripId: String { request.tripId }
     }
@@ -182,10 +188,22 @@ final class RecapExportCoordinator {
         }
         let channel = RecapExportChannel(
             stage: { stage in ifCurrent { $0.stage = stage }() },
-            progress: { fraction in ifCurrent { $0.fraction = fraction }() },
+            progress: { fraction in
+                ifCurrent { running in
+                    running.fraction = fraction
+                    guard let started = running.drawingStarted else { return }
+                    running.timeLeft?.update(fraction: fraction, elapsedS: (.now - started) / .seconds(1))
+                }()
+            },
             routing: { report in ifCurrent { $0.routing = report }() },
             photoShortfall: { summary in ifCurrent { $0.photoShortfall = summary }() },
             photoPreload: { preload in ifCurrent { $0.photoPreload = preload }() },
+            timeLeft: { estimate in
+                ifCurrent { running in
+                    running.timeLeft = estimate
+                    running.drawingStarted = .now
+                }()
+            },
             shouldContinue: { !flag.isSet }
         )
         task = Task { [weak self] in

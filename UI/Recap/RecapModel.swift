@@ -154,6 +154,10 @@ final class RecapModel {
     /// on the device — the common case, and the one that shows no extra UI.
     var photoPreload: PhotoLibraryPhotoResolver.PreloadProgress? { running?.photoPreload }
 
+    /// "About N minutes left" while drawing, from this export's own pace; nil
+    /// before its warm-up has passed (Chiu 2026-09-30, `RecapExportTimeLeft`).
+    var timeLeft: RecapExportTimeLeft.Reading? { running?.timeLeft?.reading }
+
     /// Which wait the render is in, as the job reports it. nil when idle.
     var stage: RecapExportStage? { running?.stage }
 

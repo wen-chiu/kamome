@@ -55,6 +55,8 @@ final class SpyExportJob: RecapExportRunning {
 
     func report(routing: RouteMatchReport) { channel?.routing(routing) }
 
+    func report(timeLeft: RecapExportTimeLeft) { channel?.timeLeft(timeLeft) }
+
     func complete(_ outcome: RecapExportOutcome) {
         let continuation = self.continuation
         self.continuation = nil

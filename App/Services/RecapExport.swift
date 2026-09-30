@@ -75,7 +75,7 @@ enum RecapExportStage: Equatable, Sendable {
 
 /// What a running export tells its owner. A struct of closures rather than a
 /// delegate: the coordinator is the only owner there will ever be, and this
-/// keeps the job's dependency on it to six functions.
+/// keeps the job's dependency on it to seven functions.
 @MainActor
 struct RecapExportChannel {
     var stage: (RecapExportStage) -> Void
@@ -85,6 +85,9 @@ struct RecapExportChannel {
     /// The iCloud download phase before the render: nil when there is nothing to
     /// download or the phase is over.
     var photoPreload: (PhotoLibraryPhotoResolver.PreloadProgress?) -> Void
+    /// Sent once, as drawing starts: the station plan the time-left estimate
+    /// counts down (`RecapExportTimeLeft`, Chiu 2026-09-30).
+    var timeLeft: (RecapExportTimeLeft) -> Void
     /// Read from the render thread every frame — see `SharedFlag`.
     var shouldContinue: @Sendable () -> Bool
 }
