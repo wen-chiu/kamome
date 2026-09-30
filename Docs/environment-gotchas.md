@@ -89,7 +89,7 @@ captures on 2026-09-05, and nothing about the image said so.
 **A screenshot is evidence about the installed bundle, so check that, not your
 source**, before believing one:
 
-    APP=$(xcrun simctl get_app_container <udid> com.chiu.kamome.dev app)
+    APP=$(xcrun simctl get_app_container <udid> com.chiu.kamome app)
     plutil -extract <a key you just changed> raw -o - "$APP/en.lproj/Localizable.strings"
 
 A second device avoids the collision; this check catches it when it happens

@@ -45,6 +45,9 @@ S7 do not block it; the TestFlight build is how D1–D5 get run.
 
 ## For Chiu, outside the repository
 
+- ⚠️ **The bundle id is now `com.chiu.kamome`** (ADR 2026-09-30-bundle-id):
+  it needs its own App ID and App Store Connect record before the next upload;
+  testers are re-invited there, and their trips do not carry over.
 - Paid Program, the App Store Connect record for `com.chiu.kamome.dev`, team
   `6XPGA48GFT` — **INFERRED** (2026-09-30): both signing certificates and an App
   Store profile for the bundle id on Chiu's Mac belong to it; `project.yml` had

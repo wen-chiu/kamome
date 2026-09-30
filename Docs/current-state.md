@@ -6,8 +6,9 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-29 against ADR **2026-09-29-the-opening-zooms-and-the-route-holds**
-(the opening zooms out of the title card instead of cutting, reopening
+Last synced: 2026-09-30 against ADR **2026-09-30-bundle-id** (the App Store
+bundle id is `com.chiu.kamome`, replacing the `.dev` placeholder). Before it:
+2026-09-29-the-opening-zooms-and-the-route-holds (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card). Before it:
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
 its own towns, and travel is earned by windows); 2026-09-28-sample-trip (an
