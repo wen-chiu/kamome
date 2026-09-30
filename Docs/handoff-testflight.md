@@ -46,7 +46,10 @@ S7 do not block it; the TestFlight build is how D1–D5 get run.
 ## For Chiu, outside the repository
 
 - Paid Program, the App Store Connect record for `com.chiu.kamome.dev`, team
-  `B9U326WRA4` — **UNKNOWN** from here.
+  `6XPGA48GFT` — **INFERRED** (2026-09-30): both signing certificates and an App
+  Store profile for the bundle id on Chiu's Mac belong to it; `project.yml` had
+  `B9U326WRA4`, which nothing on the Mac belongs to, and the CLI archive failed
+  "No Account for Team". Settled by a green `Scripts/release/archive.sh`.
 - **Internal testers first** — no Beta App Review. A public link ends the
   "people Chiu knows" condition of the open-endpoint acceptance (pre-launch.md
   2026-08-29 a); the 2000/day ceiling and burst limit hold either way.

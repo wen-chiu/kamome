@@ -235,9 +235,16 @@ targets:
           plutil -replace LSSupportsOpeningDocumentsInPlace -bool YES "$plist"
     settings:
       base:
-        # Placeholder until the trademark check clears (spec §11.1).
-        DEVELOPMENT_TEAM: B9U326WRA4
+        # Signing is set here and only here: a Team picked in Xcode's Signing &
+        # Capabilities pane lands in the generated .xcodeproj and is overwritten
+        # by the next `xcodegen generate` (git hooks, archive.sh) without a word.
+        # A Team ID is not a secret — every signed app carries it. The team is
+        # the one the signing certificates and profiles on Chiu's Mac belong to;
+        # Scripts/release/archive.sh refuses to archive if none of the valid
+        # signing identities is for this team.
+        DEVELOPMENT_TEAM: 6XPGA48GFT
         CODE_SIGN_STYLE: Automatic
+        # Placeholder until the trademark check clears (spec §11.1).
         PRODUCT_BUNDLE_IDENTIFIER: com.chiu.kamome.dev
         # MARKETING_VERSION and CURRENT_PROJECT_VERSION are NOT here: they live
         # in Config/Version.xcconfig (set with Scripts/set-version.sh), and a

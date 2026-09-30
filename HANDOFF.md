@@ -57,6 +57,10 @@ cost somebody time; keep each to a summary and a pointer.
   `Scripts/set-version.sh minor|patch|major`; the build fails on a mismatch.
   The build number is the commit count, stamped by every build. `Scripts/install-git-hooks.sh` once per clone regenerates the
   project after every checkout, merge, pull and rebase.
+- **Never set the Team in Xcode's Signing pane either** — same discard. It is
+  `DEVELOPMENT_TEAM` in `project.yml`; a wrong one (B9U326WRA4, until
+  2026-09-30) fails a CLI archive with "No Account for Team", and `archive.sh`
+  now stops first if no valid signing certificate belongs to the team.
 
 ---
 
