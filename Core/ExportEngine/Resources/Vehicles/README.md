@@ -60,6 +60,20 @@ user choosing them.
   depending on direction. **That variation is correct** — a car seen side-on
   really is longer on screen than one seen from behind.
 
+⚠️ **Image generators draw the north row as front views.** Asked for a 3×3
+sheet, they tend to repeat the head-on and front-3/4 drawings in the top row. Check
+that N shows the rear before shipping a set. A front view cannot be flipped into a
+rear view, because the lighting and perspective invert. NE can be the horizontal
+mirror of a correct NW, since a vehicle is left–right symmetric.
+
+⏳ **Stopgap sets (Chiu 2026-09-30):** `train`, `carriage-navy`, `sheep` and
+`beaver` have no rear-3/4 drawing yet, so their `nw.png` / `ne.png` are copies of
+`w.png` / `e.png`. A diagonal-north heading shows the profile, 45° off, instead of
+a front view. Rotating the rear view was not used, for the reason above. When the
+rear-3/4 art arrives, replace `nw.png`, mirror it into `ne.png` and re-run the
+centring tool. Mirrored from one drawn rear-3/4: `carriage` (NE from NW) and
+`bus` (NW from NE).
+
 ⚠️ **Scaling is by canvas, never by content bounds.** This is why all eight must
 share one canvas size: scale by content and the subject *pulses* as it turns,
 because the drawing's own bounding box changes with the angle. A test enforces

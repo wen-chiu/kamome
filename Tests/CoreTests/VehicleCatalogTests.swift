@@ -209,7 +209,8 @@ final class VehicleCatalogTests: XCTestCase {
         XCTAssertEqual(
             Set(VehicleCatalog.selectableSubjects.map(\.id)),
             ["car-red", "car-white", "car-toy", "scooter", "camper", "drone",
-             "reindeer-cute", "reindeer-deer", "seagull"]
+             "reindeer-cute", "reindeer-deer", "horse", "carriage",
+             "carriage-navy", "bus", "train", "sheep", "beaver", "seagull"]
         )
     }
 
