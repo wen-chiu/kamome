@@ -37,6 +37,13 @@ grep -q "Geoapify"      "$catalog" || missing+=("Geoapify attribution (mandatory
 grep -q "OpenStreetMap" "$catalog" || missing+=("OpenStreetMap attribution (always required)")
 grep -qi "privacy"      "$catalog" || missing+=("a privacy notice string (gates Apple's App Privacy questionnaire)")
 
+# The hosted privacy policy, linked inside the app (guideline 5.1.1(i), #150). The
+# store listing must point at the same page; App Store Connect is not visible from
+# here, so that half stays on the submission checklist.
+policy_url="https://wen-chiu.github.io/kamome-site/privacy/"
+grep -qF "$policy_url" UI/About/AboutView.swift \
+  || missing+=("an in-app link to the privacy policy, $policy_url, on UI/About/AboutView.swift")
+
 # Third-party software licences (ADR 2026-09-12 (c)). A different obligation from
 # the attribution above: that is owed for data the app fetches, this for code the
 # app contains. Every package Package.resolved pins is linked into Kamome.app —
@@ -73,6 +80,7 @@ done <<< "$pins"
 
 if [ ${#missing[@]} -eq 0 ]; then
   kamome_ok "attribution and privacy strings are present in $catalog"
+  kamome_ok "the privacy policy is linked from the app"
   kamome_ok "all $licences pinned packages carry their licence text and an acknowledgement at the pinned version"
   exit 0
 fi
