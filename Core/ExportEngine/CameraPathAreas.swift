@@ -101,18 +101,21 @@ extension CameraPath {
             areas.last(where: { $0.fromM <= distanceM }) ?? areas[0]
         }
 
-        /// **nil when the film has one area** — and then the caller builds the
-        /// film exactly as before, through the one-span path.
+        /// **nil when the trip asks for one scale** — and then the caller builds
+        /// the film exactly as before, through the one-span path.
         ///
         /// Two merges run to a fixed point, each only ever lowering the count, so
         /// this terminates: a seam whose zoom is too small to read, and an area
         /// held too briefly to be read — which is what keeps the camera from
-        /// pumping in and out at every stop of a road trip.
+        /// pumping in and out at every stop of a road trip. Areas merged down to
+        /// one stay an area (ADR file 2026-09-28): the one-span rule frames the
+        /// whole bounding box, which is the failure areas exist to fix.
         static func make(_ request: AreaRequest) -> AreaPlan? {
             let config = request.config
             guard config.cameraAreaSplitRatio.isFinite, config.cameraAreaSplitRatio >= 1 else { return nil }
             var groups = CameraPath.group(CameraPath.stretches(request), config: config)
-            while groups.count > 1 {
+            guard groups.count > 1 else { return nil }
+            while true {
                 // A reframe beat costs travel time, so the budget is re-read each pass.
                 let draft = request.timeline(CameraPath.reframes(groups, spans: nil), nil)
                 let travelS = CameraPath.travelSeconds(in: draft.entries)
@@ -135,12 +138,10 @@ extension CameraPath {
                 )
                 guard let brief = CameraPath.briefestAbsorbable(groups, spans: spans, startsS: startsS, request: request)
                 else { return plan }
-                let into = brief.into
-                let (first, second) = (min(brief.index, into), max(brief.index, into))
-                groups[first] = groups[first].merged(with: groups[second], keepingBandOf: groups[into])
+                let (first, second) = (min(brief.index, brief.into), max(brief.index, brief.into))
+                groups[first] = groups[first].merged(with: groups[second], keepingBandOf: groups[brief.into])
                 groups.remove(at: second)
             }
-            return nil
         }
     }
 
@@ -153,6 +154,8 @@ extension CameraPath {
         let establishing: RecapBounds?
         let config: TrackingConfig.Export
         let durationS: Double
+        /// Each stop's town, indexed like the stops; nil when unknown.
+        var places: [String?] = []
         /// The provisional journey clock for a given set of reframes and areas —
         /// `buildTimelineWithReframes` over the same stops, holds and crossings.
         let timeline: ([Reframe], AreaPlan?) -> (entries: [TimelineEntry], reframes: [ReframeWindow])
@@ -270,15 +273,14 @@ extension CameraPath {
 
     /// The area held on screen for the shortest time under **two
     /// `zoom_transition_s`** that can be absorbed, and the neighbour that absorbs
-    /// it: the one whose span is nearer, never across a crossing (the arc owns
-    /// that seam). nil when every area is held long enough to be read.
+    /// it: the one whose span is nearer, never more than `target_zoom_ratio`
+    /// tighter and never across a crossing (the arc owns that seam). nil when
+    /// every area is held long enough to be read, or when the only brief ones
+    /// are far wider than both neighbours — a quick drive keeps its own frame.
     ///
     /// Two beats because an area is entered by one: held for less than that, the
     /// scale is on screen for less time than it took to arrive at it, and the
-    /// film reads as zooming rather than as being somewhere. Derived from the
-    /// zoom's own length rather than a key of its own — a first cut carried an
-    /// 8 s minimum, which absorbed the drive between two towns (it has no stops
-    /// of its own) and framed it at town scale.
+    /// film reads as zooming rather than as being somewhere.
     private static func briefestAbsorbable(
         _ groups: [AreaGroup], spans: [Double], startsS: [Double], request: AreaRequest
     ) -> (index: Int, into: Int)? {
@@ -289,9 +291,13 @@ extension CameraPath {
         struct Candidate { let index: Int, into: Int, heldS: Double }
         let candidates = groups.indices.compactMap { index -> Candidate? in
             guard heldS[index] < 2 * request.config.zoomTransitionS else { return nil }
+            // Never into a neighbour more than `target_zoom_ratio` tighter (ADR file
+            // 2026-09-28): a brief drive absorbed into a town took the town's band
+            // and, paced by screen distance, crawled 174 km at 27 km for 13.5 s.
             let neighbours = [index - 1, index + 1].filter { other in
                 guard groups.indices.contains(other) else { return false }
                 return !groups[max(index, other)].followsCrossing
+                    && spans[other] * max(request.config.targetZoomRatio, 1) >= spans[index]
             }
             guard let into = neighbours.min(by: {
                 abs(log(spans[$0] / spans[index])) < abs(log(spans[$1] / spans[index]))
@@ -335,9 +341,9 @@ extension CameraPath {
         }
         let routes = groups.map { points(fromM: $0.fromM, toM: $0.toM, request: request) }
         // Each area's own floor, never below `camera_span_m` (`CameraPathContext`).
-        let floors = contextFloorsM(groups, request: request)
+        let floors = contextFloorsM(groups, request: request), journey = journeySpansM(groups, request: request)
         func spans(_ factor: Double) -> [Double] {
-            zip(zip(asked, ceilings), floors).map { max(min($0.0 * factor, $0.1), $1) }
+            zip(zip(asked, ceilings), zip(floors, journey)).map { max($1.1 ?? min($0.0 * factor, $0.1), $1.0) }
         }
         /// The fastest any area's camera crosses its window, in windows per second,
         /// with the clock shared by screen distance (`buildTimeline`).

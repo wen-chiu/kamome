@@ -6,9 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-28 against ADR **2026-09-28** (the ledger's last entry:
-it is frozen, one issue list replaces the handoff lists, one charter replaces
-three). `main` then carried PR #110 — film length Short ≤ 90 s (default) or
+Last synced: 2026-09-29 against ADR **2026-09-29-the-opening-zooms-and-the-route-holds**
+(the opening zooms out of the title card instead of cutting, reopening
+2026-08-31; the revealed route holds before the end card). Before it,
+2026-09-28-a-drive-is-never-framed-at-town-scale (Draft): a trip is framed by
+its own towns, and travel is earned by windows. `main` then carried PR #110 — film length Short ≤ 90 s (default) or
 Standard ≤ 300 s (ADR 2026-09-27).
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -85,7 +87,10 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
   (ADR 2026-08-20 (d) — read it before citing any older snap-radius text).
   Bounded, cancellable, and it reports which of four causes dashed a film.
 - **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per **area**
-  (`CameraPathAreas`, ADR 2026-09-24); scale changes only in a reframe beat.
+  (`CameraPathAreas`, ADR 2026-09-24); scale changes only in a reframe beat;
+  a trip's scale comes from its own town density (two nearest towns in view),
+  a zoom-in is earned only by days driven around one town, and travel lasts only
+  as long as its windows need at `travel_pacing.windows_per_s` (ADR file 2026-09-28, Draft).
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
 - **Export:** one film at a time, app-wide; `RecapExportCoordinator` outlives

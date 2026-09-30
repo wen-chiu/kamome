@@ -132,8 +132,128 @@ extension CameraPath {
 
     /// Every area's context floor: the fitting span of the place it sits in ÷
     /// `context_depth`, no tighter than `camera_span_m` and no wider than
-    /// `context_span_max_m`. An area with no stop of its own gets `camera_span_m`.
+    /// `context_span_max_m` — or its **next-town floor** when that is wider.
+    /// An area with no stop of its own gets `camera_span_m`.
     static func contextFloorsM(_ groups: [AreaGroup], request: AreaRequest) -> [Double] {
+        contextOnlyFloorsM(groups, request: request)
+    }
+
+    /// **One journey scale per trip, from its own density of towns** (ADR file
+    /// 2026-09-28, Chiu 2026-09-29). nil for an area that keeps its own framing;
+    /// otherwise the span it is shown at.
+    ///
+    /// **You know where you are when you can see the next town**
+    /// (「旅程地點行進長度密度不同我們要顯示的畫面大小就要有所變化」). For every stop,
+    /// the frame centred on it that holds the nearest stop of another town;
+    /// the journey scale is the median over the trip's stops. So a road trip
+    /// between towns 50 km apart is framed wide throughout, and does not zoom
+    /// in and out as the towns thin and thicken; a trip that is all one town
+    /// has no scale, and nothing here changes it. No distance is tuned to any trip.
+    ///
+    /// An area keeps its own, tighter framing only when it **earns the zoom**:
+    /// its stops are all one town, it fits inside the journey's frame, and its
+    /// route crosses at
+    /// least 2 × `zoom_transition_s` × the travel rate windows of the frame that
+    /// just holds it — days driven around a town. An airport and a mall on the
+    /// way out of a city, three lakeside stops, or the road in and out of a
+    /// national park past two other towns are passed through and shown at the
+    /// journey's scale (「除非是使用者有市區行程…我們可以拉近得到更好的路線軌跡」).
+    static func journeySpansM(_ groups: [AreaGroup], request: AreaRequest) -> [Double?] {
+        let anchors = request.anchors
+        let points = anchors.map {
+            coordinate(atDistance: $0.distanceM, route: request.route, cumulativeM: request.cumulativeM)
+        }
+        let place = placeIds(anchors: anchors, points: points, request: request)
+        let frames = nextTownFramesM(request, points: points, place: place).filter { $0 > 0 }.sorted()
+        guard !frames.isEmpty else { return groups.map { _ in nil } }
+        let median = frames.count % 2 == 1
+            ? frames[frames.count / 2] : (frames[frames.count / 2 - 1] * frames[frames.count / 2]).squareRoot()
+        let config = request.config
+        let scaleM = cappedToRegion(median, establishing: request.establishing, config: config)
+        let rate = config.travelPacing.isEnabled ? config.travelPacing.windowsPerS : config.cameraPanWindowFractionPerS
+        let earnedWindows = 2 * config.zoomTransitionS * rate
+        return groups.map { group in
+            let fitM = fittingSpanM(bounds: group.bounds, config: config)
+            let towns = Set(anchors.indices.filter {
+                anchors[$0].distanceM >= group.fromM && anchors[$0].distanceM <= group.toM
+            }.compactMap { place[$0] })
+            let earned = towns.count <= 1 && fitM < scaleM && group.localM / max(fitM, 1) >= earnedWindows
+            return earned ? nil : scaleM
+        }
+    }
+
+    /// For each stop (anchor), the frame centred on it that holds the nearest
+    /// stops of the **two** nearest other places — one reference says how far,
+    /// two say where — or 0 when there are not two. Never across a crossing:
+    /// the town past a flight belongs to another journey.
+    static func nextTownFramesM(_ request: AreaRequest, points: [Point], place: [Int?]) -> [Double] {
+        let anchors = request.anchors
+        guard anchors.count > 2 else { return anchors.map { _ in 0 } }
+        return anchors.indices.map { stop in
+            guard let own = place[stop] else { return 0 }
+            var nearestOf: [Int: (index: Int, metres: Double)] = [:]
+            for other in anchors.indices {
+                guard let otherPlace = place[other], otherPlace != own else { continue }
+                let low = min(anchors[stop].distanceM, anchors[other].distanceM)
+                let high = max(anchors[stop].distanceM, anchors[other].distanceM)
+                guard !request.crossings.contains(where: { $0.fromM >= low && $0.toM <= high }) else { continue }
+                let metres = Geo.distanceM(
+                    latA: points[stop].lat, lonA: points[stop].lon, latB: points[other].lat, lonB: points[other].lon
+                )
+                if metres < nearestOf[otherPlace]?.metres ?? .infinity { nearestOf[otherPlace] = (other, metres) }
+            }
+            let two = nearestOf.values.sorted { $0.metres < $1.metres }.prefix(2)
+            guard two.count == 2 else { return 0 }
+            // The frame centred on the stop that holds both: each and its mirror.
+            let held = two.flatMap { other -> [Point] in
+                let point = points[other.index]
+                return [point, Point(lat: 2 * points[stop].lat - point.lat, lon: 2 * points[stop].lon - point.lon)]
+            }
+            return fittingSpanM(bounds: bounds(of: held), config: request.config)
+        }
+    }
+
+    /// Each anchor's place, or nil when it cannot be a reference. A place is a
+    /// named town (`locality`) joined with every stop within `camera_span_m` of
+    /// it — geocoded towns are noisy, and stops that close are one spot on any
+    /// frame. A viewer places themselves by named towns, so an unnamed stop is no
+    /// reference, and a trip with no names has none.
+    private static func placeIds(
+        anchors: [(stopIndex: Int, distanceM: Double)], points: [Point], request: AreaRequest
+    ) -> [Int?] {
+        let town = anchors.map { anchor -> String? in
+            guard anchor.stopIndex < request.places.count, let name = request.places[anchor.stopIndex],
+                  !name.isEmpty else { return nil }
+            return name
+        }
+        // No names at all: no references. Clusters of unnamed stops were tried
+        // and made every photo spot on an island a "town" (the round trip widened
+        // from 6.5 to 27 km) — so an unnamed trip is framed exactly as before.
+        guard town.contains(where: { $0 != nil }) else { return anchors.map { _ in nil } }
+        var root = Array(anchors.indices)
+        func find(_ index: Int) -> Int {
+            var index = index
+            while root[index] != index { index = root[index] }
+            return index
+        }
+        var firstOfTown: [String: Int] = [:]
+        for index in anchors.indices {
+            if let name = town[index] {
+                if let seen = firstOfTown[name] { root[find(index)] = find(seen) } else { firstOfTown[name] = index }
+            }
+            for other in 0..<index where Geo.distanceM(
+                latA: points[index].lat, lonA: points[index].lon, latB: points[other].lat, lonB: points[other].lon
+            ) <= request.config.cameraSpanM {
+                root[find(index)] = find(other)
+            }
+        }
+        return anchors.indices.map { index in
+            let id = find(index)
+            return anchors.indices.contains { find($0) == id && town[$0] != nil } ? id : nil
+        }
+    }
+
+    private static func contextOnlyFloorsM(_ groups: [AreaGroup], request: AreaRequest) -> [Double] {
         let config = request.config, context = config.cameraContext
         guard context.isEnabled, request.anchors.count > 1 else { return groups.map { _ in config.cameraSpanM } }
         let points = request.anchors.map {

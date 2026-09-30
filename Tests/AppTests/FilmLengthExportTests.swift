@@ -93,17 +93,42 @@ final class FilmLengthExportTests: XCTestCase {
                              "precondition: this trip's standard film is longer than a short one")
     }
 
-    /// **The length on the sheet is the timeline's length** (reopening ADR
-    /// 2026-09-26 (c) item 7): for a local trip the estimate from the decks
-    /// alone equals what the timeline builds, to the frame, in both lengths.
-    func testTheEstimateIsTheTimelinesLength() async throws {
+    /// **The plan's length is an upper bound** (ADR file 2026-09-28): the
+    /// decks alone price the film with travel at its full share, and travel
+    /// earned by what crosses the screen can only shorten it — never lengthen.
+    func testThePlannedLengthIsNeverShorterThanTheFilm() async throws {
         let config = AppConfig.loadOrDie()
         let trip = try await imported(stops: 14, photosPerStop: 6, markedPerStop: 1, config: config).detail
         for length in FilmLength.allCases {
             let recap = try film(trip, length: length, config: config)
             let line = try timeline(recap, config: config.export)
-            let estimate = RecapComposer.estimatedFilmS(photoCounts: recap.stops.map(\.photos.count), config: config)
-            XCTAssertEqual(estimate, line.durationS, accuracy: 1.0 / Double(config.export.fps), "\(length)")
+            let planned = RecapComposer.estimatedFilmS(photoCounts: recap.stops.map(\.photos.count), config: config)
+            XCTAssertGreaterThanOrEqual(planned + 1.0 / Double(config.export.fps), line.durationS, "\(length)")
+        }
+    }
+
+    /// **The length on the sheet is the export's length** (Chiu 2026-09-27,
+    /// measured since 2026-09-29): once the sheet has measured, it says what
+    /// the export's own composition and timeline come to, to the frame, for
+    /// both lengths and both photo-card settings — not a formula's promise.
+    func testTheSheetSaysTheExportsLength() async throws {
+        let config = AppConfig.loadOrDie()
+        let imported = try await imported(stops: 14, photosPerStop: 6, markedPerStop: 1, config: config)
+        for length in FilmLength.allCases {
+            let choices = FilmPhotoChoices(
+                tripId: imported.detail.trip.id, config: config, repository: imported.repository, length: length
+            )
+            choices.measureLength()
+            for _ in 0..<200 where choices.measuredS.count < 2 { try await Task.sleep(nanoseconds: 50_000_000) }
+            for photosEnabled in [true, false] {
+                let composed = try XCTUnwrap(RecapComposer.filmComposition(
+                    detail: imported.detail, config: config, photosEnabled: photosEnabled, length: length
+                ))
+                let film = try XCTUnwrap(RecapComposer.measuredFilmS(trip: composed.trip, config: config.export))
+                let said = try XCTUnwrap(choices.measuredS[photosEnabled], "the sheet never measured \(length)")
+                XCTAssertEqual(said, film, accuracy: 1.0 / Double(config.export.fps), "\(length), photos \(photosEnabled)")
+                XCTAssertEqual(choices.estimatedFilmS(photosEnabled: photosEnabled), said)
+            }
         }
     }
 

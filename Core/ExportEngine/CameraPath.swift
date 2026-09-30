@@ -87,6 +87,8 @@ public struct CameraPath {
     /// Every area's span, in film order — one entry on a one-area film
     /// (`CameraPathAreas`, ADR 2026-09-24).
     let areaSpansM: [Double]
+    /// What this film frames, for a rebuild on another clock (earned travel).
+    let framing: Framing
     /// The moves over the reframe beats between areas. Empty on a one-area film.
     let reframeArcs: [Arc]
     /// The world the body camera starts in — the route's bounds on a one-area
@@ -105,11 +107,10 @@ public struct CameraPath {
     /// same tunables the path was built with, rather than a copied subset that
     /// can drift out of step with it.
     private let cutConfig: TrackingConfig.Export
-    private let zoomTransitionS: Double
     private let followHeadingUp: Bool
     /// The **wide** half of the opening — country, then region. The final
     /// "route" beat is not a stored frame any more: it is the live follow camera,
-    /// blended into over `zoomTransitionS`, which is what makes the handoff exact
+    /// blended into over the closing zoom (`closingZoomS`), which is what makes the handoff exact
     /// rather than approximately equal (Chiu 2026-08-01).
     private let prologue: Prologue?
     /// The film's one sanctioned discontinuity (Chiu 2026-08-31): when the title
@@ -170,18 +171,30 @@ public struct CameraPath {
         /// which takes the country card — the *other* main path, not a degraded
         /// one. A frame rather than a flag: deciding it needs the substrate's
         /// ceiling and the camera never learns about renderers (`CrossingFraming`).
-        openingFlightFrame: CameraFrame? = nil
+        openingFlightFrame: CameraFrame? = nil,
+        /// Each stop's town (`RecapTrip.Stop.locality`), indexed like `stops`;
+        /// nil or empty when unknown. The frame at a place shows the next town
+        /// (ADR file 2026-09-28). Empty is every film before that.
+        stopPlaces: [String?] = []
+    ) {
+        self.init(
+            route: route, stops: stops, config: config, stopHoldsS: stopHoldsS, totalDurationS: totalDurationS,
+            establishing: establishing, openingS: openingS, journeyEndsBeforeS: journeyEndsBeforeS,
+            crossingVertexRanges: crossingVertexRanges, openingFlightFrame: openingFlightFrame,
+            stopPlaces: stopPlaces, framing: nil
+        )
+    }
+
+    /// The same film with its framing decided already (`framing`), on this
+    /// clock — earned travel's rebuild (ADR file 2026-09-28).
+    init?(
+        route: [Point], stops: [Point], config: TrackingConfig.Export, stopHoldsS: [Double]?,
+        totalDurationS: Double?, establishing: RecapBounds?, openingS: Double, journeyEndsBeforeS: Double,
+        crossingVertexRanges: [Range<Int>], openingFlightFrame: CameraFrame?, stopPlaces: [String?],
+        framing: Framing?
     ) {
         guard route.count >= 2 else { return nil }
-        var cumulative = [0.0]
-        cumulative.reserveCapacity(route.count)
-        for index in 1..<route.count {
-            let step = Geo.distanceM(
-                latA: route[index - 1].lat, lonA: route[index - 1].lon,
-                latB: route[index].lat, lonB: route[index].lon
-            )
-            cumulative.append(cumulative[index - 1] + step)
-        }
+        let cumulative = Self.cumulativeDistancesM(route)
         guard let totalM = cumulative.last, totalM > 0 else { return nil }
 
         let anchors = Self.stopAnchors(route: route, cumulativeM: cumulative, stops: stops)
@@ -195,12 +208,13 @@ public struct CameraPath {
             crossingVertexRanges: crossingVertexRanges, stopHoldsS: stopHoldsS,
             totalDurationS: total, establishing: establishing, openingS: openingS,
             journeyEndsBeforeS: journeyEndsBeforeS, openingFlightFrame: openingFlightFrame,
-            config: config
+            config: config, framing: framing, stopPlaces: stopPlaces
         ))
         let crossings = opening.crossings, span = opening.bodySpanM, plan = opening.plan
         let opensOnTheFlight = opening.opensOnTheFlight
         bodySpanM = span; wideEndS = plan.wideEndS; self.crossings = crossings
         let areaPlan = opening.areaPlan; areaSpansM = areaPlan?.areas.map(\.spanM) ?? [span]
+        self.framing = Framing(bodySpanM: span, areaPlan: areaPlan)
         bodyStartBounds = areaPlan?.areas[0].bounds ?? Self.bounds(of: route)
         let body = Self.bodyCamera(TrackRequest(
             route: route, cumulativeM: cumulative, journeyTimeline: [],
@@ -211,7 +225,7 @@ public struct CameraPath {
         ), areaPlan: areaPlan)
         let journeyTimeline = body.timeline
         timeline = journeyTimeline; self.fps = config.fps; cutConfig = config; durationS = total; frameCount = frames
-        zoomTransitionS = config.zoomTransitionS; followHeadingUp = config.followHeadingUp
+        followHeadingUp = config.followHeadingUp
         prologue = plan.prologue; openingEndsS = plan.openingEndsS; titleCutS = plan.prologue?.cutTimeS
         track = body.track; reframeArcs = body.reframeArcs
         endRevealStartS = plan.revealS > 0 ? plan.journeyEndS : nil
@@ -233,6 +247,20 @@ public struct CameraPath {
             openingEndsS: plan.openingEndsS
         )
         arcs = moves.arcs; crossingBeatsS = moves.beatsS
+    }
+
+    /// Along-route metres at every vertex, from 0.
+    static func cumulativeDistancesM(_ route: [Point]) -> [Double] {
+        var cumulative = [0.0]
+        cumulative.reserveCapacity(route.count)
+        for index in 1..<route.count {
+            let step = Geo.distanceM(
+                latA: route[index - 1].lat, lonA: route[index - 1].lon,
+                latB: route[index].lat, lonB: route[index].lon
+            )
+            cumulative.append(cumulative[index - 1] + step)
+        }
+        return cumulative
     }
 
     /// How long the opening actually runs, after collapsing beats that do not
@@ -319,7 +347,7 @@ public struct CameraPath {
             if time < wideEndS {
                 composed = prologue.frame(atTime: time)
             } else {
-                let transition = max(zoomTransitionS, 1e-6)
+                let transition = max(openingEndsS - wideEndS, 1e-6)
                 let blend = Self.smoothstep(min(max((time - wideEndS) / transition, 0), 1))
                 // **Contained, not a plain lerp** (2026-09-01): beat 2 frames the
                 // trip's own local journey now, so the closing zoom has a real

@@ -174,24 +174,17 @@ extension CameraPath {
         // the eye cannot tell apart, so the title simply rides the destination
         // frame and the film opens where it stays.
         let countryAddsContext = countryFrame.spanM > regional.spanM * config.openingCollapseZoomRatio
-        let wanted = countryAddsContext
-            ? [
-                // **The beat's length IS the card's length.** Chiu's rule is that
-                // the cut lands as the title leaves: a cut under the card reads as
-                // a film convention, a cut a moment after it reads as a bug.
-                // Written as `titleCardS` rather than checked against
-                // `opening_country_s`, so the two cannot drift apart at all.
-                Beat(frame: countryFrame, holdS: config.titleCardS),
-                Beat(frame: regional, holdS: config.openingRegionalS)
-            ]
-            // The title always belongs to the first beat, whichever that is.
-            : [Beat(frame: regional, holdS: config.titleCardS)]
-        // `transitionS: 0` **is the cut** (Chiu 2026-08-31). Beat 1 is chrome —
-        // the viewer reads a title card as a card, not as a camera — so a cut out
-        // of it costs no continuity. Everything after it is the film proper and
-        // obeys continuity in full; `CameraPath.titleCutS` names the instant so
-        // the gate can scan from it rather than excuse a frame range.
-        return Prologue(beats: collapse(wanted, config: config), transitionS: 0)
+        // **One held beat under the title, then one continuous zoom into the
+        // journey** (Chiu 2026-09-29, reopening 2026-08-31's cut by name:
+        // 「為什麼不是直接從開始的大畫面zoom in到起始點」). The cut was there because
+        // the frame after the card divided the body's span; since the scale comes
+        // from the trip's own towns (ADR file 2026-09-28) nothing depends on it, and
+        // a jump three seconds in read as wrong. The regional beat went with the
+        // cut: held between two zooms it would be a stutter mid-move. Its seconds
+        // go to the closing zoom (`OpeningPlan.closingZoomS`), so the opening is
+        // as long as the plan reserves. The beat's length IS the card's length.
+        let first = countryAddsContext ? countryFrame : regional
+        return Prologue(beats: [Beat(frame: first, holdS: config.titleCardS)], transitionS: 0)
     }
 
     /// A `RecapBounds` in the camera math's own bounds type.
@@ -338,7 +331,7 @@ extension CameraPath {
         } ?? false
         let opening = builtPrologue == nil
             ? 0
-            : min(wideEnd + (closingZoomMoves ? config.zoomTransitionS : 0), total)
+            : min(wideEnd + (closingZoomMoves ? closingZoomS(config) : 0), total)
 
         // The closing reveal is its own beat after the journey, never a zoom
         // during it: the body zooms only in reframe beats (ADR 2026-09-24).
@@ -349,6 +342,13 @@ extension CameraPath {
             prologue: builtPrologue, wideEndS: wideEnd,
             openingEndsS: opening, revealS: reveal, journeyEndS: journeyEnd
         )
+    }
+
+    /// The closing zoom from the card's frame into the journey: the transition
+    /// plus the regional beat it replaced (Chiu 2026-09-29), which is what the
+    /// duration plan reserves for the opening after the card.
+    static func closingZoomS(_ config: TrackingConfig.Export) -> Double {
+        config.zoomTransitionS + config.openingRegionalS
     }
 
     /// Interpolation between two framings.

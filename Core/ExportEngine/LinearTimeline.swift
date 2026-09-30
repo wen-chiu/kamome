@@ -172,20 +172,23 @@ public struct LinearTimeline {
         // camera needs them before it can size the body span.
         let crossingRanges = Self.crossingVertexRanges(in: trip.legs)
 
-        guard let path = CameraPath(
-            route: routePoints, stops: stopPoints, config: config,
-            stopHoldsS: stopHolds,
-            totalDurationS: plan?.totalS ?? pacing.fixedTotalS,
-            establishing: establishing,
-            openingS: plan?.openingS ?? 0,
-            // The finale gets the frame to itself: the journey lands before the
-            // end card appears, so the closing panel never prints across a stop's
-            // photo card. Without this the last hold ran to the final frame and
-            // the two overlapped.
-            journeyEndsBeforeS: plan.map { _ in config.endCardS } ?? 0,
-            crossingVertexRanges: crossingRanges,
-            openingFlightFrame: flightFrame
-        ) else { return nil }
+        func camera(_ totalS: Double?, _ config: TrackingConfig.Export, _ framing: CameraPath.Framing?) -> CameraPath? {
+            CameraPath(
+                route: routePoints, stops: stopPoints, config: config, stopHoldsS: stopHolds,
+                totalDurationS: totalS, establishing: establishing, openingS: plan?.openingS ?? 0,
+                // The finale gets the frame to itself: the journey lands before the
+                // end card appears, so the closing panel never prints across a stop's
+                // photo card. Without this the last hold ran to the final frame and
+                // the two overlapped.
+                // Then the whole route, revealed, holds before the card (Chiu 2026-09-29).
+                journeyEndsBeforeS: plan.map { _ in config.endCardS + config.endRouteHoldS } ?? 0,
+                crossingVertexRanges: crossingRanges, openingFlightFrame: flightFrame,
+                stopPlaces: trip.stops.map(\.locality), framing: framing
+            )
+        }
+        guard let planned = camera(plan?.totalS ?? pacing.fixedTotalS, config, nil) else { return nil }
+        // Travel is then trimmed to what its windows need (ADR file 2026-09-28).
+        let path = Self.earningTravel(planned, plan: plan, stopHoldsS: stopHolds, config: config) { camera($0, $1, $2) }
 
         self.path = path
         durationS = path.durationS

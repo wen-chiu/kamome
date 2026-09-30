@@ -189,8 +189,9 @@ struct RecapView: View {
     /// **The length is said now** (Chiu 2026-09-27, reopening ADR 2026-09-26
     /// (c) item 7). It was left out because the timeline needs a composed trip;
     /// the length does not — it is the timeline's own plan over these decks
-    /// (`RecapComposer.estimatedFilmS`). "About", because a type-2 film loses
-    /// its origin's stops after routing and can only come out shorter.
+    /// (`RecapComposer.estimatedFilmS`), then the export's own timeline once it
+    /// is measured (Chiu 2026-09-29). "About", because a trip still routing is
+    /// measured on straight legs, and the export routes before it builds.
     @ViewBuilder
     private var filmSummary: some View {
         if let filmPhotos {

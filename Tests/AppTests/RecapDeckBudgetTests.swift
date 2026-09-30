@@ -226,6 +226,13 @@ final class RecapDeckBudgetTests: XCTestCase {
     /// Eight-photo decks no longer occur on the shipped path — highlights cap a
     /// deck at five — and this builder passes no weighting, which is why it
     /// still exercises them.
+    ///
+    /// **Re-baselined a fourth time 2026-09-29, [4, 8, 8, 8] → [5, 8, 8, 8]**
+    /// (Chiu: the time the road gives up goes to the photographs and to a
+    /// shorter film, ADR file 2026-09-28). The plan adds the park ramps on top of
+    /// each dwell, so `cappedHolds` had been scaling every stop down ~12 %; earned
+    /// travel now gives that back out of the road's saving, and the first stop
+    /// shows one more photograph. More shown, not fewer — and the rule below holds.
     func testASmallTripShowsWholeDecks() async throws {
         let config = AppConfig.loadOrDie()
         let recap = try await trip(stops: 4, photosPerStop: 8, config: config)
@@ -244,7 +251,7 @@ final class RecapDeckBudgetTests: XCTestCase {
         ))
         XCTAssertEqual(shown.count, 4)
         XCTAssertEqual(
-            shown, [4, 8, 8, 8],
+            shown, [5, 8, 8, 8],
             "every deck the film is given is paid for; only the first stop pays the dwell scale"
         )
         XCTAssertTrue(
