@@ -1,9 +1,10 @@
 import Foundation
 import KamomeImportKit
 import KamomePersistence
+import KamomeTripComposer
 
-/// The day chips' arithmetic and what each day shows. Its own file because the
-/// model's body is held to 250 lines under SwiftLint.
+/// The day chips' arithmetic, what each day shows, and the lines it draws. Its
+/// own file because the model's body is held to 250 lines under SwiftLint.
 extension TripDetailModel {
     /// What days are counted by: each stop's own zone (`TripClock`, arch review
     /// 2026-09-26), so chip N is the Nth local date of the trip — the same count
@@ -39,5 +40,22 @@ extension TripDetailModel {
         guard let detail else { return [] }
         guard let selectedDay else { return detail.segments }
         return detail.segments.filter { dayIndex(of: $0.segment.startedAt) == selectedDay }
+    }
+
+    /// The segment's line as `refresh()` thinned it; empty until the first read.
+    func displayPolyline(for segment: SegmentRecord) -> [Simplifier.Point] {
+        displayPolylines[segment.id] ?? []
+    }
+
+    /// Douglas-Peucker per segment, keyed by segment id. Pure, so `refresh()`
+    /// runs it off the main thread beside the read.
+    static func thinned(
+        _ segments: [(segment: SegmentRecord, points: [TrackpointRecord])], epsilonM: Double
+    ) -> [String: [Simplifier.Point]] {
+        Dictionary(uniqueKeysWithValues: segments.map { item in
+            (item.segment.id, Simplifier.douglasPeucker(
+                item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, epsilonM: epsilonM
+            ))
+        })
     }
 }
