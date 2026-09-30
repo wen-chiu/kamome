@@ -55,10 +55,22 @@ extension TrackingConfig {
         /// few kilobytes an export (INFERRED); 0 keeps none. Bookkeeping, not
         /// pixels.
         public let keptExportLogs: Int
+        /// How long the export draws before the sheet says how long is left
+        /// (Chiu 2026-09-30, issue #151): until then it shows the percentage
+        /// alone, because the first stations are too few to extrapolate from.
+        /// 60 s is Chiu's "the first minute"; a figure for how many stations a
+        /// minute holds on a phone is owed by D3 (INFERRED). Words, not pixels.
+        public let estimateWarmupS: Double
+        /// How far, in whole minutes, a new estimate may exceed the one on
+        /// screen before the screen raises it. A falling estimate is always
+        /// shown; a rising one only past this, so a slow station does not make
+        /// the number flicker up and back (`RecapExportTimeLeft`). INFERRED.
+        public let estimateRiseToleranceMin: Int
 
         public init(
             prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double, mapCacheMb: Int,
-            coalesceTileRequests: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int, keptExportLogs: Int
+            coalesceTileRequests: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int, keptExportLogs: Int,
+            estimateWarmupS: Double, estimateRiseToleranceMin: Int
         ) {
             self.prefetchDepth = prefetchDepth
             self.compositeConcurrency = compositeConcurrency
@@ -68,6 +80,8 @@ extension TrackingConfig {
             self.terrainMaxAgeS = terrainMaxAgeS
             self.tileMemoryMb = tileMemoryMb
             self.keptExportLogs = keptExportLogs
+            self.estimateWarmupS = estimateWarmupS
+            self.estimateRiseToleranceMin = estimateRiseToleranceMin
         }
 
         /// For hand-built test configs only, like `targetZoomRatio`'s default:
@@ -75,7 +89,8 @@ extension TrackingConfig {
         /// loudly. Mirrors the shipped values.
         public static let handBuilt = ExportPipeline(
             prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256,
-            coalesceTileRequests: true, terrainMaxAgeS: 2_592_000, tileMemoryMb: 64, keptExportLogs: 20
+            coalesceTileRequests: true, terrainMaxAgeS: 2_592_000, tileMemoryMb: 64, keptExportLogs: 20,
+            estimateWarmupS: 60, estimateRiseToleranceMin: 1
         )
 
         enum CodingKeys: String, CodingKey {
@@ -87,6 +102,8 @@ extension TrackingConfig {
             case terrainMaxAgeS = "terrain_max_age_s"
             case tileMemoryMb = "tile_memory_mb"
             case keptExportLogs = "kept_export_logs"
+            case estimateWarmupS = "estimate_warmup_s"
+            case estimateRiseToleranceMin = "estimate_rise_tolerance_min"
         }
     }
 }

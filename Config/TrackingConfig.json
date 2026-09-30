@@ -208,7 +208,9 @@
       "coalesce_tile_requests": true,
       "terrain_max_age_s": 2592000,
       "tile_memory_mb": 64,
-      "kept_export_logs": 20
+      "kept_export_logs": 20,
+      "estimate_warmup_s": 60,
+      "estimate_rise_tolerance_min": 1
     }
   }
 }

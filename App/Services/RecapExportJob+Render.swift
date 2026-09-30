@@ -128,12 +128,12 @@ extension RecapExportJob {
         // the number that decides how long the export runs. Logged first so a
         // film that is going to cost half an hour says so at second one rather
         // than at minute thirty.
-        let stationCount = RecapRenderLoop(
+        let stations = RecapRenderLoop(
             timeline: plan.timeline, compositor: compositor,
             provider: plan.provider, config: plan.config
-        ).stations.count
+        ).stations
         KamomeLog.recap.notice(
-            "render plan: \(stationCount) stations for \(plan.timeline.frameCount) frames"
+            "render plan: \(stations.count) stations for \(plan.timeline.frameCount) frames"
         )
         // What the phone brought to this render, and — at every exit — what
         // the map renderer did with it (`RecapExportJob+Diagnostics`).
@@ -145,6 +145,12 @@ extension RecapExportJob {
         let gifURL = request.format == .gif ? scratch.appendingPathComponent("kamome-recap-\(stamp).gif") : nil
         try? FileManager.default.removeItem(at: videoURL)
 
+        // The same plan is what the sheet counts down (Chiu 2026-09-30): the
+        // export's pace is stations per second, not frames (`RecapExportTimeLeft`).
+        channel.timeLeft(RecapExportTimeLeft(
+            stationEnds: stations.map(\.frames.upperBound),
+            frameCount: plan.timeline.frameCount, pipeline: plan.config.pipeline
+        ))
         let started = ContinuousClock.now
         do {
             let output = try await runDetached(
