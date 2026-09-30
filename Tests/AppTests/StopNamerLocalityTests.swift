@@ -46,10 +46,21 @@ final class StopNamerLocalityTests: XCTestCase {
         try XCTUnwrap(try repository.detail(tripId: tripId)).stops
     }
 
-    /// Town-only work is not in `progress`, so there is nothing to wait on but
-    /// time: two stops, a 10 ms throttle, and a stub that answers next turn.
-    private func settle() async {
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
+    /// Town-only work is not in `progress`, so this waits on its result instead:
+    /// until no stop still needs its town. It used to sleep a fixed 1 s, which
+    /// failed under load when another `xcodebuild` shared the Mac (#143).
+    ///
+    /// Polled on the main actor, where the stub answers and `StopNamer` writes,
+    /// so a check never lands halfway through one answer's writes: a name
+    /// rewritten in the same callback as the town is still caught. The ceiling
+    /// is generous rather than tight. Reaching it returns quietly, and the test's
+    /// own assertions then fail and say what was missing.
+    @MainActor
+    private func settle(_ repository: TripRepository, _ tripId: String) async throws {
+        let deadline = Date.now.addingTimeInterval(10)
+        while try stops(repository, tripId).contains(where: StopNamer.needsLocality), Date.now < deadline {
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
     }
 
     func testNamingAStopAlsoRecordsItsTown() async throws {
@@ -81,7 +92,7 @@ final class StopNamerLocalityTests: XCTestCase {
             repository: repository, geocoder: geocoder
         )
         namer.fillMissingLocalities(try stops(repository, tripId))
-        await settle()
+        try await settle(repository, tripId)
         let filled = try stops(repository, tripId)
         XCTAssertTrue(filled.allSatisfy { $0.name == "My café" }, "a town lookup rewrote a name")
         XCTAssertTrue(filled.allSatisfy { $0.locality == "Selfoss" }, "\(filled.map(\.locality))")
@@ -99,7 +110,7 @@ final class StopNamerLocalityTests: XCTestCase {
             repository: repository, geocoder: TownGeocoder(town: nil)
         )
         namer.fillMissingLocalities(try stops(repository, tripId))
-        await settle()
+        try await settle(repository, tripId)
         let asked = try stops(repository, tripId)
         XCTAssertTrue(asked.allSatisfy { $0.locality == "" }, "\(asked.map(\.locality))")
         XCTAssertTrue(asked.allSatisfy { !StopNamer.needsLocality($0) }, "an empty answer is still an answer")
