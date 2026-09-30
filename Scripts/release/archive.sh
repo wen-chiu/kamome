@@ -41,6 +41,29 @@ done
 
 team=${KAMOME_TEAM_ID:-$(sed -n 's/^ *DEVELOPMENT_TEAM: *//p' project.yml | head -1)}
 [ -n "$team" ] || { kamome_fail "no DEVELOPMENT_TEAM in project.yml and no KAMOME_TEAM_ID"; exit 1; }
+# The team must own at least one valid signing identity in the keychain, or
+# xcodebuild fails minutes later with "No Account for Team". A certificate's
+# team is its subject's OU. Only identities `security find-identity -v` calls
+# valid count: an expired or key-less certificate cannot sign.
+valid=$(security find-identity -v -p codesigning 2>/dev/null | sed -n 's/^ *[0-9]*) \([0-9A-F]\{40\}\) .*/\1/p' | tr '\n' ' ')
+owned=$(security find-certificate -a -Z -p 2>/dev/null | awk -v valid="$valid" '
+  BEGIN { n = split(valid, v, " "); for (i = 1; i <= n; i++) ok[v[i]] = 1 }
+  /^SHA-1 hash:/ { keep = ($3 in ok) }
+  /BEGIN CERTIFICATE/ { pem = "" }
+  keep { pem = pem $0 "\n" }
+  keep && /END CERTIFICATE/ {
+    cmd = "openssl x509 -noout -subject -nameopt multiline"
+    printf "%s", pem | cmd; close(cmd)
+  }' | sed -n 's/^ *organizationalUnitName *= *//p' | sort -u | paste -sd ' ' -)
+case " $owned " in
+  *" $team "*) ;;
+  *)
+    kamome_fail "team $team has no valid signing certificate on this Mac (certificates found for: ${owned:-none})"
+    kamome_info "Set DEVELOPMENT_TEAM in project.yml to your team (developer.apple.com → Membership),"
+    kamome_info "never in Xcode's Signing pane — xcodegen overwrites that. If the team is right,"
+    kamome_info "sign in to Xcode → Settings → Accounts with the Apple ID on that team."
+    exit 1 ;;
+esac
 
 if [ -n "$(git status --porcelain)" ]; then
   kamome_fail "uncommitted changes — the build number is the commit count and would name code that is not in any commit"
