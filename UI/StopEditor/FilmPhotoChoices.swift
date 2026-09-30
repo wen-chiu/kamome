@@ -29,6 +29,13 @@ final class FilmPhotoChoices {
     /// enough to fit either way has nothing to choose between.
     private(set) var lengthsDiffer = false
 
+    /// The film's length as the export will build it, per photo-card setting
+    /// (Chiu 2026-09-29) — measured off the main thread after each change, and
+    /// absent until then. Only the export sheet asks (`measureLength`).
+    private(set) var measuredS: [Bool: Double] = [:]
+    private var measuresLength = false
+    private var measuring: Task<Void, Never>?
+
     let tripId: String
     private let repository: TripRepository
     private let config: TrackingConfig
@@ -83,6 +90,36 @@ final class FilmPhotoChoices {
         let other: FilmLength = length == .short ? .standard : .short
         lengthsDiffer = detail.map { RecapComposer.filmPlan(detail: $0, config: config, length: other).decks != decks }
             ?? false
+        if measuresLength { measure() }
+    }
+
+    /// Starts measuring the film's length after every change (the export sheet).
+    func measureLength() {
+        measuresLength = true
+        measure()
+    }
+
+    /// Builds the export's own timeline for both photo-card settings, in the
+    /// background, and keeps the lengths. A change while it runs cancels it.
+    private func measure() {
+        measuredS = [:]
+        measuring?.cancel()
+        guard let detail else { return }
+        let (config, length) = (config, length)
+        measuring = Task { [weak self] in
+            let measured = await Task.detached(priority: .userInitiated) { () -> [Bool: Double] in
+                var measured: [Bool: Double] = [:]
+                for photosEnabled in [true, false] where !Task.isCancelled {
+                    guard let film = RecapComposer.filmComposition(
+                        detail: detail, config: config, photosEnabled: photosEnabled, length: length
+                    ) else { continue }
+                    measured[photosEnabled] = RecapComposer.measuredFilmS(trip: film.trip, config: config.export)
+                }
+                return measured
+            }.value
+            guard !Task.isCancelled else { return }
+            self?.measuredS = measured
+        }
     }
 
     /// Makes the next film `length` long, and remembers it.
@@ -93,10 +130,14 @@ final class FilmPhotoChoices {
         reload()
     }
 
-    /// **How long the film will run** (Chiu 2026-09-27) — the timeline's own
-    /// plan over the decks above (`RecapComposer.estimatedFilmS`). With photo
-    /// cards off every presented stop shows none, as the export composes it.
+    /// **How long the film will run** (Chiu 2026-09-27) — measured off the
+    /// export's own timeline once that is done (`measuredS`, Chiu 2026-09-29),
+    /// and until then the plan over the decks above
+    /// (`RecapComposer.estimatedFilmS`), which travel earned by the screen can
+    /// only shorten. With photo cards off every presented stop shows none, as
+    /// the export composes it.
     func estimatedFilmS(photosEnabled: Bool) -> Double {
+        if let measured = measuredS[photosEnabled] { return measured }
         let counts = filmStops.map { photosEnabled ? filmDeck(for: $0.id).count : 0 }
         return RecapComposer.estimatedFilmS(photoCounts: counts, config: config)
     }

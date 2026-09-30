@@ -13,7 +13,7 @@ extension TrackingConfig.Export {
             // the film every such config was written against. The JSON key is required.
             cameraAreaSplitRatio: Double = .infinity,
             // Off for hand-built test configs, like the split ratio above.
-            cameraContext: CameraContextConfig = .off,
+            cameraContext: CameraContextConfig = .off, travelPacing: TravelPacingConfig = .off, endRouteHoldS: Double = 0,
             zoomTransitionS: Double,
             actSplitKm: Double, crossingBeatS: Double, crossingApexPadding: Double,
             // Defaulted for the same reason `targetZoomRatio` is: the synthesized
@@ -54,7 +54,7 @@ extension TrackingConfig.Export {
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
             self.targetZoomRatio = targetZoomRatio; self.cameraAreaSplitRatio = cameraAreaSplitRatio
-            self.cameraContext = cameraContext
+            self.cameraContext = cameraContext; self.travelPacing = travelPacing; self.endRouteHoldS = endRouteHoldS
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
             self.departureStopMaxPhotos = departureStopMaxPhotos; self.followHeadingUp = followHeadingUp

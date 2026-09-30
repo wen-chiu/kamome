@@ -35,9 +35,11 @@ public extension TrackingConfig {
         /// beat the viewer sees at t=0 — so the ratio holds whatever the geometry.
         /// Acceptable range 2.25–2.75x; 2.5 is the midpoint.
         public let targetZoomRatio: Double
-        /// Camera areas (ADR 2026-09-24) and the context floor under them (ADR 2026-09-24 (e)).
+        /// Camera areas (ADR 2026-09-24), the context floor under them (ADR 2026-09-24 (e)), earned travel (2026-09-28).
         public let cameraAreaSplitRatio: Double
-        public let cameraContext: CameraContextConfig
+        public let cameraContext: CameraContextConfig; public let travelPacing: TravelPacingConfig
+        /// The whole route, revealed, held before the end card (Chiu 2026-09-29: 多停1~2秒).
+        public let endRouteHoldS: Double
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
         /// Split the film into a new fixed camera frame when consecutive route

@@ -61,6 +61,17 @@ extension CameraPath {
         let journeyEndsBeforeS: Double
         let openingFlightFrame: CameraFrame?
         let config: TrackingConfig.Export
+        /// A framing already decided on another clock — earned travel's rebuild
+        /// (ADR file 2026-09-28). nil decides it here, as always.
+        var framing: Framing?
+        /// Each stop's town (`RecapTrip.Stop.locality`), for the next-town floor.
+        var stopPlaces: [String?] = []
+    }
+
+    /// The body span and the areas: what the camera frames, apart from when.
+    struct Framing {
+        let bodySpanM: Double
+        let areaPlan: AreaPlan?
     }
 
     struct AssembledOpening {
@@ -93,7 +104,7 @@ extension CameraPath {
         // The destination's own local journey is what the body span divides on a
         // type-2 film, whose one opening beat spans two countries.
         let destination = openingRoute(route: route, crossings: request.crossingVertexRanges)
-        let span = bodySpan(BodySpanRequest(
+        let span = request.framing?.bodySpanM ?? bodySpan(BodySpanRequest(
             prologue: builtPrologue, route: route, anchors: request.anchors, totalM: request.totalM,
             crossings: crossings, stopHoldsS: request.stopHoldsS,
             totalDurationS: request.totalDurationS, establishing: request.establishing, config: config,
@@ -105,10 +116,10 @@ extension CameraPath {
 
         // The areas, when there is more than one: then the first area's span is
         // what the opening hands to, and the one-span `span` above is not used.
-        let areaPlan = AreaPlan.make(AreaRequest(
+        let areaPlan = request.framing.map(\.areaPlan) ?? AreaPlan.make(AreaRequest(
             route: route, cumulativeM: request.cumulativeM, anchors: request.anchors,
             crossings: crossings, establishing: request.establishing, config: config,
-            durationS: request.totalDurationS,
+            durationS: request.totalDurationS, places: request.stopPlaces,
             timeline: { reframes, areas in
                 buildTimelineWithReframes(
                     anchors: request.anchors, totalM: request.totalM, config: config,

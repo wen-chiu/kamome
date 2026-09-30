@@ -66,7 +66,46 @@ final class RecapReviewGeocoder: StopGeocoding {
         }
     }
 
+    /// Town and time zone as well as the name (ADR file 2026-09-28: the frame
+    /// shows the next town, so a desk render needs the towns). Cached beside the
+    /// names, in `local/<fixture>-places.json`, gitignored like them; a stop the
+    /// places cache has not seen is asked once more, even if its name is cached.
+    func reverseGeocodeZoned(
+        lat: Double, lon: Double, completion: @escaping (String?, String?, String?, Error?) -> Void
+    ) {
+        let key = key(lat: lat, lon: lon)
+        if let place = places[key] {
+            hits += 1
+            DispatchQueue.main.async { completion(place.name, place.locality, place.zone, nil) }
+            return
+        }
+        misses += 1
+        live.reverseGeocodeZoned(lat: lat, lon: lon) { [weak self] name, locality, zone, error in
+            if let self, let name {
+                self.cache[key] = name
+                self.places[key] = Place(name: name, locality: locality, zone: zone)
+                self.persist()
+            }
+            completion(name, locality, zone, error)
+        }
+    }
+
+    private struct Place: Codable {
+        let name: String
+        let locality: String?
+        let zone: String?
+    }
+
+    private var placesURL: URL {
+        cacheURL.deletingLastPathComponent()
+            .appendingPathComponent(cacheURL.lastPathComponent.replacingOccurrences(of: "-names", with: "-places"))
+    }
+
+    private lazy var places: [String: Place] = (try? Data(contentsOf: placesURL))
+        .flatMap { try? JSONDecoder().decode([String: Place].self, from: $0) } ?? [:]
+
     private func persist() {
+        if let data = try? JSONEncoder().encode(places) { try? data.write(to: placesURL) }
         guard let data = try? JSONEncoder().encode(cache) else { return }
         try? FileManager.default.createDirectory(
             at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true

@@ -53,18 +53,24 @@ final class CameraPathAreasTests: XCTestCase {
         }
     }
 
+    /// Days in a town: its loop driven four times, each lap a street further
+    /// north so a stop on a later lap is not found on the first. A zoom into a
+    /// town is earned by driving in it (ADR file 2026-09-28), and one lap is not
+    /// a day there.
+    private func days(_ loop: [CameraPath.Point]) -> [CameraPath.Point] {
+        (0..<4).flatMap { lap in loop.map { CameraPath.Point(lat: $0.lat + Double(lap) * 0.0005, lon: $0.lon) } }
+    }
+
     /// Town A, a 40 km drive east, town B — the shape Chiu described: days in a
     /// town, one drive, days in another.
     private func townDriveTown() -> (route: [CameraPath.Point], stops: [CameraPath.Point]) {
-        let townA = town(lat: 24.80, lon: 125.28)
+        let townA = days(town(lat: 24.80, lon: 125.28))
         let start = townA[townA.count - 1]
         let drive = (1...20).map { CameraPath.Point(lat: start.lat, lon: start.lon + Double($0) * 0.02) }
         let end = drive[drive.count - 1]
-        let townB = town(lat: end.lat, lon: end.lon - 0.006).map {
-            CameraPath.Point(lat: $0.lat, lon: $0.lon)
-        }
+        let townB = days(town(lat: end.lat, lon: end.lon - 0.006))
         let route = townA + drive + townB
-        let stops = [townA[0], townA[4], townA[8], townA[12], townB[0], townB[6], townB[12]]
+        let stops = [townA[0], townA[4], townA[30], townA[51], townB[0], townB[26], townB[51]]
         return (route, stops)
     }
 
@@ -93,6 +99,116 @@ final class CameraPathAreasTests: XCTestCase {
             * config.wideSpanPadding / config.targetZoomRatio
         XCTAssertLessThan(first, oneSpan / 4, "a town must not be framed at the trip's one span")
         XCTAssertEqual(line.reframeArcs.count, 2, "one change of scale at each end of the drive")
+    }
+
+    /// **A long drive is never framed at a town's scale** (Chiu 2026-09-28, the
+    /// New Zealand film). Framed at its own scale a 180 km drive crosses its
+    /// window in a few seconds — under the two-beat minimum — and the brief-area
+    /// merge used to hand it to the town beside it, band and all: the drive was
+    /// then shown at town scale and, paced by screen distance, took several
+    /// times as long. A brief area is now never absorbed into a neighbour more
+    /// than `target_zoom_ratio` tighter than itself.
+    func testALongDriveKeepsItsOwnWideFrame() throws {
+        let config = try shippedWithoutContext()
+        // The New Zealand shape: two towns where the film stops long (photo
+        // decks) and drives little, a long drive between them, and later days
+        // driven around a third town that take most of the travel clock — so
+        // the drive's own frame crosses in a couple of seconds, under the
+        // two-beat minimum the old rule measured.
+        let townA = town(lat: 24.80, lon: 125.28)
+        let start = townA[townA.count - 1]
+        let drive = (1...60).map { CameraPath.Point(lat: start.lat, lon: start.lon + Double($0) * 0.03) }
+        let end = drive[drive.count - 1]
+        let townB = town(lat: end.lat, lon: end.lon - 0.006)
+        let townC = days(days(town(lat: end.lat + 0.03, lon: end.lon)))
+        let route = townA + drive + townB + townC
+        let stops = [townA[0], townA[4], townA[8], townA[12], townB[0], townB[6], townB[12],
+                     townC[60], townC[120], townC[180], townC[townC.count - 1]]
+        let line = try XCTUnwrap(CameraPath(
+            route: route, stops: stops, config: config, stopHoldsS: Array(repeating: 3, count: stops.count),
+            totalDurationS: 60
+        ))
+
+        let driveM = Geo.distanceM(latA: start.lat, lonA: start.lon, latB: end.lat, lonB: end.lon)
+        XCTAssertGreaterThan(
+            try XCTUnwrap(line.areaSpansM.max()), driveM / 4,
+            "the \(Int(driveM / 1000)) km drive is framed at \(line.areaSpansM.map { Int($0) }) m"
+        )
+        // And the frame the drive is actually shown in, halfway along it.
+        let longest = try XCTUnwrap(line.timeline.max { lhs, rhs in
+            func metres(_ entry: CameraPath.TimelineEntry) -> Double {
+                if case let .travel(fromM, toM) = entry.phase { return toM - fromM }
+                return 0
+            }
+            return metres(lhs) < metres(rhs)
+        })
+        let midDrive = line.cameraFrame(atTime: (longest.startS + longest.endS) / 2).spanM
+        XCTAssertGreaterThan(midDrive, driveM / 4, "the drive plays at \(Int(midDrive)) m")
+    }
+
+    /// **A road trip is framed at one scale set by its own towns, and a place
+    /// only passed through is not zoomed into** (Chiu 2026-09-29, the New Zealand
+    /// film: an airport and a mall in one city, then a lake where the geocoder
+    /// names one of three stops a "Ward" — 「基本上沒有市區行程，拉近又拉遠很浪費時間」,
+    /// 「看不出來你在哪裡」). The frame holds the two nearest other towns, so every
+    /// town is seen with its neighbours, and nothing zooms in or out.
+    func testARoadTripIsFramedByItsOwnTownsWithoutZooming() throws {
+        let config = try shipped()
+        func leg(from start: CameraPath.Point, steps: Int, dLat: Double, dLon: Double) -> [CameraPath.Point] {
+            (1...steps).map { CameraPath.Point(lat: start.lat + Double($0) * dLat, lon: start.lon + Double($0) * dLon) }
+        }
+        let airport = CameraPath.Point(lat: -43.49, lon: 172.53)
+        let mall = leg(from: airport, steps: 8, dLat: 0, dLon: -0.011)
+        let toLake = leg(from: mall[mall.count - 1], steps: 60, dLat: -0.012, dLon: -0.025)
+        let shore = leg(from: toLake[toLake.count - 1], steps: 10, dLat: 0, dLon: -0.002)
+        let toTwizel = leg(from: shore[shore.count - 1], steps: 20, dLat: -0.02, dLon: -0.005)
+        let toWanaka = leg(from: toTwizel[toTwizel.count - 1], steps: 30, dLat: -0.012, dLon: -0.025)
+        let route = [airport] + mall + toLake + shore + toTwizel + toWanaka
+        let lake = toLake[toLake.count - 1], twizel = toTwizel[toTwizel.count - 1]
+        let stops = [airport, mall[mall.count - 1], lake, lake, shore[shore.count - 1], twizel, toWanaka[toWanaka.count - 1]]
+        let towns = ["Christchurch", "Christchurch", "Lake Tekapo", "Lake Tekapo", "Pukaki Ward", "Twizel", "Wānaka"]
+        let line = try XCTUnwrap(CameraPath(
+            route: route, stops: stops, config: config, totalDurationS: 60, stopPlaces: towns
+        ))
+        XCTAssertTrue(line.reframeArcs.isEmpty, "zoomed in and out at \(line.areaSpansM.map { Int($0) }) m")
+        let lakeToTwizel = Geo.distanceM(latA: lake.lat, lonA: lake.lon, latB: twizel.lat, lonB: twizel.lon)
+        XCTAssertGreaterThan(try XCTUnwrap(line.areaSpansM.min()), lakeToTwizel,
+                             "the lake is framed without its neighbouring towns")
+    }
+
+    /// **A trip that is all one town is framed exactly as before** (Chiu
+    /// 2026-09-29: 宮古島市區日會比以前寬 這也不合理). Miyakojima geocodes every
+    /// stop to one municipality: there is no next town to show, so the towns
+    /// change nothing — every frame is the one the trip gets with no names at all.
+    func testATripOfOneTownIsFramedAsWithoutTowns() throws {
+        let config = try shipped()
+        let trip = townDriveTown()
+        let named = try XCTUnwrap(CameraPath(
+            route: trip.route, stops: trip.stops, config: config, totalDurationS: 60,
+            stopPlaces: trip.stops.map { _ in "Miyakojima" }
+        ))
+        let unnamed = try XCTUnwrap(CameraPath(route: trip.route, stops: trip.stops, config: config, totalDurationS: 60))
+        XCTAssertEqual(named.areaSpansM, unnamed.areaSpansM)
+        for frame in stride(from: 0, to: named.frameCount, by: 11) {
+            let time = Double(frame) / Double(config.fps)
+            XCTAssertEqual(named.cameraFrame(atTime: time), unnamed.cameraFrame(atTime: time), "t=\(time)")
+        }
+    }
+
+    /// **Days driven around a town still earn their zoom** on a road trip: a town
+    /// that fits inside the journey's frame and is driven around for longer than
+    /// the zoom costs keeps its own, tighter framing (「除非是使用者有市區行程」).
+    func testATownDrivenAroundKeepsItsZoomOnARoadTrip() throws {
+        let config = try shipped()
+        let trip = townDriveTown()
+        let towns = ["A", "A", "A", "A", "B", "B", "B"]
+        let far = CameraPath.Point(lat: trip.route[trip.route.count - 1].lat - 0.5, lon: trip.route[trip.route.count - 1].lon)
+        let line = try XCTUnwrap(CameraPath(
+            route: trip.route + [far], stops: trip.stops + [far], config: config, totalDurationS: 60,
+            stopPlaces: towns + ["C"]
+        ))
+        let widest = try XCTUnwrap(line.areaSpansM.max())
+        XCTAssertLessThan(try XCTUnwrap(line.areaSpansM.first), widest, "the town days lost their zoom: \(line.areaSpansM)")
     }
 
     /// **The span changes only inside a reframe beat** — never while the vehicle
