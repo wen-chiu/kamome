@@ -51,3 +51,10 @@ Chiu, 2026-09-30: *build it, as a live estimate, not a pre-start prediction.*
   to average over. Settled by one phone export on a `main` build (#112, D2).
 - UNKNOWN: how far the whole-run average lags a thermal slowdown on a phone. The
   same D2 run, read against the sheet, settles it.
+- VERIFIED on the simulator (2026-09-30, one cold run, 57 stations, 155.3 s):
+  where the render is **not** snapshot-bound (wait 52 s of 155 s; composite and
+  encode dominate), stations are the wrong unit. At 86% of frames the sheet said
+  "about 2 minutes" and the film finished within about a minute. D2 on the phone
+  was snapshot-bound (wait 522 s of 746 s), which is the case this design is for.
+  If the phone disagrees, the fix is to blend the frame and station fractions,
+  not to go back to frames alone.
