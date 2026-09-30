@@ -271,7 +271,9 @@ a known limit rather than left implicit in a mismatch between two numbers. The
 fallback marker is the first token whose entire job is how it reads against the
 finished frame, so it is where the gap first bites.
 
-### 6d. ⚠️ KNOWN GAP — nothing asserts the end card's brand mark
+### 6d. ✅ CLOSED 2026-09-29 — the end card's brand mark is asserted
+
+`RecapEndCardMarkTests` (#124) renders the shipped end card in both appearances and holds the mark to the bird's shape against a baseline agreed by eye; swapping `drawMark` to `.seagullBadge` makes it fail. What follows is the record of the gap.
 
 **The same shape as 6c, and found by the same change.** The near-miss in finding
 5b — that `drawSeagull` is also the end card's brand mark, so restyling it would

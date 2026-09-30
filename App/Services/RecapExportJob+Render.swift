@@ -319,8 +319,9 @@ extension RecapExportJob {
     ///    **not to be silent**, correcting an earlier INFERRED claim that the
     ///    snapshotter would complete with blank patches. With the first tile of a
     ///    frame served and the rest refused, with connections cut after two
-    ///    tiles, and with one tile cached and the host then down, every case
-    ///    ended in `MLNErrorDomain` code 6 and no image. A mid-export network
+    ///    tiles, every case ended in `MLNErrorDomain` code 6 and no image; so did
+    ///    one tile cached and the host then down, measured by an opt-in probe
+    ///    only (`KAMOME_TILE_CACHE_PROBE`, which once stalled a full run). A mid-export network
     ///    drop therefore fails the export like (3) rather than shipping a film
     ///    with blank map. Not measured: a *slow* host (timeouts) and a tile the
     ///    server answers 200 with a corrupt body.
