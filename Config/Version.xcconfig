@@ -13,5 +13,5 @@
 // count" phase in project.yml). It rises with every commit on main, so App Store
 // Connect never sees a repeat. The value below only fills the build setting.
 
-MARKETING_VERSION = 0.2
+MARKETING_VERSION = 0.2.1
 CURRENT_PROJECT_VERSION = 1
