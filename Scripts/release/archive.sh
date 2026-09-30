@@ -103,7 +103,9 @@ if [ -n "$choice" ]; then
   [ "$(git rev-list --count HEAD..origin/main)" = 0 ] || { kamome_fail "main is behind origin — run: git pull"; exit 1; }
   Scripts/set-version.sh "$choice"
   version=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
-  git commit -qam "Version $version"
+  # Typing the current version is "keep": nothing changed, so nothing to commit
+  # (a bare `git commit` would fail and end the script before the archive).
+  git diff --quiet Config/Version.xcconfig || git commit -qam "Version $version"
   # The push waits until the checks have passed and the upload is confirmed.
 fi
 version=$(sed -n 's/^MARKETING_VERSION = //p' Config/Version.xcconfig)
