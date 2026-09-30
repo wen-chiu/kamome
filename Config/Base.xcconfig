@@ -9,3 +9,5 @@
 // 2026-09-08) made the key unnecessary; removing the path made it unreachable.
 // The Worker holds the key. `Scripts/check-secrets.sh` and `RoutingKeyTests` fail
 // if either line comes back.
+
+#include "Version.xcconfig"

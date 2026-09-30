@@ -1,0 +1,5 @@
+#!/bin/sh
+# $3 = 1 for a branch checkout (including `git worktree add`), 0 for a file
+# checkout, which cannot change the project.
+[ "$3" = "1" ] || exit 0
+exec "$(git rev-parse --show-toplevel)/Scripts/regen-project.sh"

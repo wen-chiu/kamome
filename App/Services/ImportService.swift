@@ -42,9 +42,13 @@ struct ImportService {
     /// `RouteMatchService.matchTrip` themselves, which makes a dependency that
     /// used to be accidental into one the caller states.
     @discardableResult
-    func importTrip(title: String, photos: [ImportPhoto], discoveryKey: String? = nil) async throws -> String {
+    func importTrip(title: String?, photos: [ImportPhoto], discoveryKey: String? = nil) async throws -> String {
         let plan = self.plan(for: photos)
         guard plan.isRenderable else { throw ImportError.notEnoughGeotaggedPhotos }
+        // Nobody named it: the title is the trip's own start date, the shape
+        // `TripTitle.isFallback` recognises, so the film can open on the country
+        // (#131). The picked range's first day is not the trip's.
+        let title = title ?? TripTitle.fallback(for: plan.startedAt)
 
         let byId = Dictionary(photos.map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
         func newPhoto(_ id: String) -> TripRepository.NewPhoto {

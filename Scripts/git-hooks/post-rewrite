@@ -1,0 +1,5 @@
+#!/bin/sh
+# git pull --rebase / git rebase. ($1 is "amend" for `commit --amend`, which
+# cannot change the project.)
+[ "$1" = "rebase" ] || exit 0
+exec "$(git rev-parse --show-toplevel)/Scripts/regen-project.sh"

@@ -27,7 +27,7 @@ enum BeyondDrivingJudge {
         repository: TripRepository
     ) -> Bool {
         switch segment.segmentSource {
-        case .exif, .timeline, .mergeGap: break
+        case .exif, .timeline, .mergeGap, .sample: break
         case .gpsHifi, .gpsPassive: return false
         }
         switch segment.routeVerdict {

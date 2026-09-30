@@ -110,7 +110,7 @@ extension TripDetailView {
     /// too much page for too little information).
     var mapOverlays: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            if model.isReconstructed { provenanceChip }
+            if model.isSample { sampleChip } else if model.isReconstructed { provenanceChip }
             if let latest = model.films.first {
                 FilmPosterButton(latest: latest, count: model.films.count) {
                     if model.films.count == 1 {
@@ -143,6 +143,29 @@ extension TripDetailView {
         .buttonStyle(.plain)
         .popover(isPresented: $showingProvenance) {
             Text("provenance_note")
+                .font(.footnote)
+                .padding()
+                .frame(idealWidth: 280)
+                .fixedSize(horizontal: false, vertical: true)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// The sample says what it is, in the place a real trip says how it was
+    /// made — never "rebuilt from your photos" (ADR 2026-09-28-sample-trip).
+    var sampleChip: some View {
+        Button {
+            showingProvenance = true
+        } label: {
+            Label("sample_badge", systemImage: "sparkles")
+                .font(.caption.bold())
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(.thinMaterial))
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showingProvenance) {
+            Text("sample_note")
                 .font(.footnote)
                 .padding()
                 .frame(idealWidth: 280)

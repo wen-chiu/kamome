@@ -8,10 +8,11 @@ way — this file rotted twice by growing its own reasoning.
 
 Last synced: 2026-09-29 against ADR **2026-09-29-the-opening-zooms-and-the-route-holds**
 (the opening zooms out of the title card instead of cutting, reopening
-2026-08-31; the revealed route holds before the end card). Before it,
-2026-09-28-a-drive-is-never-framed-at-town-scale (Draft): a trip is framed by
-its own towns, and travel is earned by windows. `main` then carried PR #110 — film length Short ≤ 90 s (default) or
-Standard ≤ 300 s (ADR 2026-09-27).
+2026-08-31; the revealed route holds before the end card). Before it:
+2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
+its own towns, and travel is earned by windows); 2026-09-28-sample-trip (an
+empty Home offers a sample trip, Hualien to Taitung, with its road shipped and
+drawings for photographs); 2026-09-28, governance v2, the ledger's last entry.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
 work is GitHub Issues (`device`, `chiu`, `desk`); phone-only checks are

@@ -46,8 +46,9 @@ extension HomeView {
     /// to earn a label competing with the title on every row. VoiceOver still
     /// gets the full word via the accessibility label.
     func provenanceMark(_ source: TripSource) -> some View {
-        let symbol = source.isReconstructed ? "photo.on.rectangle" : "location.fill"
-        let key: LocalizedStringKey = source.isReconstructed ? "provenance_badge" : "provenance_recorded"
+        let symbol = source.isSample ? "sparkles" : source.isReconstructed ? "photo.on.rectangle" : "location.fill"
+        let key: LocalizedStringKey = source.isSample
+            ? "sample_badge" : source.isReconstructed ? "provenance_badge" : "provenance_recorded"
         return Image(systemName: symbol)
             .font(.caption)
             .foregroundStyle(.secondary)

@@ -25,24 +25,7 @@ struct RecordingView: View {
         }
     }
 
-    private var map: some View {
-        Map {
-            if session.traveledPath.count >= 2 {
-                MapPolyline(coordinates: session.traveledPath)
-                    .stroke(.tint, lineWidth: 4)
-            }
-            if let head = session.traveledPath.last {
-                Annotation("", coordinate: head) {
-                    Image(systemName: "bird.fill") // the seagull head marker
-                        .foregroundStyle(.tint)
-                        .padding(6)
-                        .background(.thinMaterial, in: Circle())
-                }
-            }
-        }
-        .mapControlVisibility(.hidden)
-        .ignoresSafeArea()
-    }
+    private var map: some View { RecordingMap() }
 
     private var hud: some View {
         VStack(spacing: 12) {
@@ -140,5 +123,31 @@ struct RecordingView: View {
 
     private var distanceText: String {
         String(format: "%.1f km", session.distanceM / 1000)
+    }
+}
+
+/// The live map, in a view of its own: it reads only the path and the head, so
+/// the once-a-second `now` tick that re-evaluates `RecordingView` no longer
+/// rebuilds the polyline (#122).
+private struct RecordingMap: View {
+    @Environment(TrackingSession.self) private var session
+
+    var body: some View {
+        Map {
+            if session.traveledPath.count >= 2 {
+                MapPolyline(coordinates: session.traveledPath)
+                    .stroke(.tint, lineWidth: 4)
+            }
+            if let head = session.headCoordinate {
+                Annotation("", coordinate: head) {
+                    Image(systemName: "bird.fill") // the seagull head marker
+                        .foregroundStyle(.tint)
+                        .padding(6)
+                        .background(.thinMaterial, in: Circle())
+                }
+            }
+        }
+        .mapControlVisibility(.hidden)
+        .ignoresSafeArea()
     }
 }

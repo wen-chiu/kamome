@@ -128,7 +128,8 @@ final class JourneyDiscoveryModel {
 
     /// Reads every stored trip into a summary. Cheap: one read per trip.
     func loadTrips() {
-        let trips = Stored.read("allTrips") { try repository.allTrips() } ?? []
+        // The sample is not a journey anyone took (ADR 2026-09-28-sample-trip).
+        let trips = (Stored.read("allTrips") { try repository.allTrips() } ?? []).filter { !$0.tripSource.isSample }
         var summaries: [JourneySummary] = []
         for trip in trips {
             guard let facts = Stored.read("journeyCardFacts", { try repository.journeyCardFacts(tripId: trip.id) })
