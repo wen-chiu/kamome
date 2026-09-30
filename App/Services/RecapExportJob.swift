@@ -93,61 +93,22 @@ struct RecapExportJob: RecapExportRunning {
 
     private func compose() -> Composed? {
         guard let detail = Stored.read("detail", { try repository.detail(tripId: request.tripId) }) else { return nil }
-        let stats = TripStats.from(jsonString: detail.trip.statsJson)
-        // Deck photo refs are selected here (data); the resolver loads the
-        // bitmaps. Refs stay out of the render size.
-        // The counts are read either way: which stops the film presents must not
-        // change because photo cards are switched off, only whether they show.
-        let photos = RecapComposer.photoInputs(detail: detail, analysis: config.photoAnalysis)
+        guard let composed = RecapComposer.filmComposition(
+            detail: detail, config: config, photosEnabled: request.photosEnabled, length: request.length
+        ) else { return nil }
         // Which pick the film used — never waited for (ADR 2026-09-25 (d)).
         KamomeLog.recap.notice(
-            "recap: photo pick — \(photos.analysis == nil ? "by time (analysis not complete)" : "analysed")"
+            "recap: photo pick — \(composed.analysed ? "analysed" : "by time (analysis not complete)")"
         )
-        let deck = RecapDeck(
-            photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
-            labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
-        )
-        // Typed legs (Fable review 2026-07-26): each stretch reaches the film
-        // with its own transport mode and provenance, so a leg Kamome could not
-        // reconstruct renders visibly as a guess rather than as road (PD-1).
-        //
-        // The film ends at the destination (ADR 2026-09-01): the flight home and
-        // everything after it come off here, before anything is classified.
-        let film = RecapComposer.filmRecords(
-            segments: detail.segments, stops: detail.stops,
-            epsilonM: config.simplify.epsilonM,
-            matchedEpsilonM: config.matching.displayEpsilonM,
-            homeRadiusM: config.discovery.awayRadiusM
-        )
-        if film.segments.count < detail.segments.count {
+        if composed.droppedSegments > 0 {
             // Counts only — never where home is (`CLAUDE.md` §0).
             KamomeLog.recap.notice("""
                 recap: the trip comes home — the film ends at the destination; \
-                \(detail.segments.count - film.segments.count, privacy: .public) legs and \
-                \(detail.stops.count - film.stops.count, privacy: .public) stops after the flight home are left out
+                \(composed.droppedSegments, privacy: .public) legs and \
+                \(composed.droppedStops, privacy: .public) stops after the flight home are left out
                 """)
         }
-        let legs = RecapComposer.legs(
-            from: film.segments,
-            epsilonM: config.simplify.epsilonM,
-            matchedEpsilonM: config.matching.displayEpsilonM
-        )
-        guard let trip = RecapComposer.trip(
-            trip: detail.trip, legs: legs, stops: film.stops, stats: stats,
-            photosByStop: request.photosEnabled ? photos.byStop : [:], deck: deck, stopHoldS: config.export.stopHoldS,
-            rawPhotoCounts: photos.rawCounts,
-            favoriteCounts: photos.starredCounts,
-            highlightedAssets: photos.highlighted,
-            pickedAssets: photos.picked, pickedCounts: photos.pickedCounts,
-            analysis: photos.analysis,
-            highlightMaxPhotos: config.photoImport.deckHighlightMaxPhotos,
-            weighting: config.export,
-            length: request.length,
-            everyLegRoutabilityEstablished:
-                RecapComposer.everyLegRoutabilityEstablished(film.segments),
-            clock: TripClock(stops: detail.stops),
-            title: TripTitle.film(detail.trip)
-        ) else { return nil }
+        let trip = composed.trip
         announceFilmType(trip)
         return Composed(trip: trip, detail: detail)
     }

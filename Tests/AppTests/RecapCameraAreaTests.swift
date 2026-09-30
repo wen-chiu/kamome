@@ -33,7 +33,7 @@ final class RecapCameraAreaTests: XCTestCase {
             let path = line.path
             let beats = (path.arcs + path.reframeArcs).map { $0.startS...$0.endS }
             let step = 1.0 / Double(config.fps)
-            let revealS = line.durationS - config.endCardS - config.endRevealS
+            let revealS = line.durationS - config.endCardS - config.endRouteHoldS - config.endRevealS
             func inABeat(_ time: Double) -> Bool { beats.contains { $0.contains(time) } }
 
             var moved = 0

@@ -134,13 +134,15 @@ extension RecapPacingTests {
             establishing: RecapBounds(minLat: -44.0, minLon: 170.47, maxLat: -43.2, maxLon: 170.53)
         ))
 
-        // **The card beat is a still frame.** This is what earns the cut: a
-        // viewer reads a held picture under a title as chrome, and a cut out of
-        // chrome is a film convention. If the camera moved here it would be a
-        // shot, and cutting out of a shot is the bug Chiu named. Asserted first,
-        // because everything below depends on the film proper starting at the cut.
-        let cut = try XCTUnwrap(line.titleCutS, "the opening must cut, not ease, out of the title card")
+        // **The card beat is a still frame, and the film zooms out of it — it no
+        // longer cuts** (Chiu 2026-09-29, reopening 2026-08-31's cut by name:
+        // 「影片三秒的時候畫面是用跳的，為什麼不是直接從開始的大畫面zoom in到起始點」).
+        // Asserted first, because everything below starts where the card ends.
+        XCTAssertNil(line.titleCutS, "the opening must zoom, not cut, out of the title card")
+        let cut = export.titleCardS
         let card = line.cameraFrame(atTime: 0)
+        let afterCard = line.cameraFrame(atTime: cut + 1.0 / 30)
+        XCTAssertEqual(afterCard.spanM, card.spanM, accuracy: card.spanM * 0.01, "the frame jumped as the card left")
         for time in stride(from: 0.0, to: cut, by: 1.0 / 30) {
             let frame = line.cameraFrame(atTime: time)
             XCTAssertEqual(frame.spanM, card.spanM, accuracy: 1, "the card beat zoomed at t=\(time)")
@@ -148,7 +150,7 @@ extension RecapPacingTests {
             XCTAssertEqual(frame.centerLon, card.centerLon, accuracy: 1e-9, "the card beat panned at t=\(time)")
         }
 
-        // **From the cut on, the rule this test was written for still holds** —
+        // **From the card's end on, the rule this test was written for still holds** —
         // the opening must not turn into a pan — but it is asserted as
         // containment now rather than as a translate budget, and this is the
         // restatement `Arch.md` §4 asks for rather than a deletion.

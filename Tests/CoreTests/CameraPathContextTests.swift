@@ -26,14 +26,22 @@ final class CameraPathContextTests: XCTestCase {
         }
     }
 
-    /// Town A, a drive east of `driveSteps` × 0.02° of longitude, town B.
+    /// Days in a town: its loop driven four times, each lap a street further
+    /// north so a stop on a later lap is not found on the first. A zoom into a
+    /// town is earned by driving in it (ADR file 2026-09-28), and one lap is not
+    /// a day there.
+    private func days(_ loop: [CameraPath.Point]) -> [CameraPath.Point] {
+        (0..<4).flatMap { lap in loop.map { CameraPath.Point(lat: $0.lat + Double(lap) * 0.0005, lon: $0.lon) } }
+    }
+
+    /// Town A, a drive east of `driveSteps` × `stepDeg` of longitude, town B.
     private func townDriveTown(driveSteps: Int, stepDeg: Double) -> (route: [CameraPath.Point], stops: [CameraPath.Point]) {
-        let townA = town(lat: 24.80, lon: 125.28)
+        let townA = days(town(lat: 24.80, lon: 125.28))
         let start = townA[townA.count - 1]
         let drive = (1...driveSteps).map { CameraPath.Point(lat: start.lat, lon: start.lon + Double($0) * stepDeg) }
         let end = drive[drive.count - 1]
-        let townB = town(lat: end.lat, lon: end.lon - 0.006)
-        let stops = [townA[0], townA[4], townA[8], townA[12], townB[0], townB[6], townB[12]]
+        let townB = days(town(lat: end.lat, lon: end.lon - 0.006))
+        let stops = [townA[0], townA[4], townA[30], townA[51], townB[0], townB[26], townB[51]]
         return (townA + drive + townB, stops)
     }
 
@@ -87,8 +95,10 @@ final class CameraPathContextTests: XCTestCase {
         XCTAssertLessThan(line.areaSpansM[0], line.areaSpansM[1], "the town is still tighter than the drive")
     }
 
-    /// **A road trip's town stops at city scale.** The level above it is the
-    /// whole 300 km route — a line, not a place — so the floor is the cap.
+    /// **A road trip's town, when it earns a zoom, stops at city scale.** The
+    /// level above it is the whole 300 km route — a line, not a place — so the
+    /// floor is the cap. (A town only passed through earns no zoom at all:
+    /// `CameraPathAreasTests.testAPlacePassedThroughIsNotZoomedInto`.)
     func testTheFloorStopsAtCityScaleOnARoadTrip() throws {
         let config = try shipped()
         let trip = townDriveTown(driveSteps: 30, stepDeg: 0.1)

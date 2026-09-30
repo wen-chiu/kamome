@@ -91,8 +91,12 @@ final class RecapModel {
     /// re-import, and the export job reads it at render time.
     /// The next film's photographs, stop by stop, and the person's choices
     /// over them (ADR 2026-09-24) — the export composes exactly this plan.
+    /// The export sheet's choices, which also measure the film's length
+    /// (Chiu 2026-09-29): this is the one screen that says it.
     func filmPhotoChoices() -> FilmPhotoChoices {
-        FilmPhotoChoices(tripId: tripId, config: config, repository: repository)
+        let choices = FilmPhotoChoices(tripId: tripId, config: config, repository: repository)
+        choices.measureLength()
+        return choices
     }
 
     func chooseVehicle(_ id: String) {
