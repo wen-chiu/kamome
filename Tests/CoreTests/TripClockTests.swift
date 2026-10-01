@@ -60,6 +60,38 @@ final class TripClockTests: XCTestCase {
         }
     }
 
+    /// ADR 2026-10-01, from Chiu's New Zealand import read back in Taipei: a
+    /// lakeside morning stop was listed at 03:23.
+    func testAStopsTimeIsTheWallClockWhereItHappened() {
+        let british = Locale(identifier: "en_GB")
+        let lakeside = 1_772_652_180.0 // 2026-03-05 08:23 in Auckland (UTC+13)
+        let clock = TripClock(zones: [
+            .init(arrivedAt: lakeside, departedAt: lakeside + 3_600, zone: auckland)
+        ], fallback: taipei)
+        // Whether the hour is padded is the locale's business (en_GB wrote "8:23"
+        // through `Date.FormatStyle` on iOS 26.5); the hour is what is pinned.
+        func unpadded(_ text: String) -> String { String(text.drop { $0 == "0" }) }
+        XCTAssertEqual(unpadded(clock.timeText(at: lakeside, locale: british)), "8:23")
+        XCTAssertEqual(unpadded(TripClock.uniform(taipei).timeText(at: lakeside, locale: british)), "3:23",
+                       "precondition: the phone's zone really did read this morning as the small hours")
+        XCTAssertEqual(unpadded(TripClock(zones: [
+            .init(arrivedAt: lakeside, departedAt: lakeside + 3_600, zone: auckland)
+        ], fallback: reykjavik).timeText(at: lakeside, locale: british)), "8:23", "the phone's zone leaked in")
+    }
+
+    func testEachStopOfATripAcrossZonesKeepsItsOwnClock() {
+        let british = Locale(identifier: "en_GB")
+        // Leave Taipei 2026-02-01 23:00 (+8), land Auckland 2026-02-02 15:00 (+13).
+        let departure = 1_769_958_000.0
+        let arrival = departure + 11 * 3_600
+        let clock = TripClock(zones: [
+            .init(arrivedAt: departure - 3_600, departedAt: departure, zone: taipei),
+            .init(arrivedAt: arrival, departedAt: arrival + 3_600, zone: auckland)
+        ], fallback: reykjavik)
+        XCTAssertEqual(clock.timeText(at: departure - 3_600, locale: british), "22:00")
+        XCTAssertEqual(clock.timeText(at: arrival, locale: british), "15:00")
+    }
+
     func testTheDateOfADayShowsTheLocalCalendarDate() {
         var phone = Calendar(identifier: .gregorian)
         phone.timeZone = taipei

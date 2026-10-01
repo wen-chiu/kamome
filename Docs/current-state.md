@@ -6,9 +6,11 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-30 against ADR **2026-09-30-export-time-left**
+Last synced: 2026-10-01 against ADR **2026-10-01-a-stops-time-is-the-clock-where-it-happened**
+(a stop's hour is shown in the zone it happened in, like its date, on Trip
+Detail and the Journey Diary). Before it: 2026-09-30-export-time-left
 (the export sheet says "about N minutes left" from its own station pace, after
-a 60 s warm-up). Before it: 2026-09-29-the-opening-zooms-and-the-route-holds
+a 60 s warm-up); 2026-09-29-the-opening-zooms-and-the-route-holds
 (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by

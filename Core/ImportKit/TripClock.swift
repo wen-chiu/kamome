@@ -84,6 +84,19 @@ public struct TripClock: Equatable {
         return displayCalendar.date(from: parts) ?? target
     }
 
+    /// The wall clock where `timestamp` happened (ADR 2026-10-01): hour and
+    /// minute in `zone(at:)`, written the way `locale` writes a time. A
+    /// photograph taken at 08:23 by a New Zealand lake reads 08:23 on a phone
+    /// that has since gone home to Taipei, where the same instant is 03:23.
+    public func timeText(at timestamp: Double, locale: Locale = .current) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.timeZone = zone(at: timestamp)
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: Date(timeIntervalSince1970: timestamp))
+    }
+
     private static func localDate(_ timestamp: Double, in zone: TimeZone) -> DateComponents {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
