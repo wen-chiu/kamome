@@ -6,9 +6,12 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-30 against ADR **2026-09-30-export-time-left**
-(the export sheet says "about N minutes left" from its own station pace, after
-a 60 s warm-up). Before it: 2026-09-29-the-opening-zooms-and-the-route-holds
+Last synced: 2026-10-01 against ADR **2026-10-01-stop-naming-outlives-the-screen**
+(stop naming is owned by `StopNamingCoordinator` and survives leaving Trip
+Detail; every Apple lookup waits at one `GeocodeGate`). Before it:
+2026-09-30-export-time-left (the export sheet says "about N minutes left" from
+its own station pace, after a 60 s warm-up);
+2026-09-29-the-opening-zooms-and-the-route-holds
 (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by

@@ -191,7 +191,7 @@ final class StopNamerTests: XCTestCase {
         )
         let config = AppConfig.loadOrDie()
         let (repository, stops) = try await importedTrip(stops: 3, config: config)
-        let namer = StopNamer(config: config.geocode, repository: repository, geocoder: CLGeocoderStopGeocoder())
+        let namer = StopNamer(config: config.geocode, repository: repository)
 
         let done = expectation(description: "naming finished")
         namer.nameUnnamedStops(stops) { progress in
