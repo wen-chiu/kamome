@@ -37,7 +37,15 @@ final class StopNamer {
     /// Zones by the same name, for the same reason (`TripClock`).
     private var zoneByName: [String: String] = [:]
     private var isWorking = false
+    /// The stop whose lookup is out, so it is not queued a second time.
+    private var inFlightId: String?
+    /// Stops this namer has named. A caller's copy of the trip can be a read
+    /// behind, and would hand a stop back as unnamed just after its name landed.
+    private var namedIds: Set<String> = []
     private var onChange: ((Progress) -> Void)?
+    /// Called each time the queue runs empty with nothing in flight — names
+    /// and towns both. `StopNamingCoordinator` lets go of the namer then.
+    var onDrained: (() -> Void)?
     private(set) var progress = Progress()
 
     /// Takes `TrackingConfig.Geocode`, not the whole config — it is the only part
@@ -46,11 +54,11 @@ final class StopNamer {
     init(
         config: TrackingConfig.Geocode,
         repository: TripRepository,
-        geocoder: StopGeocoding = CLGeocoderStopGeocoder()
+        geocoder: StopGeocoding? = nil
     ) {
         policy = GeocodePolicy(config: config)
         self.repository = repository
-        self.geocoder = geocoder
+        self.geocoder = geocoder ?? CLGeocoderStopGeocoder(minIntervalS: config.minIntervalS)
     }
 
     /// Names every unnamed stop, respecting the throttle. Fire-and-forget;
@@ -60,7 +68,9 @@ final class StopNamer {
     /// any one-shot refresh.
     func nameUnnamedStops(_ stops: [StopRecord], onChange: ((Progress) -> Void)? = nil) {
         if let onChange { self.onChange = onChange }
-        let pending = stops.filter(Self.needsName)
+        // A stop already waiting or out is not asked twice: a screen reopened
+        // mid-run hands over the same stops again (#159).
+        let pending = stops.filter { Self.needsName($0) && !isPending($0) }
         // Before any town-only entry: names gate the export, towns do not.
         let firstTownOnly = queue.firstIndex(where: { $0.townOnly }) ?? queue.endIndex
         queue.insert(contentsOf: pending.map { (stop: $0, townOnly: false) }, at: firstTownOnly)
@@ -73,8 +83,22 @@ final class StopNamer {
     /// schema v9 kept towns. Fire-and-forget, behind any naming, on the same
     /// throttle; the name is never rewritten — it may be the user's own.
     func fillMissingLocalities(_ stops: [StopRecord]) {
-        queue.append(contentsOf: stops.filter(Self.needsLocality).map { (stop: $0, townOnly: true) })
+        queue.append(contentsOf: stops.filter { Self.needsLocality($0) && !isPending($0) }
+            .map { (stop: $0, townOnly: true) })
         drain()
+    }
+
+    /// Drops everything still waiting — the trip was deleted. A lookup already
+    /// out lands on rows that are gone and writes nothing.
+    func cancel() {
+        queue.removeAll()
+    }
+
+    /// Nothing waiting and nothing out.
+    var isIdle: Bool { !isWorking && queue.isEmpty }
+
+    private func isPending(_ stop: StopRecord) -> Bool {
+        inFlightId == stop.id || namedIds.contains(stop.id) || queue.contains { $0.stop.id == stop.id }
     }
 
     /// Named, but never asked for its town — or for its zone, which schema v14
@@ -96,14 +120,21 @@ final class StopNamer {
     }
 
     /// One stop has left the queue for good.
-    private func finish(named: Bool) {
+    private func finish(_ stop: StopRecord, named: Bool) {
         progress.completed += 1
-        if named { progress.named += 1 }
+        if named {
+            progress.named += 1
+            namedIds.insert(stop.id)
+        }
         publish()
     }
 
     private func drain() {
-        guard !isWorking, !queue.isEmpty else { return }
+        guard !isWorking else { return }
+        guard !queue.isEmpty else {
+            onDrained?()
+            return
+        }
         let (stop, townOnly) = queue.removeFirst()
         let now = Date.now.timeIntervalSince1970
 
@@ -111,21 +142,25 @@ final class StopNamer {
         case .cached(let name) where !townOnly:
             Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
             storeCachedPlace(named: name, of: stop)
-            finish(named: true)
+            finish(stop, named: true)
             drain()
         case .cached(let name):
             storeCachedPlace(named: name, of: stop)
             drain()
-        case .throttled(let retryAfterS):
+        case .throttled(let retryAfterS) where !geocoder.pacesItself:
             queue.insert((stop: stop, townOnly: townOnly), at: 0)
             DispatchQueue.main.asyncAfter(deadline: .now() + retryAfterS) { [weak self] in
                 self?.drain()
             }
-        case .lookup:
+        case .lookup, .throttled:
+            // `.throttled` lands here for a geocoder that paces itself: the
+            // gate holds the lookup until its turn (`StopGeocoding.pacesItself`).
             isWorking = true
+            inFlightId = stop.id
             geocoder.reverseGeocodeZoned(lat: stop.lat, lon: stop.lon) { [weak self] name, locality, zone, error in
                 guard let self else { return }
                 self.isWorking = false
+                self.inFlightId = nil
                 let place = Place(name: name, locality: locality, zone: zone)
                 self.record(stop, townOnly: townOnly, place: place, error: error)
                 self.drain()
@@ -161,7 +196,7 @@ final class StopNamer {
                 \(error?.localizedDescription ?? "no placemark returned", privacy: .public). \
                 The stop stays unnamed; reopening trip detail re-queues it.
                 """)
-            finish(named: false)
+            finish(stop, named: false)
             return
         }
         policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
@@ -174,7 +209,7 @@ final class StopNamer {
         storeTimeZone(zone, of: stop)
         guard !townOnly else { return }
         Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
-        finish(named: true)
+        finish(stop, named: true)
     }
 
     private func storeLocality(_ town: String, of stop: StopRecord) {

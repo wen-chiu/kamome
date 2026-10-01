@@ -9,7 +9,10 @@ way — this file rotted twice by growing its own reasoning.
 Last synced: 2026-10-01 against ADR
 **2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it**
 (a beach waypoint the drive profile refuses is moved to where a walk reaches
-it, at most 650 m, and drive is asked again). Before it:
+it, at most 650 m, and drive is asked again). The same day:
+2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
+`StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
+waits at one `GeocodeGate`). Before them:
 2026-09-30-export-time-left (the export sheet says "about N minutes left" from
 its own station pace, after a 60 s warm-up);
 2026-09-29-the-opening-zooms-and-the-route-holds
