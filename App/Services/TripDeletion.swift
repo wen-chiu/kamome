@@ -32,6 +32,7 @@ enum TripDeletion {
         exports.cancel(tripId: tripId)
         routing.cancel(tripId: tripId)
         PhotoAnalysisCoordinator.shared.cancel(tripId: tripId)
+        StopNamingCoordinator.shared.cancel(tripId: tripId)
         let films: [FilmRecord]
         do {
             films = try repository.deleteTrip(tripId: tripId)

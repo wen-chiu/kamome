@@ -1,4 +1,5 @@
 import Foundation
+import KamomeConfig
 import KamomePersistence
 
 /// What a journey is called on its card: a destination and a flag.
@@ -128,9 +129,14 @@ enum TripJourneyNaming {
     static func nameIfNeeded(
         tripId: String,
         repository: TripRepository,
-        geocoder: PlaceGeocoding = CLPlaceGeocoder(),
+        geocode: TrackingConfig.Geocode,
+        geocoder: PlaceGeocoding? = nil,
         cache: JourneyNameCache = JourneyNameCache()
     ) {
+        // Through the shared gate, behind stop names and ahead of Discovery's
+        // cards (#159). It asks about the first stop, which `StopNamer` is
+        // often asking about at the same moment: the gate sends one request.
+        let geocoder = geocoder ?? CLPlaceGeocoder(priority: .tripFlag, minIntervalS: geocode.minIntervalS)
         guard cache.place(for: tripId) == nil,
               let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }),
               let first = detail.stops.first

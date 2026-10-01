@@ -52,7 +52,7 @@ final class JourneyDiscoveryModel {
         repository: TripRepository,
         source: ImportPhotoProviding,
         photoAccess: PhotoAccessProviding,
-        geocoder: PlaceGeocoding = CLPlaceGeocoder(),
+        geocoder: PlaceGeocoding? = nil,
         defaults: UserDefaults = .standard,
         homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode,
         now: @escaping () -> Date = Date.init
@@ -61,7 +61,8 @@ final class JourneyDiscoveryModel {
         self.repository = repository
         provider = source
         self.photoAccess = photoAccess
-        self.geocoder = geocoder
+        // Behind any stop naming, on the one throttle the app shares (#159).
+        self.geocoder = geocoder ?? CLPlaceGeocoder(priority: .card, minIntervalS: config.geocode.minIntervalS)
         nameCache = JourneyNameCache(defaults: defaults)
         dismissed = DismissedJourneys(defaults: defaults)
         self.homeCountryCode = homeCountryCode
