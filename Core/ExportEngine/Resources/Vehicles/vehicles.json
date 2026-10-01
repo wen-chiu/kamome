@@ -112,6 +112,76 @@
       }
     },
     {
+      "id": "horse",
+      "kind": "directional",
+      "type": "horse",
+      "selectable": true,
+      "names": {
+        "en": "Pony",
+        "zh-Hant": "小馬"
+      }
+    },
+    {
+      "id": "carriage",
+      "kind": "directional",
+      "type": "carriage",
+      "selectable": true,
+      "names": {
+        "en": "Horse carriage (red)",
+        "zh-Hant": "馬車（紅）"
+      }
+    },
+    {
+      "id": "carriage-navy",
+      "kind": "directional",
+      "type": "carriage",
+      "selectable": true,
+      "names": {
+        "en": "Horse carriage (navy)",
+        "zh-Hant": "馬車（藍）"
+      }
+    },
+    {
+      "id": "bus",
+      "kind": "directional",
+      "type": "bus",
+      "selectable": true,
+      "names": {
+        "en": "Tour bus",
+        "zh-Hant": "觀光巴士"
+      }
+    },
+    {
+      "id": "train",
+      "kind": "directional",
+      "type": "train",
+      "selectable": true,
+      "names": {
+        "en": "Steam train",
+        "zh-Hant": "蒸汽火車"
+      }
+    },
+    {
+      "id": "sheep",
+      "kind": "directional",
+      "type": "sheep",
+      "selectable": true,
+      "names": {
+        "en": "Sheep",
+        "zh-Hant": "綿羊"
+      }
+    },
+    {
+      "id": "beaver",
+      "kind": "directional",
+      "type": "beaver",
+      "selectable": true,
+      "names": {
+        "en": "Beaver",
+        "zh-Hant": "河狸"
+      }
+    },
+    {
       "id": "seagull",
       "kind": "omni",
       "type": "mark",

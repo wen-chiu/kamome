@@ -11,7 +11,7 @@ extension TripDetailView {
     var map: some View {
         Map {
             ForEach(model.visibleSegments, id: \.segment.id) { item in
-                let coords = model.displayPolyline(for: item.points)
+                let coords = model.displayPolyline(for: item.segment)
                     .map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
                 if coords.count >= 2 {
                     MapPolyline(coordinates: coords)

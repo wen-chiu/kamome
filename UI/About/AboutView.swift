@@ -47,6 +47,11 @@ struct AboutView: View {
     private static let geoapify = URL(string: "https://www.geoapify.com/")!
     private static let openStreetMap = URL(string: "https://www.openstreetmap.org/copyright")!
     private static let terrainTiles = URL(string: "https://registry.opendata.aws/terrain-tiles/")!
+    /// The hosted policy App Store Connect points at. Guideline 5.1.1(i) wants
+    /// it reachable inside the app as well as in the store listing (#150). Not a
+    /// tunable either: it must be the same page as the store's, and
+    /// `Scripts/release/check-attribution.sh` fails if it disappears.
+    private static let privacyPolicy = URL(string: "https://wen-chiu.github.io/kamome-site/privacy/")!
 
     var body: some View {
         NavigationStack {
@@ -110,6 +115,9 @@ struct AboutView: View {
             Text("privacy_retention")
             Text("privacy_control")
             Text("privacy_share")
+            Link(destination: Self.privacyPolicy) {
+                linkRow("privacy_policy_link")
+            }
         } header: {
             Text("privacy_header")
         }
