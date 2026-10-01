@@ -35,6 +35,7 @@
     "route_max_detour_ratio": 2.5,
     "route_waypoint_min_spacing_m": 250,
     "route_waypoint_radius_m": 500,
+    "route_off_network_walk_snap_max_m": 650,
     "api_key_required": false,
     "crossing_pace_min_kmh": 160,
     "crossing_pace_min_distance_m": 100000,
