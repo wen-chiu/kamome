@@ -42,13 +42,18 @@ it a memory.
 
 ## Consequences
 
-- No schema, config or string change. `TripClockTests` and
-  `TripDetailDaysTests` pin it.
-- INFERRED: until a trip's stops are named (first open, ~2 s a stop), a row
-  shows the phone's hour and then changes when its zone lands — the day chips
-  already do the same. Settled by opening a fresh cross-zone import on a phone.
-- UNKNOWN: whether the rows on Chiu's phone now read as he expects. The desk
-  cannot show it (the simulator's seeded trips sit in the Mac's own zone);
-  settled by opening the New Zealand trip on a build of this PR.
+- No schema, config or string change. `TripClockTests`, `TripDetailDaysTests`
+  and `StopNamerTimeZoneTests` pin it.
+- VERIFIED (simulator, 2026-10-01, the seeded Western Australia trip with the
+  phone's zone set to New York): the rows read 7:27 PM … 12:00 AM, Perth's
+  clock, where the phone's own gave 7:27 AM … 12:00 PM.
+- VERIFIED (same run): a trip named before schema v14 got its zones on first
+  open and the screen never read them — hours and day chips stayed the phone's
+  until it was opened again. `StopNamer.fillMissingLocalities` now reports each
+  one that lands and Trip Detail reloads. The fix itself has a test, not a render.
+- INFERRED: while a fresh import is being named (~2 s a stop), a row shows the
+  phone's hour until its zone lands, as the day chips do. Settled on the phone.
+- UNKNOWN: how Chiu's New Zealand trip reads on his phone. Settled by opening
+  it on a build of this PR (#112's run, or TestFlight).
 - Still in the phone's zone, and not hours: the trip's date range on Home, in
   the merge sheet, and on the film's title card — #171.

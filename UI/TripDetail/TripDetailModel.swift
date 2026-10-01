@@ -99,8 +99,12 @@ final class TripDetailModel {
             }
         }
         // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
-        // before schema v9 are asked once, behind any naming.
-        namer.fillMissingLocalities(detail.stops)
+        // before schema v9 are asked once, behind any naming. Reload as each
+        // lands: the zone that comes with it is what the day chips and the
+        // stops' hours are read in (ADR 2026-10-01).
+        namer.fillMissingLocalities(detail.stops) { [weak self] in
+            self?.scheduleReload()
+        }
     }
 
     /// Resumes Vision over this trip's photographs — every trip imported
