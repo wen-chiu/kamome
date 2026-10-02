@@ -70,7 +70,19 @@ struct JourneyNameCache {
     private static let key = "kamome.journeyPlaces"
     private static let singlePlaceKey = "kamome.journeySinglePlaces"
 
-    init(defaults: UserDefaults = .standard) {
+    /// Where places are kept. In a `-demo-discover` run it is the demo's own
+    /// throwaway suite, so Home, Trip Detail and the film read the names the
+    /// demo list wrote, and a demo run still never names a real trip. A trip
+    /// made from Discovery is stored unnamed (#165), so a screen reading
+    /// another store would show its date where the list shows its place.
+    static var store: UserDefaults {
+        #if DEBUG
+        if let demo = DemoJourneyLibrary.ifRequested() { return demo.defaults }
+        #endif
+        return .standard
+    }
+
+    init(defaults: UserDefaults = JourneyNameCache.store) {
         self.defaults = defaults
     }
 
