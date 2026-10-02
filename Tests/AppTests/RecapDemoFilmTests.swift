@@ -306,7 +306,7 @@ final class RecapDemoFilmTests: XCTestCase {
         tripId: String, fixture: String, repository: TripRepository, config: TrackingConfig
     ) async throws {
         let stops = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
-        let geocoder = RecapReviewGeocoder(fixture: fixture)
+        let geocoder = RecapReviewGeocoder(fixture: fixture, minIntervalS: config.geocode.minIntervalS)
         let namer = StopNamer(config: config.geocode, repository: repository, geocoder: geocoder)
         let started = Date.now
         await withCheckedContinuation { continuation in

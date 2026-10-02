@@ -1,6 +1,7 @@
 @testable import Kamome
 import KamomeConfig
 import KamomePersistence
+import KamomeTripComposer
 import XCTest
 
 /// **Trip Detail's read is off the main thread** (#128). `repository.detail`
@@ -10,11 +11,16 @@ import XCTest
 /// stop.
 @MainActor
 final class TripDetailReloadTests: XCTestCase {
-    private func longTrip(points: Int) throws -> (TripRepository, String) {
+    /// `winding` bends the track, so thinning has corners to keep rather than
+    /// collapsing a straight line to its two ends.
+    private func longTrip(points: Int, winding: Bool = false) throws -> (TripRepository, String) {
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let start = 1_787_382_000.0
         let track = (0 ..< points).map {
-            TripRepository.NewTrackpoint(ts: start + Double($0), lat: 35.0 + Double($0) * 1e-5, lon: 139.0)
+            TripRepository.NewTrackpoint(
+                ts: start + Double($0), lat: 35.0 + Double($0) * 1e-5,
+                lon: 139.0 + (winding ? 0.01 * sin(Double($0) / 2_000) : 0)
+            )
         }
         let end = start + Double(points)
         let tripId = try repository.saveCompletedTrip(
@@ -52,5 +58,34 @@ final class TripDetailReloadTests: XCTestCase {
         await model.refresh()
         try await Task.sleep(nanoseconds: 300_000_000) // let the superseded read land
         XCTAssertEqual(model.detail?.trip.title, "renamed")
+    }
+
+    /// **The map's lines are thinned with the read, not in the view body**
+    /// (#139). The map bodies called Douglas-Peucker on every segment on every
+    /// render, on the main thread; now `refresh()` thins once, off it, and a
+    /// render only looks the result up. The lines themselves must not change.
+    func testDisplayPolylinesAreThinnedWithTheReadAndUnchanged() async throws {
+        let (repository, tripId) = try longTrip(points: 200_000, winding: true)
+        let config = AppConfig.loadOrDie()
+        let model = TripDetailModel(tripId: tripId, config: config, repository: repository)
+        await model.refresh()
+
+        let item = try XCTUnwrap(model.detail?.segments.first)
+        let started = CFAbsoluteTimeGetCurrent()
+        let expected = Simplifier.douglasPeucker(
+            item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) },
+            epsilonM: config.simplify.epsilonM
+        )
+        let perRenderBefore = CFAbsoluteTimeGetCurrent() - started
+
+        let lookedUp = CFAbsoluteTimeGetCurrent()
+        let line = model.displayPolyline(for: item.segment)
+        let perRenderNow = CFAbsoluteTimeGetCurrent() - lookedUp
+
+        XCTAssertGreaterThan(line.count, 20, "the fixture no longer winds, so this compares two endpoints")
+        XCTAssertEqual(line, expected, "thinning moved, and the line changed with it")
+        // Measured, not asserted: a wall-clock bound would flake on CI runners.
+        print("TRIPDETAIL_POLYLINE 200k: per render before \(Int(perRenderBefore * 1000)) ms, "
+            + "now \(Int(perRenderNow * 1_000_000)) µs; \(line.count) points drawn")
     }
 }

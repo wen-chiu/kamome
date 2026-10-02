@@ -3116,6 +3116,54 @@
         }
       }
     },
+    "recap_time_left_minutes": {
+      "comment": "DRAFT for the #118 wording batch (issue #151). Shown after the percentage while a film renders, once the export has measured its own pace. %lld is whole minutes, at least 1.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "About %lld minute left"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "About %lld minutes left"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "約剩 %lld 分鐘"
+          }
+        }
+      }
+    },
+    "recap_time_left_under_minute": {
+      "comment": "DRAFT for the #118 wording batch (issue #151). The time-left estimate once under a minute remains.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Less than a minute left"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剩不到 1 分鐘"
+          }
+        }
+      }
+    },
     "recap_rendering_leave_note": {
       "extractionState": "manual",
       "localizations": {
@@ -4268,6 +4316,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "範例暫時打不開，請再試一次。"
+          }
+        }
+      }
+    },
+    "privacy_policy_link": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱私權政策"
           }
         }
       }

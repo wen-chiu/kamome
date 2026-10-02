@@ -142,7 +142,8 @@ struct RecapView: View {
                         Text(stageTitle(model.stage ?? .findingRoads))
                     } currentValueLabel: {
                         if model.stage == .drawing {
-                            Text(progress, format: .percent.precision(.fractionLength(0)))
+                            Text(verbatim: Self.drawingProgress(progress, timeLeft: model.timeLeft))
+                                .monospacedDigit()
                         }
                     }
                 }

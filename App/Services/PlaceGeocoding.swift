@@ -1,4 +1,3 @@
-import CoreLocation
 import Foundation
 
 /// A coarse answer to "where is this?" — the fields a journey's name is built
@@ -32,16 +31,31 @@ protocol PlaceGeocoding: AnyObject {
 /// timing is a product decision recorded in the ADR of 2026-09-17, not an
 /// implementation detail.
 final class CLPlaceGeocoder: PlaceGeocoding {
-    private let geocoder = CLGeocoder()
+    private let priority: GeocodeGate.Priority
+    private let minIntervalS: Double
+    /// nil is the app's shared gate; a test passes its own.
+    private let gate: GeocodeGate?
+
+    /// Through `GeocodeGate`, behind any stop naming (#159): `priority` says
+    /// what the answer is for, `minIntervalS` is `geocode.min_interval_s`.
+    init(priority: GeocodeGate.Priority, minIntervalS: Double, gate: GeocodeGate? = nil) {
+        self.priority = priority
+        self.minIntervalS = minIntervalS
+        self.gate = gate
+    }
 
     func place(lat: Double, lon: Double) async -> PlaceName? {
-        let location = CLLocation(latitude: lat, longitude: lon)
-        guard let placemark = try? await geocoder.reverseGeocodeLocation(location).first else { return nil }
+        guard let place = await ask(lat: lat, lon: lon).place else { return nil }
         return PlaceName(
-            country: placemark.country,
-            countryCode: placemark.isoCountryCode,
-            region: placemark.administrativeArea,
-            locality: placemark.locality
+            country: place.country,
+            countryCode: place.countryCode,
+            region: place.administrativeArea,
+            locality: place.locality
         )
+    }
+
+    @MainActor
+    private func ask(lat: Double, lon: Double) async -> GeocodeGate.Answer {
+        await (gate ?? .shared).place(lat: lat, lon: lon, priority: priority, minIntervalS: minIntervalS)
     }
 }

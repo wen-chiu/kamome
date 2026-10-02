@@ -6,10 +6,16 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-30 against ADR **2026-09-30-bundle-id** (the App Store
-bundle id is `com.chiu.kamome`, replacing the `.dev` placeholder). Before it:
-2026-09-29-the-opening-zooms-and-the-route-holds (the opening zooms out of the title card instead of cutting, reopening
-2026-08-31; the revealed route holds before the end card). Before it:
+Last synced: 2026-10-01 against ADR **2026-10-01-stop-naming-outlives-the-screen**
+(stop naming is owned by `StopNamingCoordinator` and survives leaving Trip
+Detail; every Apple lookup waits at one `GeocodeGate`). Before it:
+2026-09-30-export-time-left (the export sheet says "about N minutes left" from
+its own station pace, after a 60 s warm-up);
+2026-09-30-bundle-id (the App Store bundle id is `com.chiu.kamome`, replacing
+the `.dev` placeholder);
+2026-09-29-the-opening-zooms-and-the-route-holds
+(the opening zooms out of the title card instead of cutting, reopening
+2026-08-31; the revealed route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
 its own towns, and travel is earned by windows); 2026-09-28-sample-trip (an
 empty Home offers a sample trip, Hualien to Taitung, with its road shipped and
@@ -99,7 +105,8 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
   every screen (ADR 2026-09-10). **The substrate declares its own attribution**
   (`MapRendererCapabilities.attribution`) and the render loop draws it on every
   frame — MapLibre credits OSM, **MapKit credits nothing and must not** (ADR
-  2026-09-12).
+  2026-09-12). While drawing, the sheet adds **"about N minutes left"** after
+  a warm-up, from the export's own stations per second (ADR 2026-09-30).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
   ⚠️ **Two keys are dead** — tuning them does nothing
   (`Scripts/dead-config.baseline`). `total_duration_max_s` is Short's ceiling.
