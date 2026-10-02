@@ -156,6 +156,7 @@ final class TripDetailModel {
                 }.value
                 // One assignment, so the map never draws lines from another read.
                 (detail, films, displayPolylines) = read
+                rememberExtent(under: config.discovery.singlePlaceExtentM)
             } while refreshAgain
             refreshTask = nil
         }
@@ -206,16 +207,10 @@ final class TripDetailModel {
     /// the same cache the card writes, so the two screens cannot disagree.
     var journeyName: JourneyName? {
         guard let detail else { return nil }
-        let lats = detail.stops.map(\.lat)
-        let lons = detail.stops.map(\.lon)
-        var extentM = 0.0
-        if let minLat = lats.min(), let maxLat = lats.max(), let minLon = lons.min(), let maxLon = lons.max() {
-            extentM = Geo.distanceM(latA: minLat, lonA: minLon, latB: maxLat, lonB: maxLon)
-        }
         return JourneyNameCache().name(
-            for: detail.trip.discoveryKey ?? detail.trip.id,
+            for: TripTitle.placeKey(for: detail.trip),
             homeCountryCode: JourneyNameCache.deviceHomeCountryCode,
-            isSinglePlace: extentM < config.discovery.singlePlaceExtentM
+            isSinglePlace: TripTitle.isSinglePlace(detail.stops, under: config.discovery.singlePlaceExtentM)
         )
     }
 

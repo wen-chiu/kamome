@@ -13,13 +13,33 @@ extension TripDetailModel {
         reload()
     }
 
-    /// The story's headline, by Home's rule: a real name (an album's, a
-    /// Discovery card's, or one the person typed) wins; only a trip still
-    /// titled with its plain start date shows the place found for it. Without
-    /// this the cached place hid a rename on this screen.
+    /// The trip's name on this screen and in the diary, by `TripTitle`'s rule: a
+    /// real name (an album's, or one the person typed) wins; a trip nobody
+    /// named shows the place found for it. Without this the cached place hid a
+    /// rename on this screen.
     var storyTitle: String {
         guard let trip = detail?.trip else { return "" }
         guard TripTitle.isFallback(trip) else { return trip.title }
         return journeyName?.title ?? trip.title
+    }
+
+    /// The navigation bar's title: `storyTitle` with its flag, as Home's row and
+    /// the film's title card say it. The stored title of an unnamed trip is its
+    /// start date, which the day chips already carry.
+    var screenTitle: String {
+        guard let trip = detail?.trip else { return "" }
+        return TripTitle.film(trip)
+    }
+
+    /// Records whether the trip stayed in one place, every time it is read.
+    /// A merge or a deleted stop changes the answer, both happen on this
+    /// screen, and Home's row and the film read it from the cache
+    /// (`TripTitle.place`).
+    func rememberExtent(under singlePlaceExtentM: Double) {
+        guard let detail else { return }
+        JourneyNameCache().setSinglePlace(
+            TripTitle.isSinglePlace(detail.stops, under: singlePlaceExtentM),
+            for: TripTitle.placeKey(for: detail.trip)
+        )
     }
 }

@@ -67,6 +67,7 @@ enum JourneyNaming {
 struct JourneyNameCache {
     private let defaults: UserDefaults
     private static let key = "kamome.journeyPlaces"
+    private static let singlePlaceKey = "kamome.journeySinglePlaces"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -89,6 +90,27 @@ struct JourneyNameCache {
     func name(for journeyKey: String, homeCountryCode: String?, isSinglePlace: Bool) -> JourneyName? {
         guard let place = place(for: journeyKey) else { return nil }
         return JourneyNaming.name(place: place, homeCountryCode: homeCountryCode, isSinglePlace: isSinglePlace)
+    }
+
+    /// Whether the journey stayed in one place, as last measured by whoever
+    /// had its stops in hand: trip creation, a Discovery card being opened, or
+    /// Trip Detail reading the trip (which re-measures after a merge or a
+    /// deleted stop). Kept because Home's row holds only the trip record, and
+    /// the rule that titles a one-town trip by its town (Chiu 2026-10-01) must
+    /// not cost a read per row. A key that was never measured reads as wide.
+    func isSinglePlace(_ journeyKey: String) -> Bool {
+        singlePlaces().contains(journeyKey)
+    }
+
+    func setSinglePlace(_ isSinglePlace: Bool, for journeyKey: String) {
+        var keys = singlePlaces()
+        guard keys.contains(journeyKey) != isSinglePlace else { return }
+        if isSinglePlace { keys.insert(journeyKey) } else { keys.remove(journeyKey) }
+        defaults.set(keys.sorted(), forKey: Self.singlePlaceKey)
+    }
+
+    private func singlePlaces() -> Set<String> {
+        Set(defaults.stringArray(forKey: Self.singlePlaceKey) ?? [])
     }
 
     /// Home's country, from the device's region setting. Local; nothing is
@@ -128,13 +150,17 @@ enum TripJourneyNaming {
     static func nameIfNeeded(
         tripId: String,
         repository: TripRepository,
+        singlePlaceExtentM: Double,
         geocoder: PlaceGeocoding = CLPlaceGeocoder(),
         cache: JourneyNameCache = JourneyNameCache()
     ) {
-        guard cache.place(for: tripId) == nil,
-              let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }),
+        guard let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }),
               let first = detail.stops.first
         else { return }
+        // Measured while the stops are in hand: a one-town trip is titled by
+        // its town, and Home's row cannot measure it (`TripTitle.place`).
+        cache.setSinglePlace(TripTitle.isSinglePlace(detail.stops, under: singlePlaceExtentM), for: tripId)
+        guard cache.place(for: tripId) == nil else { return }
         Task {
             if let place = await geocoder.place(lat: first.lat, lon: first.lon) {
                 cache.store(place, for: tripId)

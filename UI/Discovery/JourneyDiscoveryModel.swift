@@ -29,6 +29,15 @@ final class JourneyDiscoveryModel {
     private(set) var journeys: [JourneySummary] = []
     /// Set while a discovered journey is being imported on the way to its screen.
     private(set) var openingId: String?
+    /// Why the last `open` produced no trip, until the screen has said so (#166).
+    private(set) var openFailure: OpenFailure?
+
+    enum OpenFailure: Equatable {
+        /// The import refused the photographs as not a trip.
+        case notATrip
+        /// The photographs were fine; storing the trip failed.
+        case saveFailed
+    }
 
     let config: TrackingConfig
     let repository: TripRepository
@@ -46,6 +55,9 @@ final class JourneyDiscoveryModel {
     /// never from a lookup (`JourneyNaming`).
     let homeCountryCode: String?
     private var namingTask: Task<Void, Never>?
+    /// Journeys whose place `nameNow` is already asking about, so the queue in
+    /// `startNaming` does not ask a second time.
+    private var namingNow: Set<String> = []
 
     init(
         config: TrackingConfig,
@@ -196,11 +208,17 @@ final class JourneyDiscoveryModel {
             return existing
         }
         openingId = summary.id
+        openFailure = nil
         defer { openingId = nil }
         do {
+            // No title: the trip is stored unnamed and `TripTitle` calls it by
+            // its place on every screen, whenever the lookup answers. Passing
+            // the card's headline froze the trip at whatever the lookup had
+            // reached at the tap — "September 2026", for good (#165).
             let tripId = try await importService.importTrip(
-                title: summary.headline, photos: journey.photos, discoveryKey: journey.key
+                title: nil, photos: journey.photos, discoveryKey: journey.key
             )
+            nameCache.setSinglePlace(summary.isSinglePlace, for: journey.key)
             // Roads arrive when they arrive, exactly as after the import sheet
             // (2026-08-15); the trip is viewable now.
             RouteMatchCoordinator.shared.start(
@@ -211,12 +229,22 @@ final class JourneyDiscoveryModel {
                 tripId: tripId, repository: repository, config: config.photoAnalysis
             )
             detected[journey.key] = nil
+            nameNow(summary)
             loadTrips()
             return tripId
+        } catch ImportService.ImportError.notEnoughGeotaggedPhotos {
+            openFailure = .notATrip
+            return nil
         } catch {
             KamomeLog.recap.error("discovered journey could not be imported: \(error)")
+            openFailure = .saveFailed
             return nil
         }
+    }
+
+    /// The screen has shown `openFailure`.
+    func acknowledgeOpenFailure() {
+        openFailure = nil
     }
 
     /// Hides a discovered journey. Remembered, so a rescan does not bring it
@@ -258,6 +286,28 @@ final class JourneyDiscoveryModel {
         )
     }
 
+    /// Looks up the place of a journey that has just become a trip, ahead of
+    /// the queue, and finishes even if this screen has gone: the trip is
+    /// stored unnamed (`open`), so Home shows its date until this answers. The
+    /// same single lookup the queue would make — the journey's busiest stop —
+    /// only sooner; `namingNow` keeps the queue from making it twice.
+    private func nameNow(_ summary: JourneySummary) {
+        guard nameCache.place(for: summary.id) == nil,
+              let lat = summary.nameLookupLat, let lon = summary.nameLookupLon
+        else { return }
+        let (id, geocoder, cache) = (summary.id, geocoder, nameCache)
+        namingNow.insert(id)
+        Task { [weak self] in
+            if let place = await geocoder.place(lat: lat, lon: lon) {
+                cache.store(place, for: id)
+            } else {
+                KamomeLog.geocode.notice("journey naming produced no place for \(id, privacy: .public)")
+            }
+            self?.namingNow.remove(id)
+            self?.loadTrips()
+        }
+    }
+
     /// Names every journey that has none, one lookup at a time. Restarted
     /// whenever the list changes; cached places are applied synchronously in
     /// `summary(...)`, so only an unknown place costs a lookup.
@@ -267,7 +317,7 @@ final class JourneyDiscoveryModel {
     /// names. Home is never looked up (`JourneyNaming`).
     private func startNaming() {
         namingTask?.cancel()
-        let pending = journeys.filter { $0.name == nil && $0.nameLookupLat != nil }
+        let pending = journeys.filter { $0.name == nil && $0.nameLookupLat != nil && !namingNow.contains($0.id) }
         guard !pending.isEmpty else { return }
         let interval = config.geocode.minIntervalS
         namingTask = Task { [weak self] in

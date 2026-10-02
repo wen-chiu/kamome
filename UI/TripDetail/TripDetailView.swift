@@ -73,7 +73,7 @@ struct TripDetailView: View {
             exportProgressRow
             timeline
         }
-        .navigationTitle(model.detail?.trip.title ?? "")
+        .navigationTitle(model.screenTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             model.load()
