@@ -1,4 +1,3 @@
-import CoreLocation
 import Foundation
 import KamomeTripComposer
 
@@ -17,6 +16,14 @@ import KamomeTripComposer
 /// throttle, the retry, the DB write) stays in `StopNamer` where it can now be
 /// driven by a stub; only the Apple call itself is on the other side.
 protocol StopGeocoding: AnyObject {
+    /// True when this geocoder spaces its own lookups (the shipping one does,
+    /// through `GeocodeGate`). `StopNamer` then hands it the next stop at once
+    /// instead of waiting out `geocode.min_interval_s` itself: a namer that
+    /// waited would rejoin the gate's line behind whatever else was waiting,
+    /// and stop names would take turns with Discovery's cards. Defaulted to
+    /// false below, so a stub is throttled by `StopNamer` as it always was.
+    var pacesItself: Bool { get }
+
     /// Resolves one coordinate. `name` is nil when the lookup produced no usable
     /// placemark; `error` carries the reason when there was one. Both nil-name
     /// outcomes — error and empty — must still charge the throttle, which is the
@@ -47,6 +54,8 @@ protocol StopGeocoding: AnyObject {
 }
 
 extension StopGeocoding {
+    var pacesItself: Bool { false }
+
     func reverseGeocodePlace(
         lat: Double, lon: Double, completion: @escaping (String?, String?, Error?) -> Void
     ) {
@@ -60,17 +69,28 @@ extension StopGeocoding {
     }
 }
 
-/// The shipping implementation: CLGeocoder, honoring device locale so Chinese
-/// place names come back natively (§1.7).
+/// The shipping implementation: Apple's geocoder through `GeocodeGate`, the
+/// one throttle every lookup in the app shares (#159). Honours the device
+/// locale, so Chinese place names come back natively (§1.7).
 final class CLGeocoderStopGeocoder: StopGeocoding {
-    private let geocoder = CLGeocoder()
+    private let minIntervalS: Double
+    /// nil is the app's shared gate; a test passes its own.
+    private let gate: GeocodeGate?
+
+    /// `minIntervalS` is `geocode.min_interval_s`: the wait the gate holds
+    /// before each of these lookups.
+    init(minIntervalS: Double, gate: GeocodeGate? = nil) {
+        self.minIntervalS = minIntervalS
+        self.gate = gate
+    }
+
+    /// The gate spaces the lookups, and decides whose turn it is.
+    var pacesItself: Bool { true }
 
     func reverseGeocode(
         lat: Double, lon: Double, completion: @escaping (String?, Error?) -> Void
     ) {
-        geocoder.reverseGeocodeLocation(CLLocation(latitude: lat, longitude: lon)) { placemarks, error in
-            completion(Self.displayName(from: placemarks?.first), error)
-        }
+        reverseGeocodeZoned(lat: lat, lon: lon) { name, _, _, error in completion(name, error) }
     }
 
     func reverseGeocodePlace(
@@ -82,24 +102,25 @@ final class CLGeocoderStopGeocoder: StopGeocoding {
     func reverseGeocodeZoned(
         lat: Double, lon: Double, completion: @escaping (String?, String?, String?, Error?) -> Void
     ) {
-        geocoder.reverseGeocodeLocation(CLLocation(latitude: lat, longitude: lon)) { placemarks, error in
-            let placemark = placemarks?.first
-            completion(Self.displayName(from: placemark), placemark?.locality, placemark?.timeZone?.identifier, error)
+        let (gate, minIntervalS) = (gate, minIntervalS)
+        Task { @MainActor in
+            let answer = await (gate ?? .shared).place(lat: lat, lon: lon, priority: .stop, minIntervalS: minIntervalS)
+            let place = answer.place
+            completion(place.flatMap(Self.displayName), place?.locality, place?.timeZone, answer.error)
         }
     }
 
-    private static func displayName(from placemark: CLPlacemark?) -> String? {
-        guard let placemark else { return nil }
-        return StopDisplayName.choose(
-            name: placemark.name,
-            thoroughfare: placemark.thoroughfare,
-            subLocality: placemark.subLocality,
-            locality: placemark.locality,
-            administrativeArea: placemark.administrativeArea,
-            country: placemark.country,
-            inlandWater: placemark.inlandWater,
-            ocean: placemark.ocean,
-            areasOfInterest: placemark.areasOfInterest
+    private static func displayName(from place: GeocodedPlace) -> String? {
+        StopDisplayName.choose(
+            name: place.name,
+            thoroughfare: place.thoroughfare,
+            subLocality: place.subLocality,
+            locality: place.locality,
+            administrativeArea: place.administrativeArea,
+            country: place.country,
+            inlandWater: place.inlandWater,
+            ocean: place.ocean,
+            areasOfInterest: place.areasOfInterest
         )
     }
 }

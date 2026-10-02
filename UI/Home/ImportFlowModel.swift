@@ -206,7 +206,8 @@ final class ImportFlowModel {
             // Home's card can show a place + flag without S3 ever being opened
             // (Chiu 2026-09-22) — see `TripJourneyNaming`.
             TripJourneyNaming.nameIfNeeded(
-                tripId: tripId, repository: repository, singlePlaceExtentM: config.discovery.singlePlaceExtentM
+                tripId: tripId, repository: repository, geocode: config.geocode,
+                singlePlaceExtentM: config.discovery.singlePlaceExtentM
             )
             // Vision looks at the photographs in the background; the film never
             // waits for it (ADR 2026-09-25 (d)).

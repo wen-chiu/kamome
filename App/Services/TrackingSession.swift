@@ -173,7 +173,8 @@ final class TrackingSession {
         // Home's card can show a place + flag without S3 ever being opened
         // (Chiu 2026-09-22) — see `TripJourneyNaming`.
         TripJourneyNaming.nameIfNeeded(
-            tripId: tripId, repository: repository, singlePlaceExtentM: config.discovery.singlePlaceExtentM
+            tripId: tripId, repository: repository, geocode: config.geocode,
+            singlePlaceExtentM: config.discovery.singlePlaceExtentM
         )
         // §4.4 matching, fire-and-forget: trip completion never waits on
         // it, and the recap path joins any run still going rather than

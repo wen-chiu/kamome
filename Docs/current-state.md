@@ -6,13 +6,17 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-01 against ADR **2026-10-01-an-unnamed-trip-is-called-by-its-place**
-(one title rule on every screen: a real name wins, an unnamed trip is flag +
-town, region or country; a Discovery trip is stored unnamed). Draft, not built:
+Last synced: 2026-10-01 against ADR **2026-10-01-stop-naming-outlives-the-screen**
+(stop naming is owned by `StopNamingCoordinator` and survives leaving Trip
+Detail; every Apple lookup waits at one `GeocodeGate`). Same day:
+2026-10-01-an-unnamed-trip-is-called-by-its-place (one title rule on every
+screen: a real name wins, an unnamed trip is flag + town, region or country; a
+Discovery trip is stored unnamed). Draft, not built:
 2026-09-30-footprints-sits-beside-journeys (Discovery leaves beta as 足跡, a
-read-only itinerary beside 旅程). Before it: 2026-09-30-export-time-left
-(the export sheet says "about N minutes left" from its own station pace, after
-a 60 s warm-up); 2026-09-29-the-opening-zooms-and-the-route-holds
+read-only itinerary beside 旅程). Before it:
+2026-09-30-export-time-left (the export sheet says "about N minutes left" from
+its own station pace, after a 60 s warm-up);
+2026-09-29-the-opening-zooms-and-the-route-holds
 (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by

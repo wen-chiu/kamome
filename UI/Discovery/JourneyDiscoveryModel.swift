@@ -44,6 +44,9 @@ final class JourneyDiscoveryModel {
     private let provider: ImportPhotoProviding
     private let photoAccess: PhotoAccessProviding
     private let geocoder: PlaceGeocoding
+    /// For a journey that has just become a trip (`nameNow`): the same lookup
+    /// as a card's, asked at the priority of a new trip's flag (#159).
+    private let tripGeocoder: PlaceGeocoding
     let nameCache: JourneyNameCache
     private let dismissed: DismissedJourneys
     private let now: () -> Date
@@ -64,7 +67,7 @@ final class JourneyDiscoveryModel {
         repository: TripRepository,
         source: ImportPhotoProviding,
         photoAccess: PhotoAccessProviding,
-        geocoder: PlaceGeocoding = CLPlaceGeocoder(),
+        geocoder: PlaceGeocoding? = nil,
         defaults: UserDefaults = .standard,
         homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode,
         now: @escaping () -> Date = Date.init
@@ -73,7 +76,9 @@ final class JourneyDiscoveryModel {
         self.repository = repository
         provider = source
         self.photoAccess = photoAccess
-        self.geocoder = geocoder
+        // Behind any stop naming, on the one throttle the app shares (#159).
+        self.geocoder = geocoder ?? CLPlaceGeocoder(priority: .card, minIntervalS: config.geocode.minIntervalS)
+        tripGeocoder = geocoder ?? CLPlaceGeocoder(priority: .tripFlag, minIntervalS: config.geocode.minIntervalS)
         nameCache = JourneyNameCache(defaults: defaults)
         dismissed = DismissedJourneys(defaults: defaults)
         self.homeCountryCode = homeCountryCode
@@ -287,15 +292,16 @@ final class JourneyDiscoveryModel {
     }
 
     /// Looks up the place of a journey that has just become a trip, ahead of
-    /// the queue, and finishes even if this screen has gone: the trip is
+    /// the cards, and finishes even if this screen has gone: the trip is
     /// stored unnamed (`open`), so Home shows its date until this answers. The
     /// same single lookup the queue would make — the journey's busiest stop —
-    /// only sooner; `namingNow` keeps the queue from making it twice.
+    /// only sooner, through the shared gate at a new trip's priority;
+    /// `namingNow` keeps the queue from making it twice.
     private func nameNow(_ summary: JourneySummary) {
         guard nameCache.place(for: summary.id) == nil,
               let lat = summary.nameLookupLat, let lon = summary.nameLookupLon
         else { return }
-        let (id, geocoder, cache) = (summary.id, geocoder, nameCache)
+        let (id, geocoder, cache) = (summary.id, tripGeocoder, nameCache)
         namingNow.insert(id)
         Task { [weak self] in
             if let place = await geocoder.place(lat: lat, lon: lon) {
