@@ -23,6 +23,21 @@ final class StopNamingCoordinatorTests: XCTestCase {
         }
     }
 
+    /// Answers with a town and a zone as well, as Apple does.
+    private final class ZonedGeocoder: StopGeocoding {
+        func reverseGeocode(lat: Double, lon: Double, completion: @escaping (String?, Error?) -> Void) {
+            reverseGeocodeZoned(lat: lat, lon: lon) { name, _, _, error in completion(name, error) }
+        }
+
+        func reverseGeocodeZoned(
+            lat: Double, lon: Double, completion: @escaping (String?, String?, String?, Error?) -> Void
+        ) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                completion(String(format: "Place %.1f", lat), "Town", "Pacific/Auckland", nil)
+            }
+        }
+    }
+
     /// Stands in for a screen: it is what `onChange` holds weakly.
     private final class Screen {
         var heard: [StopNamer.Progress] = []
@@ -153,6 +168,27 @@ final class StopNamingCoordinatorTests: XCTestCase {
         XCTAssertFalse(coordinator.isNaming(tripId))
         XCTAssertTrue(screen.heard.isEmpty)
         XCTAssertEqual(stub.lookups, 0)
+    }
+
+    /// **A zone that lands is heard** (ADR 2026-10-01, a stop's time is the
+    /// clock where it happened). A trip named before zones were kept is asked
+    /// for them on its next open, and the screen showing its days and hours
+    /// was never told: it kept the phone's clock until it was opened again.
+    func testAScreenHearsEachBackFilledZoneLand() async throws {
+        let (repository, tripId) = try await importedTrip(stops: 2)
+        for stop in try stops(repository, tripId) {
+            try repository.setStopName(stopId: stop.id, name: "Mine")
+        }
+        let coordinator = StopNamingCoordinator { ZonedGeocoder() }
+        let screen = Screen()
+        try start(coordinator, repository, tripId, for: screen)
+        XCTAssertFalse(coordinator.isNaming(tripId), "filling a town is not naming: the film button does not wait on it")
+
+        try await settle { screen.heard.count >= 2 }
+        XCTAssertEqual(screen.heard.count, 2, "one reload per stop whose zone landed")
+        let filled = try stops(repository, tripId)
+        XCTAssertTrue(filled.allSatisfy { $0.timeZone == "Pacific/Auckland" }, "\(filled.map(\.timeZone))")
+        XCTAssertTrue(filled.allSatisfy { $0.name == "Mine" }, "a zone lookup rewrote a name")
     }
 
     /// A caller's copy of the trip can be one read behind. Handing back a stop
