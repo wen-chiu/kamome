@@ -29,7 +29,7 @@ Chiu, on his New Zealand film: *「地名放大一點 使用者比較能知道�
 
 ## Consequences
 
-- **A trip that is all one town has one name.** Miyakojima geocodes to one municipality: its close frames (8 km) now carry no place name at all (VERIFIED, render). Chiu's to judge; an issue is open.
+- **A trip that is all one town has one name.** Miyakojima geocodes to one municipality: its close frames (8 km) now carry no place name at all (VERIFIED, render). Chiu's to judge: #183.
 - The towns the trip passed but did not stop in are no longer named (Geraldine, Timaru on the NZ film).
 - Seen on the render and not solved here:
   - a name held at the bottom edge sits under the map credit;
