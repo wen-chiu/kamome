@@ -216,11 +216,6 @@ struct RecapView: View {
         }
     }
 
-    /// Film seconds as the clock a video player shows: 1:28, 3:32.
-    static func clock(_ seconds: Double) -> String {
-        Duration.seconds(seconds.rounded()).formatted(.time(pattern: .minuteSecond))
-    }
-
     /// **Short or standard** (Chiu 2026-09-27). Short is the default and fits
     /// a Reel whole; standard is the film the trip earns from its size, at most
     /// 300 s. Hidden when both make the same film — a small trip has nothing to
@@ -281,8 +276,6 @@ struct RecapView: View {
         .buttonStyle(.borderedProminent)
         .waitsForNaming(tripId: model.tripId, of: filmStopIds)
     }
-
-    private var filmStopIds: Set<String> { Set(filmPhotos?.filmStops.map(\.id) ?? []) }
 
     /// Which stops the film presents and what each shows, before it is
     /// rendered (ADR 2026-09-24, Chiu 2026-09-25) — `FilmStopsSections`.
@@ -389,5 +382,16 @@ struct RecapView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+// Out of the struct's body for SwiftLint's 250-line limit; nothing else moved.
+extension RecapView {
+    /// The stops the film presents now, for the naming gate (`FilmNamingNote`).
+    fileprivate var filmStopIds: Set<String> { Set(filmPhotos?.filmStops.map(\.id) ?? []) }
+
+    /// Film seconds as the clock a video player shows: 1:28, 3:32.
+    static func clock(_ seconds: Double) -> String {
+        Duration.seconds(seconds.rounded()).formatted(.time(pattern: .minuteSecond))
     }
 }
