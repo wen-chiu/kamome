@@ -51,4 +51,5 @@ Chiu, 2026-10-02: *「那紀錄畫面要有提醒或乾脆不給他用 有訊息
   service asks again, which is a no-op if it does.
 - UNKNOWN on a phone: where Open Settings lands (the simulator opened Settings'
   root once, Kamome's page once). One tap on a TestFlight build settles it.
-- Owed: the three new sentences are a working draft; the wording is Chiu's (#118).
+- Wording: the zh-Hant sentences and the button, 「開啟定位設定」, are Chiu's
+  (2026-10-02). The English follows them and is the session's draft (#118).

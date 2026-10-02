@@ -79,8 +79,10 @@ struct RecordingView: View {
                     .font(.footnote)
                     .fixedSize(horizontal: false, vertical: true)
                 if let settings = URL(string: UIApplication.openSettingsURLString) {
-                    Link("access_denied_settings", destination: settings)
-                        .font(.footnote.weight(.semibold))
+                    Link(destination: settings) {
+                        Text("record_location_open_settings")
+                            .font(.footnote.weight(.semibold))
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

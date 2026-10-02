@@ -82,7 +82,7 @@ struct StartRecordingSheet: View {
                     .foregroundStyle(.secondary)
                 if let settings = URL(string: UIApplication.openSettingsURLString) {
                     Link(destination: settings) {
-                        Text("access_denied_settings")
+                        Text("record_location_open_settings")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
