@@ -14,7 +14,7 @@ the app under you — it happened once during this session and produced a
 convincing screenshot of the *previous* wording. Check the installed bundle, not
 the source:
 
-    APP=$(xcrun simctl get_app_container <udid> com.chiu.kamome app)
+    APP=$(xcrun simctl get_app_container <udid> com.chiu.kamome.dev app)
     plutil -extract privacy_hop_relay raw -o - "$APP/en.lproj/Localizable.strings"
 
 ## `about-screen-*.png` — S2 and S3
@@ -33,7 +33,7 @@ that it is compiled. These are that half.
 
 Reproduce with:
 
-    xcrun simctl launch <udid> com.chiu.kamome -AppleLanguages '(en)' -AppleLocale en_US
+    xcrun simctl launch <udid> com.chiu.kamome.dev -AppleLanguages '(en)' -AppleLocale en_US
 
 ⚠️ **Both languages are captured on purpose.** `Powered by Geoapify` is the
 format the free plan requires and is therefore **not translated**; a screenshot

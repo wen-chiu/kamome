@@ -244,10 +244,9 @@ targets:
         # signing identities is for this team.
         DEVELOPMENT_TEAM: 6XPGA48GFT
         CODE_SIGN_STYLE: Automatic
-        # The App Store bundle id (ADR 2026-09-30-bundle-id). Permanent from the
-        # first App Store release: a different id is a different app, with its
-        # own App Store Connect record and its own on-device container.
-        PRODUCT_BUNDLE_IDENTIFIER: com.chiu.kamome
+        # The App Store bundle id, and permanent: Kamome ships on the existing
+        # App Store Connect record (ADR 2026-10-02). Not a placeholder any more.
+        PRODUCT_BUNDLE_IDENTIFIER: com.chiu.kamome.dev
         # MARKETING_VERSION and CURRENT_PROJECT_VERSION are NOT here: they live
         # in Config/Version.xcconfig (set with Scripts/set-version.sh), and a
         # value here would override that file. Scripts/check-version-source.sh
