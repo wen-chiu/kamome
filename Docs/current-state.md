@@ -8,15 +8,21 @@ way — this file rotted twice by growing its own reasoning.
 
 Last synced: 2026-10-02 against ADR **2026-10-02-the-finished-screen-is-the-film**
 (the finished screen gives its height to the film: Export again moves into ⋯,
-a no-road leg is one caption line). Before it:
-2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
+a no-road leg is one caption line). The same day:
+2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
+existing App Store Connect record; the id is no longer a placeholder). Before
+them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
 (a beach waypoint the drive profile refuses is moved to where a walk reaches
 it, at most 650 m, and drive is asked again). The same day:
 2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
 `StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
 waits at one `GeocodeGate`); 2026-10-01-a-stops-time-is-the-clock-where-it-happened
 (a stop's hour is shown in the zone it happened in, like its date, on Trip
-Detail and the Journey Diary). Before them:
+Detail and the Journey Diary); 2026-10-01-an-unnamed-trip-is-called-by-its-place
+(one title rule on every screen: a real name wins, an unnamed trip is flag +
+town, region or country; a Discovery trip is stored unnamed). Draft, not built:
+2026-09-30-footprints-sits-beside-journeys (Discovery leaves beta as 足跡, a
+read-only itinerary beside 旅程). Before them:
 2026-09-30-export-time-left (the export sheet says "about N minutes left" from
 its own station pace, after a 60 s warm-up);
 2026-09-29-the-opening-zooms-and-the-route-holds

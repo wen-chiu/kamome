@@ -46,7 +46,8 @@ extension JourneyDiscoveryModel {
             isSinglePlace: isSinglePlace,
             countryCode: place?.countryCode,
             countryName: place?.country,
-            clock: TripClock(stops: facts.stops)
+            clock: TripClock(stops: facts.stops),
+            realTitle: TripTitle.isFallback(trip) ? nil : trip.title
         )
     }
 
@@ -76,7 +77,7 @@ extension JourneyDiscoveryModel {
             name: nameCache.name(
                 for: journey.key, homeCountryCode: homeCountryCode, isSinglePlace: isSinglePlace
             ),
-            fallbackTitle: Self.monthTitle(for: journey.startedAt),
+            fallbackTitle: TripTitle.month(for: journey.startedAt),
             startedAt: journey.startedAt,
             endedAt: journey.endedAt,
             photoCount: journey.photoCount,
@@ -104,12 +105,5 @@ extension JourneyDiscoveryModel {
             countryCode: place?.countryCode,
             countryName: place?.country
         )
-    }
-
-    /// "March 2026" — what a journey is called until its place is known.
-    static func monthTitle(for timestamp: Double) -> String {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
-        return formatter.string(from: Date(timeIntervalSince1970: timestamp))
     }
 }

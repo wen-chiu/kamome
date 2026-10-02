@@ -1620,6 +1620,42 @@
         }
       }
     },
+    "journey_open_failed": {
+      "comment": "Discovery: the alert's title when a discovered journey could not be opened (#166). Draft wording.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This journey could not be opened"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法打開這趟旅程"
+          }
+        }
+      }
+    },
+    "journey_open_failed_not_a_trip": {
+      "comment": "Discovery: the import refused the journey's photographs as not a trip (#166). Draft wording.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its photos do not make a route."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這趟旅程的相片組不成一條路線。"
+          }
+        }
+      }
+    },
     "import_from": {
       "extractionState": "manual",
       "localizations": {
