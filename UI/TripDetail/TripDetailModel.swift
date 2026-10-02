@@ -22,14 +22,12 @@ final class TripDetailModel {
     let repository: TripRepository
     private let config: TrackingConfig
     private let photoService: PhotoLibraryService
-    private let namer: StopNamer
 
     init(tripId: String, config: TrackingConfig, repository: TripRepository) {
         self.tripId = tripId
         self.config = config
         self.repository = repository
         photoService = PhotoLibraryService(config: config, repository: repository)
-        namer = StopNamer(config: config.geocode, repository: repository)
     }
 
     /// Which subject this trip's film draws. NULL in the database means the trip
@@ -69,6 +67,7 @@ final class TripDetailModel {
     }
 
     /// What `load()` does once the trip is in hand.
+    @MainActor
     private func continueLoad() {
         guard let detail else { return }
 
@@ -88,21 +87,17 @@ final class TripDetailModel {
             }
         }
         startPhotoAnalysis()
-        let unnamed = detail.stops.filter(StopNamer.needsName)
-        if !unnamed.isEmpty {
-            // Reload as each name lands, not once on a timer: a photo-dense
-            // imported trip has many stops geocoded over ~30 s (§4.2 throttle),
-            // well past any single refresh.
-            namer.nameUnnamedStops(unnamed) { [weak self] progress in
-                self?.naming = progress
-                self?.scheduleReload()
-            }
-        }
-        // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
-        // before schema v9 are asked once, behind any naming. Reload as each
-        // lands: the zone that comes with it is what the day chips and the
-        // stops' hours are read in (ADR 2026-10-01).
-        namer.fillMissingLocalities(detail.stops) { [weak self] in
+        // Reload as each name lands, not once on a timer: a photo-dense
+        // imported trip has many stops geocoded over ~30 s (§4.2 throttle),
+        // well past any single refresh. The run belongs to the coordinator, so
+        // it carries on when this screen goes and is joined when it comes back
+        // (#159); towns are filled behind the names (ADR 2026-09-24 (e)), and
+        // each one that lands is heard here too: the zone that comes with it is
+        // what the day chips and the stops' hours are read in (ADR 2026-10-01).
+        StopNamingCoordinator.shared.start(
+            tripId: tripId, stops: detail.stops, repository: repository, config: config.geocode, for: self
+        ) { [weak self] progress in
+            self?.naming = progress
             self?.scheduleReload()
         }
     }
