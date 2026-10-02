@@ -30,6 +30,12 @@ extension TripDetailModel {
         return clock.dayIndex(of: timestamp, tripStartedAt: detail.trip.startedAt)
     }
 
+    /// The time a stop's row shows: the wall clock where the stop is, not the
+    /// phone's (ADR 2026-10-01) — the same zone its day chip is counted in.
+    func arrivalTime(of stop: StopRecord, locale: Locale = .current) -> String {
+        clock.timeText(at: stop.arrivedAt, locale: locale)
+    }
+
     var visibleStops: [StopRecord] {
         guard let detail else { return [] }
         guard let selectedDay else { return detail.stops }

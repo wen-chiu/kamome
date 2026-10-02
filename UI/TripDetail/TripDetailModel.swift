@@ -91,7 +91,9 @@ final class TripDetailModel {
         // imported trip has many stops geocoded over ~30 s (§4.2 throttle),
         // well past any single refresh. The run belongs to the coordinator, so
         // it carries on when this screen goes and is joined when it comes back
-        // (#159); towns are filled behind the names (ADR 2026-09-24 (e)).
+        // (#159); towns are filled behind the names (ADR 2026-09-24 (e)), and
+        // each one that lands is heard here too: the zone that comes with it is
+        // what the day chips and the stops' hours are read in (ADR 2026-10-01).
         StopNamingCoordinator.shared.start(
             tripId: tripId, stops: detail.stops, repository: repository, config: config.geocode, for: self
         ) { [weak self] progress in

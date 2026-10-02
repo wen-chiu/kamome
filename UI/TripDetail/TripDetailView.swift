@@ -219,7 +219,7 @@ struct TripDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(stop.name ?? String(localized: "stop_unnamed"))
                                 .font(.headline)
-                            Text(Date(timeIntervalSince1970: stop.arrivedAt), style: .time)
+                            Text(verbatim: model.arrivalTime(of: stop))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
