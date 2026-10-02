@@ -6,8 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-01 against ADR
-**2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it**
+Last synced: 2026-10-02 against ADR
+**2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev** (Kamome ships on the
+existing App Store Connect record; the id is no longer a placeholder). Before
+it: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
 (a beach waypoint the drive profile refuses is moved to where a walk reaches
 it, at most 650 m, and drive is asked again). The same day:
 2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
