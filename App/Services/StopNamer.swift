@@ -43,6 +43,7 @@ final class StopNamer {
     /// behind, and would hand a stop back as unnamed just after its name landed.
     private var namedIds: Set<String> = []
     private var onChange: ((Progress) -> Void)?
+    private var onPlaceFilled: (() -> Void)?
     /// Called each time the queue runs empty with nothing in flight — names
     /// and towns both. `StopNamingCoordinator` lets go of the namer then.
     var onDrained: (() -> Void)?
@@ -82,7 +83,13 @@ final class StopNamer {
     /// Asks for the town of every stop that has a name but was named before
     /// schema v9 kept towns. Fire-and-forget, behind any naming, on the same
     /// throttle; the name is never rewritten — it may be the user's own.
-    func fillMissingLocalities(_ stops: [StopRecord]) {
+    ///
+    /// `onFilled` fires (main thread) each time a town and zone land, so the
+    /// screen that shows the stop's day and hour can read them (ADR 2026-10-01):
+    /// without it a trip named before schema v14 kept the phone's clock until
+    /// it was opened a second time.
+    func fillMissingLocalities(_ stops: [StopRecord], onFilled: (() -> Void)? = nil) {
+        if let onFilled { onPlaceFilled = onFilled }
         queue.append(contentsOf: stops.filter { Self.needsLocality($0) && !isPending($0) }
             .map { (stop: $0, townOnly: true) })
         drain()
@@ -146,6 +153,7 @@ final class StopNamer {
             drain()
         case .cached(let name):
             storeCachedPlace(named: name, of: stop)
+            onPlaceFilled?()
             drain()
         case .throttled(let retryAfterS) where !geocoder.pacesItself:
             queue.insert((stop: stop, townOnly: townOnly), at: 0)
@@ -207,7 +215,10 @@ final class StopNamer {
         zoneByName[name] = zone
         storeLocality(town, of: stop)
         storeTimeZone(zone, of: stop)
-        guard !townOnly else { return }
+        guard !townOnly else {
+            onPlaceFilled?()
+            return
+        }
         Stored.write("setStopName") { try repository.setStopName(stopId: stop.id, name: name) }
         finish(stop, named: true)
     }

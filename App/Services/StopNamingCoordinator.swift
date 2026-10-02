@@ -56,8 +56,13 @@ final class StopNamingCoordinator {
             }
         }
         // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
-        // before schema v9 are asked once, behind any naming.
-        namer.fillMissingLocalities(stops)
+        // before schema v9 are asked once, behind any naming. Each one that
+        // lands is told to the listeners as well: its zone changes the day and
+        // hour a screen is showing (ADR 2026-10-01).
+        namer.fillMissingLocalities(stops) { [weak self, weak namer] in
+            guard let namer else { return }
+            self?.publish(namer.progress, tripId: tripId)
+        }
 
         guard !namer.isIdle else {
             release(namer, tripId: tripId)

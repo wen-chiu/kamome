@@ -72,8 +72,10 @@ final class StopNamerTimeZoneTests: XCTestCase {
                       "a stop with a town but no zone must be asked once more")
         let namer = namer(repository, zone: "Atlantic/Reykjavik")
 
-        namer.fillMissingLocalities(try stops(repository, tripId))
+        var landed = 0
+        namer.fillMissingLocalities(try stops(repository, tripId)) { landed += 1 }
         try? await Task.sleep(nanoseconds: 1_000_000_000)
+        XCTAssertEqual(landed, 2, "the screen showing these stops was never told their zones landed")
 
         let filled = try stops(repository, tripId)
         XCTAssertTrue(filled.allSatisfy { $0.name == "My café" }, "a zone lookup rewrote a name")

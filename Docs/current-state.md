@@ -12,7 +12,9 @@ Last synced: 2026-10-01 against ADR
 it, at most 650 m, and drive is asked again). The same day:
 2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
 `StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
-waits at one `GeocodeGate`). Before them:
+waits at one `GeocodeGate`); 2026-10-01-a-stops-time-is-the-clock-where-it-happened
+(a stop's hour is shown in the zone it happened in, like its date, on Trip
+Detail and the Journey Diary). Before them:
 2026-09-30-export-time-left (the export sheet says "about N minutes left" from
 its own station pace, after a 60 s warm-up);
 2026-09-29-the-opening-zooms-and-the-route-holds
