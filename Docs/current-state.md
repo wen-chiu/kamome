@@ -14,7 +14,8 @@ of the widest drive). The same day:
 height to the film: Export again moves into ⋯, a no-road leg is one caption
 line);
 2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
-existing App Store Connect record; the id is no longer a placeholder). Before
+existing App Store Connect record; the id is no longer a placeholder);
+2026-10-02-the-release-scan-needs-no-key. Before
 them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
 (a beach waypoint the drive profile refuses is moved to where a walk reaches
 it, at most 650 m, and drive is asked again). The same day:
@@ -94,10 +95,10 @@ never looked up. Discovery's thresholds ship INFERRED and its lookup timing is a
 owed only where a licence requires it (2026-09-18 (f)).
 
 What is between Kamome and a submission is **neither a document nor a session**:
-**D1–D5**, one device run nobody has done — then Chiu's submission sequence, the
-artifact check (`./check.sh --release`, needs the real key) and **then** the key
-rotation, in that order. **TestFlight is not behind these** — it is how
-D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
+**D1–D5**, one device run nobody has done — then Chiu's sequence: the artifact
+check (`./check.sh --release`, no key) and key rotation, unordered.
+**TestFlight is not behind these**; it is how D1–D5 get run
+(`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
 
 ## Architecture
 

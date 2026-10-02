@@ -68,9 +68,10 @@ else
   if require xcodebuild "Xcode is required to run the suite"; then
     destination=${KAMOME_TEST_DESTINATION:-platform=iOS Simulator,name=iPhone 17 Pro}
     set -o pipefail
-    # `env -u` (ADR 2026-09-12): `--release` needs the real routing key in
-    # KAMOME_ROUTING_API_KEY and the suite never does, so the build never sees it.
-    # A precaution, not a measured leak: on xcodebuild 26.6 an inherited variable
+    # `env -u` (ADR 2026-09-12): the build never sees a routing key from the
+    # shell. Nothing in the release procedure sets one any more (ADR 2026-10-02,
+    # "the release scan needs no key"), so this only covers a stale export. A
+    # precaution, not a measured leak: on xcodebuild 26.6 an inherited variable
     # appeared neither in -showBuildSettings nor in a build log.
     env -u KAMOME_ROUTING_API_KEY xcodebuild -scheme Kamome test -destination "$destination" CODE_SIGNING_ALLOWED=NO
     record $? "xcodebuild test"

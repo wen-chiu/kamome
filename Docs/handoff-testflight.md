@@ -53,10 +53,10 @@ S7 do not block it; the TestFlight build is how D1–D5 get run.
 - **Internal testers first** — no Beta App Review. A public link ends the
   "people Chiu knows" condition of the open-endpoint acceptance (pre-launch.md
   2026-08-29 a); the 2000/day ceiling and burst limit hold either way.
-- Archive → `./check.sh --release <.xcarchive>` (the real key, his shell) →
-  **S7 can happen now**: builds since ADR 2026-09-12 carry no key, so a rotation
-  after this archive passes is final and kills the key in every IPA already out.
-  **INFERRED** — confirm nothing else uses the key first.
+- Archive → `./check.sh --release <.xcarchive>` (no key needed, ADR 2026-10-02).
+  **S7 is independent of it and can happen any time**: builds since ADR
+  2026-09-12 carry no key, so a rotation is final and kills the key in every IPA
+  already out. **INFERRED** — confirm nothing else uses the key first.
 
 ## Not blockers — tell testers
 
