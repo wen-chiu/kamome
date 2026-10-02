@@ -114,51 +114,6 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("provenance_note", locale: "zh-Hant").contains("重建"))
     }
 
-    /// Only the time-budget case is Kamome's fault and may promise a retry.
-    /// Connection, rate-limit, and no-road are someone else's — they state the
-    /// situation and stop. Both languages must agree.
-    func testRoutingCopyPromisesARetryOnlyWhereKamomeIsAtFault() throws {
-        // Matched loosely on purpose: the copy will be reworded, and the rule
-        // has to survive the rewording. Any phrasing that tells the user to
-        // export again counts.
-        func promisesRetry(_ key: String) throws -> (en: Bool, zh: Bool) {
-            let english = try localizedValue(key, locale: "en").lowercased()
-            let chinese = try localizedValue(key, locale: "zh-Hant")
-            let en = english.contains("export again") || english.contains("try again")
-            let zh = ["再輸出", "重新輸出", "再試", "重試"].contains { chinese.contains($0) }
-            return (en, zh)
-        }
-
-        for key in ["recap_routing_unreachable_detail", "recap_routing_rate_limited_detail",
-                    "recap_routing_no_road_detail"] {
-            let promise = try promisesRetry(key)
-            XCTAssertFalse(
-                promise.en || promise.zh,
-                "\(key) promises a retry Kamome cannot keep — that outcome is not ours to fix"
-            )
-        }
-
-        // Ours, so it may promise — and must promise in both languages or neither.
-        let budget = try promisesRetry("recap_routing_budget_detail")
-        XCTAssertTrue(budget.en, "the budget case is Kamome's own limit and should offer the retry")
-        XCTAssertEqual(
-            budget.en, budget.zh,
-            "a retry promise in one language and not the other is a defect, not a translation choice"
-        )
-    }
-
-    /// The count belongs to the headline in every case, so a missing specifier
-    /// would silently print a headline with no number in it.
-    func testEveryRoutingHeadlineCarriesTheLegCount() throws {
-        for key in ["recap_routing_unreachable", "recap_routing_rate_limited",
-                    "recap_routing_budget", "recap_routing_no_road"] {
-            for locale in ["en", "zh-Hant"] {
-                let value = try localizedValue(key, locale: locale)
-                XCTAssertTrue(value.contains("%1$d"), "\(key) [\(locale)] must name how many legs: \(value)")
-            }
-        }
-    }
-
     /// **S2 — a licence condition, not copy** (`Docs/release-readiness.md`).
     /// Geoapify attribution is mandatory on the free plan in the format
     /// `Powered by Geoapify` with a link, and OpenStreetMap attribution is

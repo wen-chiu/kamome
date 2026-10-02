@@ -3221,9 +3221,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d legs aren't finished"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d leg isn't finished"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d legs aren't finished"
+                }
+              }
+            }
           }
         },
         "zh-Hant": {
@@ -3255,9 +3267,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d legs have no road"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d leg has no road"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d legs have no road"
+                }
+              }
+            }
           }
         },
         "zh-Hant": {
@@ -3289,9 +3313,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d legs aren't drawn"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d leg isn't drawn"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d legs aren't drawn"
+                }
+              }
+            }
           }
         },
         "zh-Hant": {
@@ -3306,9 +3342,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The routing service is busy, so those %1$d stretches stay dashed."
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The routing service is busy, so %1$d stretch stays dashed."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "The routing service is busy, so those %1$d stretches stay dashed."
+                }
+              }
+            }
           }
         },
         "zh-Hant": {
@@ -3323,9 +3371,21 @@
       "extractionState": "manual",
       "localizations": {
         "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d legs aren't real routes"
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d leg isn't a real route"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$d legs aren't real routes"
+                }
+              }
+            }
           }
         },
         "zh-Hant": {
