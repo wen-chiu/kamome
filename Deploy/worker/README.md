@@ -106,8 +106,8 @@ this Worker, on any machine that had it — the Worker strips a client `apiKey`,
 but Cloudflare's edge saw it first. The `Info.plist` field and the xcconfig
 include are gone, so the file is inert wherever it survives: deleting it is its
 owner's tidy-up, no longer what keeps a key out of an archive. The release gate
-takes the key from `KAMOME_ROUTING_API_KEY` in the environment only
-(`Scripts/release/check-archive.sh`).
+(`Scripts/release/check-archive.sh`) scans the archive for a key-shaped string
+and needs no key (ADR 2026-10-02).
 
 ## The Node version trap
 
