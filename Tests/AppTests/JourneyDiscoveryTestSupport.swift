@@ -28,13 +28,27 @@ final class DiscoveryStubLibrary: ImportPhotoProviding, PhotoAccessProviding {
 /// Answers instantly from a table; records every coordinate it was asked
 /// about, because *which* coordinates leave the device is the property the
 /// privacy test in `JourneyDiscoveryModelTests` holds.
-final class DiscoveryStubGeocoder: PlaceGeocoding {
-    var table: [(lat: Double, place: PlaceName)] = []
-    private(set) var askedLatitudes: [Double] = []
+///
+/// **Locked** (#193): `place` is nonisolated and `async`, so the model's naming
+/// task calls it off the main actor while a test reads `lookups` or swaps
+/// `table` on it. Unguarded, that was a crash in `Array.append` that took the
+/// test host down twice in one day.
+final class DiscoveryStubGeocoder: PlaceGeocoding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedTable: [(lat: Double, place: PlaceName)] = []
+    private var storedAskedLatitudes: [Double] = []
+
+    var table: [(lat: Double, place: PlaceName)] {
+        get { lock.withLock { storedTable } }
+        set { lock.withLock { storedTable = newValue } }
+    }
+    var askedLatitudes: [Double] { lock.withLock { storedAskedLatitudes } }
     var lookups: Int { askedLatitudes.count }
 
     func place(lat: Double, lon: Double) async -> PlaceName? {
-        askedLatitudes.append(lat)
-        return table.first { abs($0.lat - lat) < 0.5 }?.place
+        lock.withLock {
+            storedAskedLatitudes.append(lat)
+            return storedTable.first { abs($0.lat - lat) < 0.5 }?.place
+        }
     }
 }
