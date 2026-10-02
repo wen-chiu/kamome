@@ -13,14 +13,18 @@ struct RecapPhotoShortfallNotice: View {
     @ViewBuilder
     var body: some View {
         if let shortfall = model.photoShortfall {
-            Label("recap_photos_missing", systemImage: "icloud.slash")
-                .foregroundStyle(.orange)
-            Text(String.localizedStringWithFormat(
-                String(localized: "recap_photos_missing_detail"),
-                shortfall.missing, shortfall.requested
-            ))
-            .font(.footnote)
-            .foregroundStyle(.secondary)
+            // One view, so a form draws it as one row rather than a headline
+            // and a body with a divider between them (Chiu 2026-10-01).
+            VStack(alignment: .leading, spacing: 4) {
+                Label("recap_photos_missing", systemImage: "icloud.slash")
+                    .foregroundStyle(.orange)
+                Text(String.localizedStringWithFormat(
+                    String(localized: "recap_photos_missing_detail"),
+                    shortfall.missing, shortfall.requested
+                ))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -39,28 +43,37 @@ struct RecapRoutingNotice: View {
     @ViewBuilder
     var body: some View {
         if let routing = model.routing, routing.isWorthReporting {
-            // How many legs draw dashed — the one number the copy uses. It sits
-            // in the *headline* ("有 X 段還沒畫"), and only the rate-limit body
-            // repeats it, so both strings are formatted with it and the three
-            // bodies that do not mention it simply ignore the argument.
-            let dashed = routing.attempted - routing.reconstructed
-            Label {
+            VStack(alignment: .leading, spacing: 4) {
+                Label {
+                    Text(verbatim: Self.headline(routing))
+                } icon: {
+                    Image(systemName: routingSymbol(routing))
+                }
+                .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
                 Text(String.localizedStringWithFormat(
-                    String(localized: routingHeadlineKey(routing)), dashed
+                    String(localized: routingDetailKey(routing)), Self.dashedLegs(routing)
                 ))
-            } icon: {
-                Image(systemName: routingSymbol(routing))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
             }
-            .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
-            Text(String.localizedStringWithFormat(
-                String(localized: routingDetailKey(routing)), dashed
-            ))
-            .font(.footnote)
-            .foregroundStyle(.secondary)
         }
     }
 
-    private func routingHeadlineKey(_ report: RouteMatchReport) -> String.LocalizationValue {
+    /// How many legs draw dashed — the one number the copy uses. It sits
+    /// in the *headline* ("有 X 段還沒畫"), and only the rate-limit body
+    /// repeats it, so both strings are formatted with it and the three
+    /// bodies that do not mention it simply ignore the argument.
+    private static func dashedLegs(_ report: RouteMatchReport) -> Int {
+        report.attempted - report.reconstructed
+    }
+
+    /// The headline as a string: the finished film says the no-road case in
+    /// its caption line, without the body (`RecapFinishedView`).
+    static func headline(_ report: RouteMatchReport) -> String {
+        String.localizedStringWithFormat(String(localized: routingHeadlineKey(report)), dashedLegs(report))
+    }
+
+    private static func routingHeadlineKey(_ report: RouteMatchReport) -> String.LocalizationValue {
         switch report.headline {
         case .providerUnreachable: return "recap_routing_unreachable"
         case .rateLimited: return "recap_routing_rate_limited"

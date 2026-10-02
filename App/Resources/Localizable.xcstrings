@@ -3170,13 +3170,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can leave this screen — the film keeps rendering as long as Kamome stays open, and the screen stays on until it is done."
+            "value": "Keep Kamome open so the film can finish. It’s fine to leave this screen."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你可以離開這個畫面 —— 只要卡摸咩還開著，影片就會繼續算圖，螢幕也會保持亮著直到完成。"
+            "value": "請讓卡摸咩保持開啟，影片才能繼續輸出。離開這個畫面沒關係。"
           }
         }
       }
@@ -3238,13 +3238,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "There is no road joining these places. We record journeys honestly: no road, no solid line."
+            "value": "Drawn dashed — Kamome never draws a road that isn’t there."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些地方之間沒有道路相連 —— 我們誠實記錄旅程路線，沒有路就不會是實線。"
+            "value": "這幾段畫成虛線 —— 沒有路，就不畫成路。"
           }
         }
       }
@@ -3357,13 +3357,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saved to Photos"
+            "value": "Saved"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已儲存到照片"
+            "value": "已儲存"
           }
         }
       }
