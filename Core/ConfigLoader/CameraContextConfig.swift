@@ -28,17 +28,26 @@ public struct CameraContextConfig: Decodable, Equatable {
     /// town → island → country. **3, INFERRED** from the committed fixtures
     /// (`Tools/stop-scale-ladder.py`).
     public let contextLevelBreakRatio: Double
+    /// The journey's frame, as a share of the frame that just holds the widest
+    /// drive between two of the trip's towns (ADR file 2026-10-02). **0.9,
+    /// INFERRED from one trip**: Chiu, on New Zealand at 1.0 (167 km), 「可以
+    /// 167*0.9拉近」. Settled by his eye on a second road trip at this value.
+    public let journeyDriveFit: Double
 
     enum CodingKeys: String, CodingKey {
         case contextDepth = "context_depth"
         case contextSpanMaxM = "context_span_max_m"
         case contextLevelBreakRatio = "context_level_break_ratio"
+        case journeyDriveFit = "journey_drive_fit"
     }
 
-    public init(contextDepth: Double, contextSpanMaxM: Double, contextLevelBreakRatio: Double) {
+    public init(
+        contextDepth: Double, contextSpanMaxM: Double, contextLevelBreakRatio: Double, journeyDriveFit: Double = 1
+    ) {
         self.contextDepth = contextDepth
         self.contextSpanMaxM = contextSpanMaxM
         self.contextLevelBreakRatio = contextLevelBreakRatio
+        self.journeyDriveFit = journeyDriveFit
     }
 
     /// No floor beyond `camera_span_m`: the default for hand-built test configs,

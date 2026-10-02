@@ -75,7 +75,7 @@ public struct LinearTimeline {
     /// no dwell tuning can fix a car that should not have been on screen yet.
     let subjectArrivalStartS: Double
     let subjectArrivalEndS: Double
-    private let titleCardS: Double
+    let titleCardS: Double
     let endCardS: Double
     /// The boarding pass, resolved once at build time. nil on every film that is
     /// not a type-2 opening, and nil when `CountryExtent` cannot name both ends —
@@ -190,7 +190,7 @@ public struct LinearTimeline {
         // Travel is then trimmed to what its windows need (ADR file 2026-09-28).
         let path = Self.earningTravel(planned, plan: plan, stopHoldsS: stopHolds, config: config) { camera($0, $1, $2) }
 
-        self.path = path
+        self.path = Self.announced(path, trip: trip)
         durationS = path.durationS
         frameCount = path.frameCount
         openingS = path.openingS
@@ -319,6 +319,7 @@ public struct LinearTimeline {
         // Under the card and under everything else: the two ends are the ground
         // the opening is read against, not chrome over it.
         if let ends = flightEnds(atTime: time) { contents.insert(ends, at: 1) }
+        if let names = placeNamesContent(atTime: time) { contents.insert(names, at: 1) }
         if let card = journeyCardContent(atTime: time) {
             contents.append(.journeyCard(card))
         }
@@ -365,5 +366,18 @@ public struct LinearTimeline {
     static func smoothstep(_ fraction: Double) -> Double {
         let clamped = min(max(fraction, 0), 1)
         return clamped * clamped * (3 - 2 * clamped)
+    }
+}
+
+extension LinearTimeline {
+    /// What a film framed too close or too wide is diagnosed from: the scales
+    /// and how many towns set them. Counts and widths, never a place (§0).
+    fileprivate static func announced(_ path: CameraPath, trip: RecapTrip) -> CameraPath {
+        let towns = trip.stops.compactMap(\.locality)
+        KamomeLog.recap.notice("""
+            camera: \(path.areaSpansM.map { String(format: "%.1f", $0 / 1000) }.joined(separator: " / "), privacy: .public) km · \
+            \(trip.stops.count) stops · \(towns.count) with a town · \(Set(towns).count) towns
+            """)
+        return path
     }
 }

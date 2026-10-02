@@ -138,7 +138,8 @@
     "camera_context": {
       "context_depth": 5,
       "context_span_max_m": 10000,
-      "context_level_break_ratio": 3
+      "context_level_break_ratio": 3,
+      "journey_drive_fit": 0.9
     },
     "travel_pacing": {
       "windows_per_s": 0.6

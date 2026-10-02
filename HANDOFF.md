@@ -35,6 +35,9 @@ cost somebody time; keep each to a summary and a pointer.
   gitignored. No checkout routes with a key (ADR 2026-09-12); the desk harness
   uses the shipped Worker, and each render spends the 2000/day quota.
   → `Docs/environment-gotchas.md`.
+- **A desk pilot render draws Apple Maps unless told otherwise.** The shipped
+  dark map is `TEST_RUNNER_KAMOME_MAP_SUBSTRATE=liberty-fork-r6`; town names
+  need `TEST_RUNNER_KAMOME_GEOCODE_STOPS=1` and the cached `local/*-places.json`.
 - **There is no render length limit.** The SIGKILLs were six `xcodebuild`
   processes on one simulator. `pgrep -fl xcodebuild` first; render one at a time.
 - **A dead CI run looks like a passing one**: the tell is ~3 s and `steps=0`.

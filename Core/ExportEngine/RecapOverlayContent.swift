@@ -6,6 +6,20 @@ import Foundation
 /// types stay where they were; this one is the one that grows, because every new
 /// thing the film draws arrives here.
 ///
+/// One town of the trip, to be named on the map: the `locality` of one or more
+/// of the film's stops, at the middle of those stops. A name the user's own
+/// stops carry already — nothing here is looked up, and nothing is named that
+/// the trip did not stop in.
+public struct RecapPlaceName: Equatable {
+    public let name: String
+    public let coordinate: RecapCoordinate
+
+    public init(name: String, coordinate: RecapCoordinate) {
+        self.name = name
+        self.coordinate = coordinate
+    }
+}
+
 /// One drawable element active at an instant — **pure data**, no CoreGraphics
 /// and no geo→pixel (the renderer projects through the `CameraFrame`, resolves
 /// `PhotoRef`s, and generates the QR from `shareURL`). Overlays never mutate or
@@ -61,6 +75,11 @@ public enum OverlayContent: Equatable {
     /// stop's own pin by cross-fading on `RecapFlightEnd.markOpacity` — they are
     /// the same point — while its name stays up (ADR 2026-09-05 (c)).
     case flightEnds(origin: RecapFlightEnd, destination: RecapFlightEnd, opacity: Double)
+    /// **The trip's own towns, named on the map** (Chiu 2026-10-02, ADR file
+    /// 2026-10-02): the towns the film's stops are in, so a viewer on the road
+    /// between two of them can read where that is. In priority order — where two
+    /// names would overlap, the earlier one is drawn. See `RecapPlaceName`.
+    case placeNames([RecapPlaceName], opacity: Double)
     /// **Persistent film chrome** (Chiu 2026-07-31): which day of the trip it is
     /// and how far the journey has come, in the frame's top corners, for the whole
     /// body of the film — driving as well as stopped.

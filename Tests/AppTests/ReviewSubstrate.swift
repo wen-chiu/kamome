@@ -99,12 +99,17 @@ enum ReviewSubstrate {
         case libertyForkR5PeaksB = "liberty-fork-r5-b"
         case libertyForkR5PeaksC = "liberty-fork-r5-c"
         case libertyForkR5NoPeaks = "liberty-fork-r5-nopeaks"
+        /// **Round 6** (Chiu 2026-10-02) — round 5 without settlement names; the
+        /// film names the trip's own towns itself. **What ships**, so this is the
+        /// case a desk render of the shipped dark map asks for.
+        case libertyForkR6 = "liberty-fork-r6"
 
         /// OpenFreeMap serves the style, its glyphs and its sprite from absolute
         /// URLs inside the style document, so for a stock style this one URL is
         /// the whole wiring. The fork is built and written to a temp file, which
         /// resolves those same absolute URLs identically.
         func resolvedStyleURL() throws -> URL {
+            if self == .libertyForkR6 { return try LibertyFork.resolvedRound6StyleURL() }
             if isRound5 { return try LibertyFork.resolvedRound5StyleURL(peaks: round5Band) }
             if let round4 = round4Variant {
                 return try LibertyFork.resolvedRound4StyleURL(hillshade: round4.hillshade, peaks: round4.peaks)
@@ -158,13 +163,15 @@ enum ReviewSubstrate {
         /// Kamome's own styles, which a run that names nothing does not draw.
         var isFork: Bool {
             self == .openFreeMapLibertyFork || round3Coast != nil || round4Variant != nil || isRound5
+                || self == .libertyForkR6
         }
 
         /// The filename label. Round 3's files are `liberty-fork-r3-coast{A,B,C}` as
         /// its brief names them; the earlier rounds keep the `openfreemap-` prefix
         /// their files already carry on disk.
         var fileLabel: String {
-            round3Coast == nil && round4Variant == nil && !isRound5 ? "openfreemap-\(rawValue)" : rawValue
+            round3Coast == nil && round4Variant == nil && !isRound5 && self != .libertyForkR6
+                ? "openfreemap-\(rawValue)" : rawValue
         }
 
         /// **Which appearance Kamome's palette must be drawn in over this base**,
@@ -187,7 +194,7 @@ enum ReviewSubstrate {
                  .libertyForkR3CoastA, .libertyForkR3CoastB, .libertyForkR3CoastC,
                  .libertyForkR4, .libertyForkR4NoHillshade, .libertyForkR4PeaksByElevation,
                  .libertyForkR5, .libertyForkR5PeaksA, .libertyForkR5PeaksB,
-                 .libertyForkR5PeaksC, .libertyForkR5NoPeaks: return .dark
+                 .libertyForkR5PeaksC, .libertyForkR5NoPeaks, .libertyForkR6: return .dark
             }
         }
 

@@ -323,6 +323,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
             return String(format: "pass(p%.2f,o%.2f)", card.progress, card.opacity)
         case let .flightEnds(origin, _, opacity):
             return String(format: "ends(%@,o%.2f)", origin == nil ? "1" : "2", opacity)
+        case let .placeNames(names, opacity): return String(format: "towns(%d,o%.2f)", names.count, opacity)
         case .titleChrome: return "title"
         case .endChrome: return "end"
         case let .hud(day, place, travelledM):

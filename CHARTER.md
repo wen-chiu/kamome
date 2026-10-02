@@ -140,7 +140,7 @@ enforcing a lock an ADR has amended, the ADR wins and the lock is the bug.**
 | **Rendering substrate** | **Decided (ADR 2026-09-16):** the export renders OpenFreeMap + MapLibre, two frozen Liberty styles, no Apple fallback; in-app maps stay MapKit. | a new ADR |
 | **Routing** | **Geoapify**, behind a Worker. No snap radius. No second adapter. | — |
 | **Pixel art** | Parked with the old MapLibre identity path (2026-08-15). | Chiu |
-| **Map labels** | ⚠️ **CONFLICT (2026-09-28), Chiu's call:** the old lock says labels are off the roadmap; both shipped styles carry 14 visible label layers (VERIFIED, style JSON). What Chiu wanted from "big cute place names" is a Kamome-drawn overlay, iceboxed. | Chiu |
+| **Map labels** | **Decided (ADR file 2026-10-02, Chiu):** Kamome draws the trip's own towns over the map; the base map names no settlement. Countries, states, islands, water and peaks keep their names. | Chiu |
 | **The fallback badge** | One badge, `#1D6FE0`, drawn at 0.60×. Only the *size* is open, and only from a film (2026-08-29). | Chiu |
 | **Film appearance** | Follows the device's system appearance; light mode gets a warm trail (2026-08-27, 2026-09-18 (d)). | Chiu |
 

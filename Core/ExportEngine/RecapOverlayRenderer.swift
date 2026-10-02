@@ -55,12 +55,24 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             drawFadingStopLabel(
                 name: name, coordinate: coordinate, detail: detail, opacity: opacity, into: surface
             )
+        case let .flightEnds(origin, destination, opacity):
+            drawFlightEnds(origin: origin, destination: destination, opacity: opacity, into: surface)
+        case let .placeNames(names, opacity):
+            drawPlaceNames(names, opacity: opacity, into: surface)
+        case .photoDeck, .journeyCard, .hud, .titleChrome, .endChrome, .mapCredit:
+            renderOverTheFrame(content, into: surface)
+        }
+    }
+
+    /// The overlays laid over the frame rather than pinned to the map. Their own
+    /// switch since 2026-10-02: a tenth case took `render` past the
+    /// cyclomatic-complexity bar.
+    private func renderOverTheFrame(_ content: OverlayContent, into surface: RenderSurface) {
+        switch content {
         case let .photoDeck(deck):
             drawPhotoDeck(deck, into: surface)
         case let .journeyCard(card):
             drawJourneyCard(card, into: surface)
-        case let .flightEnds(origin, destination, opacity):
-            drawFlightEnds(origin: origin, destination: destination, opacity: opacity, into: surface)
         case let .hud(dayLabel, place, travelledM):
             drawHUD(dayLabel: dayLabel, place: place, travelledM: travelledM, into: surface)
         case let .titleChrome(title, subtitle):
@@ -69,6 +81,8 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             drawEndChrome(title: title, figures: figures, shareURL: shareURL, into: surface)
         case let .mapCredit(text):
             drawMapCredit(text, into: surface)
+        case .routeReveal, .stopLabel, .flightEnds, .placeNames:
+            break
         }
     }
 

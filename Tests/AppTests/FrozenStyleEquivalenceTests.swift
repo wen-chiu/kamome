@@ -29,18 +29,20 @@ final class FrozenStyleEquivalenceTests: XCTestCase {
 
     // MARK: - Dark
 
-    func testFrozenDarkMatchesRound5Transform() throws {
+    /// Round 6 since 2026-10-02 (was round 5): the shipped map draws no
+    /// settlement names, because the film names the trip's own towns itself.
+    func testFrozenDarkMatchesRound6Transform() throws {
         let stock = try stockStyle()
-        let round5 = try LibertyFork.forkedRound5(from: stock, peaks: LibertyFork.Round5.chosen)
+        let round6 = try LibertyFork.forkedRound6(from: stock)
         let frozen = try frozenStyle(resource: "openfreemap-liberty-dark")
 
-        compareTopLevel(swift: round5, frozen: frozen, variant: "dark")
-        try compareLayers(swift: round5, frozen: frozen, variant: "dark")
+        compareTopLevel(swift: round6, frozen: frozen, variant: "dark")
+        try compareLayers(swift: round6, frozen: frozen, variant: "dark")
     }
 
     // MARK: - Light
 
-    func testFrozenLightMatchesRound5Transform() throws {
+    func testFrozenLightMatchesRound6Transform() throws {
         let stock = try stockStyle()
         let frozen = try frozenStyle(resource: "openfreemap-liberty-light")
 
@@ -129,6 +131,10 @@ final class FrozenStyleEquivalenceTests: XCTestCase {
         XCTAssertTrue(
             frozenLayers.contains { ($0["id"] as? String) == "label_island" },
             "light must include island labels"
+        )
+        XCTAssertFalse(
+            frozenLayers.contains { LibertyFork.settlementLabelIDs.contains($0["id"] as? String ?? "") },
+            "light must draw no settlement names (round 6)"
         )
     }
 

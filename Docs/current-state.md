@@ -6,9 +6,15 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-09-30 against ADR **2026-09-30-export-time-left**
+Last synced: 2026-10-02 against ADR **2026-10-02-the-film-names-the-trips-own-towns**
+(the film names the towns its stops are in, in Kamome's own type over the map,
+and the base map names no settlement), with
+2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (a road trip's frame
+is 0.9 of the one that holds its widest drive between two towns, per journey,
+and the export logs its scales). Before them:
+2026-09-30-export-time-left
 (the export sheet says "about N minutes left" from its own station pace, after
-a 60 s warm-up). Before it: 2026-09-29-the-opening-zooms-and-the-route-holds
+a 60 s warm-up); 2026-09-29-the-opening-zooms-and-the-route-holds
 (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
@@ -91,7 +97,7 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
   Bounded, cancellable, and it reports which of four causes dashed a film.
 - **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per **area**
   (`CameraPathAreas`, ADR 2026-09-24); scale changes only in a reframe beat;
-  a trip's scale comes from its own town density (two nearest towns in view),
+  a trip's scale comes from its own towns (the widest drive between two, nearly fitted),
   a zoom-in is earned only by days driven around one town, and travel lasts only
   as long as its windows need at `travel_pacing.windows_per_s` (ADR file 2026-09-28, Draft).
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
