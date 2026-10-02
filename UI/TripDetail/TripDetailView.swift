@@ -73,7 +73,7 @@ struct TripDetailView: View {
             exportProgressRow
             timeline
         }
-        .navigationTitle(model.detail?.trip.title ?? "")
+        .navigationTitle(model.screenTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             model.load()
@@ -219,7 +219,7 @@ struct TripDetailView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(stop.name ?? String(localized: "stop_unnamed"))
                                 .font(.headline)
-                            Text(Date(timeIntervalSince1970: stop.arrivedAt), style: .time)
+                            Text(verbatim: model.arrivalTime(of: stop))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }

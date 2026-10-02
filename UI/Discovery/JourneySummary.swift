@@ -56,8 +56,14 @@ struct JourneySummary: Identifiable, Equatable {
     /// zones (`TripClock`), so the card says what the film's end card says; a
     /// journey not yet imported has no stops and counts in the phone's zone.
     var clock: TripClock = .uniform()
+    /// A stored trip's own name — an album's, or one the person typed. nil for
+    /// a trip nobody named and for a journey not yet imported.
+    var realTitle: String?
 
-    var headline: String { name?.title ?? fallbackTitle }
+    /// `TripTitle`'s rule: a real name wins, and only a trip nobody named is
+    /// called by the place found for it (#164). The flag is drawn beside
+    /// either.
+    var headline: String { realTitle ?? name?.title ?? fallbackTitle }
     var isImported: Bool { tripId != nil }
     var modes: Set<String> { Set(legModes) }
 

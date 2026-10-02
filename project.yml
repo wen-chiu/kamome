@@ -244,7 +244,8 @@ targets:
         # signing identities is for this team.
         DEVELOPMENT_TEAM: 6XPGA48GFT
         CODE_SIGN_STYLE: Automatic
-        # Placeholder until the trademark check clears (spec §11.1).
+        # The App Store bundle id, and permanent: Kamome ships on the existing
+        # App Store Connect record (ADR 2026-10-02). Not a placeholder any more.
         PRODUCT_BUNDLE_IDENTIFIER: com.chiu.kamome.dev
         # MARKETING_VERSION and CURRENT_PROJECT_VERSION are NOT here: they live
         # in Config/Version.xcconfig (set with Scripts/set-version.sh), and a

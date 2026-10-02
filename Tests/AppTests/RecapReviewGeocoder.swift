@@ -31,11 +31,12 @@ final class RecapReviewGeocoder: StopGeocoding {
     private(set) var hits = 0
     private(set) var misses = 0
 
-    init(fixture: String, live: StopGeocoding = CLGeocoderStopGeocoder()) {
+    /// `minIntervalS` is `geocode.min_interval_s`, for the shipping geocoder's gate.
+    init(fixture: String, minIntervalS: Double, live: StopGeocoding? = nil) {
         cacheURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Fixtures/trips/local/\(fixture)-names.json")
-        self.live = live
+        self.live = live ?? CLGeocoderStopGeocoder(minIntervalS: minIntervalS)
         cache = (try? Data(contentsOf: cacheURL))
             .flatMap { try? JSONDecoder().decode([String: String].self, from: $0) } ?? [:]
     }

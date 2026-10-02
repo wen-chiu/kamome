@@ -7,9 +7,10 @@ import SwiftUI
 /// Moved as written; only `private` is gone, which a separate file needs.
 extension HomeView {
     /// The card's headline: the trip's real name when it has one (an album's,
-    /// or one the user typed) — otherwise the place `TripJourneyNaming` found
-    /// for it (flag + country), falling back to the plain date range until
-    /// that one-time lookup resolves, or forever if it never finds one.
+    /// or one the user typed) — otherwise the place found for it, by
+    /// `TripTitle`'s rule (flag + town, region or country), falling back to the
+    /// plain date range until that one-time lookup resolves, or forever if it
+    /// never finds one.
     func headline(for trip: TripRecord) -> String {
         guard hasFallbackTitle(trip) else { return trip.title }
         return placeText(for: trip) ?? Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)

@@ -38,6 +38,83 @@ final class TripTitleTests: XCTestCase {
         XCTAssertEqual(TripTitle.film(trip(title: "北海道夏天"), cache: cacheWithJapan()), "北海道夏天")
     }
 
+    // MARK: - The place an unnamed trip is called by (Chiu 2026-10-01)
+
+    private func cache(_ place: PlaceName, singlePlace: Bool, key: String = "t1") -> JourneyNameCache {
+        let cache = JourneyNameCache(defaults: defaults)
+        cache.store(place, for: key)
+        cache.setSinglePlace(singlePlace, for: key)
+        return cache
+    }
+
+    private let whitehorse = PlaceName(country: "Canada", countryCode: "CA", region: "Yukon", locality: "Whitehorse")
+    private let hualien = PlaceName(country: "Taiwan", countryCode: "TW", region: "Hualien County", locality: "Ji'an")
+
+    func testAOneTownTripIsItsFlagAndItsTown() {
+        let unnamed = trip(title: TripTitle.fallback(for: startedAt))
+        XCTAssertEqual(
+            TripTitle.film(unnamed, cache: cache(whitehorse, singlePlace: true), homeCountryCode: "TW"),
+            "🇨🇦 Whitehorse"
+        )
+    }
+
+    func testAWideTripAbroadIsItsCountry() {
+        let unnamed = trip(title: TripTitle.fallback(for: startedAt))
+        XCTAssertEqual(
+            TripTitle.film(unnamed, cache: cache(whitehorse, singlePlace: false), homeCountryCode: "TW"),
+            "🇨🇦 Canada"
+        )
+    }
+
+    /// A wide trip at home is its region on every screen, as it already was on
+    /// the Discovery card (ADR 2026-09-17; Chiu 2026-10-01 for Home and the film).
+    func testAWideTripAtHomeIsItsRegion() {
+        let unnamed = trip(title: TripTitle.fallback(for: startedAt))
+        XCTAssertEqual(
+            TripTitle.film(unnamed, cache: cache(hualien, singlePlace: false), homeCountryCode: "TW"),
+            "🇹🇼 Hualien County"
+        )
+    }
+
+    func testANeverMeasuredTripReadsAsWide() {
+        let cache = JourneyNameCache(defaults: defaults)
+        cache.store(whitehorse, for: "t1")
+        let unnamed = trip(title: TripTitle.fallback(for: startedAt))
+        XCTAssertEqual(TripTitle.film(unnamed, cache: cache, homeCountryCode: "TW"), "🇨🇦 Canada")
+    }
+
+    func testSinglePlaceIsRememberedAndForgotten() {
+        let cache = JourneyNameCache(defaults: defaults)
+        XCTAssertFalse(cache.isSinglePlace("t1"))
+        cache.setSinglePlace(true, for: "t1")
+        XCTAssertTrue(JourneyNameCache(defaults: defaults).isSinglePlace("t1"))
+        cache.setSinglePlace(false, for: "t1")
+        XCTAssertFalse(JourneyNameCache(defaults: defaults).isSinglePlace("t1"))
+    }
+
+    /// A trip opened from Discovery before #165 was fixed carries the card's
+    /// month title. Nobody typed it, so the place names the trip after all —
+    /// under its discovery key, where Discovery cached the place.
+    func testADiscoveryTripStoredUnderItsMonthIsStillUnnamed() {
+        var stuck = trip(title: TripTitle.month(for: startedAt))
+        XCTAssertFalse(TripTitle.isFallback(stuck), "a month title someone typed on an ordinary trip is a name")
+        stuck.discoveryKey = "2026-09-20"
+        XCTAssertTrue(TripTitle.isFallback(stuck))
+        XCTAssertEqual(
+            TripTitle.film(stuck, cache: cache(whitehorse, singlePlace: true, key: "2026-09-20"), homeCountryCode: "TW"),
+            "🇨🇦 Whitehorse"
+        )
+    }
+
+    func testOneTownIsMeasuredFromTheStops() {
+        func stop(_ lat: Double, _ lon: Double) -> StopRecord {
+            StopRecord(id: UUID().uuidString, tripId: "t1", lat: lat, lon: lon, arrivedAt: 0, departedAt: 0)
+        }
+        XCTAssertTrue(TripTitle.isSinglePlace([stop(60.72, -135.05), stop(60.80, -135.20)], under: 60_000))
+        XCTAssertFalse(TripTitle.isSinglePlace([stop(35.68, 139.65), stop(35.01, 135.77)], under: 60_000))
+        XCTAssertTrue(TripTitle.isSinglePlace([], under: 60_000))
+    }
+
     func testWithoutAPlaceTheStoredTitleStands() {
         let unnamed = trip(title: TripTitle.fallback(for: startedAt))
         XCTAssertEqual(TripTitle.film(unnamed, cache: JourneyNameCache(defaults: defaults)), unnamed.title)
