@@ -1,5 +1,6 @@
 import Foundation
 import KamomeConfig
+import KamomeTrackingEngine
 
 /// Geoapify `/v1/routing` client — the reconstruction backend since 2026-08-20
 /// (`Docs/decisions.md` 2026-08-20), replacing the self-hosted OSRM that only
@@ -25,7 +26,9 @@ import KamomeConfig
 /// - There is **no snap-radius parameter**, and unknown query parameters are
 ///   silently ignored rather than refused (ADR 2026-08-20 (d)). A waypoint with
 ///   no road near it is refused natively with `400 No suitable edges near
-///   location`, which is the keep-raw verdict this provider maps it to.
+///   location` — from about 500 m out, on the one beach measured (ADR
+///   2026-10-01) — and is asked again from where a walk reaches it
+///   (`routeFromWhereAWalkReaches`) before it keeps its raw leg.
 /// - A bad key is `401 Invalid apiKey`. No 429 has ever been observed — see
 ///   `RouteProviderFailure.rateLimited` for why the case is kept anyway.
 ///
@@ -75,12 +78,19 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             return .notEstablished(.tooFewWaypoints)
         }
 
-        let data: Data
         switch try await fetch(url) {
-        case let .body(body): data = body
+        case let .body(data): return try reconstruction(from: data, through: thinned)
         case .noRoadHere: return try await landConnection(through: thinned)
-        case .offTheRoadNetwork: return .offTheRoadNetwork
+        case .offTheRoadNetwork: return try await routeFromWhereAWalkReaches(thinned)
         }
+    }
+
+    /// What a drive 200 establishes: a route that passes the detour gate, or
+    /// the named reason it is not one. `waypoints` are the places the leg
+    /// really went through, which is what the gate measures against.
+    private func reconstruction(
+        from data: Data, through waypoints: [RouteMatchPoint]
+    ) throws -> RouteReconstruction {
         let body = try JSONDecoder().decode(Response.self, from: data)
         guard let route = body.features?.first else {
             KamomeLog.routing.notice("route: the provider returned no route feature — leg stays raw")
@@ -93,18 +103,69 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         }
         guard RoutePlausibility.acceptsRoute(
             distanceM: route.properties.distance,
-            through: thinned,
+            through: waypoints,
             maxDetourRatio: config.routeMaxDetourRatio
         ) else { return .implausible }
 
         KamomeLog.routing.notice("""
             route: reconstructed \(route.properties.distance / 1000, format: .fixed(precision: 1)) km \
-            from \(thinned.count) waypoints
+            from \(waypoints.count) waypoints
             """)
         // Routing reports no confidence of its own. Passing the gate is the
         // verdict: the caller stores the geometry, which is what marks the leg
         // reconstructed rather than inferred.
         return .routed(RouteMatchOutcome(geometry: geometry, confidence: 1))
+    }
+
+    /// **A waypoint the drive profile refuses is moved to where a walk reaches
+    /// it, and drive is asked again** (ADR 2026-10-01).
+    ///
+    /// The drive profile refuses a waypoint from about 500 m off the road, so a
+    /// photograph on the sand cost the whole leg its road, and the leg out of
+    /// that stop with it. The walk profile reaches further (both measured
+    /// through the Worker on 2026-10-01, in the ADR), and a walk route's parts
+    /// meet at the points where each waypoint joined the network: one part per
+    /// waypoint pair on this profile too. Those points replace the waypoints
+    /// and the drive profile is asked once more.
+    ///
+    /// **Every way this can fail leaves the leg what it was**,
+    /// `.offTheRoadNetwork`: a walk 400, a walk answer that cannot be read, a
+    /// waypoint moved farther than `route_off_network_walk_snap_max_m`, or a
+    /// second drive 400 of either kind. A second drive answer that *is* a route
+    /// goes through the same detour gate as any other, measured against the
+    /// places the photographs were taken, not the moved ones. Nobody answering
+    /// **throws**, as in `landConnection(through:)`, so the leg is asked again.
+    ///
+    /// The same waypoints go to the same decided provider (CLAUDE.md §0); the
+    /// walk geometry is read for its joints and thrown away.
+    private func routeFromWhereAWalkReaches(_ waypoints: [RouteMatchPoint]) async throws -> RouteReconstruction {
+        guard let walkURL = requestURL(for: waypoints, profile: Self.walkProfile),
+              case let .body(walkData) = try await fetch(walkURL),
+              let walk = (try? JSONDecoder().decode(Response.self, from: walkData))?.features?.first,
+              walk.geometry.joints.count == waypoints.count
+        else { return .offTheRoadNetwork }
+
+        let reached = zip(waypoints, walk.geometry.joints).map { waypoint, joint in
+            RouteMatchPoint(ts: waypoint.ts, lat: joint.lat, lon: joint.lon, hAccM: waypoint.hAccM)
+        }
+        let farthestM = zip(waypoints, reached).map {
+            Geo.distanceM(latA: $0.lat, lonA: $0.lon, latB: $1.lat, lonB: $1.lon)
+        }.max() ?? 0
+        guard farthestM <= config.routeOffNetworkWalkSnapMaxM else {
+            KamomeLog.routing.notice("""
+                route: off the road network, and a walk reaches it only \(farthestM, format: .fixed(precision: 0)) m \
+                away (limit \(config.routeOffNetworkWalkSnapMaxM, format: .fixed(precision: 0)) m) — leg stays raw
+                """)
+            return .offTheRoadNetwork
+        }
+        guard let driveURL = requestURL(for: reached, profile: Self.driveProfile),
+              case let .body(data) = try await fetch(driveURL)
+        else { return .offTheRoadNetwork }
+        KamomeLog.routing.notice("""
+            route: off the road network, asked again from where a walk reaches it \
+            (moved at most \(farthestM, format: .fixed(precision: 0)) m)
+            """)
+        return try reconstruction(from: data, through: waypoints)
     }
 
     /// **Is "no drive path" the sea, or land a car cannot reach?** Asked once,
@@ -241,6 +302,10 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
     /// simplification and be encoded into `matched_polyline`.
     private struct Geometry: Decodable {
         let points: [GeoPoint]
+        /// Where each waypoint joined the network: the start of the first part,
+        /// then the end of every part. One per waypoint when the answer has one
+        /// part per waypoint pair; `routeFromWhereAWalkReaches` checks the count.
+        let joints: [GeoPoint]
 
         private enum CodingKeys: String, CodingKey {
             case type, coordinates
@@ -261,14 +326,17 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
                 parts = []
             }
             var flattened: [GeoPoint] = []
+            var joints: [GeoPoint] = []
             for part in parts {
-                for pair in part where pair.count >= 2 {
-                    // GeoJSON is [longitude, latitude].
-                    let point = GeoPoint(lat: pair[1], lon: pair[0])
-                    if point != flattened.last { flattened.append(point) }
-                }
+                // GeoJSON is [longitude, latitude].
+                let line = part.filter { $0.count >= 2 }.map { GeoPoint(lat: $0[1], lon: $0[0]) }
+                for point in line where point != flattened.last { flattened.append(point) }
+                guard let first = line.first, let last = line.last else { continue }
+                if joints.isEmpty { joints.append(first) }
+                joints.append(last)
             }
             points = flattened
+            self.joints = joints
         }
     }
 

@@ -172,7 +172,7 @@ private struct StopRow: View {
         Button { onEdit(stop) } label: {
             TimelineRow(marker: .place, connectsDown: !isLast, markerOffset: 9, bottomPadding: 22) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(Date(timeIntervalSince1970: stop.arrivedAt), style: .time)
+                    Text(verbatim: model.arrivalTime(of: stop))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                     if let name = stop.name {

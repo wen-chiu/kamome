@@ -45,4 +45,35 @@ final class TripDetailDaysTests: XCTestCase {
         XCTAssertEqual(model.visibleStops.map(\.arrivedAt), [start])
         XCTAssertEqual(model.routePhotos.map(\.phAssetId), ["route1"])
     }
+
+    /// **A stop's row shows the time where the stop is** (ADR 2026-10-01).
+    /// Two stops in zones five hours apart, so whatever zone this machine is
+    /// in, the phone's clock cannot give both answers.
+    func testAStopsRowShowsTheTimeWhereTheStopIs() async throws {
+        let config = AppConfig.loadOrDie()
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let taipeiEvening = 1_769_954_400.0 // 2026-02-01 22:00 in Taipei (UTC+8)
+        let aucklandAfternoon = taipeiEvening + 12 * 3_600 // 2026-02-02 15:00 in Auckland (UTC+13)
+        let photos = [
+            ImportPhoto(assetId: "a1", timestamp: taipeiEvening, lat: 64.0, lon: -20.0),
+            ImportPhoto(assetId: "a2", timestamp: taipeiEvening + 60, lat: 64.0, lon: -20.0),
+            ImportPhoto(assetId: "b1", timestamp: aucklandAfternoon, lat: 65.5, lon: -20.0),
+            ImportPhoto(assetId: "b2", timestamp: aucklandAfternoon + 60, lat: 65.5, lon: -20.0)
+        ]
+        let tripId = try await ImportService(repository: repository, config: config)
+            .importTrip(title: "zones", photos: photos)
+        // Named, with a town and a zone: the model's own geocoder has nothing to ask.
+        let stored = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
+        XCTAssertEqual(stored.count, 2)
+        for (stop, zone) in zip(stored, ["Asia/Taipei", "Pacific/Auckland"]) {
+            try repository.setStopName(stopId: stop.id, name: "Stop")
+            try repository.setStopLocality(stopId: stop.id, locality: "Town")
+            try repository.setStopTimeZone(stopId: stop.id, timeZone: zone)
+        }
+
+        let model = TripDetailModel(tripId: tripId, config: config, repository: repository)
+        await model.refresh()
+        let british = Locale(identifier: "en_GB")
+        XCTAssertEqual(model.visibleStops.map { model.arrivalTime(of: $0, locale: british) }, ["22:00", "15:00"])
+    }
 }

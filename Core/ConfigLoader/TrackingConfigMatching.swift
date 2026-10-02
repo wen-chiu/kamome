@@ -91,6 +91,14 @@ public extension TrackingConfig {
         /// It was never the wrong-road guard the migration briefing believed it
         /// to be — `Docs/decisions.md` 2026-08-20 (d) has the measurements.
         public let routeWaypointRadiusM: Double
+        /// **How far a walk may move a waypoint the drive profile refused**
+        /// (ADR 2026-10-01). A photograph on a beach more than about 500 m from a
+        /// drivable road gets `400 No suitable edges`; the walk profile still
+        /// reaches it, and where the walk route lands is a point the drive
+        /// profile accepts. A waypoint moved farther than this keeps its dashed
+        /// leg: past it the road drawn would end too far from where the person
+        /// stood to be called the way there. 650 m is Chiu's number.
+        public let routeOffNetworkWalkSnapMaxM: Double
 
         /// Whether this endpoint needs the app to supply a key.
         ///
@@ -149,6 +157,7 @@ public extension TrackingConfig {
             case routeMaxDetourRatio = "route_max_detour_ratio"
             case routeWaypointMinSpacingM = "route_waypoint_min_spacing_m"
             case routeWaypointRadiusM = "route_waypoint_radius_m"
+            case routeOffNetworkWalkSnapMaxM = "route_off_network_walk_snap_max_m"
             case apiKeyRequired = "api_key_required"
             case crossingPaceMinKmh = "crossing_pace_min_kmh"
             case crossingPaceMinDistanceM = "crossing_pace_min_distance_m"
@@ -166,6 +175,7 @@ public extension TrackingConfig {
             routeMaxDetourRatio: Double,
             routeWaypointMinSpacingM: Double,
             routeWaypointRadiusM: Double,
+            routeOffNetworkWalkSnapMaxM: Double = 650,
             apiKeyRequired: Bool = true,
             crossingPaceMinKmh: Double = 160,
             crossingPaceMinDistanceM: Double = 100_000,
@@ -181,6 +191,7 @@ public extension TrackingConfig {
             self.routeMaxDetourRatio = routeMaxDetourRatio
             self.routeWaypointMinSpacingM = routeWaypointMinSpacingM
             self.routeWaypointRadiusM = routeWaypointRadiusM
+            self.routeOffNetworkWalkSnapMaxM = routeOffNetworkWalkSnapMaxM
             self.apiKeyRequired = apiKeyRequired
             self.crossingPaceMinKmh = crossingPaceMinKmh
             self.crossingPaceMinDistanceM = crossingPaceMinDistanceM
