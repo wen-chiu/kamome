@@ -226,7 +226,8 @@ struct JourneyTimelineView: View {
         if let demo = DemoJourneyLibrary.ifRequested() {
             return JourneyDiscoveryModel(
                 config: session.config, repository: session.repository,
-                source: demo, photoAccess: demo, defaults: demo.defaults
+                source: demo, photoAccess: demo, defaults: demo.defaults,
+                matchesTripsByPhotographs: false
             )
         }
         #endif
