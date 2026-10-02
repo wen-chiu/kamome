@@ -51,6 +51,13 @@ final class JourneyDiscoveryModel {
     private let dismissed: DismissedJourneys
     private let now: () -> Date
     private let importService: ImportService
+    /// Whether a found journey is matched to a stored trip by the photographs
+    /// they share (ADR 2026-09-23 (d)). Off only for `-demo-discover`, whose
+    /// invented photographs borrow the simulator's few asset ids in rotation:
+    /// every demo journey holds the same ids, so one stored trip claimed all
+    /// the others and the list offered nothing else (#178). A demo journey is
+    /// still matched by its discovery key.
+    private let matchesTripsByPhotographs: Bool
 
     /// Discovered journeys not yet imported, by key.
     private var detected: [String: DiscoveredJourney] = [:]
@@ -70,6 +77,7 @@ final class JourneyDiscoveryModel {
         geocoder: PlaceGeocoding? = nil,
         defaults: UserDefaults = .standard,
         homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode,
+        matchesTripsByPhotographs: Bool = true,
         now: @escaping () -> Date = Date.init
     ) {
         self.config = config
@@ -82,6 +90,7 @@ final class JourneyDiscoveryModel {
         nameCache = JourneyNameCache(defaults: defaults)
         dismissed = DismissedJourneys(defaults: defaults)
         self.homeCountryCode = homeCountryCode
+        self.matchesTripsByPhotographs = matchesTripsByPhotographs
         self.now = now
         importService = ImportService(repository: repository, config: config)
     }
@@ -188,7 +197,7 @@ final class JourneyDiscoveryModel {
             // is matched by its photographs instead (Chiu 2026-09-23). It is
             // already on this list as a stored trip; offering the journey
             // beside it is what made two "Vietnam"s.
-            if importService.existingTrip(for: journey.photos) != nil { continue }
+            if storedTrip(holding: journey.photos) != nil { continue }
             found[journey.key] = journey
             fresh.append(summary(journey: journey))
         }
@@ -199,6 +208,12 @@ final class JourneyDiscoveryModel {
         startNaming()
     }
 
+    /// The stored trip these photographs already belong to, if any — unless
+    /// this library's asset ids do not tell photographs apart.
+    private func storedTrip(holding photos: [ImportPhoto]) -> String? {
+        matchesTripsByPhotographs ? importService.existingTrip(for: photos) : nil
+    }
+
     // MARK: - Opening and hiding
 
     /// The trip to show for a card, importing the journey first if it never
@@ -207,7 +222,7 @@ final class JourneyDiscoveryModel {
         if let tripId = summary.tripId { return tripId }
         guard let journey = detected[summary.id] else { return nil }
         // A trip may have been imported through the sheet since the scan.
-        if let existing = importService.existingTrip(for: journey.photos) {
+        if let existing = storedTrip(holding: journey.photos) {
             detected[journey.key] = nil
             loadTrips()
             return existing
