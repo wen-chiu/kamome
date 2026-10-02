@@ -375,6 +375,8 @@ public struct RecapStyle {
     /// (Chiu 2026-09-04). A nested value for the same reason the card's tokens
     /// are: this file is at its 400-line budget. See `RecapFlightEndStyle`.
     public var flightEnd = RecapFlightEndStyle()
+    /// The trip's own towns, named on the map. See `RecapPlaceNameStyle`.
+    public var placeName = RecapPlaceNameStyle()
 
     /// **The Journey Card's own tokens** — the boarding pass the crossing carries
     /// (Chiu 2026-09-02). A nested value rather than twenty more properties here:

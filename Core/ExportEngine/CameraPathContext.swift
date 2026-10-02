@@ -142,13 +142,15 @@ extension CameraPath {
     /// 2026-09-28, Chiu 2026-09-29). nil for an area that keeps its own framing;
     /// otherwise the span it is shown at.
     ///
-    /// **You know where you are when you can see the next town**
-    /// (「旅程地點行進長度密度不同我們要顯示的畫面大小就要有所變化」). For every stop,
-    /// the frame centred on it that holds the nearest stop of another town;
-    /// the journey scale is the median over the trip's stops. So a road trip
-    /// between towns 50 km apart is framed wide throughout, and does not zoom
-    /// in and out as the towns thin and thicken; a trip that is all one town
-    /// has no scale, and nothing here changes it. No distance is tuned to any trip.
+    /// **The frame nearly holds the widest drive between two of the trip's towns**
+    /// (「旅程地點行進長度密度不同我們要顯示的畫面大小就要有所變化」; Chiu 2026-10-02,
+    /// on the New Zealand film at the frame that just holds it: 「可以167*0.9拉近」).
+    /// On the road between two towns the viewer reads where that is from the two
+    /// names, so the frame is sized to the drives: a road trip between towns
+    /// 150 km apart is framed wide throughout, and does not zoom in and out as
+    /// the towns thin and thicken; a trip that is all one town has no drive, no
+    /// scale, and nothing here changes it. No distance is tuned to any trip;
+    /// `journey_drive_fit` is a share of the trip's own widest drive.
     ///
     /// An area keeps its own, tighter framing only when it **earns the zoom**:
     /// its stops are all one town, it fits inside the journey's frame, and its
@@ -164,15 +166,20 @@ extension CameraPath {
             coordinate(atDistance: $0.distanceM, route: request.route, cumulativeM: request.cumulativeM)
         }
         let place = placeIds(anchors: anchors, points: points, request: request)
-        let frames = nextTownFramesM(request, points: points, place: place).filter { $0 > 0 }.sorted()
-        guard !frames.isEmpty else { return groups.map { _ in nil } }
-        let median = frames.count % 2 == 1
-            ? frames[frames.count / 2] : (frames[frames.count / 2 - 1] * frames[frames.count / 2]).squareRoot()
+        let drives = drives(request, points: points, place: place)
         let config = request.config
-        let scaleM = cappedToRegion(median, establishing: request.establishing, config: config)
         let rate = config.travelPacing.isEnabled ? config.travelPacing.windowsPerS : config.cameraPanWindowFractionPerS
         let earnedWindows = 2 * config.zoomTransitionS * rate
         return groups.map { group in
+            // The widest drive of the group's own journey, nearly fitted (ADR
+            // file 2026-10-02) — and only a journey of three towns has a scale:
+            // one drive is a line between two places, framed as before.
+            let journey = journeyIndex(atM: (group.fromM + group.toM) / 2, request: request)
+            let framesM = drives.filter { $0.journey == journey }.map(\.frameM)
+            guard framesM.count > 1, let widestM = framesM.max() else { return nil }
+            let scaleM = cappedToRegion(
+                widestM * config.cameraContext.journeyDriveFit, establishing: request.establishing, config: config
+            )
             let fitM = fittingSpanM(bounds: group.bounds, config: config)
             let towns = Set(anchors.indices.filter {
                 anchors[$0].distanceM >= group.fromM && anchors[$0].distanceM <= group.toM
@@ -182,34 +189,31 @@ extension CameraPath {
         }
     }
 
-    /// For each stop (anchor), the frame centred on it that holds the nearest
-    /// stops of the **two** nearest other places — one reference says how far,
-    /// two say where — or 0 when there are not two. Never across a crossing:
-    /// the town past a flight belongs to another journey.
-    static func nextTownFramesM(_ request: AreaRequest, points: [Point], place: [Int?]) -> [Double] {
+    /// Which journey a point of the route is in: 0 before the first crossing,
+    /// 1 after it, and so on. The town past a flight belongs to another journey,
+    /// and so does its scale — the drive to the airport does not frame the island.
+    private static func journeyIndex(atM distanceM: Double, request: AreaRequest) -> Int {
+        request.crossings.filter { $0.toM <= distanceM }.count
+    }
+
+    /// For each drive from one town to the next, the frame that holds both — the
+    /// last stop in one and the first stop in the other — and the journey it is
+    /// in. Stops with no town are driven past; a drive with a crossing in it is
+    /// none. Empty when the trip has one town.
+    ///
+    /// Drives, not stops: a town with five photo stops is one end of two drives
+    /// however many stops it has, so the film's stop list cannot move the scale
+    /// (the median over stops put one trip at 130 km and at 60 km).
+    static func drives(
+        _ request: AreaRequest, points: [Point], place: [Int?]
+    ) -> [(journey: Int, frameM: Double)] {
         let anchors = request.anchors
-        guard anchors.count > 2 else { return anchors.map { _ in 0 } }
-        return anchors.indices.map { stop in
-            guard let own = place[stop] else { return 0 }
-            var nearestOf: [Int: (index: Int, metres: Double)] = [:]
-            for other in anchors.indices {
-                guard let otherPlace = place[other], otherPlace != own else { continue }
-                let low = min(anchors[stop].distanceM, anchors[other].distanceM)
-                let high = max(anchors[stop].distanceM, anchors[other].distanceM)
-                guard !request.crossings.contains(where: { $0.fromM >= low && $0.toM <= high }) else { continue }
-                let metres = Geo.distanceM(
-                    latA: points[stop].lat, lonA: points[stop].lon, latB: points[other].lat, lonB: points[other].lon
-                )
-                if metres < nearestOf[otherPlace]?.metres ?? .infinity { nearestOf[otherPlace] = (other, metres) }
-            }
-            let two = nearestOf.values.sorted { $0.metres < $1.metres }.prefix(2)
-            guard two.count == 2 else { return 0 }
-            // The frame centred on the stop that holds both: each and its mirror.
-            let held = two.flatMap { other -> [Point] in
-                let point = points[other.index]
-                return [point, Point(lat: 2 * points[stop].lat - point.lat, lon: 2 * points[stop].lon - point.lon)]
-            }
-            return fittingSpanM(bounds: bounds(of: held), config: request.config)
+        let named = anchors.indices.filter { place[$0] != nil }.sorted { anchors[$0].distanceM < anchors[$1].distanceM }
+        return zip(named, named.dropFirst()).compactMap { from, to in
+            guard place[from] != place[to] else { return nil }
+            let journey = journeyIndex(atM: anchors[from].distanceM, request: request)
+            guard journey == journeyIndex(atM: anchors[to].distanceM, request: request) else { return nil }
+            return (journey, fittingSpanM(bounds: bounds(of: [points[from], points[to]]), config: request.config))
         }
     }
 

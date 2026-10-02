@@ -3,7 +3,8 @@
 
 One transform, two palettes: every subtractive rule is identical — layer
 removals, the two-layer road skeleton, peaks (ele >= 1000, rank <= 1), island
-labels, hillshade, coast by contrast only, no lake edge. Only the colour set
+labels, hillshade, coast by contrast only, no lake edge, no settlement names
+(the film draws the trip's own towns itself). Only the colour set
 differs: dark uses the souvenir palette, light keeps Liberty's own.
 
 Usage:
@@ -259,6 +260,11 @@ def scaled(size, factor):
 
 # ── The transform ───────────────────────────────────────────────────────
 
+# Every name of a place people live in. Countries, states, islands, water and
+# peaks keep theirs.
+SETTLEMENT_LABEL_IDS = {"label_other", "label_village", "label_town", "label_city", "label_city_capital"}
+
+
 def transform(stock, dark=True):
     """Apply the frozen fork transform to the stock Liberty style."""
     layers = list(stock["layers"])
@@ -340,6 +346,11 @@ def transform(stock, dark=True):
         layers.insert(1, hillshade_layer)
     else:
         layers.insert(0, hillshade_layer)
+
+    # 9. No settlement names (Chiu 2026-10-02): Kamome names the trip's own
+    # towns over the map, and a town named twice is a town named badly. Last,
+    # because the island and peak layers above are built from label_town.
+    layers = [l for l in layers if l.get("id", "") not in SETTLEMENT_LABEL_IDS]
 
     style = dict(stock)
     style["layers"] = layers

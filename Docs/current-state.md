@@ -6,9 +6,13 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-02 against ADR **2026-10-02-the-finished-screen-is-the-film**
-(the finished screen gives its height to the film: Export again moves into ⋯,
-a no-road leg is one caption line). The same day:
+Last synced: 2026-10-02 against ADR **2026-10-02-the-film-names-the-trips-own-towns**
+(the film names its stops' towns; the map names none), with
+2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of the frame
+of the widest drive). The same day:
+2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
+height to the film: Export again moves into ⋯, a no-road leg is one caption
+line);
 2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
 existing App Store Connect record; the id is no longer a placeholder). Before
 them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
@@ -110,7 +114,7 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
   Bounded, cancellable, and it reports which of four causes dashed a film.
 - **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per **area**
   (`CameraPathAreas`, ADR 2026-09-24); scale changes only in a reframe beat;
-  a trip's scale comes from its own town density (two nearest towns in view),
+  a trip's scale is its widest drive between two towns,
   a zoom-in is earned only by days driven around one town, and travel lasts only
   as long as its windows need at `travel_pacing.windows_per_s` (ADR file 2026-09-28, Draft).
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
