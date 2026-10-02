@@ -131,7 +131,7 @@ struct RecapView: View {
             case .idle:
                 filmSummary
                 exportButton
-                namingNote
+                FilmNamingNote(tripId: model.tripId, stopIds: filmStopIds)
 
             case let .rendering(progress):
                 if let preload = model.photoPreload {
@@ -279,32 +279,10 @@ struct RecapView: View {
                 .padding(.vertical, 6)
         }
         .buttonStyle(.borderedProminent)
-        .disabled(isNamingAFilmStop)
-        .onChange(of: filmStopIds) { StopNamingCoordinator.shared.nameFirst(filmStopIds, tripId: model.tripId) }
+        .waitsForNaming(tripId: model.tripId, of: filmStopIds)
     }
 
     private var filmStopIds: Set<String> { Set(filmPhotos?.filmStops.map(\.id) ?? []) }
-
-    /// Trip Detail opens this sheet once the stops the app chose are named
-    /// (#160); the rest are still being named behind it. A stop put into the
-    /// film from that rest would be filmed as "Unnamed stop", so Export waits
-    /// for it, and it is named next.
-    private var isNamingAFilmStop: Bool {
-        StopNamingCoordinator.shared.isNaming(model.tripId, anyOf: filmStopIds)
-    }
-
-    /// Why Export is off, in the words Trip Detail's banner uses.
-    @ViewBuilder
-    private var namingNote: some View {
-        if isNamingAFilmStop, let naming = StopNamingCoordinator.shared.progress[model.tripId] {
-            Text(String.localizedStringWithFormat(
-                String(localized: "naming_stops_progress"), naming.completed, naming.total
-            ))
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-        }
-    }
 
     /// Which stops the film presents and what each shows, before it is
     /// rendered (ADR 2026-09-24, Chiu 2026-09-25) — `FilmStopsSections`.
