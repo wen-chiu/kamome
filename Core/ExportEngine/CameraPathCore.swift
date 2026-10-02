@@ -295,22 +295,22 @@ extension CameraPath {
         )
     }
 
-    /// The span the opening establishes: the first beat the viewer sees at t=0,
-    /// which is what the body span divides. Falls back to the regional framing for
-    /// a film with no prologue at all, so `.fixed` pacing still gets a sane body.
+    /// The span the body divides: the frame that holds the journey the film opens
+    /// in (`Prologue.journeySpanM`) — not the card's, which may be a country. The
+    /// same regional framing for a film with no prologue at all, so `.fixed`
+    /// pacing gets the body the shipped film gets.
     static func establishedSpanM(
         prologue: Prologue?, route: [Point], establishing: RecapBounds?, config: TrackingConfig.Export
     ) -> Double {
-        // **The LAST wide beat, not the first** (Chiu 2026-08-31). One number was
+        // **The journey's frame, not the card's** (Chiu 2026-08-31). One number was
         // doing two incompatible jobs: the span of beat 1 was both the "where in
         // the world" establishing shot *and*, through `target_zoom_ratio`, the
         // divisor that set how tightly the destination is framed — so the country
         // could not be widened without smudging the destination, and vice versa.
-        // The title-card cut breaks that chain: beat 1 no longer has to be
-        // continuous with anything, so the body divides the frame the film proper
-        // actually opens on. With a single-beat prologue first and last are the
-        // same beat, so nothing moves there.
-        if let last = prologue?.beats.last { return last.frame.spanM }
+        // The body divides the frame of the journey itself. That was the
+        // prologue's last beat until the opening became one beat and a zoom
+        // (2026-09-29); reading `beats.last` after that read the country (#187).
+        if let prologue { return prologue.journeySpanM }
         return cappedToRegion(
             frame(for: bounds(of: route), config: config, padding: config.wideSpanPadding).spanM,
             establishing: establishing, config: config

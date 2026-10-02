@@ -64,9 +64,9 @@ public struct RecapDurationPlan: Equatable {
     /// **Derived from what the opening establishes** (Chiu 2026-08-09): the body
     /// is simply the established span divided by `target_zoom_ratio`, so the zoom
     /// the viewer sees is the thing being configured rather than a consequence of
-    /// trip geometry. `establishedSpanM` is the span of the opening's *first*
-    /// beat — the picture at t=0 — which is the country beat when a region has
-    /// wider context to offer and the regional beat otherwise.
+    /// trip geometry. `establishedSpanM` is the frame that holds the journey the
+    /// film opens in (`CameraPath.establishedSpanM`) — never the country the
+    /// title card may show instead (#187).
     ///
     /// Floored at `camera_span_m` so a trip round one block does not zoom to the
     /// width of a street, and never wider than what it establishes.

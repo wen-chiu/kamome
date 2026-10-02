@@ -30,6 +30,9 @@ final class TrackingSession {
     var interruption: Interruption?
     /// Drives the §6 Always-permission priming sheet on first recording.
     var needsAlwaysPriming = false
+    /// Whether iOS lets Kamome read a position. The record sheet and S2 both
+    /// say so when it is refused: a recording without it records nothing.
+    private(set) var locationAccess: LocationAccess
     private(set) var startedAt: Date?
     private(set) var traveledPath: [CLLocationCoordinate2D] = []
     private(set) var distanceM: Double = 0
@@ -46,16 +49,23 @@ final class TrackingSession {
     /// by up to `simplify.live_path_min_spacing_m`.
     var headCoordinate: CLLocationCoordinate2D? { lastCoordinate }
     private let journal: RecordingJournalFile?
+    private let permission: LocationPermissionProviding
+    /// Start Journey was pressed before the location prompt was answered.
+    private var vehicleAwaitingPermission: VehicleType?
 
     init(
         config: TrackingConfig,
         repository: TripRepository,
         journal: RecordingJournalFile? = RecordingJournalFile.defaultURL().map(RecordingJournalFile.init),
+        permission: LocationPermissionProviding = LocationPermission(),
         now: Date = .now
     ) {
         self.config = config
         self.repository = repository
         self.journal = journal
+        self.permission = permission
+        locationAccess = permission.access
+        permission.onChange = { [weak self] in self?.locationAccessChanged($0) }
         TripTitle.clearLegacyFallbacks(in: repository)
         refreshTrips()
         recoverInterruptedRecording(now: now)
@@ -105,11 +115,6 @@ final class TrackingSession {
         #if DEBUG
         DriveTestLog.shared.tripEnded(discardedAsPhantom: outcome == .phantom)
         #endif
-    }
-
-    func grantAlwaysPermission() {
-        locationService?.requestAlwaysPermission()
-        needsAlwaysPriming = false
     }
 
     var elapsed: TimeInterval {
@@ -261,7 +266,9 @@ final class TrackingSession {
 
         self.engine = engine
         locationService = service
-        needsAlwaysPriming = service.authorizationStatus != .authorizedAlways
+        // Only where there is something to upgrade: over an unanswered prompt
+        // or after a refusal, "Change to Always Allow" is a button to nowhere.
+        needsAlwaysPriming = service.authorizationStatus == .authorizedWhenInUse
         self.startedAt = startedAt
         currentMode = engine.currentMode ?? .unknown
         stopCount = engine.stops.count
@@ -338,6 +345,43 @@ final class TrackingSession {
                 )
             }
         )
+    }
+}
+
+// MARK: - Location access
+
+extension TrackingSession {
+    /// Start Journey. **A recording starts only once location is allowed**
+    /// (Chiu 2026-10-02, #190): it used to start regardless, and a refusal left
+    /// S2 up with a clock, no route and no word. Never answered — ask, and
+    /// start on a yes. Refused — nothing starts; the record sheet says why.
+    func requestStart(vehicle: VehicleType) {
+        guard !isRecording else { return }
+        switch locationAccess {
+        case .allowed:
+            start(vehicle: vehicle)
+        case .undetermined:
+            vehicleAwaitingPermission = vehicle
+            permission.request()
+        case .refused:
+            KamomeLog.recording.notice("recording not started — location access is refused")
+        }
+    }
+
+    func grantAlwaysPermission() {
+        locationService?.requestAlwaysPermission()
+        needsAlwaysPriming = false
+    }
+
+    fileprivate func locationAccessChanged(_ access: LocationAccess) {
+        locationAccess = access
+        guard access != .undetermined, let vehicle = vehicleAwaitingPermission else { return }
+        vehicleAwaitingPermission = nil
+        if access == .allowed {
+            start(vehicle: vehicle)
+        } else {
+            KamomeLog.recording.notice("recording not started — location was refused at the prompt")
+        }
     }
 }
 
