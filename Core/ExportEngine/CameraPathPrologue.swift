@@ -33,6 +33,17 @@ extension CameraPath {
     struct Prologue {
         let beats: [Beat]
         let transitionS: Double
+        /// **What the body divides**: the frame that holds the local journey the
+        /// film opens in, with `wide_span_padding` round it.
+        ///
+        /// Its own field because it is no longer on screen. It was the regional
+        /// beat's span, and the body read it off `beats.last`; when the opening
+        /// became one held beat and a zoom (Chiu 2026-09-29) the last beat became
+        /// the country, and a film framed in one area — which still divides this
+        /// — was drawn at the country's width ÷ `target_zoom_ratio` (#187:
+        /// 1,621 km for 271 km of road in Western Australia). A film with
+        /// several areas never reads it.
+        let journeySpanM: Double
 
         /// When the wide beats are done — the moment the journey's clock starts
         /// and the closing zoom into the body camera begins.
@@ -112,7 +123,12 @@ extension CameraPath {
         // frame. `cutTimeS` is nil for a single beat — there is nothing to cut out
         // of — and a still camera costs one snapshot at any span.
         if let flightFrame {
-            return Prologue(beats: [Beat(frame: flightFrame, holdS: config.titleCardS)], transitionS: 0)
+            // The flight frame's own span: `bodySpan` overrides it with the
+            // destination's whenever a film opens on its flight.
+            return Prologue(
+                beats: [Beat(frame: flightFrame, holdS: config.titleCardS)], transitionS: 0,
+                journeySpanM: flightFrame.spanM
+            )
         }
         return buildWideOpening(
             route: route,
@@ -177,14 +193,17 @@ extension CameraPath {
         // **One held beat under the title, then one continuous zoom into the
         // journey** (Chiu 2026-09-29, reopening 2026-08-31's cut by name:
         // 「為什麼不是直接從開始的大畫面zoom in到起始點」). The cut was there because
-        // the frame after the card divided the body's span; since the scale comes
-        // from the trip's own towns (ADR file 2026-09-28) nothing depends on it, and
-        // a jump three seconds in read as wrong. The regional beat went with the
+        // the frame after the card divided the body's span; a film with several
+        // areas takes its scale from them (ADR file 2026-09-28) and does not depend
+        // on it, and a jump three seconds in read as wrong. The regional beat went with the
         // cut: held between two zooms it would be a stutter mid-move. Its seconds
         // go to the closing zoom (`OpeningPlan.closingZoomS`), so the opening is
         // as long as the plan reserves. The beat's length IS the card's length.
+        // The body still divides the regional frame, on screen or not (#187).
         let first = countryAddsContext ? countryFrame : regional
-        return Prologue(beats: [Beat(frame: first, holdS: config.titleCardS)], transitionS: 0)
+        return Prologue(
+            beats: [Beat(frame: first, holdS: config.titleCardS)], transitionS: 0, journeySpanM: regional.spanM
+        )
     }
 
     /// A `RecapBounds` in the camera math's own bounds type.

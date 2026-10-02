@@ -70,8 +70,8 @@ final class RecapCameraContinuityTests: XCTestCase {
     /// Until now every scan here passed a synthetic `establishing` extent, and
     /// the comment justifying that said it was "the same code path, not a stub".
     /// **It is not.** `establishing` decides whether the opening gets a region
-    /// beat, `establishedSpanM` returns the prologue's *last* beat, and
-    /// `bodySpanM` divides that — so a nil `establishing` yields a different
+    /// beat, `establishedSpanM` returned the prologue's *last* beat (the
+    /// journey's own frame since #187), and `bodySpanM` divides that — so a nil `establishing` yields a different
     /// prologue, a different established span and a different body span. It also
     /// switches the film off content-derived pacing onto `.fixed`.
     ///
