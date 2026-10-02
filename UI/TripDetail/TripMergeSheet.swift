@@ -76,7 +76,7 @@ struct TripMergeSheet: View {
                 Image(systemName: selected.contains(trip.id) ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(blocked ? Color.secondary : Color.accentColor)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(trip.title)
+                    Text(verbatim: TripTitle.film(trip))
                     Group {
                         if blocked {
                             Text("trip_merge_overlap")

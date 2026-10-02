@@ -10,31 +10,76 @@ import KamomeTrackingEngine
 /// named is called by the place found for it, by `JourneyNaming`'s rule and
 /// with its flag: the town for a trip that stayed in one place, the region for
 /// a wider trip at home, the country for one abroad. Until that lookup
-/// resolves, or if it never does, the stored title stands.
+/// resolves, or if it never does, it is called by its start date.
 enum TripTitle {
-    /// The title a trip is given when nobody names it: its start date.
+    /// The stored title of a trip nobody named (Chiu 2026-10-02, #168). It used
+    /// to be the start date as a string, which only the language and time zone
+    /// that wrote it could recognise again.
+    static let unnamed = ""
+
+    /// An unnamed trip's start date, in today's language: what it is called
+    /// until a place is found for it, or if none ever is.
     static func fallback(for startedAt: Double) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: Date(timeIntervalSince1970: startedAt))
+        formatters[0].date.string(from: Date(timeIntervalSince1970: startedAt))
     }
 
     /// "March 2026" — what a Discovery card is called until its place is known.
     static func month(for startedAt: Double) -> String {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("yMMMM")
-        return formatter.string(from: Date(timeIntervalSince1970: startedAt))
+        formatters[0].month.string(from: Date(timeIntervalSince1970: startedAt))
     }
 
     /// Nobody named this trip — no album title, never renamed.
-    ///
-    /// A trip opened from Discovery before its place was known used to be
-    /// stored under the card's month title (#165). Nobody typed that either,
-    /// so it counts as unnamed and the trip is called by its place once found.
     static func isFallback(_ trip: TripRecord) -> Bool {
-        if trip.title == fallback(for: trip.startedAt) { return true }
-        return trip.discoveryKey != nil && trip.title == month(for: trip.startedAt)
+        trip.title.isEmpty || isLegacyFallback(trip)
+    }
+
+    /// The name with no place in it: the real name, or the start date for a
+    /// trip nobody named. For the rows that have no place to show.
+    static func plain(_ trip: TripRecord) -> String {
+        isFallback(trip) ? fallback(for: trip.startedAt) : trip.title
+    }
+
+    // MARK: - Titles written before #168
+
+    /// The languages Kamome ships in, with and without the phone's region: the
+    /// date string depends on both ("Oct 2, 2026", "2 Oct 2026", "2026年10月2日").
+    /// Today's own locale comes first. Built once: Home asks per row.
+    private static let formatters: [(date: DateFormatter, month: DateFormatter)] = {
+        let region = Locale.current.region?.identifier
+        let identifiers = ["en", "en_US", "zh-Hant", "zh_Hant_TW"]
+            + (region.map { ["en_\($0)", "zh_Hant_\($0)"] } ?? [])
+        return ([Locale.current] + identifiers.map(Locale.init(identifier:))).map { locale in
+            let date = DateFormatter()
+            date.locale = locale
+            date.dateStyle = .medium
+            date.timeStyle = .none
+            let month = DateFormatter()
+            month.locale = locale
+            month.setLocalizedDateFormatFromTemplate("yMMMM")
+            return (date, month)
+        }
+    }()
+
+    /// A title written before #168: the start date in a language Kamome ships
+    /// in, or a day either side of it for a phone that has changed time zone
+    /// since. A trip opened from Discovery before #165 carries the card's month
+    /// the same way. Nobody typed either.
+    static func isLegacyFallback(_ trip: TripRecord) -> Bool {
+        let days = [-86_400.0, 0, 86_400].map { Date(timeIntervalSince1970: trip.startedAt + $0) }
+        return formatters.contains { formatter in
+            days.contains { formatter.date.string(from: $0) == trip.title }
+                || (trip.discoveryKey != nil && days.contains { formatter.month.string(from: $0) == trip.title })
+        }
+    }
+
+    /// Rewrites every title `isLegacyFallback` recognises as `unnamed`, so the
+    /// store says "nobody named this" as a fact. Run at launch; a store with
+    /// none left is one read.
+    static func clearLegacyFallbacks(in repository: TripRepository) {
+        let trips = Stored.read("allTrips") { try repository.allTrips() } ?? []
+        for trip in trips where !trip.title.isEmpty && isLegacyFallback(trip) {
+            Stored.write("setTripTitle") { try repository.setTripTitle(tripId: trip.id, title: unnamed) }
+        }
     }
 
     /// The key a trip's place is cached under — the same one Discovery writes.
@@ -77,6 +122,6 @@ enum TripTitle {
         homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode
     ) -> String {
         guard isFallback(trip) else { return trip.title }
-        return place(for: trip, cache: cache, homeCountryCode: homeCountryCode) ?? trip.title
+        return place(for: trip, cache: cache, homeCountryCode: homeCountryCode) ?? fallback(for: trip.startedAt)
     }
 }

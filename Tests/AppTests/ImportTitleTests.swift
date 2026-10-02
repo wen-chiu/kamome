@@ -59,7 +59,11 @@ final class ImportTitleTests: XCTestCase {
         let trip = try await imported(source: .dateRange)
         let firstPhoto = try XCTUnwrap(journey().map(\.timestamp).min())
 
-        XCTAssertEqual(trip.title, TripTitle.fallback(for: firstPhoto))
+        // Restated 2026-10-02 (#168, Chiu: an unnamed trip is stored with no
+        // title). This pinned the first photograph's date as the stored string;
+        // the same date is now what the trip is called, read off its own start.
+        XCTAssertEqual(trip.title, TripTitle.unnamed)
+        XCTAssertEqual(TripTitle.plain(trip), TripTitle.fallback(for: firstPhoto))
         XCTAssertTrue(TripTitle.isFallback(trip), "nobody named it, so the film may open on its country")
     }
 

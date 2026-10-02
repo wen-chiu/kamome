@@ -1,4 +1,5 @@
 import KamomePersistence
+import KamomeTripComposer
 import SwiftUI
 
 /// How one trip reads on Home: its headline, its dates, its place and its
@@ -35,6 +36,20 @@ extension HomeView {
         let end = Date(timeIntervalSince1970: endedAt)
         guard !Calendar.current.isDate(start, inSameDayAs: end) else { return from }
         return "\(from) – \(formatter.string(from: end))"
+    }
+
+    /// "· 2 km · 3 stops". The count carries its unit: a bare number read as a
+    /// stray digit, most of all the zero of a recording with no stops (#192).
+    static func statsText(_ stats: TripStats) -> String {
+        let stops = String.localizedStringWithFormat(String(localized: "recap_film_stop_count"), stats.stopCount)
+        return String(format: "· %.0f km · ", stats.distanceM / 1000) + stops
+    }
+
+    /// The row's second line: the dates, then the distance and stops if known.
+    static func detailText(for trip: TripRecord) -> String {
+        let dates = dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
+        guard let stats = TripStats.from(jsonString: trip.statsJson) else { return dates }
+        return "\(dates) \(statsText(stats))"
     }
 
     /// The place found for the trip (`TripTitle.place`), nil until it resolves.

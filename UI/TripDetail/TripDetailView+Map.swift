@@ -85,23 +85,46 @@ extension TripDetailView {
         }
     }
 
+    /// Four figures in a row; two rows of two when a row does not fit. At the
+    /// largest text sizes one row broke its labels inside words ("Dis-tanc-e")
+    /// and cut its values ("72 k…", #191).
     func statsStrip(_ stats: TripStats) -> some View {
-        HStack(spacing: 24) {
-            stat(value: String(format: "%.0f km", stats.distanceM / 1000), label: "stat_distance")
-            stat(value: hours(stats.driveS), label: "stat_drive_time")
-            stat(value: "\(stats.stopCount)", label: "stat_stops")
-            stat(value: String(format: "%.0f km/h", stats.topSpeedKmh), label: "stat_top_speed")
+        let distance = stat(value: String(format: "%.0f km", stats.distanceM / 1000), label: "stat_distance")
+        let driving = stat(value: hours(stats.driveS), label: "stat_drive_time")
+        let stops = stat(value: "\(stats.stopCount)", label: "stat_stops")
+        let topSpeed = stat(value: String(format: "%.0f km/h", stats.topSpeedKmh), label: "stat_top_speed")
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 24) {
+                distance
+                driving
+                stops
+                topSpeed
+            }
+            Grid(horizontalSpacing: 24, verticalSpacing: 8) {
+                GridRow {
+                    distance
+                    driving
+                }
+                GridRow {
+                    stops
+                    topSpeed
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .background(.thinMaterial)
     }
 
+    /// One line each, never wrapped: `ViewThatFits` measures the row at this
+    /// width, and the two-by-two shrinks a label rather than break it.
     func stat(value: String, label: LocalizedStringKey) -> some View {
         VStack {
             Text(value).font(.subheadline.bold()).monospacedDigit()
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
     }
 
     /// What floats on the map's bottom-right corner — bottom-right because

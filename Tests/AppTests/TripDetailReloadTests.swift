@@ -60,6 +60,28 @@ final class TripDetailReloadTests: XCTestCase {
         XCTAssertEqual(model.detail?.trip.title, "renamed")
     }
 
+    /// **Renaming a trip nobody named starts from an empty field** (#177): it
+    /// opened on the stored start date, which no screen shows, and typing
+    /// added to it. The placeholder is the name this screen shows instead.
+    func testRenamingAnUnnamedTripStartsEmptyAndANamedOneFromItsName() async throws {
+        let (repository, tripId) = try longTrip(points: 10)
+        let model = TripDetailModel(tripId: tripId, config: AppConfig.loadOrDie(), repository: repository)
+        await model.refresh()
+        XCTAssertEqual(model.renameDraft, "long")
+        XCTAssertNil(model.renamePrompt)
+
+        try repository.setTripTitle(tripId: tripId, title: TripTitle.unnamed)
+        await model.refresh()
+        XCTAssertEqual(model.renameDraft, "")
+        XCTAssertEqual(model.renamePrompt, model.storyTitle)
+        XCTAssertFalse(model.storyTitle.isEmpty, "an unnamed trip is never shown as a blank")
+
+        let legacy = TripTitle.fallback(for: try XCTUnwrap(model.detail?.trip.startedAt))
+        try repository.setTripTitle(tripId: tripId, title: legacy)
+        await model.refresh()
+        XCTAssertEqual(model.renameDraft, "", "a title that is the old date string is not a name to edit")
+    }
+
     /// **The map's lines are thinned with the read, not in the view body**
     /// (#139). The map bodies called Douglas-Peucker on every segment on every
     /// render, on the main thread; now `refresh()` thins once, off it, and a
