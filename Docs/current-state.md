@@ -7,11 +7,10 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-10-02 against ADR **2026-10-02-the-film-names-the-trips-own-towns**
-(the film names the towns its stops are in, in Kamome's own type over the map,
-and the base map names no settlement), with
-2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (a road trip's frame
-is 0.9 of the one that holds its widest drive between two towns, per journey,
-and the export logs its scales). The same day:
+(the film names the towns its stops are in; the base map names no settlement),
+with 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (a road trip's
+frame is 0.9 of the one holding its widest drive between two towns, per
+journey; the export logs its scales). The same day:
 2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
 existing App Store Connect record; the id is no longer a placeholder). Before
 them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
