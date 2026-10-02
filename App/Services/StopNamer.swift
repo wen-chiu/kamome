@@ -39,6 +39,10 @@ final class StopNamer {
     private var isWorking = false
     /// The stop whose lookup is out, so it is not queued a second time.
     private var inFlightId: String?
+    private var inFlightTownOnly = false
+    /// Stops whose lookup has failed once and been put back for one more try
+    /// (Chiu 2026-10-01, #160). A second failure is final.
+    private var retriedIds: Set<String> = []
     /// Stops this namer has named. A caller's copy of the trip can be a read
     /// behind, and would hand a stop back as unnamed just after its name landed.
     private var namedIds: Set<String> = []
@@ -104,6 +108,24 @@ final class StopNamer {
     /// Nothing waiting and nothing out.
     var isIdle: Bool { !isWorking && queue.isEmpty }
 
+    /// The stops still owed a name: waiting, out, or waiting for their retry.
+    /// What the film button asks about (#160) — `progress` counts the whole trip.
+    var pendingNameIds: Set<String> {
+        var ids = Set(queue.filter { !$0.townOnly }.map(\.stop.id))
+        if let inFlightId, !inFlightTownOnly { ids.insert(inFlightId) }
+        return ids
+    }
+
+    /// Moves these stops to the front of the names still waiting, in the order
+    /// they already had: the film's stops are named first, so the film button
+    /// waits on the film's size and not the trip's (Chiu 2026-10-01, #160).
+    func prioritise(_ stopIds: Set<String>) {
+        let names = queue.filter { !$0.townOnly }
+        let towns = queue.filter { $0.townOnly }
+        queue = names.filter { stopIds.contains($0.stop.id) }
+            + names.filter { !stopIds.contains($0.stop.id) } + towns
+    }
+
     private func isPending(_ stop: StopRecord) -> Bool {
         inFlightId == stop.id || namedIds.contains(stop.id) || queue.contains { $0.stop.id == stop.id }
     }
@@ -165,6 +187,7 @@ final class StopNamer {
             // gate holds the lookup until its turn (`StopGeocoding.pacesItself`).
             isWorking = true
             inFlightId = stop.id
+            inFlightTownOnly = townOnly
             geocoder.reverseGeocodeZoned(lat: stop.lat, lon: stop.lon) { [weak self] name, locality, zone, error in
                 guard let self else { return }
                 self.isWorking = false
@@ -196,12 +219,25 @@ final class StopNamer {
             policy.recordAttempt(at: finishedAt)
             // A town-only miss stays NULL, so the next open asks again.
             guard !townOnly else { return }
+            let reason = error?.localizedDescription ?? "no placemark returned"
+            // **One more try, after every other stop has been asked** (Chiu
+            // 2026-10-01, #160): a lookup that failed once is often a rate
+            // limit that has passed by the end of the queue. It goes behind the
+            // names still waiting and is charged the throttle like any other.
+            if retriedIds.insert(stop.id).inserted {
+                KamomeLog.geocode.error("""
+                    stop naming failed for \(stop.id, privacy: .public) — \(reason, privacy: .public). \
+                    It is asked once more after the other stops.
+                    """)
+                let firstTownOnly = queue.firstIndex(where: { $0.townOnly }) ?? queue.endIndex
+                queue.insert((stop: stop, townOnly: false), at: firstTownOnly)
+                return
+            }
             // And say so. This was `_`, so a rate-limited trip produced a
             // film full of "Unnamed stop" with nothing anywhere naming a
             // cause (Chiu 2026-08-03).
             KamomeLog.geocode.error("""
-                stop naming failed for \(stop.id, privacy: .public) — \
-                \(error?.localizedDescription ?? "no placemark returned", privacy: .public). \
+                stop naming failed twice for \(stop.id, privacy: .public) — \(reason, privacy: .public). \
                 The stop stays unnamed; reopening trip detail re-queues it.
                 """)
             finish(stop, named: false)
