@@ -4456,13 +4456,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome draws your route from your phone’s GPS, so a trip can’t be recorded while location is turned off. We suggest allowing Kamome to always use your location in Settings. Kamome only reads your location during a trip you started, and does not store your data."
+            "value": "Kamome draws your route from your phone’s GPS, so a trip can’t be recorded while location is turned off. We suggest allowing Kamome to always use your location in Settings. Kamome only reads your location during a trip you started, and your route stays only on your phone."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩是靠手機的 GPS 畫出你走過的路線，定位關閉時沒辦法記錄旅程。建議到「設定」允許卡摸咩可以一直使用定位資訊。卡摸咩只會在你啟動的旅程期間讀取位置，不會儲存你的資料。"
+            "value": "卡摸咩是靠手機的 GPS 畫出你走過的路線，定位關閉時沒辦法記錄旅程。建議到「設定」允許卡摸咩可以一直使用定位資訊。卡摸咩只會在你啟動的旅程期間讀取位置，路線只存在你的手機裡。"
           }
         }
       }
