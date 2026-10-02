@@ -99,6 +99,7 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.routeMaxDetourRatio, 2.5)
         XCTAssertEqual(config.matching.routeWaypointMinSpacingM, 250)
         XCTAssertEqual(config.matching.routeWaypointRadiusM, 500)
+        XCTAssertEqual(config.matching.routeOffNetworkWalkSnapMaxM, 650)
         assertPaceDefaults(config)
         XCTAssertEqual(config.sampling.vehicles.car.fast.distanceFilterM, 50)
         XCTAssertEqual(config.sampling.vehicles.car.slow.distanceFilterM, 20)

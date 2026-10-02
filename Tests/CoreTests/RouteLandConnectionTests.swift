@@ -135,9 +135,16 @@ final class RouteLandConnectionTests: XCTestCase {
         }
     }
 
-    /// The walk question is asked only after `No path`. A routed leg and a
-    /// `No suitable edges` leg are already settled by the drive answer.
-    func testTheWalkQuestionIsAskedOnlyAfterNoPath() async throws {
+    /// The land question is asked only after `No path`. A routed leg is settled
+    /// by the drive answer alone.
+    ///
+    /// 🔴 **Restated 2026-10-01 (Chiu, ADR 2026-10-01).** This also asserted
+    /// that a `No suitable edges` leg sends one request. It now sends a walk
+    /// request too, but for a different question: where a walk reaches the
+    /// waypoint (`RouteWalkSnapTests`). What still holds, and is asserted, is
+    /// that a walk answer the provider refuses leaves the beach off the road
+    /// network, and never makes it a crossing.
+    func testTheLandQuestionIsAskedOnlyAfterNoPath() async throws {
         let seen = Locked<[URLRequest]>([])
         let beach = GeoapifyRouteProvider(config: config) { request in
             seen.set(seen.get() + [request])
@@ -145,6 +152,17 @@ final class RouteLandConnectionTests: XCTestCase {
         }
         let outcome = try await beach.route(leg)
         XCTAssertEqual(outcome, .offTheRoadNetwork)
-        XCTAssertEqual(seen.get().map { mode(of: $0) }, ["drive"])
+        XCTAssertEqual(seen.get().map { mode(of: $0) }, ["drive", "walk"])
+
+        let asked = Locked<[URLRequest]>([])
+        let road = GeoapifyRouteProvider(config: config) { request in
+            asked.set(asked.get() + [request])
+            var body = try XCTUnwrap(try JSONSerialization.jsonObject(with: self.walkBody(ferry: nil)) as? [String: Any])
+            body["mode"] = "drive"
+            return (try JSONSerialization.data(withJSONObject: body), self.http(200, request.url))
+        }
+        let routed = try await road.route(leg)
+        XCTAssertNotNil(routed.outcome)
+        XCTAssertEqual(asked.get().map { mode(of: $0) }, ["drive"])
     }
 }
