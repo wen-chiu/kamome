@@ -6,9 +6,13 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-01 against ADR **2026-10-01-stop-naming-outlives-the-screen**
-(stop naming is owned by `StopNamingCoordinator` and survives leaving Trip
-Detail; every Apple lookup waits at one `GeocodeGate`). Before it:
+Last synced: 2026-10-01 against ADR
+**2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it**
+(a beach waypoint the drive profile refuses is moved to where a walk reaches
+it, at most 650 m, and drive is asked again). The same day:
+2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
+`StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
+waits at one `GeocodeGate`). Before them:
 2026-09-30-export-time-left (the export sheet says "about N minutes left" from
 its own station pace, after a 60 s warm-up);
 2026-09-29-the-opening-zooms-and-the-route-holds
@@ -91,6 +95,8 @@ D1–D5 get run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`,
 - **Routing:** `RouteProvider`-shaped boundary; **Geoapify**, key behind a
   Cloudflare Worker. Detour-ratio gate 2.5. **No snap radius exists or is needed**
   (ADR 2026-08-20 (d) — read it before citing any older snap-radius text).
+  A waypoint refused as off the network is asked again from where a walk
+  reaches it, within 650 m (ADR 2026-10-01).
   Bounded, cancellable, and it reports which of four causes dashed a film.
 - **Camera:** `FollowCamera` dead-zone dolly, pre-simulated, one span per **area**
   (`CameraPathAreas`, ADR 2026-09-24); scale changes only in a reframe beat;
