@@ -15,10 +15,18 @@
 # check by hand, at the moment of highest pressure. This is that instruction as
 # a command whose output is the evidence.
 #
-# The strongest check here is the EXACT one: the real key, matched byte for byte
-# across every file including binaries. A shape scan alone would be both weaker
-# and noisier, so the exact scan is required rather than best-effort — if the key
-# cannot be read, this exits non-zero rather than passing with a gap in it.
+# No key is needed to run this, and none should be put in the environment for it
+# (ADR 2026-10-02, "the release scan needs no key"). It used to demand the real
+# key for a byte-for-byte scan, which meant a release check whose own procedure
+# exported the secret into a shell — and then asked for the secret to be
+# rotated. The scan below matches the key's SHAPE instead, and reaches the
+# executables: a Geoapify key is 32 lowercase hex characters (VERIFIED: the two
+# bundles above carried exactly that), so a key string compiled into a binary is
+# found whether or not this script knows it.
+#
+# What that gives up: a key of another shape would pass. INFERRED that a
+# rotated Geoapify key keeps the shape; the cheapest way to settle it is to look
+# at the new key when it is issued.
 set -uo pipefail
 source "$(dirname "$0")/../lib.sh"
 cd "$(dirname "$0")/../.."
@@ -27,25 +35,6 @@ artifact="${1:-}"
 if [ -z "$artifact" ] || [ ! -e "$artifact" ]; then
   kamome_fail "usage: Scripts/release/check-archive.sh <path to .ipa or .xcarchive>"
   kamome_info "Check the ARTIFACT, never the source — that is the whole point of this gate."
-  exit 1
-fi
-
-# The key, for the exact scan — from the environment ONLY (ADR 2026-09-12). This
-# used to fall back to Config/Secrets.xcconfig; no build reads that file any
-# more, and a gate that still gives it a use is a reason for it to survive on the
-# very machine that builds the archive. Supply the key for the one command,
-# without writing it to a file:
-#
-#   KAMOME_ROUTING_API_KEY="$(grep '^GEOAPIFY_API_KEY=' ~/.kamome/routing.env | cut -d= -f2-)" \
-#     ./check.sh --release <path to .xcarchive>
-#
-# ./check.sh strips the variable from its xcodebuild stage, so the build it runs
-# never sees the key.
-key="${KAMOME_ROUTING_API_KEY:-}"
-if [ -z "$key" ]; then
-  kamome_fail "KAMOME_ROUTING_API_KEY is not set, so the exact scan cannot run"
-  kamome_info "Pass the real key in the environment for this one command — see this script's header."
-  kamome_info "A shape scan alone is not this gate — it would pass a key of another shape."
   exit 1
 fi
 
@@ -63,15 +52,35 @@ esac
 
 failures=0
 
-# 1. The exact key, every file, binaries included.
-hits=$(grep -rlaF "$key" "$root" 2>/dev/null || true)
-if [ -n "$hits" ]; then
-  kamome_fail "the routing key is INSIDE the artifact:"
-  printf '%s\n' "$hits" | sed "s|^$root|  |" | while read -r f; do kamome_info "$f"; done
-  kamome_info "Rotate the key (pre-launch.md item 7) — this build is burned."
+# 1. A key-shaped string in any executable inside the app — the main binary and
+#    every framework's. A 32-hex run bounded by non-hex bytes, so a SHA-1 or a
+#    UUID without dashes is not read as a key; a compiled C string is NUL-bounded,
+#    which is non-hex. Only Mach-O files: measured on a built archive, the
+#    shipped executables carry none, the dSYM (which is not shipped) carries
+#    thousands, and a framework's compiled asset catalog carries a few — none of
+#    them credentials, all of them noise a gate cannot be allowed to make.
+hexrun='(^|[^0-9a-fA-F])[0-9a-f]{32}([^0-9a-fA-F]|$)'
+scanned=0
+binhits=""
+while IFS= read -r f; do
+  [ "$(file -b --mime-type "$f" 2>/dev/null)" = "application/x-mach-binary" ] || continue
+  scanned=$((scanned + 1))
+  if LC_ALL=C grep -qaE "$hexrun" "$f" 2>/dev/null; then
+    binhits="${binhits}${f}"$'\n'
+  fi
+done < <(find "$root" -path '*.app/*' -type f 2>/dev/null)
+if [ "$scanned" -eq 0 ]; then
+  kamome_fail "no executable found inside a .app in the artifact — nothing was scanned"
+  kamome_info "A scan that measured nothing is not a pass. Is this an app archive?"
+  failures=$((failures + 1))
+elif [ -n "$binhits" ]; then
+  kamome_fail "a key-shaped (32-hex) string is INSIDE an executable:"
+  printf '%s' "$binhits" | sed "s|^$root|  |" | while read -r f; do kamome_info "$f"; done
+  kamome_info "Adjudicate it — a hash is fine, a credential is not. If it is the routing key,"
+  kamome_info "this build is burned: do not upload it, and find what put the key in the build."
   failures=$((failures + 1))
 else
-  kamome_ok "the routing key does not appear anywhere in the artifact"
+  kamome_ok "no key-shaped string in any of $scanned executables"
 fi
 
 # 2. The Info.plist field the app used to read, structurally. Since ADR 2026-09-12

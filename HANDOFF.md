@@ -11,9 +11,9 @@
 | Closed findings, history | `Docs/_archive/` |
 
 **The critical path to a release:** #112 (the device run), then Chiu's
-submission sequence — `./check.sh --release <.xcarchive>` with the real key in
-`KAMOME_ROUTING_API_KEY` (never a file, ADR 2026-09-12), **then** rotate the
-Geoapify key (S7). Never the other way round. → `Docs/release-readiness.md`.
+submission sequence — `./check.sh --release <.xcarchive>`, which needs **no**
+key (ADR 2026-10-02). Rotating the Geoapify key (S7) is independent of it now;
+do it whenever. → `Docs/release-readiness.md`.
 Before submitting, the App Store prerequisites A1–A7 are Chiu's (#126,
 `Docs/handoff-release-review-2026-09-28.md`).
 

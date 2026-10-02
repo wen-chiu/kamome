@@ -40,6 +40,8 @@ struct AboutView: View {
     /// Read, not hardcoded: the notice states these two numbers as fact.
     let matching: TrackingConfig.Matching
     @Environment(\.dismiss) private var dismiss
+    /// The diagnostics file being shared; its sheet hangs on the list (#189).
+    @State private var diagnosticsFile: DiagnosticsFile?
 
     /// Licence targets, deliberately not in `TrackingConfig.json`. Rule 7 governs
     /// *tunables*; changing either of these is a licence breach, not a tuning
@@ -58,9 +60,10 @@ struct AboutView: View {
             List {
                 attributionSection
                 privacySection
-                DiagnosticsSection()
+                DiagnosticsSection(file: $diagnosticsFile)
                 acknowledgementsSection
             }
+            .diagnosticsShareSheet($diagnosticsFile)
             .navigationTitle("about_title")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
