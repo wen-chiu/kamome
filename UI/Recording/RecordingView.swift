@@ -29,6 +29,9 @@ struct RecordingView: View {
 
     private var hud: some View {
         VStack(spacing: 12) {
+            if session.locationAccess == .refused {
+                locationRefusedNotice
+            }
             if let interruption = session.interruption {
                 resumedNotice(interruption)
             }
@@ -61,6 +64,27 @@ struct RecordingView: View {
         .padding()
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
         .padding()
+    }
+
+    /// Location was turned off for Kamome while a trip is open — in Settings
+    /// mid-drive, or before a relaunch resumed the recording (#190). Nothing is
+    /// being recorded, and the HUD's numbers alone would not say so. Stays for
+    /// as long as it is true.
+    private var locationRefusedNotice: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "location.slash.fill")
+                .foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("recording_location_refused_notice")
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let settings = URL(string: UIApplication.openSettingsURLString) {
+                    Link("access_denied_settings", destination: settings)
+                        .font(.footnote.weight(.semibold))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     /// Said once after a recording was recovered: the app had been closed,

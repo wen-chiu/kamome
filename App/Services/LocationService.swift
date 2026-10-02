@@ -4,9 +4,56 @@ import Foundation
 import KamomeConfig
 import KamomeTrackingEngine
 
+/// Whether iOS lets Kamome read a position at all — the three answers a
+/// recording cares about (ADR 2026-10-02, #190).
+enum LocationAccess: Equatable {
+    case undetermined, allowed, refused
+
+    init(_ status: CLAuthorizationStatus) {
+        switch status {
+        case .notDetermined: self = .undetermined
+        case .authorizedAlways, .authorizedWhenInUse: self = .allowed
+        case .denied, .restricted: self = .refused
+        @unknown default: self = .refused
+        }
+    }
+}
+
+/// The seam `TrackingSession` asks through, so a test can answer the prompt.
+protocol LocationPermissionProviding: AnyObject {
+    var access: LocationAccess { get }
+    /// Called on every change, including the answer to `request()`.
+    var onChange: ((LocationAccess) -> Void)? { get set }
+    /// Raises the When In Use prompt if it has never been answered.
+    func request()
+}
+
+/// Asks for location before a recording starts and watches the answer for the
+/// app's life: a recording that began allowed can be refused later in Settings.
+/// It never starts an update — tracking is `LocationService`'s, during a trip.
+final class LocationPermission: NSObject, LocationPermissionProviding, CLLocationManagerDelegate {
+    var onChange: ((LocationAccess) -> Void)?
+    private let manager = CLLocationManager()
+
+    override init() {
+        super.init()
+        manager.delegate = self
+    }
+
+    var access: LocationAccess { LocationAccess(manager.authorizationStatus) }
+
+    func request() {
+        manager.requestWhenInUseAuthorization()
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        onChange?(access)
+    }
+}
+
 /// Bridges CoreLocation/CoreMotion to the pure TrackingEngine and applies the
-/// §2.3 adaptive sampling table to the location manager. The only file that
-/// talks to CLLocationManager.
+/// §2.3 adaptive sampling table to the location manager. With
+/// `LocationPermission` above, the only file that talks to CLLocationManager.
 final class LocationService: NSObject, CLLocationManagerDelegate {
     /// How a dwell pause is executed given what CoreLocation can deliver (§2.3).
     enum DwellPausePlan: Equatable {
@@ -211,6 +258,13 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         applyBackgroundCapability()
+        // Location given back in Settings in the middle of a trip (#190): ask
+        // for fixes again rather than rely on a start made while refused.
+        // UNKNOWN whether iOS resumes that start by itself; asking twice is a
+        // no-op, and a dwell pause keeps GPS off until its region says otherwise.
+        guard vehicle != nil, !isDwellRegionArmed,
+              LocationAccess(manager.authorizationStatus) == .allowed else { return }
+        manager.startUpdatingLocation()
     }
 
     func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {

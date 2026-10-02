@@ -57,10 +57,14 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $showingStartRecording) {
-                StartRecordingSheet(vehicle: $vehicle) {
-                    showingStartRecording = false
-                    session.start(vehicle: vehicle)
+                StartRecordingSheet(vehicle: $vehicle, access: session.locationAccess) {
+                    session.requestStart(vehicle: vehicle)
                 }
+            }
+            .onChange(of: session.isRecording) {
+                // The sheet waits for the location prompt (#190) and makes way
+                // for S2 only once a recording has really begun.
+                if session.isRecording { showingStartRecording = false }
             }
             .toolbar { toolbarItems }
             .sheet(isPresented: $showingDiscovery) {
