@@ -45,13 +45,6 @@ extension HomeView {
         return String(format: "· %.0f km · ", stats.distanceM / 1000) + stops
     }
 
-    /// The row's second line: the dates, then the distance and stops if known.
-    static func detailText(for trip: TripRecord) -> String {
-        let dates = dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
-        guard let stats = TripStats.from(jsonString: trip.statsJson) else { return dates }
-        return "\(dates) \(statsText(stats))"
-    }
-
     /// The place found for the trip (`TripTitle.place`), nil until it resolves.
     func placeText(for trip: TripRecord) -> String? {
         TripTitle.place(for: trip)

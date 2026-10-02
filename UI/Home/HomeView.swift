@@ -178,12 +178,14 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(headline(for: trip))
                             .font(.headline)
-                        // One text, so at the largest sizes it wraps as one
-                        // line of reading; two side by side wrapped into each
-                        // other ("2026 · 2 / 年10 km", #191).
-                        Text(verbatim: Self.detailText(for: trip))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 4) {
+                            Text(Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt))
+                            if let stats = TripStats.from(jsonString: trip.statsJson) {
+                                Text(verbatim: Self.statsText(stats))
+                            }
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 8)
                     provenanceMark(trip.tripSource)
