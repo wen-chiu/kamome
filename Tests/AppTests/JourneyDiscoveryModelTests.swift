@@ -8,38 +8,8 @@ import XCTest
 /// out, a trip only when a card is opened, and the same trip on the next scan.
 @MainActor
 final class JourneyDiscoveryModelTests: XCTestCase {
-    private final class StubLibrary: ImportPhotoProviding, PhotoAccessProviding {
-        var photos: [ImportPhoto] = []
-        var queries: [ImportQuery] = []
-        var access: PhotoReadAccess = .granted
-        var pickerPresented = 0
-
-        func photos(matching query: ImportQuery) async -> [ImportPhoto] {
-            queries.append(query)
-            return photos
-        }
-        func albums() async -> [PhotoAlbum] { [] }
-        var readAccess: PhotoReadAccess { access }
-        func requestReadAccess() async -> PhotoReadAccess { access }
-        func presentLimitedLibraryPicker(completion: @escaping () -> Void) {
-            pickerPresented += 1
-            completion()
-        }
-    }
-
-    /// Answers instantly from a table; records every coordinate it was asked
-    /// about, because *which* coordinates leave the device is the property the
-    /// privacy test below holds.
-    private final class StubGeocoder: PlaceGeocoding {
-        var table: [(lat: Double, place: PlaceName)] = []
-        private(set) var askedLatitudes: [Double] = []
-        var lookups: Int { askedLatitudes.count }
-
-        func place(lat: Double, lon: Double) async -> PlaceName? {
-            askedLatitudes.append(lat)
-            return table.first { abs($0.lat - lat) < 0.5 }?.place
-        }
-    }
+    private typealias StubLibrary = DiscoveryStubLibrary
+    private typealias StubGeocoder = DiscoveryStubGeocoder
 
     private let week = 7.0 * 86_400
     /// A fixed "now" far enough past the photographs that they are inside the
@@ -211,7 +181,14 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         let opened = await harness.model.open(japan)
         let tripId = try XCTUnwrap(opened)
         let trip = try XCTUnwrap(try harness.repository.detail(tripId: tripId)?.trip)
-        XCTAssertEqual(trip.title, "Japan", "the resolved name becomes the trip's title")
+        // Restated 2026-10-01 (#165, Chiu's title rule): this used to pin the
+        // card's name being copied into `trip.title`. The trip is now stored
+        // unnamed and called by its place wherever it is shown, flag included.
+        XCTAssertEqual(trip.title, TripTitle.fallback(for: trip.startedAt), "stored unnamed, not under the card's name")
+        XCTAssertEqual(
+            TripTitle.film(trip, cache: JourneyNameCache(defaults: harness.defaults), homeCountryCode: "TW"),
+            "🇯🇵 Japan", "the resolved name is what the trip is called"
+        )
         XCTAssertEqual(trip.discoveryKey, japan.id)
         XCTAssertEqual(trip.tripSource, .importedPhotos, "honest provenance survives discovery")
 

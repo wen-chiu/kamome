@@ -66,6 +66,21 @@ struct JourneyTimelineView: View {
                     deleting = nil
                 }
             }
+            .alert(
+                Text("journey_open_failed"),
+                isPresented: Binding(
+                    get: { model.openFailure != nil }, set: { if !$0 { model.acknowledgeOpenFailure() } }
+                ),
+                presenting: model.openFailure
+            ) { _ in
+            } message: { failure in
+                // A tap that produced no trip used to produce nothing at all:
+                // the spinner stopped and the screen stayed as it was (#166).
+                switch failure {
+                case .notATrip: Text("journey_open_failed_not_a_trip")
+                case .saveFailed: Text("import_error_save")
+                }
+            }
         }
         // The app follows the device's appearance (ADR 2026-09-18 (d)), so
         // this sheet inherits light or dark from the system. The light style
