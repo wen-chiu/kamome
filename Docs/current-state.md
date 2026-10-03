@@ -15,7 +15,9 @@ height to the film: Export again moves into ⋯, a no-road leg is one caption
 line);
 2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
 existing App Store Connect record; the id is no longer a placeholder);
-2026-10-02-the-release-scan-needs-no-key. Before
+2026-10-02-the-release-scan-needs-no-key;
+2026-10-02-an-unnamed-trip-is-stored-with-no-title;
+2026-10-02-deleting-a-stop-asks-first. Before
 them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
 (a beach waypoint the drive profile refuses is moved to where a walk reaches
 it, at most 650 m, and drive is asked again). The same day:
@@ -34,9 +36,8 @@ its own station pace, after a 60 s warm-up);
 (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
-its own towns, and travel is earned by windows); 2026-09-28-sample-trip (an
-empty Home offers a sample trip, Hualien to Taitung, with its road shipped and
-drawings for photographs); 2026-09-28, governance v2, the ledger's last entry.
+its own towns, and travel is earned by windows); 2026-09-28-sample-trip;
+2026-09-28, governance v2, the ledger's last entry.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
 work is GitHub Issues (`device`, `chiu`, `desk`); phone-only checks are

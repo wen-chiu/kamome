@@ -11,6 +11,10 @@ struct TripDetailView: View {
     @Environment(TrackingSession.self) private var session
     @State var model: TripDetailModel
     @State var editingStop: StopRecord?
+    /// The stop a swipe asked to delete, held until the person confirms. A full
+    /// swipe used to delete it outright: its name, note and film choices gone,
+    /// and a recorded stop cannot be made again (#188). Home asks the same way.
+    @State private var stopPendingDeletion: StopRecord?
     @State private var showingRecap = false
     @State var playingFilm: FilmRecord?
     @State var showingAllFilms = false
@@ -41,7 +45,7 @@ struct TripDetailView: View {
     private var tripEditMenu: some View {
         Menu {
             Button {
-                renameText = model.detail?.trip.title ?? ""
+                renameText = model.renameDraft
                 showingRename = true
             } label: {
                 Label("trip_rename_action", systemImage: "pencil")
@@ -97,15 +101,16 @@ struct TripDetailView: View {
                     } label: {
                         Label("recap_export", systemImage: "film")
                     }
-                    // Naming is throttled and asynchronous; a film exported before it
-                    // finishes says "Unnamed stop" for every stop still in the queue
-                    // (Chiu 2026-08-04). The banner above says why the button is off.
-                    .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
+                    // Naming is throttled and asynchronous; a film exported before
+                    // its stops are named says "Unnamed stop" for each of them
+                    // (Chiu 2026-08-04). It waits only for the stops a film shows
+                    // (#160); the banner above keeps counting the rest.
+                    .disabled(model.detail?.trip.endedAt == nil || model.isNamingFilmStops)
                 }
             }
         }
         .alert("trip_rename_title", isPresented: $showingRename) {
-            TextField("trip_rename_placeholder", text: $renameText)
+            TextField("trip_rename_placeholder", text: $renameText, prompt: model.renamePrompt.map { Text(verbatim: $0) })
             Button("recap_cancel", role: .cancel) {}
             Button("save") {
                 model.renameTrip(to: renameText)
@@ -229,7 +234,7 @@ struct TripDetailView: View {
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
-                        model.deleteStop(stopId: stop.id)
+                        stopPendingDeletion = stop
                     } label: {
                         Label("delete_stop", systemImage: "trash")
                     }
@@ -254,6 +259,25 @@ struct TripDetailView: View {
             }
         }
         .listStyle(.plain)
+        .overlay {
+            if model.detail?.trip.endedAt != nil, model.visibleStops.isEmpty, model.routePhotos.isEmpty {
+                Text("trip_no_stops")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding()
+            }
+        }
+        .confirmationDialog(
+            "stop_delete_confirm", isPresented: Binding(
+                get: { stopPendingDeletion != nil }, set: { if !$0 { stopPendingDeletion = nil } }
+            ), titleVisibility: .visible
+        ) {
+            Button("delete_stop", role: .destructive) {
+                if let stopPendingDeletion { model.deleteStop(stopId: stopPendingDeletion.id) }
+                stopPendingDeletion = nil
+            }
+        }
     }
 
     /// The running export, on the trip screen rather than inside the sheet

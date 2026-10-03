@@ -13,6 +13,20 @@ extension TripDetailModel {
         reload()
     }
 
+    /// What the rename field opens with: the trip's own name, or nothing for a
+    /// trip nobody named (#177). It used to open on the stored start date,
+    /// which no screen shows, and typing added to it.
+    var renameDraft: String {
+        guard let trip = detail?.trip, !TripTitle.isFallback(trip) else { return "" }
+        return trip.title
+    }
+
+    /// The empty rename field's placeholder: what this screen calls the trip.
+    var renamePrompt: String? {
+        guard let trip = detail?.trip, TripTitle.isFallback(trip) else { return nil }
+        return storyTitle
+    }
+
     /// The trip's name on this screen and in the diary, by `TripTitle`'s rule: a
     /// real name (an album's, or one the person typed) wins; a trip nobody
     /// named shows the place found for it. Without this the cached place hid a
@@ -20,7 +34,7 @@ extension TripDetailModel {
     var storyTitle: String {
         guard let trip = detail?.trip else { return "" }
         guard TripTitle.isFallback(trip) else { return trip.title }
-        return journeyName?.title ?? trip.title
+        return journeyName?.title ?? TripTitle.fallback(for: trip.startedAt)
     }
 
     /// The navigation bar's title: `storyTitle` with its flag, as Home's row and

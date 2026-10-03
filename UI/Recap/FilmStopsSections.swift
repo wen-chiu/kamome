@@ -14,29 +14,33 @@ struct FilmStopsSections: View {
 
     var body: some View {
         let inFilm = choices.filmStops
-        Section {
-            ForEach(inFilm, id: \.id) { stop in
-                NavigationLink {
-                    StopPhotoPickerView(choices: choices, stop: stop)
-                } label: {
-                    FilmDeckRow(choices: choices, stop: stop)
-                }
-                .swipeActions(edge: .trailing) {
-                    Button {
-                        withAnimation { choices.takeOut(stopId: stop.id) }
+        let others = choices.otherStops
+        // A recording that never stopped has nothing to choose: no header
+        // counting zero stops, no "Kamome chose these" over an empty list (#192).
+        if !inFilm.isEmpty || !others.isEmpty {
+            Section {
+                ForEach(inFilm, id: \.id) { stop in
+                    NavigationLink {
+                        StopPhotoPickerView(choices: choices, stop: stop)
                     } label: {
-                        Label("stop_take_out", systemImage: "minus.circle")
+                        FilmDeckRow(choices: choices, stop: stop)
                     }
-                    .tint(.orange)
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            withAnimation { choices.takeOut(stopId: stop.id) }
+                        } label: {
+                            Label("stop_take_out", systemImage: "minus.circle")
+                        }
+                        .tint(.orange)
+                    }
                 }
+            } header: {
+                Text(String.localizedStringWithFormat(String(localized: "recap_stops_in_film"), inFilm.count))
+            } footer: {
+                Text("recap_stops_in_film_footer")
             }
-        } header: {
-            Text(String.localizedStringWithFormat(String(localized: "recap_stops_in_film"), inFilm.count))
-        } footer: {
-            Text("recap_stops_in_film_footer")
         }
 
-        let others = choices.otherStops
         if !others.isEmpty {
             Section {
                 ForEach(others, id: \.id) { stop in

@@ -21,7 +21,7 @@ enum GPXExporter {
         var lines: [String] = [
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
             "<gpx version=\"1.1\" creator=\"Kamome debug export\" xmlns=\"http://www.topografix.com/GPX/1/1\">",
-            "  <metadata><name>\(escape(detail.trip.title))</name></metadata>"
+            "  <metadata><name>\(escape(TripTitle.plain(detail.trip)))</name></metadata>"
         ]
         for stop in detail.stops {
             let name = escape(stop.name ?? "stop")

@@ -1,5 +1,6 @@
 @testable import Kamome
 import KamomePersistence
+import KamomeTripComposer
 import XCTest
 
 /// **The film's title** (Chiu 2026-09-27): an unnamed trip opens on its
@@ -118,5 +119,71 @@ final class TripTitleTests: XCTestCase {
     func testWithoutAPlaceTheStoredTitleStands() {
         let unnamed = trip(title: TripTitle.fallback(for: startedAt))
         XCTAssertEqual(TripTitle.film(unnamed, cache: JourneyNameCache(defaults: defaults)), unnamed.title)
+    }
+
+    // MARK: - Unnamed is a stored fact, not a formatted date (#168, Chiu 2026-10-02)
+
+    private func mediumDate(_ locale: String, _ time: Double) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: locale)
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: Date(timeIntervalSince1970: time))
+    }
+
+    func testAnEmptyTitleIsATripNobodyNamed() {
+        let unnamed = trip(title: TripTitle.unnamed)
+        XCTAssertTrue(TripTitle.isFallback(unnamed))
+        XCTAssertEqual(
+            TripTitle.film(unnamed, cache: JourneyNameCache(defaults: defaults)), TripTitle.fallback(for: startedAt),
+            "with no place it is called by its start date, never by the blank"
+        )
+        XCTAssertEqual(TripTitle.film(unnamed, cache: cacheWithJapan()), "🇯🇵 Japan")
+        XCTAssertEqual(TripTitle.plain(unnamed), TripTitle.fallback(for: startedAt))
+        XCTAssertEqual(TripTitle.plain(trip(title: "北海道夏天")), "北海道夏天")
+    }
+
+    /// The bug: the date was compared in today's language, so a title written
+    /// under English became a name the day the phone switched to Chinese.
+    func testADateWrittenInEitherShippedLanguageIsStillUnnamed() {
+        for locale in ["en_US", "zh_Hant_TW"] {
+            let written = trip(title: mediumDate(locale, startedAt))
+            XCTAssertTrue(TripTitle.isFallback(written), "\(locale): \(written.title)")
+            XCTAssertEqual(TripTitle.film(written, cache: cacheWithJapan()), "🇯🇵 Japan")
+        }
+    }
+
+    /// A phone that has changed time zone since puts the start on the day
+    /// before or after the one the title was written from.
+    func testADateADayEitherSideIsStillUnnamed() {
+        XCTAssertTrue(TripTitle.isFallback(trip(title: mediumDate("en_US", startedAt - 86_400))))
+        XCTAssertTrue(TripTitle.isFallback(trip(title: mediumDate("zh_Hant_TW", startedAt + 86_400))))
+        XCTAssertFalse(TripTitle.isFallback(trip(title: mediumDate("en_US", startedAt + 3 * 86_400))))
+    }
+
+    func testLaunchRewritesOldDateTitlesAndLeavesNames() throws {
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        func save(_ title: String) throws -> String {
+            try repository.saveCompletedTrip(
+                title: title, startedAt: startedAt, endedAt: startedAt + 3_600, segments: [], stops: []
+            )
+        }
+        let english = try save(mediumDate("en_US", startedAt))
+        let chinese = try save(mediumDate("zh_Hant_TW", startedAt))
+        let named = try save("北海道夏天")
+
+        TripTitle.clearLegacyFallbacks(in: repository)
+
+        XCTAssertEqual(try repository.detail(tripId: english)?.trip.title, TripTitle.unnamed)
+        XCTAssertEqual(try repository.detail(tripId: chinese)?.trip.title, TripTitle.unnamed)
+        XCTAssertEqual(try repository.detail(tripId: named)?.trip.title, "北海道夏天")
+    }
+
+    /// "· 2 km · 0" read as a stray digit (#192): the count carries its unit.
+    func testHomesStopCountCarriesItsUnit() {
+        let none = HomeView.statsText(TripStats(distanceM: 2_000, driveS: 120, walkS: 0, stopCount: 0, topSpeedKmh: 60))
+        let unit = String.localizedStringWithFormat(String(localized: "recap_film_stop_count"), 0)
+        XCTAssertTrue(none.hasSuffix(unit), none)
+        XCTAssertNotEqual(unit, "0")
     }
 }

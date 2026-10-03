@@ -20,6 +20,7 @@ final class StopNamerTests: XCTestCase {
         /// name for a coordinate, or nil to fail that lookup.
         var answer: (Double, Double) -> String?
         private(set) var lookupTimes: [TimeInterval] = []
+        private(set) var lookupLats: [Double] = []
         private(set) var lookups = 0
 
         init(answer: @escaping (Double, Double) -> String?) { self.answer = answer }
@@ -29,6 +30,7 @@ final class StopNamerTests: XCTestCase {
         ) {
             lookups += 1
             lookupTimes.append(Date.now.timeIntervalSince1970)
+            lookupLats.append(lat)
             let name = answer(lat, lon)
             DispatchQueue.main.async {
                 completion(name, name == nil ? NSError(domain: "stub", code: 2) : nil)
@@ -134,7 +136,12 @@ final class StopNamerTests: XCTestCase {
         }
         await fulfillment(of: [done], timeout: 20)
 
-        XCTAssertEqual(stub.lookups, 5)
+        // Restated 2026-10-02 (#160, Chiu 2026-10-01: 「允許每站重試一次」). This
+        // pinned five lookups for five stops and the failed stop left unnamed.
+        // The failed stop is now asked once more, last, so there are six, and
+        // the spacing below is asserted across all of them, the retry included.
+        XCTAssertEqual(stub.lookups, 6)
+        XCTAssertEqual(stub.lookupLats.last, stub.lookupLats[1], "the retry comes after every other stop")
         let gaps = zip(stub.lookupTimes, stub.lookupTimes.dropFirst()).map { $1 - $0 }
         for (index, gap) in gaps.enumerated() {
             XCTAssertGreaterThanOrEqual(
@@ -142,12 +149,64 @@ final class StopNamerTests: XCTestCase {
                 "lookup \(index + 2) came \(gap)s after the last one — the throttle was released by a failure"
             )
         }
-        // The failed stop stays unnamed and the rest are unaffected: "some named,
-        // some not" is correct here, unlike the burst failure it used to cause.
+        // The retry answered, so every stop is named.
+        let named = try XCTUnwrap(try repository.detail(tripId: stops[0].tripId)).stops
+        XCTAssertEqual(named.compactMap(\.name).count, 5)
+        XCTAssertEqual(namer.progress.completed, 5)
+        XCTAssertTrue(namer.progress.isFinished)
+    }
+
+    /// The half of the test above that the retry would otherwise have lost: a
+    /// stop whose lookup fails **both** times is finished, not pending, and the
+    /// rest are unaffected — one retry, never a loop.
+    func testAStopThatFailsTwiceIsFinishedAndUnnamed() async throws {
+        let config = AppConfig.loadOrDie()
+        let geocode = self.geocode(minIntervalS: 0.05)
+        let (repository, stops) = try await importedTrip(stops: 5, config: config)
+        let dead = stops[1].lat
+        let stub = StubGeocoder { lat, _ in lat == dead ? nil : String(format: "Place %.1f", lat) }
+        let namer = StopNamer(config: geocode, repository: repository, geocoder: stub)
+
+        let done = expectation(description: "naming finished")
+        namer.nameUnnamedStops(stops) { progress in
+            if progress.isFinished { done.fulfill() }
+        }
+        await fulfillment(of: [done], timeout: 20)
+
+        XCTAssertEqual(stub.lookups, 6, "five stops and one retry")
+        XCTAssertEqual(stub.lookupLats.filter { $0 == dead }.count, 2)
         let named = try XCTUnwrap(try repository.detail(tripId: stops[0].tripId)).stops
         XCTAssertEqual(named.compactMap(\.name).count, 4)
         XCTAssertEqual(namer.progress.completed, 5, "a failed stop is finished, not pending")
         XCTAssertTrue(namer.progress.isFinished)
+        XCTAssertTrue(namer.pendingNameIds.isEmpty)
+    }
+
+    /// **The film's stops are named first, and are no longer owed a name while
+    /// the rest of the trip still is** (#160, Chiu 2026-10-01). That gap is
+    /// what the film button stops waiting through.
+    func testPrioritisedStopsAreNamedFirstAndStopBeingPendingEarly() async throws {
+        let config = AppConfig.loadOrDie()
+        let geocode = self.geocode(minIntervalS: 0.05)
+        let (repository, stops) = try await importedTrip(stops: 6, config: config)
+        let film = Set([stops[3].id, stops[5].id])
+        let stub = StubGeocoder { lat, _ in String(format: "Place %.1f", lat) }
+        let namer = StopNamer(config: geocode, repository: repository, geocoder: stub)
+
+        var filmDoneAt: Int?
+        let done = expectation(description: "naming finished")
+        namer.nameUnnamedStops(stops) { progress in
+            if filmDoneAt == nil, namer.pendingNameIds.isDisjoint(with: film) { filmDoneAt = progress.completed }
+            if progress.isFinished { done.fulfill() }
+        }
+        // The first stop's lookup is already out; the film's two follow it.
+        namer.prioritise(film)
+        XCTAssertFalse(namer.pendingNameIds.isDisjoint(with: film))
+        await fulfillment(of: [done], timeout: 20)
+
+        XCTAssertEqual(Array(stub.lookupLats.prefix(3)), [stops[0].lat, stops[3].lat, stops[5].lat])
+        XCTAssertEqual(filmDoneAt, 3, "the film's stops were named after 3 of 6 lookups, not after all of them")
+        XCTAssertEqual(stub.lookups, 6)
     }
 
     /// The export gate's contract: progress is not finished until every stop has
