@@ -24,7 +24,8 @@ import XCTest
 ///     -only-testing:KamomeTests/RecapSnapshotBudgetTests
 ///
 /// Offline by default (`base_url` empty ⇒ every leg inferred, worst case for
-/// geometry). Set `TEST_RUNNER_KAMOME_ROUTING_BASE_URL` to price a routed film.
+/// geometry). Set `TEST_RUNNER_KAMOME_ROUTING_BASE_URL=https://api.geoapify.com`
+/// to price a routed film — on the desk key, never the Worker (ADR 2026-10-03).
 final class RecapSnapshotBudgetTests: XCTestCase {
     /// Counts provider hits. Every hit is one `MKMapSnapshotter` fetch on the
     /// shipped Apple-Maps path, so this number times the per-snapshot cost is
