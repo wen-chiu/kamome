@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-03 against ADR **2026-10-03-the-routing-ceiling-counts-in-one-durable-object**.
+Last synced: 2026-10-03 against ADR **2026-10-03-a-road-is-stored-only-if-it-could-be-driven**.
 Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:
