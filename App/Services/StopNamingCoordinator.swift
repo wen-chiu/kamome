@@ -38,8 +38,12 @@ final class StopNamingCoordinator {
     /// joins the run already doing so. Returns at once; names land in the
     /// database. `onChange` is called on the main actor each time progress
     /// moves, until the run ends — hold `owner` weakly inside it.
+    ///
+    /// `first` are the stops to name ahead of the rest: the ones the film
+    /// shows, so the film button waits only for them (Chiu 2026-10-01, #160).
     func start(
-        tripId: String, stops: [StopRecord], repository: TripRepository, config: TrackingConfig.Geocode,
+        tripId: String, stops: [StopRecord], first: Set<String> = [], repository: TripRepository,
+        config: TrackingConfig.Geocode,
         for owner: AnyObject? = nil, onChange: ((StopNamer.Progress) -> Void)? = nil
     ) {
         let namer = namers[tripId] ?? StopNamer(config: config, repository: repository, geocoder: geocoder?())
@@ -49,12 +53,15 @@ final class StopNamingCoordinator {
         // Cleared while stops are handed over: the first call below can run the
         // queue empty before the second has added its towns.
         namer.onDrained = nil
-        let unnamed = stops.filter(StopNamer.needsName)
+        let needy = stops.filter(StopNamer.needsName)
+        let unnamed = needy.filter { first.contains($0.id) } + needy.filter { !first.contains($0.id) }
         if !unnamed.isEmpty {
             namer.nameUnnamedStops(unnamed) { [weak self] progress in
                 self?.publish(progress, tripId: tripId)
             }
         }
+        // After the hand-over, so a run joined mid-way is reordered as well.
+        if !first.isEmpty { namer.prioritise(first) }
         // The film's HUD pill names the town (ADR 2026-09-24 (e)); stops named
         // before schema v9 are asked once, behind any naming. Each one that
         // lands is told to the listeners as well: its zone changes the day and
@@ -77,6 +84,20 @@ final class StopNamingCoordinator {
     /// Whether stops are still being named for this trip.
     func isNaming(_ tripId: String) -> Bool {
         progress[tripId].map { $0.total > 0 && !$0.isFinished } ?? false
+    }
+
+    /// Whether any of these stops is still owed a name by this trip's run.
+    func isNaming(_ tripId: String, anyOf stopIds: Set<String>) -> Bool {
+        // Read so an observer is told when progress moves; the answer itself
+        // is the namer's queue.
+        guard isNaming(tripId), let namer = namers[tripId] else { return false }
+        return !namer.pendingNameIds.isDisjoint(with: stopIds)
+    }
+
+    /// Names these stops ahead of the rest of a run in flight: the person put
+    /// one into the film on the export sheet.
+    func nameFirst(_ stopIds: Set<String>, tripId: String) {
+        namers[tripId]?.prioritise(stopIds)
     }
 
     /// Stops the run before its next stop — the trip was deleted.

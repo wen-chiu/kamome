@@ -218,7 +218,7 @@ struct JourneyDiaryView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
+            .disabled(model.detail?.trip.endedAt == nil || model.isNamingFilmStops)
             if model.isNamingStops {
                 Text(String.localizedStringWithFormat(
                     String(localized: "naming_stops_progress"), model.naming.completed, model.naming.total

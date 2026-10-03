@@ -97,10 +97,11 @@ struct TripDetailView: View {
                     } label: {
                         Label("recap_export", systemImage: "film")
                     }
-                    // Naming is throttled and asynchronous; a film exported before it
-                    // finishes says "Unnamed stop" for every stop still in the queue
-                    // (Chiu 2026-08-04). The banner above says why the button is off.
-                    .disabled(model.detail?.trip.endedAt == nil || model.isNamingStops)
+                    // Naming is throttled and asynchronous; a film exported before
+                    // its stops are named says "Unnamed stop" for each of them
+                    // (Chiu 2026-08-04). It waits only for the stops a film shows
+                    // (#160); the banner above keeps counting the rest.
+                    .disabled(model.detail?.trip.endedAt == nil || model.isNamingFilmStops)
                 }
             }
         }

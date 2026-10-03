@@ -95,7 +95,8 @@ final class TripDetailModel {
         // each one that lands is heard here too: the zone that comes with it is
         // what the day chips and the stops' hours are read in (ADR 2026-10-01).
         StopNamingCoordinator.shared.start(
-            tripId: tripId, stops: detail.stops, repository: repository, config: config.geocode, for: self
+            tripId: tripId, stops: detail.stops, first: filmStopIds, repository: repository,
+            config: config.geocode, for: self
         ) { [weak self] progress in
             self?.naming = progress
             self?.scheduleReload()
@@ -122,6 +123,18 @@ final class TripDetailModel {
     /// (Chiu 2026-08-04).
     var isNamingStops: Bool { naming.total > 0 && !naming.isFinished }
 
+    /// The stops a film of this trip can open with, at either length: the
+    /// export's own plan (`RecapComposer.filmPlan`), read with the trip.
+    private(set) var filmStopIds: Set<String> = []
+
+    /// **True while a stop the film shows is still being identified** (Chiu
+    /// 2026-10-01, #160). The film button waits on this, not on the whole trip:
+    /// a 45-stop trip shows about 21, and the rest are named behind them. The
+    /// banner keeps counting every stop (`isNamingStops`).
+    @MainActor var isNamingFilmStops: Bool {
+        isNamingStops && StopNamingCoordinator.shared.isNaming(tripId, anyOf: filmStopIds)
+    }
+
     /// Re-reads the trip and its films, off the main thread: `detail` carries
     /// every trackpoint, and a two-week recording made the sync read a hitch
     /// (#128). Fire-and-forget for the views; `refresh()` is the awaitable form.
@@ -143,7 +156,7 @@ final class TripDetailModel {
             await running.value
             return
         }
-        let (repository, tripId, epsilonM) = (repository, tripId, config.simplify.epsilonM)
+        let (repository, tripId, epsilonM, config) = (repository, tripId, config.simplify.epsilonM, config)
         let task = Task { @MainActor in
             repeat {
                 refreshAgain = false
@@ -151,16 +164,25 @@ final class TripDetailModel {
                     let detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
                     return (detail,
                             Stored.read("films") { try repository.films(tripId: tripId) } ?? [],
-                            Self.thinned(detail?.segments ?? [], epsilonM: epsilonM))
+                            Self.thinned(detail?.segments ?? [], epsilonM: epsilonM),
+                            detail.map { Self.filmStopIds($0, config: config) } ?? [])
                 }.value
                 // One assignment, so the map never draws lines from another read.
-                (detail, films, displayPolylines) = read
+                (detail, films, displayPolylines, filmStopIds) = read
                 rememberExtent(under: config.discovery.singlePlaceExtentM)
             } while refreshAgain
             refreshTask = nil
         }
         refreshTask = task
         await task.value
+    }
+
+    /// Every stop either film length presents. Both, because the length is
+    /// chosen on the export sheet, after the button this gates.
+    nonisolated static func filmStopIds(_ detail: TripRepository.TripDetail, config: TrackingConfig) -> Set<String> {
+        FilmLength.allCases.reduce(into: Set<String>()) { ids, length in
+            ids.formUnion(RecapComposer.filmPlan(detail: detail, config: config, length: length).decks.keys)
+        }
     }
 
     /// Deletes a single film record and its file on disk.
