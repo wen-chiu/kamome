@@ -98,6 +98,10 @@ public struct RecapTrip {
         /// the HUD pill while the journey is on the road (ADR 2026-09-24 (e)).
         /// nil when the geocoder gave none or has not been asked yet.
         public let locality: String?
+        /// The part of that town the stop is in (`CLPlacemark.subLocality`):
+        /// what a film that never leaves one town names on its map (#183).
+        /// nil when there is none or it has not been asked yet.
+        public let subLocality: String?
 
         public init(
             coordinate: RecapCoordinate,
@@ -106,7 +110,8 @@ public struct RecapTrip {
             detail: String? = nil,
             photos: [PhotoRef] = [],
             dwellS: Double,
-            locality: String? = nil
+            locality: String? = nil,
+            subLocality: String? = nil
         ) {
             self.coordinate = coordinate
             self.name = name
@@ -115,6 +120,7 @@ public struct RecapTrip {
             self.photos = photos
             self.dwellS = dwellS
             self.locality = locality
+            self.subLocality = subLocality
         }
     }
 

@@ -51,10 +51,32 @@ protocol StopGeocoding: AnyObject {
         lat: Double, lon: Double,
         completion: @escaping (_ name: String?, _ locality: String?, _ timeZone: String?, _ error: Error?) -> Void
     )
+
+    /// The same one lookup, whole: the name, the town, **the part of the town**
+    /// (`CLPlacemark.subLocality`, #183) and the zone. Nothing more leaves the
+    /// phone than the lookup that names the stop already sends. Defaulted below
+    /// to `reverseGeocodeZoned` with no part, so every stub still conforms.
+    func reverseGeocodeStop(
+        lat: Double, lon: Double, completion: @escaping (_ place: StopPlace, _ error: Error?) -> Void
+    )
+}
+
+/// What one lookup answers about a stop.
+struct StopPlace: Equatable {
+    var name: String?
+    var locality: String?
+    var subLocality: String?
+    var timeZone: String?
 }
 
 extension StopGeocoding {
     var pacesItself: Bool { false }
+
+    func reverseGeocodeStop(lat: Double, lon: Double, completion: @escaping (StopPlace, Error?) -> Void) {
+        reverseGeocodeZoned(lat: lat, lon: lon) { name, locality, zone, error in
+            completion(StopPlace(name: name, locality: locality, subLocality: nil, timeZone: zone), error)
+        }
+    }
 
     func reverseGeocodePlace(
         lat: Double, lon: Double, completion: @escaping (String?, String?, Error?) -> Void
@@ -102,11 +124,20 @@ final class CLGeocoderStopGeocoder: StopGeocoding {
     func reverseGeocodeZoned(
         lat: Double, lon: Double, completion: @escaping (String?, String?, String?, Error?) -> Void
     ) {
+        reverseGeocodeStop(lat: lat, lon: lon) { place, error in
+            completion(place.name, place.locality, place.timeZone, error)
+        }
+    }
+
+    func reverseGeocodeStop(lat: Double, lon: Double, completion: @escaping (StopPlace, Error?) -> Void) {
         let (gate, minIntervalS) = (gate, minIntervalS)
         Task { @MainActor in
             let answer = await (gate ?? .shared).place(lat: lat, lon: lon, priority: .stop, minIntervalS: minIntervalS)
             let place = answer.place
-            completion(place.flatMap(Self.displayName), place?.locality, place?.timeZone, answer.error)
+            completion(StopPlace(
+                name: place.flatMap(Self.displayName), locality: place?.locality,
+                subLocality: place?.subLocality, timeZone: place?.timeZone
+            ), answer.error)
         }
     }
 

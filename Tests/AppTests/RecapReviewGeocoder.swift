@@ -84,10 +84,35 @@ final class RecapReviewGeocoder: StopGeocoding {
         live.reverseGeocodeZoned(lat: lat, lon: lon) { [weak self] name, locality, zone, error in
             if let self, let name {
                 self.cache[key] = name
-                self.places[key] = Place(name: name, locality: locality, zone: zone)
+                self.places[key] = Place(name: name, locality: locality, zone: zone, part: self.places[key]?.part)
                 self.persist()
             }
             completion(name, locality, zone, error)
+        }
+    }
+
+    /// The whole answer, cached the same way. A place cached before the part
+    /// of town was kept (`part` absent) is asked once more.
+    func reverseGeocodeStop(lat: Double, lon: Double, completion: @escaping (StopPlace, Error?) -> Void) {
+        let key = key(lat: lat, lon: lon)
+        if let place = places[key], let part = place.part {
+            hits += 1
+            let answer = StopPlace(
+                name: place.name, locality: place.locality, subLocality: part.isEmpty ? nil : part, timeZone: place.zone
+            )
+            DispatchQueue.main.async { completion(answer, nil) }
+            return
+        }
+        misses += 1
+        live.reverseGeocodeStop(lat: lat, lon: lon) { [weak self] place, error in
+            if let self, let name = place.name {
+                self.cache[key] = name
+                self.places[key] = Place(
+                    name: name, locality: place.locality, zone: place.timeZone, part: place.subLocality ?? ""
+                )
+                self.persist()
+            }
+            completion(place, error)
         }
     }
 
@@ -95,6 +120,8 @@ final class RecapReviewGeocoder: StopGeocoding {
         let name: String
         let locality: String?
         let zone: String?
+        /// `subLocality`; "" = asked, none; absent = cached before it was kept.
+        var part: String?
     }
 
     private var placesURL: URL {

@@ -54,6 +54,11 @@ struct StartRecordingSheet: View {
         }
         // Half a screen holds two lines and a button only at ordinary sizes.
         .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium])
+        // Opaque, unlike iOS 26's glass default (#185). This half sheet sits
+        // over Home's own buttons, and through the glass "Import from photos"
+        // read as a third, disabled button between the picker and Start
+        // Journey. The other half sheets sit over a map, which may show.
+        .presentationBackground(Color(.systemBackground))
     }
 
     private var startForm: some View {

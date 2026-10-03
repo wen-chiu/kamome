@@ -16,6 +16,21 @@ public struct RecapPlaceNameStyle {
     /// pauses; larger than any name the base map draws (its towns reach 28).
     public var fontPx: CGFloat = 44
 
+    /// **The name is set as a map sets a name: ink, and a halo of the ground
+    /// under it** — not the shadowed white of a stop's name, which was made for
+    /// type over a photograph. Judged on renders of both shipped maps
+    /// (2026-10-02): white with a drop shadow read on the dark map and was a
+    /// grey smudge on the light one, and on either it let the trail run through
+    /// the letters. The halo cuts the trail and the terrain away from the
+    /// glyphs, and the pair follows the appearance like the trail does.
+    ///
+    /// These are the dark map's: the HUD's own off-white, on the halo the dark
+    /// style gives its own labels. `modernMinimal(.light)` sets the light pair.
+    public var textColor = CGColor(srgbRed: 0.953, green: 0.961, blue: 0.969, alpha: 1)
+    public var haloColor = CGColor(srgbRed: 0.043, green: 0.078, blue: 0.102, alpha: 0.9)
+    /// How far the halo reaches past the glyph.
+    public var haloPx: CGFloat = 5
+
     /// Line to line, for a name set on two lines.
     public var lineHeightEm: CGFloat = 1.12
 

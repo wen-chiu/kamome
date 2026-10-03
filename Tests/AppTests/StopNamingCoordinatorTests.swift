@@ -160,6 +160,8 @@ final class StopNamingCoordinatorTests: XCTestCase {
             try repository.setStopName(stopId: stop.id, name: "Named")
             try repository.setStopLocality(stopId: stop.id, locality: "Town")
             try repository.setStopTimeZone(stopId: stop.id, timeZone: "Atlantic/Reykjavik")
+            // "" = asked, none: since schema v15 a stop is also asked for the part of its town.
+            try repository.setStopSubLocality(stopId: stop.id, subLocality: "")
         }
         let stub = StubGeocoder()
         let coordinator = StopNamingCoordinator { stub }

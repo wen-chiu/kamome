@@ -272,6 +272,14 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE stop ADD COLUMN time_zone TEXT")
         }
 
+        // Schema v15 — the part of its town a stop is in (ADR file 2026-10-02,
+        // #183): `CLPlacemark.subLocality` from the lookup that already names
+        // it, so a film that never leaves one town can name where in it.
+        // NULL = never asked; back-filled like v9's towns. Forward-only.
+        migrator.registerMigration("v15") { db in
+            try db.execute(sql: "ALTER TABLE stop ADD COLUMN sub_locality TEXT")
+        }
+
         return migrator
     }
 }

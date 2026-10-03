@@ -8,8 +8,8 @@ way — this file rotted twice by growing its own reasoning.
 
 Last synced: 2026-10-03 against ADR **2026-10-03-the-routing-ceiling-counts-in-one-durable-object**.
 Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
-2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of the frame
-of the widest drive). The same day:
+2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
+drive). The same day:
 2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
 height to the film: Export again moves into ⋯, a no-road leg is one caption
 line);
