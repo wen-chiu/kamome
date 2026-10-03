@@ -85,12 +85,41 @@ extension TripDetailView {
         }
     }
 
+    /// Four figures in a row — until the text is too large for a row, when
+    /// they become two rows of two, and past that one figure to a line (#191).
+    /// Squeezed into the row, the labels broke inside words ("Dis-tanc-e") and
+    /// the figures themselves were cut ("72 k…").
     func statsStrip(_ stats: TripStats) -> some View {
-        HStack(spacing: 24) {
-            stat(value: String(format: "%.0f km", stats.distanceM / 1000), label: "stat_distance")
-            stat(value: hours(stats.driveS), label: "stat_drive_time")
-            stat(value: "\(stats.stopCount)", label: "stat_stops")
-            stat(value: String(format: "%.0f km/h", stats.topSpeedKmh), label: "stat_top_speed")
+        let figures: [(value: String, label: LocalizedStringKey)] = [
+            (String(format: "%.0f km", stats.distanceM / 1000), "stat_distance"),
+            (hours(stats.driveS), "stat_drive_time"),
+            ("\(stats.stopCount)", "stat_stops"),
+            (String(format: "%.0f km/h", stats.topSpeedKmh), "stat_top_speed")
+        ]
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 24) {
+                ForEach(figures.indices, id: \.self) { stat(value: figures[$0].value, label: figures[$0].label) }
+            }
+            Grid(horizontalSpacing: 24, verticalSpacing: 10) {
+                GridRow {
+                    stat(value: figures[0].value, label: figures[0].label)
+                    stat(value: figures[1].value, label: figures[1].label)
+                }
+                GridRow {
+                    stat(value: figures[2].value, label: figures[2].label)
+                    stat(value: figures[3].value, label: figures[3].label)
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(figures.indices, id: \.self) { index in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(figures[index].label).font(.caption2).foregroundStyle(.secondary)
+                        Spacer(minLength: 12)
+                        Text(figures[index].value).font(.subheadline.bold()).monospacedDigit()
+                    }
+                }
+            }
+            .padding(.horizontal)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
@@ -102,6 +131,8 @@ extension TripDetailView {
             Text(value).font(.subheadline.bold()).monospacedDigit()
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
+        .lineLimit(1)
+        .fixedSize()
     }
 
     /// What floats on the map's bottom-right corner — bottom-right because

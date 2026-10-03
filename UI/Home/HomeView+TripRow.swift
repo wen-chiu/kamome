@@ -1,4 +1,5 @@
 import KamomePersistence
+import KamomeTripComposer
 import SwiftUI
 
 /// How one trip reads on Home: its headline, its dates, its place and its
@@ -35,6 +36,30 @@ extension HomeView {
         let end = Date(timeIntervalSince1970: endedAt)
         guard !Calendar.current.isDate(start, inSameDayAs: end) else { return from }
         return "\(from) – \(formatter.string(from: end))"
+    }
+
+    /// The row's second line: the dates, then distance and stops. On one line
+    /// while it fits; at a large text size the two halves used to wrap
+    /// separately and interleave ("2026 · 2 / 年10 km"), so they stack and each
+    /// stays whole (#191).
+    @ViewBuilder
+    func tripFacts(_ trip: TripRecord) -> some View {
+        let dates = Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
+        if let stats = TripStats.from(jsonString: trip.statsJson) {
+            let figures = String(format: "%.0f km · %d", stats.distanceM / 1000, stats.stopCount)
+            ViewThatFits(in: .horizontal) {
+                Text(verbatim: "\(dates) · \(figures)")
+                // Without the fixed height the fallback is measured one line
+                // tall and a long range is cut with an ellipsis, not wrapped.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(dates)
+                    Text(figures)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            Text(dates)
+        }
     }
 
     /// The place found for the trip (`TripTitle.place`), nil until it resolves.

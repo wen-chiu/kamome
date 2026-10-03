@@ -20,17 +20,30 @@ struct StartRecordingSheet: View {
     let access: LocationAccess
     let onStart: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         NavigationStack {
-            Group {
-                if access == .refused {
-                    locationRefused
-                } else {
-                    startForm
+            // The words scroll and the one action stays put under them, so it
+            // is reachable at every text size (#191): in a fixed half-height
+            // stack the largest sizes pushed Start Journey off the sheet, and
+            // nothing could bring it back.
+            ScrollView {
+                Group {
+                    if access == .refused {
+                        locationRefused
+                    } else {
+                        startForm
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
             }
-            .padding()
+            .safeAreaInset(edge: .bottom) {
+                action
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
             .navigationTitle("live_capture_header")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -39,7 +52,8 @@ struct StartRecordingSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        // Half a screen holds two lines and a button only at ordinary sizes.
+        .presentationDetents(dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium])
     }
 
     private var startForm: some View {
@@ -54,7 +68,26 @@ struct StartRecordingSheet: View {
                 Text("vehicle_bicycle").tag(VehicleType.bicycle)
             }
             .pickerStyle(.segmented)
-            Spacer(minLength: 0)
+        }
+    }
+
+    private var locationRefused: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Image(systemName: "location.slash")
+                .font(.system(size: 36, weight: .light))
+                .foregroundStyle(.tint)
+                .accessibilityHidden(true)
+            Text("record_location_refused_title")
+                .font(.title3.weight(.semibold))
+            Text("record_location_refused_body")
+                .font(.body)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Start Journey, or the way to Settings when location is refused.
+    @ViewBuilder private var action: some View {
+        if access != .refused {
             Button {
                 onStart()
             } label: {
@@ -64,33 +97,14 @@ struct StartRecordingSheet: View {
                     .padding(.vertical, 8)
             }
             .buttonStyle(.borderedProminent)
-        }
-    }
-
-    /// Scrolls, so the way to Settings is reachable at any text size.
-    private var locationRefused: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Image(systemName: "location.slash")
-                    .font(.system(size: 36, weight: .light))
-                    .foregroundStyle(.tint)
-                    .accessibilityHidden(true)
-                Text("record_location_refused_title")
-                    .font(.title3.weight(.semibold))
-                Text("record_location_refused_body")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                if let settings = URL(string: UIApplication.openSettingsURLString) {
-                    Link(destination: settings) {
-                        Text("record_location_open_settings")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
+        } else if let settings = URL(string: UIApplication.openSettingsURLString) {
+            Link(destination: settings) {
+                Text("record_location_open_settings")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .buttonStyle(.borderedProminent)
         }
     }
 }
