@@ -253,13 +253,12 @@ final class RecapDemoFilmTests: XCTestCase {
         // the harness composes straight out of the importer, which cannot name a
         // stop, and every card in the pilot reads "Unnamed stop" — a difference
         // from the shipped app that has twice been mistaken for a regression.
-        if RecapReviewGeocoder.isEnabled {
-            try await Self.nameStops(tripId: tripId, fixture: fixture, repository: repository, config: full)
-        }
+        try await Self.placeStops(tripId: tripId, fixture: fixture, repository: repository, config: full)
         let detail = try XCTUnwrap(try repository.detail(tripId: tripId))
         let film = Self.filmRecords(detail: detail, full: full)
         let legs = RecapComposer.legs(
-            from: film.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM
+            from: film.segments, epsilonM: full.simplify.epsilonM, matchedEpsilonM: full.matching.displayEpsilonM,
+            stops: detail.stops
         )
         print("KAMOME_DEMO_FILM_IMPORT legs: "
             + legs.map { "\($0.mode.rawValue)/\($0.provenance)\($0.isCrossing ? "/CROSSING" : "")" }
@@ -293,30 +292,6 @@ final class RecapDemoFilmTests: XCTestCase {
             + (config.stopWeightingEnabled ? "ON" : "off"))
         return (recap, config)
     }
-    /// Runs the **shipped** `StopNamer` over the trip's stops and waits for it to
-    /// finish, so what the pilot renders is what the app would have written.
-    private static func nameStops(
-        tripId: String, fixture: String, repository: TripRepository, config: TrackingConfig
-    ) async throws {
-        let stops = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
-        let geocoder = RecapReviewGeocoder(fixture: fixture, minIntervalS: config.geocode.minIntervalS)
-        let namer = StopNamer(config: config.geocode, repository: repository, geocoder: geocoder)
-        let started = Date.now
-        await withCheckedContinuation { continuation in
-            var resumed = false
-            namer.nameUnnamedStops(stops) { progress in
-                guard progress.isFinished, !resumed else { return }
-                resumed = true
-                continuation.resume()
-            }
-        }
-        print(String(
-            format: "KAMOME_GEOCODE_STOPS %d/%d named · %d cached, %d looked up · %.0fs",
-            namer.progress.named, namer.progress.total, geocoder.hits, geocoder.misses,
-            Date.now.timeIntervalSince(started)
-        ))
-    }
-
     // MARK: - Trip
 
     /// The committed day-1 GPX through the real engine, then the same composition

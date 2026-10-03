@@ -155,6 +155,10 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// `CLPlacemark.subLocality` (schema v15, #183): the part of its town the
     /// stop is in. NULL = never asked; "" = asked, and there was none.
     public var subLocality: String?
+    /// `CLPlacemark.isoCountryCode` (schema v16): the country the stop is in,
+    /// ISO 3166-1 alpha-2 — what the boarding pass names (ADR file 2026-10-03).
+    /// NULL = never asked; "" = asked, and none came back (open sea).
+    public var countryCode: String?
     /// Whether the film presents this stop (schema v10, Chiu 2026-09-25):
     /// NULL is the app's choice, `StopFilmChoice` names the person's.
     public var filmChoice: String?
@@ -164,6 +168,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         case filmChoice = "film_choice"
         case timeZone = "time_zone"
         case subLocality = "sub_locality"
+        case countryCode = "country_code"
         case tripId = "trip_id"
         case arrivedAt = "arrived_at"
         case departedAt = "departed_at"
@@ -182,7 +187,8 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         locality: String? = nil,
         filmChoice: String? = nil,
         timeZone: String? = nil,
-        subLocality: String? = nil
+        subLocality: String? = nil,
+        countryCode: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -197,6 +203,7 @@ public struct StopRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.filmChoice = filmChoice
         self.timeZone = timeZone
         self.subLocality = subLocality
+        self.countryCode = countryCode
     }
 
     /// The person's word on whether the film presents this stop. `nil` —

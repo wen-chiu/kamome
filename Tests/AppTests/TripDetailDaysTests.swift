@@ -62,7 +62,7 @@ final class TripDetailDaysTests: XCTestCase {
         ]
         let tripId = try await ImportService(repository: repository, config: config)
             .importTrip(title: "zones", photos: photos)
-        // Named, with a town, a zone and its part of town ("" = asked, none):
+        // Named, with a town, a zone, its part of town and its country ("" = asked, none):
         // the model's own geocoder has nothing to ask.
         let stored = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
         XCTAssertEqual(stored.count, 2)
@@ -71,6 +71,7 @@ final class TripDetailDaysTests: XCTestCase {
             try repository.setStopLocality(stopId: stop.id, locality: "Town")
             try repository.setStopTimeZone(stopId: stop.id, timeZone: zone)
             try repository.setStopSubLocality(stopId: stop.id, subLocality: "")
+            try repository.setStopCountryCode(stopId: stop.id, countryCode: "")
         }
 
         let model = TripDetailModel(tripId: tripId, config: config, repository: repository)

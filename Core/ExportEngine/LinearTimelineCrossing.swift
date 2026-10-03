@@ -28,22 +28,27 @@ extension LinearTimeline {
     /// `journeyCardContent(atTime:)` — the card is one object whose two
     /// time-varying fields the beat drives.
     ///
-    /// nil, and **no card is drawn**, when `CountryExtent` cannot name an end.
-    /// The table has six rows and returns nil outside them (both shipping
-    /// fixtures, TW→NZ and TW→JP, resolve). There is no honest region name to
-    /// print in that case and a boarding pass with a blank FROM is worse than no
-    /// boarding pass, so the beat simply carries the sprite as it did before.
+    /// nil, and **no card is drawn**, when an end has no country. The names come
+    /// from **Apple's answer for the stops on either side of the flight**
+    /// (`Leg.countryCodes`, ADR file 2026-10-03) — not from `CountryExtent`,
+    /// whose six rows left every other country without a pass. There is no
+    /// honest region name to print without one, and a boarding pass with a
+    /// blank FROM is worse than no boarding pass, so the beat simply carries the
+    /// sprite as it did before.
     ///
     /// ⚠️ The log line names **which end** failed and nothing else — never a
-    /// coordinate, never a place (`CLAUDE.md` §0).
+    /// coordinate, never a place (`CLAUDE.md` §0). It is `.public` because it
+    /// is only ever the word "origin" or "destination": the default redaction
+    /// printed `<private>`, which hid the one fact the line exists to give.
     static func journeyCard(trip: RecapTrip, locale: Locale) -> RecapJourneyCard? {
-        guard let ends = RecapTypeTwoFilm.crossingEnds(trip) else { return nil }
-        let origin = CountryExtent.containing(lat: ends.origin.lat, lon: ends.origin.lon)
-        let destination = CountryExtent.containing(lat: ends.destination.lat, lon: ends.destination.lon)
-        guard let from = region(origin, locale: locale), let to = region(destination, locale: locale) else {
+        guard RecapTypeTwoFilm.crossingEnds(trip) != nil,
+              let crossing = trip.legs.first(where: \.isCrossing) else { return nil }
+        let origin = region(crossing.countryCodes.origin, locale: locale)
+        let destination = region(crossing.countryCodes.destination, locale: locale)
+        guard let from = origin, let to = destination else {
+            let end = origin == nil ? "origin" : "destination"
             KamomeLog.recap.notice("""
-                journey card: no country extent covers the \
-                \(origin == nil ? "origin" : "destination") end of the crossing — \
+                journey card: no stop names a country at the \(end, privacy: .public) end of the crossing — \
                 drawing no card
                 """)
             return nil
@@ -55,14 +60,17 @@ extension LinearTimeline {
     }
 
     /// One end's two names. **English first — a boarding pass is an English
-    /// artefact** — with the viewer's own language beneath it, and nil when the
-    /// system cannot name the country at all.
-    private static func region(_ country: CountryExtent.Country?, locale: Locale) -> RecapJourneyCard.Region? {
-        guard let country, let english = country.localizedName(locale: Locale(identifier: "en_US")) else {
+    /// artefact** — with the viewer's own language beneath it, and nil when there
+    /// is no country or the system cannot name it. The name is the system's job
+    /// (`Locale.localizedString(forRegionCode:)`, offline): the stop's code is
+    /// what Apple answered, the words are the viewer's language.
+    private static func region(_ isoCode: String?, locale: Locale) -> RecapJourneyCard.Region? {
+        guard let isoCode, !isoCode.isEmpty,
+              let english = Locale(identifier: "en_US").localizedString(forRegionCode: isoCode) else {
             return nil
         }
         return RecapJourneyCard.Region(
-            english: english.uppercased(), local: country.localizedName(locale: locale)
+            english: english.uppercased(), local: locale.localizedString(forRegionCode: isoCode)
         )
     }
 
@@ -130,9 +138,9 @@ extension LinearTimeline {
     /// was missing was something on it, not time.
     ///
     /// Gated on `opensOnTheFlight` and having two ends — deliberately **not** on
-    /// the card's `CountryExtent` condition. A **mark** needs no country name, so
-    /// a trip whose ends fall outside the six-row table draws no pass, draws no
-    /// names, and still draws its two marks.
+    /// the card's country condition. A **mark** needs no country name, so a trip
+    /// whose ends have no country draws no pass, draws no names, and still draws
+    /// its two marks.
     ///
     /// 🔴 **The origin's mark cross-fades with the departure stop's pin; its name
     /// does not move** (Chiu 2026-09-05, ADR 2026-09-05 (c)).
@@ -158,7 +166,7 @@ extension LinearTimeline {
         let fade = max(min(cardFadeS, beat.upperBound - beat.lowerBound), 1e-6)
         let opacity = Self.smoothstep((beat.upperBound - time) / fade)
         guard opacity > 0.001 else { return nil }
-        // **The names come from the card**, which resolved `CountryExtent` once
+        // **The names come from the card**, which resolved both countries once
         // when the timeline was built. Looking them up again here is how the two
         // surfaces would come to disagree about one place.
         return .flightEnds(

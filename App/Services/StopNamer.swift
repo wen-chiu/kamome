@@ -31,7 +31,7 @@ final class StopNamer {
     /// lookup's — and are asked only for their town, which never touches the name
     /// and never counts towards `progress` (ADR 2026-09-24 (e)).
     private var queue: [(stop: StopRecord, townOnly: Bool)] = []
-    /// Town, zone and part of town by the name the lookup returned, so a stop
+    /// Town, zone, part of town and country by the name the lookup returned, so a stop
     /// answered from `GeocodePolicy`'s name cache still gets them.
     private var placeByName: [String: StopPlace] = [:]
     private var isWorking = false
@@ -129,10 +129,12 @@ final class StopNamer {
     }
 
     /// Named, but never asked for its town — or for its zone, which schema v14
-    /// added later (arch review 2026-09-26). A stop that still needs a name gets
-    /// both from that lookup instead.
+    /// added later (arch review 2026-09-26), its part of town (v15) or its
+    /// country (v16). A stop that still needs a name gets all of them from that
+    /// lookup instead.
     static func needsLocality(_ stop: StopRecord) -> Bool {
-        (stop.locality == nil || stop.timeZone == nil || stop.subLocality == nil) && !needsName(stop)
+        (stop.locality == nil || stop.timeZone == nil || stop.subLocality == nil || stop.countryCode == nil)
+            && !needsName(stop)
     }
 
     /// Unnamed — or named with a bare coordinate, which is what the open-sea
@@ -238,10 +240,12 @@ final class StopNamer {
         let town = locality ?? ""
         let zone = place.timeZone ?? ""
         let part = place.subLocality ?? ""
+        let country = place.countryCode ?? ""
         placeByName[name] = place
         storeLocality(town, of: stop)
         storeTimeZone(zone, of: stop)
         storeSubLocality(part, of: stop)
+        storeCountryCode(country, of: stop)
         guard !townOnly else {
             onPlaceFilled?()
             return
@@ -262,6 +266,10 @@ final class StopNamer {
         Stored.write("setStopSubLocality") { try repository.setStopSubLocality(stopId: stop.id, subLocality: part) }
     }
 
+    private func storeCountryCode(_ code: String, of stop: StopRecord) {
+        Stored.write("setStopCountryCode") { try repository.setStopCountryCode(stopId: stop.id, countryCode: code) }
+    }
+
     /// A stop answered from `GeocodePolicy`'s name cache gets the town, zone
     /// and part of town the lookup behind that name returned, when this session
     /// made it.
@@ -270,5 +278,6 @@ final class StopNamer {
         storeLocality(place.locality ?? "", of: stop)
         storeTimeZone(place.timeZone ?? "", of: stop)
         storeSubLocality(place.subLocality ?? "", of: stop)
+        storeCountryCode(place.countryCode ?? "", of: stop)
     }
 }

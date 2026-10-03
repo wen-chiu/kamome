@@ -43,7 +43,8 @@ extension RecapComposer {
         // with its own transport mode and provenance, so a leg Kamome could not
         // reconstruct renders visibly as a guess rather than as road (PD-1).
         let legs = legs(
-            from: film.segments, epsilonM: config.simplify.epsilonM, matchedEpsilonM: config.matching.displayEpsilonM
+            from: film.segments, epsilonM: config.simplify.epsilonM, matchedEpsilonM: config.matching.displayEpsilonM,
+            stops: detail.stops
         )
         guard let trip = trip(
             trip: detail.trip, legs: legs, stops: film.stops, stats: stats,
