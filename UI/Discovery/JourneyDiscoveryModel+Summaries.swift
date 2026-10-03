@@ -23,7 +23,7 @@ extension JourneyDiscoveryModel {
             tripId: trip.id,
             discoveryKey: trip.discoveryKey,
             name: nameCache.name(for: id, homeCountryCode: homeCountryCode, isSinglePlace: isSinglePlace),
-            fallbackTitle: trip.title,
+            fallbackTitle: TripTitle.plain(trip),
             startedAt: trip.startedAt,
             endedAt: trip.endedAt ?? trip.startedAt,
             photoCount: facts.photos.count,

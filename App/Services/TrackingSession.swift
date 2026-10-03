@@ -66,6 +66,7 @@ final class TrackingSession {
         self.permission = permission
         locationAccess = permission.access
         permission.onChange = { [weak self] in self?.locationAccessChanged($0) }
+        TripTitle.clearLegacyFallbacks(in: repository)
         refreshTrips()
         recoverInterruptedRecording(now: now)
     }
@@ -144,7 +145,6 @@ final class TrackingSession {
             return .phantom
         }
 
-        let title = Self.defaultTitle(for: startedAt)
         let segments = engine.segments.map(Self.repositorySegment)
         let stops = allStops.map {
             TripRepository.NewStop(
@@ -156,7 +156,7 @@ final class TrackingSession {
         let tripId: String
         do {
             tripId = try repository.saveCompletedTrip(
-                title: title,
+                title: TripTitle.unnamed,
                 startedAt: startedAt.timeIntervalSince1970,
                 endedAt: now.timeIntervalSince1970,
                 segments: segments,
@@ -345,11 +345,6 @@ final class TrackingSession {
                 )
             }
         )
-    }
-
-    /// `TripTitle.fallback`: the one shape every unnamed trip's title has.
-    private static func defaultTitle(for date: Date) -> String {
-        TripTitle.fallback(for: date.timeIntervalSince1970)
     }
 }
 

@@ -198,7 +198,7 @@ enum RecapComposer {
             legs: legs,
             stops: tripStops,
             // The export passes `TripTitle.film` — the place for an unnamed trip.
-            title: title ?? trip.title,
+            title: title ?? TripTitle.plain(trip),
             subtitle: titleSubtitle(trip: trip, distanceM: titleM),
             endCardFigures: endCardFigures(
                 trip: trip, distanceM: drawnM, stopCount: film.stops.count, clock: clock

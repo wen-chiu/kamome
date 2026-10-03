@@ -160,7 +160,7 @@ final class ImportFlowModel {
         if let tripId = service.existingTrip(for: photos),
            let trip = Stored.read("detail", { try repository.detail(tripId: tripId)?.trip }) {
             pending = (tripTitle, photos)
-            phase = .duplicate(Duplicate(tripId: tripId, title: trip.title))
+            phase = .duplicate(Duplicate(tripId: tripId, title: TripTitle.film(trip)))
             return
         }
         await save(title: tripTitle, photos: photos)

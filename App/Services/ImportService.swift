@@ -45,10 +45,9 @@ struct ImportService {
     func importTrip(title: String?, photos: [ImportPhoto], discoveryKey: String? = nil) async throws -> String {
         let plan = self.plan(for: photos)
         guard plan.isRenderable else { throw ImportError.notEnoughGeotaggedPhotos }
-        // Nobody named it: the title is the trip's own start date, the shape
-        // `TripTitle.isFallback` recognises, so the film can open on the country
-        // (#131). The picked range's first day is not the trip's.
-        let title = title ?? TripTitle.fallback(for: plan.startedAt)
+        // Nobody named it: it is stored unnamed, and `TripTitle` calls it by its
+        // place, or by the trip's own start date (#131, #168).
+        let title = title ?? TripTitle.unnamed
 
         let byId = Dictionary(photos.map { ($0.assetId, $0) }, uniquingKeysWith: { first, _ in first })
         func newPhoto(_ id: String) -> TripRepository.NewPhoto {

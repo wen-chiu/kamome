@@ -184,7 +184,9 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         // Restated 2026-10-01 (#165, Chiu's title rule): this used to pin the
         // card's name being copied into `trip.title`. The trip is now stored
         // unnamed and called by its place wherever it is shown, flag included.
-        XCTAssertEqual(trip.title, TripTitle.fallback(for: trip.startedAt), "stored unnamed, not under the card's name")
+        // Restated again 2026-10-02 (#168): unnamed is an empty title, not the
+        // start date as a string.
+        XCTAssertEqual(trip.title, TripTitle.unnamed, "stored unnamed, not under the card's name")
         XCTAssertEqual(
             TripTitle.film(trip, cache: JourneyNameCache(defaults: harness.defaults), homeCountryCode: "TW"),
             "🇯🇵 Japan", "the resolved name is what the trip is called"

@@ -216,4 +216,31 @@ final class StopNamingCoordinatorTests: XCTestCase {
         XCTAssertEqual(stub.lookups, 3)
         XCTAssertEqual(namer.progress, StopNamer.Progress(total: 3, completed: 3, named: 3))
     }
+
+    /// **The gate the film button reads** (#160): with the film's stops handed
+    /// over as `first`, the run stops owing them a name while it is still
+    /// naming the rest of the trip.
+    func testTheFilmsStopsAreNamedBeforeTheRunEnds() async throws {
+        let (repository, tripId) = try await importedTrip(stops: 6)
+        let stops = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
+        let film = Set([stops[4].id, stops[5].id])
+        let coordinator = StopNamingCoordinator(geocoder: { StubGeocoder() })
+
+        var runningWithFilmNamed = false
+        let screen = Screen()
+        coordinator.start(
+            tripId: tripId, stops: stops, first: film, repository: repository, config: geocode, for: screen
+        ) { _ in
+            if coordinator.isNaming(tripId), !coordinator.isNaming(tripId, anyOf: film) {
+                runningWithFilmNamed = true
+            }
+        }
+        XCTAssertTrue(coordinator.isNaming(tripId, anyOf: film), "the gate is closed at the start")
+        try await settle { !coordinator.isNaming(tripId) }
+
+        XCTAssertTrue(runningWithFilmNamed, "the film's stops were the last to be named")
+        XCTAssertFalse(coordinator.isNaming(tripId, anyOf: film))
+        let named = try XCTUnwrap(try repository.detail(tripId: tripId)).stops
+        XCTAssertEqual(named.compactMap(\.name).count, 6, "the rest are still named behind them")
+    }
 }
