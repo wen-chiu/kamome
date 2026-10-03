@@ -32,9 +32,11 @@ cost somebody time; keep each to a summary and a pointer.
 ## ⚠️ Traps — read before you touch these
 
 - **A worktree renders a different film**: `Tests/Fixtures/trips/local/` is
-  gitignored. No checkout routes with a key (ADR 2026-09-12); the desk harness
-  uses the shipped Worker, and each render spends the 2000/day quota.
-  → `Docs/environment-gotchas.md`.
+  gitignored. → `Docs/environment-gotchas.md`.
+- **A desk render routes direct to Geoapify on its own key**, read from
+  `~/.kamome/desk-routing.env` inside the test process — never pass it in a
+  `TEST_RUNNER_` variable (the build log echoes it). Pointing it at the Worker
+  is refused: that quota is the users' (#204). ADR 2026-10-03, #218.
 - **A desk pilot render draws Apple Maps unless told otherwise.** The shipped
   dark map is `TEST_RUNNER_KAMOME_MAP_SUBSTRATE=liberty-fork-r6`; town names
   need `TEST_RUNNER_KAMOME_GEOCODE_STOPS=1` and the cached `local/*-places.json`.

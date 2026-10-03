@@ -6,15 +6,17 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-03 against ADR **2026-10-03-a-road-is-stored-only-if-it-could-be-driven**.
+Last synced: 2026-10-03 against ADR **2026-10-03-a-road-is-stored-only-if-it-could-be-driven**,
+with 2026-10-03-the-routing-ceiling-counts-in-one-durable-object and
+2026-10-03-desk-renders-route-direct-on-their-own-key (desk renders:
+Geoapify direct, own key; the app still asks the Worker).
 Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:
 2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
 height to the film: Export again moves into ⋯, a no-road leg is one caption
 line);
-2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
-existing App Store Connect record; the id is no longer a placeholder);
+2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev;
 2026-10-02-the-release-scan-needs-no-key;
 2026-10-02-an-unnamed-trip-is-stored-with-no-title;
 2026-10-02-deleting-a-stop-asks-first. Before
@@ -30,8 +32,7 @@ Detail and the Journey Diary); 2026-10-01-an-unnamed-trip-is-called-by-its-place
 town, region or country; a Discovery trip is stored unnamed). Draft, not built:
 2026-09-30-footprints-sits-beside-journeys (Discovery leaves beta as 足跡, a
 read-only itinerary beside 旅程). Before them:
-2026-09-30-export-time-left (the export sheet says "about N minutes left" from
-its own station pace, after a 60 s warm-up);
+2026-09-30-export-time-left;
 2026-09-29-the-opening-zooms-and-the-route-holds
 (the opening zooms out of the title card instead of cutting, reopening
 2026-08-31; the revealed route holds before the end card);
