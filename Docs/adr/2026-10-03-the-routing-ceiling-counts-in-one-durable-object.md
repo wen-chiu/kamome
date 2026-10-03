@@ -33,10 +33,10 @@ Chiu: *「如果DO是不花錢的方法能讓我打到一天兩千次的免費�
 - What the app sees does not change: 429 with `Retry-After` to UTC midnight above
   the ceiling, 503 when the Worker cannot count, counting before forwarding, and the
   per-IP burst limit checked first.
-- `BUDGET_LOCATION_HINT = "wnam"`: the region where the object is first created. It
-  comes from one measurement (this Mac in Taiwan is served from SJC). Which colo
-  serves a phone on a Taiwanese carrier is UNKNOWN; the cheapest check is opening
-  `/cdn-cgi/trace` on the Worker's hostname from the phone.
+- `BUDGET_LOCATION_HINT = "apac"`: the region where the object is first
+  created, never moved afterwards. VERIFIED 2026-10-03, in Taiwan, with
+  `/cdn-cgi/trace`: Chiu's iPhone on cellular is served from SIN and this Mac
+  from SJC. The app's requests come from phones.
 
 ## Rejected
 

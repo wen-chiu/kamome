@@ -213,7 +213,7 @@ it is every user losing routing until Chiu resolves it with the provider by hand
 |---|---|
 | the number | `DAILY_REQUEST_CEILING` in `wrangler.toml` — **2000/day, Chiu's number**, arithmetic beside it. Never a literal in the source, and **never** in `Config/TrackingConfig.json`: that is the app's config and the app never sees this value. |
 | the storage | `KAMOME_BUDGET`, **one** SQLite-backed Durable Object (`RoutingBudget`, named `routing-budget`), table `spend(day, count)`, one row per UTC day, 31 days kept. |
-| where it lives | created once near `BUDGET_LOCATION_HINT` (`wnam`) and never moves. Every routing request makes one round trip to it. |
+| where it lives | created once near `BUDGET_LOCATION_HINT` (`apac`: an iPhone in Taiwan on cellular lands in SIN) and never moves. Every routing request makes one round trip to it. |
 | over the ceiling | **429**, `Retry-After` = seconds to UTC midnight, empty body, upstream never called. |
 | cannot count | **503** — fail closed. |
 

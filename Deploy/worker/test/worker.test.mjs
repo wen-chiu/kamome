@@ -128,7 +128,7 @@ function freshEnv(overrides = {}) {
     GEOAPIFY_API_KEY: "worker-secret",
     DAILY_REQUEST_CEILING: "2000",
     BURST_RETRY_AFTER_S: "60",
-    BUDGET_LOCATION_HINT: "wnam",
+    BUDGET_LOCATION_HINT: "apac",
     KAMOME_BUDGET: stubBudget(),
     KAMOME_BURST: stubRateLimiter(),
     ...overrides
@@ -357,9 +357,9 @@ const tests = {
   },
 
   async "the location hint comes from the config, and its absence is the platform default"() {
-    const hinted = freshEnv({ BUDGET_LOCATION_HINT: "apac" });
+    const hinted = freshEnv({ BUDGET_LOCATION_HINT: "weur" });
     await callWorker(ROUTE, { env: hinted });
-    assert.deepEqual(hinted.KAMOME_BUDGET.gets[0].options, { locationHint: "apac" });
+    assert.deepEqual(hinted.KAMOME_BUDGET.gets[0].options, { locationHint: "weur" });
 
     const unhinted = freshEnv({ BUDGET_LOCATION_HINT: undefined });
     const { response } = await callWorker(ROUTE, { env: unhinted });

@@ -129,10 +129,11 @@ BURST_RETRY_AFTER_S = "60"
 # the Worker's location to the object's, so it belongs where the Worker runs for
 # most requests.
 #
-# `wnam` (western North America) is from one measurement, not a survey:
-# 2026-10-03, this Mac in Taiwan (`loc=TW`) is served from **SJC**, San Jose
-# (`/cdn-cgi/trace`). Where a phone on a Taiwanese carrier lands is UNKNOWN; the
-# cheapest check is opening `/cdn-cgi/trace` on this hostname from the phone.
-# If it is wrong, renaming `BUDGET_OBJECT_NAME` in the source creates a new
-# object under a new hint.
-BUDGET_LOCATION_HINT = "wnam"
+# `apac` from two measurements, 2026-10-03, both in Taiwan (`loc=TW`,
+# `/cdn-cgi/trace`): Chiu's iPhone on cellular is served from **SIN**,
+# Singapore; this Mac on its home line from **SJC**, San Jose. The app's
+# requests come from phones, so the object goes where the phone lands. Desk
+# renders stop using this Worker (ADR owed, Chiu 2026-10-03), so SJC is not the
+# path that matters. If it is wrong, renaming `BUDGET_OBJECT_NAME` in the source
+# creates a new object under a new hint.
+BUDGET_LOCATION_HINT = "apac"
