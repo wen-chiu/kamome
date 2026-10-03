@@ -50,12 +50,21 @@ final class ImportQuerySeamTests: XCTestCase {
         ]
     }
 
+    /// Owns the Photos answer, so the test never reads the simulator's real
+    /// permission (#213): a device that answered Don't Allow must not change it.
+    private final class StubAccess: PhotoAccessProviding {
+        var readAccess: PhotoReadAccess { .granted }
+        func requestReadAccess() async -> PhotoReadAccess { .granted }
+        func presentLimitedLibraryPicker(completion: @escaping () -> Void) { completion() }
+    }
+
     private func makeModel(source: StubSource) throws -> ImportFlowModel {
         let config = AppConfig.loadOrDie()
         return ImportFlowModel(
             config: config,
             repository: TripRepository(database: try AppDatabase.inMemory()),
-            source: source
+            source: source,
+            photoAccess: StubAccess()
         )
     }
 
