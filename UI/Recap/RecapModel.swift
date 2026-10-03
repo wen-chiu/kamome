@@ -161,6 +161,10 @@ final class RecapModel {
     /// Which wait the render is in, as the job reports it. nil when idle.
     var stage: RecapExportStage? { running?.stage }
 
+    /// Frames drawn, 0…1, once frames are being drawn; nil before — the only
+    /// stage `progress` measures. The gull flies on this alone (`ExportGullView`).
+    var drawingFraction: Double? { stage == .drawing ? running?.fraction : nil }
+
     private var running: RecapExportCoordinator.Running? {
         coordinator.running(tripId: tripId)
     }
