@@ -67,6 +67,11 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.matching.crossingPaceMinKmh, paceDefaults.crossingPaceMinKmh)
         XCTAssertEqual(config.matching.crossingPaceMinDistanceM, paceDefaults.crossingPaceMinDistanceM)
         XCTAssertEqual(config.matching.crossingPaceClockMarginS, paceDefaults.crossingPaceClockMarginS)
+        // 120, decided by Chiu 2026-10-03 (ADR 2026-10-03); ten hours is EU 561/2006 Art. 6.
+        XCTAssertEqual(config.matching.crossingRoutePaceMinKmh, 120)
+        XCTAssertEqual(config.matching.crossingRoutePaceMinKmh, paceDefaults.crossingRoutePaceMinKmh)
+        XCTAssertEqual(config.matching.routeUnwitnessedMaxDriveS, 36_000)
+        XCTAssertEqual(config.matching.routeUnwitnessedMaxDriveS, paceDefaults.routeUnwitnessedMaxDriveS)
     }
 
     /// Capture / matching / import tunables.
