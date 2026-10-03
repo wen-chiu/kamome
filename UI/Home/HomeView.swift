@@ -57,10 +57,14 @@ struct HomeView: View {
                 }
             }
             .sheet(isPresented: $showingStartRecording) {
-                StartRecordingSheet(vehicle: $vehicle) {
-                    showingStartRecording = false
-                    session.start(vehicle: vehicle)
+                StartRecordingSheet(vehicle: $vehicle, access: session.locationAccess) {
+                    session.requestStart(vehicle: vehicle)
                 }
+            }
+            .onChange(of: session.isRecording) {
+                // The sheet waits for the location prompt (#190) and makes way
+                // for S2 only once a recording has really begun.
+                if session.isRecording { showingStartRecording = false }
             }
             .toolbar { toolbarItems }
             .sheet(isPresented: $showingDiscovery) {
@@ -178,14 +182,9 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(headline(for: trip))
                             .font(.headline)
-                        HStack(spacing: 4) {
-                            Text(Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt))
-                            if let stats = TripStats.from(jsonString: trip.statsJson) {
-                                Text(String(format: "· %.0f km · %d", stats.distanceM / 1000, stats.stopCount))
-                            }
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        tripFacts(trip)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 8)
                     provenanceMark(trip.tripSource)
