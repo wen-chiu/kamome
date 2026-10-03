@@ -4500,6 +4500,40 @@
           }
         }
       }
+    },
+    "stop_delete_confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this stop? Its name and note go with it. Its photos stay in the trip."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要刪除這個停留點嗎？它的名稱和備註會一起刪除，相片會留在旅程裡。"
+          }
+        }
+      }
+    },
+    "trip_no_stops": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No stops on this trip."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這趟旅程沒有停留點。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

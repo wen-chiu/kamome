@@ -12,6 +12,8 @@ struct StopEditorView: View {
     @State private var name: String = ""
     @State private var note: String = ""
     @State private var choices: FilmPhotoChoices?
+    /// Deleting asks first, as the timeline's swipe does (#188).
+    @State private var confirmingDelete = false
 
     var body: some View {
         NavigationStack {
@@ -31,11 +33,18 @@ struct StopEditorView: View {
                 }
                 Section {
                     Button(role: .destructive) {
-                        model.deleteStop(stopId: stop.id)
-                        dismiss()
+                        confirmingDelete = true
                     } label: {
                         Label("delete_stop", systemImage: "trash")
                     }
+                }
+            }
+            // On the form, not the row: a presentation attached inside a list
+            // row is torn down as it appears on iOS 26 (#189).
+            .confirmationDialog("stop_delete_confirm", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("delete_stop", role: .destructive) {
+                    model.deleteStop(stopId: stop.id)
+                    dismiss()
                 }
             }
             .navigationTitle(Text("stop_editor_title"))

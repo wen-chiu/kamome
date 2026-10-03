@@ -38,6 +38,13 @@ extension HomeView {
         return "\(from) – \(formatter.string(from: end))"
     }
 
+    /// "2 km · 3 stops". The count carries its unit: a bare number read as a
+    /// stray digit, most of all the zero of a recording with no stops (#192).
+    static func statsText(_ stats: TripStats) -> String {
+        let stops = String.localizedStringWithFormat(String(localized: "recap_film_stop_count"), stats.stopCount)
+        return String(format: "%.0f km · ", stats.distanceM / 1000) + stops
+    }
+
     /// The row's second line: the dates, then distance and stops. On one line
     /// while it fits; at a large text size the two halves used to wrap
     /// separately and interleave ("2026 · 2 / 年10 km"), so they stack and each
@@ -46,7 +53,7 @@ extension HomeView {
     func tripFacts(_ trip: TripRecord) -> some View {
         let dates = Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
         if let stats = TripStats.from(jsonString: trip.statsJson) {
-            let figures = String(format: "%.0f km · %d", stats.distanceM / 1000, stats.stopCount)
+            let figures = Self.statsText(stats)
             ViewThatFits(in: .horizontal) {
                 Text(verbatim: "\(dates) · \(figures)")
                 // Without the fixed height the fallback is measured one line
