@@ -1,9 +1,10 @@
 # The routing proxy — how the key stops shipping in the binary
 
-**Status: deployed; current version `09e248ee`, 2026-09-06** —
-`https://kamome-routing.kamome-site.workers.dev`,
-from Chiu's own Cloudflare account and his authenticated shell, never from an
-agent session. That hostname is **not a secret**: it ships in every IPA by design.
+**Status: deployed; current version `adc4d1c7`, 2026-10-03** (the Durable
+Object counter, ADR 2026-10-03, from merged `main` `3e9a510`) —
+`https://kamome-routing.kamome-site.workers.dev`, from Chiu's own Cloudflare
+account, deployed by a session under his cached login as "Who may run this"
+allows. That hostname is **not a secret**: it ships in every IPA by design.
 Preview URLs were turned off on 2026-08-28 — see "Why `preview_urls = false`".
 
 ✅ **The app is pointed at it as of 2026-09-08** (ADR 2026-09-08): `base_url` is
@@ -460,6 +461,25 @@ the suite and the `wrangler dev` control above. Forcing a 429 in production mean
 deliberately exceeding 60/min against the live Worker — ~60 Geoapify credits and
 60 of the day's 2,000, to re-confirm a binding the deploy output already lists.
 Not done, and not recommended without a reason.
+
+### Re-measured 2026-10-03 — the counter's move to a Durable Object opened no door
+
+Version `adc4d1c7` (from merged `main` `3e9a510`, PR #215). Same discriminator.
+`wrangler rollback` cannot reach any version before this one (it crosses a
+Durable Object migration), so the old preview hostnames matter only as history.
+
+| host | result |
+|---|---|
+| `kamome-routing` `/v1/routing` | **200, 5,503 B**, the same body as before the deploy (public landmark coordinates) |
+| `kamome-routing` `/` | **404, empty**: still the Worker |
+| `adc4d1c7-…` `/` and `/v1/routing` | **404, 17 B**: a Cloudflare miss |
+
+The 200 now says the counter object answered with a clean yes. A missing
+binding, an unreachable object or an answer it did not understand would each
+have been a 503. Ten sequential requests from the Mac in Taiwan (served from
+SJC) took 1.13–5.29 s, median 3.2 s, against 1.35–5.50 s and a median of 3.4 s
+before the deploy: the added round trip cannot be told apart from Geoapify's own
+spread.
 
 **These are the pass conditions for every future deploy.** Re-run
 `~/Kamome-wt/probe.sh <first-8-of-Version-ID>` — public landmark coordinates only

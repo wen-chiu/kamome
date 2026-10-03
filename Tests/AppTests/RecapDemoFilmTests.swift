@@ -182,11 +182,11 @@ final class RecapDemoFilmTests: XCTestCase {
     /// and a real photo library can be dumped straight into that shape
     /// (`Tools/exif-to-fixture.sh`).
     ///
-    /// Real roads need the Worker named explicitly — no build carries a routing
-    /// key since ADR 2026-09-12 (see `importedRecap`) — and tiles for the region:
+    /// Real roads come from Geoapify direct, on the desk's own key in
+    /// `~/.kamome/desk-routing.env` (ADR 2026-10-03, see `importedRecap`) —
+    /// nothing to set — and tiles for the region:
     ///
     ///   KAMOME_DEMO_FILM_IMPORT=iceland \
-    ///   KAMOME_ROUTING_BASE_URL=https://kamome-routing.kamome-site.workers.dev \
     ///   KAMOME_TILES_PATH=~/kamome-osrm/tiles \
     ///   KAMOME_RENDER_OUT=/path/to/out
     func testRenderImportedFilm() async throws {
@@ -214,14 +214,11 @@ final class RecapDemoFilmTests: XCTestCase {
     /// offline continuity gate needs — and what the shipped app does today,
     /// since `matching.base_url` ships empty.
     ///
-    /// The default is the live provider, direct (2026-08-20). ⚠️ **Since ADR
-    /// 2026-09-12 no build carries a key for it**, so a render that reaches this
-    /// default gets 401s, reported as an unreachable provider — and those
-    /// requests still carry the fixture's coordinates, which for a local dump are
-    /// real (§0, exposure for nothing). Pass `KAMOME_ROUTING_BASE_URL` = the
-    /// Worker for real roads; that spends the Worker's daily ceiling. Changing
-    /// this default is not decided here — see `HANDOFF.md`. Every caller that
-    /// reaches it is env-gated and never runs in CI.
+    /// The default is Geoapify, direct, on the desk's own key (ADR 2026-10-03,
+    /// `DeskRouting`) — a §0 exception for Chiu's own trips on the desk only. The
+    /// shipped Worker is refused: it shares its daily ceiling with every user,
+    /// and desk films helped exhaust it on 2026-10-02 (#204). Every caller that
+    /// reaches this default is env-gated and never runs in CI.
     ///
     /// `reconstructor` replaces the routing provider outright. The offline gates
     /// need it because their `baseURL: ""` disables routing altogether, which
@@ -237,10 +234,7 @@ final class RecapDemoFilmTests: XCTestCase {
         let full = try AppConfig.loadOrDie()
         let baseURL = requestedBaseURL
             ?? HarnessEnv.value("KAMOME_ROUTING_BASE_URL")
-            // The shipped Worker, which holds the key (ADR 2026-09-19). The old
-            // default, api.geoapify.com, has no key in any checkout (ADR
-            // 2026-09-12) and could only answer 401 while carrying real positions.
-            ?? full.matching.baseURL
+            ?? DeskRouting.geoapifyBaseURL
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let service = ImportService(repository: repository, config: full)
         // Routing became its own step on 2026-08-15 (`importTrip` returns as
@@ -249,8 +243,7 @@ final class RecapDemoFilmTests: XCTestCase {
         // app deliberately does not.
         let routing = RouteMatchService(
             repository: repository, matching: full.matching,
-            reconstructor: reconstructor
-                ?? GeoapifyRouteProvider(config: full.matching.withBaseURL(baseURL))
+            reconstructor: try reconstructor ?? DeskRouting.provider(full.matching, baseURL: baseURL)
         )
 
         let trip = try Self.tripFixture(named: fixture)

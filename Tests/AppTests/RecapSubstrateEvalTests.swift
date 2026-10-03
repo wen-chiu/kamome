@@ -32,7 +32,6 @@ import XCTest
 /// share one camera, which is what makes the light and dark frames comparable.
 ///
 ///     TEST_RUNNER_KAMOME_SUBSTRATE_EVAL=miyakojima \
-///     TEST_RUNNER_KAMOME_ROUTING_BASE_URL=https://kamome-routing.kamome-site.workers.dev \
 ///     TEST_RUNNER_KAMOME_STOP_PHOTOS=/path/to/jpegs \
 ///     TEST_RUNNER_KAMOME_RENDER_OUT=$HOME/Kamome-films/openfreemap-eval \
 ///     xcodebuild -scheme Kamome test -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \

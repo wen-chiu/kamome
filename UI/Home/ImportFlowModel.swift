@@ -64,7 +64,9 @@ final class ImportFlowModel {
     private let now: Date
     private let provider: ImportPhotoProviding
     private let service: ImportService
-    private let photoService: PhotoLibraryService
+    /// Where Photos access stands, and the limited-library picker. Injected so a
+    /// test owns the answer instead of reading the simulator's real permission (#213).
+    private let photoAccess: PhotoAccessProviding
     /// The fetch a duplicate verdict paused on, so "import anyway" does not
     /// read the library a second time.
     private var pending: (title: String?, photos: [ImportPhoto])?
@@ -73,6 +75,7 @@ final class ImportFlowModel {
         config: TrackingConfig,
         repository: TripRepository,
         source: ImportPhotoProviding = PhotoLibraryImportSource(),
+        photoAccess: PhotoAccessProviding? = nil,
         now: Date = .now
     ) {
         self.config = config
@@ -80,7 +83,7 @@ final class ImportFlowModel {
         self.now = now
         provider = source
         service = ImportService(repository: repository, config: config)
-        photoService = PhotoLibraryService(config: config, repository: repository)
+        self.photoAccess = photoAccess ?? PhotoLibraryService(config: config, repository: repository)
 
         let calendar = Calendar.current
         endDate = now
@@ -97,7 +100,7 @@ final class ImportFlowModel {
     /// Limited Photo Library access — the fetch sees only the user-selected
     /// subset, so the sheet must offer the system picker (Replay MVP gate item).
     /// Only meaningful once authorization has been requested (first import).
-    var isLimitedAccess: Bool { photoService.isLimitedAccess }
+    var isLimitedAccess: Bool { photoAccess.readAccess == .limited }
 
     /// The album the user picked, for the span the sheet shows before importing.
     var selectedAlbum: PhotoAlbum? {
@@ -218,7 +221,7 @@ final class ImportFlowModel {
         } catch ImportService.ImportError.notEnoughGeotaggedPhotos {
             // An empty fetch from denied access lands here too, so prefer the
             // access message when we can see permission is actually blocked.
-            phase = .failed(photoService.isDenied ? .accessDenied : .noGeotaggedPhotos)
+            phase = .failed(photoAccess.readAccess == .denied ? .accessDenied : .noGeotaggedPhotos)
         } catch {
             // The database refused the trip. This used to be reported as "no
             // geotagged photos" — a wrong reason that sends the user off to
@@ -231,7 +234,7 @@ final class ImportFlowModel {
     /// System limited-library picker so the selection can grow, then let the
     /// user retry the import against the new set.
     func selectMorePhotos() {
-        photoService.presentLimitedLibraryPicker { [weak self] in
+        photoAccess.presentLimitedLibraryPicker { [weak self] in
             // A grown selection means the previous "not enough" verdict is
             // stale — reset so the Import button (not the error) shows.
             self?.phase = .idle
