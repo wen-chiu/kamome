@@ -39,16 +39,30 @@ enabled = false
 #   wrangler secret put GEOAPIFY_API_KEY
 # `vars` would put it in this file, which is committed.
 
-# The spend ceiling's storage. Created 2026-09-04 on Chiu's instruction; the id
-# is an identifier, not a secret — Cloudflare's own snippet puts it in this file.
+# The spend ceiling's storage: one SQLite-backed Durable Object, `RoutingBudget`
+# in `src/index.js` (ADR 2026-10-03, replacing the KV counter of ADR 2026-09-04).
 #
-# ⚠️ **Bound before its reader exists, deliberately.** The counter itself is not
-# built (`README.md`, "Not built, and deliberately"); this binding and the
-# ceiling below are here so the session that writes it has nothing to provision
-# and no account of Chiu's to touch. A binding with no reader is inert.
-[[kv_namespaces]]
-binding = "KAMOME_BUDGET"
-id = "d533d7ee1b7d4a3c8ffcf51fe8701b33"
+# Why not KV any more, VERIFIED from Cloudflare's limits page 2026-10-03: the
+# free plan allows **1,000 KV writes a day** and **one write a second to the same
+# key**. The counter wrote one key once per request, so the real ceiling was
+# 1,000, and past it every request failed closed at 503 until UTC midnight
+# (#204). The free plan's Durable Object allowance is 100,000 requests and
+# 100,000 rows written a day — one of each per routing request.
+#
+# ⚠️ **No `wrangler rollback` across this migration.** VERIFIED from Cloudflare's
+# rollback docs 2026-10-03: a rollback is refused when a Durable Object class
+# lifecycle change lies between the two versions. Recovery from a bad deploy of
+# this is a forward fix, so this change's controls run before the deploy.
+#
+# The old KV namespace `d533d7ee1b7d4a3c8ffcf51fe8701b33` is unbound, not
+# deleted. Deleting it is Chiu's call.
+[[durable_objects.bindings]]
+name = "KAMOME_BUDGET"
+class_name = "RoutingBudget"
+
+[[migrations]]
+tag = "v1-routing-budget"
+new_sqlite_classes = ["RoutingBudget"]
 
 # 🔴 **The only ceiling that can exist anywhere.** VERIFIED from Geoapify's own
 # pages, 2026-08-29: their limits are *soft on every tier*, there is no
@@ -68,8 +82,9 @@ id = "d533d7ee1b7d4a3c8ffcf51fe8701b33"
 # day: Cloudflare's maximum `period` is 60 s. Both exist because neither is the
 # other, and the reason the pair is needed at all is KV's read cache — measured
 # 2026-09-04, its window is *tens of seconds*, so a single client could spend the
-# whole 2000 inside one window while the counter still read low. This binding is
-# what makes that burst impossible before the counter ever has to notice it.
+# whole 2000 inside one window while the counter still read low. The counter is
+# exact since ADR 2026-10-03, and this binding still matters: an exact counter
+# lets one address spend the whole day in a minute just as faithfully.
 #
 # **60/min is the number, and the floor under it is real traffic, not taste.**
 # Kamome's own legitimate burst is ~29 requests/minute (Iceland's 58 legs inside
@@ -107,3 +122,18 @@ DAILY_REQUEST_CEILING = "2000"
 # one period: this is an honest upper bound, never an under-estimate that would
 # invite an early retry.
 BURST_RETRY_AFTER_S = "60"
+
+# Where the counter object is first created — a Cloudflare region code, used
+# once and ignored afterwards, because an object never moves (VERIFIED,
+# Cloudflare docs 2026-10-03). Every routing request makes one round trip from
+# the Worker's location to the object's, so it belongs where the Worker runs for
+# most requests.
+#
+# `apac` from two measurements, 2026-10-03, both in Taiwan (`loc=TW`,
+# `/cdn-cgi/trace`): Chiu's iPhone on cellular is served from **SIN**,
+# Singapore; this Mac on its home line from **SJC**, San Jose. The app's
+# requests come from phones, so the object goes where the phone lands. Desk
+# renders stop using this Worker (ADR owed, Chiu 2026-10-03), so SJC is not the
+# path that matters. If it is wrong, renaming `BUDGET_OBJECT_NAME` in the source
+# creates a new object under a new hint.
+BUDGET_LOCATION_HINT = "apac"

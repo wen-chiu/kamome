@@ -12,30 +12,79 @@
  * Worker.
  */
 import assert from "node:assert/strict";
-import worker from "../src/index.js";
+import { DatabaseSync } from "node:sqlite";
+import worker, { RoutingBudget } from "../src/index.js";
 
 const ROUTE = "https://kamome-routing.example.workers.dev/v1/routing"
   + "?waypoints=64.310400,-20.302400%7C64.327100,-20.119900&mode=drive";
 
 /**
- * An in-memory stand-in for the KV binding — the two methods the Worker calls
- * and nothing else. `throws` makes a KV outage testable, which is the branch
- * that must fail closed rather than forward uncounted.
+ * The Durable Object's storage, backed by a **real SQLite** (`node:sqlite`)
+ * rather than a model of one — so the counter's SQL, its upsert and its
+ * retention delete are exercised as written. Only the surface `RoutingBudget`
+ * uses is provided: `sql.exec(query, ...bindings)` returning a cursor with
+ * `toArray()`, synchronous, as Cloudflare's is.
  */
-function stubKV({ seed = {}, throws = false } = {}) {
-  const store = new Map(Object.entries(seed));
+function sqliteStorage() {
+  const db = new DatabaseSync(":memory:");
   return {
-    store,
-    async get(key) {
-      if (throws) throw new Error("KV unavailable");
-      return store.has(key) ? store.get(key) : null;
-    },
-    async put(key, value, options) {
-      if (throws) throw new Error("KV unavailable");
-      store.set(key, value);
-      this.lastPutOptions = options;
+    db,
+    sql: {
+      exec(query, ...bindings) {
+        const rows = db.prepare(query).all(...bindings);
+        return { toArray: () => rows };
+      }
     }
   };
+}
+
+/**
+ * A stand-in for the Durable Object namespace binding, running the **real**
+ * `RoutingBudget` class over `sqliteStorage()`. `seed` pre-fills days as
+ * `{ "YYYY-MM-DD": count }`. `throws` makes an unreachable object testable;
+ * `answer` replaces the object with one that replies with that `Response`
+ * factory — the branches where the Worker must not read a fault as a yes.
+ *
+ * ⚠️ **A stand-in is not the platform.** It runs requests one after another on
+ * one instance, which is what Cloudflare documents for an object; the control a
+ * stand-in cannot give is `wrangler dev` against the real runtime, in
+ * `README.md` under "The spend ceiling".
+ */
+function stubBudget({ seed = {}, throws = false, answer } = {}) {
+  const storage = sqliteStorage();
+  const object = new RoutingBudget({ storage });
+  for (const [day, count] of Object.entries(seed)) {
+    storage.sql.exec("INSERT INTO spend (day, count) VALUES (?, ?)", day, count);
+  }
+  const binding = {
+    storage,
+    names: [],
+    gets: [],
+    calls: 0,
+    idFromName(name) {
+      this.names.push(name);
+      return { name };
+    },
+    get(id, options) {
+      this.gets.push({ id, options });
+      return {
+        fetch: async (input, init) => {
+          binding.calls += 1;
+          if (throws) throw new Error("Durable Object unavailable");
+          if (answer) return answer();
+          return object.fetch(new Request(input, init));
+        }
+      };
+    },
+    /** The stored count for one day, or `undefined` when the day has no row. */
+    count(day) {
+      return storage.sql.exec("SELECT count FROM spend WHERE day = ?", day).toArray()[0]?.count;
+    },
+    days() {
+      return storage.sql.exec("SELECT day FROM spend ORDER BY day").toArray().map((row) => row.day);
+    }
+  };
+  return binding;
 }
 
 /**
@@ -79,7 +128,8 @@ function freshEnv(overrides = {}) {
     GEOAPIFY_API_KEY: "worker-secret",
     DAILY_REQUEST_CEILING: "2000",
     BURST_RETRY_AFTER_S: "60",
-    KAMOME_BUDGET: stubKV(),
+    BUDGET_LOCATION_HINT: "apac",
+    KAMOME_BUDGET: stubBudget(),
     KAMOME_BURST: stubRateLimiter(),
     ...overrides
   };
@@ -117,6 +167,13 @@ async function callWorkerConcurrently(url, { env = freshEnv(), count, ip } = {})
   } finally {
     restore();
   }
+}
+
+/** Freezes `Date.now()` for a concurrent run, which `callWorkerConcurrently` does not do itself; returns the undo. */
+function freezeClock(at) {
+  const originalNow = Date.now;
+  Date.now = () => new Date(at).getTime();
+  return () => { Date.now = originalNow; };
 }
 
 /** One inbound request, carrying the connecting address Cloudflare would set. */
@@ -220,17 +277,18 @@ const tests = {
     const { response, seen, env } = await callWorker(ROUTE, { at: "2026-09-04T12:00:00.000Z" });
     assert.equal(response.status, 200);
     assert.equal(seen.calls, 1);
-    assert.equal(env.KAMOME_BUDGET.store.get("routing-requests-2026-09-04"), "1");
+    assert.equal(env.KAMOME_BUDGET.count("2026-09-04"), 1);
   },
 
   async "at the ceiling the Worker answers 429 itself and never calls Geoapify"() {
     const env = freshEnv({
       DAILY_REQUEST_CEILING: "2000",
-      KAMOME_BUDGET: stubKV({ seed: { "routing-requests-2026-09-04": "2000" } })
+      KAMOME_BUDGET: stubBudget({ seed: { "2026-09-04": 2000 } })
     });
     const { response, seen } = await callWorker(ROUTE, { env, at: "2026-09-04T12:00:00.000Z" });
     assert.equal(response.status, 429);
     assert.equal(seen.calls, 0, "a refused request must not reach the provider");
+    assert.equal(env.KAMOME_BUDGET.count("2026-09-04"), 2000, "a refused request is not counted");
 
     const retryAfter = response.headers.get("retry-after");
     assert.ok(retryAfter !== null, "a self-generated 429 without Retry-After is worthless to the app");
@@ -239,9 +297,7 @@ const tests = {
   },
 
   async "the 429's Retry-After is the seconds remaining until UTC midnight"() {
-    const env = freshEnv({
-      KAMOME_BUDGET: stubKV({ seed: { "routing-requests-2026-09-04": "2000" } })
-    });
+    const env = freshEnv({ KAMOME_BUDGET: stubBudget({ seed: { "2026-09-04": 2000 } }) });
     // 21:30:00Z is two and a half hours short of the roll: 9,000 seconds.
     const { response } = await callWorker(ROUTE, { env, at: "2026-09-04T21:30:00.000Z" });
     assert.equal(response.status, 429);
@@ -257,11 +313,11 @@ const tests = {
     const second = await callWorker(ROUTE, { env, at: "2026-09-04T23:59:30.000Z" });
     assert.equal(second.response.status, 429, "the day's budget is now spent");
 
-    // One minute later, on the other side of the boundary, against the same KV.
+    // One minute later, on the other side of the boundary, against the same object.
     const afterMidnight = await callWorker(ROUTE, { env, at: "2026-09-05T00:01:00.000Z" });
     assert.equal(afterMidnight.response.status, 200, "a new UTC day is a new budget");
-    assert.equal(env.KAMOME_BUDGET.store.get("routing-requests-2026-09-04"), "1");
-    assert.equal(env.KAMOME_BUDGET.store.get("routing-requests-2026-09-05"), "1");
+    assert.equal(env.KAMOME_BUDGET.count("2026-09-04"), 1);
+    assert.equal(env.KAMOME_BUDGET.count("2026-09-05"), 1);
   },
 
   async "the ceiling comes from env as a string, and a lower one bites sooner"() {
@@ -274,23 +330,97 @@ const tests = {
     assert.equal(second.response.status, 429);
   },
 
-  async "the day's counter is set to outlive its own day"() {
-    const env = freshEnv();
-    await callWorker(ROUTE, { env, at: "2026-09-04T23:00:00.000Z" });
-    // An hour to the roll, plus the slack that keeps the namespace from growing
-    // a key per day forever — and comfortably above Cloudflare's 60 s minimum.
-    assert.equal(env.KAMOME_BUDGET.lastPutOptions.expirationTtl, 3600 + 3600);
+  // 🔴 **The property KV never had, and the reason for ADR 2026-10-03.** KV
+  // could overshoot under concurrency; the object handles one request at a time,
+  // so a burst arriving together is cut at exactly the ceiling.
+  async "concurrent requests are counted exactly: the ceiling lets through the ceiling, no more"() {
+    const env = freshEnv({ DAILY_REQUEST_CEILING: "50", KAMOME_BURST: stubRateLimiter({ limit: 1000 }) });
+    const restoreClock = freezeClock("2026-09-04T12:00:00.000Z");
+    try {
+      const { statuses, seen } = await callWorkerConcurrently(ROUTE, { env, count: 75, ip: "203.0.113.7" });
+      assert.equal(statuses.filter((status) => status === 200).length, 50, "exactly the ceiling gets through");
+      assert.equal(statuses.filter((status) => status === 429).length, 25, "everything above it is refused");
+      assert.equal(seen.calls, 50, "a refused request must not reach the provider");
+      assert.equal(env.KAMOME_BUDGET.count("2026-09-04"), 50, "and the stored count is exact");
+    } finally {
+      restoreClock();
+    }
   },
 
-  // The three fail-closed branches. A Worker that cannot count is a Worker with
-  // no ceiling, and forwarding anyway is the silent fallback that would make the
+  async "one object holds every day, addressed by one fixed name"() {
+    // A per-day object would be created near whoever asked first that day and
+    // never move — a different place, and a different latency, every day.
+    const env = freshEnv();
+    await callWorker(ROUTE, { env, at: "2026-09-04T12:00:00.000Z" });
+    await callWorker(ROUTE, { env, at: "2026-09-05T12:00:00.000Z" });
+    assert.deepEqual(env.KAMOME_BUDGET.names, ["routing-budget", "routing-budget"]);
+  },
+
+  async "the location hint comes from the config, and its absence is the platform default"() {
+    const hinted = freshEnv({ BUDGET_LOCATION_HINT: "weur" });
+    await callWorker(ROUTE, { env: hinted });
+    assert.deepEqual(hinted.KAMOME_BUDGET.gets[0].options, { locationHint: "weur" });
+
+    const unhinted = freshEnv({ BUDGET_LOCATION_HINT: undefined });
+    const { response } = await callWorker(ROUTE, { env: unhinted });
+    assert.equal(response.status, 200);
+    assert.equal(unhinted.KAMOME_BUDGET.gets[0].options, undefined);
+  },
+
+  async "only a date, the ceiling and a cut-off date reach the counter — never a coordinate"() {
+    const env = freshEnv();
+    let sent;
+    const real = env.KAMOME_BUDGET.get.bind(env.KAMOME_BUDGET);
+    env.KAMOME_BUDGET.get = (id, options) => {
+      const stub = real(id, options);
+      return { fetch: (input, init) => { sent = new URL(input); return stub.fetch(input, init); } };
+    };
+    await callWorker(ROUTE, { env, at: "2026-09-04T12:00:00.000Z" });
+    assert.deepEqual([...sent.searchParams.keys()].sort(), ["ceiling", "day", "keep_from"]);
+    assert.equal(sent.searchParams.get("day"), "2026-09-04");
+    assert.equal(sent.searchParams.get("ceiling"), "2000");
+    assert.equal(sent.toString().includes("64.31"), false, "the trip's coordinates must not reach the counter");
+  },
+
+  async "a month of days is kept for the dashboard, and older ones are dropped on a new day"() {
+    const env = freshEnv({
+      KAMOME_BUDGET: stubBudget({ seed: { "2026-08-03": 7, "2026-08-04": 9, "2026-09-03": 12 } })
+    });
+    await callWorker(ROUTE, { env, at: "2026-09-04T00:00:30.000Z" });
+    // 31 days before 2026-09-04 is 2026-08-04: kept. The day before it is not.
+    assert.deepEqual(env.KAMOME_BUDGET.days(), ["2026-08-04", "2026-09-03", "2026-09-04"]);
+    assert.equal(env.KAMOME_BUDGET.count("2026-09-03"), 12, "yesterday's count survives for whoever asks");
+  },
+
+  async "the counter survives its object being evicted and recreated"() {
+    // Cloudflare can evict an idle object; the next request builds a new
+    // instance over the same storage. `CREATE TABLE IF NOT EXISTS` must not
+    // reset the day.
+    const env = freshEnv({ DAILY_REQUEST_CEILING: "2" });
+    await callWorker(ROUTE, { env, at: "2026-09-04T12:00:00.000Z" });
+    const revived = new RoutingBudget({ storage: env.KAMOME_BUDGET.storage });
+    const realGet = env.KAMOME_BUDGET.get.bind(env.KAMOME_BUDGET);
+    env.KAMOME_BUDGET.get = (id, options) => {
+      realGet(id, options);
+      return { fetch: (input, init) => revived.fetch(new Request(input, init)) };
+    };
+    const second = await callWorker(ROUTE, { env, at: "2026-09-04T12:00:01.000Z" });
+    const third = await callWorker(ROUTE, { env, at: "2026-09-04T12:00:02.000Z" });
+    assert.equal(second.response.status, 200);
+    assert.equal(third.response.status, 429, "the count carried over the eviction");
+  },
+
+  // The fail-closed branches. A Worker that cannot count is a Worker with no
+  // ceiling, and forwarding anyway is the silent fallback that would make the
   // proxy only *look* capped.
 
-  async "a missing KV binding fails closed at 503 and forwards nothing"() {
-    const env = freshEnv({ KAMOME_BUDGET: undefined });
-    const { response, seen } = await callWorker(ROUTE, { env });
-    assert.equal(response.status, 503);
-    assert.equal(seen.calls, 0, "an uncountable request must not be forwarded");
+  async "a missing counter binding fails closed at 503 and forwards nothing"() {
+    for (const binding of [undefined, {}, { idFromName() {} }]) {
+      const env = freshEnv({ KAMOME_BUDGET: binding });
+      const { response, seen } = await callWorker(ROUTE, { env });
+      assert.equal(response.status, 503);
+      assert.equal(seen.calls, 0, "an uncountable request must not be forwarded");
+    }
   },
 
   async "a missing or unusable ceiling fails closed at 503, never unlimited"() {
@@ -303,24 +433,60 @@ const tests = {
     }
   },
 
-  async "a counter that does not parse fails closed, rather than reading as zero"() {
-    // Only something other than this Worker writes such a value, and treating it
-    // as zero is how a ceiling silently becomes no ceiling.
-    for (const stored of ["", "lots", "-5"]) {
-      const env = freshEnv({
-        KAMOME_BUDGET: stubKV({ seed: { "routing-requests-2026-09-04": stored } })
-      });
+  async "a stored count that is not a count fails closed, rather than reading as zero"() {
+    // Only something other than this Worker writes such a value — by hand in
+    // Data Studio, say — and treating it as zero is how a ceiling silently
+    // becomes no ceiling.
+    for (const stored of ["lots", -5, 1.5]) {
+      const env = freshEnv({ KAMOME_BUDGET: stubBudget() });
+      env.KAMOME_BUDGET.storage.sql.exec("INSERT INTO spend (day, count) VALUES (?, ?)", "2026-09-04", stored);
       const { response, seen } = await callWorker(ROUTE, { env, at: "2026-09-04T12:00:00.000Z" });
       assert.equal(response.status, 503, `stored ${JSON.stringify(stored)} must not read as zero`);
       assert.equal(seen.calls, 0);
     }
   },
 
-  async "a KV outage fails closed at 503 rather than forwarding uncounted"() {
-    const env = freshEnv({ KAMOME_BUDGET: stubKV({ throws: true }) });
+  async "an unreachable counter fails closed at 503 rather than forwarding uncounted"() {
+    const env = freshEnv({ KAMOME_BUDGET: stubBudget({ throws: true }) });
     const { response, seen } = await callWorker(ROUTE, { env });
     assert.equal(response.status, 503);
     assert.equal(seen.calls, 0);
+  },
+
+  async "a counter answering anything but a clean yes or no fails closed"() {
+    const answers = [
+      () => new Response(null, { status: 500 }),
+      () => new Response(null, { status: 400 }),
+      () => new Response("not json", { status: 200 }),
+      () => Response.json({}),
+      () => Response.json({ allowed: "yes" }),
+      () => Response.json({ allowed: 1 }),
+      () => Response.json(null)
+    ];
+    for (const answer of answers) {
+      const env = freshEnv({ KAMOME_BUDGET: stubBudget({ answer }) });
+      const { response, seen } = await callWorker(ROUTE, { env });
+      assert.equal(response.status, 503, "a counter this Worker does not understand must not read as yes");
+      assert.equal(seen.calls, 0);
+    }
+  },
+
+  async "the counter object refuses a malformed question instead of guessing"() {
+    const object = new RoutingBudget({ storage: sqliteStorage() });
+    const ask = (query, method = "POST") =>
+      object.fetch(new Request(`https://routing-budget.internal/spend?${query}`, { method }));
+    const good = "day=2026-09-04&ceiling=2&keep_from=2026-08-04";
+    assert.equal((await ask(good)).status, 200);
+    assert.equal((await ask(good, "GET")).status, 404);
+    for (const bad of [
+      "ceiling=2&keep_from=2026-08-04",
+      "day=today&ceiling=2&keep_from=2026-08-04",
+      "day=2026-09-04&ceiling=0&keep_from=2026-08-04",
+      "day=2026-09-04&ceiling=2.5&keep_from=2026-08-04",
+      "day=2026-09-04&ceiling=2"
+    ]) {
+      assert.equal((await ask(bad)).status, 400, `"${bad}" must be refused`);
+    }
   },
 
   // ── The per-IP burst limit ───────────────────────────────────────────────
@@ -361,8 +527,9 @@ const tests = {
     });
     assert.equal(response.status, 429);
     assert.equal(seen.calls, 0, "a refused request must not reach the provider");
-    assert.equal(env.KAMOME_BUDGET.store.get("routing-requests-2026-09-04"), undefined,
+    assert.equal(env.KAMOME_BUDGET.count("2026-09-04"), undefined,
       "a request that never reached Geoapify must not spend the day's budget");
+    assert.equal(env.KAMOME_BUDGET.calls, 0, "a burst refusal never reaches the counter at all");
   },
 
   async "the burst 429's Retry-After is the configured period, not a literal"() {
@@ -385,7 +552,7 @@ const tests = {
     // ordering is what keeps a burst out of KV and off the day's budget.
     const env = freshEnv({
       KAMOME_BURST: stubRateLimiter({ limit: 0 }),
-      KAMOME_BUDGET: stubKV({ seed: { "routing-requests-2026-09-04": "2000" } })
+      KAMOME_BUDGET: stubBudget({ seed: { "2026-09-04": 2000 } })
     });
     const { response } = await callWorker(ROUTE, {
       env, at: "2026-09-04T12:00:00.000Z", ip: "203.0.113.7"

@@ -6,16 +6,16 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-03 against ADR **2026-10-03-desk-renders-route-direct-on-their-own-key**
-(desk renders: Geoapify direct, own key; the app still asks the Worker).
+Last synced: 2026-10-03 against ADR **2026-10-03-the-routing-ceiling-counts-in-one-durable-object**,
+with 2026-10-03-desk-renders-route-direct-on-their-own-key (desk renders:
+Geoapify direct, own key; the app still asks the Worker).
 Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:
 2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
 height to the film: Export again moves into ⋯, a no-road leg is one caption
 line);
-2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev (Kamome ships on the
-existing App Store Connect record; the id is no longer a placeholder);
+2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev;
 2026-10-02-the-release-scan-needs-no-key;
 2026-10-02-an-unnamed-trip-is-stored-with-no-title;
 2026-10-02-deleting-a-stop-asks-first. Before
