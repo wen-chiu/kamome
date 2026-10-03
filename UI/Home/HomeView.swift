@@ -182,14 +182,9 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(headline(for: trip))
                             .font(.headline)
-                        HStack(spacing: 4) {
-                            Text(Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt))
-                            if let stats = TripStats.from(jsonString: trip.statsJson) {
-                                Text(verbatim: Self.statsText(stats))
-                            }
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        tripFacts(trip)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 8)
                     provenanceMark(trip.tripSource)

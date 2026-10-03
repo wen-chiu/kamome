@@ -21,7 +21,6 @@ struct RecordingView: View {
         .onReceive(clock) { now = $0 }
         .sheet(isPresented: $session.needsAlwaysPriming) {
             AlwaysPrimingView()
-                .presentationDetents([.medium])
         }
     }
 
@@ -29,18 +28,12 @@ struct RecordingView: View {
 
     private var hud: some View {
         VStack(spacing: 12) {
-            if session.locationAccess == .refused {
-                locationRefusedNotice
-            }
-            if let interruption = session.interruption {
-                resumedNotice(interruption)
-            }
-            HStack(spacing: 24) {
-                Image(systemName: modeSymbol)
-                    .font(.title2)
-                stat(value: elapsedText, label: "stat_elapsed")
-                stat(value: distanceText, label: "stat_distance")
-                stat(value: "\(session.stopCount)", label: "stat_stops")
+            // End Trip is never pushed off the screen: when the notices and
+            // the figures are taller than the room above it — two notices at
+            // the largest text size are — they scroll, and it stays (#191).
+            ViewThatFits(in: .vertical) {
+                readout
+                ScrollView { readout }
             }
             // One tap used to end the trip. On a phone in a car mount that is
             // a brushed screen, and an ended recording cannot be continued —
@@ -120,11 +113,53 @@ struct RecordingView: View {
         return String.localizedStringWithFormat(String(localized: "recording_resumed_notice"), gap)
     }
 
+    /// Everything above End Trip: what is wrong, if anything, then the figures.
+    private var readout: some View {
+        VStack(spacing: 12) {
+            if session.locationAccess == .refused {
+                locationRefusedNotice
+            }
+            if let interruption = session.interruption {
+                resumedNotice(interruption)
+            }
+            figures
+        }
+    }
+
+    /// Mode, time, distance and stops in a row — or one to a line once the
+    /// text is too large for a row (#191), where the row broke the figures
+    /// themselves in two ("0:0 / 2").
+    private var figures: some View {
+        let stats: [(value: String, label: LocalizedStringKey)] = [
+            (elapsedText, "stat_elapsed"), (distanceText, "stat_distance"), ("\(session.stopCount)", "stat_stops")
+        ]
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 24) {
+                Image(systemName: modeSymbol)
+                    .font(.title2)
+                ForEach(stats.indices, id: \.self) { stat(value: stats[$0].value, label: stats[$0].label) }
+            }
+            VStack(spacing: 4) {
+                ForEach(stats.indices, id: \.self) { index in
+                    HStack(alignment: .firstTextBaseline) {
+                        if index == 0 { Image(systemName: modeSymbol) }
+                        Text(stats[index].label).font(.caption2).foregroundStyle(.secondary)
+                        Spacer(minLength: 12)
+                        Text(stats[index].value).font(.headline).monospacedDigit()
+                    }
+                    .lineLimit(1)
+                }
+            }
+        }
+    }
+
     private func stat(value: String, label: LocalizedStringKey) -> some View {
         VStack {
             Text(value).font(.headline).monospacedDigit()
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
+        .lineLimit(1)
+        .fixedSize()
     }
 
     private var modeSymbol: String {
