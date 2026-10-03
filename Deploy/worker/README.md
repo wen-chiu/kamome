@@ -139,7 +139,7 @@ to 17, which is why the fix is in this directory instead:
 - **`node_modules/` is local to this directory**, so `npx wrangler` finds it
   before it ever consults the shared npx cache.
 - **`.npmrc` sets `engine-strict=true`**, so running this under Node 17 now fails
-  with `EBADENGINE … Required: {"node":">=22.0.0"} Actual: v17.0.0` rather than
+  with `EBADENGINE … Required: {"node":">=22.13.0"} Actual: v17.0.0` rather than
   the workerd message above. A clear failure instead of a puzzling one.
 
 If `npm ci` reports `EBADENGINE`, switch Node (`nvm use 24.3.0`) — do not work
@@ -178,16 +178,18 @@ around it by deleting `.npmrc`. wrangler 4.127.1 genuinely requires Node ≥ 22.
   plumbing has to arrive as "nobody answered", which is retryable.
 - **Refuses above a per-IP burst limit.** Cloudflare's rate-limiting binding,
   **60 requests/minute per connecting address**, keyed by `CF-Connecting-IP`.
-  Above it the Worker answers **429 with `Retry-After: 60`**, never reaches KV
-  and never reaches Geoapify. ⚠️ **It does not replace the per-day ceiling and
+  Above it the Worker answers **429 with `Retry-After: 60`**, never reaches the
+  counter and never reaches Geoapify. ⚠️ **It does not replace the per-day ceiling and
   the ceiling does not replace it** — 60 s is Cloudflare's longest period, so a
   burst limit cannot express a day. See "The burst limit" below.
-- **Refuses above a per-day ceiling.** A KV counter keyed by UTC date; above
+- **Refuses above a per-day ceiling.** A Durable Object counter, one row per UTC
+  day (ADR 2026-10-03); above
   `DAILY_REQUEST_CEILING` the Worker answers **429 with `Retry-After` set to the
   seconds until UTC midnight**, and does not call Geoapify. See "The spend
   ceiling" below.
-- **Fails closed when it cannot count or cannot limit.** No KV binding, no
-  usable ceiling, a KV error, **no rate-limit binding, no usable
+- **Fails closed when it cannot count or cannot limit.** No counter binding, no
+  usable ceiling, an unreachable counter or one whose answer is not a clean yes
+  or no, **no rate-limit binding, no usable
   `BURST_RETRY_AFTER_S`, or a limiter error** — all **503**, never a forwarded
   request. A Worker that cannot count is a Worker with no ceiling, and one whose
   limiter is missing *looks* hardened without being it; forwarding anyway is the
@@ -199,82 +201,92 @@ around it by deleting `.npmrc`. wrangler 4.127.1 genuinely requires Node ≥ 22.
 
 ## The spend ceiling
 
-**Built 2026-09-04.** The counter sits in `src/index.js` after the secret check
-and before the upstream fetch — 🔴 **the only place a ceiling can exist for
-Kamome.** VERIFIED from Geoapify's own pricing pages, 2026-08-29: their limits
-are *soft on every tier*, there is **no customer-settable cap**, and escalation
-ends in **account blocking**. The failure it guards is not a daily outage that
-clears at midnight; it is every user losing routing until Chiu resolves it with
-the provider by hand.
+**Built 2026-09-04 on KV; moved to one Durable Object by ADR 2026-10-03** after
+#204. The counter sits in `src/index.js` after the burst limit and before the
+upstream fetch — 🔴 **the only place a ceiling can exist for Kamome.** VERIFIED
+from Geoapify's own pricing pages, 2026-08-29: their limits are *soft on every
+tier*, there is **no customer-settable cap**, and escalation ends in **account
+blocking**. The failure it guards is not a daily outage that clears at midnight;
+it is every user losing routing until Chiu resolves it with the provider by hand.
 
 | what | where |
 |---|---|
 | the number | `DAILY_REQUEST_CEILING` in `wrangler.toml` — **2000/day, Chiu's number**, arithmetic beside it. Never a literal in the source, and **never** in `Config/TrackingConfig.json`: that is the app's config and the app never sees this value. |
-| the storage | `KAMOME_BUDGET`, one key per UTC day, `routing-requests-YYYY-MM-DD`, expiring an hour after its day. |
+| the storage | `KAMOME_BUDGET`, **one** SQLite-backed Durable Object (`RoutingBudget`, named `routing-budget`), table `spend(day, count)`, one row per UTC day, 31 days kept. |
+| where it lives | created once near `BUDGET_LOCATION_HINT` (`wnam`) and never moves. Every routing request makes one round trip to it. |
 | over the ceiling | **429**, `Retry-After` = seconds to UTC midnight, empty body, upstream never called. |
 | cannot count | **503** — fail closed. |
 
-Two choices worth knowing before you change anything here:
+### Why it is not KV any more (#204)
 
-- ⚠️ **The count can overshoot slightly under concurrency, and that is
-  accepted.** KV is eventually consistent, so simultaneous requests can read the
-  same value. A Durable Object would be exact, and it costs a class, a migration
-  and a round trip to one object on every request. A ceiling set well below the
-  provider's soft limit does not need to be exact; it needs to exist. **Do not
-  silently switch to a DO.**
+VERIFIED from Cloudflare's KV limits page, 2026-10-03: the free plan allows
+**1,000 writes a day** and **one write a second to the same key**. The KV counter
+wrote one key per request, so it failed at 1,000 — half the ceiling — and from
+then until UTC midnight every request was a 503. That happened on 2026-10-02 from
+14:47 UTC. The 2026-09-04 choice of KV over a Durable Object weighed consistency;
+nobody had read the write limits. A Durable Object on the free plan gets 100,000
+requests and 100,000 rows written a day (VERIFIED, DO pricing page, 2026-10-03).
+
+Three things worth knowing before you change anything here:
+
+- **The count is exact.** An object handles one request at a time and
+  `ctx.storage.sql` is synchronous, so read, compare and increment happen with no
+  `await` between them. A test fires 75 concurrent requests at a ceiling of 50 and
+  requires exactly 50 through; it was shown red by putting an `await` between the
+  read and the write, which is the race KV had.
+- **One object, never one per day.** An object is placed near whoever first asks
+  for it and never moves (VERIFIED, Cloudflare docs). To move it, rename
+  `BUDGET_OBJECT_NAME`: a new, empty object is created under the current hint.
+  That day can then spend up to twice the ceiling.
 - **The request is counted before the fetch, not after.** That is the only
   ordering in which the stored number bounds what is actually forwarded. It
   over-counts requests that end at 502 — those never reached Geoapify and cost no
   credit — and over-counting is the safe direction for a ceiling.
 
+⚠️ **`wrangler rollback` cannot cross the migration that created this class**
+(VERIFIED, Cloudflare rollback docs). A bad deploy here is fixed forward, so both
+controls below run before the deploy, not after.
+
 **Positive control, and re-run it after any change here**, because a gate nobody
-has seen fire is a gate nobody should trust:
+has seen fire is a gate nobody should trust. This runs the real runtime, real
+Durable Object and real SQLite, all local:
 
 ```bash
-cd Deploy/worker && npx wrangler dev --port 8799 --var DAILY_REQUEST_CEILING:1
+cd Deploy/worker && npx wrangler dev --port 8799 --persist-to /tmp/kamome-dev \
+  --var DAILY_REQUEST_CEILING:5
+# then fire 8 concurrent GET /v1/routing — public landmark coordinates only (§0)
 ```
 
-Then two requests to `/v1/routing` with **public landmark coordinates only** (§0
-— never a real trip). The second must be `429` with a positive integer
-`Retry-After`. Measured 2026-09-04 with a placeholder key in `.dev.vars`, which
-is why the first line is Geoapify's own 401 rather than a 200 — the point is that
-it reached the provider and was counted, and the second never did:
+Measured 2026-10-03 with a placeholder key in `.dev.vars`, which is why the
+through-traffic is Geoapify's own 401 — the point is that it reached the provider
+and was counted, and the rest never did:
 
 ```
-=== request 1 ===
-HTTP/1.1 401 Unauthorized
-=== request 2 ===
-HTTP/1.1 429 Too Many Requests
-Retry-After: 65312
+8 concurrent at ceiling 5 → 401 ×5, 429 ×3 (Retry-After: 51997); two more after: 429, 429
 ```
 
-`wrangler dev` binds KV **locally** (its startup banner says `local`), so this
-touches no namespace in Chiu's account.
+`wrangler dev`'s startup banner lists `env.KAMOME_BUDGET (RoutingBudget) Durable
+Object local`, so this touches nothing in Chiu's account.
 
-**In production, the cheap check is the 200.** Every KV fault fails closed at
+**In production, the cheap check is the 200.** Every counter fault fails closed at
 503, so a successful `/v1/routing` proves the binding is attached, the ceiling
-parsed and the counter read and wrote. Read the day's key directly with:
-
-```bash
-npx wrangler kv key get "routing-requests-$(date -u +%Y-%m-%d)" \
-  --namespace-id d533d7ee1b7d4a3c8ffcf51fe8701b33 --remote
-```
-
-⚠️ **Expect a stale read for tens of seconds.** Measured 2026-09-04: a read 2 s
-after a write still returned the pre-write value; the same key 30 s later
-returned the new one. That is KV's read cache, it is the mechanism behind the
-accepted overshoot, and **it means a counter that "did not increment" is usually
-a cache, not a bug — wait a minute before concluding anything.**
+parsed and the object counted. To read the counts, open **Workers & Pages →
+Durable Objects → `RoutingBudget` → Data Studio** with the name `routing-budget`
+and run `SELECT * FROM spend ORDER BY day DESC`. VERIFIED that Data Studio
+exists for SQLite-backed objects; whether it is on the free plan is UNKNOWN until
+someone opens it. Each query there is billed as a request, and it is logged in
+the audit log.
 
 ## The burst limit
 
 **Built 2026-09-05, live in production since 2026-09-06** (Version ID
 `09e248ee`, from merged `main` `430d48c`). Cloudflare's rate-limiting binding,
 in `src/index.js`
-**before** the per-day counter. It exists because the ceiling provably cannot see
-a burst: KV's read cache is tens of seconds wide (measured 2026-09-04), so one
-client could spend the whole 2000 inside a single window while the stored number
-still read low.
+**before** the per-day counter. It was built because the KV counter could not see
+a burst: KV's read cache is tens of seconds wide (measured 2026-09-04). The
+counter is exact since ADR 2026-10-03, and the burst limit still matters: an
+exact counter lets one address spend the whole 2000 in a minute just as
+faithfully, and leaves every other user refused until UTC midnight.
 
 🔴 **The two are complements, and neither is a substitute for the other.**
 Cloudflare's maximum `period` is **60 seconds**, so a burst limit cannot express
@@ -285,7 +297,7 @@ the other exists.
 |---|---|
 | the number | `simple = { limit = 60, period = 60 }` on the `[[ratelimits]]` binding in `wrangler.toml`. **Never a literal in the source** — the binding exposes `.limit()` and nothing else, so there is no number in `src/index.js` to drift from the deployed one. |
 | the bucket | `CF-Connecting-IP`. A request without one shares a single `no-connecting-ip` bucket rather than skipping the limit. |
-| over the limit | **429**, `Retry-After` = `BURST_RETRY_AFTER_S`, empty body, KV never read, upstream never called, **not counted against the day**. |
+| over the limit | **429**, `Retry-After` = `BURST_RETRY_AFTER_S`, empty body, counter never asked, upstream never called, **not counted against the day**. |
 | cannot limit | **503** — fail closed, exactly as the ceiling does. |
 
 **Why 60 and not less.** Kamome's own legitimate burst is **~29 requests/minute**
@@ -459,20 +471,32 @@ Not done, and not recommended without a reason.
 cd Deploy/worker && npm test
 ```
 
-Two suites, **30 + 13 assertions**, no Cloudflare, no key, no network:
-`test/worker.test.mjs` drives the handler against a stubbed upstream, stubbed KV
+Two suites, **37 + 13 tests**, no Cloudflare, no key, no network:
+`test/worker.test.mjs` drives the handler against a stubbed upstream, the real
+`RoutingBudget` class over a real in-memory SQLite (`node:sqlite`)
 and a stubbed rate limiter; `test/deploy-config.test.mjs` is the no-log gate
-above. Needs Node 22+ to match `package.json`'s `engines` (run on v24.3.0); the
-globals it actually uses — `fetch`/`Request`/`Response` — have been there since
-18. It is **not** part of `xcodebuild test`: this repository's CI is the Xcode
+above. Needs Node 22.13+ to match `package.json`'s `engines` (run on v24.3.0):
+that is the first 22.x where `node:sqlite` loads without a flag. It is **not** part of `xcodebuild test`: this repository's CI is the Xcode
 suite, and a deploy artifact should not invent a second one. `npm run deploy`
 runs it, so a deploy cannot skip it by forgetting.
 
 ## Capacity
 
-Cloudflare's free tier is 100,000 requests a day. Kamome spends one request per
-drive leg — 9 on Miyakojima, 17 on New Zealand, 58 on Iceland — so the binding
-limit is Geoapify's 3,000 credits a day underneath, not this.
+Kamome spends one request per drive leg — 9 on Miyakojima, 17 on New Zealand, 58
+on Iceland. Per routing request, on Cloudflare's free plan (VERIFIED 2026-10-03):
+
+| what | per routing request | free plan, per day |
+|---|---|---|
+| Worker requests | 1 | 100,000 |
+| Durable Object requests | 1 | 100,000 |
+| Durable Object rows written | 1 (plus one delete a day) | 100,000 |
+| Geoapify credits | 1 | 3,000 |
+
+So `DAILY_REQUEST_CEILING` 2000 binds first, and Geoapify's 3,000 sits under it.
+⚠️ **Read every per-day limit on the path, not only the request count.** This
+table used to list Worker requests and Geoapify credits only, and that is how a
+1,000-writes-a-day KV limit capped the Worker at half its ceiling without anyone
+seeing it (#204).
 
 ## Not built, and deliberately
 
