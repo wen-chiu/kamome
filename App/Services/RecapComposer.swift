@@ -169,7 +169,8 @@ enum RecapComposer {
                 photos: photos,
                 dwellS: photos.isEmpty ? stopHoldS : deck.dwellS(photoCount: photos.count),
                 // "" is stored for "asked, none came back" (`StopNamer`).
-                locality: stop.locality.flatMap { $0.isEmpty ? nil : $0 }
+                locality: stop.locality.flatMap { $0.isEmpty ? nil : $0 },
+                subLocality: stop.subLocality.flatMap { $0.isEmpty ? nil : $0 }
             )
         }
 
