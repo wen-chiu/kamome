@@ -30,20 +30,53 @@ extension RecapOverlayRenderer {
         for index in Self.uncrowded(placed.map { $0.rect.insetBy(dx: -clearance, dy: -clearance) })
         where frame.contains(placed[index].point) {
             // A town near the edge keeps its whole name: the box slides inside
-            // the frame, and gives way if that puts it on a name already drawn.
-            let rect = Self.held(placed[index].rect, inside: frame.insetBy(dx: clearance, dy: clearance))
+            // the frame — clear of the HUD above and the map credit below — and
+            // gives way if that puts it on a name already drawn.
+            let rect = Self.held(placed[index].rect, inside: nameBounds(in: surface))
             guard !drawn.contains(where: { $0.intersects(rect) }) else { continue }
             drawn.append(rect.insetBy(dx: -clearance, dy: -clearance))
+            // The dot stays: the town is still there. Only its name yields.
             drawPin(at: placed[index].point, radius: token.dotRadiusPx * scale, in: surface)
+            context.saveGState()
+            defer { context.restoreGState() }
+            context.setAlpha(CGFloat(opacity * names[index].opacity))
             for (row, text) in placed[index].lines.enumerated() {
                 let baselineY = rect.maxY - token.fontPx * scale
                     - CGFloat(row) * token.fontPx * token.lineHeightEm * scale
-                drawShadowedText(
-                    text, anchor: CGPoint(x: rect.midX, y: baselineY), fontPx: token.fontPx,
-                    tracking: 0, color: style.labelTextColor, in: surface
-                )
+                drawHaloedText(text, anchor: CGPoint(x: rect.midX, y: baselineY), in: surface)
             }
         }
+    }
+
+    /// Where a name may sit: the frame, less the room the names keep around
+    /// themselves, the HUD's row at the top and the map credit's at the bottom.
+    private func nameBounds(in surface: RenderSurface) -> CGRect {
+        let scale = surface.scale, clearance = style.placeName.clearancePx * scale
+        let hud = (style.hudMarginPx + style.hudFontPx + 2 * style.hudPillPaddingYPx) * scale
+        let credit = (style.mapCredit.marginPx + style.mapCredit.fontPx + 2 * style.mapCredit.pillPaddingYPx) * scale
+        return CGRect(
+            x: clearance, y: credit + clearance, width: CGFloat(surface.widthPx) - 2 * clearance,
+            height: CGFloat(surface.heightPx) - hud - credit - 2 * clearance
+        )
+    }
+
+    /// Centred type in the name's ink over a halo: the glyphs stroked wide in
+    /// the halo colour, then filled. `anchor` is (centre x, baseline y).
+    private func drawHaloedText(_ text: String, anchor: CGPoint, in surface: RenderSurface) {
+        let token = style.placeName, context = surface.context
+        context.saveGState()
+        context.setTextDrawingMode(.stroke)
+        context.setLineWidth(2 * token.haloPx * surface.scale)
+        context.setLineJoin(.round)
+        context.setStrokeColor(token.haloColor)
+        drawCenteredText(
+            text, centerX: anchor.x, baselineY: anchor.y, fontPx: token.fontPx, color: token.haloColor, in: surface
+        )
+        context.setTextDrawingMode(.fill)
+        drawCenteredText(
+            text, centerX: anchor.x, baselineY: anchor.y, fontPx: token.fontPx, color: token.textColor, in: surface
+        )
+        context.restoreGState()
     }
 
     /// `rect` moved the least that puts it inside `bounds`; unmoved when it is

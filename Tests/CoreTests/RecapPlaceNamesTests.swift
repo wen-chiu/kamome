@@ -6,21 +6,22 @@ import XCTest
 /// **The film names the trip's own towns on the map** (Chiu 2026-10-02, ADR
 /// file 2026-10-02): which towns, when, and which name gives way when two meet.
 final class RecapPlaceNamesTests: LinearTimelineTestCase {
-    private func stop(_ lat: Double, town: String?, dwellS: Double = 6) -> RecapTrip.Stop {
+    private func stop(_ lat: Double, town: String?, part: String? = nil, dwellS: Double = 6) -> RecapTrip.Stop {
         RecapTrip.Stop(
             coordinate: RecapCoordinate(lat: lat, lon: 115.75), name: "Stop", dayLabel: "Day 1",
-            dwellS: dwellS, locality: town
+            dwellS: dwellS, locality: town, subLocality: part
         )
     }
 
-    /// `sampleTrip` with a town on every stop: two stops in A, one in B.
+    /// `sampleTrip` with a town on every stop: two stops in A, one in B. The
+    /// last stop has no name of its own, so it is called by its town — "B".
     private func tripWithTowns(_ config: TrackingConfig.Export) -> RecapTrip {
         let sample = sampleTrip(photoCounts: [1, 1, 1], config: config)
         let towns = ["A", "A", "B"]
-        let stops = zip(sample.stops, towns).map { stop, town in
+        let stops = zip(sample.stops, towns).enumerated().map { index, pair in
             RecapTrip.Stop(
-                coordinate: stop.coordinate, name: stop.name, dayLabel: stop.dayLabel, photos: stop.photos,
-                dwellS: stop.dwellS, locality: town
+                coordinate: pair.0.coordinate, name: index == 2 ? "B" : pair.0.name, dayLabel: pair.0.dayLabel,
+                photos: pair.0.photos, dwellS: pair.0.dwellS, locality: pair.1
             )
         }
         return RecapTrip(
@@ -34,16 +35,64 @@ final class RecapPlaceNamesTests: LinearTimelineTestCase {
         return nil
     }
 
-    /// One name per town, at the middle of its stops, and only towns the film's
-    /// stops are in: a stop the geocoder gave no town names nothing.
-    func testEachTownIsNamedOnceAtTheMiddleOfItsStops() {
+    /// One name per town, on the stop nearest the middle of its stops, and only
+    /// towns the film's stops are in: a stop the geocoder gave no town names
+    /// nothing. On a stop, not at the middle itself (restated 2026-10-02): the
+    /// middle of two stops on a curved coast is in the sea.
+    func testEachTownIsNamedOnceAtTheStopNearestTheMiddleOfItsStops() {
         let names = LinearTimeline.placeNames(of: [
             stop(-32.0, town: "A"), stop(-32.2, town: nil), stop(-32.4, town: "B"), stop(-32.1, town: "A"),
-            stop(-32.3, town: "")
+            stop(-32.3, town: ""), stop(-32.16, town: "A")
         ])
         XCTAssertEqual(names.map(\.name), ["A", "B"])
-        XCTAssertEqual(names[0].coordinate.lat, -32.05, accuracy: 1e-9)
+        XCTAssertEqual(names[0].coordinate.lat, -32.1, accuracy: 1e-9)
         XCTAssertEqual(names[1].coordinate.lat, -32.4, accuracy: 1e-9)
+    }
+
+    /// **A journey that never leaves one town is named by the town's parts**
+    /// (Chiu 2026-10-02, #183: 「標更細的地名」). Miyakojima is one municipality:
+    /// the film had one name, and its close frames none. A stop the geocoder
+    /// gave no part keeps the town.
+    func testAJourneyInOneTownIsNamedByItsParts() {
+        let names = LinearTimeline.placeNames(of: [
+            stop(24.80, town: "Miyakojima", part: "Hirara"), stop(24.82, town: "Miyakojima", part: "Hirara"),
+            stop(24.815, town: "Miyakojima", part: "Hirara"),
+            stop(24.83, town: "Miyakojima", part: "Irabu"), stop(24.74, town: "Miyakojima", part: nil),
+            stop(24.72, town: nil, part: "Gusukube")
+        ])
+        XCTAssertEqual(Set(names.map(\.name)), ["Hirara", "Irabu", "Miyakojima", "Gusukube"])
+        XCTAssertEqual(names.first { $0.name == "Hirara" }?.coordinate.lat ?? 0, 24.815, accuracy: 1e-9)
+    }
+
+    /// One part is no finer than the town, and less known: the town stays.
+    func testOnePartIsNotANameOfItsOwn() {
+        let names = LinearTimeline.placeNames(of: [
+            stop(24.80, town: "Miyakojima", part: "Hirara"), stop(24.82, town: "Miyakojima", part: "Hirara")
+        ])
+        XCTAssertEqual(names.map(\.name), ["Miyakojima"])
+    }
+
+    /// A journey between towns is named by its towns, whatever parts they have:
+    /// its frame is sized to the drives between them.
+    func testAJourneyBetweenTownsKeepsItsTowns() {
+        let names = LinearTimeline.placeNames(of: [
+            stop(25.03, town: "Taipei", part: "Xinyi"), stop(25.05, town: "Taipei", part: "Zhongshan"),
+            stop(24.75, town: "Yilan", part: "Jiaoxi")
+        ])
+        XCTAssertEqual(Set(names.map(\.name)), ["Taipei", "Yilan"])
+    }
+
+    /// **Each side of a flight is its own journey.** The airport the trip left
+    /// from is in another town, and the island is still one town.
+    func testTheTownLeftByAirDoesNotCountAgainstTheIsland() {
+        let stops = [
+            stop(25.08, town: "Dayuan", part: "Puxin"),
+            stop(24.80, town: "Miyakojima", part: "Hirara"), stop(24.83, town: "Miyakojima", part: "Irabu")
+        ]
+        XCTAssertEqual(Set(LinearTimeline.placeNames(of: stops, journeys: [0, 1, 1]).map(\.name)),
+                       ["Dayuan", "Hirara", "Irabu"])
+        XCTAssertEqual(Set(LinearTimeline.placeNames(of: stops).map(\.name)), ["Dayuan", "Miyakojima"],
+                       "as one journey these are two towns")
     }
 
     /// Where two names would overlap, the town the film stays in longest is the
@@ -72,6 +121,26 @@ final class RecapPlaceNamesTests: LinearTimelineTestCase {
         guard case .placeNames = middle[1] else { return XCTFail("not directly over the trail: \(middle)") }
         let reveal = line.overlayContents(atTime: line.durationS - config.endCardS - 0.1)
         XCTAssertNotNil(towns(in: reveal), "the revealed route lost its names")
+    }
+
+    /// **One word is not set twice in one frame.** A stop with no landmark name
+    /// is called by its town; while the film presents it, the town's own name
+    /// yields to the stop's, and comes back on the road. The other towns keep
+    /// theirs throughout.
+    func testATownsNameYieldsWhileAStopIsPresentedUnderIt() throws {
+        let config = exportConfig()
+        let line = try fixedTimeline(tripWithTowns(config), config)
+        let hold = try XCTUnwrap(line.holds.first { $0.stopIndex == 2 })
+        func opacity(of name: String, at time: Double) throws -> Double {
+            try XCTUnwrap(try XCTUnwrap(towns(in: line.overlayContents(atTime: time))).names.first { $0.name == name })
+                .opacity
+        }
+        let presented = (hold.startS + hold.endS) / 2
+        XCTAssertLessThan(try opacity(of: "B", at: presented), 0.01, "the stop and its town are both set as B")
+        XCTAssertEqual(try opacity(of: "A", at: presented), 1, accuracy: 1e-9)
+        let onTheRoad = hold.startS - 0.5
+        XCTAssertNil(line.presentedStopName(atTime: onTheRoad), "t=\(onTheRoad) is not on the road in this fixture")
+        XCTAssertEqual(try opacity(of: "B", at: onTheRoad), 1, accuracy: 1e-9)
     }
 
     /// A trip whose stops have no towns draws no names — the film it was.

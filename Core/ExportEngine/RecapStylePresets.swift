@@ -152,6 +152,11 @@ public extension RecapStyle {
             // is exactly the collision the trail was moved out of. Dark is
             // deliberately not touched here, so the change is one appearance wide.
             style.labelPinColor = trailOnLight
+            // **The town names turn to ink on a light base** (2026-10-02, from
+            // renders of both shipped maps): the HUD pill's navy, on a white halo
+            // — the pair a light map sets its own names in.
+            style.placeName.textColor = CGColor(srgbRed: 0.031, green: 0.047, blue: 0.071, alpha: 1)
+            style.placeName.haloColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
             // ⏳ **The fallback marker is no longer set per appearance, and that
             // is a question for Chiu rather than a decision taken here**
             // (2026-08-29).

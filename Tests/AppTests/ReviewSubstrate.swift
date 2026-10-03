@@ -103,6 +103,9 @@ enum ReviewSubstrate {
         /// film names the trip's own towns itself. **What ships**, so this is the
         /// case a desk render of the shipped dark map asks for.
         case libertyForkR6 = "liberty-fork-r6"
+        /// **The shipped light map**: the bundled frozen style itself, which no
+        /// Swift fork builds (the light palette is the freeze script's).
+        case shippedLight = "shipped-light"
 
         /// OpenFreeMap serves the style, its glyphs and its sprite from absolute
         /// URLs inside the style document, so for a stock style this one URL is
@@ -110,6 +113,9 @@ enum ReviewSubstrate {
         /// resolves those same absolute URLs identically.
         func resolvedStyleURL() throws -> URL {
             if self == .libertyForkR6 { return try LibertyFork.resolvedRound6StyleURL() }
+            if self == .shippedLight {
+                return try RecapMapStyle.resolvedNetworkStyleURL(styleResource: "openfreemap-liberty-light")
+            }
             if isRound5 { return try LibertyFork.resolvedRound5StyleURL(peaks: round5Band) }
             if let round4 = round4Variant {
                 return try LibertyFork.resolvedRound4StyleURL(hillshade: round4.hillshade, peaks: round4.peaks)
@@ -163,14 +169,14 @@ enum ReviewSubstrate {
         /// Kamome's own styles, which a run that names nothing does not draw.
         var isFork: Bool {
             self == .openFreeMapLibertyFork || round3Coast != nil || round4Variant != nil || isRound5
-                || self == .libertyForkR6
+                || self == .libertyForkR6 || self == .shippedLight
         }
 
         /// The filename label. Round 3's files are `liberty-fork-r3-coast{A,B,C}` as
         /// its brief names them; the earlier rounds keep the `openfreemap-` prefix
         /// their files already carry on disk.
         var fileLabel: String {
-            round3Coast == nil && round4Variant == nil && !isRound5 && self != .libertyForkR6
+            round3Coast == nil && round4Variant == nil && !isRound5 && self != .libertyForkR6 && self != .shippedLight
                 ? "openfreemap-\(rawValue)" : rawValue
         }
 
@@ -189,7 +195,7 @@ enum ReviewSubstrate {
         /// light and dark one at a time and ADR 2026-08-27 is untouched.
         var appearance: RecapAppearance {
             switch self {
-            case .openFreeMapPositron, .openFreeMapLiberty: return .light
+            case .openFreeMapPositron, .openFreeMapLiberty, .shippedLight: return .light
             case .openFreeMapFiord, .openFreeMapLibertyFork,
                  .libertyForkR3CoastA, .libertyForkR3CoastB, .libertyForkR3CoastC,
                  .libertyForkR4, .libertyForkR4NoHillshade, .libertyForkR4PeaksByElevation,

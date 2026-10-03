@@ -7,16 +7,21 @@ import Foundation
 /// thing the film draws arrives here.
 ///
 /// One town of the trip, to be named on the map: the `locality` of one or more
-/// of the film's stops, at the middle of those stops. A name the user's own
+/// of the film's stops, at the one nearest the middle of them. A name the user's own
 /// stops carry already — nothing here is looked up, and nothing is named that
 /// the trip did not stop in.
 public struct RecapPlaceName: Equatable {
     public let name: String
     public let coordinate: RecapCoordinate
+    /// This name's own share of the overlay's opacity. Below 1 while a stop
+    /// presents itself under the same name: one word is not set twice in one
+    /// frame, and the stop's own type is the larger.
+    public var opacity: Double
 
-    public init(name: String, coordinate: RecapCoordinate) {
+    public init(name: String, coordinate: RecapCoordinate, opacity: Double = 1) {
         self.name = name
         self.coordinate = coordinate
+        self.opacity = opacity
     }
 }
 

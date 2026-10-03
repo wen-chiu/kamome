@@ -118,7 +118,7 @@ public enum RecapTypeTwoFilm {
             detail: departure.detail,
             photos: photos,
             dwellS: photos.isEmpty ? config.stopHoldS : deck.dwellS(photoCount: photos.count),
-            locality: departure.locality
+            locality: departure.locality, subLocality: departure.subLocality
         )] + stops.dropFirst()
     }
 

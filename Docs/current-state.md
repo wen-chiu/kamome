@@ -7,9 +7,9 @@ way — this file rotted twice by growing its own reasoning.
 ## Staleness
 
 Last synced: 2026-10-02 against ADR **2026-10-02-the-film-names-the-trips-own-towns**
-(the film names its stops' towns; the map names none), with
-2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of the frame
-of the widest drive). The same day:
+(the film names its stops' towns, or one town's parts; the map none), with
+2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
+drive). The same day:
 2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
 height to the film: Export again moves into ⋯, a no-road leg is one caption
 line);
