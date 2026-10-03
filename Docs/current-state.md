@@ -6,8 +6,9 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-03 against ADR **2026-10-03-the-routing-ceiling-counts-in-one-durable-object**.
-Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
+Last synced: 2026-10-03 against ADR **2026-10-03-the-routing-ceiling-counts-in-one-durable-object**;
+also 2026-10-03-the-export-wait-flies-a-gull (while a film renders, the brand
+gull flies the bar's progress). Before them: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:
 2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
@@ -19,8 +20,7 @@ existing App Store Connect record; the id is no longer a placeholder);
 2026-10-02-an-unnamed-trip-is-stored-with-no-title;
 2026-10-02-deleting-a-stop-asks-first. Before
 them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
-(a beach waypoint the drive profile refuses is moved to where a walk reaches
-it, at most 650 m, and drive is asked again). The same day:
+(a refused beach waypoint moves ≤ 650 m to where a walk reaches it). The same day:
 2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
 `StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
 waits at one `GeocodeGate`); 2026-10-01-a-stops-time-is-the-clock-where-it-happened
@@ -33,8 +33,7 @@ read-only itinerary beside 旅程). Before them:
 2026-09-30-export-time-left (the export sheet says "about N minutes left" from
 its own station pace, after a 60 s warm-up);
 2026-09-29-the-opening-zooms-and-the-route-holds
-(the opening zooms out of the title card instead of cutting, reopening
-2026-08-31; the revealed route holds before the end card);
+(the opening zooms out of the title card; the route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
 its own towns, and travel is earned by windows); 2026-09-28-sample-trip;
 2026-09-28, governance v2, the ledger's last entry.

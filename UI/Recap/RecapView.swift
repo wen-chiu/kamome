@@ -106,6 +106,7 @@ struct RecapView: View {
                     }
                 }
             }
+            if model.isRendering { ExportGullSection(progress: model.drawingFraction) }
 
             if model.photoShortfall != nil {
                 Section { RecapPhotoShortfallNotice(model: model) }
