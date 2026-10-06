@@ -52,6 +52,8 @@ final class JourneyDiscoveryModel {
     /// as a card's, asked at the priority of a new trip's flag (#159).
     private let tripGeocoder: PlaceGeocoding
     let nameCache: JourneyNameCache
+    /// A found journey's places, named while its preview is open (Data 3).
+    let previewNamer: PreviewStopNamer
     private let dismissed: DismissedJourneys
     private let now: () -> Date
     private let importService: ImportService
@@ -84,6 +86,7 @@ final class JourneyDiscoveryModel {
         source: ImportPhotoProviding,
         photoAccess: PhotoAccessProviding,
         geocoder: PlaceGeocoding? = nil,
+        stopGeocoder: StopGeocoding? = nil,
         defaults: UserDefaults = .standard,
         homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode,
         matchesTripsByPhotographs: Bool = true,
@@ -97,37 +100,13 @@ final class JourneyDiscoveryModel {
         self.geocoder = geocoder ?? CLPlaceGeocoder(priority: .card, minIntervalS: config.geocode.minIntervalS)
         tripGeocoder = geocoder ?? CLPlaceGeocoder(priority: .tripFlag, minIntervalS: config.geocode.minIntervalS)
         nameCache = JourneyNameCache(defaults: defaults)
+        previewNamer = stopGeocoder.map(PreviewStopNamer.init(geocoder:))
+            ?? PreviewStopNamer(config: config.geocode)
         dismissed = DismissedJourneys(defaults: defaults)
         self.homeCountryCode = homeCountryCode
         self.matchesTripsByPhotographs = matchesTripsByPhotographs
         self.now = now
         importService = ImportService(repository: repository, config: config)
-    }
-
-    // MARK: - What the screen draws
-
-    var sections: [JourneyYearSection] {
-        let grouped = Dictionary(grouping: journeys, by: \.year)
-        return grouped.keys.sorted(by: >).map { year in
-            JourneyYearSection(year: year, journeys: grouped[year] ?? [])
-        }
-    }
-
-    /// Which visit to its country each journey was, by id (`JourneyChronicle`).
-    var visits: [String: JourneyChronicle.Visit] {
-        JourneyChronicle.visits(journeys, homeCountryCode: homeCountryCode)
-    }
-
-    /// Days at home before each journey began, keyed by that (newer) journey's
-    /// id — the row sits under it on screen, between it and the one before it.
-    /// Empty when `discovery.show_home_gaps` is off.
-    var homeGaps: [String: Int] {
-        guard config.discovery.showHomeGaps else { return [:] }
-        var gaps: [String: Int] = [:]
-        for (newer, older) in zip(journeys, journeys.dropFirst()) {
-            if let days = JourneyChronicle.homeDays(after: older, before: newer) { gaps[newer.id] = days }
-        }
-        return gaps
     }
 
     var isScanning: Bool { phase == .scanning }
@@ -260,6 +239,11 @@ final class JourneyDiscoveryModel {
                 title: nil, photos: journey.photos, discoveryKey: journey.key, plan: plan
             )
             nameCache.setSinglePlace(summary.isSinglePlace, for: journey.key)
+            // What the preview already learnt about each stop, so S3 does not
+            // ask Apple a second time (Data 3: one lookup per stop, ever).
+            if let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) {
+                previewNamer.write(to: detail.stops, repository: repository)
+            }
             // Roads arrive when they arrive, exactly as after the import sheet
             // (2026-08-15); the trip is viewable now.
             RouteMatchCoordinator.shared.start(

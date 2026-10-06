@@ -9,6 +9,35 @@ import Observation
 /// `JourneyDiscoveryModel` (arch review 2026-09-26, round 2) when `UI/` came
 /// under SwiftLint: the class body was 281 lines against 250. Moved as written.
 extension JourneyDiscoveryModel {
+    // MARK: - What the screen draws
+    // Moved from the class body when the preview namer took it past 250 lines.
+
+    var sections: [JourneyYearSection] {
+        let grouped = Dictionary(grouping: journeys, by: \.year)
+        return grouped.keys.sorted(by: >).map { year in
+            JourneyYearSection(year: year, journeys: grouped[year] ?? [])
+        }
+    }
+
+    /// Which visit to its country each journey was, by id (`JourneyChronicle`).
+    var visits: [String: JourneyChronicle.Visit] {
+        JourneyChronicle.visits(journeys, homeCountryCode: homeCountryCode)
+    }
+
+    /// Days at home before each journey began, keyed by that (newer) journey's
+    /// id — the row sits under it on screen, between it and the one before it.
+    /// Empty when `discovery.show_home_gaps` is off.
+    var homeGaps: [String: Int] {
+        guard config.discovery.showHomeGaps else { return [:] }
+        var gaps: [String: Int] = [:]
+        for (newer, older) in zip(journeys, journeys.dropFirst()) {
+            if let days = JourneyChronicle.homeDays(after: older, before: newer) { gaps[newer.id] = days }
+        }
+        return gaps
+    }
+
+    // MARK: - Cards
+
     func summary(trip: TripRecord, facts: TripRepository.JourneyCardFacts) -> JourneySummary {
         let id = trip.discoveryKey ?? trip.id
         let stats = TripStats.from(jsonString: trip.statsJson)
@@ -61,13 +90,14 @@ extension JourneyDiscoveryModel {
     }
 
     /// What the diary draws for a card (Footprints ADR draft, Data 1): a
-    /// stored trip's own stops, edits included, else the found journey's plan.
-    /// nil for a card this model no longer holds.
+    /// stored trip's own stops, edits included, else the found journey's plan
+    /// with whatever its preview has named so far. nil for a card this model
+    /// no longer holds.
     func itinerary(for summary: JourneySummary) -> JourneyItinerary? {
         if let tripId = summary.tripId {
             return Stored.read("detail") { try repository.detail(tripId: tripId) }.map(JourneyItinerary.init(detail:))
         }
-        return plans[summary.id].map { JourneyItinerary(plan: $0, config: config) }
+        return plans[summary.id].map { previewNamer.named(JourneyItinerary(plan: $0, config: config)) }
     }
 
     /// What the scan cuts journeys by. Moved here from the class body when
