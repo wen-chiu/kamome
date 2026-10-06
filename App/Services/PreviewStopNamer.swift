@@ -1,5 +1,6 @@
 import Foundation
 import KamomeConfig
+import KamomeImportKit
 import KamomePersistence
 
 /// **Names a found journey's places while its preview is open** (Footprints
@@ -38,6 +39,18 @@ final class PreviewStopNamer {
     /// What the lookup answered for the stop here, if this session asked.
     func answer(lat: Double, lon: Double) -> StopPlace? {
         answers[Key(lat: lat, lon: lon)]
+    }
+
+    /// The clock a found journey's days and times are counted by: each stop's
+    /// own zone, from the answers this session holds, else the phone's. The
+    /// stops the plan becomes get those zones at 「新增旅程」 (`write`), so a
+    /// preview and S3 say the same hour and the same day.
+    func clock(for plan: ImportedTripPlan) -> TripClock {
+        TripClock(zones: plan.stops.compactMap { stop in
+            guard let identifier = answer(lat: stop.lat, lon: stop.lon)?.timeZone,
+                  let zone = TimeZone(identifier: identifier) else { return nil }
+            return TripClock.StopZone(arrivedAt: stop.arrivedAt, departedAt: stop.departedAt, zone: zone)
+        })
     }
 
     /// The itinerary with every answered place named.

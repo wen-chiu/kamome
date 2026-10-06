@@ -80,6 +80,15 @@ final class PreviewStopNamerTests: XCTestCase {
             stops.allSatisfy { !StopNamer.needsName($0) && !StopNamer.needsLocality($0) },
             "S3's namer has nothing left to ask Apple"
         )
+
+        // The preview counts in the zones its lookups found, as S3 will: the
+        // same hour and the same day. Found on the 2026-10-06 render, where the
+        // preview said 6:00 PM (the phone's zone) and S3 said 7:00 PM (Tokyo).
+        let named = namer.named(JourneyItinerary(plan: plan, config: config, clock: namer.clock(for: plan)))
+        let stored = JourneyItinerary(detail: try XCTUnwrap(repository.detail(tripId: tripId)))
+        XCTAssertEqual(named.places.map { named.arrivalTime(of: $0) }, stored.places.map { stored.arrivalTime(of: $0) })
+        XCTAssertEqual(named.days.map(\.index), stored.days.map(\.index))
+        XCTAssertEqual(named.places.map(\.name), stored.places.map(\.name))
     }
 
     func testLeavingThePreviewStopsAsking() async throws {

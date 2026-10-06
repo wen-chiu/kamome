@@ -97,7 +97,8 @@ extension JourneyDiscoveryModel {
         if let tripId = summary.tripId {
             return Stored.read("detail") { try repository.detail(tripId: tripId) }.map(JourneyItinerary.init(detail:))
         }
-        return plans[summary.id].map { previewNamer.named(JourneyItinerary(plan: $0, config: config)) }
+        guard let plan = plans[summary.id] else { return nil }
+        return previewNamer.named(JourneyItinerary(plan: plan, config: config, clock: previewNamer.clock(for: plan)))
     }
 
     /// What the scan cuts journeys by. Moved here from the class body when
