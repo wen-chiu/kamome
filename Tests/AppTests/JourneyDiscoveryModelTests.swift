@@ -8,15 +8,15 @@ import XCTest
 /// out, a trip only when a card is opened, and the same trip on the next scan.
 @MainActor
 final class JourneyDiscoveryModelTests: XCTestCase {
-    private typealias StubLibrary = DiscoveryStubLibrary
-    private typealias StubGeocoder = DiscoveryStubGeocoder
+    typealias StubLibrary = DiscoveryStubLibrary
+    typealias StubGeocoder = DiscoveryStubGeocoder
 
-    private let week = 7.0 * 86_400
+    let week = 7.0 * 86_400
     /// A fixed "now" far enough past the photographs that they are inside the
     /// lookback window.
-    private let now = Date(timeIntervalSince1970: 60 * 7 * 86_400)
+    let now = Date(timeIntervalSince1970: 60 * 7 * 86_400)
 
-    private func photo(_ id: String, _ ts: Double, _ lat: Double, _ lon: Double) -> ImportPhoto {
+    func photo(_ id: String, _ ts: Double, _ lat: Double, _ lon: Double) -> ImportPhoto {
         ImportPhoto(assetId: id, timestamp: ts, lat: lat, lon: lon)
     }
 
@@ -24,11 +24,11 @@ final class JourneyDiscoveryModelTests: XCTestCase {
     /// the trips below depart. Never *at* the mark: a photograph at home ends a
     /// journey (R1, 2026-09-25), and one sharing a trip's first second would be
     /// ordered by asset id — the alphabet, not the fixture, would decide.
-    private func homeYear() -> [ImportPhoto] {
+    func homeYear() -> [ImportPhoto] {
         (0..<52).map { photo("home-\($0)", Double($0) * week - 3 * 3_600, 25.04, 121.56) }
     }
 
-    private func library() -> [ImportPhoto] {
+    func library() -> [ImportPhoto] {
         var photos = homeYear()
         // Japan: Tokyo then Kyoto, twelve and six photographs.
         photos += (0..<12).map { photo("jp-\($0)", 10 * week + Double($0) * 1_800, 35.68, 139.65) }
@@ -38,7 +38,7 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         return photos
     }
 
-    private struct Harness {
+    struct Harness {
         let model: JourneyDiscoveryModel
         let library: StubLibrary
         let geocoder: StubGeocoder
@@ -46,10 +46,16 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         let defaults: UserDefaults
     }
 
-    private func makeHarness() throws -> Harness {
-        let suite = "kamome.test.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+    /// - Parameter defaults: an earlier harness's store, to stand for a relaunch.
+    func makeHarness(defaults existing: UserDefaults? = nil) throws -> Harness {
+        let defaults: UserDefaults
+        if let existing {
+            defaults = existing
+        } else {
+            let suite = "kamome.test.\(UUID().uuidString)"
+            defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+        }
         let library = StubLibrary()
         library.photos = self.library()
         let geocoder = StubGeocoder()
@@ -68,7 +74,9 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         return Harness(model: model, library: library, geocoder: geocoder, repository: repository, defaults: defaults)
     }
 
-    private func waitUntil(_ description: String, _ condition: () -> Bool) async {
+    /// `@escaping` because the hiding tests in another file call it: not
+    /// private, the module-emit pass rejects a non-escaping `condition` here.
+    func waitUntil(_ description: String, _ condition: @escaping () -> Bool) async {
         for _ in 0..<200 where !condition() {
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(10))
@@ -205,18 +213,6 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         XCTAssertEqual(harness.model.journeys.count, 2)
         let reopened = await harness.model.open(stored)
         XCTAssertEqual(reopened, tripId)
-    }
-
-    func testHidingAJourneyKeepsItHiddenAcrossScans() async throws {
-        let harness = try makeHarness()
-        await harness.model.refresh()
-        let whitehorse = try XCTUnwrap(harness.model.journeys.first)
-
-        harness.model.hide(whitehorse)
-        XCTAssertEqual(harness.model.journeys.count, 1)
-        await harness.model.refresh()
-        XCTAssertEqual(harness.model.journeys.count, 1, "hidden stays hidden")
-        XCTAssertFalse(harness.model.journeys.contains { $0.id == whitehorse.id })
     }
 
     func testDeletingAStoredJourneyRemovesTheTrip() async throws {

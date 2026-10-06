@@ -187,7 +187,8 @@ enum TripJourneyNaming {
     }
 }
 
-/// Discovered journeys the user swiped away. Keys only.
+/// Discovered journeys the user hid. Keys only. Shown again from the hidden
+/// row at the foot of the Discovery list (#167).
 struct DismissedJourneys {
     private let defaults: UserDefaults
     private static let key = "kamome.dismissedJourneys"
@@ -202,5 +203,9 @@ struct DismissedJourneys {
 
     func dismiss(_ journeyKey: String) {
         defaults.set(Array(keys.union([journeyKey])).sorted(), forKey: Self.key)
+    }
+
+    func restore(_ journeyKey: String) {
+        defaults.set(Array(keys.subtracting([journeyKey])).sorted(), forKey: Self.key)
     }
 }

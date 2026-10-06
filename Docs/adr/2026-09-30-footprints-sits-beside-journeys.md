@@ -127,9 +127,17 @@ journey is drawn as unsaved on the rail.
 - a stored trip in Footprints has no delete;
 - the diary has no export path.
 
-**Owed before this ships** (analysis 2026-09-30, filed 2026-10-01):
-1. #167 — hidden journeys cannot be restored.
-2. #165, the part left open — the country before any lookup answers.
+**Owed before this ships** (analysis 2026-09-30, filed 2026-10-01), both
+answered by Chiu on 2026-10-03:
+1. #167, hidden journeys cannot be restored: 「列表最下面一行『已隱藏的旅程』」.
+   A row at the foot of the list opens in place; each hidden journey in it
+   has 「重新顯示 / Show again」. A hidden journey is never looked up. In
+   Footprints the row sits at the foot of the Footprints list. Copy is draft.
+2. #165, the part left open (the country before any lookup answers): 「先不做」.
+   No longer owed. Until Apple's lookup answers, an unnamed trip keeps its
+   date. The engineering option, if it reopens, was an alpha-3 → alpha-2
+   table over the bundled outlines, with the country's name from iOS's own
+   locale data, so nothing new leaves the phone.
 
 Already decided and built in `2026-10-01-an-unnamed-trip-is-called-by-its-place`:
 the list calls a stored trip by its own name (#164), a trip made here is

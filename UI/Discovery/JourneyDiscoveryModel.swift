@@ -27,6 +27,10 @@ final class JourneyDiscoveryModel {
     private(set) var phase: Phase = .idle
     /// Every journey, newest first: stored trips and discovered ones together.
     private(set) var journeys: [JourneySummary] = []
+    /// Found journeys the person hid, newest first, for the row at the foot of
+    /// the list that shows them again (Chiu 2026-10-03, #167). Never named:
+    /// a hidden journey costs no lookup.
+    private(set) var hiddenJourneys: [JourneySummary] = []
     /// Set while a discovered journey is being imported on the way to its screen.
     private(set) var openingId: String?
     /// Why the last `open` produced no trip, until the screen has said so (#166).
@@ -59,7 +63,8 @@ final class JourneyDiscoveryModel {
     /// still matched by its discovery key.
     private let matchesTripsByPhotographs: Bool
 
-    /// Discovered journeys not yet imported, by key.
+    /// Discovered journeys not yet imported, by key — hidden ones included, so
+    /// one shown again can be opened.
     private var detected: [String: DiscoveredJourney] = [:]
     /// Home's country, for the domestic-naming rule. From the device's region,
     /// never from a lookup (`JourneyNaming`).
@@ -191,7 +196,8 @@ final class JourneyDiscoveryModel {
         let hidden = dismissed.keys
         var found: [String: DiscoveredJourney] = [:]
         var fresh: [JourneySummary] = []
-        for journey in detection.journeys where !hidden.contains(journey.key) {
+        var stillHidden: [JourneySummary] = []
+        for journey in detection.journeys {
             if Stored.read("trip(discoveryKey:)", { try repository.trip(discoveryKey: journey.key) }) != nil { continue }
             // A trip made through the import sheet has no discovery key, so it
             // is matched by its photographs instead (Chiu 2026-09-23). It is
@@ -199,9 +205,14 @@ final class JourneyDiscoveryModel {
             // beside it is what made two "Vietnam"s.
             if storedTrip(holding: journey.photos) != nil { continue }
             found[journey.key] = journey
-            fresh.append(summary(journey: journey))
+            if hidden.contains(journey.key) {
+                stillHidden.append(summary(journey: journey))
+            } else {
+                fresh.append(summary(journey: journey))
+            }
         }
         detected = found
+        hiddenJourneys = stillHidden.sorted { $0.startedAt > $1.startedAt }
         let stored = journeys.filter(\.isImported)
         journeys = (stored + fresh).sorted { $0.startedAt > $1.startedAt }
         phase = .ready
@@ -268,12 +279,22 @@ final class JourneyDiscoveryModel {
     }
 
     /// Hides a discovered journey. Remembered, so a rescan does not bring it
-    /// back. Stored trips are deleted through `delete` instead.
+    /// back; it moves to the hidden row, where `unhide` returns it. Stored
+    /// trips are deleted through `delete` instead.
     func hide(_ summary: JourneySummary) {
         guard !summary.isImported else { return }
         dismissed.dismiss(summary.id)
-        detected[summary.id] = nil
         journeys.removeAll { $0.id == summary.id }
+        hiddenJourneys = (hiddenJourneys + [summary]).sorted { $0.startedAt > $1.startedAt }
+    }
+
+    /// Shows a hidden journey again, where it sits by date (#167). A hidden
+    /// journey was never named; it is queued for its one lookup now.
+    func unhide(_ summary: JourneySummary) {
+        guard let index = hiddenJourneys.firstIndex(where: { $0.id == summary.id }) else { return }
+        dismissed.restore(summary.id)
+        journeys = (journeys + [hiddenJourneys.remove(at: index)]).sorted { $0.startedAt > $1.startedAt }
+        startNaming()
     }
 
     /// Deletes a stored trip and its films. The journey may be rediscovered on
@@ -294,17 +315,6 @@ final class JourneyDiscoveryModel {
     }
 
     // MARK: - Naming
-
-    private var detectionConfig: JourneyDetectionConfig {
-        JourneyDetectionConfig(
-            homeCellDeg: config.discovery.homeCellDeg,
-            awayRadiusM: config.discovery.awayRadiusM,
-            journeyGapS: config.discovery.journeyGapS,
-            minPhotos: config.discovery.minPhotos,
-            homecomingMinJumpM: config.discovery.homecomingMinJumpM,
-            countryCoastBufferM: config.discovery.countryCoastBufferM
-        )
-    }
 
     /// Looks up the place of a journey that has just become a trip, ahead of
     /// the cards, and finishes even if this screen has gone: the trip is

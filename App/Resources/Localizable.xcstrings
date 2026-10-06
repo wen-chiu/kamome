@@ -1,6 +1,40 @@
 {
   "sourceLanguage": "zh-Hant",
   "strings": {
+    "discovery_hidden_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden journeys"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已隱藏的旅程"
+          }
+        }
+      }
+    },
+    "journey_unhide": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show again"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新顯示"
+          }
+        }
+      }
+    },
     "recap_length_header": {
       "extractionState": "manual",
       "localizations": {
