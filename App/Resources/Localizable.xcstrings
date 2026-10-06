@@ -3306,13 +3306,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$d leg has no road"
+                  "value": "Couldn’t find a route for %1$d leg"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%1$d legs have no road"
+                  "value": "Couldn’t find a route for %1$d legs"
                 }
               }
             }
@@ -3321,7 +3321,36 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "有 %1$d 段本來就沒有路"
+            "value": "有 %1$d 段找不到路線"
+          }
+        }
+      }
+    },
+    "recap_routing_no_road_caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Couldn’t find a route for %1$d leg, so it’s drawn dashed."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Couldn’t find a route for %1$d legs, so they’re drawn dashed."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段找不到路線，會畫成虛線。"
           }
         }
       }
@@ -3332,13 +3361,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Drawn dashed — Kamome never draws a road that isn’t there."
+            "value": "Drawn dashed — Kamome never draws a road it couldn’t find."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這幾段畫成虛線 —— 沒有路，就不畫成路。"
+            "value": "這幾段畫成虛線 —— 找不到路線，就不畫成路。"
           }
         }
       }

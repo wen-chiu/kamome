@@ -132,6 +132,22 @@ public extension TrackingConfig {
         /// India is half an hour off) so a clock that jumped a zone never makes a
         /// leg look faster than it was.
         public let crossingPaceClockMarginS: Double
+        /// **A road route nobody could have driven in the time is a crossing**
+        /// (ADR 2026-10-03, Chiu: 「超速寬限就用時速 120 公里」). The routed
+        /// distance over the leg's elapsed time — padded by the same clock
+        /// allowance as `crossingPaceMinKmh` — at or above this is a flight the
+        /// router answered with a road because the land is connected. 120 is the
+        /// motorway limit across most of the world: averaging it over the whole
+        /// gap, stops included, is not a drive.
+        public let crossingRoutePaceMinKmh: Double
+        /// **The longest stretch of road a leg may cover with no photograph along
+        /// it and still be stored as road** (ADR 2026-10-03), measured as driving
+        /// time at `crossingRoutePaceMinKmh`. 36,000 s is ten hours: the most
+        /// driving one day may hold under EU Regulation 561/2006 Art. 6 (nine
+        /// hours, ten twice a week). A route longer than a day's driving with no
+        /// photograph on it is not evidence of a drive, whatever the clocks say,
+        /// so it is stored as `implausible_route` — drawn dashed, never as road.
+        public let routeUnwitnessedMaxDriveS: Double
         /// The routing provider's API key — **deliberately not a JSON key, and
         /// never supplied by the app** (ADR 2026-09-12).
         ///
@@ -162,6 +178,8 @@ public extension TrackingConfig {
             case crossingPaceMinKmh = "crossing_pace_min_kmh"
             case crossingPaceMinDistanceM = "crossing_pace_min_distance_m"
             case crossingPaceClockMarginS = "crossing_pace_clock_margin_s"
+            case crossingRoutePaceMinKmh = "crossing_route_pace_min_kmh"
+            case routeUnwitnessedMaxDriveS = "route_unwitnessed_max_drive_s"
         }
 
         public init(
@@ -179,7 +197,9 @@ public extension TrackingConfig {
             apiKeyRequired: Bool = true,
             crossingPaceMinKmh: Double = 160,
             crossingPaceMinDistanceM: Double = 100_000,
-            crossingPaceClockMarginS: Double = 7_200
+            crossingPaceClockMarginS: Double = 7_200,
+            crossingRoutePaceMinKmh: Double = 120,
+            routeUnwitnessedMaxDriveS: Double = 36_000
         ) {
             self.baseURL = baseURL
             self.chunkSize = chunkSize
@@ -196,6 +216,8 @@ public extension TrackingConfig {
             self.crossingPaceMinKmh = crossingPaceMinKmh
             self.crossingPaceMinDistanceM = crossingPaceMinDistanceM
             self.crossingPaceClockMarginS = crossingPaceClockMarginS
+            self.crossingRoutePaceMinKmh = crossingRoutePaceMinKmh
+            self.routeUnwitnessedMaxDriveS = routeUnwitnessedMaxDriveS
         }
 
         /// Whether this endpoint may ship in a build that leaves this Mac.
