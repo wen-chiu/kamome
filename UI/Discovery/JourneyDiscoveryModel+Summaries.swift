@@ -60,6 +60,16 @@ extension JourneyDiscoveryModel {
         return LegLength.groundMeters(detail.segments)
     }
 
+    /// What the diary draws for a card (Footprints ADR draft, Data 1): a
+    /// stored trip's own stops, edits included, else the found journey's plan.
+    /// nil for a card this model no longer holds.
+    func itinerary(for summary: JourneySummary) -> JourneyItinerary? {
+        if let tripId = summary.tripId {
+            return Stored.read("detail") { try repository.detail(tripId: tripId) }.map(JourneyItinerary.init(detail:))
+        }
+        return plans[summary.id].map { JourneyItinerary(plan: $0, config: config) }
+    }
+
     /// What the scan cuts journeys by. Moved here from the class body when
     /// the hidden row (#167) took it past 250 lines.
     var detectionConfig: JourneyDetectionConfig {
@@ -73,12 +83,8 @@ extension JourneyDiscoveryModel {
         )
     }
 
-    func summary(journey: DiscoveredJourney) -> JourneySummary {
-        let plan = PhotoImportClusterer.plan(photos: journey.photos, config: ImportClusteringConfig(
-            stopRadiusM: config.photoImport.stopRadiusM,
-            stopSplitGapS: config.photoImport.stopSplitGapS,
-            minPhotosPerStop: config.photoImport.minPhotosPerStop
-        ))
+    /// - Parameter plan: the journey's cluster plan, made by the scan.
+    func summary(journey: DiscoveredJourney, plan: ImportedTripPlan) -> JourneySummary {
         let busiest = plan.stops.max { $0.photoAssetIds.count < $1.photoAssetIds.count }
         let modes = plan.legs.map { ImportService.mode(for: $0, config: config).rawValue }
         let isSinglePlace = journey.extentM < config.discovery.singlePlaceExtentM

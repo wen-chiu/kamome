@@ -66,6 +66,10 @@ final class JourneyDiscoveryModel {
     /// Discovered journeys not yet imported, by key — hidden ones included, so
     /// one shown again can be opened.
     private var detected: [String: DiscoveredJourney] = [:]
+    /// Each found journey's cluster plan, made once by the scan off the main
+    /// actor (Footprints ADR draft, Data 2). The card, the itinerary and the
+    /// import all read this one plan.
+    private(set) var plans: [String: ImportedTripPlan] = [:]
     /// Home's country, for the domestic-naming rule. From the device's region,
     /// never from a lookup (`JourneyNaming`).
     let homeCountryCode: String?
@@ -188,9 +192,13 @@ final class JourneyDiscoveryModel {
         // and the scanning spinner must keep turning. The outlines are read for
         // this scan only (≈0.8 MB, released after); nothing loads at launch.
         // Unreadable → the country rule is off.
-        let detectionConfig = self.detectionConfig
-        let detection = await Task.detached(priority: .userInitiated) {
-            JourneyDetector.detect(photos: photos, config: detectionConfig, countries: CountryBoundaries.bundled())
+        let (detectionConfig, clustering) = (self.detectionConfig, ImportService.clustering(config))
+        let (detection, scanned) = await Task.detached(priority: .userInitiated) {
+            let detection = JourneyDetector.detect(
+                photos: photos, config: detectionConfig, countries: CountryBoundaries.bundled()
+            )
+            let plans = detection.journeys.map { PhotoImportClusterer.plan(photos: $0.photos, config: clustering) }
+            return (detection, Dictionary(zip(detection.journeys.map(\.key), plans)) { first, _ in first })
         }.value
 
         let hidden = dismissed.keys
@@ -203,15 +211,16 @@ final class JourneyDiscoveryModel {
             // is matched by its photographs instead (Chiu 2026-09-23). It is
             // already on this list as a stored trip; offering the journey
             // beside it is what made two "Vietnam"s.
-            if storedTrip(holding: journey.photos) != nil { continue }
+            guard let plan = scanned[journey.key], storedTrip(holding: plan) == nil else { continue }
             found[journey.key] = journey
             if hidden.contains(journey.key) {
-                stillHidden.append(summary(journey: journey))
+                stillHidden.append(summary(journey: journey, plan: plan))
             } else {
-                fresh.append(summary(journey: journey))
+                fresh.append(summary(journey: journey, plan: plan))
             }
         }
         detected = found
+        plans = scanned.filter { found[$0.key] != nil }
         hiddenJourneys = stillHidden.sorted { $0.startedAt > $1.startedAt }
         let stored = journeys.filter(\.isImported)
         journeys = (stored + fresh).sorted { $0.startedAt > $1.startedAt }
@@ -221,8 +230,8 @@ final class JourneyDiscoveryModel {
 
     /// The stored trip these photographs already belong to, if any — unless
     /// this library's asset ids do not tell photographs apart.
-    private func storedTrip(holding photos: [ImportPhoto]) -> String? {
-        matchesTripsByPhotographs ? importService.existingTrip(for: photos) : nil
+    private func storedTrip(holding plan: ImportedTripPlan) -> String? {
+        matchesTripsByPhotographs ? importService.existingTrip(plan: plan) : nil
     }
 
     // MARK: - Opening and hiding
@@ -231,10 +240,11 @@ final class JourneyDiscoveryModel {
     /// was. Returns nil when the import could not produce a trip.
     func open(_ summary: JourneySummary) async -> String? {
         if let tripId = summary.tripId { return tripId }
-        guard let journey = detected[summary.id] else { return nil }
+        guard let journey = detected[summary.id], let plan = plans[summary.id] else { return nil }
         // A trip may have been imported through the sheet since the scan.
-        if let existing = storedTrip(holding: journey.photos) {
+        if let existing = storedTrip(holding: plan) {
             detected[journey.key] = nil
+            plans[journey.key] = nil
             loadTrips()
             return existing
         }
@@ -247,7 +257,7 @@ final class JourneyDiscoveryModel {
             // the card's headline froze the trip at whatever the lookup had
             // reached at the tap — "September 2026", for good (#165).
             let tripId = try await importService.importTrip(
-                title: nil, photos: journey.photos, discoveryKey: journey.key
+                title: nil, photos: journey.photos, discoveryKey: journey.key, plan: plan
             )
             nameCache.setSinglePlace(summary.isSinglePlace, for: journey.key)
             // Roads arrive when they arrive, exactly as after the import sheet
@@ -260,6 +270,7 @@ final class JourneyDiscoveryModel {
                 tripId: tripId, repository: repository, config: config.photoAnalysis
             )
             detected[journey.key] = nil
+            plans[journey.key] = nil
             nameNow(summary)
             loadTrips()
             return tripId
