@@ -2,7 +2,7 @@
 
 **Status:** Decided (Chiu, 2026-10-03)
 **Supersedes:** nothing. Fills the space S5 review 2026-09-25 item 2 cleared (the settings fold away while rendering).
-Amends 2026-10-02-the-finished-screen-is-the-film point 4 (the no-road explanation while rendering)
+Amends 2026-10-02-the-finished-screen-is-the-film points 3 and 4 (the no-road wording and where it is said)
 
 ## Context
 
@@ -32,7 +32,12 @@ Chiu, on the proposal: *「海鷗由你來畫」*, *「綁真實進度 好」*.
 5. **A leg with no road is the gull's caption, not a card** (Chiu, on the screenshots: the notice *「有點突兀」*;
    *「簡單說 有ｘ段找不到路線會畫虛線」*). One small line under the route, while rendering: 「有 X 段找不到路線，會畫成虛線。」
    / "Couldn’t find a route for X legs, so they’re drawn dashed." The three retryable causes keep their orange
-   card — exporting again fixes them. The finished screen's caption line is unchanged.
+   card — exporting again fixes them.
+6. **One wording for it everywhere: 找不到路線** (Chiu: *「統一成找不到路線」*). The headline on the finished
+   screen's caption line and on the card is 「有 X 段找不到路線」 / "Couldn’t find a route for X legs"; its body
+   「這幾段畫成虛線 —— 找不到路線，就不畫成路。」 / "Drawn dashed — Kamome never draws a road it couldn’t find."
+   It is also the truer sentence since ADR 2026-10-03-a-road-is-stored-only-if-it-could-be-driven: this
+   headline now covers a road the router returned and Kamome refused, where 「本來就沒有路」 was false.
 
 ## Rejected
 
