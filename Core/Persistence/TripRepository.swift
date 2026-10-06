@@ -274,3 +274,14 @@ public struct TripRepository {
         }
     }
 }
+
+// Outside the struct body, which is at its lint limit.
+extension TripRepository {
+    /// "" records that the geocoder was asked and named no country here
+    /// (`StopRecord.countryCode`).
+    public func setStopCountryCode(stopId: String, countryCode: String) throws {
+        try database.writer.write { db in
+            try db.execute(sql: "UPDATE stop SET country_code = ? WHERE id = ?", arguments: [countryCode, stopId])
+        }
+    }
+}
