@@ -236,40 +236,6 @@ public struct TripRepository {
         }
     }
 
-    /// Deletes a false-positive stop; its photos become route-attached.
-    public func deleteStop(stopId: String) throws {
-        try database.writer.write { db in
-            try db.execute(sql: "UPDATE photo_ref SET stop_id = NULL WHERE stop_id = ?", arguments: [stopId])
-            try db.execute(sql: "DELETE FROM stop WHERE id = ?", arguments: [stopId])
-        }
-    }
-
-    /// Merges `absorbedId` into `keptId`: earliest arrival, latest departure,
-    /// photos reassigned.
-    public func mergeStops(keptId: String, absorbedId: String) throws {
-        try database.writer.write { db in
-            guard
-                let kept = try StopRecord.fetchOne(db, key: keptId),
-                let absorbed = try StopRecord.fetchOne(db, key: absorbedId)
-            else { return }
-            let arrived = min(kept.arrivedAt, absorbed.arrivedAt)
-            let departed: Double?
-            switch (kept.departedAt, absorbed.departedAt) {
-            case let (keptEnd?, absorbedEnd?): departed = max(keptEnd, absorbedEnd)
-            default: departed = nil // one is still open-ended
-            }
-            try db.execute(
-                sql: "UPDATE stop SET arrived_at = ?, departed_at = ? WHERE id = ?",
-                arguments: [arrived, departed, keptId]
-            )
-            try db.execute(
-                sql: "UPDATE photo_ref SET stop_id = ? WHERE stop_id = ?",
-                arguments: [keptId, absorbedId]
-            )
-            try db.execute(sql: "DELETE FROM stop WHERE id = ?", arguments: [absorbedId])
-        }
-    }
-
     /// Self-contained database copy for the debug export path
     /// (Docs/device-test-P1.md post-drive verification).
     public func snapshotDatabase(to path: String) throws {
