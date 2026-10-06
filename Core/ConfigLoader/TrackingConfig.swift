@@ -152,6 +152,14 @@ public struct TrackingConfig: Decodable, Equatable {
         /// is a first guess — an exact repeat scores 1.0, a trip merely sharing
         /// an airport morning scores far below it; not measured on real libraries.
         public let duplicatePhotoShare: Double
+        /// **A photograph whose fix is at least this high was taken in flight**
+        /// (#224, ADR 2026-10-06): above the highest motorable passes (≈ 5,800 m),
+        /// below an airliner's cruise (10–12 km). Read against altitude less
+        /// vertical accuracy, so a vague fix reads low.
+        public let airborneMinAltitudeM: Double
+        /// …or at least this fast: above the fastest train in service (Shanghai
+        /// maglev, 431 km/h), below a cruise (≈ 800–950). Speed less its accuracy.
+        public let airborneMinSpeedKmh: Double
 
         enum CodingKeys: String, CodingKey {
             case stopRadiusM = "stop_radius_m"
@@ -162,6 +170,8 @@ public struct TrackingConfig: Decodable, Equatable {
             case defaultRangeDays = "default_range_days"
             case maxRangeDays = "max_range_days"
             case duplicatePhotoShare = "duplicate_photo_share"
+            case airborneMinAltitudeM = "airborne_min_altitude_m"
+            case airborneMinSpeedKmh = "airborne_min_speed_kmh"
         }
     }
 

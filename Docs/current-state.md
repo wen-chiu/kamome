@@ -6,10 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-03 against ADR **2026-10-03-a-road-is-stored-only-if-it-could-be-driven**,
-with 2026-10-03-the-routing-ceiling-counts-in-one-durable-object and
-2026-10-03-desk-renders-route-direct-on-their-own-key (desk renders:
-Geoapify direct, own key; the app still asks the Worker).
+Last synced: 2026-10-06 against ADR **2026-10-06-a-photo-taken-in-flight-flies-its-leg**,
+after 2026-10-03-a-road-is-stored-only-if-it-could-be-driven,
+2026-10-03-the-routing-ceiling-counts-in-one-durable-object and
+2026-10-03-desk-renders-route-direct-on-their-own-key (desk: Geoapify direct).
 Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:

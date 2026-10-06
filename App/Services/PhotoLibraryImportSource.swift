@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import KamomeImportKit
 import Photos
@@ -116,10 +117,26 @@ final class PhotoLibraryImportSource: ImportPhotoProviding {
                 timestamp: date.timeIntervalSince1970,
                 lat: location.coordinate.latitude,
                 lon: location.coordinate.longitude,
-                isFavorite: asset.isFavorite
+                isFavorite: asset.isFavorite,
+                altitudeLowerBoundM: Self.altitudeLowerBoundM(location),
+                speedLowerBoundKmh: Self.speedLowerBoundKmh(location)
             ))
         }
         return photos
+    }
+
+    /// The lowest altitude the fix allows (#224). A negative vertical accuracy
+    /// is Core Location's "no valid altitude", which is not the same as zero.
+    static func altitudeLowerBoundM(_ location: CLLocation) -> Double? {
+        guard location.verticalAccuracy >= 0 else { return nil }
+        return location.altitude - location.verticalAccuracy
+    }
+
+    /// The lowest ground speed the fix allows, km/h. A negative speed or speed
+    /// accuracy is Core Location's "no valid speed".
+    static func speedLowerBoundKmh(_ location: CLLocation) -> Double? {
+        guard location.speed >= 0, location.speedAccuracy >= 0 else { return nil }
+        return max(location.speed - location.speedAccuracy, 0) * 3.6
     }
 
     private static func collection(id: String) -> PHAssetCollection? {
