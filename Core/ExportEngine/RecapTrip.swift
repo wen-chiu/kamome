@@ -158,17 +158,29 @@ public struct RecapTrip {
         /// Defaults to `false`, which is what "nothing was established" must
         /// mean: a leg nobody asked about is never flown.
         public let isCrossing: Bool
+        /// **The countries a crossing leaves and lands in**, ISO 3166-1 alpha-2,
+        /// as Apple named the stops on either side of it (ADR file 2026-10-03).
+        /// What the boarding pass prints. nil on every leg that is not a
+        /// crossing, and at an end no stop was given a country for.
+        public let countryCodes: (origin: String?, destination: String?)
 
         public init(
             coordinates: [RecapCoordinate],
             mode: TransportMode,
             provenance: RouteProvenance,
-            isCrossing: Bool = false
+            isCrossing: Bool = false,
+            countryCodes: (origin: String?, destination: String?) = (nil, nil)
         ) {
             self.coordinates = coordinates
             self.mode = mode
             self.provenance = provenance
             self.isCrossing = isCrossing
+            self.countryCodes = countryCodes
+        }
+
+        public static func == (lhs: Leg, rhs: Leg) -> Bool {
+            lhs.coordinates == rhs.coordinates && lhs.mode == rhs.mode && lhs.provenance == rhs.provenance
+                && lhs.isCrossing == rhs.isCrossing && lhs.countryCodes == rhs.countryCodes
         }
     }
 

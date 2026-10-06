@@ -3,6 +3,13 @@ import Foundation
 /// **The country a trip is in, and how wide that country is** — what the
 /// opening's title card is held over (Chiu 2026-08-31).
 ///
+/// 🔴 **Only the opening's framing reads this now.** The boarding pass used to
+/// name a flight's two ends from these six rows too, so every other country —
+/// Vietnam, first — flew a plane with no pass. Since ADR file 2026-10-03 the
+/// pass takes each end's country from Apple's answer for the stops beside the
+/// flight (`RecapTrip.Leg.countryCodes`). A *name* Apple already gives; an
+/// *extent* it does not, which is why the table stays for the camera.
+///
 /// ## Why a table, and why it is small
 ///
 /// The opening's first beat answers *where in the world is this*. Until now it

@@ -78,12 +78,12 @@ public struct LinearTimeline {
     let titleCardS: Double
     let endCardS: Double
     /// The boarding pass, resolved once at build time. nil on every film that is
-    /// not a type-2 opening, and nil when `CountryExtent` cannot name both ends —
+    /// not a type-2 opening, and nil when no stop names a country at both ends —
     /// see `journeyCard(trip:locale:)`.
     let journeyCard: RecapJourneyCard?
     /// The flight's two ends, for the marks drawn over the opening. **Kept apart
-    /// from `journeyCard`**: a mark needs no country name, so an end the table
-    /// cannot name still gets one (`flightEnds(atTime:)`).
+    /// from `journeyCard`**: a mark needs no country name, so an end with no
+    /// country still gets one (`flightEnds(atTime:)`).
     let flightEndCoordinates: (origin: RecapCoordinate, destination: RecapCoordinate)?
     /// How long the card takes to arrive and to leave, each. **`deck_zoom_s`
     /// deliberately reused**: it is the film's one "a card arrives" ramp, and a

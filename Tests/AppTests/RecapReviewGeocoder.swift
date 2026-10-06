@@ -84,7 +84,10 @@ final class RecapReviewGeocoder: StopGeocoding {
         live.reverseGeocodeZoned(lat: lat, lon: lon) { [weak self] name, locality, zone, error in
             if let self, let name {
                 self.cache[key] = name
-                self.places[key] = Place(name: name, locality: locality, zone: zone, part: self.places[key]?.part)
+                self.places[key] = Place(
+                    name: name, locality: locality, zone: zone,
+                    part: self.places[key]?.part, country: self.places[key]?.country
+                )
                 self.persist()
             }
             completion(name, locality, zone, error)
@@ -92,13 +95,15 @@ final class RecapReviewGeocoder: StopGeocoding {
     }
 
     /// The whole answer, cached the same way. A place cached before the part
-    /// of town was kept (`part` absent) is asked once more.
+    /// of town or the country was kept (`part` or `country` absent) is asked
+    /// once more.
     func reverseGeocodeStop(lat: Double, lon: Double, completion: @escaping (StopPlace, Error?) -> Void) {
         let key = key(lat: lat, lon: lon)
-        if let place = places[key], let part = place.part {
+        if let place = places[key], let part = place.part, let country = place.country {
             hits += 1
             let answer = StopPlace(
-                name: place.name, locality: place.locality, subLocality: part.isEmpty ? nil : part, timeZone: place.zone
+                name: place.name, locality: place.locality, subLocality: part.isEmpty ? nil : part,
+                timeZone: place.zone, countryCode: country.isEmpty ? nil : country
             )
             DispatchQueue.main.async { completion(answer, nil) }
             return
@@ -108,7 +113,8 @@ final class RecapReviewGeocoder: StopGeocoding {
             if let self, let name = place.name {
                 self.cache[key] = name
                 self.places[key] = Place(
-                    name: name, locality: place.locality, zone: place.timeZone, part: place.subLocality ?? ""
+                    name: name, locality: place.locality, zone: place.timeZone, part: place.subLocality ?? "",
+                    country: place.countryCode ?? ""
                 )
                 self.persist()
             }
@@ -122,6 +128,8 @@ final class RecapReviewGeocoder: StopGeocoding {
         let zone: String?
         /// `subLocality`; "" = asked, none; absent = cached before it was kept.
         var part: String?
+        /// `isoCountryCode`, the same three states as `part`.
+        var country: String?
     }
 
     private var placesURL: URL {
