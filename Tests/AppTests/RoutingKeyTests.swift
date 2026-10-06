@@ -113,7 +113,8 @@ final class RoutingKeyTests: XCTestCase {
          "route_waypoint_radius_m":500,"route_off_network_walk_snap_max_m":650,
          "api_key_required":true,"api_key":"leaked-into-git",
          "crossing_pace_min_kmh":150,"crossing_pace_min_distance_m":100000,
-         "crossing_pace_clock_margin_s":7200}
+         "crossing_pace_clock_margin_s":7200,"crossing_route_pace_min_kmh":120,
+         "route_unwitnessed_max_drive_s":36000}
         """
         let matching = try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
         XCTAssertEqual(matching.apiKey, "", "a key in the committed file must be ignored, not honoured")
@@ -158,7 +159,8 @@ final class RoutingKeyTests: XCTestCase {
          "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
          "route_waypoint_radius_m":500,"route_off_network_walk_snap_max_m":650,"api_key_required":true,
          "crossing_pace_min_kmh":150,"crossing_pace_min_distance_m":100000,
-         "crossing_pace_clock_margin_s":7200}
+         "crossing_pace_clock_margin_s":7200,"crossing_route_pace_min_kmh":120,
+         "route_unwitnessed_max_drive_s":36000}
         """
         return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }
@@ -172,7 +174,8 @@ final class RoutingKeyTests: XCTestCase {
          "route_max_detour_ratio":2.5,"route_waypoint_min_spacing_m":250,
          "route_waypoint_radius_m":500,"route_off_network_walk_snap_max_m":650,"api_key_required":false,
          "crossing_pace_min_kmh":150,"crossing_pace_min_distance_m":100000,
-         "crossing_pace_clock_margin_s":7200}
+         "crossing_pace_clock_margin_s":7200,"crossing_route_pace_min_kmh":120,
+         "route_unwitnessed_max_drive_s":36000}
         """
         return try JSONDecoder().decode(TrackingConfig.Matching.self, from: Data(json.utf8))
     }
