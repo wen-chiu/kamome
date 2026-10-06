@@ -41,7 +41,7 @@ final class RecapRoutingCopyTests: XCTestCase {
 
         for legs in Self.legCounts {
             for key in ["recap_routing_unreachable_detail", "recap_routing_rate_limited_detail",
-                        "recap_routing_no_road_detail"] {
+                        "recap_routing_no_road_detail", "recap_routing_no_road_caption"] {
                 let promise = try promisesRetry(key, legs: legs)
                 XCTAssertFalse(
                     promise.en || promise.zh,
@@ -62,8 +62,9 @@ final class RecapRoutingCopyTests: XCTestCase {
     /// The count belongs to the headline in every case, so a missing specifier
     /// would silently print a headline with no number in it.
     func testEveryRoutingHeadlineCarriesTheLegCount() throws {
+        // The gull's caption says the no-road case alone, so it carries the count too.
         for key in ["recap_routing_unreachable", "recap_routing_rate_limited",
-                    "recap_routing_budget", "recap_routing_no_road"] {
+                    "recap_routing_budget", "recap_routing_no_road", "recap_routing_no_road_caption"] {
             for locale in ["en", "zh-Hant"] {
                 for legs in Self.legCounts {
                     let headline = try sentence(key, locale: locale, legs: legs)
@@ -76,10 +77,11 @@ final class RecapRoutingCopyTests: XCTestCase {
     }
 
     /// "1 legs have no road" (#181): English counts one leg as one leg, in the
-    /// four headlines and in the one body that repeats the count.
+    /// four headlines, the one body that repeats the count, and the gull's caption.
     func testOneLegIsSingularInEnglish() throws {
         for key in ["recap_routing_unreachable", "recap_routing_rate_limited",
-                    "recap_routing_budget", "recap_routing_no_road", "recap_routing_rate_limited_detail"] {
+                    "recap_routing_budget", "recap_routing_no_road", "recap_routing_rate_limited_detail",
+                    "recap_routing_no_road_caption"] {
             let one = try sentence(key, locale: "en", legs: 1)
             let several = try sentence(key, locale: "en", legs: 5)
             for plural in ["legs", "stretches"] {

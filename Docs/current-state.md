@@ -8,8 +8,9 @@ way — this file rotted twice by growing its own reasoning.
 
 Last synced: 2026-10-03 against ADR **2026-10-03-the-boarding-pass-names-its-countries-from-the-stops**
 (stop.country_code, v16), with -a-road-is-stored-only-if-it-could-be-driven,
--the-routing-ceiling-counts-in-one-durable-object and -desk-renders-route-direct-on-their-own-key.
-Before it: 2026-10-02-the-film-names-the-trips-own-towns, with
+-the-export-wait-flies-a-gull, -the-routing-ceiling-counts-in-one-durable-object
+and -desk-renders-route-direct-on-their-own-key.
+Before them: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:
 2026-10-02-the-finished-screen-is-the-film (the finished screen gives its
@@ -20,8 +21,7 @@ line);
 2026-10-02-an-unnamed-trip-is-stored-with-no-title;
 2026-10-02-deleting-a-stop-asks-first. Before
 them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
-(a beach waypoint the drive profile refuses is moved to where a walk reaches
-it, at most 650 m, and drive is asked again). The same day:
+(a refused beach waypoint moves ≤ 650 m to where a walk reaches it). The same day:
 2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
 `StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
 waits at one `GeocodeGate`); 2026-10-01-a-stops-time-is-the-clock-where-it-happened
@@ -33,8 +33,7 @@ town, region or country; a Discovery trip is stored unnamed). Draft, not built:
 read-only itinerary beside 旅程). Before them:
 2026-09-30-export-time-left;
 2026-09-29-the-opening-zooms-and-the-route-holds
-(the opening zooms out of the title card instead of cutting, reopening
-2026-08-31; the revealed route holds before the end card);
+(the opening zooms out of the title card; the route holds before the end card);
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
 its own towns, and travel is earned by windows); 2026-09-28-sample-trip;
 2026-09-28, governance v2, the ledger's last entry.
