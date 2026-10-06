@@ -1,7 +1,8 @@
 # While a film renders, the brand gull flies the bar's own progress
 
 **Status:** Decided (Chiu, 2026-10-03)
-**Supersedes:** nothing. Fills the space S5 review 2026-09-25 item 2 cleared (the settings fold away while rendering)
+**Supersedes:** nothing. Fills the space S5 review 2026-09-25 item 2 cleared (the settings fold away while rendering).
+Amends 2026-10-02-the-finished-screen-is-the-film point 4 (the no-road explanation while rendering)
 
 ## Context
 
@@ -28,6 +29,10 @@ Chiu, on the proposal: *「海鷗由你來畫」*, *「綁真實進度 好」*.
 3. **No app code per display frame.** The flap is a Core Animation keyframe animation on a `CAShapeLayer`
    (the render server interpolates it); the gull and route move only when progress does, without easing.
 4. **Decorative.** Hidden from VoiceOver (the bar carries the number). Reduce Motion holds the brand pose.
+5. **A leg with no road is the gull's caption, not a card** (Chiu, on the screenshots: the notice *「有點突兀」*;
+   *「簡單說 有ｘ段找不到路線會畫虛線」*). One small line under the route, while rendering: 「有 X 段找不到路線，會畫成虛線。」
+   / "Couldn’t find a route for X legs, so they’re drawn dashed." The three retryable causes keep their orange
+   card — exporting again fixes them. The finished screen's caption line is unchanged.
 
 ## Rejected
 
@@ -41,8 +46,8 @@ Chiu, on the proposal: *「海鷗由你來畫」*, *「綁真實進度 好」*.
 
 ## Consequences
 
-- `UI/Recap/` only, plus `RecapModel.drawingFraction`. Nothing in `ExportEngine`, the coordinator or the
-  render loop changes (VERIFIED, diff).
+- `UI/Recap/`, one catalogue string, and `RecapRoutingCopyTests` covering it; `RecapModel.drawingFraction`.
+  Nothing in `ExportEngine`, the coordinator or the render loop changes (VERIFIED, diff).
 - Export cost, desk A/B (iPhone 17 Pro simulator, demo trip, 1800 frames, alternating, while other sessions
   held the Mac at load 190–350): app CPU 261 / 223 s with the gull, 240 / 247 s without; render server
   17.2 / 9.0 s against 9.7 / 8.4 s. INFERRED: no cost above the noise, which is ±20 s of CPU and larger in

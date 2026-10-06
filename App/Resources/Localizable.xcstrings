@@ -3292,6 +3292,35 @@
         }
       }
     },
+    "recap_routing_no_road_caption": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Couldn’t find a route for %1$d leg, so it’s drawn dashed."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Couldn’t find a route for %1$d legs, so they’re drawn dashed."
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %1$d 段找不到路線，會畫成虛線。"
+          }
+        }
+      }
+    },
     "recap_routing_no_road_detail": {
       "extractionState": "manual",
       "localizations": {

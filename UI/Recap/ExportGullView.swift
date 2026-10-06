@@ -2,13 +2,43 @@ import SwiftUI
 import UIKit
 
 /// The gull as the export form's first section while rendering, on the form's
-/// own background rather than a card.
+/// own background rather than a card, with its caption under the route.
 struct ExportGullSection: View {
     let progress: Double?
+    /// One small line under the route, or nothing — `RecapModel.gullCaption`.
+    let caption: String?
 
     var body: some View {
-        Section { ExportGullView(progress: progress) }
-            .listRowBackground(Color.clear)
+        Section {
+            VStack(spacing: 6) {
+                ExportGullView(progress: progress)
+                if let caption {
+                    Text(verbatim: caption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+        }
+        .listRowBackground(Color.clear)
+    }
+}
+
+extension RecapModel {
+    /// **A leg with no road is the gull's caption while rendering** (Chiu
+    /// 2026-10-03, amending ADR 2026-10-02-the-finished-screen-is-the-film
+    /// point 4): *「有ｘ段找不到路線會畫虛線」*, said as one small line under the
+    /// route instead of a card. It is a fact about the trip, nothing to act on.
+    /// The three retryable causes (unreachable, rate-limited, out of time) are
+    /// not this: they keep their orange notice, because exporting again fixes
+    /// them. nil whenever the notice is not the no-road one.
+    var gullCaption: String? {
+        guard isRendering, let routing, routing.isWorthReporting, routing.headline == .someLegsHaveNoRoad else {
+            return nil
+        }
+        return String.localizedStringWithFormat(
+            String(localized: "recap_routing_no_road_caption"), RecapRoutingNotice.dashedLegs(routing)
+        )
     }
 }
 

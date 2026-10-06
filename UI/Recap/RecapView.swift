@@ -106,12 +106,12 @@ struct RecapView: View {
                     }
                 }
             }
-            if model.isRendering { ExportGullSection(progress: model.drawingFraction) }
+            if model.isRendering { ExportGullSection(progress: model.drawingFraction, caption: model.gullCaption) }
 
             if model.photoShortfall != nil {
                 Section { RecapPhotoShortfallNotice(model: model) }
             }
-            if model.routing?.isWorthReporting == true {
+            if model.routing?.isWorthReporting == true, model.gullCaption == nil {
                 Section { RecapRoutingNotice(model: model) }
             }
             busySection
