@@ -53,7 +53,7 @@ protocol StopGeocoding: AnyObject {
     )
 
     /// The same one lookup, whole: the name, the town, **the part of the town**
-    /// (`CLPlacemark.subLocality`, #183) and the zone. Nothing more leaves the
+    /// (`CLPlacemark.subLocality`, #183), the zone and the country. Nothing more leaves the
     /// phone than the lookup that names the stop already sends. Defaulted below
     /// to `reverseGeocodeZoned` with no part, so every stub still conforms.
     func reverseGeocodeStop(
@@ -67,6 +67,9 @@ struct StopPlace: Equatable {
     var locality: String?
     var subLocality: String?
     var timeZone: String?
+    /// ISO 3166-1 alpha-2 (`CLPlacemark.isoCountryCode`): what the boarding
+    /// pass names a flight's end by (ADR file 2026-10-03). nil at sea.
+    var countryCode: String?
 }
 
 extension StopGeocoding {
@@ -136,7 +139,8 @@ final class CLGeocoderStopGeocoder: StopGeocoding {
             let place = answer.place
             completion(StopPlace(
                 name: place.flatMap(Self.displayName), locality: place?.locality,
-                subLocality: place?.subLocality, timeZone: place?.timeZone
+                subLocality: place?.subLocality, timeZone: place?.timeZone,
+                countryCode: place?.countryCode
             ), answer.error)
         }
     }

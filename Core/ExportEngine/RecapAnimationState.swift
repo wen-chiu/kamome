@@ -156,8 +156,9 @@ public struct RecapPhotoDeck: Equatable {
 ///
 /// ## Everything on it is something Kamome actually knows, offline
 ///
-/// The region names come from `CountryExtent` (a built-in table — no geocode, no
-/// coordinate leaving the process, `CLAUDE.md` §0); the distance is the crossing
+/// The region names come from the country Apple named for the stops on either
+/// side of the flight — the stop-naming lookup that already runs, so nothing
+/// new leaves the phone (ADR file 2026-10-03, `CLAUDE.md` §0); the distance is the crossing
 /// leg's own length; the dates are the app's formatting of two photograph
 /// timestamps.
 ///
@@ -233,9 +234,9 @@ public struct RecapJourneyCard: Equatable {
 /// 🔴 **`name` is the value the Journey Card already resolved** — passed down
 /// from the same `RecapJourneyCard.Region`, never looked up again. Two lookups is
 /// how the card and the map come to print different names for one place, and the
-/// timeline resolves `CountryExtent` exactly once per film.
+/// timeline resolves the two countries exactly once per film.
 ///
-/// nil when `CountryExtent` has no row for this end: **the mark is still drawn
+/// nil when no stop names a country for this end: **the mark is still drawn
 /// and the name is simply absent**, the same honesty rule the card follows when
 /// it declines to print a pass at all.
 public struct RecapFlightEnd: Equatable {

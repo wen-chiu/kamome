@@ -63,7 +63,7 @@ struct RecapRoutingNotice: View {
     /// in the *headline* ("有 X 段還沒畫"), and only the rate-limit body
     /// repeats it, so both strings are formatted with it and the three
     /// bodies that do not mention it simply ignore the argument.
-    private static func dashedLegs(_ report: RouteMatchReport) -> Int {
+    static func dashedLegs(_ report: RouteMatchReport) -> Int {
         report.attempted - report.reconstructed
     }
 

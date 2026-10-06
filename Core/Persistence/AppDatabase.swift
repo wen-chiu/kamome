@@ -280,6 +280,15 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE stop ADD COLUMN sub_locality TEXT")
         }
 
+        // Schema v16 — the country a stop is in (ADR file 2026-10-03):
+        // `CLPlacemark.isoCountryCode` from the lookup that already names it, so
+        // the boarding pass names both ends of a flight from Apple's answer
+        // instead of a built-in table. NULL = never asked; back-filled like v9's
+        // towns. Forward-only.
+        migrator.registerMigration("v16") { db in
+            try db.execute(sql: "ALTER TABLE stop ADD COLUMN country_code TEXT")
+        }
+
         return migrator
     }
 }

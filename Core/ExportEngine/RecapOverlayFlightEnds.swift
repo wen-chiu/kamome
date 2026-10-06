@@ -61,8 +61,8 @@ extension RecapOverlayRenderer {
                 context.restoreGState()
             }
             // **The country, and nothing else** — no stop, no city, no other kind
-            // of place name (ADR 2026-09-04 §3). Absent when `CountryExtent` has
-            // no row: the mark is still drawn, the name is simply not claimed.
+            // of place name (ADR 2026-09-04 §3). Absent when no stop names a
+            // country there: the mark is still drawn, the name is simply not claimed.
             guard let name = end.name else { continue }
             drawShadowedText(
                 name,

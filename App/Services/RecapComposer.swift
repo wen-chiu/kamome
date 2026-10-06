@@ -22,10 +22,15 @@ enum RecapComposer {
     ///
     /// Each leg also carries **why its geometry looks the way it does**, which
     /// the film draws (PD-1) — see `provenance(for:)`.
+    ///
+    /// `stops` is the whole trip's, and only a crossing reads it: its two
+    /// countries come from the stops either side of it (`crossingCountryCodes`).
+    /// Without them a crossing still flies, and the boarding pass is not drawn.
     static func legs(
         from segments: [(segment: SegmentRecord, points: [TrackpointRecord])],
         epsilonM: Double,
-        matchedEpsilonM: Double
+        matchedEpsilonM: Double,
+        stops: [StopRecord] = []
     ) -> [RecapTrip.Leg] {
         segments.compactMap { item -> RecapTrip.Leg? in
             let source: (points: [Simplifier.Point], epsilonM: Double)
@@ -39,13 +44,33 @@ enum RecapComposer {
             let coordinates = Simplifier.douglasPeucker(source.points, epsilonM: source.epsilonM)
                 .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
             guard coordinates.count >= 2 else { return nil }
+            let crossing = isCrossing(item.segment)
             return RecapTrip.Leg(
                 coordinates: coordinates,
                 mode: TransportMode(rawValue: item.segment.mode) ?? .unknown,
                 provenance: provenance(for: item.segment),
-                isCrossing: isCrossing(item.segment)
+                isCrossing: crossing,
+                countryCodes: crossing ? crossingCountryCodes(item.segment, stops: stops) : (nil, nil)
             )
         }
+    }
+
+    /// **The countries a crossing leaves and lands in, as Apple named them**
+    /// (ADR file 2026-10-03): the code stop naming stored for the last stop
+    /// reached before the crossing began, and for the first one reached after.
+    ///
+    /// **The nearest stop *with* a country, not the nearest stop.** A photograph
+    /// taken from the aircraft makes a stop at sea, and Apple names no country
+    /// there (stored ""); the flight still left from the country before it.
+    /// Cut by time, as `filmRecords` cuts — a round trip's two ends share a place.
+    static func crossingCountryCodes(
+        _ segment: SegmentRecord, stops: [StopRecord]
+    ) -> (origin: String?, destination: String?) {
+        let named = stops.filter { !($0.countryCode ?? "").isEmpty }.sorted { $0.arrivedAt < $1.arrivedAt }
+        return (
+            named.last { $0.arrivedAt <= segment.startedAt }?.countryCode,
+            named.first { $0.arrivedAt > segment.startedAt }?.countryCode
+        )
     }
 
     /// Derives a segment's provenance from what the row actually says (PD-1).
