@@ -9,6 +9,35 @@ import Observation
 /// `JourneyDiscoveryModel` (arch review 2026-09-26, round 2) when `UI/` came
 /// under SwiftLint: the class body was 281 lines against 250. Moved as written.
 extension JourneyDiscoveryModel {
+    // MARK: - What the screen draws
+    // Moved from the class body when the preview namer took it past 250 lines.
+
+    var sections: [JourneyYearSection] {
+        let grouped = Dictionary(grouping: journeys, by: \.year)
+        return grouped.keys.sorted(by: >).map { year in
+            JourneyYearSection(year: year, journeys: grouped[year] ?? [])
+        }
+    }
+
+    /// Which visit to its country each journey was, by id (`JourneyChronicle`).
+    var visits: [String: JourneyChronicle.Visit] {
+        JourneyChronicle.visits(journeys, homeCountryCode: homeCountryCode)
+    }
+
+    /// Days at home before each journey began, keyed by that (newer) journey's
+    /// id — the row sits under it on screen, between it and the one before it.
+    /// Empty when `discovery.show_home_gaps` is off.
+    var homeGaps: [String: Int] {
+        guard config.discovery.showHomeGaps else { return [:] }
+        var gaps: [String: Int] = [:]
+        for (newer, older) in zip(journeys, journeys.dropFirst()) {
+            if let days = JourneyChronicle.homeDays(after: older, before: newer) { gaps[newer.id] = days }
+        }
+        return gaps
+    }
+
+    // MARK: - Cards
+
     func summary(trip: TripRecord, facts: TripRepository.JourneyCardFacts) -> JourneySummary {
         let id = trip.discoveryKey ?? trip.id
         let stats = TripStats.from(jsonString: trip.statsJson)
@@ -60,6 +89,18 @@ extension JourneyDiscoveryModel {
         return LegLength.groundMeters(detail.segments)
     }
 
+    /// What the diary draws for a card (Footprints ADR draft, Data 1): a
+    /// stored trip's own stops, edits included, else the found journey's plan
+    /// with whatever its preview has named so far. nil for a card this model
+    /// no longer holds.
+    func itinerary(for summary: JourneySummary) -> JourneyItinerary? {
+        if let tripId = summary.tripId {
+            return Stored.read("detail") { try repository.detail(tripId: tripId) }.map(JourneyItinerary.init(detail:))
+        }
+        guard let plan = plans[summary.id] else { return nil }
+        return previewNamer.named(JourneyItinerary(plan: plan, config: config, clock: previewNamer.clock(for: plan)))
+    }
+
     /// What the scan cuts journeys by. Moved here from the class body when
     /// the hidden row (#167) took it past 250 lines.
     var detectionConfig: JourneyDetectionConfig {
@@ -73,12 +114,8 @@ extension JourneyDiscoveryModel {
         )
     }
 
-    func summary(journey: DiscoveredJourney) -> JourneySummary {
-        let plan = PhotoImportClusterer.plan(photos: journey.photos, config: ImportClusteringConfig(
-            stopRadiusM: config.photoImport.stopRadiusM,
-            stopSplitGapS: config.photoImport.stopSplitGapS,
-            minPhotosPerStop: config.photoImport.minPhotosPerStop
-        ))
+    /// - Parameter plan: the journey's cluster plan, made by the scan.
+    func summary(journey: DiscoveredJourney, plan: ImportedTripPlan) -> JourneySummary {
         let busiest = plan.stops.max { $0.photoAssetIds.count < $1.photoAssetIds.count }
         let modes = plan.legs.map { ImportService.mode(for: $0, config: config).rawValue }
         let isSinglePlace = journey.extentM < config.discovery.singlePlaceExtentM
