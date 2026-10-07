@@ -43,6 +43,12 @@ trailing items lost that licence button on relaunch (2026-09-02). Journeys is
 the default, and the last choice is remembered per device. The beta's toolbar
 button and its sheet are removed.
 
+**Every launch opens on Journeys** (Chiu, 2026-10-07, choosing between this
+section and Data 5, which conflicted when the last choice was Footprints):
+the choice is kept while the app runs, never across launches. That replaces
+"the last choice is remembered per device" above, so Footprints never scans
+or looks anything up at launch.
+
 | | 旅程 Journeys (S1 → S3) | 足跡 Footprints (list → diary) |
 |---|---|---|
 | Holds | stored trips: imported, recorded, the sample | every journey the library shows, stored or only found |

@@ -22,8 +22,13 @@ final class DiscoveryLocalizationTests: XCTestCase {
     func testDiscoveryHomeStringsResolve() throws {
         XCTAssertEqual(try localizedValue("home_title", locale: "en"), "My Journeys", "S1's title is untouched")
         XCTAssertEqual(try localizedValue("home_title", locale: "zh-Hant"), "我的旅程", "S1's title is untouched")
-        XCTAssertEqual(try localizedValue("discovery_title", locale: "en"), "Your Journeys")
-        XCTAssertEqual(try localizedValue("discovery_title", locale: "zh-Hant"), "你的旅程")
+        // Restated when the beta left beta as 足跡 (Footprints ADR draft):
+        // `discovery_title` is retired, and Footprints has its own title, apart
+        // from S1's, which it sits beside.
+        XCTAssertEqual(try localizedValue("footprints_title", locale: "en"), "Footprints")
+        XCTAssertEqual(try localizedValue("footprints_title", locale: "zh-Hant"), "足跡")
+        XCTAssertEqual(try localizedValue("home_segment_journeys", locale: "zh-Hant"), "旅程")
+        XCTAssertEqual(try localizedValue("home_segment_footprints", locale: "zh-Hant"), "足跡")
         XCTAssertEqual(try localizedValue("welcome_find", locale: "en"), "Find my journeys")
         XCTAssertEqual(try localizedValue("welcome_find", locale: "zh-Hant"), "找出我的旅程")
         XCTAssertEqual(try localizedValue("make_film", locale: "en"), "Make this a Film")

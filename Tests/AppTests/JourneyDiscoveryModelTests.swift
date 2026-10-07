@@ -215,17 +215,24 @@ final class JourneyDiscoveryModelTests: XCTestCase {
         XCTAssertEqual(reopened, tripId)
     }
 
-    func testDeletingAStoredJourneyRemovesTheTrip() async throws {
+    /// Restated for Footprints (ADR draft 2026-09-30): delete lives only in
+    /// Journeys. A stored trip's entry offers no delete here, and a trip
+    /// deleted in Journeys is gone from Footprints when it reads the trips again.
+    func testAStoredTripIsDeletedInJourneysNotInFootprints() async throws {
         let harness = try makeHarness()
         await harness.model.refresh()
         let japan = try XCTUnwrap(harness.model.journeys.last)
+        XCTAssertTrue(FootprintsMenu.canHide(japan), "a found journey can be hidden")
         _ = await harness.model.open(japan)
         XCTAssertEqual(try harness.repository.allTrips().count, 1)
 
         let stored = try XCTUnwrap(harness.model.journeys.first { $0.id == japan.id })
-        harness.model.delete(stored)
+        XCTAssertFalse(FootprintsMenu.canHide(stored), "a stored trip's menu in Footprints is empty: no delete")
+        let tripId = try XCTUnwrap(stored.tripId)
+        XCTAssertTrue(TripDeletion.delete(tripId: tripId, repository: harness.repository), "deleted in Journeys")
+        harness.model.loadTrips()
         XCTAssertEqual(try harness.repository.allTrips().count, 0)
-        XCTAssertFalse(harness.model.journeys.contains { $0.id == japan.id })
+        XCTAssertFalse(harness.model.journeys.contains { $0.tripId == tripId })
     }
 
     // MARK: - Access
