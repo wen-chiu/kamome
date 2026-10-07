@@ -1,132 +1,52 @@
 import SwiftUI
 
-/// **Your Journeys** — the Journey Discovery beta (Chiu, 2026-09-18).
+/// **足跡 / Footprints** — Home's second segment (ADR draft
+/// 2026-09-30-footprints-sits-beside-journeys). It was the Journey Discovery
+/// beta, a sheet behind a toolbar button, until it left beta.
 ///
 /// Kamome finds the journeys already sitting in the photo library and lays them
 /// out as one chronology: year, then destination and date, then the route. Each
 /// entry folds its photographs and details into a drawer that opens in place
-/// (2026-09-23); tapping the entry opens its diary, whose single action is
-/// *Make this a Film*.
+/// (2026-09-23); tapping the entry opens its itinerary, which only reads.
 ///
-/// ⚠️ **It does not replace the home screen.** S1 is still the app's home and
-/// still owns import and live capture; this is a separate screen reached from
-/// its toolbar, so the shipping path keeps working untouched while this UI is
-/// refined. That separation is Chiu's instruction, not a staging accident —
-/// when the beta is judged good enough, promoting it is a decision, not a
-/// leftover step.
+/// **For reading, not making.** Import, recording, editing, deleting and
+/// export all live in 旅程 / Journeys (S1 → S3). Here a found journey can be
+/// hidden, and a stored one has no delete (「刪除只在旅程」).
 ///
-/// Because the two paths stay separate, this screen deliberately carries **no**
-/// import or recording entry: a journey the library cannot see is added the way
-/// it always was, on the home screen behind this one.
-struct JourneyTimelineView: View {
-    /// A screen this list pushes.
-    enum Route: Hashable {
-        /// A journey's itinerary, by its card's id.
-        case itinerary(String)
-        /// S3, by trip id.
-        case trip(String)
-    }
+/// **Built only when first shown** (§0): `HomeView` creates the model the
+/// first time 足跡 is chosen, and the scan starts on this view's first
+/// appearance — never at launch, which always opens on 旅程 (Chiu 2026-10-07).
+struct FootprintsView: View {
+    let model: JourneyDiscoveryModel
+    /// Pushes a journey's itinerary on Home's stack.
+    let onOpen: (JourneySummary) -> Void
+    /// Shared with Home, whose stack draws the itinerary the entry grows into.
+    let namespace: Namespace.ID
 
-    let session: TrackingSession
-
-    @State private var model: JourneyDiscoveryModel
-    @State private var path: [Route] = []
-    @State private var deleting: JourneySummary?
     /// Entries whose drawer is open. Several may be; opening one closes nothing.
     @State private var expanded: Set<String> = []
     @State private var showingHidden = false
-    @Namespace private var entryNamespace
-    @Environment(\.dismiss) private var dismiss
-
-    init(session: TrackingSession) {
-        self.session = session
-        _model = State(initialValue: JourneyTimelineView.makeModel(session: session))
-    }
 
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                content
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 40)
-            }
-            .background(Color(.systemBackground))
-            .navigationTitle(Text("discovery_title"))
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .itinerary(let id):
-                    if let journey = model.journeys.first(where: { $0.id == id }) {
-                        JourneyItineraryView(summary: journey, model: model) { openTrip($0) }
-                            .modifier(ZoomFromEntry(id: id, namespace: entryNamespace))
-                    }
-                case .trip(let tripId):
-                    TripDetailView(tripId: tripId, session: session)
-                }
-            }
-            // Back on the list, it reads the trips again: a journey just made
-            // here has been named and routed since (#169).
-            .onChange(of: path) { if path.isEmpty { model.loadTrips() } }
-            .refreshable { await model.refresh() }
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("about_close") { dismiss() }
-                }
-            }
-            .confirmationDialog(
-                "journey_delete_confirm", isPresented: Binding(
-                    get: { deleting != nil }, set: { if !$0 { deleting = nil } }
-                ), titleVisibility: .visible
-            ) {
-                Button("journey_delete", role: .destructive) {
-                    if let deleting { withAnimation(.snappy) { model.delete(deleting) } }
-                    session.refreshTrips()
-                    deleting = nil
-                }
-            }
-            .alert(
-                Text("journey_open_failed"),
-                isPresented: Binding(
-                    get: { model.openFailure != nil }, set: { if !$0 { model.acknowledgeOpenFailure() } }
-                ),
-                presenting: model.openFailure
-            ) { _ in
-            } message: { failure in
-                // A tap that produced no trip used to produce nothing at all:
-                // the spinner stopped and the screen stayed as it was (#166).
-                switch failure {
-                case .notATrip: Text("journey_open_failed_not_a_trip")
-                case .saveFailed: Text("import_error_save")
-                }
+        ScrollView {
+            state
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+        }
+        .scrollContentBackground(.hidden)
+        .refreshable { await model.refresh() }
+        // The first appearance scans; a return reads the trips again, since a
+        // journey made here has been named and routed since (#169).
+        .task {
+            if model.phase == .idle {
+                await model.refresh()
+            } else {
+                model.loadTrips()
             }
         }
-        // The app follows the device's appearance (ADR 2026-09-18 (d)), so
-        // this sheet inherits light or dark from the system. The light style
-        // is approved (addendum to (d)).
-        .task { await model.refresh() }
-    }
-
-    /// Says what this is, under the title it qualifies. A beta that does not
-    /// admit to being one is just an inconsistency.
-    private var betaMark: some View {
-        Text("discovery_beta")
-            .font(.caption2.weight(.semibold))
-            .tracking(0.6)
-            .textCase(.uppercase)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.secondary.opacity(0.18)))
     }
 
     // MARK: - Content
-
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            betaMark
-                .padding(.bottom, 14)
-            state
-        }
-    }
 
     @ViewBuilder
     private var state: some View {
@@ -170,7 +90,7 @@ struct JourneyTimelineView: View {
                         isExpanded: expanded.contains(journey.id),
                         isOpening: model.openingId == journey.id,
                         isLast: isLastOverall(section: sectionIndex, entry: index),
-                        namespace: entryNamespace,
+                        namespace: namespace,
                         onToggle: { toggle(journey) },
                         action: { open(journey) }
                     )
@@ -215,13 +135,11 @@ struct JourneyTimelineView: View {
         section == model.sections.count - 1 && entry == (model.sections.last?.journeys.count ?? 0) - 1
     }
 
+    /// A found journey can be hidden; a stored trip has nothing here. Delete
+    /// lives only in Journeys (Footprints ADR draft).
     @ViewBuilder
     private func contextMenu(for journey: JourneySummary) -> some View {
-        if journey.isImported {
-            Button(role: .destructive) { deleting = journey } label: {
-                Label("journey_delete", systemImage: "trash")
-            }
-        } else {
+        if FootprintsMenu.canHide(journey) {
             Button { withAnimation(.snappy) { model.hide(journey) } } label: {
                 Label("journey_hide", systemImage: "eye.slash")
             }
@@ -237,18 +155,10 @@ struct JourneyTimelineView: View {
     /// A journey opens its itinerary. Nothing is imported until
     /// 「新增旅程」 (Footprints ADR draft: a found journey is previewed).
     private func open(_ journey: JourneySummary) {
-        path.append(.itinerary(journey.id))
+        onOpen(journey)
     }
 
-    /// S3, in place of the itinerary that led to it. The trip may be new, so
-    /// the home screen behind this sheet hears about it.
-    private func openTrip(_ tripId: String) {
-        session.refreshTrips()
-        if case .itinerary? = path.last { path.removeLast() }
-        path.append(.trip(tripId))
-    }
-
-    private static func makeModel(session: TrackingSession) -> JourneyDiscoveryModel {
+    static func makeModel(session: TrackingSession) -> JourneyDiscoveryModel {
         #if DEBUG
         if let demo = DemoJourneyLibrary.ifRequested() {
             return JourneyDiscoveryModel(
@@ -267,8 +177,16 @@ struct JourneyTimelineView: View {
     }
 }
 
+/// What a Footprints entry's menu offers. Its own type so the rule is tested:
+/// a stored trip in Footprints has no delete, and nothing else.
+enum FootprintsMenu {
+    static func canHide(_ journey: JourneySummary) -> Bool {
+        !journey.isImported
+    }
+}
+
 /// The entry grows into its diary on iOS 18; on 17 the push is the plain one.
-private struct ZoomFromEntry: ViewModifier {
+struct ZoomFromEntry: ViewModifier {
     let id: String
     let namespace: Namespace.ID
 
