@@ -143,12 +143,11 @@ public struct LinearTimeline {
         /// Pin it in a desk harness or two machines render different films.
         locale: Locale = .current
     ) {
-        // **A type-2 film is a film about the destination**, so the origin's drive
-        // comes out before anything is measured (`RecapTypeTwoFilm`). Every other
-        // film passes through untouched.
-        let trip = untrimmedTrip.filmType.hasDestinationAbroad
-            ? RecapTypeTwoFilm.trimmedToTheDestination(untrimmedTrip, config: config)
-            : untrimmedTrip
+        // **Continuous across 180° before anything is measured** (#234), and **a
+        // type-2 film is a film about the destination**, so the origin's drive
+        // comes out too (`RecapTypeTwoFilm`). Every other film passes through
+        // untouched.
+        let (untrimmedTrip, trip) = Self.filmed(untrimmedTrip, config: config)
 
         // Which of the type-2 opening's two forms this film takes — both are main
         // paths (`CrossingFraming`).
@@ -238,6 +237,14 @@ public struct LinearTimeline {
         // and this round is type-2 only.
         flightEndCoordinates = opensOnTheFlight ? RecapTypeTwoFilm.crossingEnds(trip) : nil
         journeyCard = flightEndCoordinates == nil ? nil : Self.journeyCard(trip: trip, locale: locale)
+    }
+
+    /// The trip the film is made of, and the same trip before a type-2 film's
+    /// origin is trimmed away — both unwrapped across 180° (`Antimeridian`).
+    private static func filmed(_ supplied: RecapTrip, config: TrackingConfig.Export) -> (RecapTrip, RecapTrip) {
+        let untrimmed = supplied.unwrappedAcrossTheAntimeridian()
+        guard untrimmed.filmType.hasDestinationAbroad else { return (untrimmed, untrimmed) }
+        return (untrimmed, RecapTypeTwoFilm.trimmedToTheDestination(untrimmed, config: config))
     }
 
     /// When the subject first appears, and the two sequences that decide it

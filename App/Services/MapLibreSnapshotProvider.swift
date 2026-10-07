@@ -191,7 +191,12 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     }
 
     public func snapshot(_ frame: CameraFrame, map: MapState, widthPx: Int, heightPx: Int) async throws -> MapSnapshot {
-        let center = CLLocationCoordinate2D(latitude: frame.centerLat, longitude: frame.centerLon)
+        // Normal for the camera only (#234): a film across 180° hands out
+        // unwrapped centres, and MapLibre draws garbage around one past ±180
+        // while projecting every point to the copy nearest a normal one.
+        let center = CLLocationCoordinate2D(
+            latitude: frame.centerLat, longitude: Antimeridian.normalized(frame.centerLon)
+        )
         let size = CGSize(width: widthPx, height: heightPx)
         let zoom = Self.zoomLevel(spanM: frame.spanM, widthPx: widthPx, latitude: frame.centerLat)
         let styleURL = self.styleURL

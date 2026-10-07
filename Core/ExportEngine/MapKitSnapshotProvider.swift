@@ -163,7 +163,7 @@ public struct MapKitSnapshotProvider: MapRenderer {
             )
         }
         return MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: Antimeridian.normalized(centerLon)),
             latitudinalMeters: latitudinalM,
             longitudinalMeters: spanM
         )
