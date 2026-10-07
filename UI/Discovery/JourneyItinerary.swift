@@ -82,9 +82,15 @@ struct JourneyItinerary: Equatable {
 extension JourneyItinerary {
     /// A found journey, from the plan an import would store. Nothing about it
     /// is stored or routed, so every leg is inferred, as the stored trip's
-    /// legs are until routing answers. Counted in the phone's zone: a found
-    /// journey's stops have no zones until they are named.
-    init(plan: ImportedTripPlan, config: TrackingConfig, clock: TripClock = .uniform()) {
+    /// legs are until routing answers — except a leg a photograph was taken
+    /// in flight on, which the import stores as flown (#224) and so is a
+    /// crossing here too (`ImportService.flownLegs`). Counted in the phone's
+    /// zone: a found journey's stops have no zones until they are named.
+    ///
+    /// - Parameter photos: the journey's photographs, which `plan` was made
+    ///   from. Only their in-flight fixes are read, and nothing is kept (§0).
+    init(plan: ImportedTripPlan, photos: [ImportPhoto], config: TrackingConfig, clock: TripClock = .uniform()) {
+        let flown = ImportService.flownLegs(of: plan, photos: photos, config: config)
         let places = plan.stops.enumerated().map { index, stop in
             Place(
                 id: "plan-\(index)", lat: stop.lat, lon: stop.lon,
@@ -97,7 +103,7 @@ extension JourneyItinerary {
                 startedAt: leg.startedAt,
                 mode: ImportService.mode(for: leg, config: config),
                 provenance: .inferred,
-                isCrossing: false
+                isCrossing: flown.contains(leg)
             )
         }
         self.init(
