@@ -41,6 +41,21 @@ struct JourneyItineraryView: View {
         .safeAreaInset(edge: .bottom) { actionBar }
         .onAppear(perform: load)
         .onDisappear { model.previewNamer.cancel() }
+        .alert(
+            Text("journey_open_failed"),
+            isPresented: Binding(
+                get: { model.openFailure != nil }, set: { if !$0 { model.acknowledgeOpenFailure() } }
+            ),
+            presenting: model.openFailure
+        ) { _ in
+        } message: { failure in
+            // A tap that produced no trip used to produce nothing at all: the
+            // spinner stopped and the screen stayed as it was (#166).
+            switch failure {
+            case .notATrip: Text("journey_open_failed_not_a_trip")
+            case .saveFailed: Text("import_error_save")
+            }
+        }
     }
 
     private func load() {
@@ -80,7 +95,7 @@ struct JourneyItineraryView: View {
             return
         }
         Task {
-            // A refused import says why through the list's alert (#166).
+            // A refused import says why, in the alert above (#166).
             if let tripId = await model.open(summary) { onOpenTrip(tripId) }
         }
     }

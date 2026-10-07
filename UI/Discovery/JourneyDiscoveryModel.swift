@@ -292,15 +292,6 @@ final class JourneyDiscoveryModel {
         startNaming()
     }
 
-    /// Deletes a stored trip and its films. The journey may be rediscovered on
-    /// the next scan; that is the honest outcome of deleting the trip and not
-    /// the photographs.
-    func delete(_ summary: JourneySummary) {
-        guard let tripId = summary.tripId else { return }
-        guard TripDeletion.delete(tripId: tripId, repository: repository) else { return }
-        journeys.removeAll { $0.id == summary.id }
-    }
-
     /// Selected Photos: grow the selection, then look again — the selection
     /// *is* the library discovery can see.
     func selectMorePhotos() {

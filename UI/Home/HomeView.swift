@@ -8,18 +8,22 @@ import UIKit
 /// hero button, and a quieter "Record a trip" button that asks for the vehicle
 /// in its own sheet (Chiu 2026-09-23). Cover map thumbnails remain a later polish.
 ///
-/// ⚠️ **This screen stays the home** (Chiu, 2026-09-18). Journey Discovery is an
-/// *added* feature in beta, not a replacement: it is one toolbar button away and
-/// opens as its own screen, so everything below — the trip list, import, live
-/// capture, the licence anchor — keeps working exactly as it did while the new
-/// UI is refined. Nothing here was restyled for it.
+/// ⚠️ **This screen stays the home** (Chiu, 2026-09-18). Footprints sits beside
+/// it as a second segment, 旅程 | 足跡 (ADR draft
+/// 2026-09-30-footprints-sits-beside-journeys), on this one stack: everything
+/// in 旅程 — the trip list, import, live capture, the licence anchor — works
+/// exactly as it did. Footprints is built the first time it is chosen.
 struct HomeView: View {
     @Environment(TrackingSession.self) private var session
     @State private var vehicle: VehicleType = .car
-    @State private var path: [String] = []
+    @State private var path: [HomeRoute] = []
+    @State private var segment = HomeSegment.atLaunch
+    /// Created the first time 足跡 is chosen, never before (§0), and kept for
+    /// the session so its scan and its names are not redone on every switch.
+    @State private var footprints: JourneyDiscoveryModel?
+    @Namespace private var entryNamespace
     @State private var showingImport = false
     @State private var showingStartRecording = false
-    @State private var showingDiscovery = false
     @State private var showingAbout = false
     @State private var showingFirstRunNotice = false
     /// The trip a swipe asked to delete, held until the user confirms. A full
@@ -32,18 +36,14 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            VStack(spacing: 16) {
-                if session.trips.isEmpty {
-                    HomeEmptyState(openSample: openSample)
-                } else {
-                    tripList
+            Group {
+                switch segment {
+                case .journeys: journeys
+                case .footprints: footprintsContent
                 }
-                Spacer()
-                importButton
-                recordButton
             }
-            .padding()
-            .navigationTitle(Text("home_title"))
+            .navigationTitle(Text(segment.title))
+            .navigationDestination(for: HomeRoute.self, destination: destination)
             .fullScreenCover(isPresented: .constant(session.isRecording)) {
                 RecordingView()
             }
@@ -53,7 +53,7 @@ struct HomeView: View {
                 ImportSheet(session: session) { tripId in
                     showingImport = false
                     session.refreshTrips()
-                    path = [tripId]
+                    path = [.trip(tripId)]
                 }
             }
             .sheet(isPresented: $showingStartRecording) {
@@ -67,15 +67,6 @@ struct HomeView: View {
                 if session.isRecording { showingStartRecording = false }
             }
             .toolbar { toolbarItems }
-            .sheet(isPresented: $showingDiscovery) {
-                JourneyTimelineView(session: session)
-            }
-            .onChange(of: showingDiscovery) {
-                // The beta can create a trip (opening a discovered journey
-                // imports it) and can delete one, so the list behind it is
-                // refreshed on the way back rather than left stale.
-                if !showingDiscovery { session.refreshTrips() }
-            }
             .sheet(isPresented: $showingAbout) {
                 AboutView(matching: session.config.matching)
             }
@@ -96,14 +87,14 @@ struct HomeView: View {
             // Demo screenshot automation (Phase 2 gate): jump straight to S3.
             if ProcessInfo.processInfo.arguments.contains("-demo-open-trip"),
                let first = session.trips.first {
-                path = [first.id]
+                path = [.trip(first.id)]
             }
             // Replay MVP §1 artifact: present the import sheet for its shot.
             if ProcessInfo.processInfo.arguments.contains("-demo-open-import") {
                 showingImport = true
             }
             if ProcessInfo.processInfo.arguments.contains("-demo-discover") {
-                showingDiscovery = true
+                show(.footprints)
             }
             // The record sheet's own shot (Chiu 2026-09-23 home cleanup).
             if ProcessInfo.processInfo.arguments.contains("-demo-open-record") {
@@ -111,12 +102,12 @@ struct HomeView: View {
             }
             #endif
             // Told once, before this build can send a real coordinate anywhere
-            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). Both demo sheets above are
+            // (Chiu 2026-09-04; ADR 2026-09-05 (b)). The demo sheets above are
             // checked because they open from this same `onAppear`, and two
             // sheets raised in one pass is a race rather than a stack. Nothing
             // is remembered on the launch that loses it, so the notice comes
             // back on the next one.
-            if !showingImport, !showingDiscovery, !showingStartRecording,
+            if !showingImport, !showingStartRecording,
                FirstRunNotice.shouldPresent(matching: session.config.matching) {
                 showingFirstRunNotice = true
             }
@@ -141,18 +132,22 @@ struct HomeView: View {
         #if DEBUG
         ToolbarItem(placement: .topBarLeading) { debugExportMenu }
         #endif
+        // The segments sit at `.principal`, never beside the info button: two
+        // items at `.topBarTrailing` lost it on relaunch (2026-09-02).
+        ToolbarItem(placement: .principal) {
+            Picker(selection: Binding(get: { segment }, set: show)) {
+                ForEach(HomeSegment.allCases, id: \.self) { Text($0.label).tag($0) }
+            } label: {
+                Text("home_segment_label")
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+        }
         ToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 2) {
-                Button {
-                    showingDiscovery = true
-                } label: {
-                    Label("discovery_open", systemImage: "sparkles.rectangle.stack")
-                }
-                Button {
-                    showingAbout = true
-                } label: {
-                    Label("about_title", systemImage: "info.circle")
-                }
+            Button {
+                showingAbout = true
+            } label: {
+                Label("about_title", systemImage: "info.circle")
             }
         }
     }
@@ -172,12 +167,27 @@ struct HomeView: View {
     private func openSample() throws {
         let tripId = try SampleTrip.create(repository: session.repository, vehicleId: LastVehicleChoice.forNewTrip())
         session.refreshTrips()
-        path = [tripId]
+        path = [.trip(tripId)]
+    }
+
+    /// 旅程, exactly as Home always was.
+    private var journeys: some View {
+        VStack(spacing: 16) {
+            if session.trips.isEmpty {
+                HomeEmptyState(openSample: openSample)
+            } else {
+                tripList
+            }
+            Spacer()
+            importButton
+            recordButton
+        }
+        .padding()
     }
 
     private var tripList: some View {
         List(session.trips) { trip in
-            NavigationLink(value: trip.id) {
+            NavigationLink(value: HomeRoute.trip(trip.id)) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(headline(for: trip))
@@ -208,9 +218,6 @@ struct HomeView: View {
                 if let tripPendingDeletion { session.deleteTrip(tripPendingDeletion.id) }
                 tripPendingDeletion = nil
             }
-        }
-        .navigationDestination(for: String.self) { tripId in
-            TripDetailView(tripId: tripId, session: session)
         }
     }
 
@@ -304,6 +311,49 @@ struct HomeView: View {
         return formatter.string(from: .now)
     }
     #endif
+}
+
+// MARK: - 足跡 / Footprints
+
+extension HomeView {
+    /// 足跡, once its model exists. It is created by `show(.footprints)`, so
+    /// nothing here runs before the person chooses it.
+    @ViewBuilder
+    fileprivate var footprintsContent: some View {
+        if let footprints {
+            FootprintsView(model: footprints, onOpen: { path.append(.itinerary($0.id)) }, namespace: entryNamespace)
+        }
+    }
+
+    /// Chooses a segment. 足跡 is built the first time; coming back to 旅程
+    /// reads the trips again, since Footprints can make one.
+    fileprivate func show(_ choice: HomeSegment) {
+        if choice == .footprints, footprints == nil {
+            footprints = FootprintsView.makeModel(session: session)
+        }
+        if choice == .journeys, segment != .journeys { session.refreshTrips() }
+        segment = choice
+    }
+
+    /// Both itinerary actions end here: switch to 旅程 and show the trip in S3
+    /// (「新增旅程」 / 「在旅程中打開」, Footprints ADR draft).
+    fileprivate func openInJourneys(_ tripId: String) {
+        show(.journeys)
+        path = [.trip(tripId)]
+    }
+
+    @ViewBuilder
+    fileprivate func destination(_ route: HomeRoute) -> some View {
+        switch route {
+        case .trip(let tripId):
+            TripDetailView(tripId: tripId, session: session)
+        case .itinerary(let id):
+            if let footprints, let journey = footprints.journeys.first(where: { $0.id == id }) {
+                JourneyItineraryView(summary: journey, model: footprints, onOpenTrip: openInJourneys)
+                    .modifier(ZoomFromEntry(id: id, namespace: entryNamespace))
+            }
+        }
+    }
 }
 
 #if DEBUG

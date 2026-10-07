@@ -52,6 +52,23 @@
         }
       }
     },
+    "footprints_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Footprints"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "足跡"
+          }
+        }
+      }
+    },
     "footprints_unsaved": {
       "extractionState": "manual",
       "localizations": {
@@ -65,6 +82,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未加入旅程"
+          }
+        }
+      }
+    },
+    "home_segment_footprints": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Footprints"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "足跡"
+          }
+        }
+      }
+    },
+    "home_segment_journeys": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journeys"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程"
+          }
+        }
+      }
+    },
+    "home_segment_label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journeys or Footprints"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅程或足跡"
           }
         }
       }
@@ -1309,57 +1377,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除停留點"
-          }
-        }
-      }
-    },
-    "discovery_beta": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beta"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "測試版"
-          }
-        }
-      }
-    },
-    "discovery_open": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Discover journeys"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "探索旅程"
-          }
-        }
-      }
-    },
-    "discovery_title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your Journeys"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的旅程"
           }
         }
       }
