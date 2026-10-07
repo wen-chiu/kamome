@@ -40,7 +40,6 @@ extension JourneyDiscoveryModel {
 
     func summary(trip: TripRecord, facts: TripRepository.JourneyCardFacts) -> JourneySummary {
         let id = trip.discoveryKey ?? trip.id
-        let stats = TripStats.from(jsonString: trip.statsJson)
         var extentM = 0.0
         if let span = facts.stopSpan {
             extentM = PhotoImportClusterer.haversineMeters(span.minLat, span.minLon, span.maxLat, span.maxLon)
@@ -61,7 +60,7 @@ extension JourneyDiscoveryModel {
                 facts.photos.map { PhotoCoverSelector.Candidate(assetId: $0.phAssetId, isHighlight: $0.isHighlight == 1) },
                 count: config.discovery.coverPhotos
             ),
-            distanceM: groundDistance(trip: trip, stats: stats),
+            distanceM: LegLength.groundMeters(trip: trip, repository: repository),
             legModes: facts.legModes,
             // A stop stored before ADR 2026-09-23 may be "named" by its own
             // coordinate. `StopNamer` renames it when Trip Detail next opens;
@@ -78,15 +77,6 @@ extension JourneyDiscoveryModel {
             clock: TripClock(stops: facts.stops),
             realTitle: TripTitle.isFallback(trip) ? nil : trip.title
         )
-    }
-
-    /// Kilometres on the ground (`LegLength.groundMeters`). A recording's own
-    /// stats are its measured distance; a trip rebuilt from photographs is
-    /// measured along its routed legs, flights left out.
-    func groundDistance(trip: TripRecord, stats: TripStats?) -> Double? {
-        if !trip.tripSource.isReconstructed, let measured = stats?.distanceM { return measured }
-        guard let detail = Stored.read("detail", { try repository.detail(tripId: trip.id) }) else { return nil }
-        return LegLength.groundMeters(detail.segments)
     }
 
     /// What the diary draws for a card (Footprints ADR draft, Data 1): a

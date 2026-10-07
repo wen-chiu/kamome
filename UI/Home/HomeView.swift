@@ -4,9 +4,9 @@ import KamomeTripComposer
 import SwiftUI
 import UIKit
 
-/// S1 Home / Trip List: trip cards (title, date, distance, stops), the import
-/// hero button, and a quieter "Record a trip" button that asks for the vehicle
-/// in its own sheet (Chiu 2026-09-23). Cover map thumbnails remain a later polish.
+/// S1 Home / Trip List: trip rows with a cover photograph (`HomeTripRow`), the
+/// import hero button, and a quieter "Record a trip" button that asks for the
+/// vehicle in its own sheet (Chiu 2026-09-23).
 ///
 /// ⚠️ **This screen stays the home** (Chiu, 2026-09-18). Footprints sits beside
 /// it as a second segment, 旅程 | 足跡 (ADR draft
@@ -43,6 +43,10 @@ struct HomeView: View {
                 }
             }
             .navigationTitle(Text(segment.title))
+            // The segmented control already names the page; a large title
+            // under it said it twice and cost the list ~80 pt (Chiu
+            // 2026-10-07). The title still names the back button.
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: HomeRoute.self, destination: destination)
             .fullScreenCover(isPresented: .constant(session.isRecording)) {
                 RecordingView()
@@ -170,36 +174,53 @@ struct HomeView: View {
         path = [.trip(tripId)]
     }
 
-    /// 旅程, exactly as Home always was.
+    /// 旅程: the trips, and the two ways to add one held at the foot of the
+    /// screen (Chiu 2026-10-07). They used to sit under the list behind a
+    /// `Spacer`, which left a short list a thin strip above an empty middle;
+    /// now the list runs the whole height and scrolls under them.
     private var journeys: some View {
-        VStack(spacing: 16) {
+        Group {
             if session.trips.isEmpty {
-                HomeEmptyState(openSample: openSample)
+                ScrollView {
+                    HomeEmptyState(openSample: openSample)
+                }
             } else {
                 tripList
             }
-            Spacer()
-            importButton
-            recordButton
         }
-        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 12) {
+                importButton
+                recordButton
+            }
+            .padding(.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+            // The page's own background, faded in over the top edge, so a row
+            // scrolling under the buttons goes out softly and a short list
+            // shows no panel at all.
+            .background {
+                LinearGradient(
+                    stops: [
+                        .init(color: Color(.systemBackground).opacity(0), location: 0),
+                        .init(color: Color(.systemBackground), location: 0.2)
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .ignoresSafeArea(edges: .bottom)
+            }
+        }
     }
 
     private var tripList: some View {
         List(session.trips) { trip in
             NavigationLink(value: HomeRoute.trip(trip.id)) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(headline(for: trip))
-                            .font(.headline)
-                        tripFacts(trip)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 8)
-                    provenanceMark(trip.tripSource)
-                }
+                HomeTripRow(trip: trip, repository: session.repository)
             }
+            // With no large title above it, the first row's top rule hung
+            // under the toolbar on its own; rows are still divided below.
+            .listRowSeparator(.hidden, edges: .top)
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) {
                     tripPendingDeletion = trip

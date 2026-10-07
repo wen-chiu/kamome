@@ -111,8 +111,7 @@ private struct ItineraryMasthead: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(dates)
                 .font(.caption.weight(.semibold))
-                .tracking(0.8)
-                .textCase(.uppercase)
+                .modifier(SmallCaps(tracking: 0.8))
                 .foregroundStyle(.secondary)
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 if let flag = summary.name?.flag {

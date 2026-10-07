@@ -123,4 +123,19 @@ final class JourneyChronicleTests: XCTestCase {
         XCTAssertNil(LegLength.groundMeters([leg("flight", mode: "drive", verdict: .noRoad, lat: 30)]))
         XCTAssertNil(LegLength.groundMeters([]))
     }
+
+    /// 「初訪」 is nearly every journey, so only a return carries the pill
+    /// (Chiu 2026-10-07); the drawer's sentence still covers a first visit.
+    func testOnlyAReturnVisitCarriesThePill() {
+        XCTAssertFalse(JourneyChronicle.showsPill(JourneyChronicle.Visit(ordinal: 1, country: "Japan")))
+        XCTAssertTrue(JourneyChronicle.showsPill(JourneyChronicle.Visit(ordinal: 2, country: "Japan")))
+    }
+
+    /// Tracking and italics are kept for Latin script only (2026-10-07).
+    func testLatinTypographyIsLatinOnly() {
+        XCTAssertTrue(ScriptTypography.isLatin(language: "en"))
+        XCTAssertTrue(ScriptTypography.isLatin(language: "en-GB"))
+        XCTAssertFalse(ScriptTypography.isLatin(language: "zh-Hant"))
+        XCTAssertFalse(ScriptTypography.isLatin(language: "ja"))
+    }
 }
