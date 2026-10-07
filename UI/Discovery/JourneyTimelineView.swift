@@ -26,6 +26,7 @@ struct JourneyTimelineView: View {
     @State private var deleting: JourneySummary?
     /// Entries whose drawer is open. Several may be; opening one closes nothing.
     @State private var expanded: Set<String> = []
+    @State private var showingHidden = false
     @Namespace private var entryNamespace
     @Environment(\.dismiss) private var dismiss
 
@@ -167,6 +168,13 @@ struct JourneyTimelineView: View {
             }
             if !model.hasJourneys, !model.isScanning {
                 NothingFoundCard(access: model.access)
+            }
+            if !model.hiddenJourneys.isEmpty {
+                HiddenJourneysRow(journeys: model.hiddenJourneys, isExpanded: $showingHidden) { journey in
+                    withAnimation(.snappy) { model.unhide(journey) }
+                }
+                .padding(.top, 24)
+                .transition(.opacity)
             }
         }
         .padding(.top, 4)

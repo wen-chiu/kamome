@@ -60,6 +60,19 @@ extension JourneyDiscoveryModel {
         return LegLength.groundMeters(detail.segments)
     }
 
+    /// What the scan cuts journeys by. Moved here from the class body when
+    /// the hidden row (#167) took it past 250 lines.
+    var detectionConfig: JourneyDetectionConfig {
+        JourneyDetectionConfig(
+            homeCellDeg: config.discovery.homeCellDeg,
+            awayRadiusM: config.discovery.awayRadiusM,
+            journeyGapS: config.discovery.journeyGapS,
+            minPhotos: config.discovery.minPhotos,
+            homecomingMinJumpM: config.discovery.homecomingMinJumpM,
+            countryCoastBufferM: config.discovery.countryCoastBufferM
+        )
+    }
+
     func summary(journey: DiscoveredJourney) -> JourneySummary {
         let plan = PhotoImportClusterer.plan(photos: journey.photos, config: ImportClusteringConfig(
             stopRadiusM: config.photoImport.stopRadiusM,
