@@ -173,10 +173,9 @@ extension CameraPath {
         // Left in place it turned a country beat into the largest portrait frame
         // that fits inside the trip's bounds: 46.6 km on `ishigaki-crossing`,
         // which is a city, not a country.
-        let country = destination.first.flatMap { CountryExtent.containing(lat: $0.lat, lon: $0.lon) }
         let countryFrame: CameraFrame
-        if let country {
-            countryFrame = frame(for: Self.bounds(of: country.bounds), config: config, padding: 1.0)
+        if let country = destination.first.flatMap(Self.countryBounds(around:)) {
+            countryFrame = frame(for: country, config: config, padding: 1.0)
         } else {
             // **A real answer, said out loud** (`Arch.md` §6). No row covers this
             // trip, so the film cannot claim to show a country and falls back to
