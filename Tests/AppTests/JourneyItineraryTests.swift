@@ -46,7 +46,7 @@ final class JourneyItineraryTests: XCTestCase {
         let config = try config()
         let photos = journey()
         let plan = PhotoImportClusterer.plan(photos: photos, config: ImportService.clustering(config))
-        let preview = JourneyItinerary(plan: plan, config: config)
+        let preview = JourneyItinerary(plan: plan, photos: photos, config: config)
 
         let repository = TripRepository(database: try AppDatabase.inMemory())
         let tripId = try await ImportService(repository: repository, config: config)
@@ -68,6 +68,36 @@ final class JourneyItineraryTests: XCTestCase {
         XCTAssertEqual(stored.tripId, tripId)
     }
 
+    /// **A flown leg is flown in the preview too** (#224 meets Footprints). The
+    /// import stores a leg a photograph was taken in flight on as a crossing,
+    /// so the preview must draw it as one, or the found journey shows a road
+    /// where the trip it becomes shows a plane. Public landmarks only (§0):
+    /// the fixture of `ImportFlownLegTests`.
+    func testAFlownLegIsACrossingInThePreviewAsInTheStoredTrip() async throws {
+        let config = try config()
+        let hour = 3600.0
+        func photo(_ id: String, _ hours: Double, _ lat: Double, _ lon: Double, altitude: Double = 50) -> ImportPhoto {
+            ImportPhoto(assetId: id, timestamp: hours * hour, lat: lat, lon: lon, altitudeLowerBoundM: altitude)
+        }
+        let photos = [
+            photo("la1", 0, 34.0522, -118.2437), photo("la2", 0.2, 34.0522, -118.2437),
+            photo("window", 3, 38.5, -98.0, altitude: 10_500),
+            photo("ny1", 30, 40.7128, -74.0060), photo("ny2", 30.2, 40.7128, -74.0060),
+            photo("bos1", 36, 42.3601, -71.0589), photo("bos2", 36.2, 42.3601, -71.0589)
+        ]
+        let plan = PhotoImportClusterer.plan(photos: photos, config: ImportService.clustering(config))
+        let preview = JourneyItinerary(plan: plan, photos: photos, config: config)
+
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let tripId = try await ImportService(repository: repository, config: config)
+            .importTrip(title: nil, photos: photos, plan: plan)
+        let stored = JourneyItinerary(detail: try XCTUnwrap(repository.detail(tripId: tripId)))
+
+        let previewLegs = preview.days.flatMap { $0.entries.compactMap(\.leg) }
+        XCTAssertEqual(previewLegs.map(\.isCrossing), [true, false], "Los Angeles → New York flown, the drive to Boston not")
+        XCTAssertEqual(previewLegs, stored.days.flatMap { $0.entries.compactMap(\.leg) })
+    }
+
     /// For a stored trip, the stored version wins: an edit made in S3 is what
     /// Footprints shows.
     func testAStoredTripsItineraryShowsItsEdits() async throws {
@@ -87,8 +117,9 @@ final class JourneyItineraryTests: XCTestCase {
     /// The first place has no travel into it; every later one does.
     func testTheFirstPlaceHasNoLegIntoIt() throws {
         let config = try config()
-        let plan = PhotoImportClusterer.plan(photos: journey(), config: ImportService.clustering(config))
-        let entries = JourneyItinerary(plan: plan, config: config).days.flatMap(\.entries)
+        let photos = journey()
+        let plan = PhotoImportClusterer.plan(photos: photos, config: ImportService.clustering(config))
+        let entries = JourneyItinerary(plan: plan, photos: photos, config: config).days.flatMap(\.entries)
         XCTAssertNil(entries.first?.leg)
         XCTAssertTrue(entries.dropFirst().allSatisfy { $0.leg?.provenance == .inferred })
     }

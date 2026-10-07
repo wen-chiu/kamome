@@ -144,14 +144,9 @@ struct ImportService {
     ///
     /// Only the count is logged; the altitudes and speeds are never stored (§0).
     private func markFlownLegs(tripId: String, plan: ImportedTripPlan, photos: [ImportPhoto]) {
-        let rules = config.photoImport
-        let airborne = Set(photos.filter {
-            $0.isAirborne(minAltitudeM: rules.airborneMinAltitudeM, minSpeedKmh: rules.airborneMinSpeedKmh)
-        }.map(\.assetId))
-        let flown = plan.legs.filter { leg in leg.points.contains { airborne.contains($0.assetId) } }
+        let flown = Self.flownLegs(of: plan, photos: photos, config: config)
         KamomeLog.importing.notice("""
-            import: \(airborne.count) of \(photos.count) photographs taken in flight — \
-            \(flown.count) of \(plan.legs.count) legs flown
+            import: \(flown.count) of \(plan.legs.count) legs flown, by photographs taken in flight
             """)
         guard !flown.isEmpty,
               let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) else { return }
@@ -161,6 +156,19 @@ struct ImportService {
             }) else { continue }
             Stored.write("setRoutability") { try repository.setRoutability(segmentId: segment.id, .beyondDriving) }
         }
+    }
+
+    /// The legs of `plan` a photograph was taken in flight on: the one rule
+    /// the import stores by (`markFlownLegs`) and Footprints previews by
+    /// (`JourneyItinerary(plan:...)`), so a found journey and the trip it
+    /// becomes fly the same legs.
+    static func flownLegs(of plan: ImportedTripPlan, photos: [ImportPhoto], config: TrackingConfig) -> [ImportedLeg] {
+        let rules = config.photoImport
+        let airborne = Set(photos.filter {
+            $0.isAirborne(minAltitudeM: rules.airborneMinAltitudeM, minSpeedKmh: rules.airborneMinSpeedKmh)
+        }.map(\.assetId))
+        guard !airborne.isEmpty else { return [] }
+        return plan.legs.filter { leg in leg.points.contains { airborne.contains($0.assetId) } }
     }
 
     private func plan(for photos: [ImportPhoto]) -> ImportedTripPlan {

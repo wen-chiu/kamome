@@ -67,7 +67,7 @@ final class JourneyDiscoveryModel {
 
     /// Discovered journeys not yet imported, by key — hidden ones included, so
     /// one shown again can be opened.
-    private var detected: [String: DiscoveredJourney] = [:]
+    private(set) var detected: [String: DiscoveredJourney] = [:]
     /// Each found journey's cluster plan, made once by the scan off the main
     /// actor (Footprints ADR draft, Data 2). The card, the itinerary and the
     /// import all read this one plan.

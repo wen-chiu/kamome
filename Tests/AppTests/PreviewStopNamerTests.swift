@@ -53,7 +53,7 @@ final class PreviewStopNamerTests: XCTestCase {
         let namer = PreviewStopNamer(geocoder: geocoder)
         let photos = photos()
         let plan = PhotoImportClusterer.plan(photos: photos, config: ImportService.clustering(config))
-        let preview = JourneyItinerary(plan: plan, config: config)
+        let preview = JourneyItinerary(plan: plan, photos: photos, config: config)
 
         namer.name(preview.places) {}
         await waitFor("all three named") { namer.named(preview).places.allSatisfy { $0.name != nil } }
@@ -84,7 +84,7 @@ final class PreviewStopNamerTests: XCTestCase {
         // The preview counts in the zones its lookups found, as S3 will: the
         // same hour and the same day. Found on the 2026-10-06 render, where the
         // preview said 6:00 PM (the phone's zone) and S3 said 7:00 PM (Tokyo).
-        let named = namer.named(JourneyItinerary(plan: plan, config: config, clock: namer.clock(for: plan)))
+        let named = namer.named(JourneyItinerary(plan: plan, photos: photos, config: config, clock: namer.clock(for: plan)))
         let stored = JourneyItinerary(detail: try XCTUnwrap(repository.detail(tripId: tripId)))
         XCTAssertEqual(named.places.map { named.arrivalTime(of: $0) }, stored.places.map { stored.arrivalTime(of: $0) })
         XCTAssertEqual(named.days.map(\.index), stored.days.map(\.index))
@@ -95,8 +95,9 @@ final class PreviewStopNamerTests: XCTestCase {
         let config = try JourneyDiscoveryModelTests.shippedConfig(geocodeInterval: 0)
         let geocoder = CountingGeocoder()
         let namer = PreviewStopNamer(geocoder: geocoder)
-        let plan = PhotoImportClusterer.plan(photos: photos(), config: ImportService.clustering(config))
-        let preview = JourneyItinerary(plan: plan, config: config)
+        let photos = photos()
+        let plan = PhotoImportClusterer.plan(photos: photos, config: ImportService.clustering(config))
+        let preview = JourneyItinerary(plan: plan, photos: photos, config: config)
 
         namer.name(preview.places) { namer.cancel() }
         try await Task.sleep(for: .milliseconds(100))
@@ -110,7 +111,7 @@ final class PreviewStopNamerTests: XCTestCase {
         let namer = PreviewStopNamer(geocoder: geocoder)
         let photos = photos()
         let plan = PhotoImportClusterer.plan(photos: photos, config: ImportService.clustering(config))
-        let preview = JourneyItinerary(plan: plan, config: config)
+        let preview = JourneyItinerary(plan: plan, photos: photos, config: config)
         namer.name(preview.places) {}
         await waitFor("named") { namer.named(preview).places.allSatisfy { $0.name != nil } }
 
