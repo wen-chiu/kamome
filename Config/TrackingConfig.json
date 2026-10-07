@@ -55,7 +55,9 @@
     "pace_unknowable_gap_s": 14400,
     "default_range_days": 7,
     "max_range_days": 21,
-    "duplicate_photo_share": 0.5
+    "duplicate_photo_share": 0.5,
+    "airborne_min_altitude_m": 6000,
+    "airborne_min_speed_kmh": 450
   },
   "photo_analysis": {
     "target_px": 512,

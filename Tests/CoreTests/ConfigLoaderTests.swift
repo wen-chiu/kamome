@@ -123,6 +123,9 @@ final class ConfigLoaderTests: XCTestCase {
         XCTAssertEqual(config.photoImport.minPhotosPerStop, 2)
         XCTAssertEqual(config.photoImport.deckHighlightMaxPhotos, 5)
         XCTAssertEqual(config.photoImport.paceUnknowableGapS, 14_400)
+        // #224, ADR 2026-10-06: above the highest road; above the fastest train.
+        XCTAssertEqual(config.photoImport.airborneMinAltitudeM, 6_000)
+        XCTAssertEqual(config.photoImport.airborneMinSpeedKmh, 450)
         // Inclusive of both ends: 7 means a seven-day range, seeded at now − 6.
         XCTAssertEqual(config.photoImport.defaultRangeDays, 7)
         // The widest range the picker will hold, as a sliding window (Chiu's 21).
