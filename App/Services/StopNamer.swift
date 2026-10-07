@@ -200,7 +200,7 @@ final class StopNamer {
 
     /// One lookup's answer, written back. Pulled out of `drain` for length.
     private func record(_ stop: StopRecord, townOnly: Bool, place: StopPlace, error: Error?) {
-        let (name, locality) = (place.name, place.locality)
+        let name = place.name
         let finishedAt = Date.now.timeIntervalSince1970
         guard let name else {
             // **Charge the throttle anyway.** Advancing the clock only on
@@ -236,16 +236,8 @@ final class StopNamer {
             return
         }
         policy.recordLookup(lat: stop.lat, lon: stop.lon, name: name, at: finishedAt)
-        // "" = asked, no town (or zone) here: recorded so it is not asked again.
-        let town = locality ?? ""
-        let zone = place.timeZone ?? ""
-        let part = place.subLocality ?? ""
-        let country = place.countryCode ?? ""
         placeByName[name] = place
-        storeLocality(town, of: stop)
-        storeTimeZone(zone, of: stop)
-        storeSubLocality(part, of: stop)
-        storeCountryCode(country, of: stop)
+        Self.storePlace(place, of: stop.id, repository: repository)
         guard !townOnly else {
             onPlaceFilled?()
             return
@@ -254,20 +246,23 @@ final class StopNamer {
         finish(stop, named: true)
     }
 
-    private func storeLocality(_ town: String, of stop: StopRecord) {
-        Stored.write("setStopLocality") { try repository.setStopLocality(stopId: stop.id, locality: town) }
-    }
-
-    private func storeTimeZone(_ zone: String, of stop: StopRecord) {
-        Stored.write("setStopTimeZone") { try repository.setStopTimeZone(stopId: stop.id, timeZone: zone) }
-    }
-
-    private func storeSubLocality(_ part: String, of stop: StopRecord) {
-        Stored.write("setStopSubLocality") { try repository.setStopSubLocality(stopId: stop.id, subLocality: part) }
-    }
-
-    private func storeCountryCode(_ code: String, of stop: StopRecord) {
-        Stored.write("setStopCountryCode") { try repository.setStopCountryCode(stopId: stop.id, countryCode: code) }
+    /// Writes what one lookup answered about a stop, beside its name: town,
+    /// zone, part of town and country. "" = asked, none here, recorded so it is
+    /// not asked again. Shared with Footprints, whose preview answers are
+    /// written onto a new trip's stops at 「新增旅程」 (`PreviewStopNamer`).
+    static func storePlace(_ place: StopPlace, of stopId: String, repository: TripRepository) {
+        Stored.write("setStopLocality") {
+            try repository.setStopLocality(stopId: stopId, locality: place.locality ?? "")
+        }
+        Stored.write("setStopTimeZone") {
+            try repository.setStopTimeZone(stopId: stopId, timeZone: place.timeZone ?? "")
+        }
+        Stored.write("setStopSubLocality") {
+            try repository.setStopSubLocality(stopId: stopId, subLocality: place.subLocality ?? "")
+        }
+        Stored.write("setStopCountryCode") {
+            try repository.setStopCountryCode(stopId: stopId, countryCode: place.countryCode ?? "")
+        }
     }
 
     /// A stop answered from `GeocodePolicy`'s name cache gets the town, zone
@@ -275,9 +270,6 @@ final class StopNamer {
     /// made it.
     private func storeCachedPlace(named name: String, of stop: StopRecord) {
         guard let place = placeByName[name] else { return }
-        storeLocality(place.locality ?? "", of: stop)
-        storeTimeZone(place.timeZone ?? "", of: stop)
-        storeSubLocality(place.subLocality ?? "", of: stop)
-        storeCountryCode(place.countryCode ?? "", of: stop)
+        Self.storePlace(place, of: stop.id, repository: repository)
     }
 }

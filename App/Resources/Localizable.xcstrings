@@ -18,6 +18,57 @@
         }
       }
     },
+    "footprints_create_journey": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Journey"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增旅程"
+          }
+        }
+      }
+    },
+    "footprints_open_in_journeys": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Journeys"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在旅程中打開"
+          }
+        }
+      }
+    },
+    "footprints_unsaved": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in Journeys yet"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未加入旅程"
+          }
+        }
+      }
+    },
     "journey_unhide": {
       "extractionState": "manual",
       "localizations": {

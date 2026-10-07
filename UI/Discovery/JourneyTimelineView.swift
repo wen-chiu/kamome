@@ -19,10 +19,18 @@ import SwiftUI
 /// import or recording entry: a journey the library cannot see is added the way
 /// it always was, on the home screen behind this one.
 struct JourneyTimelineView: View {
+    /// A screen this list pushes.
+    enum Route: Hashable {
+        /// A journey's itinerary, by its card's id.
+        case itinerary(String)
+        /// S3, by trip id.
+        case trip(String)
+    }
+
     let session: TrackingSession
 
     @State private var model: JourneyDiscoveryModel
-    @State private var path: [String] = []
+    @State private var path: [Route] = []
     @State private var deleting: JourneySummary?
     /// Entries whose drawer is open. Several may be; opening one closes nothing.
     @State private var expanded: Set<String> = []
@@ -44,12 +52,20 @@ struct JourneyTimelineView: View {
             }
             .background(Color(.systemBackground))
             .navigationTitle(Text("discovery_title"))
-            .navigationDestination(for: String.self) { tripId in
-                JourneyDiaryView(tripId: tripId, session: session)
-                    .modifier(ZoomFromEntry(
-                        id: model.summary(forTrip: tripId)?.id ?? tripId, namespace: entryNamespace
-                    ))
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .itinerary(let id):
+                    if let journey = model.journeys.first(where: { $0.id == id }) {
+                        JourneyItineraryView(summary: journey, model: model) { openTrip($0) }
+                            .modifier(ZoomFromEntry(id: id, namespace: entryNamespace))
+                    }
+                case .trip(let tripId):
+                    TripDetailView(tripId: tripId, session: session)
+                }
             }
+            // Back on the list, it reads the trips again: a journey just made
+            // here has been named and routed since (#169).
+            .onChange(of: path) { if path.isEmpty { model.loadTrips() } }
             .refreshable { await model.refresh() }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -218,15 +234,18 @@ struct JourneyTimelineView: View {
         }
     }
 
+    /// A journey opens its itinerary. Nothing is imported until
+    /// 「新增旅程」 (Footprints ADR draft: a found journey is previewed).
     private func open(_ journey: JourneySummary) {
-        Task {
-            if let tripId = await model.open(journey) {
-                // The trip the beta just created is a real trip, so the home
-                // screen behind this sheet has to know about it.
-                session.refreshTrips()
-                path.append(tripId)
-            }
-        }
+        path.append(.itinerary(journey.id))
+    }
+
+    /// S3, in place of the itinerary that led to it. The trip may be new, so
+    /// the home screen behind this sheet hears about it.
+    private func openTrip(_ tripId: String) {
+        session.refreshTrips()
+        if case .itinerary? = path.last { path.removeLast() }
+        path.append(.trip(tripId))
     }
 
     private static func makeModel(session: TrackingSession) -> JourneyDiscoveryModel {
