@@ -16,13 +16,38 @@ public struct ImportPhoto: Equatable, Sendable {
     /// from exported files carry place and time only, so a desk render sees
     /// `false` everywhere.
     public let isFavorite: Bool
+    /// The **lowest** altitude the photo's GPS fix allows — altitude less its
+    /// vertical accuracy, in metres — or nil when the fix carries no valid
+    /// altitude (#224). A lower bound so that a poor fix can only ever make a
+    /// photograph look *lower*: it can hide a flight, never invent one. Read on
+    /// the phone to judge one leg and never stored (§0).
+    public let altitudeLowerBoundM: Double?
+    /// The **lowest** ground speed the fix allows — speed less its accuracy, in
+    /// km/h — or nil when the fix carries no valid speed. Same one-sidedness,
+    /// same lifetime as `altitudeLowerBoundM`.
+    public let speedLowerBoundKmh: Double?
 
-    public init(assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false) {
+    public init(
+        assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false,
+        altitudeLowerBoundM: Double? = nil, speedLowerBoundKmh: Double? = nil
+    ) {
         self.assetId = assetId
         self.timestamp = timestamp
         self.lat = lat
         self.lon = lon
         self.isFavorite = isFavorite
+        self.altitudeLowerBoundM = altitudeLowerBoundM
+        self.speedLowerBoundKmh = speedLowerBoundKmh
+    }
+
+    /// **Was this photograph taken in flight?** (#224). Above the highest road
+    /// on Earth, or faster than any train in service, the camera was in the
+    /// air — and the leg the photograph sits on was flown, whatever the clocks
+    /// say. One-sided: a photograph without a fix proves nothing.
+    public func isAirborne(minAltitudeM: Double, minSpeedKmh: Double) -> Bool {
+        if let altitudeLowerBoundM, minAltitudeM > 0, altitudeLowerBoundM >= minAltitudeM { return true }
+        if let speedLowerBoundKmh, minSpeedKmh > 0, speedLowerBoundKmh >= minSpeedKmh { return true }
+        return false
     }
 }
 
@@ -90,13 +115,38 @@ public struct ImportedRoutePoint: Equatable, Sendable {
     /// from exported files carry place and time only, so a desk render sees
     /// `false` everywhere.
     public let isFavorite: Bool
+    /// The **lowest** altitude the photo's GPS fix allows — altitude less its
+    /// vertical accuracy, in metres — or nil when the fix carries no valid
+    /// altitude (#224). A lower bound so that a poor fix can only ever make a
+    /// photograph look *lower*: it can hide a flight, never invent one. Read on
+    /// the phone to judge one leg and never stored (§0).
+    public let altitudeLowerBoundM: Double?
+    /// The **lowest** ground speed the fix allows — speed less its accuracy, in
+    /// km/h — or nil when the fix carries no valid speed. Same one-sidedness,
+    /// same lifetime as `altitudeLowerBoundM`.
+    public let speedLowerBoundKmh: Double?
 
-    public init(assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false) {
+    public init(
+        assetId: String, timestamp: Double, lat: Double, lon: Double, isFavorite: Bool = false,
+        altitudeLowerBoundM: Double? = nil, speedLowerBoundKmh: Double? = nil
+    ) {
         self.assetId = assetId
         self.timestamp = timestamp
         self.lat = lat
         self.lon = lon
         self.isFavorite = isFavorite
+        self.altitudeLowerBoundM = altitudeLowerBoundM
+        self.speedLowerBoundKmh = speedLowerBoundKmh
+    }
+
+    /// **Was this photograph taken in flight?** (#224). Above the highest road
+    /// on Earth, or faster than any train in service, the camera was in the
+    /// air — and the leg the photograph sits on was flown, whatever the clocks
+    /// say. One-sided: a photograph without a fix proves nothing.
+    public func isAirborne(minAltitudeM: Double, minSpeedKmh: Double) -> Bool {
+        if let altitudeLowerBoundM, minAltitudeM > 0, altitudeLowerBoundM >= minAltitudeM { return true }
+        if let speedLowerBoundKmh, minSpeedKmh > 0, speedLowerBoundKmh >= minSpeedKmh { return true }
+        return false
     }
 }
 

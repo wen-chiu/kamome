@@ -104,6 +104,8 @@ struct ImportService {
             )
         )
 
+        markFlownLegs(tripId: tripId, plan: plan, photos: photos)
+
         // The subject is recorded at creation, never at render: the row then
         // states what the film draws, so changing the default later cannot
         // restyle a trip someone already made.
@@ -127,6 +129,37 @@ struct ImportService {
         let kept = plan.stops.flatMap(\.photoAssetIds) + plan.routeAttachedAssetIds
         return Stored.read("tripHoldingMost") {
             try repository.tripHoldingMost(assetIds: kept, minShare: config.photoImport.duplicatePhotoShare)
+        }
+    }
+
+    /// **A leg a photograph was taken in flight on was flown** (#224, ADR
+    /// 2026-10-06), and it is stored as `beyond_driving` before routing ever
+    /// sees it — so the plane flies it, and the airborne fix is never sent to a
+    /// road router as a via-waypoint nor counted as a witness of a drive.
+    ///
+    /// No clock is involved, which is the point: `LegPace` and
+    /// `RouteFeasibility` both read the photographs' times, and a night either
+    /// side of a flight defeats them. A stop's two ends carry its first and last
+    /// photographs' ids, so a stop made of window photographs flies both legs.
+    ///
+    /// Only the count is logged; the altitudes and speeds are never stored (§0).
+    private func markFlownLegs(tripId: String, plan: ImportedTripPlan, photos: [ImportPhoto]) {
+        let rules = config.photoImport
+        let airborne = Set(photos.filter {
+            $0.isAirborne(minAltitudeM: rules.airborneMinAltitudeM, minSpeedKmh: rules.airborneMinSpeedKmh)
+        }.map(\.assetId))
+        let flown = plan.legs.filter { leg in leg.points.contains { airborne.contains($0.assetId) } }
+        KamomeLog.importing.notice("""
+            import: \(airborne.count) of \(photos.count) photographs taken in flight — \
+            \(flown.count) of \(plan.legs.count) legs flown
+            """)
+        guard !flown.isEmpty,
+              let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) else { return }
+        for leg in flown {
+            guard let segment = detail.segments.map(\.segment).first(where: {
+                $0.startedAt == leg.startedAt && $0.endedAt == leg.endedAt
+            }) else { continue }
+            Stored.write("setRoutability") { try repository.setRoutability(segmentId: segment.id, .beyondDriving) }
         }
     }
 
