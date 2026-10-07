@@ -77,7 +77,8 @@ public enum RecapSnapshotStations {
         camera: (Double) -> CameraFrame,
         map: (Double) -> MapState,
         mustStartAt: Set<Int> = [],
-        config: TrackingConfig.Export
+        config: TrackingConfig.Export,
+        band: MercatorBand? = nil
     ) -> [Station] {
         guard frameCount > 0, fps > 0 else { return [] }
         let budget = max(config.snapshotStationMaxMagnification, 1)
@@ -105,13 +106,19 @@ public enum RecapSnapshotStations {
                 // and put a soft map under every stop in the film.
                 let candidate = run + [Self.path(next)]
                 let unions = candidate.contains { $0 != candidate[0] }
-                let extended = CameraPath.containingFrame(
+                let union = CameraPath.containingFrame(
                     candidate, padding: unions ? padding : 1, config: config
                 )
+                // **A station the substrate would move is moved here first**
+                // (#223): a union padded past the map's edge is drawn shifted,
+                // so it is planned shifted — and kept only if, drawn that way,
+                // it still holds every frame of the run. Inside the band this
+                // is the identical value and nothing below changes.
+                let extended = Self.drawable(union, holding: candidate, band: band)
                 // The budget is measured against the *tightest* frame in the run:
                 // that is the one magnified most, so it is the one that decides.
                 let tightest = min(run.map(\.spanM).min() ?? next.spanM, next.spanM)
-                guard tightest > 0, extended.spanM <= tightest * budget else { break }
+                guard let extended, tightest > 0, extended.spanM <= tightest * budget else { break }
                 run.append(Self.path(next))
                 containing = extended
                 end += 1
@@ -123,6 +130,19 @@ public enum RecapSnapshotStations {
             start = end
         }
         return stations
+    }
+
+    /// `union` as the substrate will draw it, or nil when, drawn that way, it
+    /// no longer holds every frame of `run` — which closes the station.
+    private static func drawable(
+        _ union: CameraPath.CameraFrame, holding run: [CameraPath.CameraFrame], band: MercatorBand?
+    ) -> CameraPath.CameraFrame? {
+        guard let band else { return union }
+        let asked = waist(union, bearing: union.bearing)
+        let drawn = band.fitted(asked)
+        guard drawn != asked else { return union }
+        guard run.allSatisfy({ band.contains(drawn, waist($0, bearing: $0.bearing)) }) else { return nil }
+        return path(drawn)
     }
 
     /// **Where a station must begin, so a stop beat is pixel-exact.**

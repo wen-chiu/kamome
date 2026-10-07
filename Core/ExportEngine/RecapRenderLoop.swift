@@ -197,7 +197,8 @@ public struct RecapRenderLoop {
                 holds: timeline.holds, frameCount: timeline.frameCount,
                 fps: config.fps, camera: camera
             ),
-            config: config
+            config: config,
+            band: timeline.substrateBand
         )
     }
 

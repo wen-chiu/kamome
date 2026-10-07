@@ -185,6 +185,7 @@ public struct MapLibreSnapshotProvider: MapRenderer {
     public var capabilities: MapRendererCapabilities {
         MapRendererCapabilities(
             supportsBearing: true, supportsHeadingUp: true, fixedAppearance: fixedAppearance,
+            maxFramableLatitudeDeg: MercatorBand.webMercatorMaxLatitudeDeg,
             attribution: attribution
         )
     }

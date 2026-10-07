@@ -66,8 +66,22 @@ extension RecapExportJob {
             // its two forms accordingly rather than discovering the answer one
             // snapshot at a time (`CrossingFraming`).
             substrateMaxLongitudeDeg: provider.capabilities.maxFramableLongitudeDeg
-        ) else { return nil }
+        )?.fitted(into: provider.capabilities.maxFramableLatitudeDeg.map {
+            // …and where its world ends: every frame is fitted inside, so a
+            // station is planned against what the substrate draws (#223).
+            MercatorBand(maxLatitudeDeg: $0, widthPx: exportConfig.frameWidthPx, heightPx: exportConfig.frameHeightPx)
+        }) else { return nil }
         announce(timeline: timeline, trip: composed.trip, region: region, appearance: appearance)
+        let fitted = timeline.framesFittedIntoBand(fps: exportConfig.fps)
+        if fitted.moved > 0 {
+            // Named, never silent: the picture is not the one the camera asked
+            // for, and a reviewer of this film needs to know which frames moved.
+            KamomeLog.recap.notice("""
+                film: \(fitted.moved) frames fitted inside the map's edge (±85°) — largest move \
+                \(fitted.worstShiftPx, format: .fixed(precision: 0)) px, \(fitted.tallerThanBand) taller than \
+                the whole map and zoomed in to fit (ADR 2026-10-07)
+                """)
+        }
         return Plan(
             timeline: timeline, provider: provider,
             style: RecapStyle.modernMinimal(appearance).withEndCard(config.export.endCardStyle),
@@ -172,6 +186,11 @@ extension RecapExportJob {
             // error can carry a tile URL, and z/x/y is a place (§0).
             let code = Self.failureCode(error)
             KamomeLog.recap.error("export failed — \(code, privacy: .public): \(error)")
+            // Two numbers and fixed words, no place — so public, unlike the line
+            // above: a redacted one cost #223 its diagnosis.
+            if let containment = error as? SnapshotReprojection.ContainmentError {
+                KamomeLog.recap.error("export failed — \(containment.description, privacy: .public)")
+            }
             return .failed(message: code)
         }
     }

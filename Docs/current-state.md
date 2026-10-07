@@ -6,10 +6,10 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-03 against ADR **2026-10-03-the-boarding-pass-names-its-countries-from-the-stops**
-(stop.country_code, v16), with -a-road-is-stored-only-if-it-could-be-driven,
--the-export-wait-flies-a-gull, -the-routing-ceiling-counts-in-one-durable-object
-and -desk-renders-route-direct-on-their-own-key.
+Last synced: 2026-10-07 against ADR **2026-10-07-every-frame-fits-inside-the-maps-edge**;
+2026-10-03: -the-boarding-pass-names-its-countries-from-the-stops (stop.country_code,
+v16), -a-road-is-stored-only-if-it-could-be-driven, -the-export-wait-flies-a-gull,
+-the-routing-ceiling-counts-in-one-durable-object, -desk-renders-route-direct-on-their-own-key.
 Before them: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:

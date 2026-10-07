@@ -53,6 +53,11 @@ public struct LinearTimeline {
     }
 
     let path: CameraPath
+    /// The substrate's drawable band, when it has one (`MercatorBand`, #223):
+    /// every frame this timeline hands out is fitted into it, so a station is
+    /// planned against the picture the substrate will really draw. Set through
+    /// `fitted(into:)`.
+    public internal(set) var substrateBand: MercatorBand?
     let stops: [RecapTrip.Stop]
     let holds: [CameraPath.Hold]
     /// Internal, not private, since 2026-09-03: `LinearTimelineCrossing` owns
@@ -282,13 +287,15 @@ public struct LinearTimeline {
     }
 
     /// Camera framing: straight through to `CameraPath`, which holds one fixed
-    /// frame per act. Nothing here modulates it — not the stop, not the deck.
+    /// frame per act. Nothing here modulates it — not the stop, not the deck —
+    /// except the substrate's band, which only a frame past its edge ever meets.
     public func cameraFrame(atTime time: Double) -> CameraFrame {
         let frame = path.cameraFrame(atTime: time)
-        return CameraFrame(
+        let asked = CameraFrame(
             centerLat: frame.centerLat, centerLon: frame.centerLon,
             spanM: frame.spanM, bearing: frame.bearing
         )
+        return substrateBand?.fitted(asked) ?? asked
     }
 
     /// Everything drawn over the map at `time`: the revealed trail, the trip

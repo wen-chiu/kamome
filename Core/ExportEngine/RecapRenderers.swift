@@ -61,6 +61,15 @@ public struct MapRendererCapabilities: Equatable {
     /// east–west one that cannot be framed at all.
     public let maxFramableLongitudeDeg: Double?
 
+    /// **The latitude this substrate's world ends at**, or nil when it has no
+    /// such edge (#223, ADR 2026-10-07). A Web-Mercator map stops at ±85.05°,
+    /// and MapLibre moves a frame that reaches past it — VERIFIED on a real
+    /// snapshot. Unlike the longitude ceiling this is not a limit the film
+    /// chooses around: `LinearTimeline` fits every frame into the band, so the
+    /// picture planned is the picture drawn, and the export log counts the
+    /// frames it moved.
+    public let maxFramableLatitudeDeg: Double?
+
     /// **The credit the exported film must carry because of this substrate's
     /// data**, or nil when its data obliges none (ADR 2026-09-12 (b)).
     ///
@@ -85,12 +94,14 @@ public struct MapRendererCapabilities: Equatable {
         supportsHeadingUp: Bool,
         fixedAppearance: RecapAppearance? = nil,
         maxFramableLongitudeDeg: Double? = nil,
+        maxFramableLatitudeDeg: Double? = nil,
         attribution: String? = nil
     ) {
         self.supportsBearing = supportsBearing
         self.supportsHeadingUp = supportsHeadingUp
         self.fixedAppearance = fixedAppearance
         self.maxFramableLongitudeDeg = maxFramableLongitudeDeg
+        self.maxFramableLatitudeDeg = maxFramableLatitudeDeg
         self.attribution = attribution
     }
 
