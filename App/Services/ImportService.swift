@@ -41,9 +41,15 @@ struct ImportService {
     /// owns the run; harnesses that need a routed trip await
     /// `RouteMatchService.matchTrip` themselves, which makes a dependency that
     /// used to be accidental into one the caller states.
+    ///
+    /// - Parameter plan: the photographs' cluster plan when the caller already
+    ///   has it (Discovery plans every journey once, off the main actor). It
+    ///   must be `plan(for: photos)`; nil plans here.
     @discardableResult
-    func importTrip(title: String?, photos: [ImportPhoto], discoveryKey: String? = nil) async throws -> String {
-        let plan = self.plan(for: photos)
+    func importTrip(
+        title: String?, photos: [ImportPhoto], discoveryKey: String? = nil, plan: ImportedTripPlan? = nil
+    ) async throws -> String {
+        let plan = plan ?? self.plan(for: photos)
         guard plan.isRenderable else { throw ImportError.notEnoughGeotaggedPhotos }
         // Nobody named it: it is stored unnamed, and `TripTitle` calls it by its
         // place, or by the trip's own start date (#131, #168).
@@ -113,7 +119,11 @@ struct ImportService {
     /// scores 1.0 even when clustering drops strays. Nil when nothing would be
     /// kept: that import fails on its own terms, not as a duplicate.
     func existingTrip(for photos: [ImportPhoto]) -> String? {
-        let plan = self.plan(for: photos)
+        existingTrip(plan: plan(for: photos))
+    }
+
+    /// `existingTrip(for:)` on a plan already made.
+    func existingTrip(plan: ImportedTripPlan) -> String? {
         let kept = plan.stops.flatMap(\.photoAssetIds) + plan.routeAttachedAssetIds
         return Stored.read("tripHoldingMost") {
             try repository.tripHoldingMost(assetIds: kept, minShare: config.photoImport.duplicatePhotoShare)
@@ -121,11 +131,17 @@ struct ImportService {
     }
 
     private func plan(for photos: [ImportPhoto]) -> ImportedTripPlan {
-        PhotoImportClusterer.plan(photos: photos, config: ImportClusteringConfig(
+        PhotoImportClusterer.plan(photos: photos, config: Self.clustering(config))
+    }
+
+    /// The clustering an import stores by. One definition, so a plan made
+    /// elsewhere (Discovery's scan) is the plan an import would make.
+    static func clustering(_ config: TrackingConfig) -> ImportClusteringConfig {
+        ImportClusteringConfig(
             stopRadiusM: config.photoImport.stopRadiusM,
             stopSplitGapS: config.photoImport.stopSplitGapS,
             minPhotosPerStop: config.photoImport.minPhotosPerStop
-        ))
+        )
     }
 
     /// Classifies a leg by its implied pace (PD-8). Walking-pace legs stay

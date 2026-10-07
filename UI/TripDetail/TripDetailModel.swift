@@ -295,20 +295,22 @@ final class TripDetailModel {
     private func storyLeg(between from: Double, and to: Double, id: String) -> StoryLeg? {
         guard let detail else { return nil }
         let inside = detail.segments.filter { $0.segment.startedAt >= from - 1 && $0.segment.startedAt <= to + 1 }
-        guard !inside.isEmpty else { return nil }
-        var modes: [TransportMode] = []
-        var distance = 0.0
-        var provenance = RouteProvenance.recorded
-        var crossing = false
-        for item in inside {
-            let mode = TransportMode(rawValue: item.segment.mode) ?? .unknown
-            if modes.last != mode { modes.append(mode) }
-            distance += Self.length(of: item)
-            let claim = RecapComposer.provenance(for: item.segment)
-            if claim == .inferred || (claim == .reconstructed && provenance == .recorded) { provenance = claim }
-            crossing = crossing || RecapComposer.isCrossing(item.segment)
+        // The one folding rule the Footprints itinerary uses too, so the two
+        // screens cannot call the same leg differently.
+        let pieces = inside.map { item in
+            StoryLegFolding.Piece(
+                startedAt: item.segment.startedAt,
+                mode: TransportMode(rawValue: item.segment.mode) ?? .unknown,
+                provenance: RecapComposer.provenance(for: item.segment),
+                isCrossing: RecapComposer.isCrossing(item.segment)
+            )
         }
-        return StoryLeg(id: "leg-\(id)", modes: modes, provenance: provenance, distanceM: distance, isCrossing: crossing)
+        guard let folded = StoryLegFolding.fold(pieces, from: from, to: to) else { return nil }
+        let distance = inside.reduce(0.0) { $0 + Self.length(of: $1) }
+        return StoryLeg(
+            id: "leg-\(id)", modes: folded.modes, provenance: folded.provenance,
+            distanceM: distance, isCrossing: folded.isCrossing
+        )
     }
 
     /// Along the road when one was matched, else along the raw points
