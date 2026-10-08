@@ -6,14 +6,15 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-07 against ADR **2026-10-07-home-reads-like-footprints**,
+Last synced: 2026-10-08 against ADR
+**2026-10-08-the-film-counts-the-road-it-draws-home-counts-the-ground**;
+2026-10-07-home-reads-like-footprints,
 -a-trip-across-180-is-framed-the-short-way, -every-frame-fits-inside-the-maps-edge, 2026-10-06-a-photo-taken-in-flight-flies-its-leg;
-2026-10-03: -the-boarding-pass-names-its-countries-from-the-stops (schema
-v16), -a-road-is-stored-only-if-it-could-be-driven, -the-export-wait-flies-a-gull,
+2026-10-03: -the-boarding-pass-names-its-countries-from-the-stops,
+-a-road-is-stored-only-if-it-could-be-driven, -the-export-wait-flies-a-gull,
 -the-routing-ceiling-counts-in-one-durable-object, -desk-renders-route-direct-on-their-own-key.
 Before them: 2026-10-02-the-film-names-the-trips-own-towns, with
-2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
-drive). The same day:
+2026-10-02-the-journey-frame-nearly-holds-its-widest-drive. The same day:
 2026-10-02-the-finished-screen-is-the-film;
 2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev;
 2026-10-02-the-release-scan-needs-no-key;
