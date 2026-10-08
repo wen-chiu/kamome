@@ -162,4 +162,29 @@ final class JourneyChronicleTests: XCTestCase {
         XCTAssertEqual(huge.size, largest.size)
         XCTAssertLessThan(small.size.width, largest.size.width)
     }
+
+    /// #242: Trip Detail's stat card prints the figure Home and Footprints do.
+    /// A recording keeps its measured distance; a photo trip counts its routed
+    /// ground legs only, and a dash stands where none counts yet.
+    func testTripDetailPrintsTheGroundDistance() {
+        let stats = #"{"distance_m":500000,"drive_s":0,"walk_s":0,"stop_count":2,"top_speed_kmh":0}"#
+        var recorded = TripRecord(id: "r", title: "", startedAt: 0, status: "completed")
+        recorded.statsJson = stats
+        var photos = recorded
+        photos.source = TripSource.importedPhotos.rawValue
+        let flight = leg("f", mode: "drive", verdict: .noRoad, lat: 30)
+        let drive = leg("d", mode: "drive", verdict: .road, lat: 10)
+
+        XCTAssertEqual(LegLength.groundMeters(trip: recorded, segments: [flight]), 500_000)
+        XCTAssertNil(LegLength.groundMeters(trip: photos, segments: [flight]))
+        XCTAssertEqual(
+            LegLength.groundMeters(trip: photos, segments: [flight, drive]),
+            LegLength.groundMeters([drive])
+        )
+        XCTAssertEqual(TripDetailView.distanceFigure(nil), "—")
+        XCTAssertEqual(
+            TripDetailView.distanceFigure(271_000),
+            String.localizedStringWithFormat(String(localized: "journey_km"), 271.0)
+        )
+    }
 }

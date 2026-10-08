@@ -85,15 +85,25 @@ extension TripDetailView {
         }
     }
 
+    /// "271 km" in Home's words; a dash until a leg counts — routing has not
+    /// answered for any of them yet, and "0 km" would be a claim.
+    static func distanceFigure(_ groundM: Double?) -> String {
+        guard let groundM else { return "—" }
+        return String.localizedStringWithFormat(String(localized: "journey_km"), groundM / 1000)
+    }
+
     /// Four figures in a row — until the text is too large for a row, when
     /// they become two rows of two, and past that one figure to a line (#191).
     /// Squeezed into the row, the labels broke inside words ("Dis-tanc-e") and
     /// the figures themselves were cut ("72 k…").
-    func statsStrip(_ stats: TripStats) -> some View {
+    ///
+    /// Distance and stops are the figures Home and Footprints print for the
+    /// same trip (#242): kilometres on the ground and the stops as they stand.
+    func statsStrip(_ stats: TripStats, groundM: Double?, stopCount: Int) -> some View {
         let figures: [(value: String, label: LocalizedStringKey)] = [
-            (String(format: "%.0f km", stats.distanceM / 1000), "stat_distance"),
+            (Self.distanceFigure(groundM), "stat_distance"),
             (hours(stats.driveS), "stat_drive_time"),
-            ("\(stats.stopCount)", "stat_stops"),
+            ("\(stopCount)", "stat_stops"),
             (String(format: "%.0f km/h", stats.topSpeedKmh), "stat_top_speed")
         ]
         return ViewThatFits(in: .horizontal) {

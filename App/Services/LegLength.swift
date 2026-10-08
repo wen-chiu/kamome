@@ -49,17 +49,27 @@ enum LegLength {
         return ground.reduce(0.0) { $0 + meters(segment: $1.segment, points: $1.points) }
     }
 
-    /// **A stored trip's kilometres on the ground** — the one figure Home and
-    /// Footprints both print for it (2026-10-07: the same trip read 271 km on
-    /// Home and no distance at all in Footprints). A recording's own stats are
-    /// its measured distance; a trip rebuilt from photographs is measured along
-    /// its routed legs, flights left out, by the rule above.
+    /// **A stored trip's kilometres on the ground** — the one figure Home,
+    /// Footprints and Trip Detail's stat card print for it (2026-10-07: the
+    /// same trip read 271 km on Home and no distance at all in Footprints;
+    /// #242 brought Trip Detail in). A recording's own stats are its measured
+    /// distance; a trip rebuilt from photographs is measured along its routed
+    /// legs, flights left out, by the rule above.
     static func groundMeters(trip: TripRecord, repository: TripRepository) -> Double? {
-        if !trip.tripSource.isReconstructed, let measured = TripStats.from(jsonString: trip.statsJson)?.distanceM {
-            return measured
-        }
+        if let measured = recordedMeters(trip) { return measured }
         guard let detail = Stored.read("detail", { try repository.detail(tripId: trip.id) }) else { return nil }
-        return groundMeters(detail.segments)
+        return groundMeters(trip: trip, segments: detail.segments)
+    }
+
+    /// The same figure, for a caller that already holds the trip's legs.
+    static func groundMeters(trip: TripRecord, segments: [(segment: SegmentRecord, points: [TrackpointRecord])]) -> Double? {
+        recordedMeters(trip) ?? groundMeters(segments)
+    }
+
+    /// A recording's measured distance; nil for a trip rebuilt from photographs.
+    private static func recordedMeters(_ trip: TripRecord) -> Double? {
+        guard !trip.tripSource.isReconstructed else { return nil }
+        return TripStats.from(jsonString: trip.statsJson)?.distanceM
     }
 
     /// Everything that moves over land. `unknown` is not ground: it is what a
