@@ -71,7 +71,9 @@ struct TripDetailView: View {
                 .frame(minHeight: 280)
                 .overlay(alignment: .bottomTrailing) { mapOverlays }
             if model.dayCount > 1 { dayChips }
-            if let stats = model.stats { statsStrip(stats) }
+            if let stats = model.stats {
+                statsStrip(stats, groundM: model.groundDistanceM, stopCount: model.detail?.stops.count ?? stats.stopCount)
+            }
             if model.isNamingStops { namingBanner }
             if model.photoAccessIsLimited { limitedPhotosBanner }
             exportProgressRow
