@@ -284,4 +284,12 @@ extension TripRepository {
             try db.execute(sql: "UPDATE stop SET country_code = ? WHERE id = ?", arguments: [countryCode, stopId])
         }
     }
+
+    /// A trip's stops in order, without its track — what a list row needs to
+    /// print the trip's dates in the zones they happened in (#171).
+    public func stops(tripId: String) throws -> [StopRecord] {
+        try database.writer.read { db in
+            try StopRecord.filter(sql: "trip_id = ?", arguments: [tripId]).order(sql: "arrived_at").fetchAll(db)
+        }
+    }
 }
