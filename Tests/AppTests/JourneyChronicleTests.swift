@@ -150,4 +150,16 @@ final class JourneyChronicleTests: XCTestCase {
         XCTAssertNotNil(UIImage(systemName: HomeSegment.journeys.symbol))
         XCTAssertGreaterThan(both.size.width, word.size.width)
     }
+
+    /// Past the largest standard text size the segments stop growing, so they
+    /// never cover the toolbar buttons beside them (2026-10-08).
+    func testTheSegmentImageStopsGrowingAtTheLargestStandardSize() {
+        let title = HomeSegment.footprints.labelText
+        let symbol = HomeSegment.footprints.symbol
+        let largest = SegmentLabelImage.make(symbol: symbol, title: title, size: SegmentLabelImage.largestSize)
+        let huge = SegmentLabelImage.make(symbol: symbol, title: title, size: .accessibilityExtraExtraExtraLarge)
+        let small = SegmentLabelImage.make(symbol: symbol, title: title, size: .small)
+        XCTAssertEqual(huge.size, largest.size)
+        XCTAssertLessThan(small.size.width, largest.size.width)
+    }
 }
