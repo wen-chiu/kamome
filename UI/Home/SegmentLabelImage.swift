@@ -7,10 +7,22 @@ import UIKit
 /// once the large title went. A template image carries both and still takes
 /// the control's own selected and unselected colours.
 enum SegmentLabelImage {
+    /// The largest text size the control is drawn at. Past it, at the
+    /// accessibility sizes, the two segments outgrew the bar and covered the
+    /// buttons either side of it (2026-10-08) — the control the system draws
+    /// stops growing there too.
+    static let largestSize: UIContentSizeCategory = .extraExtraExtraLarge
+
     /// Drawn in the text style the control would use, at the person's current
-    /// text size; the caller redraws when that size changes.
-    static func make(symbol: String, title: String, textStyle: UIFont.TextStyle = .subheadline) -> UIImage {
-        let base = UIFont.preferredFont(forTextStyle: textStyle)
+    /// text size up to `largestSize`; the caller redraws when that size changes.
+    static func make(
+        symbol: String, title: String, textStyle: UIFont.TextStyle = .subheadline,
+        size: UIContentSizeCategory = UITraitCollection.current.preferredContentSizeCategory
+    ) -> UIImage {
+        let capped = size > largestSize ? largestSize : size
+        let base = UIFont.preferredFont(
+            forTextStyle: textStyle, compatibleWith: UITraitCollection(preferredContentSizeCategory: capped)
+        )
         let font = UIFont.systemFont(ofSize: base.pointSize, weight: .medium)
         let text = NSMutableAttributedString()
         if let glyph = UIImage(
