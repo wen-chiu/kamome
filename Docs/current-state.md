@@ -6,12 +6,14 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-08 against ADR **2026-10-08-a-database-that-cannot-open-says-so**, 2026-10-07-home-reads-like-footprints,
--a-trip-across-180-is-framed-the-short-way, -every-frame-fits-inside-the-maps-edge, 2026-10-06-a-photo-taken-in-flight-flies-its-leg;
+Last synced: 2026-10-08 against ADR **2026-10-08-trip-detail-prints-the-ground-distance**, -a-database-that-cannot-open-says-so;
+2026-10-07: -home-reads-like-footprints,
+-a-trip-across-180-is-framed-the-short-way, -every-frame-fits-inside-the-maps-edge;
+2026-10-06-a-photo-taken-in-flight-flies-its-leg;
 2026-10-03: -the-boarding-pass-names-its-countries-from-the-stops (schema
 v16), -a-road-is-stored-only-if-it-could-be-driven, -the-export-wait-flies-a-gull,
 -the-routing-ceiling-counts-in-one-durable-object, -desk-renders-route-direct-on-their-own-key.
-Before them: 2026-10-02-the-film-names-the-trips-own-towns, with
+Before: 2026-10-02-the-film-names-the-trips-own-towns, with
 2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
 drive). The same day:
 2026-10-02-the-finished-screen-is-the-film;
@@ -31,8 +33,7 @@ town, region or country; a Discovery trip is stored unnamed). Draft, not built:
 2026-09-30-footprints-sits-beside-journeys (Discovery leaves beta as 足跡, a
 read-only itinerary beside 旅程). Before them:
 2026-09-30-export-time-left;
-2026-09-29-the-opening-zooms-and-the-route-holds
-(the opening zooms out of the title card; the route holds before the end card);
+2026-09-29-the-opening-zooms-and-the-route-holds;
 2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
 its own towns, and travel is earned by windows); 2026-09-28-sample-trip;
 2026-09-28, governance v2, the ledger's last entry.

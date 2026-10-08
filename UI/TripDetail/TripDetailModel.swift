@@ -165,24 +165,17 @@ final class TripDetailModel {
                     return (detail,
                             Stored.read("films") { try repository.films(tripId: tripId) } ?? [],
                             Self.thinned(detail?.segments ?? [], epsilonM: epsilonM),
-                            detail.map { Self.filmStopIds($0, config: config) } ?? [])
+                            detail.map { Self.filmStopIds($0, config: config) } ?? [],
+                            detail.flatMap { LegLength.groundMeters(trip: $0.trip, segments: $0.segments) })
                 }.value
                 // One assignment, so the map never draws lines from another read.
-                (detail, films, displayPolylines, filmStopIds) = read
+                (detail, films, displayPolylines, filmStopIds, groundDistanceM) = read
                 rememberExtent(under: config.discovery.singlePlaceExtentM)
             } while refreshAgain
             refreshTask = nil
         }
         refreshTask = task
         await task.value
-    }
-
-    /// Every stop either film length presents. Both, because the length is
-    /// chosen on the export sheet, after the button this gates.
-    nonisolated static func filmStopIds(_ detail: TripRepository.TripDetail, config: TrackingConfig) -> Set<String> {
-        FilmLength.allCases.reduce(into: Set<String>()) { ids, length in
-            ids.formUnion(RecapComposer.filmPlan(detail: detail, config: config, length: length).decks.keys)
-        }
     }
 
     /// Deletes a single film record and its file on disk.
@@ -218,9 +211,10 @@ final class TripDetailModel {
     /// (#139).
     private(set) var displayPolylines: [String: [Simplifier.Point]] = [:]
 
-    var stats: TripStats? {
-        TripStats.from(jsonString: detail?.trip.statsJson)
-    }
+    /// The stat card's distance: the trip's kilometres on the ground, the
+    /// figure Home and Footprints print (#242). Measured in `refresh()`, off
+    /// the main thread, beside the read it comes from. nil when no leg counts.
+    private(set) var groundDistanceM: Double?
 
     // MARK: - The story (Journey Discovery detail, 2026-09-17)
 
