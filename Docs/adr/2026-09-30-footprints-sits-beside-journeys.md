@@ -1,6 +1,6 @@
 # Journey Discovery leaves beta as Footprints: an itinerary you read, beside the Journeys you make films from
 
-**Status:** Draft (Chiu's answers 2026-09-30 and 2026-10-01; not built)
+**Status:** Decided (Chiu, 2026-10-08: 「ADR 改成 Decided」; from his answers 2026-09-30 and 2026-10-01; built in PRs #232–#233)
 **Supersedes:** 2026-09-18 (b) in part (the toolbar button and the sheet), and
 2026-09-17's "opening a journey imports it". S1 stays the home.
 

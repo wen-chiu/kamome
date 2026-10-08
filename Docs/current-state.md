@@ -6,37 +6,8 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-08 against ADR **2026-10-08-trip-detail-prints-the-ground-distance**, -a-database-that-cannot-open-says-so;
-2026-10-07: -home-reads-like-footprints,
--a-trip-across-180-is-framed-the-short-way, -every-frame-fits-inside-the-maps-edge;
-2026-10-06-a-photo-taken-in-flight-flies-its-leg;
-2026-10-03: -the-boarding-pass-names-its-countries-from-the-stops (schema
-v16), -a-road-is-stored-only-if-it-could-be-driven, -the-export-wait-flies-a-gull,
--the-routing-ceiling-counts-in-one-durable-object, -desk-renders-route-direct-on-their-own-key.
-Before: 2026-10-02-the-film-names-the-trips-own-towns, with
-2026-10-02-the-journey-frame-nearly-holds-its-widest-drive (0.9 of its widest
-drive). The same day:
-2026-10-02-the-finished-screen-is-the-film;
-2026-10-02-the-bundle-id-stays-com-chiu-kamome-dev;
-2026-10-02-the-release-scan-needs-no-key;
-2026-10-02-an-unnamed-trip-is-stored-with-no-title;
-2026-10-02-deleting-a-stop-asks-first. Before
-them: 2026-10-01-a-refused-waypoint-is-asked-again-from-where-a-walk-reaches-it
-(a refused beach waypoint moves ≤ 650 m to where a walk reaches it). The same day:
-2026-10-01-stop-naming-outlives-the-screen (stop naming is owned by
-`StopNamingCoordinator` and survives leaving Trip Detail; every Apple lookup
-waits at one `GeocodeGate`); 2026-10-01-a-stops-time-is-the-clock-where-it-happened
-(a stop's hour is shown in the zone it happened in, like its date, on Trip
-Detail and the Journey Diary); 2026-10-01-an-unnamed-trip-is-called-by-its-place
-(one title rule on every screen: a real name wins, an unnamed trip is flag +
-town, region or country; a Discovery trip is stored unnamed). Draft, not built:
-2026-09-30-footprints-sits-beside-journeys (Discovery leaves beta as 足跡, a
-read-only itinerary beside 旅程). Before them:
-2026-09-30-export-time-left;
-2026-09-29-the-opening-zooms-and-the-route-holds;
-2026-09-28-a-drive-is-never-framed-at-town-scale (Draft: a trip is framed by
-its own towns, and travel is earned by windows); 2026-09-28-sample-trip;
-2026-09-28, governance v2, the ledger's last entry.
+Last synced: 2026-10-08 against ADR **2026-10-08-trip-detail-prints-the-ground-distance**, -a-database-that-cannot-open-says-so.
+Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
 work is GitHub Issues (`device`, `chiu`, `desk`); phone-only checks are
@@ -57,48 +28,33 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 
 ## Current phase
 
-**Phase 4 — films worth keeping** (opened 2026-08-15):
-
-1. ✅ Vehicle sprites — PR #15.
-2. ✅ Cross-region crossing — PRs #24/#31.
-3. ~~Export that survives~~ — **dissolved 2026-09-02**: film half in ADR
-   2026-08-31 (b), release half in `Docs/release-readiness.md` D1–D3.
-4. **Closeout** — four steps, named 2026-09-10. ① ✅ film record (ADR
-   2026-09-08). ② ✅ export outlives the screen (ADR 2026-09-10). ③ ⏸ D1–D5 and
-   ④ ⏸ performance — the substrate evaluation is concluded and the production
-   switch has landed (ADR 2026-09-16); performance now prices `MLNMapSnapshotter`, not
-   `MKMapSnapshotter`. Deferred, not dropped; **② does not settle D1**. Music is
-   outside the closeout.
+**Phase 4 — films worth keeping** (opened 2026-08-15), in closeout. Left: the
+phone run (`Docs/device-runbook.md`, #112) with the performance it prices
+(`MLNMapSnapshotter`, `Docs/handoff-export-performance.md`), and Chiu's
+judgement of a film. Music is outside the closeout.
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
 film good enough to release. Do not propose a checklist for it.
 
-**Closed:** Phase 3.5 (Replay MVP) 2026-08-15 — §6a passed, §6b did not; its six
-unmet items are on the release gate. Phases 0–3 done. P5 Capture Beta / P6 Plans /
-P7 backend deferred.
+P5 Capture Beta / P6 Plans / P7 backend are deferred.
 
 ## Where the work actually stands
 
-**Every Phase 4 film that was in flight has landed and been judged**, the type-2
-opening included — retimed, with a boarding pass, a plane and two marked flight
-ends (ADRs 2026-09-03 (b), 2026-09-04 (b)). What is open is Chiu's judgement, in
-`HANDOFF.md`, which wins on findings and blockers. ✅ **The production switch has
-landed** (ADR 2026-09-16, PRs #71–#72): OpenFreeMap + MapLibre replaces Apple Maps
-in the export, with no Apple fallback, and Apple geocoding is a §0 exception
-scoped to **stop points** (#72). **Journey Discovery ships as an added feature
-in beta, not the home** (ADRs 2026-09-17 → 2026-09-18 (c)): S1 and S3 are
-restored untouched, the feature lives behind one toolbar button, and home is
-never looked up. Discovery's thresholds ship INFERRED and its lookup timing is accepted
-(2026-09-18 (e)); a photo at home ends a journey (2026-09-25). S1's dark override is lifted and the light style approved
-(2026-09-18 (d) and addendum) — films follow the device. The terrain credit is
-owed only where a licence requires it (2026-09-18 (f)).
+What is open is Chiu's judgement (`gh issue list --label chiu`). **Journey
+Discovery is 足跡 (Footprints)**, a segment beside 旅程 on Home (PRs #232–#233,
+ADRs 2026-09-30-footprints-sits-beside-journeys, 2026-10-07-home-reads-like-footprints). Its thresholds ship INFERRED and its
+lookup timing is accepted (2026-09-18 (e)); home is never looked up, and a photo
+at home ends a journey (2026-09-25). Films follow the device's
+appearance (2026-09-18 (d)); the terrain credit is owed only where a licence
+requires it (2026-09-18 (f)).
 
-What is between Kamome and a submission is **neither a document nor a session**:
-**D1–D5**, one device run nobody has done — then Chiu's sequence: the artifact
-check (`./check.sh --release`, no key) and key rotation, unordered.
-**TestFlight is not behind these**; it is how D1–D5 get run
-(`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
+Between Kamome and a submission: the rest of **D1–D5** on a phone
+(`Docs/device-runbook.md` §A — D1 passed once and D2–D3 are half done, on a
+build older than #105/#110; D4 stays desk-only by Chiu's choice; D5 is done),
+then Chiu's sequence: the artifact check (`./check.sh --release`, no key) and
+key rotation, unordered. **TestFlight is not behind these**; it is how they get
+run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md` 🔴.
 
 ## Architecture
 
@@ -145,13 +101,13 @@ is not to be tuned** — Variant A is harness-only env overrides.
 ## Deferred — do not implement opportunistically
 
 MapLibre substrate work beyond the frozen styles (custom tiles, tile server, map
-labels, pixel art) — the production switch landed (ADR 2026-09-16) · Story
+labels, pixel art) · Story
 Director's remaining content (chapters, music, video beads — hero photos
 reopened, ADR 2026-09-24) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·
-per-act camera framing (rejected 2026-08-02; per-**area** framing built 2026-09-24) · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
+per-act camera framing (rejected 2026-08-02) · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
 
 ## Authoritative sources — higher wins; newest wins within a level
 
