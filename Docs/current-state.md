@@ -43,8 +43,7 @@ P5 Capture Beta / P6 Plans / P7 backend are deferred.
 
 What is open is Chiu's judgement (`gh issue list --label chiu`). **Journey
 Discovery is 足跡 (Footprints)**, a segment beside 旅程 on Home (PRs #232–#233,
-ADR 2026-10-07-home-reads-like-footprints; 2026-09-30-footprints-sits-beside-journeys
-is built though still marked Draft). Its thresholds ship INFERRED and its
+ADRs 2026-09-30-footprints-sits-beside-journeys, 2026-10-07-home-reads-like-footprints). Its thresholds ship INFERRED and its
 lookup timing is accepted (2026-09-18 (e)); home is never looked up, and a photo
 at home ends a journey (2026-09-25). Films follow the device's
 appearance (2026-09-18 (d)); the terrain credit is owed only where a licence
