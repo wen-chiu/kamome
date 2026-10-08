@@ -91,6 +91,7 @@ every-tile-~9× fetch path. Main-branch numbers are still owed.
 | iCloud photo download | transfer size, peak memory of a full-mode film, cellular cost, Optimize Storage on | ADR 2026-09-19 (b) |
 | Country rule scan time | seconds per 50k photos on a phone (Mac: 0.32 s) | ADR 2026-09-25 |
 | Crash-safe recording | kill the app mid-recording; the trip comes back | `handoff-long-recording.md` |
+| Restart while recording (#245) | restart the phone mid-recording, leave it locked while carrying it > 1 km, then unlock: no `Kamome` crash in Analytics Data, the trip resumes | #245 |
 | Merge-gap pacing | a multi-day `merge_gap` leg paces acceptably; is `merge_gap_min_m` = 500 right | same |
 | Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` |
 | Subject lookup miss rate | count fallback badges over ten exports (desk: 1 in 5) | `handoff-subject-lookup.md` |
