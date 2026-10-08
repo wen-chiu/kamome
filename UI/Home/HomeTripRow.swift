@@ -19,14 +19,21 @@ struct HomeTripRow: View {
 
     private let coverSide: CGFloat = 56
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        // At an accessibility size the cover sits above the words: beside
+        // them it left the name a few letters and broke "271 公里" in two.
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
+        layout {
             cover
             VStack(alignment: .leading, spacing: 4) {
                 headline
                 facts
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
@@ -61,7 +68,7 @@ struct HomeTripRow: View {
             Text(verbatim: parts.title)
                 .font(.system(.title3, design: .serif).weight(.semibold))
                 .foregroundStyle(.primary)
-                .lineLimit(2)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

@@ -175,8 +175,13 @@ struct HomeView: View {
     private var journeys: some View {
         Group {
             if session.trips.isEmpty {
-                ScrollView {
-                    HomeEmptyState(openSample: openSample)
+                // Centred in the room above the buttons, and scrollable at a
+                // text size that outgrows it.
+                GeometryReader { room in
+                    ScrollView {
+                        HomeEmptyState(openSample: openSample)
+                            .frame(minHeight: room.size.height)
+                    }
                 }
             } else {
                 tripList
@@ -188,6 +193,10 @@ struct HomeView: View {
                 importButton
                 recordButton
             }
+            // They grow with the text up to the first accessibility size and
+            // no further: at the largest they took half the screen and left
+            // the list one row (#205).
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             .padding(.horizontal)
             .padding(.top, 12)
             .padding(.bottom, 8)
