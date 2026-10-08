@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-07 against ADR **2026-10-07-home-reads-like-footprints**,
+Last synced: 2026-10-08 against ADR **2026-10-08-a-database-that-cannot-open-says-so**, 2026-10-07-home-reads-like-footprints,
 -a-trip-across-180-is-framed-the-short-way, -every-frame-fits-inside-the-maps-edge, 2026-10-06-a-photo-taken-in-flight-flies-its-leg;
 2026-10-03: -the-boarding-pass-names-its-countries-from-the-stops (schema
 v16), -a-road-is-stored-only-if-it-could-be-driven, -the-export-wait-flies-a-gull,
