@@ -57,8 +57,7 @@ private struct ItineraryDayAnchor: View {
             HStack(alignment: .center, spacing: 10) {
                 Text(String.localizedStringWithFormat(String(localized: "day_chip"), day.index + 1))
                     .font(.caption.weight(.bold))
-                    .tracking(1.2)
-                    .textCase(.uppercase)
+                    .modifier(SmallCaps(tracking: 1.2))
                 Rectangle()
                     .fill(Color.secondary.opacity(0.25))
                     .frame(height: 1)

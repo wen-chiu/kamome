@@ -83,6 +83,13 @@ enum JourneyChronicle {
         return formatter.string(from: reference, to: end) ?? ""
     }
 
+    /// Whether the entry carries the pill at all: only from a second visit
+    /// (Chiu 2026-10-07). Nearly every journey is a first visit, so 「初訪」 on
+    /// every row was noise; the drawer still says it in full.
+    static func showsPill(_ visit: Visit) -> Bool {
+        visit.ordinal > 1
+    }
+
     /// The pill beside the destination: 「初訪」 / 「第2次」.
     static func pillText(_ visit: Visit) -> String {
         if visit.ordinal == 1 { return String(localized: "journey_visit_pill_first") }

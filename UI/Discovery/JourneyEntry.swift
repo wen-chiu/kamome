@@ -29,6 +29,10 @@ struct JourneyEntry: View {
     private let milestoneLimit = 2
     /// Room the chevron takes at the end of the second line.
     private let chevronWidth: CGFloat = 28
+    /// The chevron's hit area: Apple's minimum target, centred on the glyph.
+    private let chevronTarget: CGFloat = 44
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         TimelineRow(
@@ -69,6 +73,9 @@ struct JourneyEntry: View {
         .overlay(alignment: .bottomTrailing) { chevron }
     }
 
+    /// The glyph keeps its 28 × 20 place at the end of the route line; the
+    /// target around it is 44 pt (Chiu 2026-10-07 — it was the glyph's own
+    /// size, beside the much larger target that opens the diary).
     private var chevron: some View {
         Button(action: onToggle) {
             Image(systemName: "chevron.down")
@@ -76,25 +83,31 @@ struct JourneyEntry: View {
                 .foregroundStyle(.tertiary)
                 .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 .frame(width: chevronWidth, height: 20)
+                .frame(width: chevronTarget, height: chevronTarget)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .offset(x: (chevronTarget - chevronWidth) / 2, y: (chevronTarget - 20) / 2)
         .accessibilityLabel(Text(isExpanded ? "journey_collapse" : "journey_expand"))
     }
 
-    /// Destination and dates on one line (Chiu, 2026-09-23). At an
-    /// accessibility text size they stop fitting, and the range broke across
-    /// two lines mid-range — "APR 6 / – 10" reads as two dates — so the line
-    /// stacks instead and the range always stays whole.
+    /// Destination and dates on one line (Chiu, 2026-09-23). A long name
+    /// wraps to a second line beside the dates rather than pushing them under
+    /// it — `ViewThatFits` measured the name unwrapped, so one long album name
+    /// both lost its end and moved its dates where no other entry has them
+    /// (2026-10-07). At an accessibility text size the line stacks, so the
+    /// range never breaks mid-range ("APR 6 / – 10" reads as two dates).
+    @ViewBuilder
     private var headline: some View {
-        ViewThatFits(in: .horizontal) {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                destination
+                datePart
+            }
+        } else {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 destination
                 Spacer(minLength: 8)
-                datePart
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                destination
                 datePart
             }
         }
@@ -108,8 +121,9 @@ struct JourneyEntry: View {
             Text(journey.headline)
                 .font(.system(.title3, design: .serif).weight(.semibold))
                 .foregroundStyle(.primary)
-                .lineLimit(1)
-            if let visit {
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            if let visit, JourneyChronicle.showsPill(visit) {
                 VisitPill(text: JourneyChronicle.pillText(visit))
             }
             if journey.name == nil, journey.nameLookupLat != nil {
@@ -127,8 +141,7 @@ struct JourneyEntry: View {
             }
             Text(JourneyDateText.range(from: journey.startedAt, to: journey.endedAt))
                 .font(.caption.weight(.semibold))
-                .tracking(0.6)
-                .textCase(.uppercase)
+                .modifier(SmallCaps(tracking: 0.6))
                 .foregroundStyle(.secondary)
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -292,7 +305,7 @@ struct HomeGapRow: View {
             Text(String.localizedStringWithFormat(
                 String(localized: "journey_home_gap"), JourneyChronicle.durationText(days: days)
             ))
-            .font(.caption.italic())
+            .font(ScriptTypography.isLatin ? .caption.italic() : .caption)
             .foregroundStyle(.tertiary)
         }
     }
@@ -341,38 +354,6 @@ enum JourneyRouteText {
         var seen: Set<String> = []
         return modes.filter { seen.insert($0).inserted }
     }
-}
-
-/// Compact, locale-aware date ranges for timeline anchors: "3 – 5 Aug" inside
-/// one month, "28 Aug – 2 Sep" across two. The year is deliberately absent —
-/// the section heading above already carries it.
-enum JourneyDateText {
-    static func range(from startedAt: Double, to endedAt: Double) -> String {
-        let start = Date(timeIntervalSince1970: startedAt)
-        let end = Date(timeIntervalSince1970: endedAt)
-        let calendar = Calendar.current
-        if calendar.isDate(start, equalTo: end, toGranularity: .day) {
-            return dayAndMonth.string(from: start)
-        }
-        if calendar.isDate(start, equalTo: end, toGranularity: .month) {
-            // The month sits on the opening date and the range runs from it —
-            // "Aug 3 – 5". Putting it on the closing date reads as a typo.
-            return "\(dayAndMonth.string(from: start)) – \(dayOnly.string(from: end))"
-        }
-        return "\(dayAndMonth.string(from: start)) – \(dayAndMonth.string(from: end))"
-    }
-
-    private static let dayAndMonth: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("dMMM")
-        return formatter
-    }()
-
-    private static let dayOnly: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("d")
-        return formatter
-    }()
 }
 
 /// A gentle press. The entry has no card to sink, so the text dims instead.

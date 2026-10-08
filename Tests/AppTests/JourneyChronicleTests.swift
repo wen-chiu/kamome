@@ -1,5 +1,6 @@
 @testable import Kamome
 import KamomePersistence
+import UIKit
 import XCTest
 
 /// **Reading the timeline as a life** (Chiu, 2026-09-23): which visit a journey
@@ -122,5 +123,31 @@ final class JourneyChronicleTests: XCTestCase {
     func testNoGroundLegMeansNoDistance() {
         XCTAssertNil(LegLength.groundMeters([leg("flight", mode: "drive", verdict: .noRoad, lat: 30)]))
         XCTAssertNil(LegLength.groundMeters([]))
+    }
+
+    /// 「初訪」 is nearly every journey, so only a return carries the pill
+    /// (Chiu 2026-10-07); the drawer's sentence still covers a first visit.
+    func testOnlyAReturnVisitCarriesThePill() {
+        XCTAssertFalse(JourneyChronicle.showsPill(JourneyChronicle.Visit(ordinal: 1, country: "Japan")))
+        XCTAssertTrue(JourneyChronicle.showsPill(JourneyChronicle.Visit(ordinal: 2, country: "Japan")))
+    }
+
+    /// Tracking and italics are kept for Latin script only (2026-10-07).
+    func testLatinTypographyIsLatinOnly() {
+        XCTAssertTrue(ScriptTypography.isLatin(language: "en"))
+        XCTAssertTrue(ScriptTypography.isLatin(language: "en-GB"))
+        XCTAssertFalse(ScriptTypography.isLatin(language: "zh-Hant"))
+        XCTAssertFalse(ScriptTypography.isLatin(language: "ja"))
+    }
+
+    /// Home's segments draw glyph and word as one template image, so the
+    /// control tints it and neither half is dropped (Chiu 2026-10-07).
+    func testASegmentImageCarriesItsGlyphAndWord() {
+        let both = SegmentLabelImage.make(symbol: HomeSegment.footprints.symbol, title: HomeSegment.footprints.labelText)
+        let word = SegmentLabelImage.make(symbol: "no-such-symbol", title: HomeSegment.footprints.labelText)
+        XCTAssertEqual(both.renderingMode, .alwaysTemplate)
+        XCTAssertNotNil(UIImage(systemName: HomeSegment.footprints.symbol))
+        XCTAssertNotNil(UIImage(systemName: HomeSegment.journeys.symbol))
+        XCTAssertGreaterThan(both.size.width, word.size.width)
     }
 }

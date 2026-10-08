@@ -2,6 +2,7 @@ import Foundation
 import KamomePersistence
 import KamomeRouteMatching
 import KamomeTrackingEngine
+import KamomeTripComposer
 
 /// **How long a leg was**, measured once for every screen that prints it — the
 /// diary's connectors and the Discovery timeline's kilometres read this, so
@@ -46,6 +47,19 @@ enum LegLength {
         }
         guard !ground.isEmpty else { return nil }
         return ground.reduce(0.0) { $0 + meters(segment: $1.segment, points: $1.points) }
+    }
+
+    /// **A stored trip's kilometres on the ground** — the one figure Home and
+    /// Footprints both print for it (2026-10-07: the same trip read 271 km on
+    /// Home and no distance at all in Footprints). A recording's own stats are
+    /// its measured distance; a trip rebuilt from photographs is measured along
+    /// its routed legs, flights left out, by the rule above.
+    static func groundMeters(trip: TripRecord, repository: TripRepository) -> Double? {
+        if !trip.tripSource.isReconstructed, let measured = TripStats.from(jsonString: trip.statsJson)?.distanceM {
+            return measured
+        }
+        guard let detail = Stored.read("detail", { try repository.detail(tripId: trip.id) }) else { return nil }
+        return groundMeters(detail.segments)
     }
 
     /// Everything that moves over land. `unknown` is not ground: it is what a

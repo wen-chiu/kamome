@@ -180,10 +180,43 @@ final class TripTitleTests: XCTestCase {
     }
 
     /// "· 2 km · 0" read as a stray digit (#192): the count carries its unit.
+    /// Restated 2026-10-07 when Home took Footprints' words for its figures
+    /// ("places", not "stops"); the claim held is unchanged.
     func testHomesStopCountCarriesItsUnit() {
-        let none = HomeView.statsText(TripStats(distanceM: 2_000, driveS: 120, walkS: 0, stopCount: 0, topSpeedKmh: 60))
-        let unit = String.localizedStringWithFormat(String(localized: "recap_film_stop_count"), 0)
+        let none = HomeTripRow.figuresText(groundM: 2_000, stopCount: 0)
+        let unit = String.localizedStringWithFormat(String(localized: "journey_places"), 0)
         XCTAssertTrue(none.hasSuffix(unit), none)
         XCTAssertNotEqual(unit, "0")
+    }
+
+    /// Home and Footprints print one figure for one trip (2026-10-07): the
+    /// kilometres on the ground, in Footprints' words, and none under one km.
+    func testHomesFiguresAreFootprintsFigures() {
+        let both = HomeTripRow.figuresText(groundM: 271_000, stopCount: 4)
+        XCTAssertTrue(both.hasPrefix(String.localizedStringWithFormat(String(localized: "journey_km"), 271.0)), both)
+        XCTAssertEqual(
+            HomeTripRow.figuresText(groundM: nil, stopCount: 4),
+            String.localizedStringWithFormat(String(localized: "journey_places"), 4)
+        )
+        XCTAssertEqual(HomeTripRow.figuresText(groundM: 400, stopCount: 4), HomeTripRow.figuresText(groundM: nil, stopCount: 4))
+    }
+
+    /// Provenance on Home is marked by exception, as in Footprints (ADR
+    /// 2026-09-23 (e)) — but a recording and the sample are always marked.
+    func testHomeMarksProvenanceByException() {
+        XCTAssertNil(HomeTripRow.provenanceSymbol(.importedPhotos))
+        XCTAssertEqual(HomeTripRow.provenanceSymbol(.recorded), "location.fill")
+        XCTAssertEqual(HomeTripRow.provenanceSymbol(.sample), "sparkles")
+    }
+
+    /// A named trip carries the flag of the place found for it, as its
+    /// Footprints entry does; an unnamed one is its place, flag split off.
+    func testHomeHeadlineCarriesTheFlag() {
+        let named = HomeTripRow.headline(for: trip(title: "北海道夏天"), cache: cacheWithJapan(), homeCountryCode: "TW")
+        XCTAssertEqual(named.flag, "🇯🇵")
+        XCTAssertEqual(named.title, "北海道夏天")
+        let unnamed = HomeTripRow.headline(for: trip(title: TripTitle.unnamed), cache: cacheWithJapan(), homeCountryCode: "TW")
+        XCTAssertEqual(unnamed.flag, "🇯🇵")
+        XCTAssertEqual(unnamed.title, "Japan")
     }
 }

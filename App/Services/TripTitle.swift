@@ -113,6 +113,17 @@ enum TripTitle {
         return [name.flag, name.title].compactMap { $0 }.joined(separator: " ")
     }
 
+    /// The flag of the place found for the trip, for a row that shows a real
+    /// name beside it as Footprints does. nil until a lookup resolves.
+    static func flag(
+        for trip: TripRecord,
+        cache: JourneyNameCache = JourneyNameCache(),
+        homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode
+    ) -> String? {
+        let key = placeKey(for: trip)
+        return cache.name(for: key, homeCountryCode: homeCountryCode, isSinglePlace: cache.isSinglePlace(key))?.flag
+    }
+
     /// The trip's name wherever it is shown or filmed: the real name, or the
     /// place for an unnamed trip. The dates are already the title card's second
     /// line, so an unnamed trip does not print its date twice.

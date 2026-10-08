@@ -21,6 +21,23 @@ enum HomeSegment: Hashable, CaseIterable {
         }
     }
 
+    /// The glyph drawn before the word in the control (Chiu 2026-10-07): a
+    /// map for the trips made here, footprints for the ones the library holds.
+    var symbol: String {
+        switch self {
+        case .journeys: "map"
+        case .footprints: "shoeprints.fill"
+        }
+    }
+
+    /// The word, as a string, for the image the control draws.
+    var labelText: String {
+        switch self {
+        case .journeys: String(localized: "home_segment_journeys")
+        case .footprints: String(localized: "home_segment_footprints")
+        }
+    }
+
     /// The segment's own label in the control.
     var label: LocalizedStringKey {
         switch self {
@@ -36,4 +53,29 @@ enum HomeRoute: Hashable {
     case trip(String)
     /// A Footprints journey's itinerary, by its entry's id.
     case itinerary(String)
+}
+
+/// Home's 旅程 | 足跡 control. Each segment is its glyph and word drawn as one
+/// image (`SegmentLabelImage`): the control would show only one of them.
+struct HomeSegmentPicker: View {
+    let segment: HomeSegment
+    let choose: (HomeSegment) -> Void
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        Picker(selection: Binding(get: { segment }, set: choose)) {
+            ForEach(HomeSegment.allCases, id: \.self) { choice in
+                Image(uiImage: SegmentLabelImage.make(symbol: choice.symbol, title: choice.labelText))
+                    .accessibilityLabel(Text(choice.label))
+                    .tag(choice)
+            }
+        } label: {
+            Text("home_segment_label")
+        }
+        .pickerStyle(.segmented)
+        .fixedSize()
+        // The image is drawn at one text size; a new size redraws it.
+        .id(dynamicTypeSize)
+    }
 }
