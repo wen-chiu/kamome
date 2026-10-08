@@ -1,3 +1,4 @@
+import KamomeImportKit
 import KamomePersistence
 import SwiftUI
 
@@ -17,6 +18,9 @@ struct TripMergeSheet: View {
     @State private var selected: Set<String> = []
     @State private var merging = false
     @State private var failure: LocalizedStringKey?
+    /// Each candidate's stop zones, read once, so its dates and hours are the
+    /// ones where it happened (#171).
+    @State private var clocks: [String: TripClock] = [:]
 
     private var current: TripRecord? { session.trips.first { $0.id == tripId } }
 
@@ -60,6 +64,12 @@ struct TripMergeSheet: View {
                 }
             }
             .interactiveDismissDisabled(merging)
+            .task {
+                for trip in candidates where clocks[trip.id] == nil {
+                    let stops = Stored.read("stops") { try session.repository.stops(tripId: trip.id) } ?? []
+                    clocks[trip.id] = TripClock(stops: stops)
+                }
+            }
         }
     }
 
@@ -81,7 +91,7 @@ struct TripMergeSheet: View {
                         if blocked {
                             Text("trip_merge_overlap")
                         } else {
-                            Text(verbatim: Self.dateRange(trip))
+                            Text(verbatim: Self.dateRange(trip, clock: clocks[trip.id] ?? .uniform()))
                         }
                     }
                     .font(.caption)
@@ -132,13 +142,28 @@ struct TripMergeSheet: View {
         }
     }
 
-    private static func dateRange(_ trip: TripRecord) -> String {
+    /// Date and hour at each end, on the clock where that end happened
+    /// (`TripClock`, #171): the hours are what tell two trips on one day apart.
+    /// One zone at both ends reads as one interval; two print each end whole.
+    static func dateRange(_ trip: TripRecord, clock: TripClock) -> String {
+        let start = Date(timeIntervalSince1970: trip.startedAt)
+        let endedAt = trip.endedAt ?? trip.startedAt
+        let end = Date(timeIntervalSince1970: endedAt)
+        let startZone = clock.zone(at: trip.startedAt)
+        let endZone = clock.zone(at: endedAt)
+        guard startZone == endZone else {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            formatter.timeZone = startZone
+            let from = formatter.string(from: start)
+            formatter.timeZone = endZone
+            return "\(from) – \(formatter.string(from: end))"
+        }
         let formatter = DateIntervalFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
-        return formatter.string(
-            from: Date(timeIntervalSince1970: trip.startedAt),
-            to: Date(timeIntervalSince1970: trip.endedAt ?? trip.startedAt)
-        )
+        formatter.timeZone = startZone
+        return formatter.string(from: start, to: end)
     }
 }

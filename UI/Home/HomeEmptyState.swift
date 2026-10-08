@@ -20,7 +20,10 @@ struct HomeEmptyState: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("sample_open_action") {
+            // A button, not a line of tinted text (2026-10-08): it is the
+            // best first step for someone new, and read as a caption it was
+            // easy to pass. Bordered, so the import below stays the hero.
+            Button {
                 do {
                     try openSample()
                 } catch {
@@ -29,15 +32,19 @@ struct HomeEmptyState: View {
                     )
                     sampleFailed = true
                 }
+            } label: {
+                Label("sample_open_action", systemImage: "play.fill")
+                    .font(.subheadline.weight(.semibold))
             }
-            .font(.subheadline)
-            .padding(.top, 4)
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+            .padding(.top, 8)
             .alert("sample_failed", isPresented: $sampleFailed) {
                 Button("OK", role: .cancel) {}
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 80)
         .padding(.horizontal)
+        .padding(.vertical, 24)
     }
 }

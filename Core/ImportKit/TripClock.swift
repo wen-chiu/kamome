@@ -84,6 +84,19 @@ public struct TripClock: Equatable {
         return displayCalendar.date(from: parts) ?? target
     }
 
+    /// The trip's first and last local dates, as `date(ofDay:)` writes them —
+    /// what a printed date range runs between (#171). An Iceland trip that ends
+    /// at 18:00 ends on that date, though it is already the next day in Taipei.
+    public func localDateSpan(
+        startedAt: Double, endedAt: Double, displayCalendar: Calendar = .current
+    ) -> (first: Date, last: Date) {
+        let lastIndex = dayCount(startedAt: startedAt, endedAt: endedAt) - 1
+        return (
+            date(ofDay: 0, tripStartedAt: startedAt, displayCalendar: displayCalendar),
+            date(ofDay: lastIndex, tripStartedAt: startedAt, displayCalendar: displayCalendar)
+        )
+    }
+
     /// The wall clock where `timestamp` happened (ADR 2026-10-01): hour and
     /// minute in `zone(at:)`, written the way `locale` writes a time. A
     /// photograph taken at 08:23 by a New Zealand lake reads 08:23 on a phone

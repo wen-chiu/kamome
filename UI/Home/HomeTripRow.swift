@@ -19,14 +19,21 @@ struct HomeTripRow: View {
 
     private let coverSide: CGFloat = 56
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
+        // At an accessibility size the cover sits above the words: beside
+        // them it left the name a few letters and broke "271 公里" in two.
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 14))
+        layout {
             cover
             VStack(alignment: .leading, spacing: 4) {
                 headline
                 facts
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
@@ -53,7 +60,7 @@ struct HomeTripRow: View {
     }
 
     private var headline: some View {
-        let parts = Self.headline(for: trip)
+        let parts = Self.headline(for: trip, clock: figures?.clock ?? .uniform())
         return HStack(alignment: .firstTextBaseline, spacing: 8) {
             if let flag = parts.flag {
                 Text(verbatim: flag).font(.headline)
@@ -61,7 +68,7 @@ struct HomeTripRow: View {
             Text(verbatim: parts.title)
                 .font(.system(.title3, design: .serif).weight(.semibold))
                 .foregroundStyle(.primary)
-                .lineLimit(2)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -70,7 +77,7 @@ struct HomeTripRow: View {
     /// size the two halves used to wrap separately and interleave
     /// ("2026 · 2 / 年10 km"), so they stack and each stays whole (#191).
     private var facts: some View {
-        let dates = Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt)
+        let dates = datesText
         return HStack(alignment: .firstTextBaseline, spacing: 5) {
             provenanceMark
             if let figures {
@@ -104,11 +111,17 @@ struct HomeTripRow: View {
         }
     }
 
+    /// Counted in the stops' own zones once the row has read them (#171);
+    /// until then, the phone's — which is the same date for nearly every trip.
+    private var datesText: String {
+        Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt, clock: figures?.clock ?? .uniform())
+    }
+
     private var accessibilityText: String {
-        let parts = Self.headline(for: trip)
+        let parts = Self.headline(for: trip, clock: figures?.clock ?? .uniform())
         var spoken = [
             parts.title,
-            Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt),
+            datesText,
             String(localized: Self.provenanceKey(trip.tripSource))
         ]
         if let figures {
@@ -129,7 +142,8 @@ extension HomeTripRow {
     static func headline(
         for trip: TripRecord,
         cache: JourneyNameCache = JourneyNameCache(),
-        homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode
+        homeCountryCode: String? = JourneyNameCache.deviceHomeCountryCode,
+        clock: TripClock = .uniform()
     ) -> (flag: String?, title: String) {
         let flag = TripTitle.flag(for: trip, cache: cache, homeCountryCode: homeCountryCode)
         guard TripTitle.isFallback(trip) else { return (flag, trip.title) }
@@ -141,22 +155,21 @@ extension HomeTripRow {
             }
             return (nil, place)
         }
-        return (nil, dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt))
+        return (nil, dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt, clock: clock))
     }
 
     /// "Jun 21 – 22, 2026" — the same span format the Import sheet's own album
     /// rows already use; a single day collapses to one date. Home has no year
-    /// headings, so the year stays in.
-    static func dateRangeText(startedAt: Double, endedAt: Double?) -> String {
+    /// headings, so the year stays in. The dates are the local ones where the
+    /// trip began and ended (`TripClock`, #171), as on the boarding pass.
+    static func dateRangeText(startedAt: Double, endedAt: Double?, clock: TripClock = .uniform()) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        let start = Date(timeIntervalSince1970: startedAt)
-        let from = formatter.string(from: start)
-        guard let endedAt else { return from }
-        let end = Date(timeIntervalSince1970: endedAt)
-        guard !Calendar.current.isDate(start, inSameDayAs: end) else { return from }
-        return "\(from) – \(formatter.string(from: end))"
+        let span = clock.localDateSpan(startedAt: startedAt, endedAt: endedAt ?? startedAt)
+        let from = formatter.string(from: span.first)
+        guard endedAt != nil, !Calendar.current.isDate(span.first, inSameDayAs: span.last) else { return from }
+        return "\(from) – \(formatter.string(from: span.last))"
     }
 
     /// "271 km · 4 places" — Footprints' words for Footprints' figures: the
@@ -191,6 +204,8 @@ struct HomeTripFigures: Equatable {
     let groundM: Double?
     let stopCount: Int
     let coverAssetId: String?
+    /// The stops' zones, so the row's dates are where the trip happened.
+    let clock: TripClock
 
     static func load(trip: TripRecord, repository: TripRepository) -> HomeTripFigures? {
         guard let facts = Stored.read("journeyCardFacts", { try repository.journeyCardFacts(tripId: trip.id) })
@@ -202,7 +217,8 @@ struct HomeTripFigures: Equatable {
         return HomeTripFigures(
             groundM: LegLength.groundMeters(trip: trip, repository: repository),
             stopCount: facts.stopCount,
-            coverAssetId: cover
+            coverAssetId: cover,
+            clock: TripClock(stops: facts.stops)
         )
     }
 }
