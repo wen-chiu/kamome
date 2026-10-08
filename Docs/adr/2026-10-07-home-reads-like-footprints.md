@@ -26,6 +26,9 @@ Chiu, 2026-10-07: 「A1-A3、7、9 先直接在這個分支改 / 4、5、6、8�
   trip unmarked on screen, said by VoiceOver). A cover photograph leads the row.
 - Home's buttons sit in a bottom inset; the list runs the whole height.
 - Both segments use an inline title: the segmented control names the page.
+- Each segment is a glyph and its word (map 旅程, shoeprints 足跡), drawn as
+  one template image: the control shows an image or a title, never both
+  (VERIFIED: a `Text` with an `Image` in it lost the glyph).
 - The visit pill appears from a second visit; the drawer still says 初訪.
 - Tracking, upper case and italics apply to Latin-script languages only.
 - An entry's name wraps to two lines beside its dates; the chevron's target is

@@ -139,13 +139,7 @@ struct HomeView: View {
         // The segments sit at `.principal`, never beside the info button: two
         // items at `.topBarTrailing` lost it on relaunch (2026-09-02).
         ToolbarItem(placement: .principal) {
-            Picker(selection: Binding(get: { segment }, set: show)) {
-                ForEach(HomeSegment.allCases, id: \.self) { Text($0.label).tag($0) }
-            } label: {
-                Text("home_segment_label")
-            }
-            .pickerStyle(.segmented)
-            .fixedSize()
+            HomeSegmentPicker(segment: segment, choose: show)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
