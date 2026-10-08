@@ -355,6 +355,9 @@ extension TrackingSession {
     /// (Chiu 2026-10-02, #190): it used to start regardless, and a refusal left
     /// S2 up with a clock, no route and no word. Never answered — ask, and
     /// start on a yes. Refused — nothing starts; the record sheet says why.
+    /// Not yet known in the moment after launch (#235) is the same as never
+    /// answered: the request is a no-op for an answered prompt, and the answer
+    /// CoreLocation delivers starts the recording or refuses it.
     func requestStart(vehicle: VehicleType) {
         guard !isRecording else { return }
         switch locationAccess {

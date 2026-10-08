@@ -21,8 +21,10 @@ enum LocationAccess: Equatable {
 
 /// The seam `TrackingSession` asks through, so a test can answer the prompt.
 protocol LocationPermissionProviding: AnyObject {
+    /// `.undetermined` until the first answer arrives through `onChange`.
     var access: LocationAccess { get }
-    /// Called on every change, including the answer to `request()`.
+    /// Called once soon after creation with the current answer, then on every
+    /// change, including the answer to `request()`.
     var onChange: ((LocationAccess) -> Void)? { get set }
     /// Raises the When In Use prompt if it has never been answered.
     func request()
@@ -31,8 +33,16 @@ protocol LocationPermissionProviding: AnyObject {
 /// Asks for location before a recording starts and watches the answer for the
 /// app's life: a recording that began allowed can be refused later in Settings.
 /// It never starts an update — tracking is `LocationService`'s, during a trip.
+///
+/// **It never reads the status at creation** (#235). `authorizationStatus` is a
+/// synchronous round trip to locationd, and this is built in `KamomeApp.init`,
+/// before the first frame: a slow locationd held launch on a blank screen for
+/// over 20 s on the desk. CoreLocation calls the delegate once right after the
+/// manager is created, and the status is read there. A Start pressed in that
+/// gap waits for it, exactly as it waits for an unanswered prompt.
 final class LocationPermission: NSObject, LocationPermissionProviding, CLLocationManagerDelegate {
     var onChange: ((LocationAccess) -> Void)?
+    private(set) var access: LocationAccess = .undetermined
     private let manager = CLLocationManager()
 
     override init() {
@@ -40,13 +50,12 @@ final class LocationPermission: NSObject, LocationPermissionProviding, CLLocatio
         manager.delegate = self
     }
 
-    var access: LocationAccess { LocationAccess(manager.authorizationStatus) }
-
     func request() {
         manager.requestWhenInUseAuthorization()
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        access = LocationAccess(manager.authorizationStatus)
         onChange?(access)
     }
 }
