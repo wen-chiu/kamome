@@ -224,7 +224,7 @@ enum RecapComposer {
             stops: tripStops,
             // The export passes `TripTitle.film` — the place for an unnamed trip.
             title: title ?? TripTitle.plain(trip),
-            subtitle: titleSubtitle(trip: trip, distanceM: titleM),
+            subtitle: titleSubtitle(trip: trip, distanceM: titleM, clock: clock),
             endCardFigures: endCardFigures(
                 trip: trip, distanceM: drawnM, stopCount: film.stops.count, clock: clock
             ),
@@ -315,14 +315,14 @@ enum RecapComposer {
     /// The title card's second line. **`distanceM` is the local journey**, never
     /// the whole trip — see `localDistanceM`. On screen at 0–3 s, which is why
     /// leaving the flight in it put 9,024 km in front of a viewer before the film
-    /// had started.
-    static func titleSubtitle(trip: TripRecord, distanceM: Double?) -> String {
+    /// had started. The dates are the local dates where the trip began and
+    /// ended (`TripClock`, #171), the same ones the boarding pass prints.
+    static func titleSubtitle(trip: TripRecord, distanceM: Double?, clock: TripClock = .uniform()) -> String {
         let formatter = DateIntervalFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
-        let start = Date(timeIntervalSince1970: trip.startedAt)
-        let end = Date(timeIntervalSince1970: trip.endedAt ?? trip.startedAt)
-        let dates = formatter.string(from: start, to: end)
+        let span = clock.localDateSpan(startedAt: trip.startedAt, endedAt: trip.endedAt ?? trip.startedAt)
+        let dates = formatter.string(from: span.first, to: span.last)
         guard let distanceM else { return dates }
         return "\(dates) · \(Int((distanceM / 1000).rounded())) km"
     }
