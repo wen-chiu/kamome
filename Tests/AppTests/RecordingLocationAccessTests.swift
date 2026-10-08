@@ -132,6 +132,23 @@ final class RecordingLocationAccessTests: XCTestCase {
         XCTAssertEqual(session.locationAccess, .allowed)
     }
 
+    /// Built in `KamomeApp.init`, before the first frame: reading the status
+    /// there is a synchronous trip to locationd that held launch on a blank
+    /// screen (#235). It starts unanswered and takes the answer CoreLocation
+    /// delivers right after the manager is created — which is what a Start
+    /// pressed in that gap waits on, so the delivery must come by itself.
+    func testThePermissionAnswersAfterLaunchWithoutAskingLocationdFirst() {
+        let permission = LocationPermission()
+        XCTAssertEqual(permission.access, .undetermined, "nothing is read from locationd while the app is launching")
+
+        let answered = expectation(description: "CoreLocation delivers the current answer unprompted")
+        answered.assertForOverFulfill = false
+        permission.onChange = { _ in answered.fulfill() }
+        wait(for: [answered], timeout: 10)
+
+        XCTAssertEqual(permission.access, LocationAccess(CLLocationManager().authorizationStatus))
+    }
+
     func testEveryAuthorizationStatusIsOneOfThreeAnswers() {
         XCTAssertEqual(LocationAccess(.notDetermined), .undetermined)
         XCTAssertEqual(LocationAccess(.authorizedWhenInUse), .allowed)
