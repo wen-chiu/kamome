@@ -4665,6 +4665,57 @@
           }
         }
       }
+    },
+    "database_failed_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome can't open your trips"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡摸咩打不開你的旅程"
+          }
+        }
+      }
+    },
+    "database_failed_body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing has been deleted. If your iPhone is almost out of storage, free up some space, then try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有任何東西被刪除。如果 iPhone 的儲存空間快滿了，先清出一些空間，再試一次。"
+          }
+        }
+      }
+    },
+    "database_failed_retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try Again"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試一次"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

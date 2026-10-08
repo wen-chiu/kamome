@@ -8,24 +8,29 @@ struct KamomeApp: App {
     /// launch with a message naming the problem (spec §0 rule 2).
     private static let trackingConfig = AppConfig.loadOrDie()
 
-    @State private var session: TrackingSession
-
-    init() {
-        let database = AppConfig.openDatabaseOrDie()
+    /// The database opens here, at launch — unless the phone has been locked
+    /// since power-on and cannot read it yet; then on the first unlock (#245).
+    /// An open that fails is shown, not crashed on (ADR 2026-10-08).
+    @State private var launch = ProtectedDataLaunch<TrackingSession> {
+        let database = try AppConfig.openDatabase()
         let repository = TripRepository(database: database)
         #if DEBUG
         DemoSeeder.seedIfRequested(repository: repository)
         #endif
-        _session = State(initialValue: TrackingSession(
-            config: Self.trackingConfig,
-            repository: repository
-        ))
+        return TrackingSession(config: KamomeApp.trackingConfig, repository: repository)
     }
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
-                .environment(session)
+            // `nil` only before the first unlock, when nobody can see the screen.
+            if let session = launch.value {
+                HomeView()
+                    .environment(session)
+            } else if let failure = launch.failure {
+                DatabaseFailureView(code: failure, retry: launch.retry)
+            } else {
+                Color(.systemBackground)
+            }
         }
     }
 }
@@ -91,17 +96,15 @@ enum AppConfig {
         return config.withMatching(config.matching.withBaseURL(""))
     }
 
-    static func openDatabaseOrDie() -> AppDatabase {
-        do {
-            let support = try FileManager.default.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )
-            return try AppDatabase.onDisk(path: support.appendingPathComponent("kamome.sqlite").path)
-        } catch {
-            fatalError("Kamome database failed to open: \(error)")
-        }
+    /// Throws rather than crashes: `ProtectedDataLaunch` turns a failure into
+    /// `DatabaseFailureView` (ADR 2026-10-08).
+    static func openDatabase() throws -> AppDatabase {
+        let support = try FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        return try AppDatabase.onDisk(path: support.appendingPathComponent("kamome.sqlite").path)
     }
 }
