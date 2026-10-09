@@ -83,11 +83,10 @@ struct RecapView: View {
             // item 2). They used to stay on screen disabled, which is a form that
             // looks editable and is not; the film in flight has already chosen.
             if !model.isRendering {
-                lengthSection
-                vehicleSection
+                settingsSection
 
                 // Its own section so the note reads as the toggle's, not as a
-                // caption under Format (S5 review item 4).
+                // caption under the settings (S5 review item 4).
                 Section {
                     Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
                 } footer: {
@@ -96,15 +95,6 @@ struct RecapView: View {
                 }
 
                 filmPhotosSection
-
-                // After the stops: GIF is a minority choice and MP4 the default
-                // (UX rule 2), so Format is the last setting, not the second.
-                Section {
-                    Picker("recap_format", selection: $model.format) {
-                        Text("recap_format_mp4").tag(RecapModel.Format.mp4)
-                        Text("recap_format_gif").tag(RecapModel.Format.gif)
-                    }
-                }
             }
             if model.isRendering { ExportGullSection(progress: model.drawingFraction, caption: model.gullCaption) }
 
@@ -217,18 +207,39 @@ struct RecapView: View {
         }
     }
 
+    /// **How the film is made, in one place** (Chiu 2026-10-09): length,
+    /// vehicle and format as three rows above the stops, so the settings read
+    /// as one short block and the list below is only *what* the film shows.
+    /// Format used to sit after every stop's row — off screen on a trip of any
+    /// size. MP4 stays the default (UX rule 2); a menu row costs it no room.
+    private var settingsSection: some View {
+        Section {
+            lengthRow
+            // The plane is deliberately absent from the picker: the app picks it
+            // from the journey for a crossing (`VehiclePickerLayout`).
+            if model.pickableSubjects.count > 1 { VehicleRow(model: model) }
+            Picker("recap_format", selection: $model.format) {
+                Text("recap_format_mp4").tag(RecapModel.Format.mp4)
+                Text("recap_format_gif").tag(RecapModel.Format.gif)
+            }
+        } header: {
+            Text("recap_settings_header")
+        } footer: {
+            lengthFooter
+        }
+    }
+
     /// **Short or standard** (Chiu 2026-09-27). Short is the default and fits
     /// a Reel whole; standard is the film the trip earns from its size, at most
     /// 300 s. Hidden when both make the same film — a small trip has nothing to
     /// choose — unless there is a warning to give: the person's own additions
     /// carried the film past its ceiling, which the app never cuts for them.
     @ViewBuilder
-    private var lengthSection: some View {
-        let isOver = filmPhotos?.isOverCeiling(photosEnabled: model.photosEnabled) ?? false
-        if let filmPhotos, filmPhotos.lengthsDiffer || isOver {
-            let ceiling = Self.clock(filmPhotos.ceilingS)
-            let estimate = filmPhotos.estimatedFilmS(photosEnabled: model.photosEnabled)
-            Section {
+    private var lengthRow: some View {
+        if let filmPhotos, showsLength(filmPhotos) {
+            HStack {
+                Text("recap_length_header")
+                Spacer()
                 Picker("recap_length_header", selection: Binding(
                     get: { filmPhotos.length }, set: { length in withAnimation { filmPhotos.choose(length) } }
                 )) {
@@ -236,21 +247,31 @@ struct RecapView: View {
                     Text("recap_length_standard").tag(FilmLength.standard)
                 }
                 .pickerStyle(.segmented)
-            } header: {
-                Text("recap_length_header")
-            } footer: {
-                if isOver {
-                    Text(verbatim: String.localizedStringWithFormat(
-                        String(localized: "recap_length_over"), Self.clock(estimate), ceiling
-                    ))
-                    .foregroundStyle(.orange)
-                } else {
-                    let footer: String.LocalizationValue = filmPhotos.length == .short
-                        ? "recap_length_short_footer" : "recap_length_standard_footer"
-                    Text(verbatim: String.localizedStringWithFormat(String(localized: footer), ceiling))
-                }
+                .fixedSize()
             }
         }
+    }
+
+    @ViewBuilder
+    private var lengthFooter: some View {
+        if let filmPhotos, showsLength(filmPhotos) {
+            let ceiling = Self.clock(filmPhotos.ceilingS)
+            if filmPhotos.isOverCeiling(photosEnabled: model.photosEnabled) {
+                let estimate = filmPhotos.estimatedFilmS(photosEnabled: model.photosEnabled)
+                Text(verbatim: String.localizedStringWithFormat(
+                    String(localized: "recap_length_over"), Self.clock(estimate), ceiling
+                ))
+                .foregroundStyle(.orange)
+            } else {
+                let footer: String.LocalizationValue = filmPhotos.length == .short
+                    ? "recap_length_short_footer" : "recap_length_standard_footer"
+                Text(verbatim: String.localizedStringWithFormat(String(localized: footer), ceiling))
+            }
+        }
+    }
+
+    private func showsLength(_ filmPhotos: FilmPhotoChoices) -> Bool {
+        filmPhotos.lengthsDiffer || filmPhotos.isOverCeiling(photosEnabled: model.photosEnabled)
     }
 
     /// The stage's name. The two later ones reuse the sentences the screen
@@ -286,71 +307,6 @@ struct RecapView: View {
         if model.photosEnabled, let filmPhotos {
             FilmStopsSections(choices: filmPhotos)
         }
-    }
-
-    /// Which subject the film draws. **Moved here from Trip Detail** (Chiu
-    /// 2026-09-22): the choice only ever affected the film — nothing on the
-    /// trip screen read it — so it belongs where the film is actually
-    /// configured. A mid-render edit is safe (`RecapExportJob` snapshots the
-    /// subject once at compose time); it is still hidden while rendering so
-    /// the picker never reads as "this changes the film in progress".
-    ///
-    /// The plane is deliberately absent: the app picks it from the journey for
-    /// a crossing, and choosing one for a road trip is not a feature.
-    @ViewBuilder
-    private var vehicleSection: some View {
-        let subjects = model.pickableSubjects
-        if subjects.count > 1 {
-            Section("recap_vehicle_header") {
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(subjects, id: \.id) { subject in
-                                Button {
-                                    model.chooseVehicle(subject.id)
-                                } label: {
-                                    vehicleChip(subject, isSelected: subject.id == model.vehicleId)
-                                }
-                                .buttonStyle(.plain)
-                                .id(subject.id)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                    // **The chosen vehicle opens in view** (S5 review item 5).
-                    // With a chip late in the row chosen, the sheet opened on
-                    // the first three and nothing said which was selected.
-                    // Centred, so its neighbours show and the row still reads
-                    // as scrollable; on appear only — a tapped chip is in view.
-                    .onAppear { proxy.scrollTo(model.vehicleId, anchor: .center) }
-                }
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 0))
-            }
-        }
-    }
-
-    private func vehicleChip(_ subject: VehicleSubject, isSelected: Bool) -> some View {
-        // A subject with no thumbnail yet shows its name alone. Deliberately not
-        // a grey box or a "missing image" glyph: those read as broken, and this
-        // is not broken — the set works in a film and simply has no picture yet.
-        // A chip that is only a name is an ordinary chip.
-        return HStack(spacing: 6) {
-            if let thumbnail = VehicleCatalog.thumbnail(id: subject.id) {
-                Image(decorative: thumbnail, scale: 1)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 26, height: 26)
-            }
-            Text(subject.screenName)
-                .font(.subheadline)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(isSelected ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.10))
-        .overlay(
-            Capsule().stroke(isSelected ? Color.accentColor : .clear, lineWidth: 1.5)
-        )
-        .clipShape(Capsule())
     }
 
     /// The download phase before the render — only shown when some of the film's
