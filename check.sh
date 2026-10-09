@@ -67,13 +67,23 @@ else
   stage "Tests"
   if require xcodebuild "Xcode is required to run the suite"; then
     destination=${KAMOME_TEST_DESTINATION:-platform=iOS Simulator,name=iPhone 17 Pro}
+    if [ -z "${KAMOME_TEST_DESTINATION:-}" ]; then
+      printf 'note: testing on the shared "iPhone 17 Pro". Another session may be using it;\n'
+      printf '      set KAMOME_TEST_DESTINATION=id=<your own simulator> (CHARTER.md §1).\n'
+    fi
+    # **This worktree's own build products** (#231). Xcode's default DerivedData
+    # is one folder per project path under ~/Library, and on 2026-10-06 a run
+    # here tested another worktree's bundle: a test that did not exist on this
+    # branch failed in it. A path inside the checkout cannot be shared.
+    derived_data=".build/DerivedData"
     set -o pipefail
     # `env -u` (ADR 2026-09-12): the build never sees a routing key from the
     # shell. Nothing in the release procedure sets one any more (ADR 2026-10-02,
     # "the release scan needs no key"), so this only covers a stale export. A
     # precaution, not a measured leak: on xcodebuild 26.6 an inherited variable
     # appeared neither in -showBuildSettings nor in a build log.
-    env -u KAMOME_ROUTING_API_KEY xcodebuild -scheme Kamome test -destination "$destination" CODE_SIGNING_ALLOWED=NO
+    env -u KAMOME_ROUTING_API_KEY xcodebuild -scheme Kamome test -destination "$destination" \
+      -derivedDataPath "$derived_data" CODE_SIGNING_ALLOWED=NO
     record $? "xcodebuild test"
   fi
 
