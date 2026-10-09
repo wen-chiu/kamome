@@ -168,7 +168,8 @@ extension RecapExportJob {
         let started = ContinuousClock.now
         do {
             let output = try await runDetached(
-                exporter: exporter, videoURL: videoURL, gifURL: gifURL, channel: channel
+                exporter: exporter, videoURL: videoURL, gifURL: gifURL, channel: channel,
+                memory: conditions.memory
             )
             // Asked again on the main actor after the last frame: a trip deleted
             // meanwhile (`TripDeletion`) stores nothing (arch review 2026-09-24).
@@ -260,7 +261,8 @@ extension RecapExportJob {
     /// only for progress updates. Cancellation reads the lock-guarded flag
     /// directly on the render thread.
     private func runDetached(
-        exporter: RecapExporter, videoURL: URL, gifURL: URL?, channel: RecapExportChannel
+        exporter: RecapExporter, videoURL: URL, gifURL: URL?, channel: RecapExportChannel,
+        memory: MemoryWatch
     ) async throws -> RecapExporter.Output? {
         let progress = channel.progress
         let shouldContinue = channel.shouldContinue
@@ -275,6 +277,8 @@ extension RecapExportJob {
                 let now = ContinuousClock.now
                 if let lastEmitted, fraction < 1, now - lastEmitted < Self.progressInterval { return }
                 lastEmitted = now
+                // The memory reading rides the same tick (#161): ~10/s, one syscall.
+                memory.sample()
                 Task { @MainActor in progress(fraction) }
             }
             // A GIF export renders only the frames the GIF keeps, and no MP4.

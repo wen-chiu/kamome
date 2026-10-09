@@ -25,7 +25,7 @@ what `OSLogStore` returns outside a debugger.
 | # | check | pass means | detail |
 |---|---|---|---|
 | D1 | start an export, **lock the screen**, wait | the export survives, or fails loudly and a second export can start | `release-readiness.md` D1; iOS 26 cannot render MapLibre in the background, so "survives" means pause/resume (`handoff-export-performance.md` §9) |
-| D2 | per-trip export time and peak memory at full frame count | numbers recorded for three trips; feeds the export estimate | `render cost:` line; also judges `prefetch_depth` / `composite_concurrency` |
+| D2 | per-trip export time and peak memory at full frame count | numbers recorded for three trips; feeds the export estimate | `render cost:` line, and `render memory:` for peak footprint and lowest headroom (#161, no Xcode needed); also judges `prefetch_depth` / `composite_concurrency` |
 | D3 | seconds per snapshot on current hardware | `render substrate:` mean recorded; `snapshot_timeout_s` = 60 checked against it | `handoff-export-performance.md` §9 — owed: the `render network` line after the one-download-per-tile fix (#105) |
 | D4 | Limited Photo Library | import and export work with a limited selection | `device-test-P3.md` H |
 | D5 | the S5 export sheet, device half | the desk review's items hold on a phone | `design-reviews/2026-09-25-s5-export-sheet.md`, `device-test-P3.md` G |
