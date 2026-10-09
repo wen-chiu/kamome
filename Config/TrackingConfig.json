@@ -41,7 +41,7 @@
     "crossing_pace_min_distance_m": 100000,
     "crossing_pace_clock_margin_s": 7200,
     "crossing_route_pace_min_kmh": 120,
-    "route_unwitnessed_max_drive_s": 36000
+    "route_unwitnessed_max_m": 1200000
   },
   "photos": {
     "match_radius_m": 300,
