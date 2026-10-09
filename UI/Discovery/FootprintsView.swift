@@ -89,6 +89,7 @@ struct FootprintsView: View {
                         visit: visits[journey.id],
                         isExpanded: expanded.contains(journey.id),
                         isOpening: model.openingId == journey.id,
+                        isNaming: model.awaitsName(journey),
                         isLast: isLastOverall(section: sectionIndex, entry: index),
                         namespace: namespace,
                         onToggle: { toggle(journey) },
