@@ -15,6 +15,7 @@ struct TripDetailView: View {
     /// swipe used to delete it outright: its name, note and film choices gone,
     /// and a recorded stop cannot be made again (#188). Home asks the same way.
     @State private var stopPendingDeletion: StopRecord?
+    @State private var showingRoutePhotos = false
     @State private var showingRecap = false
     @State var playingFilm: FilmRecord?
     @State var showingAllFilms = false
@@ -144,6 +145,9 @@ struct TripDetailView: View {
             StopEditorView(model: model, stop: stop)
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showingRoutePhotos) {
+            RoutePhotosSheet(model: model)
+        }
         .sheet(isPresented: $showingRecap) {
             RecapView(tripId: model.tripId, session: session)
         }
@@ -250,14 +254,10 @@ struct TripDetailView: View {
                 }
             }
             // §4.3 route-attached photos (no stop) — without this row they
-            // exist in the DB but appear nowhere.
+            // exist in the DB but appear nowhere. It stays while any are
+            // removed, since its sheet is where they are put back.
             if !model.routePhotos.isEmpty {
-                HStack {
-                    Text("route_photos_header")
-                        .font(.headline)
-                    Spacer()
-                    PhotoStrip(photos: model.routePhotos, maxThumbnails: 3)
-                }
+                RoutePhotosRow(model: model) { showingRoutePhotos = true }
             }
         }
         .listStyle(.plain)
