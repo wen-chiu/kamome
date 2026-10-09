@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-08 against ADR **2026-10-08-trip-detail-prints-the-ground-distance**, -a-database-that-cannot-open-says-so.
+Last synced: 2026-10-09 against ADR **2026-10-09-a-days-driving-is-1200-km**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open

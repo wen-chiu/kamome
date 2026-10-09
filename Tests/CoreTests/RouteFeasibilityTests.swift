@@ -62,6 +62,26 @@ final class RouteFeasibilityTests: XCTestCase {
         XCTAssertEqual(RouteFeasibility.judge(route: overland, trace: trace, config: config), .unwitnessed)
     }
 
+    /// **The ceiling is a day's driving, 1,200 km** (ADR 2026-10-09). About
+    /// 1,280 km of road and a night either side: slow enough for the time test,
+    /// so only the witness test can refuse it — and under the old ceiling
+    /// (4,320 km) it was stored as road.
+    func testAnUnwitnessedRoadPastADaysDrivingIsRefusedEvenWhenTheClocksAllowIt() {
+        let road = road([(lat: 0, lon: 0), (lat: 0, lon: 11.5)])
+        let trace = [point((lat: 0, lon: 0), after: 0), point((lat: 0, lon: 11.5), after: 30)]
+        XCTAssertGreaterThan(RouteFeasibility.lengthM(road), 1_200_000, "precondition")
+        XCTAssertEqual(RouteFeasibility.judge(route: road, trace: trace, config: config), .unwitnessed)
+    }
+
+    /// The other side of the line: about 1,100 km with no photograph, a long
+    /// day at the wheel, is still a road.
+    func testALongDaysDriveWithNoPhotographAlongItStaysARoad() {
+        let road = road([(lat: 0, lon: 0), (lat: 0, lon: 9.9)])
+        let trace = [point((lat: 0, lon: 0), after: 0), point((lat: 0, lon: 9.9), after: 14)]
+        XCTAssertLessThan(RouteFeasibility.lengthM(road), 1_200_000, "precondition")
+        XCTAssertEqual(RouteFeasibility.judge(route: road, trace: trace, config: config), .drivable)
+    }
+
     /// A day's autobahn with photographs along it stays a road.
     func testAWitnessedDaysDriveIsDrivable() {
         let trace = [

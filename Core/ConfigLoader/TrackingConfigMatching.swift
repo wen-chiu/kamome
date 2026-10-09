@@ -141,13 +141,18 @@ public extension TrackingConfig {
         /// gap, stops included, is not a drive.
         public let crossingRoutePaceMinKmh: Double
         /// **The longest stretch of road a leg may cover with no photograph along
-        /// it and still be stored as road** (ADR 2026-10-03), measured as driving
-        /// time at `crossingRoutePaceMinKmh`. 36,000 s is ten hours: the most
-        /// driving one day may hold under EU Regulation 561/2006 Art. 6 (nine
-        /// hours, ten twice a week). A route longer than a day's driving with no
-        /// photograph on it is not evidence of a drive, whatever the clocks say,
-        /// so it is stored as `implausible_route` — drawn dashed, never as road.
-        public let routeUnwitnessedMaxDriveS: Double
+        /// it and still be stored as road** (ADR 2026-10-03), in metres. A route
+        /// longer than a day's driving with no photograph on it is not evidence
+        /// of a drive, whatever the clocks say, so it is stored as
+        /// `implausible_route` — drawn dashed, never as road.
+        ///
+        /// 1,200 km, Chiu 2026-10-09 (ADR 2026-10-09): the most a person drives
+        /// in a day. It was ten hours at `crossingRoutePaceMinKmh` — 4,320 km —
+        /// which let an overnight flight across connected land through as road.
+        /// Only China's longest high-speed rail services (2,400–2,760 km) cover
+        /// more over land in a day, and the time test already flies those
+        /// unless a night sits either side.
+        public let routeUnwitnessedMaxM: Double
         /// The routing provider's API key — **deliberately not a JSON key, and
         /// never supplied by the app** (ADR 2026-09-12).
         ///
@@ -179,7 +184,7 @@ public extension TrackingConfig {
             case crossingPaceMinDistanceM = "crossing_pace_min_distance_m"
             case crossingPaceClockMarginS = "crossing_pace_clock_margin_s"
             case crossingRoutePaceMinKmh = "crossing_route_pace_min_kmh"
-            case routeUnwitnessedMaxDriveS = "route_unwitnessed_max_drive_s"
+            case routeUnwitnessedMaxM = "route_unwitnessed_max_m"
         }
 
         public init(
@@ -199,7 +204,7 @@ public extension TrackingConfig {
             crossingPaceMinDistanceM: Double = 100_000,
             crossingPaceClockMarginS: Double = 7_200,
             crossingRoutePaceMinKmh: Double = 120,
-            routeUnwitnessedMaxDriveS: Double = 36_000
+            routeUnwitnessedMaxM: Double = 1_200_000
         ) {
             self.baseURL = baseURL
             self.chunkSize = chunkSize
@@ -217,7 +222,7 @@ public extension TrackingConfig {
             self.crossingPaceMinDistanceM = crossingPaceMinDistanceM
             self.crossingPaceClockMarginS = crossingPaceClockMarginS
             self.crossingRoutePaceMinKmh = crossingRoutePaceMinKmh
-            self.routeUnwitnessedMaxDriveS = routeUnwitnessedMaxDriveS
+            self.routeUnwitnessedMaxM = routeUnwitnessedMaxM
         }
 
         /// Whether this endpoint may ship in a build that leaves this Mac.

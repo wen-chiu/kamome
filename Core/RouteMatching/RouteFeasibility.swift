@@ -24,8 +24,8 @@ import KamomeTrackingEngine
 /// - **Witness.** The time test is only as good as the photographs at the two
 ///   ends; one taken the evening before a flight and the next a day after
 ///   landing defeats it. So, independent of any clock: a stretch of the route
-///   longer than a day's driving (`route_unwitnessed_max_drive_s` at
-///   `crossing_route_pace_min_kmh`) with no photograph along it is not
+///   longer than a day's driving (`route_unwitnessed_max_m`, 1,200 km) with
+///   no photograph along it is not
 ///   evidence of a drive. It is not proof of a flight either, so it is not a
 ///   crossing — it is refused as road and drawn dashed, which is the honest
 ///   reading of "we do not know" (PD-1).
@@ -62,7 +62,7 @@ public enum RouteFeasibility {
         let notDriven = routedM >= config.crossingPaceMinDistanceM
             && config.crossingRoutePaceMinKmh > 0
             && paceKmh >= config.crossingRoutePaceMinKmh
-        let dayOfDrivingM = config.routeUnwitnessedMaxDriveS / 3600 * config.crossingRoutePaceMinKmh * 1000
+        let dayOfDrivingM = config.routeUnwitnessedMaxM
         let unwitnessed = dayOfDrivingM > 0 && unwitnessedM > dayOfDrivingM
         let verdict: Verdict = notDriven ? .notDriven : (unwitnessed ? .unwitnessed : .drivable)
 
