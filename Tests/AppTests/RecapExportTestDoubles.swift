@@ -71,7 +71,12 @@ final class FakePlatform {
     var idleTimerDisabled = false
     var heldAssertions = 0
     var expiry: (() -> Void)?
+    /// Who is listening for Kamome going to the background, by token.
+    private(set) var backgroundObservers: [ObjectIdentifier: () -> Void] = [:]
     private var nextIdentifier = 1
+
+    /// An app switch or a locked screen (#260).
+    func enterBackground() { backgroundObservers.values.forEach { $0() } }
 
     var platform: ExportLifecycleGuard.Platform {
         ExportLifecycleGuard.Platform(
@@ -82,7 +87,13 @@ final class FakePlatform {
                 self.nextIdentifier += 1
                 return UIBackgroundTaskIdentifier(rawValue: self.nextIdentifier)
             },
-            endTask: { _ in self.heldAssertions -= 1 }
+            endTask: { _ in self.heldAssertions -= 1 },
+            observeBackground: { handler in
+                let token = NSObject()
+                self.backgroundObservers[ObjectIdentifier(token)] = handler
+                return token
+            },
+            stopObserving: { self.backgroundObservers[ObjectIdentifier($0)] = nil }
         )
     }
 }

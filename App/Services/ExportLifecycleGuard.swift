@@ -44,13 +44,23 @@ final class ExportLifecycleGuard {
         var setIdleTimerDisabled: (Bool) -> Void
         var beginTask: (@escaping () -> Void) -> UIBackgroundTaskIdentifier
         var endTask: (UIBackgroundTaskIdentifier) -> Void
+        /// Calls back each time Kamome goes to the background — an app switch or
+        /// a locked screen (#260). Returns the token `stopObserving` takes.
+        var observeBackground: (@escaping () -> Void) -> NSObjectProtocol
+        var stopObserving: (NSObjectProtocol) -> Void
 
         static let uiKit = Platform(
             setIdleTimerDisabled: { UIApplication.shared.isIdleTimerDisabled = $0 },
             beginTask: { expiry in
                 UIApplication.shared.beginBackgroundTask(withName: "kamome.recap.export", expirationHandler: expiry)
             },
-            endTask: { UIApplication.shared.endBackgroundTask($0) }
+            endTask: { UIApplication.shared.endBackgroundTask($0) },
+            observeBackground: { handler in
+                NotificationCenter.default.addObserver(
+                    forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+                ) { _ in handler() }
+            },
+            stopObserving: { NotificationCenter.default.removeObserver($0) }
         )
     }
 
@@ -59,6 +69,7 @@ final class ExportLifecycleGuard {
     /// Called if iOS takes the assertion back before the export finishes, so the
     /// caller can stop at a frame boundary instead of being killed mid-write.
     private var onExpiry: (() -> Void)?
+    private var backgroundObserver: NSObjectProtocol?
 
     init(platform: Platform = .uiKit) {
         self.platform = platform
@@ -70,9 +81,12 @@ final class ExportLifecycleGuard {
 
     /// Idempotent: starting twice holds one assertion, so a repeated export
     /// cannot leak one.
-    func begin(onExpiry: @escaping () -> Void) {
+    /// `onBackground` is told each time Kamome leaves the foreground while the
+    /// assertion is held: a render on its way to failing there (#260).
+    func begin(onExpiry: @escaping () -> Void, onBackground: @escaping () -> Void = {}) {
         guard backgroundTask == .invalid else { return }
         self.onExpiry = onExpiry
+        backgroundObserver = platform.observeBackground(onBackground)
         platform.setIdleTimerDisabled(true)
         backgroundTask = platform.beginTask { [weak self] in
             // iOS is reclaiming the assertion. Tell the export first, then let
@@ -91,6 +105,8 @@ final class ExportLifecycleGuard {
         platform.endTask(backgroundTask)
         backgroundTask = .invalid
         onExpiry = nil
+        if let backgroundObserver { platform.stopObserving(backgroundObserver) }
+        backgroundObserver = nil
     }
 
     deinit {
@@ -99,10 +115,12 @@ final class ExportLifecycleGuard {
         // `self` is already going away.
         let task = backgroundTask
         let platform = platform
+        let observer = backgroundObserver
         guard task != .invalid else { return }
         Task { @MainActor in
             platform.setIdleTimerDisabled(false)
             platform.endTask(task)
+            if let observer { platform.stopObserving(observer) }
         }
     }
 }
