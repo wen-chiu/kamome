@@ -11,6 +11,7 @@ extension RecapExportJob {
     /// What `beginConditions` started and `reportConditions` reads back.
     struct RenderConditions {
         let thermal: ThermalWatch
+        let memory: MemoryWatch
         let measuresSubstrate: Bool
     }
 
@@ -20,6 +21,8 @@ extension RecapExportJob {
     func beginConditions(plan: Plan) async -> RenderConditions {
         let thermal = ThermalWatch()
         thermal.begin()
+        let memory = MemoryWatch()
+        memory.begin()
         KamomeLog.recap.notice("""
             render device: thermal \(ThermalWatch.name(ProcessInfo.processInfo.thermalState), privacy: .public) · \
             low power \(ProcessInfo.processInfo.isLowPowerModeEnabled ? "on" : "off", privacy: .public) · \
@@ -40,7 +43,7 @@ extension RecapExportJob {
                 KamomeLog.recap.notice("map cache: \(cacheMb) MB ambient")
             }
         }
-        return RenderConditions(thermal: thermal, measuresSubstrate: measuresSubstrate)
+        return RenderConditions(thermal: thermal, memory: memory, measuresSubstrate: measuresSubstrate)
     }
 
     /// **Why the snapshots cost what they did**, logged on every exit —
@@ -64,6 +67,7 @@ extension RecapExportJob {
             worst \(ThermalWatch.name(thermal.worst), privacy: .public) · \
             \(thermal.hotS, format: .fixed(precision: 0))s at serious or above
             """)
+        KamomeLog.recap.notice("render memory: \(Self.memoryLine(conditions.memory.end()), privacy: .public)")
         guard conditions.measuresSubstrate else { return }
         let map = MapLibreSnapshotProvider.meter.read()
         let style = map.meanStyleS.map { String(format: "%.2fs", $0) } ?? "n/a"
@@ -82,6 +86,15 @@ extension RecapExportJob {
             render network: \(hub.downloads) downloads · \(hub.joined) joined · \
             \(hub.remembered) remembered · \(hub.terrainAged) terrain given a lifetime
             """)
+    }
+
+    /// **How close the render came to jetsam** (#161): the largest footprint
+    /// and the least headroom seen. "headroom n/a" means the platform never
+    /// reported a limit — the simulator does not.
+    nonisolated static func memoryLine(_ reading: MemoryWatch.Reading) -> String {
+        let headroom = reading.lowestAvailable.map { "\(MemoryWatch.megabytes($0)) MB" } ?? "n/a"
+        return "peak \(MemoryWatch.megabytes(reading.peakFootprint)) MB · lowest headroom \(headroom) · " +
+            "\(reading.samples) samples"
     }
 
     /// Whether this phone could keep rendering the map with the app in the
