@@ -14,10 +14,10 @@ The button promised a film and delivered a form and a wait. The same unlabelled 
 
 ## Decision
 Chiu: 「P0 的先直接修」.
-- **The sample ships with its film, in Chinese only.**
-  - The film is `App/Resources/SampleTrip/sample-film-zh-Hant.mp4`: this app's own export of this trip, re-encoded to HEVC at about 6 MB (`Scripts/encode-sample-film.sh`).
-  - Chiu, the same day: 「範例影片先留中文版就好 App 變大 12 M 有點多」.
-  - An English app opens the sample without a film, and the button makes one. It never plays the Chinese film beside English stop names.
+- **The sample ships with its film, one per app language.**
+  - The films are `App/Resources/SampleTrip/sample-film-{en,zh-Hant}.mp4`: this app's own export of this trip, re-encoded to HEVC at about 6 MB each (`Scripts/encode-sample-film.sh`).
+  - Chiu first kept Chinese only (「App 變大 12 M 有點多」). Told that a reviewer's device is usually English, the same day: 「還是把英文版的範例影片加回去吧」.
+  - A language without a film opens the sample without one. It never plays another language's film beside its own stop names.
   - The manifest's `film` entry names the files and the facts their row carries.
 - **The button plays it.** `SampleTrip.attachFilm` copies the bundled file into `Films/` and writes a `FilmRecord`; Home then opens the trip with that film playing.
   - The film is stored like any other: it saves, shares and deletes the same way, and a new export from the sample still renders from scratch.
@@ -31,13 +31,10 @@ Chiu: 「P0 的先直接修」.
 ## Rejected
 - **Auto-starting the export when the sample opens:** it is still a multi-minute wait for a film the person asked to *see*.
 - **Shipping the exports as they are (H.264, 36 MB each):** 72 MB added to the app for one sample.
-- **A film per language (12 MB):** Chiu judged it too much.
+- **Chinese only (6 MB):** an English-language reviewer would get the multi-minute render (INFERRED: review devices are usually English).
 - **Playing the Chinese film in an English app:** a Chinese title beside English stop names reads as broken.
 
 ## Consequences
-- The app grows by about 6 MB.
-- An English app's 「See a sample film first」 opens the trip, not a film. Shipping an English film again is one manifest line and one 6 MB file.
-- The bundled film goes stale when the film's look changes. Re-render it with the script; `SampleTripTests` only checks that every named file exists.
-- **App Store review note (A4, #126):** "tap *See a sample film first*" plays at once only in a Chinese app.
-  - INFERRED: a reviewer's device is usually English. Such a reviewer sees the trip and must make the film, a render of a few minutes.
-  - Either the note says so, or an English film ships after all.
+- The app grows by about 12 MB.
+- The bundled films go stale when the film's look changes. Re-render both with the script; `SampleTripTests` only checks that both files exist.
+- The App Store review note (A4, #126) is true in both languages as written: "tap *See a sample film first*".

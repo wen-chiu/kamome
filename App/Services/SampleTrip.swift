@@ -179,8 +179,9 @@ enum SampleTrip {
 
     enum FilmFailure: Error, Equatable {
         case noFilmInManifest
-        /// No film ships in the app's language: only the Chinese one does
-        /// (Chiu 2026-10-10). Expected in an English app, not a fault.
+        /// The manifest names no film for the app's language. Both ship today;
+        /// should one be dropped, that language opens the sample without a
+        /// film rather than playing another language's.
         case noFilmForLanguage
         case filmMissing(String)
     }
@@ -188,9 +189,9 @@ enum SampleTrip {
     /// **The sample arrives with its film** (Chiu 2026-10-10, #285): 「先看一支
     /// 範例影片」 promised a film, and the person got a map, a form and a
     /// three-minute render. The film is this app's own render of this trip,
-    /// shipped in the bundle, so it plays the moment it is asked for. **Only the
-    /// Chinese film ships** (Chiu 2026-10-10: 12 MB for two was too much): an
-    /// English app gets none rather than a Chinese film beside English names.
+    /// shipped in the bundle in the app's language, so it plays the moment it is
+    /// asked for. Never another language's film: a Chinese title beside English
+    /// stop names reads as broken.
     /// It is stored like any film — copied into `Films/` with its own row — so
     /// it plays, saves, shares and deletes like one, and a new export from the
     /// sample still renders from scratch.
