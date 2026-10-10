@@ -28,10 +28,17 @@ extension JourneyDiscoveryModel {
     /// Days at home before each journey began, keyed by that (newer) journey's
     /// id — the row sits under it on screen, between it and the one before it.
     /// Empty when `discovery.show_home_gaps` is off.
+    ///
+    /// **A hidden journey still happened** (Chiu 2026-10-10, #267): the gap is
+    /// measured to the journey just before, hidden or not, so the row never
+    /// says "at home" over weeks the person was away. A hidden journey has no
+    /// row of its own.
     var homeGaps: [String: Int] {
         guard config.discovery.showHomeGaps else { return [:] }
+        let hidden = Set(hiddenJourneys.map(\.id))
+        let all = (journeys + hiddenJourneys).sorted { $0.startedAt > $1.startedAt }
         var gaps: [String: Int] = [:]
-        for (newer, older) in zip(journeys, journeys.dropFirst()) {
+        for (newer, older) in zip(all, all.dropFirst()) where !hidden.contains(newer.id) {
             if let days = JourneyChronicle.homeDays(after: older, before: newer) { gaps[newer.id] = days }
         }
         return gaps

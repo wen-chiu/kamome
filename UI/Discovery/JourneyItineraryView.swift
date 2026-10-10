@@ -158,20 +158,16 @@ private struct ItineraryMasthead: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// The list's form with its year (#267): `.long` printed 「2026/8/3至2026/8/5」 in zh-TW.
     private var dates: String {
-        let formatter = DateIntervalFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
-        return formatter.string(
-            from: Date(timeIntervalSince1970: itinerary.startedAt), to: Date(timeIntervalSince1970: itinerary.endedAt)
-        )
+        JourneyDateText.rangeWithYear(from: itinerary.startedAt, to: itinerary.endedAt)
     }
 
     /// Photographs, places, days. No kilometres: those are S3's.
     private var figures: String {
         [
             String.localizedStringWithFormat(String(localized: "journey_photos"), itinerary.photoCount),
-            String.localizedStringWithFormat(String(localized: "journey_stops"), itinerary.places.count),
+            String.localizedStringWithFormat(String(localized: "journey_places"), itinerary.places.count),
             String.localizedStringWithFormat(String(localized: "journey_days"), itinerary.dayCount)
         ].joined(separator: " · ")
     }

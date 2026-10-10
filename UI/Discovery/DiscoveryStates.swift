@@ -120,6 +120,8 @@ struct LimitedLibraryRow: View {
             Spacer(minLength: 8)
             Button("limited_photos_manage", action: action)
                 .font(.footnote.weight(.semibold))
+                // In Footprints' list a default-style button takes the whole row's tap.
+                .buttonStyle(.borderless)
         }
         .padding(14)
         .background(Color(.secondarySystemBackground))
