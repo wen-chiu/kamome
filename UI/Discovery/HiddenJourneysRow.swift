@@ -65,6 +65,8 @@ private struct HiddenJourneyLine: View {
             Spacer(minLength: 8)
             Button("journey_unhide", action: onUnhide)
                 .font(.footnote.weight(.semibold))
+                // In Footprints' list a default-style button takes the whole row's tap.
+                .buttonStyle(.borderless)
         }
     }
 }
