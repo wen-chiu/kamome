@@ -65,6 +65,40 @@ every-tile-~9× fetch path. Main-branch numbers are still owed.
   - Found: the title-date bug (#131).
 - **D5 — ✅ Chiu ran it** on the phone.
 
+**Results 2026-10-09.** Same phone, iOS 26.4.2. The measured runs are on a
+**Debug** build of `main` 808, installed from the desk. The release builds'
+numbers come from the phone's own `export-history.txt`: five finished exports,
+2026-10-01 to 10-08, all with `export stages` and `render network` lines, so
+they postdate #105 and #110. Their exact build numbers are not in the log.
+
+- **D2 — time ✅, memory ✅.**
+
+  | frames | render cost | export total | thermal at serious or above |
+  |---|---|---|---|
+  | 2118 | 78.1 s | 89.9 s | 0 s |
+  | 2688 | 106.6 s | 107.7 s | 76 s |
+  | 2226 | 337.0 s | 377.2 s (roads 21.4 s, photos 18.0 s) | 114 s |
+  | 7588 | 324.8 s | 327.8 s | 0 s |
+  | 8910 | 742.2 s | 753.7 s | 600 s |
+  | 5129 (Debug) | 377.1 s | 390.8 s | 328 s |
+
+  - **Peak memory: 951.6 MB physical footprint** (Instruments Activity Monitor)
+    over the 5129-frame Debug export.
+  - Release memory is INFERRED to be no higher.
+  - UNKNOWN: the ceiling on a 3 GB phone. Settled by one export on the
+    smallest supported device.
+- **D3 — ✅.** Mean seconds per snapshot is 2.75–4.42 s on the release builds and
+  4.12 s on Debug, against `snapshot_timeout_s` = 60. `render network` is now
+  logged. The 8910-frame export, for example, logged `requests 10741 / 2298
+  distinct · 8268 refetched` and `2395 downloads · 2667 joined · 5679
+  remembered`.
+- **D1 — fails loudly, but in words no user can read (#260).** With the screen
+  locked mid-export, the export fails as `SnapshotTimeout`: the map cannot draw
+  without the GPU. The sheet showed the raw text `KamomeExportEngine.SnapshotTimeout · 1`.
+  Export stays available. That export's lines never reached `export-history.txt`.
+- **#235 — ✅ cold launch:** first frame at 0.56 s, foreground active at 1.33 s
+  (Instruments App Launch, Debug). No wait on locationd.
+
 ## B. TestFlight verifications (`handoff-testflight.md`)
 
 | # | check | pass means |
@@ -77,7 +111,7 @@ every-tile-~9× fetch path. Main-branch numbers are still owed.
 | check | pass means | detail |
 |---|---|---|
 | Miyakojima re-export | log reads `film type one destination abroad` and the homecoming line; Chiu judges | `handoff-type2-round-trip.md` |
-| MapLibre snapshotter crash | three full exports of the longest trip, no new `Kamome-*.ips` | same |
+| MapLibre snapshotter crash | three full exports of the longest trip, no new `Kamome-*.ips` | same — **2026-10-09, partly**: no `Kamome-*.ips` on the phone since 2026-09-19, across six finished exports of up to 8910 frames. There are only seven `Kamome.cpu_resource-*.ips`, each during an export. Not yet three exports of the longest trip. |
 | Iceland day 12, plane over land | the Skógar → pool leg draws no plane | `handoff-known-bugs.md` |
 | Vietnam: Taiwan → Vietnam leg | the stored verdict is read from the log; which of the three causes it is | `handoff-vietnam-crossing.md` |
 | Stop-zone days (schema v14) | a trip opened after v14 has every stop's zone; an Iceland film exported in Taipei shows the same `Day N` | `_archive/handoff-arch-review-2026-09-24.md` round 2 |
@@ -90,17 +124,23 @@ every-tile-~9× fetch path. Main-branch numbers are still owed.
 | Photo picks (ADR 2026-09-25 (b)) | pick 1–5 per stop and hide a stop; the film follows | same |
 | iCloud photo download | transfer size, peak memory of a full-mode film, cellular cost, Optimize Storage on | ADR 2026-09-19 (b) |
 | Country rule scan time | seconds per 50k photos on a phone (Mac: 0.32 s) | ADR 2026-09-25 |
-| Crash-safe recording | kill the app mid-recording; the trip comes back | `handoff-long-recording.md` |
+| Crash-safe recording | kill the app mid-recording; the trip comes back | `handoff-long-recording.md` — **✅ 2026-10-09**: swiped away from the app switcher mid-recording, reopened, and it was recording again (Chiu) |
 | Restart while recording (#245) | restart the phone mid-recording, leave it locked while carrying it > 1 km, then unlock: no `Kamome` crash in Analytics Data, the trip resumes | #245 |
 | Merge-gap pacing | a multi-day `merge_gap` leg paces acceptably; is `merge_gap_min_m` = 500 right | same |
-| Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` |
+| Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` — **❌ 2026-10-09 (#260)**: the background assertion expired about 23 s after leaving, and the export was cancelled. The sheet returned to ready with **no message**. A second export started. |
 | Subject lookup miss rate | count fallback badges over ten exports (desk: 1 in 5) | `handoff-subject-lookup.md` |
 
 Also from the 2026-09-28 release review: an **iOS 17/18** pass (a simulator
 can settle it first, #127), and the two-week recording's replay time on a phone
 (`handoff-long-recording.md`).
 
-## E. Chiu's own steps, in this order (`HANDOFF.md` 🔴)
+Also found in this run's export history (counts only): #256, a one-point route
+is never settled, and #259, the film type stays UNKNOWN on 3 of 6 trips.
+Still owed: #245 (restart while recording, needs a walk), #196 (whether the Motion
+prompt showed at this run's first recording is not yet reported; a phone that
+answered it before shows nothing, so a fresh install may be needed), B (T4, T5), C (films) and the rest of D.
 
-1. `./check.sh --release <.xcarchive>` with the real key in the environment.
-2. **Then** rotate the Geoapify key (S7). Never the other way round.
+## E. Chiu's own steps (`HANDOFF.md` 🔴)
+
+1. `./check.sh --release <.xcarchive>`. It needs **no** key (ADR 2026-10-02).
+2. Rotate the Geoapify key (S7) whenever. The two no longer have an order.

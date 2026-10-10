@@ -100,6 +100,9 @@ final class RecapExportCoordinator {
     private var idleObservers: [() -> Void] = []
     private var cancelFlag = SharedFlag()
     private let lifecycle: ExportLifecycleGuard
+    /// How the current run has been away from the screen (#260), read once in
+    /// `finish` by `reported(_:leftApp:)`.
+    private(set) var leftApp = LeftApp()
 
     /// `shared` is the app's one owner. The initialiser is reachable so tests
     /// can drive an instance with a fake lifecycle platform; nothing in the app
@@ -166,14 +169,9 @@ final class RecapExportCoordinator {
         rendering.set()
         cancelFlag = SharedFlag()
         running = Running(request: request)
+        leftApp = LeftApp()
         let flag = cancelFlag
-        // Taken before the render starts and released in `finish` below, which
-        // every exit goes through. On expiry the export cancels itself at a
-        // frame boundary rather than being suspended mid-write.
-        lifecycle.begin {
-            KamomeLog.recap.error("export: the background assertion expired — cancelling at the next frame")
-            flag.set()
-        }
+        beginLifecycle(run: flag)
         // Every write is gated on the run that made it still being the current
         // one. The render's progress hops back to the main actor as
         // fire-and-forget `Task`s, so a cancelled run can still have some in
@@ -225,7 +223,8 @@ final class RecapExportCoordinator {
     /// **The only exit.** Finish, cancel and failure all arrive here, so the
     /// lifecycle guard is released by structure rather than by three call sites
     /// remembering to.
-    private func finish(tripId: String, outcome: RecapExportOutcome) {
+    private func finish(tripId: String, outcome reported: RecapExportOutcome) {
+        let outcome = Self.reported(reported, leftApp: leftApp)
         lifecycle.end()
         if case .finished = outcome, let running {
             findings[tripId] = Findings(routing: running.routing, photoShortfall: running.photoShortfall)
@@ -239,6 +238,23 @@ final class RecapExportCoordinator {
 
     /// Called each time a render ends, however it ended — how work that stepped
     /// aside for the film picks up again.
+    /// Taken before the render starts and released in `finish`, which every
+    /// exit goes through. On expiry the export cancels itself at a frame
+    /// boundary rather than being suspended mid-write.
+    private func beginLifecycle(run flag: SharedFlag) {
+        lifecycle.begin(onExpiry: { [weak self] in
+            KamomeLog.recap.error("export: the background assertion expired — cancelling at the next frame")
+            flag.set()
+            self?.noteLeftApp(expired: true, run: flag)
+        }, onBackground: { [weak self] in self?.noteLeftApp(expired: false, run: flag) })
+    }
+
+    private func noteLeftApp(expired: Bool, run flag: SharedFlag) {
+        guard cancelFlag === flag, running != nil else { return }
+        leftApp.foreground = true
+        if expired { leftApp.expired = true }
+    }
+
     func whenIdle(_ action: @escaping () -> Void) {
         idleObservers.append(action)
     }

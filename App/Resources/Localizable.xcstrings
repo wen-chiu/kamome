@@ -2909,6 +2909,24 @@
         }
       }
     },
+    "recap_failed_left_app": {
+      "comment": "Under 'Export failed' when the export ended because Kamome left the foreground: an app switch or a locked screen (#260).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS stopped the export while Kamome was in the background. Stay in Kamome until the film is done, then export again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kamome 在背景時，iOS 停止了匯出。請留在 Kamome 直到影片完成，再匯出一次。"
+          }
+        }
+      }
+    },
     "recap_figure_label_day": {
       "comment": "The unit under the closing card's day count, for exactly one. Two keys rather than a plural variation: the number is drawn as a separate figure, and Xcode refuses a plural whose text does not contain it.",
       "extractionState": "manual",
