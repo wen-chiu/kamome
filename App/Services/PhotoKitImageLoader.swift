@@ -43,7 +43,8 @@ enum PhotoKitImageLoader {
         case deck
     }
 
-    /// Fetches one asset's image at roughly `targetPx` on its longest side.
+    /// Fetches one asset's image filling a `targetPx` square (aspect-fill: the
+    /// *short* side is `targetPx`) — what a square thumbnail tile needs.
     ///
     /// - Parameters:
     ///   - allowNetwork: `false` reads only what is on the device and reports
@@ -56,6 +57,20 @@ enum PhotoKitImageLoader {
     /// Photos never calls back.
     static func image(
         for asset: PHAsset, targetPx: Int, profile: Profile,
+        allowNetwork: Bool, progress: (@Sendable (Double) -> Void)? = nil
+    ) async -> PhotoFetch {
+        await image(
+            for: asset, targetSize: CGSize(width: max(targetPx, 1), height: max(targetPx, 1)),
+            profile: profile, allowNetwork: allowNetwork, progress: progress
+        )
+    }
+
+    /// Fetches one asset's image **filling `targetSize`** (aspect-fill: the
+    /// photograph covers the whole size, its other side overhanging). A film's
+    /// photo card asks for the card's own size, so a landscape photograph is
+    /// decoded as tall as the card it fills rather than upscaled into it (#279).
+    static func image(
+        for asset: PHAsset, targetSize: CGSize, profile: Profile,
         allowNetwork: Bool, progress: (@Sendable (Double) -> Void)? = nil
     ) async -> PhotoFetch {
         let options = PHImageRequestOptions()
@@ -71,13 +86,12 @@ enum PhotoKitImageLoader {
         if allowNetwork, let progress {
             options.progressHandler = { fraction, _, _, _ in progress(fraction) }
         }
-        let side = CGFloat(max(targetPx, 1))
         let pending = PendingRequest()
         return await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
                 guard pending.install(continuation) else { return }
                 let id = PHImageManager.default().requestImage(
-                    for: asset, targetSize: CGSize(width: side, height: side),
+                    for: asset, targetSize: targetSize,
                     contentMode: .aspectFill, options: options
                 ) { image, info in
                     pending.finish(

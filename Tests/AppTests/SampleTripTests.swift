@@ -104,7 +104,7 @@ final class SampleTripTests: XCTestCase {
     func testTheFilmResolvesASampleDrawingWithoutThePhotoLibrary() async throws {
         let resolver = PhotoLibraryPhotoResolver()
         let ref = PhotoRef.asset(SampleTrip.assetPrefix + "sanxiantai-1")
-        let summary = await resolver.warm([ref], targetPx: 600, timeoutS: 1)
+        let summary = await resolver.warm([ref], targetSize: CGSize(width: 600, height: 600), timeoutS: 1)
         XCTAssertEqual(summary.resolved, 1)
         XCTAssertNotNil(resolver.image(for: ref, targetPx: 600))
     }
