@@ -3244,13 +3244,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "On the road"
+            "value": "Vehicles"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "路上"
+            "value": "車車"
           }
         }
       }
@@ -3261,13 +3261,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Animals and storybook"
+            "value": "Cute animals"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "動物與童話"
+            "value": "可愛動物區"
           }
         }
       }
