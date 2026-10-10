@@ -304,8 +304,13 @@ final class RecapMapCreditTests: RecapRenderTestCase {
         let credit = RecapMapAttribution.openFreeMap(
             minLat: 63.8, maxLat: 64.3, minLon: -22.2, maxLon: -21.5
         )
-        XCTAssertTrue(credit.contains("Copernicus"), "Iceland is inside EU-DEM's EEA coverage")
-        XCTAssertTrue(credit.contains("EU-DEM"), "the EU-DEM dataset name must appear")
+        XCTAssertTrue(
+            credit.contains(
+                "Produced using Copernicus data and information funded by the European Union - EU-DEM layers"
+            ),
+            "Iceland is inside EU-DEM's EEA coverage, and the Copernicus wording may not shorten "
+                + "(ADR 2026-09-18 (f), #114): \(credit)"
+        )
         XCTAssertTrue(credit.hasPrefix(RecapMapAttribution.openFreeMapBase),
                        "the frozen OSM credit must still lead")
     }
