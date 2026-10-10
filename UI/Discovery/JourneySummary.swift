@@ -81,14 +81,9 @@ struct JourneySummary: Identifiable, Equatable {
         Calendar.current.component(.year, from: Date(timeIntervalSince1970: startedAt))
     }
 
-    /// "3–15 Mar 2026" style range, in the user's locale.
+    /// "Mar 3 – 15, 2026": the list's form with its year (`JourneyDateText`, #267).
     var dateRangeText: String {
-        let start = Date(timeIntervalSince1970: startedAt)
-        let end = Date(timeIntervalSince1970: endedAt)
-        let formatter = DateIntervalFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter.string(from: start, to: end)
+        JourneyDateText.rangeWithYear(from: startedAt, to: endedAt)
     }
 }
 

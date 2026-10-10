@@ -22,6 +22,20 @@ enum JourneyDateText {
         return "\(dayAndMonth.string(from: start)) – \(dayAndMonth.string(from: end))"
     }
 
+    /// The same range with its year, for a screen with no year heading above
+    /// it — the diary's masthead and the hidden row (Chiu 2026-10-10, #267:
+    /// one trip printed in four date formats). The locale's own interval form
+    /// of day, month and year: "Aug 3 – 5, 2026", 「2026年8月3日至5日」.
+    static func rangeWithYear(from startedAt: Double, to endedAt: Double) -> String {
+        withYear.string(from: Date(timeIntervalSince1970: startedAt), to: Date(timeIntervalSince1970: endedAt))
+    }
+
+    private static let withYear: DateIntervalFormatter = {
+        let formatter = DateIntervalFormatter()
+        formatter.dateTemplate = "yMMMd"
+        return formatter
+    }()
+
     private static let dayAndMonth: DateFormatter = {
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("dMMM")
