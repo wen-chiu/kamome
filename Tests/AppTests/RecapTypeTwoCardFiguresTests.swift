@@ -73,7 +73,8 @@ final class RecapTypeTwoCardFiguresTests: XCTestCase {
                 case let .stopLabel(name, coordinate, _, opacity):
                     if opacity > 0.01 { note(name, at: coordinate) }
                 case let .photoDeck(deck):
-                    if deck.opacity > 0.01 { note(deck.name, at: deck.coordinate) }
+                    // A deck with no place on the map is the departure's (#275).
+                    if deck.opacity > 0.01 { note(deck.name, at: deck.coordinate ?? departure) }
                 default: break
                 }
             }

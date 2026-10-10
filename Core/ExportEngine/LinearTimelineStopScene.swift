@@ -106,6 +106,9 @@ extension LinearTimeline {
     /// Nothing while a crossing plays: the boarding pass and the flight-end
     /// marks own *where* there (ADR 2026-09-04 (b)).
     func hudPlace(atTime time: Double) -> String? {
+        // The departure's photographs play over the frozen frame; no town on
+        // this map is where they were taken (#275).
+        if isDepartureCut(atTime: time) { return nil }
         if let stopIndex = holdingStopIndex(atTime: time) { return displayName(of: stopIndex) }
         if path.arcs.contains(where: { $0.contains(time) }) { return nil }
         var town = stops.first?.locality

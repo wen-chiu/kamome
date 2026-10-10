@@ -37,7 +37,9 @@ import XCTest
 /// 8. a type-2 film opens on the flight with its pass and both ends marked —
 ///    or, past the drawn-flight limit, on the frozen card with neither; a
 ///    local film never shows a pass or a flight end;
-/// 9. the title card opens the film and the end card closes it.
+/// 9. the title card opens the film and the end card closes it;
+/// 10. a flight the film does not draw is cut, not flown (#275): no frame wider
+///     than the opening's, nothing flies, the departure's photographs play.
 ///
 /// Synthetic geometry between public places, none of them a trip anyone took
 /// (`CLAUDE.md` §0).
@@ -214,6 +216,9 @@ final class ExportQualityMatrixTests: XCTestCase {
             Case(name: "across 180° to an island", form: .departure,
                  trip: trip([incheon] + loop(honolulu, radiusDeg: 0.2, count: 4), crossings: [0],
                             countries: [kr, "US", "US", "US", "US"]), drawsTheFlight: false),
+            Case(name: "a long-haul to a country with its own frame", form: .departure,
+                 trip: trip([london] + hokkaido, crossings: [0], countries: ["GB"] + Array(repeating: jp, count: 5)),
+                 drawsTheFlight: false),
             Case(name: "up to the high Arctic", form: .departure,
                  trip: trip([oslo] + loop(longyearbyen, radiusDeg: 0.15, count: 4), crossings: [0],
                             countries: ["NO", "NO", "NO", "NO", "NO"])),
