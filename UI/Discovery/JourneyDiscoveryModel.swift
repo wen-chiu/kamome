@@ -54,7 +54,7 @@ final class JourneyDiscoveryModel {
     let nameCache: JourneyNameCache
     /// A found journey's places, named while its preview is open (Data 3).
     let previewNamer: PreviewStopNamer
-    private let dismissed: DismissedJourneys
+    let dismissed: DismissedJourneys
     private let now: () -> Date
     private let importService: ImportService
     /// Whether a found journey is matched to a stored trip by the photographs
@@ -63,7 +63,7 @@ final class JourneyDiscoveryModel {
     /// every demo journey holds the same ids, so one stored trip claimed all
     /// the others and the list offered nothing else (#178). A demo journey is
     /// still matched by its discovery key.
-    private let matchesTripsByPhotographs: Bool
+    let matchesTripsByPhotographs: Bool
 
     /// Every journey the last scan found, by key — hidden ones, and ones a
     /// stored trip now holds, included. The list leaves out the stored ones
@@ -79,6 +79,9 @@ final class JourneyDiscoveryModel {
     /// read per journey, so it is redone only when the trips change (#262).
     private var matchedUnstored: Set<String> = []
     private var matchedAgainst: Set<String>?
+    /// The keys hidden this scan: hidden records matched to this scan's
+    /// journeys by their photographs (#170). Before a scan, the stored keys.
+    private var hiddenKeys: Set<String>
     /// Home's country, for the domestic-naming rule. From the device's region,
     /// never from a lookup (`JourneyNaming`).
     let homeCountryCode: String?
@@ -112,7 +115,9 @@ final class JourneyDiscoveryModel {
         nameCache = JourneyNameCache(defaults: defaults)
         previewNamer = stopGeocoder.map(PreviewStopNamer.init(geocoder:))
             ?? PreviewStopNamer(config: config.geocode)
-        dismissed = DismissedJourneys(defaults: defaults)
+        let dismissed = DismissedJourneys(defaults: defaults)
+        self.dismissed = dismissed
+        hiddenKeys = dismissed.keys
         self.homeCountryCode = homeCountryCode
         self.matchesTripsByPhotographs = matchesTripsByPhotographs
         self.now = now
@@ -170,7 +175,7 @@ final class JourneyDiscoveryModel {
             else { continue }
             summaries.append(summary(trip: trip, facts: facts))
         }
-        let hidden = dismissed.keys
+        let hidden = hiddenKeys
         var shown: [JourneySummary] = []
         var stillHidden: [JourneySummary] = []
         for key in unstoredKeys(trips: trips) {
@@ -210,27 +215,16 @@ final class JourneyDiscoveryModel {
             byAdding: .year, value: -config.discovery.lookbackYears, to: end
         ) ?? end
         let photos = await provider.photos(matching: .dateRange(from: start, to: end))
-        // Home is estimated on device to decide what is "away", and that is all
-        // it is used for: the estimate never leaves this function.
-        // Off the main actor: with the country rule a scan is ~0.3 s per 50,000
-        // photographs on a Mac (measured 2026-09-25, release), more on a phone,
-        // and the scanning spinner must keep turning. The outlines are read for
-        // this scan only (≈0.8 MB, released after); nothing loads at launch.
-        // Unreadable → the country rule is off.
-        let (detectionConfig, clustering) = (self.detectionConfig, ImportService.clustering(config))
-        let (detection, scanned) = await Task.detached(priority: .userInitiated) {
-            let detection = JourneyDetector.detect(
-                photos: photos, config: detectionConfig, countries: CountryBoundaries.bundled()
-            )
-            let plans = detection.journeys.map { PhotoImportClusterer.plan(photos: $0.photos, config: clustering) }
-            return (detection, Dictionary(zip(detection.journeys.map(\.key), plans)) { first, _ in first })
-        }.value
+        let (detection, scanned) = await Self.detect(
+            photos, config: detectionConfig, clustering: ImportService.clustering(config)
+        )
 
         // Every journey is kept, stored or not; `loadTrips` leaves out the ones
         // a trip holds, against the trips as they are now.
         detected = Dictionary(detection.journeys.map { ($0.key, $0) }) { first, _ in first }
         plans = scanned
         matchedAgainst = nil
+        hiddenKeys = reconciledHiddenKeys()
         loadTrips()
         phase = .ready
     }
@@ -304,7 +298,11 @@ final class JourneyDiscoveryModel {
     /// trips are deleted through `delete` instead.
     func hide(_ summary: JourneySummary) {
         guard !summary.isImported else { return }
-        dismissed.dismiss(summary.id)
+        // Its photographs too, so it stays hidden when its key moves (#170) —
+        // unless this library's asset ids do not tell photographs apart.
+        let assetIds = matchesTripsByPhotographs ? detected[summary.id]?.photos.map(\.assetId) ?? [] : []
+        dismissed.dismiss(summary.id, assetIds: assetIds)
+        hiddenKeys.insert(summary.id)
         journeys.removeAll { $0.id == summary.id }
         hiddenJourneys = (hiddenJourneys + [summary]).sorted { $0.startedAt > $1.startedAt }
     }
@@ -314,6 +312,7 @@ final class JourneyDiscoveryModel {
     func unhide(_ summary: JourneySummary) {
         guard let index = hiddenJourneys.firstIndex(where: { $0.id == summary.id }) else { return }
         dismissed.restore(summary.id)
+        hiddenKeys.remove(summary.id)
         journeys = (journeys + [hiddenJourneys.remove(at: index)]).sorted { $0.startedAt > $1.startedAt }
         startNaming()
     }
@@ -327,13 +326,6 @@ final class JourneyDiscoveryModel {
     }
 
     // MARK: - Naming
-
-    /// Whether a journey still has a name coming: what the entry's spinner
-    /// shows. False once its lookup has answered nothing, so a journey Apple
-    /// cannot name keeps its month title rather than spinning for good (#263).
-    func awaitsName(_ summary: JourneySummary) -> Bool {
-        summary.name == nil && summary.nameLookupLat != nil && !unanswered.contains(summary.id)
-    }
 
     /// Looks up the place of a journey that has just become a trip, ahead of
     /// the cards, and finishes even if this screen has gone: the trip is
