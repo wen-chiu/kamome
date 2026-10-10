@@ -82,6 +82,8 @@ public struct LinearTimeline {
     let subjectArrivalEndS: Double
     let titleCardS: Double
     let endCardS: Double
+    /// The frozen-card film's departure, played over the opening frame (#275).
+    let departureCut: DepartureCut?
     /// The boarding pass, resolved once at build time. nil on every film that is
     /// not a type-2 opening, and nil when no stop names a country at both ends —
     /// see `journeyCard(trip:locale:)`.
@@ -148,7 +150,7 @@ public struct LinearTimeline {
         // type-2 film is a film about the destination**, so the origin's drive
         // comes out too (`RecapTypeTwoFilm`). Every other film passes through
         // untouched.
-        let (untrimmedTrip, trip) = Self.filmed(untrimmedTrip, config: config)
+        let (untrimmedTrip, filmed) = Self.filmed(untrimmedTrip, config: config)
 
         // Which of the type-2 opening's two forms this film takes — both are main
         // paths (`CrossingFraming`).
@@ -159,9 +161,12 @@ public struct LinearTimeline {
         let flightFrame = CrossingFraming.openingFrame(
             trip: untrimmedTrip, config: config, substrateMaxLongitudeDeg: substrateMaxLongitudeDeg
         )
+        // A flight the film does not draw is cut, not flown (#275): the camera
+        // gets the destination alone, and the departure plays over the frozen frame.
+        let cut = Self.cutPlan(filmed, untrimmed: untrimmedTrip, drawsTheFlight: flightFrame != nil, config, pacing)
+        let (trip, plan, stopHolds) = (cut.trip, cut.plan, cut.holds)
 
-        let route = trip.route
-        let routePoints = route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
+        let routePoints = trip.route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }
         let stopPoints = trip.stops.map { CameraPath.Point(lat: $0.coordinate.lat, lon: $0.coordinate.lon) }
         // `RecapDurationPlan` sizes each stop from its own photo count and fits
         // the whole film into the target window; `.fixed` skips it for a known
@@ -171,7 +176,6 @@ public struct LinearTimeline {
         // parks on the way in and pulls away on the way out, and those beats are
         // *added* around the deck rather than taken out of it — otherwise every
         // stop would silently lose `2 · subject_park_s` of photo time.
-        let (plan, stopHolds) = Self.pacing(for: trip, config: config, pacing: pacing)
 
         // Where the legs with no road sit on the concatenated polyline — the
         // camera needs them before it can size the body span.
@@ -191,9 +195,10 @@ public struct LinearTimeline {
                 stopPlaces: trip.stops.map(\.locality), framing: framing
             )
         }
-        guard let planned = camera(plan?.totalS ?? pacing.fixedTotalS, config, nil) else { return nil }
+        guard let planned = camera(plan?.totalS ?? pacing.fixedTotalS, cut.config, nil) else { return nil }
         // Travel is then trimmed to what its windows need (ADR file 2026-09-28).
-        let path = Self.earningTravel(planned, plan: plan, stopHoldsS: stopHolds, config: config) { camera($0, $1, $2) }
+        let path = Self.earningTravel(planned, plan: plan, stopHoldsS: stopHolds, config: cut.config, rebuild: camera)
+        departureCut = cut.departure
 
         self.path = Self.announced(path, trip: trip)
         durationS = path.durationS
@@ -203,7 +208,7 @@ public struct LinearTimeline {
         journeyStartS = path.journeyStartS
         stops = trip.stops
         holds = path.holds
-        routeCoordinates = route
+        routeCoordinates = trip.route
         legRanges = Self.legWindows(of: trip.legs)
         deck = Self.deck(config: config)
         subjectParkS = config.subjectParkS
@@ -336,9 +341,7 @@ public struct LinearTimeline {
         // the opening is read against, not chrome over it.
         if let ends = flightEnds(atTime: time) { contents.insert(ends, at: 1) }
         if let names = placeNamesContent(atTime: time) { contents.insert(names, at: 1) }
-        if let card = journeyCardContent(atTime: time) {
-            contents.append(.journeyCard(card))
-        }
+        contents += cards(atTime: time)
         if let active = activeScene(atTime: time) {
             let stop = active.stop
             let window = deckWindow(active.hold)
@@ -382,18 +385,5 @@ public struct LinearTimeline {
     static func smoothstep(_ fraction: Double) -> Double {
         let clamped = min(max(fraction, 0), 1)
         return clamped * clamped * (3 - 2 * clamped)
-    }
-}
-
-extension LinearTimeline {
-    /// What a film framed too close or too wide is diagnosed from: the scales
-    /// and how many towns set them. Counts and widths, never a place (§0).
-    fileprivate static func announced(_ path: CameraPath, trip: RecapTrip) -> CameraPath {
-        let towns = trip.stops.compactMap(\.locality)
-        KamomeLog.recap.notice("""
-            camera: \(path.areaSpansM.map { String(format: "%.1f", $0 / 1000) }.joined(separator: " / "), privacy: .public) km · \
-            \(trip.stops.count) stops · \(towns.count) with a town · \(Set(towns).count) towns
-            """)
-        return path
     }
 }
