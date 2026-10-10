@@ -74,7 +74,7 @@ extension JourneyDiscoveryModel {
             nameLookupLon: facts.nameLookupLon,
             isSinglePlace: isSinglePlace,
             countryCode: place?.countryCode,
-            countryName: place?.country,
+            countryName: place?.localizedCountry(),
             clock: TripClock(stops: facts.stops),
             realTitle: TripTitle.isFallback(trip) ? nil : trip.title,
             route: JourneyRouteText.steps(
@@ -162,7 +162,7 @@ extension JourneyDiscoveryModel {
             nameLookupLon: busiest?.lon,
             isSinglePlace: isSinglePlace,
             countryCode: place?.countryCode,
-            countryName: place?.country
+            countryName: place?.localizedCountry()
         )
     }
 }

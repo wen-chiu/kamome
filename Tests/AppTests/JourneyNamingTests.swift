@@ -79,4 +79,53 @@ final class JourneyNamingTests: XCTestCase {
         let hualien = PlaceName(country: "Taiwan", countryCode: "TW", region: "Hualien County", locality: "Hualien City")
         XCTAssertEqual(JourneyNaming.name(place: hualien, homeCountryCode: "tw", isSinglePlace: false)?.title, "Hualien County")
     }
+
+    // MARK: - The country in the app's language (#266)
+
+    /// A place looked up in one language is named in the app's language now:
+    /// the country comes from its code, so switching zh-Hant ⇄ English renames
+    /// every journey without asking Apple again.
+    func testTheCountryIsNamedInTheAppsLanguageNotTheLookups() {
+        let lookedUpInChinese = PlaceName(country: "日本", countryCode: "JP", region: "東京都", locality: "澀谷區")
+        XCTAssertEqual(
+            JourneyNaming.name(place: lookedUpInChinese, homeCountryCode: taiwan, isSinglePlace: false, localization: "en")?
+                .title, "Japan"
+        )
+        let lookedUpInEnglish = PlaceName(country: "Japan", countryCode: "JP", region: "Tokyo", locality: "Shibuya")
+        XCTAssertEqual(
+            JourneyNaming.name(place: lookedUpInEnglish, homeCountryCode: taiwan, isSinglePlace: false, localization: "zh-Hant")?
+                .title, "日本"
+        )
+        XCTAssertEqual(lookedUpInEnglish.localizedCountry(localization: "zh-Hant"), "日本", "what the visit line counts by")
+    }
+
+    /// Towns and regions have no table on the phone: they stay as looked up.
+    func testATownStaysAsLookedUp() {
+        let town = PlaceName(country: "Japan", countryCode: "JP", region: "Tokyo", locality: "Shibuya")
+        XCTAssertEqual(
+            JourneyNaming.name(place: town, homeCountryCode: taiwan, isSinglePlace: true, localization: "zh-Hant")?.title,
+            "Shibuya"
+        )
+    }
+
+    /// Taiwan is named as Taiwan in either language, never folded into
+    /// another country (Chiu's rule; the locale data agrees).
+    func testTaiwanIsNamedAsItself() {
+        let place = PlaceName(country: "Taiwan", countryCode: "TW", region: nil, locality: nil)
+        XCTAssertEqual(place.localizedCountry(localization: "en"), "Taiwan")
+        XCTAssertEqual(place.localizedCountry(localization: "zh-Hant"), "台灣")
+    }
+
+    /// No code (a stop at sea), or a code iOS does not know: the looked-up
+    /// name is kept rather than lost.
+    func testWithoutAUsableCodeTheLookedUpCountryStays() {
+        XCTAssertEqual(
+            PlaceName(country: "Somewhere", countryCode: nil, region: nil, locality: nil).localizedCountry(localization: "en"),
+            "Somewhere"
+        )
+        XCTAssertEqual(
+            PlaceName(country: "Somewhere", countryCode: "QQ", region: nil, locality: nil).localizedCountry(localization: "en"),
+            "Somewhere"
+        )
+    }
 }

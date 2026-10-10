@@ -12,6 +12,23 @@ struct PlaceName: Codable, Equatable {
     let locality: String?
 }
 
+extension PlaceName {
+    /// **The country in the app's language now** (#266), from its code through
+    /// iOS's own locale data — no lookup, nothing leaves the phone. The cached
+    /// `country` is whatever language Apple answered in when the journey was
+    /// first looked up, so after a language change every journey kept its old
+    /// name. Falls back to the cached name when there is no code (at sea).
+    ///
+    /// Towns and regions have no such table; they stay as looked up.
+    func localizedCountry(localization: String? = Bundle.main.preferredLocalizations.first) -> String? {
+        guard let code = countryCode, let localization,
+              let name = Locale(identifier: localization).localizedString(forRegionCode: code),
+              !name.isEmpty, name.uppercased() != code.uppercased() // an unknown code comes back as itself
+        else { return country }
+        return name
+    }
+}
+
 /// The one capability journey naming needs from the outside world, on the same
 /// seam `StopGeocoding` cut for stop naming and for the same reason: the Apple
 /// call is the only thing tests cannot drive, so it is the only thing behind

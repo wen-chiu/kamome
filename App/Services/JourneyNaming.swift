@@ -29,16 +29,21 @@ enum JourneyNaming {
     ///   - place: the coarse place of the journey's busiest stop.
     ///   - homeCountryCode: ISO 3166-1 alpha-2 of home — the device's region.
     ///   - isSinglePlace: whether the journey's extent is under the threshold.
-    static func name(place: PlaceName, homeCountryCode: String?, isSinglePlace: Bool) -> JourneyName? {
+    ///   - localization: the language a country is named in (`PlaceName.localizedCountry`).
+    static func name(
+        place: PlaceName, homeCountryCode: String?, isSinglePlace: Bool,
+        localization: String? = Bundle.main.preferredLocalizations.first
+    ) -> JourneyName? {
         let domestic = homeCountryCode != nil
             && homeCountryCode?.uppercased() == place.countryCode?.uppercased()
+        let country = place.localizedCountry(localization: localization)
         let title: String?
         if isSinglePlace {
-            title = place.locality ?? place.region ?? place.country
+            title = place.locality ?? place.region ?? country
         } else if domestic {
-            title = place.region ?? place.locality ?? place.country
+            title = place.region ?? place.locality ?? country
         } else {
-            title = place.country ?? place.region ?? place.locality
+            title = country ?? place.region ?? place.locality
         }
         guard let title, !title.isEmpty else { return nil }
         return JourneyName(title: title, flag: flag(countryCode: place.countryCode))
