@@ -387,7 +387,7 @@ final class JourneyDiscoveryModel {
                             place: place, homeCountryCode: homeCountryCode, isSinglePlace: summary.isSinglePlace
                         )
                         journeys[index].countryCode = place.countryCode
-                        journeys[index].countryName = place.country
+                        journeys[index].countryName = place.localizedCountry()
                     }
                 } else {
                     KamomeLog.geocode.notice("journey naming produced no place for \(summary.id, privacy: .public)")
