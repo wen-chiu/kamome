@@ -20,6 +20,9 @@ struct JourneyEntry: View {
     let visit: JourneyChronicle.Visit?
     let isExpanded: Bool
     let isOpening: Bool
+    /// A name is still coming (`JourneyDiscoveryModel.awaitsName`); false
+    /// once the lookup has answered nothing (#263).
+    let isNaming: Bool
     let isLast: Bool
     let namespace: Namespace.ID
     let onToggle: () -> Void
@@ -126,7 +129,7 @@ struct JourneyEntry: View {
             if let visit, JourneyChronicle.showsPill(visit) {
                 VisitPill(text: JourneyChronicle.pillText(visit))
             }
-            if journey.name == nil, journey.nameLookupLat != nil {
+            if isNaming {
                 ProgressView().controlSize(.mini)
             }
         }

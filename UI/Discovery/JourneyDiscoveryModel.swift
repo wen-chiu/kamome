@@ -65,20 +65,30 @@ final class JourneyDiscoveryModel {
     /// still matched by its discovery key.
     private let matchesTripsByPhotographs: Bool
 
-    /// Discovered journeys not yet imported, by key — hidden ones included, so
-    /// one shown again can be opened.
+    /// Every journey the last scan found, by key — hidden ones, and ones a
+    /// stored trip now holds, included. The list leaves out the stored ones
+    /// each time it is read (`unstoredKeys(trips:)`), so a trip deleted in Journeys
+    /// gives its journey back without a rescan (#262).
     private(set) var detected: [String: DiscoveredJourney] = [:]
     /// Each found journey's cluster plan, made once by the scan off the main
     /// actor (Footprints ADR draft, Data 2). The card, the itinerary and the
     /// import all read this one plan.
     private(set) var plans: [String: ImportedTripPlan] = [:]
+    /// The found journeys no stored trip holds, and the ids of the stored
+    /// trips that set was worked out against. Matching by photographs is one
+    /// read per journey, so it is redone only when the trips change (#262).
+    private var matchedUnstored: Set<String> = []
+    private var matchedAgainst: Set<String>?
     /// Home's country, for the domestic-naming rule. From the device's region,
     /// never from a lookup (`JourneyNaming`).
     let homeCountryCode: String?
     private var namingTask: Task<Void, Never>?
-    /// Journeys whose place `nameNow` is already asking about, so the queue in
-    /// `startNaming` does not ask a second time.
+    /// Journeys whose place is being asked about right now, by `nameNow` or
+    /// by the queue, so a queue restarted mid-lookup does not ask again.
     private var namingNow: Set<String> = []
+    /// Journeys whose lookup answered nothing this session. Not asked again
+    /// until the person pulls to refresh, and no longer drawn as naming (#263).
+    private(set) var unanswered: Set<String> = []
 
     init(
         config: TrackingConfig,
@@ -120,8 +130,11 @@ final class JourneyDiscoveryModel {
     // MARK: - Loading
 
     /// Stored trips instantly; a scan too, if the library may be read. Called
-    /// on appear and after anything that changes the library or the trips.
+    /// on first appearance, on pull-to-refresh and after the Selected Photos
+    /// picker: each is the person asking, so a journey whose name lookup
+    /// answered nothing earlier is asked once more (#263).
     func refresh() async {
+        unanswered = []
         access = photoAccess.readAccess
         loadTrips()
         switch access {
@@ -140,7 +153,14 @@ final class JourneyDiscoveryModel {
         }
     }
 
-    /// Reads every stored trip into a summary. Cheap: one read per trip.
+    /// Reads every stored trip into a summary, and lays the found journeys no
+    /// trip holds beside them. Cheap: one read per trip, plus one per found
+    /// journey when the trips have changed since the last read.
+    ///
+    /// Called each time Footprints is shown, so a trip imported or deleted in
+    /// Journeys is reflected without a rescan (#262): a journey imported
+    /// through the sheet is not listed twice, and one whose trip was deleted
+    /// is offered again.
     func loadTrips() {
         // The sample is not a journey anyone took (ADR 2026-09-28-sample-trip).
         let trips = (Stored.read("allTrips") { try repository.allTrips() } ?? []).filter { !$0.tripSource.isSample }
@@ -150,10 +170,36 @@ final class JourneyDiscoveryModel {
             else { continue }
             summaries.append(summary(trip: trip, facts: facts))
         }
-        // Discovered journeys that are still only in memory stay on the list.
-        let pending = journeys.filter { !$0.isImported && detected[$0.id] != nil }
-        journeys = (summaries + pending).sorted { $0.startedAt > $1.startedAt }
+        let hidden = dismissed.keys
+        var shown: [JourneySummary] = []
+        var stillHidden: [JourneySummary] = []
+        for key in unstoredKeys(trips: trips) {
+            guard let journey = detected[key], let plan = plans[key] else { continue }
+            if hidden.contains(key) {
+                stillHidden.append(summary(journey: journey, plan: plan))
+            } else {
+                shown.append(summary(journey: journey, plan: plan))
+            }
+        }
+        hiddenJourneys = stillHidden.sorted { $0.startedAt > $1.startedAt }
+        journeys = (summaries + shown).sorted { $0.startedAt > $1.startedAt }
         startNaming()
+    }
+
+    /// The found journeys no stored trip holds: not by its discovery key and,
+    /// for a trip made through the import sheet, which has none, not by the
+    /// photographs they share (Chiu 2026-09-23 — offering the journey beside
+    /// it is what made two "Vietnam"s).
+    private func unstoredKeys(trips: [TripRecord]) -> Set<String> {
+        let tripIds = Set(trips.map(\.id))
+        guard tripIds != matchedAgainst else { return matchedUnstored }
+        let keys = Set(trips.compactMap(\.discoveryKey))
+        matchedUnstored = Set(detected.keys.filter { key in
+            guard !keys.contains(key), let plan = plans[key] else { return false }
+            return storedTrip(holding: plan) == nil
+        })
+        matchedAgainst = tripIds
+        return matchedUnstored
     }
 
     /// Scans the library and adds every journey that is not already a trip.
@@ -180,31 +226,13 @@ final class JourneyDiscoveryModel {
             return (detection, Dictionary(zip(detection.journeys.map(\.key), plans)) { first, _ in first })
         }.value
 
-        let hidden = dismissed.keys
-        var found: [String: DiscoveredJourney] = [:]
-        var fresh: [JourneySummary] = []
-        var stillHidden: [JourneySummary] = []
-        for journey in detection.journeys {
-            if Stored.read("trip(discoveryKey:)", { try repository.trip(discoveryKey: journey.key) }) != nil { continue }
-            // A trip made through the import sheet has no discovery key, so it
-            // is matched by its photographs instead (Chiu 2026-09-23). It is
-            // already on this list as a stored trip; offering the journey
-            // beside it is what made two "Vietnam"s.
-            guard let plan = scanned[journey.key], storedTrip(holding: plan) == nil else { continue }
-            found[journey.key] = journey
-            if hidden.contains(journey.key) {
-                stillHidden.append(summary(journey: journey, plan: plan))
-            } else {
-                fresh.append(summary(journey: journey, plan: plan))
-            }
-        }
-        detected = found
-        plans = scanned.filter { found[$0.key] != nil }
-        hiddenJourneys = stillHidden.sorted { $0.startedAt > $1.startedAt }
-        let stored = journeys.filter(\.isImported)
-        journeys = (stored + fresh).sorted { $0.startedAt > $1.startedAt }
+        // Every journey is kept, stored or not; `loadTrips` leaves out the ones
+        // a trip holds, against the trips as they are now.
+        detected = Dictionary(detection.journeys.map { ($0.key, $0) }) { first, _ in first }
+        plans = scanned
+        matchedAgainst = nil
+        loadTrips()
         phase = .ready
-        startNaming()
     }
 
     /// The stored trip these photographs already belong to, if any — unless
@@ -222,8 +250,6 @@ final class JourneyDiscoveryModel {
         guard let journey = detected[summary.id], let plan = plans[summary.id] else { return nil }
         // A trip may have been imported through the sheet since the scan.
         if let existing = storedTrip(holding: plan) {
-            detected[journey.key] = nil
-            plans[journey.key] = nil
             loadTrips()
             return existing
         }
@@ -253,8 +279,8 @@ final class JourneyDiscoveryModel {
             PhotoAnalysisCoordinator.shared.start(
                 tripId: tripId, repository: repository, config: config.photoAnalysis
             )
-            detected[journey.key] = nil
-            plans[journey.key] = nil
+            // The journey stays in `detected`: should the trip be deleted in
+            // Journeys, the list offers the journey again (#262).
             nameNow(summary)
             loadTrips()
             return tripId
@@ -302,6 +328,13 @@ final class JourneyDiscoveryModel {
 
     // MARK: - Naming
 
+    /// Whether a journey still has a name coming: what the entry's spinner
+    /// shows. False once its lookup has answered nothing, so a journey Apple
+    /// cannot name keeps its month title rather than spinning for good (#263).
+    func awaitsName(_ summary: JourneySummary) -> Bool {
+        summary.name == nil && summary.nameLookupLat != nil && !unanswered.contains(summary.id)
+    }
+
     /// Looks up the place of a journey that has just become a trip, ahead of
     /// the cards, and finishes even if this screen has gone: the trip is
     /// stored unnamed (`open`), so Home shows its date until this answers. The
@@ -319,6 +352,7 @@ final class JourneyDiscoveryModel {
                 cache.store(place, for: id)
             } else {
                 KamomeLog.geocode.notice("journey naming produced no place for \(id, privacy: .public)")
+                self?.unanswered.insert(id)
             }
             self?.namingNow.remove(id)
             self?.loadTrips()
@@ -331,17 +365,22 @@ final class JourneyDiscoveryModel {
     ///
     /// **One lookup per journey, and nothing else.** Each sends that journey's
     /// busiest stop to Apple — the recipient `privacy_intro` names for place
-    /// names. Home is never looked up (`JourneyNaming`).
+    /// names. Home is never looked up (`JourneyNaming`). A lookup that answers
+    /// nothing is not repeated this session (#263): the list is read again
+    /// every time Footprints is shown, and it used to ask again every time.
     private func startNaming() {
         namingTask?.cancel()
-        let pending = journeys.filter { $0.name == nil && $0.nameLookupLat != nil && !namingNow.contains($0.id) }
+        let pending = journeys.filter { awaitsName($0) && !namingNow.contains($0.id) }
         guard !pending.isEmpty else { return }
         let interval = config.geocode.minIntervalS
         namingTask = Task { [weak self] in
             guard let self else { return }
             for summary in pending {
                 guard !Task.isCancelled, let lat = summary.nameLookupLat, let lon = summary.nameLookupLon else { return }
-                if let place = await geocoder.place(lat: lat, lon: lon) {
+                namingNow.insert(summary.id)
+                let answer = await geocoder.place(lat: lat, lon: lon)
+                namingNow.remove(summary.id)
+                if let place = answer {
                     nameCache.store(place, for: summary.id)
                     if let index = journeys.firstIndex(where: { $0.id == summary.id }) {
                         journeys[index].name = JourneyNaming.name(
@@ -352,6 +391,7 @@ final class JourneyDiscoveryModel {
                     }
                 } else {
                     KamomeLog.geocode.notice("journey naming produced no place for \(summary.id, privacy: .public)")
+                    unanswered.insert(summary.id)
                 }
                 try? await Task.sleep(for: .seconds(interval))
             }
