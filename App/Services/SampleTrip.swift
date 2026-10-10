@@ -177,18 +177,23 @@ enum SampleTrip {
 
     // MARK: - Its film
 
-    enum FilmFailure: Error {
+    enum FilmFailure: Error, Equatable {
         case noFilmInManifest
+        /// No film ships in the app's language: only the Chinese one does
+        /// (Chiu 2026-10-10). Expected in an English app, not a fault.
+        case noFilmForLanguage
         case filmMissing(String)
     }
 
     /// **The sample arrives with its film** (Chiu 2026-10-10, #285): 「先看一支
     /// 範例影片」 promised a film, and the person got a map, a form and a
     /// three-minute render. The film is this app's own render of this trip,
-    /// shipped in the bundle in the app's language, so it plays the moment it is
-    /// asked for. It is stored like any film — copied into `Films/` with its own
-    /// row — so it plays, saves, shares and deletes like one, and a new export
-    /// from the sample still renders from scratch.
+    /// shipped in the bundle, so it plays the moment it is asked for. **Only the
+    /// Chinese film ships** (Chiu 2026-10-10: 12 MB for two was too much): an
+    /// English app gets none rather than a Chinese film beside English names.
+    /// It is stored like any film — copied into `Films/` with its own row — so
+    /// it plays, saves, shares and deletes like one, and a new export from the
+    /// sample still renders from scratch.
     ///
     /// No render time is recorded: nothing was rendered on this phone.
     @discardableResult
@@ -200,7 +205,9 @@ enum SampleTrip {
         filmsDirectory: () throws -> URL = FilmStore.filmsDirectory
     ) throws -> FilmRecord {
         guard let film = try manifest(bundle: bundle).film else { throw FilmFailure.noFilmInManifest }
-        let name = text(film.files, localizations: localizations)
+        // Exactly the app's language, never `text`'s fallback to another one.
+        let language = localizations.first?.hasPrefix("zh") == true ? "zh-Hant" : "en"
+        guard let name = film.files[language] else { throw FilmFailure.noFilmForLanguage }
         guard let source = bundle.url(forResource: name, withExtension: "mp4") else {
             throw FilmFailure.filmMissing(name)
         }

@@ -33,18 +33,33 @@ final class SampleTripTests: XCTestCase {
         XCTAssertEqual(drawings, ["qixingtan": 2, "shitiping": 2, "sanxiantai": 2, "dulan": 2, "tiehua": 0])
     }
 
-    /// #285: 「先看一支範例影片」 plays a film at once, so the film must ship in
-    /// both of the app's languages. A missing one would quietly send that
-    /// language back to the multi-minute render the button promised to skip.
-    func testTheSampleFilmShipsInBothLanguages() throws {
+    /// #285: 「先看一支範例影片」 plays a film at once. **Only the Chinese film
+    /// ships** (Chiu 2026-10-10), and every film the manifest names must be in
+    /// the app: a missing one would quietly send that language back to the
+    /// multi-minute render the button promised to skip.
+    func testTheChineseSampleFilmShipsAndEveryNamedFilmIsInTheApp() throws {
         let film = try XCTUnwrap(SampleTrip.manifest().film, "the manifest names no sample film")
-        for language in ["en", "zh-Hant"] {
-            let name = try XCTUnwrap(film.files[language], "no sample film named for \(language)")
+        XCTAssertNotNil(film.files["zh-Hant"], "the Chinese sample film must ship")
+        for (language, name) in film.files {
             XCTAssertNotNil(
                 Bundle.main.url(forResource: name, withExtension: "mp4"),
-                "\(name).mp4 is missing from the app bundle"
+                "\(name).mp4 (\(language)) is missing from the app bundle"
             )
         }
+    }
+
+    /// An English app gets no film rather than the Chinese one beside English
+    /// stop names, and nothing is written.
+    func testAnEnglishAppGetsNoSampleFilmRatherThanAnotherLanguagesFilm() throws {
+        let repository = try repository()
+        let tripId = try SampleTrip.create(repository: repository, vehicleId: "car", localizations: ["en"])
+        XCTAssertThrowsError(try SampleTrip.attachFilm(
+            tripId: tripId, repository: repository, localizations: ["en"],
+            filmsDirectory: { FileManager.default.temporaryDirectory }
+        )) { error in
+            XCTAssertEqual(error as? SampleTrip.FilmFailure, .noFilmForLanguage)
+        }
+        XCTAssertEqual(try repository.films(tripId: tripId), [])
     }
 
     /// The film is stored like one the person made — its own file in `Films/`

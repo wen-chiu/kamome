@@ -32,7 +32,7 @@ final class DiscoveryLocalizationTests: XCTestCase {
         XCTAssertEqual(try localizedValue("welcome_find", locale: "en"), "Find my journeys")
         XCTAssertEqual(try localizedValue("welcome_find", locale: "zh-Hant"), "找出我的旅程")
         XCTAssertEqual(try localizedValue("make_film", locale: "en"), "Make this a Film")
-        XCTAssertEqual(try localizedValue("make_film", locale: "zh-Hant"), "做成一部影片")
+        XCTAssertEqual(try localizedValue("make_film", locale: "zh-Hant"), "製作旅程影片")
 
         // **The welcome card may not say less than what is sent** — the class of
         // understatement `testPrivacyNoticeDescribesTwoDifferentPayloads` guards.

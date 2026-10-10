@@ -29,7 +29,7 @@ Chiu, asked to choose, on 2026-10-10:
 ## Consequences
 - `RecapChromeTests.testTheStackGlowDarkensBehindTheTypeAndNowhereElse` keeps the glow local: darker at the stack, unchanged at the frame's edge.
 - `LocalizationTests` restates the tagline rule: the English value equals the brand line, and no language promises a scan.
-- **Rendered:** both sample films (zh-Hant and en, light, frame at 58.5 s), the ones now bundled (#285).
+- **Rendered:** both sample films (zh-Hant and en, light, frame at 58.5 s). The zh-Hant one is bundled (#285).
   - VERIFIED: the closing line is in the film's language and reads, in white.
   - VERIFIED: **the glow softens the collision and does not remove it.** 「Taiwan 臺」 still touches the left end of the trip's name; a dark name with a white halo stays legible under a glow this light.
   - Stronger is Chiu's call, judged from that frame: deepen the glow's core, which moves toward the rejected card, or fade country names on the end card only, which reopens Map labels.
