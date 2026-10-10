@@ -16,7 +16,7 @@ struct TripDetailView: View {
     /// and a recorded stop cannot be made again (#188). Home asks the same way.
     @State private var stopPendingDeletion: StopRecord?
     @State private var showingRoutePhotos = false
-    @State private var showingRecap = false
+    @State var showingRecap = false
     @State var playingFilm: FilmRecord?
     @State var showingAllFilms = false
     @State var showingProvenance = false
@@ -29,16 +29,20 @@ struct TripDetailView: View {
     /// once the sheet is gone, since two dismissals in one pass race.
     @State private var mergedAway = false
     @Environment(\.dismiss) private var dismiss
+    /// Set for the sample, which arrives with its film made (#285): that film
+    /// plays once, as soon as it is read, and never again on this screen.
+    @State private var autoplayPending: Bool
     /// The export outlives the sheet, so the trip screen has to be able to draw
     /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
     /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
     /// answer to be wrong, and Observation tracks the reads in `body` either way.
     private let exportCoordinator = RecapExportCoordinator.shared
 
-    init(tripId: String, session: TrackingSession) {
+    init(tripId: String, session: TrackingSession, playsNewestFilm: Bool = false) {
         _model = State(initialValue: TripDetailModel(
             tripId: tripId, config: session.config, repository: session.repository
         ))
+        _autoplayPending = State(initialValue: playsNewestFilm)
     }
 
     /// What can be changed about the trip itself. A pencil rather than the
@@ -80,8 +84,14 @@ struct TripDetailView: View {
             exportProgressRow
             timeline
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) { makeFilmButton }
         .navigationTitle(model.screenTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: model.films) {
+            guard autoplayPending, let newest = model.films.first else { return }
+            autoplayPending = false
+            playingFilm = newest
+        }
         .onAppear {
             model.load()
             #if DEBUG
@@ -93,23 +103,11 @@ struct TripDetailView: View {
         .toolbar {
             // **One trailing item, not two** — Home's two-trailing-items bug
             // (2026-09-02): the second of two `ToolbarItem`s on the same side
-            // vanished on every clean relaunch. The edit menu and the film
-            // button share this slot for the same reason Home's two do.
+            // vanished on every clean relaunch. The film button used to share
+            // this slot as a bare icon; it is now the labelled button at the
+            // foot of the screen (#285), and the slot holds the edit menu alone.
             ToolbarItem(placement: .primaryAction) {
-                HStack(spacing: 2) {
-                    tripEditMenu
-                    // S5 entry: only completed trips have a recap to render.
-                    Button {
-                        showingRecap = true
-                    } label: {
-                        Label("recap_export", systemImage: "film")
-                    }
-                    // Naming is throttled and asynchronous; a film exported before
-                    // its stops are named says "Unnamed stop" for each of them
-                    // (Chiu 2026-08-04). It waits only for the stops a film shows
-                    // (#160); the banner above keeps counting the rest.
-                    .disabled(model.detail?.trip.endedAt == nil || model.isNamingFilmStops)
-                }
+                tripEditMenu
             }
         }
         .alert("trip_rename_title", isPresented: $showingRename) {

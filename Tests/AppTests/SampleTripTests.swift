@@ -33,6 +33,71 @@ final class SampleTripTests: XCTestCase {
         XCTAssertEqual(drawings, ["qixingtan": 2, "shitiping": 2, "sanxiantai": 2, "dulan": 2, "tiehua": 0])
     }
 
+    /// #285: 「先看一支範例影片」 plays a film at once, so the film ships in both
+    /// of the app's languages (Chiu 2026-10-10: a reviewer's device is usually
+    /// English). A missing one would quietly send that language back to the
+    /// multi-minute render the button promised to skip.
+    func testTheSampleFilmShipsInBothLanguages() throws {
+        let film = try XCTUnwrap(SampleTrip.manifest().film, "the manifest names no sample film")
+        XCTAssertEqual(Set(film.files.keys), ["en", "zh-Hant"])
+        for (language, name) in film.files {
+            XCTAssertNotNil(
+                Bundle.main.url(forResource: name, withExtension: "mp4"),
+                "\(name).mp4 (\(language)) is missing from the app bundle"
+            )
+        }
+    }
+
+    /// An English app gets the English film, never the Chinese one beside
+    /// English stop names.
+    func testAnEnglishAppGetsTheEnglishSampleFilm() throws {
+        let repository = try repository()
+        let films = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sample-film-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: films, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: films) }
+
+        let tripId = try SampleTrip.create(repository: repository, vehicleId: "car", localizations: ["en"])
+        let record = try SampleTrip.attachFilm(
+            tripId: tripId, repository: repository, localizations: ["en"], filmsDirectory: { films }
+        )
+        let stored = films.appendingPathComponent((record.relativePath as NSString).lastPathComponent)
+        let bundled = try XCTUnwrap(Bundle.main.url(forResource: "sample-film-en", withExtension: "mp4"))
+        XCTAssertEqual(
+            try FileManager.default.attributesOfItem(atPath: stored.path)[.size] as? Int64,
+            try FileManager.default.attributesOfItem(atPath: bundled.path)[.size] as? Int64,
+            "the stored film is the English one, copied whole"
+        )
+    }
+
+    /// The film is stored like one the person made — its own file in `Films/`
+    /// and its own row — in the app's language, with no render time, since
+    /// nothing was rendered on this phone.
+    func testTheSampleArrivesWithItsFilmInTheAppsLanguage() throws {
+        let repository = try repository()
+        let films = FileManager.default.temporaryDirectory
+            .appendingPathComponent("sample-film-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: films, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: films) }
+
+        let tripId = try SampleTrip.create(repository: repository, vehicleId: "car", localizations: ["zh-Hant"])
+        let record = try SampleTrip.attachFilm(
+            tripId: tripId, repository: repository, localizations: ["zh-Hant"], filmsDirectory: { films }
+        )
+
+        XCTAssertEqual(try repository.films(tripId: tripId), [record])
+        XCTAssertNil(record.renderSeconds, "nothing was rendered on this phone")
+        XCTAssertEqual(record.format, "mp4")
+        let stored = films.appendingPathComponent((record.relativePath as NSString).lastPathComponent)
+        let bundled = try XCTUnwrap(Bundle.main.url(forResource: "sample-film-zh-Hant", withExtension: "mp4"))
+        XCTAssertEqual(
+            try FileManager.default.attributesOfItem(atPath: stored.path)[.size] as? Int64,
+            try FileManager.default.attributesOfItem(atPath: bundled.path)[.size] as? Int64,
+            "the stored film is the Chinese one, copied whole"
+        )
+        XCTAssertEqual(record.fileBytes, FilmStore.fileSize(at: stored))
+    }
+
     func testEveryDrawingTheManifestNamesIsInTheApp() throws {
         for stop in try SampleTrip.manifest().stops {
             for name in stop.photos {

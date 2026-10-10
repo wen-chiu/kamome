@@ -77,7 +77,8 @@ extension RecapTrip {
                 )
             },
             title: title, subtitle: subtitle, endCardFigures: endCardFigures, shareURL: shareURL,
-            journeyDates: journeyDates, everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
+            journeyDates: journeyDates, everyLegRoutabilityEstablished: everyLegRoutabilityEstablished,
+            endCardTagline: endCardTagline
         )
     }
 }

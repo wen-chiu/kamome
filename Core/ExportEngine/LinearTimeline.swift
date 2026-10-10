@@ -101,6 +101,7 @@ public struct LinearTimeline {
     private let subtitle: String
     private let endCardFigures: [RecapEndCardFigure]
     private let shareURL: String?
+    private let endCardTagline: String
 
     /// Which of the three films this is (`RecapFilmType`), and whether its
     /// opening is the still flight frame rather than a country card. Exposed so
@@ -227,6 +228,7 @@ public struct LinearTimeline {
         subtitle = trip.subtitle
         endCardFigures = trip.endCardFigures
         shareURL = trip.shareURL
+        endCardTagline = trip.endCardTagline
         filmType = untrimmedTrip.filmType
         // Both halves of the camera's own condition, not just the frame. The
         // camera opens on the flight when it has a frame **and** an opening to
@@ -322,7 +324,7 @@ public struct LinearTimeline {
             contents.append(.titleChrome(title: title, subtitle: subtitle))
         }
         if time >= durationS - endCardS {
-            contents.append(.endChrome(title: title, figures: endCardFigures, shareURL: shareURL))
+            contents.append(.endChrome(title: title, figures: endCardFigures, shareURL: shareURL, tagline: endCardTagline))
         }
         // A stop the allocator gave no photographs to still happened, and the film
         // should say where it was (Chiu 2026-08-05): the pin lands with its name

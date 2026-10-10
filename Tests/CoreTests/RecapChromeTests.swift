@@ -135,6 +135,38 @@ final class RecapChromeTests: RecapRenderTestCase {
         )
     }
 
+    /// 🔴 **The glow behind the stack is local** (Chiu 2026-10-10, #287). It
+    /// darkens where the type stands, so a base-map name under the trip's name
+    /// steps back, and it leaves the frame's edge exactly as the dim left it. A
+    /// glow that reached the edge would be the full-frame scrim Chiu rejected,
+    /// arrived at by another road. The two frames differ only in the glow's
+    /// alpha, so the type cancels out of both measurements.
+    func testTheStackGlowDarkensBehindTheTypeAndNowhereElse() async throws {
+        let config = exportConfig()
+        let timeline = try makeTimeline(makeTrip(stops: [StopSpec(routeIndex: 5)], config: config), config: config)
+        let at = config.targetDurationS - 0.5
+        var noGlow = opaqueCardStyle
+        noGlow.endCardStyle.stackGlowColor = noGlow.endCardStyle.stackGlowColor.copy(alpha: 0)
+            ?? noGlow.endCardStyle.stackGlowColor
+
+        let glowing = try await renderFrame(timeline, makeCompositor(timeline), at: at, config: config)
+        let plain = try await renderFrame(timeline, makeCompositor(timeline, style: noGlow), at: at, config: config)
+
+        let centre = (heightPx * 45 / 100)..<(heightPx * 55 / 100)
+        XCTAssertLessThan(
+            try meanLuminance(glowing, rows: centre, cols: 0..<widthPx),
+            try meanLuminance(plain, rows: centre, cols: 0..<widthPx) - 3,
+            "the glow must darken the ground the type stands on"
+        )
+        let edge = 0..<(heightPx / 8)
+        XCTAssertEqual(
+            try meanLuminance(glowing, rows: edge, cols: 0..<widthPx),
+            try meanLuminance(plain, rows: edge, cols: 0..<widthPx),
+            accuracy: 1,
+            "the glow must fade out before the frame's edge — a glow there is a scrim"
+        )
+    }
+
     /// Ink over the **whole frame**: pixels that differ markedly from the dimmed
     /// ground, measured against the frame's own top-left corner so no threshold is
     /// hard-coded against a wash that has now changed three times.
