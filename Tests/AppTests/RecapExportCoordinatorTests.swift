@@ -18,7 +18,7 @@ final class RecapExportCoordinatorTests: XCTestCase {
     // MARK: - Harness
 
     private func request(_ tripId: String) -> RecapExportRequest {
-        RecapExportRequest(tripId: tripId, photosEnabled: true, format: .mp4, appearance: .dark)
+        RecapExportRequest(tripId: tripId, photosEnabled: true, appearance: .dark)
     }
 
     private func film(_ tripId: String) -> FilmRecord {
@@ -101,7 +101,7 @@ final class RecapExportCoordinatorTests: XCTestCase {
         let coordinator = RecapExportCoordinator()
         let job = SpyExportJob()
         let running = RecapExportRequest(
-            tripId: "trip-a", photosEnabled: false, format: .gif, appearance: .light
+            tripId: "trip-a", photosEnabled: false, appearance: .light
         )
         coordinator.start(request: running, job: job)
         await waitUntil("the job to start") { job.hasStarted }
@@ -115,7 +115,6 @@ final class RecapExportCoordinatorTests: XCTestCase {
         XCTAssertTrue(reopened.isRendering)
         XCTAssertEqual(reopened.phase, .rendering(progress: 0.25))
         XCTAssertFalse(reopened.photosEnabled, "the screen must show the running film's settings")
-        XCTAssertEqual(reopened.format, .gif)
     }
 
     // MARK: - One export at a time

@@ -1,22 +1,22 @@
 import AVFoundation
 import CoreGraphics
-import ImageIO
 import KamomeConfig
 import KamomeExportEngine
 import XCTest
 
-/// §4.5 step 5 gate: the encoders turn the deterministic frame stream into a
-/// real MP4 and GIF with the promised duration, size, and frame decimation.
+/// §4.5 step 5 gate: the encoder turns the deterministic frame stream into a
+/// real MP4 with the promised duration and size. (MP4 only since the GIF was
+/// removed, ADR file 2026-10-10.)
 final class RecapEncoderTests: XCTestCase {
     private let route: [RecapCoordinate] = (0...10).map {
         RecapCoordinate(lat: -32.0 + Double($0) * 0.0009, lon: 115.75)
     }
 
-    /// 2 s × 10 fps = 20 frames; GIF at 5 fps → stride 2 → 10 GIF frames.
+    /// 2 s × 10 fps = 20 frames.
     private func exportConfig(pipeline: TrackingConfig.ExportPipeline = .handBuilt) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: 2, fps: 10, stopHoldS: 1.5, maxHoldFraction: 0.5,
-            gifFps: 5, gifWidthPx: 108, frameWidthPx: 216, frameHeightPx: 384,
+            frameWidthPx: 216, frameHeightPx: 384,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25,
             crossingBeatS: 4.0, crossingApexPadding: 1.5, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
@@ -96,71 +96,6 @@ final class RecapEncoderTests: XCTestCase {
         let size = try await track.load(.naturalSize)
         XCTAssertEqual(Int(size.width), config.frameWidthPx)
         XCTAssertEqual(Int(size.height), config.frameHeightPx)
-    }
-
-    func testExportProducesDecimatedScaledGIF() async throws {
-        let config = exportConfig()
-        let (exporter, frameCount) = try makeExporter(config: config)
-        let videoURL = scratchURL("recap.mp4")
-        let gifURL = scratchURL("recap.gif")
-        defer {
-            try? FileManager.default.removeItem(at: videoURL)
-            try? FileManager.default.removeItem(at: gifURL)
-        }
-
-        let output = try await exporter.export(videoURL: videoURL, gifURL: gifURL)
-
-        XCTAssertEqual(output?.gifURL, gifURL)
-        let source = try XCTUnwrap(CGImageSourceCreateWithURL(gifURL as CFURL, nil))
-        // fps 10 → gif 5 fps → every 2nd of 20 frames.
-        XCTAssertEqual(CGImageSourceGetCount(source), frameCount / 2)
-        let first = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
-        XCTAssertEqual(first.width, config.gifWidthPx)
-        XCTAssertEqual(first.height, 192, "aspect ratio should survive the downscale")
-        // Real-time playback: stride 2 at 10 fps → 0.2 s per GIF frame.
-        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
-        let gifProperties = try XCTUnwrap(properties?[kCGImagePropertyGIFDictionary] as? [CFString: Any])
-        let delay = try XCTUnwrap(gifProperties[kCGImagePropertyGIFDelayTime] as? Double)
-        XCTAssertEqual(delay, 0.2, accuracy: 1e-6)
-    }
-
-    /// A GIF-only export renders only the frames the GIF keeps and writes no
-    /// MP4 — and the GIF it writes is the one the two-encoder pass wrote.
-    func testGIFOnlyExportMatchesTheTwoEncoderGIF() async throws {
-        let config = exportConfig()
-        let (exporter, frameCount) = try makeExporter(config: config)
-        let videoURL = scratchURL("recap.mp4")
-        let bothGIF = scratchURL("both.gif")
-        let onlyGIF = scratchURL("only.gif")
-        defer {
-            [videoURL, bothGIF, onlyGIF].forEach { try? FileManager.default.removeItem(at: $0) }
-        }
-
-        _ = try await exporter.export(videoURL: videoURL, gifURL: bothGIF)
-        var progressCalls = 0
-        var lastProgress = 0.0
-        let output = try await exporter.exportGIF(gifURL: onlyGIF, progress: {
-            progressCalls += 1
-            lastProgress = $0
-        })
-
-        XCTAssertNil(output?.videoURL)
-        XCTAssertEqual(output?.gifURL, onlyGIF)
-        // fps 10 → gif 5 fps → stride 2: half the frames are never composited.
-        XCTAssertEqual(output?.stats.frames, frameCount / 2)
-        XCTAssertEqual(lastProgress, 1, "progress must finish even when the last frame is skipped")
-        XCTAssertEqual(progressCalls, frameCount / 2 + 1)
-        let both = try XCTUnwrap(CGImageSourceCreateWithURL(bothGIF as CFURL, nil))
-        let only = try XCTUnwrap(CGImageSourceCreateWithURL(onlyGIF as CFURL, nil))
-        XCTAssertEqual(CGImageSourceGetCount(only), CGImageSourceGetCount(both))
-        for index in 0..<CGImageSourceGetCount(both) {
-            let expected = try XCTUnwrap(CGImageSourceCreateImageAtIndex(both, index, nil))
-            let actual = try XCTUnwrap(CGImageSourceCreateImageAtIndex(only, index, nil))
-            XCTAssertEqual(
-                actual.dataProvider?.data as Data?, expected.dataProvider?.data as Data?,
-                "GIF frame \(index) must be the frame the two-encoder pass wrote"
-            )
-        }
     }
 
     func testCancelledExportReturnsNilAndStopsRendering() async throws {

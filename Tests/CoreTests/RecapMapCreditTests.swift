@@ -340,22 +340,17 @@ final class RecapMapCreditTests: RecapRenderTestCase {
 
     // MARK: - The two measurements this design rests on
 
-    /// **The credit has to survive the GIF.**
+    /// **The credit has to be legible in the film.**
     ///
-    /// Every export surface composites the same frame and the GIF then scales it
-    /// to `export.gif_width_px` — so a credit sized for the MP4 alone can arrive
-    /// illegible in the other file the app writes. The floor is set against the
-    /// thing this change replaced: the snapshotter's burned-in copy measured
-    /// **11 px** tall at 1080, i.e. ~5 px once scaled, which is why it could not
-    /// be the film's credit either.
-    func testTheCreditStaysLegibleAfterTheGifDownscale() throws {
+    /// Restated 2026-10-10. It was *"the credit has to survive the GIF"* —
+    /// the frame scaled to 480 of 1080 — and the GIF was removed (ADR file
+    /// 2026-10-10), so the MP4 is the only file the app writes. The floor is the
+    /// same 10 px, set against the snapshotter's burned-in copy, which measured
+    /// ~5 px once scaled and could not be the film's credit.
+    func testTheCreditIsLegibleAtTheFilmsOwnSize() throws {
         let config = try shippedExportConfig()
-        let scaled = RecapStyle().mapCredit.fontPx
-            * CGFloat(config.gifWidthPx) / CGFloat(config.frameWidthPx)
-        XCTAssertGreaterThanOrEqual(
-            scaled, 10,
-            "at \(config.gifWidthPx)/\(config.frameWidthPx) the credit renders \(scaled) px in the GIF"
-        )
+        let px = RecapStyle().mapCredit.fontPx * CGFloat(config.frameWidthPx) / 1080
+        XCTAssertGreaterThanOrEqual(px, 10, "at \(config.frameWidthPx) px wide the credit renders \(px) px")
     }
 
     /// **Why the film draws its own instead of keeping the snapshotter's.**

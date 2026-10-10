@@ -19,7 +19,6 @@ struct RecapExportRequest: Equatable, Sendable {
     /// Photo overlays only (decisions.md 2026-07-18 recap-chrome, Chiu): off
     /// removes stop photo cards; title/end cards always render.
     let photosEnabled: Bool
-    let format: RecapExportFormat
     let appearance: RecapAppearance
     /// How long a highlight film may run (Chiu 2026-09-27). Defaulted to
     /// `.standard` — the film every existing caller was written against — so
@@ -27,20 +26,14 @@ struct RecapExportRequest: Equatable, Sendable {
     let length: FilmLength
 
     init(
-        tripId: String, photosEnabled: Bool, format: RecapExportFormat, appearance: RecapAppearance,
+        tripId: String, photosEnabled: Bool, appearance: RecapAppearance,
         length: FilmLength = .standard
     ) {
         self.tripId = tripId
         self.photosEnabled = photosEnabled
-        self.format = format
         self.appearance = appearance
         self.length = length
     }
-}
-
-enum RecapExportFormat: String, CaseIterable, Equatable, Sendable {
-    case mp4
-    case gif
 }
 
 /// How one export ended. Three cases, because the screen says three different

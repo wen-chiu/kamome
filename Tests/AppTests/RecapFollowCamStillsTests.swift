@@ -36,7 +36,7 @@ final class RecapFollowCamStillsTests: XCTestCase {
     private func followCamConfig(headingUp: Bool) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: 12, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.6,
-            gifFps: 12, gifWidthPx: 480, frameWidthPx: width, frameHeightPx: height,
+            frameWidthPx: width, frameHeightPx: height,
             cameraSpanM: 1200, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25,
             crossingBeatS: 6.0, crossingApexPadding: 1.5, followHeadingUp: headingUp,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,

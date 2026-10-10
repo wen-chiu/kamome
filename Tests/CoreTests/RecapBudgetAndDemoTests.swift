@@ -10,7 +10,7 @@ import XCTest
 /// them. Run with `TEST_RUNNER_<VAR>=1` on the xcodebuild command line:
 ///
 ///   KAMOME_RENDER_BENCH=1 → full-resolution render-budget measurement
-///   KAMOME_DEMO_RENDER=1  → Phase 3 demo artifact (MP4 + GIF, real map)
+///   KAMOME_DEMO_RENDER=1  → Phase 3 demo artifact (MP4, real map)
 ///
 /// The simulator numbers are proxies; the §4.5 bar (< 90 s, 8-day trip) is
 /// judged on the physical device via S5's on-screen render-time readout.
@@ -101,21 +101,16 @@ final class RecapBudgetAndDemoTests: XCTestCase {
             provider: FlatSnapshotProvider(), config: config
         )
         let videoURL = FileManager.default.temporaryDirectory.appendingPathComponent("bench.mp4")
-        let gifURL = FileManager.default.temporaryDirectory.appendingPathComponent("bench.gif")
-        defer {
-            try? FileManager.default.removeItem(at: videoURL)
-            try? FileManager.default.removeItem(at: gifURL)
-        }
+        defer { try? FileManager.default.removeItem(at: videoURL) }
 
         let started = Date.now
-        let output = try await exporter.export(videoURL: videoURL, gifURL: gifURL)
+        let output = try await exporter.export(videoURL: videoURL)
         let seconds = Date.now.timeIntervalSince(started)
 
         XCTAssertNotNil(output)
         let videoMB = Double((try? FileManager.default.attributesOfItem(atPath: videoURL.path)[.size] as? Int) ?? 0) / 1e6
-        let gifMB = Double((try? FileManager.default.attributesOfItem(atPath: gifURL.path)[.size] as? Int) ?? 0) / 1e6
-        print(String(format: "KAMOME_BENCH pipeline (flat provider, %d frames @ %d×%d): %.1f s — mp4 %.1f MB, gif %.1f MB",
-                     timeline.frameCount, config.frameWidthPx, config.frameHeightPx, seconds, videoMB, gifMB))
+        print(String(format: "KAMOME_BENCH pipeline (flat provider, %d frames @ %d×%d): %.1f s — mp4 %.1f MB",
+                     timeline.frameCount, config.frameWidthPx, config.frameHeightPx, seconds, videoMB))
     }
 
     func testMapKitSnapshotLatency() async throws {
@@ -219,14 +214,12 @@ final class RecapBudgetAndDemoTests: XCTestCase {
         let stampDir = outBase.appendingPathComponent("kamome-demo", isDirectory: true)
         try FileManager.default.createDirectory(at: stampDir, withIntermediateDirectories: true)
         let videoURL = stampDir.appendingPathComponent("kamome-p3-recap.mp4")
-        let gifURL = stampDir.appendingPathComponent("kamome-p3-recap.gif")
 
         let started = Date.now
-        let output = try await exporter.export(videoURL: videoURL, gifURL: gifURL)
+        let output = try await exporter.export(videoURL: videoURL)
         XCTAssertNotNil(output)
         print(String(format: "KAMOME_DEMO rendered in %.1f s (simulator, real map tiles):", Date.now.timeIntervalSince(started)))
         print("KAMOME_DEMO mp4: \(videoURL.path)")
-        print("KAMOME_DEMO gif: \(gifURL.path)")
     }
 }
 

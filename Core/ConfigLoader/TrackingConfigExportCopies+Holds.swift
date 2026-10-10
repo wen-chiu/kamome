@@ -11,8 +11,7 @@ extension TrackingConfig.Export {
     public func withMaxHoldFraction(_ fraction: Double) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: fraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: fraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,

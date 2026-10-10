@@ -13,8 +13,7 @@ extension TrackingConfig.Export {
     public func withFollowHeadingUp(_ resolved: Bool) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
@@ -78,8 +77,7 @@ extension TrackingConfig.Export {
     public func withAllocationZeroShare(_ share: Double) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
@@ -130,8 +128,7 @@ extension TrackingConfig.Export {
     public func withRecapMode(_ mode: RecapMode) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
@@ -180,8 +177,7 @@ extension TrackingConfig.Export {
     public func withTotalDuration(min minS: Double, max maxS: Double) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
@@ -242,8 +238,7 @@ extension TrackingConfig.Export {
     public func withCrossingBeatS(_ seconds: Double) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
@@ -297,8 +292,7 @@ extension TrackingConfig.Export {
     public func withKeyframeIntervalFrames(_ frames: Int) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
@@ -351,8 +345,7 @@ extension TrackingConfig.Export {
     public func withSnapshotStations(maxMagnification: Double, padding: Double) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: stopHoldS,
-            maxHoldFraction: maxHoldFraction, gifFps: gifFps, gifWidthPx: gifWidthPx,
-            frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
+            maxHoldFraction: maxHoldFraction, frameWidthPx: frameWidthPx, frameHeightPx: frameHeightPx,
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,

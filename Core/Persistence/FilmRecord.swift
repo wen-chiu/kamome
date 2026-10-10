@@ -20,7 +20,8 @@ public struct FilmRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     /// Path relative to the app's Application Support directory.
     /// Resolved at read time; never stored as an absolute URL.
     public var relativePath: String
-    /// `mp4` or `gif`.
+    /// `mp4`. A `gif` row is a film made before GIF export was removed (ADR
+    /// file 2026-10-10): kept, listed and shareable, never played in the app.
     public var format: String
     public var createdAt: Double
     /// Film duration in seconds (from the timeline, not wall-clock render time).

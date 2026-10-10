@@ -18,22 +18,21 @@ import Foundation
 /// centred, and the title stack sits at `titleStackCenterFraction` 0.46 of its
 /// band — so the bottom-left is the one corner no beat competes for.
 public struct RecapMapCreditStyle {
-    /// ⚠️ **This has a floor, and the GIF sets it.** Every export surface
-    /// composites the same frame and the GIF then scales it to
-    /// `export.gif_width_px` (480 of 1080), so a credit legible in the MP4 can
-    /// arrive ~5 px tall in the other file the app writes — which is exactly
-    /// what `MLNMapSnapshotter`'s own burned-in copy measured, and one of the
-    /// three reasons it could not be the film's credit.
-    /// `RecapMapCreditTests.testTheCreditStaysLegibleAfterTheGifDownscale`
-    /// holds the product of the two.
+    /// ⚠️ **This has a floor**: 10 px in the film, held by
+    /// `RecapMapCreditTests.testTheCreditIsLegibleAtTheFilmsOwnSize`. Until
+    /// 2026-10-10 the GIF set it — the frame scaled to 480 of 1080, so 24 px
+    /// arrived as 10.67 — and that is why 24 was chosen. The GIF is gone (ADR
+    /// file 2026-10-10), so the type now has headroom it did not have when Chiu
+    /// asked whether the credit could be smaller (2026-09-13); 24 is unchanged
+    /// until a film is judged at another size.
     public var fontPx: CGFloat = 24
 
     // MARK: - The plate
 
     /// **Lightened 2026-09-13, and the type was not touched** (ADR 2026-09-13).
-    /// Chiu asked twice whether the credit could be smaller. The *type* cannot
-    /// move — `fontPx` 24 × 480/1080 is 10.67 px in the GIF against a floor of
-    /// 10, so 22.5 is the entire headroom and the gate goes red at 22.4 — so the
+    /// Chiu asked twice whether the credit could be smaller. The *type* could
+    /// not move then — `fontPx` 24 × 480/1080 was 10.67 px in the GIF against a
+    /// floor of 10 (the GIF has since been removed, see `fontPx`) — so the
     /// weight came out of the plate instead: padding 20/11 → 14/8 (pill height
     /// 46 → 40) and the fill from 0.72 alpha to 0.55.
     ///

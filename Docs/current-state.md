@@ -76,7 +76,7 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   as long as its windows need at `travel_pacing.windows_per_s` (ADR file 2026-09-28, Draft).
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
-- **Export:** one film at a time, app-wide; `RecapExportCoordinator` outlives
+- **Export:** an MP4, nothing else (GIF removed, ADR 2026-10-10); one film at a time, app-wide; `RecapExportCoordinator` outlives
   every screen (ADR 2026-09-10). **The substrate declares its own attribution**
   (`MapRendererCapabilities.attribution`) and the render loop draws it on every
   frame — MapLibre credits OSM, **MapKit credits nothing and must not** (ADR

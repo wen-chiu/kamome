@@ -151,9 +151,16 @@ enum RecapComposer {
     /// photo count. `length` is the export sheet's choice (`FilmLength`).
     /// Returns nil for trips the phantom guard should have kept out
     /// anyway (no route points).
+    ///
+    /// `statsLegs` are the legs `stats` was summed over — the **whole** trip's.
+    /// The film's `legs` have the flight home taken off (`filmRecords`), and the
+    /// title's distance is the recorded total less *every* flight in it, so
+    /// subtracting only the film's crossings left the flight home on the title
+    /// card (#278). nil means `legs` are the whole trip.
     static func trip(
         trip: TripRecord,
         legs: [RecapTrip.Leg],
+        statsLegs: [RecapTrip.Leg]? = nil,
         stops: [StopRecord],
         stats: TripStats?,
         photosByStop: [String: [PhotoRef]],
@@ -206,7 +213,7 @@ enum RecapComposer {
         // just showed (`filmJourney`), which is the same axis the HUD odometer
         // counts. Fixing one of the three and not the others is exactly how
         // 9,024 km survived on two cards after the odometer was corrected.
-        let localM = localDistanceM(stats: stats, legs: legs)
+        let localM = localDistanceM(stats: stats, legs: statsLegs ?? legs)
         let film = filmJourney(
             legs: legs, stops: tripStops, config: weighting,
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished

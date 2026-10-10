@@ -41,12 +41,6 @@ struct RecapExportTimeLeft: Equatable {
 
     /// The frame, exclusive, by which each station's frames have all been
     /// delivered, in film order — `RecapSnapshotStations.Station.frames.upperBound`.
-    ///
-    /// A GIF export delivers only the frames it keeps, so a station there is
-    /// counted done at the next kept frame at or past its end: at most one
-    /// station late, and a station with no kept frame (never fetched) is counted
-    /// with its neighbours (INFERRED from the stride rule; no GIF timing on a
-    /// phone exists).
     let stationEnds: [Int]
     let frameCount: Int
     let warmupS: Double
