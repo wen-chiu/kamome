@@ -158,18 +158,44 @@ public enum RecapFilmType: Equatable, Sendable {
     /// A single place *between* two crossings (a transit airport, a photograph
     /// from a boat) is still not counted: it cannot lower the count, and the
     /// reading stays the lower bound `classify` relies on.
+    ///
+    /// ## A crossing inside the trip splits it only when it outspans both sides
+    ///
+    /// **Chiu 2026-10-10 (#276, ADR file 2026-10-10).** The same test the ends
+    /// use, applied to every crossing between two runs of road: the crossing
+    /// splits the trip only when it is **longer than the ground on both sides
+    /// is wide**. A mainland drive, a 25 km ferry Geoapify does not route, and
+    /// an island drive used to count two journeys — so the film trimmed the
+    /// mainland away and flew a plane over the ferry. A flight away from a city
+    /// still splits: it is longer than either side.
+    ///
+    /// ## The fold runs until nothing overlaps
+    ///
+    /// A journey whose box bridges two separate regions joins them both. The
+    /// first version merged it into the first only and never compared the
+    /// widened region again, so the count depended on the order of the trip.
     public static func distinctJourneyCount(legs: [RecapTrip.Leg]) -> Int {
-        var journeys: [[RecapCoordinate]] = []
+        var runs: [[RecapCoordinate]] = []
         var current: [RecapCoordinate] = []
         for leg in legs {
             if leg.isCrossing {
-                if !current.isEmpty { journeys.append(current) }
+                if !current.isEmpty { runs.append(current) }
                 current = []
             } else {
                 current.append(contentsOf: leg.coordinates)
             }
         }
-        if !current.isEmpty { journeys.append(current) }
+        if !current.isEmpty { runs.append(current) }
+
+        var journeys: [[RecapCoordinate]] = []
+        for run in runs {
+            if let previous = journeys.last, let end = previous.last, let start = run.first,
+               isAGapInside(across: distanceM(end, start), between: previous, and: run) {
+                journeys[journeys.count - 1].append(contentsOf: run)
+            } else {
+                journeys.append(run)
+            }
+        }
 
         if let opening = legs.first, opening.isCrossing,
            let place = opening.coordinates.first, let other = opening.coordinates.last,
@@ -182,18 +208,35 @@ public enum RecapFilmType: Equatable, Sendable {
             journeys.append([place])
         }
 
-        var regions: [RecapBounds] = []
-        for journey in journeys {
-            guard let box = enclosing(journey) else { continue }
-            if let index = regions.firstIndex(where: { intersects($0, box) }) {
-                // A return to ground already visited is the same region, widened
-                // by whatever of it this visit newly covered.
-                regions[index] = union(regions[index], box)
-            } else {
-                regions.append(box)
+        return regionCount(journeys)
+    }
+
+    /// A return to ground already visited is the same region, widened by
+    /// whatever of it this visit newly covered — merged until no two regions
+    /// share ground, whatever order the trip visited them in.
+    private static func regionCount(_ journeys: [[RecapCoordinate]]) -> Int {
+        var regions = journeys.compactMap(enclosing)
+        var merging = true
+        while merging {
+            merging = false
+            search: for first in regions.indices {
+                for second in regions.indices where second > first && intersects(regions[first], regions[second]) {
+                    regions[first] = union(regions[first], regions[second])
+                    regions.remove(at: second)
+                    merging = true
+                    break search
+                }
             }
         }
         return regions.count
+    }
+
+    /// Whether a crossing of `crossingM` between two runs of road is a gap
+    /// inside one journey: no longer than either side is wide (#276).
+    private static func isAGapInside(
+        across crossingM: Double, between before: [RecapCoordinate], and after: [RecapCoordinate]
+    ) -> Bool {
+        crossingM <= widthM(before) && crossingM <= widthM(after)
     }
 
     /// Whether a trip's end `place`, joined by a crossing to `other`, is a place
@@ -203,10 +246,18 @@ public enum RecapFilmType: Equatable, Sendable {
     private static func isItsOwnGround(
         _ place: RecapCoordinate, across other: RecapCoordinate, beside journey: [RecapCoordinate]?
     ) -> Bool {
-        guard let journey, let box = enclosing(journey) else { return true }
-        let widthM = Geo.distanceM(latA: box.minLat, lonA: box.minLon, latB: box.maxLat, lonB: box.maxLon)
-        let crossingM = Geo.distanceM(latA: place.lat, lonA: place.lon, latB: other.lat, lonB: other.lon)
-        return crossingM > widthM
+        guard let journey, !journey.isEmpty else { return true }
+        return distanceM(place, other) > widthM(journey)
+    }
+
+    /// How wide a journey's ground is: its bounding box's diagonal.
+    private static func widthM(_ journey: [RecapCoordinate]) -> Double {
+        guard let box = enclosing(journey) else { return 0 }
+        return Geo.distanceM(latA: box.minLat, lonA: box.minLon, latB: box.maxLat, lonB: box.maxLon)
+    }
+
+    private static func distanceM(_ lhs: RecapCoordinate, _ rhs: RecapCoordinate) -> Double {
+        Geo.distanceM(latA: lhs.lat, lonA: lhs.lon, latB: rhs.lat, lonB: rhs.lon)
     }
 
     private static func enclosing(_ coordinates: [RecapCoordinate]) -> RecapBounds? {

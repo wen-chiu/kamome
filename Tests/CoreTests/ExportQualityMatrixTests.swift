@@ -13,8 +13,8 @@ import XCTest
 ///
 /// - **local** — one region, no crossing: a city walk, a day's drive, a long
 ///   road trip, a loop, an out-and-back, a trip near a pole, on the equator, on
-///   180°, all-dashed legs, unrouted legs, stops with no photographs, a short
-///   no-road hop at the end;
+///   180°, all-dashed legs, unrouted legs, stops with no photographs, a ferry
+///   mid-trip, a short no-road hop at the end;
 /// - **with a departure** — the type-2 film that opens on the flight and
 ///   carries a boarding pass: from an airport photograph alone, after a drive
 ///   to the airport, a short island hop, a long-haul past the flight frame's
@@ -186,6 +186,10 @@ final class ExportQualityMatrixTests: XCTestCase {
                  trip: trip(line(lisbon, porto, count: 5), photos: [0, 0, 3, 0, 0])),
             Case(name: "one stop with 40 photographs", form: .local,
                  trip: trip(line(lisbon, porto, count: 4), photos: [3, 40, 3, 3])),
+            Case(name: "a ferry routing cannot answer for, mid-trip (#276)", form: .local,
+                 trip: trip([Place(lat: 56.0, lon: -4.0), Place(lat: 56.3, lon: -4.6), Place(lat: 56.5, lon: -5.2),
+                             Place(lat: 56.45, lon: -5.5), Place(lat: 56.45, lon: -5.9), Place(lat: 56.6, lon: -6.2),
+                             Place(lat: 56.5, lon: -6.4)], crossings: [3], countries: Array(repeating: "GB", count: 7))),
             Case(name: "a short no-road hop at the end (a beach photograph)", form: .local,
                  trip: trip(loop(palma, radiusDeg: 0.3, count: 5) + [Place(lat: 39.25, lon: 2.73)], crossings: [4]))
         ]
