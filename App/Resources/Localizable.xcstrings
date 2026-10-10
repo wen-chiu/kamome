@@ -3063,7 +3063,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩~卡膜咩嘛飛來~影片完成"
+            "value": "卡摸咩~卡摸咩嘛飛來~影片完成"
           }
         }
       }
@@ -4350,13 +4350,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome already knows where you’ve been."
+            "value": "Your journeys are already in your photos."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩已經知道你去過哪裡。"
+            "value": "你的每一趟旅程，都在相片裡。"
           }
         }
       }

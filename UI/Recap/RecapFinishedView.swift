@@ -154,12 +154,10 @@ struct RecapFinishedView: View {
         }
     }
 
+    /// Debug builds only (#288); a no-road headline still shows in Release.
     private var renderReadout: String? {
-        guard case let .finished(film, _) = model.phase, let renderSeconds = film.renderSeconds else { return nil }
-        return String.localizedStringWithFormat(
-            String(localized: "recap_render_time"),
-            String(format: "%.1f", renderSeconds)
-        )
+        guard case let .finished(film, _) = model.phase else { return nil }
+        return RenderTimeReadout.text(seconds: film.renderSeconds)
     }
 
     private var noRoadHeadline: String? {

@@ -68,14 +68,12 @@ struct FilmPlayerSheet: View {
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 4)
 
-                if let renderSeconds = film.renderSeconds {
-                    Text(String.localizedStringWithFormat(
-                        String(localized: "recap_render_time"),
-                        String(format: "%.1f", renderSeconds)
-                    ))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 8)
+                // Debug builds only (#288).
+                if let renderTime = RenderTimeReadout.text(seconds: film.renderSeconds) {
+                    Text(verbatim: renderTime)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.bottom, 8)
                 }
             }
             .navigationTitle("recap_title")
