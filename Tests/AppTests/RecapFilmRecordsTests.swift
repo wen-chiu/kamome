@@ -2,6 +2,8 @@
 import KamomeExportEngine
 import KamomePersistence
 import KamomeRouteMatching
+import KamomeTrackingEngine
+import KamomeTripComposer
 import XCTest
 
 /// **The records a film is made from end at the destination**
@@ -155,5 +157,45 @@ final class RecapFilmRecordsTests: XCTestCase {
         )
         XCTAssertEqual(film.segments.count, oneWay.count)
         XCTAssertEqual(film.stops.count, trip.stops.count)
+    }
+
+    // MARK: - The title's distance (#278)
+
+    /// **The flight home comes off the title's kilometres too** (#278). A
+    /// recorded trip's `TripStats.distanceM` is the whole trip, flight home
+    /// included; the film's legs end before it. Subtracting only the film's
+    /// crossings left the flight home on the title card. The figure must be the
+    /// three days on the island and nothing flown.
+    func testTheTitleCountsNeitherFlight() throws {
+        let trip = roundTrip
+        let film = RecapComposer.filmRecords(
+            segments: trip.segments, stops: trip.stops, epsilonM: 15, matchedEpsilonM: 5, homeRadiusM: 40_000
+        )
+        let filmLegs = RecapComposer.legs(from: film.segments, epsilonM: 15, matchedEpsilonM: 5)
+        let wholeLegs = RecapComposer.legs(from: trip.segments, epsilonM: 15, matchedEpsilonM: 5)
+        func metres(_ legs: [RecapTrip.Leg]) -> Double {
+            legs.reduce(0) { total, leg in
+                total + zip(leg.coordinates, leg.coordinates.dropFirst()).reduce(0) { run, pair in
+                    run + Geo.distanceM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
+                }
+            }
+        }
+        let islandKm = Int((metres(wholeLegs.filter { !$0.isCrossing }) / 1000).rounded())
+        let stats = TripStats(distanceM: metres(wholeLegs), driveS: 0, walkS: 0, stopCount: 0, topSpeedKmh: 0)
+        let record = TripRecord(
+            id: "trip", title: "Island", startedAt: start, endedAt: start + 2 * day + 5 * 3600, status: "completed"
+        )
+        let composed = try XCTUnwrap(RecapComposer.trip(
+            trip: record, legs: filmLegs, statsLegs: wholeLegs, stops: film.stops, stats: stats, photosByStop: [:]
+        ))
+        XCTAssertTrue(
+            composed.subtitle.hasSuffix(" · \(islandKm) km"),
+            "the title reads \(composed.subtitle); the island is \(islandKm) km and both flights come off"
+        )
+        // The defect, kept visible: with only the film's legs, the flight home stays in.
+        let before = try XCTUnwrap(RecapComposer.trip(
+            trip: record, legs: filmLegs, stops: film.stops, stats: stats, photosByStop: [:]
+        ))
+        XCTAssertFalse(before.subtitle.hasSuffix(" · \(islandKm) km"), "precondition: the film's legs alone miss it")
     }
 }

@@ -46,8 +46,14 @@ extension RecapComposer {
             from: film.segments, epsilonM: config.simplify.epsilonM, matchedEpsilonM: config.matching.displayEpsilonM,
             stops: detail.stops
         )
+        // The title's distance is the recorded total less every flight in it —
+        // the flight home included, though the film no longer shows it (#278).
+        let wholeTripLegs = film.segments.count == detail.segments.count ? legs : Self.legs(
+            from: detail.segments, epsilonM: config.simplify.epsilonM,
+            matchedEpsilonM: config.matching.displayEpsilonM
+        )
         guard let trip = trip(
-            trip: detail.trip, legs: legs, stops: film.stops, stats: stats,
+            trip: detail.trip, legs: legs, statsLegs: wholeTripLegs, stops: film.stops, stats: stats,
             photosByStop: photosEnabled ? photos.byStop : [:], deck: deck, stopHoldS: config.export.stopHoldS,
             rawPhotoCounts: photos.rawCounts,
             favoriteCounts: photos.starredCounts,
