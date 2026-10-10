@@ -41,7 +41,9 @@ struct RecapExportJob: RecapExportRunning {
     private func runStages(_ channel: RecapExportChannel, clock: ExportStageClock) async -> RecapExportOutcome {
         channel.stage(.findingRoads)
         clock.enter("roads")
-        await matchRoutes(channel)
+        // Cancel is read while the roads are found, not after (#277): routing
+        // may take `trip_budget_s`, and nothing is drawn yet to stop between.
+        guard await matchRoutes(channel), channel.shouldContinue() else { return .cancelled }
         channel.stage(.preparingPhotos)
         clock.enter("compose")
         guard let composed = compose() else {
@@ -74,13 +76,48 @@ struct RecapExportJob: RecapExportRunning {
     /// anything — `DatabaseQueue` serialises, and the write is one column that
     /// does not read itself — but two runs mean two budgets and two verdicts for
     /// one trip, and the screen can only show one.
-    private func matchRoutes(_ channel: RecapExportChannel) async {
-        let report = await RouteMatchCoordinator.shared.result(
-            tripId: request.tripId,
-            service: RouteMatchService(repository: repository, matching: config.matching)
+    ///
+    /// **Cancel stops the export's wait, not the routing** (#277). The run may
+    /// be an import's, and every verdict it reaches is stored either way; what
+    /// the person cancelled is the film. Returns false when they did.
+    private func matchRoutes(_ channel: RecapExportChannel) async -> Bool {
+        let (tripId, service) = (
+            request.tripId, RouteMatchService(repository: repository, matching: config.matching)
         )
+        guard let report = await Self.waiting(
+            for: { await RouteMatchCoordinator.shared.result(tripId: tripId, service: service) },
+            unless: channel.shouldContinue
+        ) else {
+            KamomeLog.recap.notice("export cancelled while finding roads — routing carries on for the trip")
+            return false
+        }
         channel.routing(report)
+        return true
     }
+
+    /// `work`'s answer, or nil as soon as `shouldContinue` turns false — read
+    /// every `cancelPollInterval` while `work` runs. `work` is not cancelled:
+    /// it finishes on its own, and its answer is dropped.
+    static func waiting<Value: Sendable>(
+        for work: @escaping @MainActor () async -> Value,
+        unless shouldContinue: @escaping @Sendable () -> Bool
+    ) async -> Value? {
+        let done = SharedFlag()
+        let task = Task { @MainActor in
+            let value = await work()
+            done.set()
+            return value
+        }
+        while !done.isSet {
+            guard shouldContinue() else { return nil }
+            try? await Task.sleep(for: cancelPollInterval)
+        }
+        return await task.value
+    }
+
+    /// How often a wait with nothing to draw reads Cancel — the same tenth of
+    /// a second the render's progress reports at (`progressInterval`).
+    static let cancelPollInterval: Duration = .milliseconds(100)
 
     // MARK: - Composition
 
