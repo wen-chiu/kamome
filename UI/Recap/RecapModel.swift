@@ -19,8 +19,6 @@ import Observation
 @Observable
 @MainActor
 final class RecapModel {
-    typealias Format = RecapExportFormat
-
     enum Phase: Equatable {
         case idle
         case rendering(progress: Double)
@@ -34,12 +32,11 @@ final class RecapModel {
     /// Photo overlays only (decisions.md 2026-07-18 recap-chrome, Chiu):
     /// off removes stop photo cards; title/end cards always render.
     ///
-    /// ⚠️ These two are what the **next** export is started with. While one is
-    /// running, `photosEnabled` and `format` below read from the running request
+    /// ⚠️ This is what the **next** export is started with. While one is
+    /// running, `photosEnabled` below reads from the running request
     /// instead, so a sheet reopened mid-render shows the settings the film in
     /// flight is actually using rather than this fresh model's defaults.
     private var requestedPhotosEnabled = true
-    private var requestedFormat: Format = .mp4
 
     /// Set when a start was refused because a **different** trip is rendering.
     /// One export at a time is a hard rule (`RecapExportCoordinator`); this is
@@ -110,11 +107,6 @@ final class RecapModel {
     var photosEnabled: Bool {
         get { running?.request.photosEnabled ?? requestedPhotosEnabled }
         set { requestedPhotosEnabled = newValue }
-    }
-
-    var format: Format {
-        get { running?.request.format ?? requestedFormat }
-        set { requestedFormat = newValue }
     }
 
     var phase: Phase {
@@ -192,7 +184,6 @@ final class RecapModel {
         let request = RecapExportRequest(
             tripId: tripId,
             photosEnabled: requestedPhotosEnabled,
-            format: requestedFormat,
             appearance: appearance,
             length: length
         )

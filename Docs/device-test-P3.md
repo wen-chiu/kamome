@@ -84,7 +84,7 @@ after every export — no instruments needed.
 - [ ] Toggle OFF: no stop cards, but title card AND end card (QR) still
       present — this is the signed-off contract, decisions.md 2026-07-18
 - [ ] MP4 export → share sheet → file plays in Photos/Messages
-- [ ] GIF export → share sheet → animates in Messages
+- ~~GIF export → share sheet → animates in Messages~~ — GIF removed (ADR 2026-10-10)
 - [ ] Cancel mid-render returns to idle, no stray files, re-export works
 - [ ] Render-time readout appears and looks plausible (item F)
 

@@ -210,8 +210,8 @@ public struct RecapRenderLoop {
     /// is wanted is never fetched. **The plan itself does not change** — it is
     /// still made over every frame — so each frame that *is* rendered comes from
     /// exactly the station, and therefore exactly the pixels, it would have in a
-    /// full render. A GIF export is the caller: it keeps one frame in
-    /// `fps / gif_fps` and used to composite all of them.
+    /// full render. The export renders every frame; a harness that wants a
+    /// sample (`RecapTileRequestBenchTests`) asks for only those.
     ///
     /// Returns what the pass cost, stage by stage (`RenderStats`). A cancelled
     /// render returns what it had spent up to that frame — an abandoned export is

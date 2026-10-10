@@ -10,7 +10,7 @@ import XCTest
 @MainActor
 final class TripDeletionTests: XCTestCase {
     private func request(_ tripId: String) -> RecapExportRequest {
-        RecapExportRequest(tripId: tripId, photosEnabled: true, format: .mp4, appearance: .dark)
+        RecapExportRequest(tripId: tripId, photosEnabled: true, appearance: .dark)
     }
 
     private func waitUntil(_ condition: () -> Bool) async {

@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-09 against ADR **2026-10-09-a-days-driving-is-1200-km**.
+Last synced: 2026-10-10 against ADR **2026-10-10-a-film-is-an-mp4**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -76,7 +76,7 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   as long as its windows need at `travel_pacing.windows_per_s` (ADR file 2026-09-28, Draft).
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
-- **Export:** one film at a time, app-wide; `RecapExportCoordinator` outlives
+- **Export:** an MP4, nothing else (GIF removed, ADR 2026-10-10); one film at a time, app-wide; `RecapExportCoordinator` outlives
   every screen (ADR 2026-09-10). **The substrate declares its own attribution**
   (`MapRendererCapabilities.attribution`) and the render loop draws it on every
   frame — MapLibre credits OSM, **MapKit credits nothing and must not** (ADR

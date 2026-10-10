@@ -148,7 +148,7 @@ final class RecapExportTimeLeftTests: XCTestCase {
         let coordinator = RecapExportCoordinator()
         let job = SpyExportJob()
         coordinator.start(
-            request: RecapExportRequest(tripId: "trip-a", photosEnabled: true, format: .mp4, appearance: .dark),
+            request: RecapExportRequest(tripId: "trip-a", photosEnabled: true, appearance: .dark),
             job: job
         )
         for _ in 0..<10_000 where !job.hasStarted { await Task.yield() }

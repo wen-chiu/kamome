@@ -15,13 +15,9 @@ extension RecapExportJob {
     func store(
         output: RecapExporter.Output, plan: Plan, seconds: Double
     ) throws -> RecapExportOutcome {
-        // The one file written: GIF when the user chose GIF, MP4 otherwise.
-        guard let primaryURL = output.gifURL ?? output.videoURL else {
-            return .failed(message: String(localized: "recap_failed"))
-        }
         let record = try persistFilm(
-            tempURL: primaryURL,
-            format: output.gifURL != nil ? "gif" : "mp4",
+            tempURL: output.videoURL,
+            format: "mp4",
             appearance: plan.appearance,
             durationS: plan.timeline.durationS,
             renderSeconds: seconds

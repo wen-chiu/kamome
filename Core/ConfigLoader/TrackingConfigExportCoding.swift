@@ -22,8 +22,6 @@ extension TrackingConfig.Export {
         case fps
         case stopHoldS = "stop_hold_s"
         case maxHoldFraction = "max_hold_fraction"
-        case gifFps = "gif_fps"
-        case gifWidthPx = "gif_width_px"
         case frameWidthPx = "frame_width_px"
         case frameHeightPx = "frame_height_px"
         case cameraSpanM = "camera_span_m"

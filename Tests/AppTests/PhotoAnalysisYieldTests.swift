@@ -18,7 +18,7 @@ final class PhotoAnalysisYieldTests: XCTestCase {
         let exports = RecapExportCoordinator()
         let job = SpyExportJob()
         exports.start(
-            request: RecapExportRequest(tripId: "rendering", photosEnabled: true, format: .mp4, appearance: .dark),
+            request: RecapExportRequest(tripId: "rendering", photosEnabled: true, appearance: .dark),
             job: job
         )
         await waitUntil { job.hasStarted }

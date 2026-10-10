@@ -19,7 +19,7 @@ final class RecapPacingTests: XCTestCase {
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: 30, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.6,
-            gifFps: 12, gifWidthPx: 480, frameWidthPx: 1080, frameHeightPx: 1920,
+            frameWidthPx: 1080, frameHeightPx: 1920,
             cameraSpanM: 1500, wideSpanPadding: 1.15, zoomTransitionS: 2.5,
             actSplitKm: 25, crossingBeatS: 4.0, crossingApexPadding: 1.5, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,

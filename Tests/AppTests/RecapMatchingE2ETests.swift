@@ -43,7 +43,6 @@ final class RecapMatchingE2ETests: XCTestCase {
         let tripId = try seedPerthFixtureTrip(into: repository, config: config)
 
         let model = RecapModel(tripId: tripId, config: config, repository: repository)
-        model.format = .mp4
         // Pinned, not inherited from the simulator: this drives the shipped export
         // path end to end, and an end-to-end check whose output depends on a
         // machine's dark-mode setting is not a check.
