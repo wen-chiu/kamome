@@ -59,6 +59,9 @@ extension ExportQualityMatrixTests {
         var lastTravelled = 0.0
         var sawPass = false, sawEnds = false
         var badCamera = 0, badSubject = 0, deckUnderEndCard = 0, backwards = 0
+        // 10. A frozen card is cut, not flown (#275).
+        let openingSpanM = line.cameraFrame(atTime: 0).spanM
+        var widestM = 0.0, sawArc = false, sawDepartureCard = false
         for frame in 0..<line.frameCount {
             let time = Double(frame) / fps
             // 2. The camera.
@@ -70,6 +73,8 @@ extension ExportQualityMatrixTests {
             // 3. The vehicle.
             let subject = line.subjectState(atTime: time)
             if !(subject.lat.isFinite && subject.lon.isFinite && subject.heading.isFinite) { badSubject += 1 }
+            widestM = max(widestM, camera.spanM)
+            if subject.role == .crossing, subject.isVisible { sawArc = true }
 
             let contents = line.overlayContents(atTime: time)
             // 9. Title first, end card last.
@@ -86,7 +91,9 @@ extension ExportQualityMatrixTests {
                 case .journeyCard: sawPass = true
                 case .flightEnds: sawEnds = true
                 case .endChrome: endCard = true
-                case .photoDeck: deck = true
+                case let .photoDeck(card):
+                    deck = true
+                    if card.coordinate == nil { sawDepartureCard = true }
                 case let .hud(_, _, travelledM):
                     // 6. The odometer.
                     if !travelledM.isFinite || travelledM < 0 { backwards += 1 }
@@ -127,6 +134,19 @@ extension ExportQualityMatrixTests {
             if sawEnds != test.drawsTheFlight {
                 violations.append(sawEnds ? "8. a frozen card marks flight ends" : "8. the flight's two ends are never marked")
             }
+        }
+
+        // 10. A flight the film does not draw is cut, not flown (#275): the
+        // camera never frames wider than its opening frame, nothing flies, and
+        // the departure's photographs play over the frozen frame.
+        if test.form == .departure, !test.drawsTheFlight {
+            if widestM > openingSpanM * 1.001 {
+                violations.append(String(
+                    format: "10. a frame %.0f km wide, wider than the opening's %.0f km", widestM / 1000, openingSpanM / 1000
+                ))
+            }
+            if sawArc { violations.append("10. something flies the crossing the film does not draw") }
+            if !sawDepartureCard { violations.append("10. the departure's photographs never play") }
         }
 
         // 4 and 5. The stations.

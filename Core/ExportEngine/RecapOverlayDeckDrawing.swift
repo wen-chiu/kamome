@@ -63,13 +63,20 @@ extension RecapOverlayRenderer {
             // the whole scene rather than recomputed as the card grows.
             maxCardHeight: settledCardHeight(in: surface),
             identity: identity,
-            anchor: surface.cgPoint(lat: deck.coordinate.lat, lon: deck.coordinate.lon), in: surface
+            // No place on this map (#275): the cluster hangs above a point half
+            // its card below the centre, so the card itself sits in the middle.
+            anchor: deck.coordinate.map { surface.cgPoint(lat: $0.lat, lon: $0.lon) } ?? CGPoint(
+                x: CGFloat(surface.widthPx) / 2, y: (CGFloat(surface.heightPx) + settledCardHeight(in: surface)) / 2
+            ),
+            in: surface
         )
         let heroRect = layout.cardRect.insetBy(dx: overhang, dy: 0)
 
         context.saveGState()
         context.setAlpha(CGFloat(deck.opacity))
-        drawPin(at: layout.pinPoint, radius: style.labelPinRadiusPx * surface.scale, in: surface)
+        if deck.coordinate != nil {
+            drawPin(at: layout.pinPoint, radius: style.labelPinRadiusPx * surface.scale, in: surface)
+        }
         drawPeekCards(deck.photos, heroRect: heroRect, targetPx: Int(maxW), in: surface)
         drawCard(
             resolver.image(for: deck.photos[index], targetPx: Int(maxW)),

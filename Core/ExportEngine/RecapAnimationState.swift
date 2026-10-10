@@ -130,11 +130,15 @@ public struct RecapPhotoDeck: Equatable {
     /// group *beside the vehicle parked there* — with a static camera the
     /// vehicle is no longer centred, so a frame-centred card would collide with
     /// it (Chiu 2026-07-25).
-    public let coordinate: RecapCoordinate
+    ///
+    /// nil for photographs from a place that is not on this map — the departure
+    /// of a flight the film does not draw (#275): no pin is drawn, and the card
+    /// is centred in the frame.
+    public let coordinate: RecapCoordinate?
 
     public init(
         photos: [PhotoRef], focusIndex: Int, reveal: Double, opacity: Double,
-        name: String?, detail: String? = nil, coordinate: RecapCoordinate
+        name: String?, detail: String? = nil, coordinate: RecapCoordinate?
     ) {
         self.photos = photos
         self.focusIndex = focusIndex
