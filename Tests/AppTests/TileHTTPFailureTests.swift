@@ -11,10 +11,37 @@ import XCTest
 ///
 /// The vector tile source of the frozen dark style is pointed at a loopback
 /// server in this process, which answers each tile request as the case says.
-/// Sprites, glyphs and terrain still come from their real hosts, so the
-/// `healthy` control is what says the failures below are the server's doing.
+///
+/// **Nothing else leaves the process** (#239). The style is cut to that one
+/// source and the layers drawn from it: no sprite, no glyphs (so no symbol
+/// layers), no shaded-relief raster, no terrain. Those used to come from their
+/// real hosts, and under load — or with the network slow — the snapshot waited
+/// on them past the timeout and the healthy control failed with no tile ever
+/// asked for, in about one full `./check.sh` in three. What is tested is how
+/// the *vector tile* host fails; the `healthy` control still says the failures
+/// below are that server's doing.
 final class TileHTTPFailureTests: XCTestCase {
     /// The control: a server that answers every tile with an empty (valid) tile.
+    /// The test style reaches no host but the loopback server: a guard that
+    /// the cut below keeps up with the style it is cut from.
+    func testTheTestStyleReachesOnlyTheLoopbackServer() throws {
+        let server = try TileServer { _, _ in .ok }
+        defer { server.stop() }
+        let style = try JSONSerialization.jsonObject(with: Data(contentsOf: style(pointingAt: server)))
+        let urls = Self.strings(in: style).filter { $0.contains("://") }
+        XCTAssertEqual(urls, ["http://127.0.0.1:\(server.port)/planet"], "a resource still comes from a real host")
+    }
+
+    /// Every string anywhere in a JSON value.
+    private static func strings(in value: Any) -> [String] {
+        switch value {
+        case let string as String: [string]
+        case let array as [Any]: array.flatMap(strings(in:))
+        case let object as [String: Any]: object.values.flatMap(strings(in:))
+        default: []
+        }
+    }
+
     func testAHealthyTileServerSnapshotsSuccessfully() async throws {
         let server = try TileServer { _, _ in .ok }
         defer { server.stop() }
@@ -147,16 +174,29 @@ final class TileHTTPFailureTests: XCTestCase {
         }
     }
 
+    /// The frozen dark style, cut to the vector source and pointed at `server`.
+    /// Symbol layers go with the glyphs and sprite they need; layers on the
+    /// relief and terrain sources go with those sources.
     private func style(pointingAt server: TileServer) throws -> URL {
         let name = "openfreemap-liberty-dark"
         let url = try XCTUnwrap(Bundle.main.url(forResource: name, withExtension: "json"))
-        let json = try String(contentsOf: url, encoding: .utf8).replacingOccurrences(
-            of: "\"https://tiles.openfreemap.org/planet\"",
-            with: "\"http://127.0.0.1:\(server.port)/planet\""
-        )
+        var style = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let vector = "openmaptiles"
+        var sources = try XCTUnwrap(style["sources"] as? [String: Any])
+        var source = try XCTUnwrap(sources[vector] as? [String: Any])
+        source["url"] = "http://127.0.0.1:\(server.port)/planet"
+        sources = [vector: source]
+        style["sources"] = sources
+        style["sprite"] = nil
+        style["glyphs"] = nil
+        let layers = try XCTUnwrap(style["layers"] as? [[String: Any]])
+        style["layers"] = layers.filter { layer in
+            let onVector = (layer["source"] as? String).map { $0 == vector } ?? true
+            return onVector && layer["type"] as? String != "symbol"
+        }
         let out = FileManager.default.temporaryDirectory
             .appendingPathComponent("kamome-test-http-\(server.port).json")
-        try json.write(to: out, atomically: true, encoding: .utf8)
+        try JSONSerialization.data(withJSONObject: style).write(to: out, options: .atomic)
         return out
     }
 }
