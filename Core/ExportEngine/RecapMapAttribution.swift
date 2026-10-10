@@ -97,16 +97,20 @@ public enum RecapMapAttribution {
         /// "Source: INEGI, Continental relief, 2016"
         case mexico
 
-        /// Short-form credit for the film. INFERRED acceptable under each
-        /// source's licence — CC BY permits "reasonable manner for the medium";
-        /// Copernicus requires acknowledging EU funding (Delegated Regulation
-        /// 1159/2013 Art. 3); government licences require naming the source.
-        /// `AboutView` carries the full prescribed wording for each.
+        /// The film's credit for this source. A short form is INFERRED
+        /// acceptable under each source's licence — CC BY permits "reasonable
+        /// manner for the medium"; government licences require naming the
+        /// source. `AboutView` carries the full wording for each.
+        ///
+        /// **EU-DEM is the exception and is not short** (#114, Chiu
+        /// 2026-10-10): ADR 2026-09-18 (f) says the Copernicus wording is
+        /// prescribed and may not shorten, so the film carries it word for word,
+        /// exactly as `AboutView` does. The film's credit wraps to make room.
         public var filmCredit: String {
             switch self {
             case .linz: return "© LINZ"
             case .geoscienceAustralia: return "© Geoscience Australia"
-            case .euDEM: return "EU-DEM (Copernicus)"
+            case .euDEM: return Self.copernicusPrescribed
             case .ukEnvironmentAgency: return "© UK Environment Agency"
             case .austria: return "© data.gv.at"
             case .kartverket: return "© Kartverket"
@@ -114,6 +118,11 @@ public enum RecapMapAttribution {
             case .mexico: return "© INEGI"
             }
         }
+
+        /// Copernicus's prescribed acknowledgement, verbatim — the same string
+        /// `AboutView`'s terrain notice carries. Not to be shortened (#114).
+        public static let copernicusPrescribed =
+            "Produced using Copernicus data and information funded by the European Union - EU-DEM layers"
 
         /// Coarse bounding box, deliberately oversized.
         public var coverageBox: CoverageBox {
@@ -156,7 +165,7 @@ public enum RecapMapAttribution {
             return openFreeMapBase
         }
         return openFreeMapBase + " · Terrain: "
-            + required.map(\.filmCredit).joined(separator: "/")
+            + required.map(\.filmCredit).joined(separator: " / ")
     }
 
     /// **What the parked souvenir substrate owes** — the self-hosted `.pmtiles`

@@ -39,7 +39,7 @@ import Foundation
 /// one credit it controls. That trade is only safe because the absence is
 /// gated — `RecapMapCreditTests` is the other half of this file.
 extension RecapOverlayRenderer {
-    /// Bottom-left, pill-plated, one line.
+    /// Bottom-left, pill-plated, and as many lines as the frame's width needs.
     ///
     /// **Bottom-left, not bottom-right**, on the film's own layout rather than
     /// on the snapshotter's habit: the HUD owns both *top* corners (day on the
@@ -51,6 +51,12 @@ extension RecapOverlayRenderer {
     /// is trip data of unknown length and shrinks to fit; this one is a fixed
     /// licence string, and a credit that shrank to fit would be a credit that
     /// could shrink to nothing.
+    ///
+    /// **So it wraps instead** (#114). Copernicus's wording is prescribed and
+    /// may not shorten (ADR 2026-09-18 (f)), and with it a European film's
+    /// credit is ~150 characters — wider than the frame at `fontPx`. A credit
+    /// that ran off the edge would be the same silent loss as one that shrank.
+    /// Most films (OSM only, or one short terrain credit) still draw one line.
     func drawMapCredit(_ text: String, into surface: RenderSurface) {
         guard !text.isEmpty else { return }
         let scale = surface.scale
@@ -58,16 +64,60 @@ extension RecapOverlayRenderer {
         let margin = tokens.marginPx * scale
         let padding = CGSize(width: tokens.pillPaddingXPx * scale, height: tokens.pillPaddingYPx * scale)
         let fontPx = tokens.fontPx
-        let pillH = fontPx * scale + padding.height * 2
+        let maxTextWidth = CGFloat(surface.widthPx) - 2 * margin - 2 * padding.width
+        let lines = mapCreditLines(text, maxWidth: maxTextWidth, in: surface)
+        let lineStep = fontPx * tokens.lineHeightEm * scale
         let pill = CGRect(
             x: margin, y: margin,
-            width: textWidth(text, fontPx: fontPx, in: surface) + padding.width * 2, height: pillH
+            width: (lines.map { textWidth($0, fontPx: fontPx, in: surface) }.max() ?? 0) + padding.width * 2,
+            height: fontPx * scale + CGFloat(lines.count - 1) * lineStep + padding.height * 2
         )
-        drawPill(pill, fill: tokens.pillColor, border: tokens.pillBorderColor, in: surface)
-        drawText(
-            text,
-            at: CGPoint(x: pill.minX + padding.width, y: pill.minY + padding.height + fontPx * scale * 0.18),
-            fontPx: fontPx, color: tokens.textColor, in: surface
-        )
+        // One line keeps the HUD's capsule; more keep its corner, not its shape.
+        let singleLineHeight = fontPx * scale + padding.height * 2
+        drawPill(pill, fill: tokens.pillColor, border: tokens.pillBorderColor,
+                 cornerRadius: singleLineHeight / 2, in: surface)
+        for (row, line) in lines.enumerated() {
+            drawText(
+                line,
+                at: CGPoint(
+                    x: pill.minX + padding.width,
+                    y: pill.minY + padding.height + fontPx * scale * 0.18
+                        + CGFloat(lines.count - 1 - row) * lineStep
+                ),
+                fontPx: fontPx, color: tokens.textColor, in: surface
+            )
+        }
+    }
+
+    /// The credit broken into lines no wider than `maxWidth`: whole ` · `
+    /// clauses where they fit, words where one clause alone does not. Every
+    /// character of `text` except the break points' spaces survives.
+    private func mapCreditLines(_ text: String, maxWidth: CGFloat, in surface: RenderSurface) -> [String] {
+        let fontPx = style.mapCredit.fontPx
+        let fits = { (line: String) in textWidth(line, fontPx: fontPx, in: surface) <= maxWidth }
+        var lines: [String] = []
+        var current = ""
+        for clause in text.components(separatedBy: " · ") {
+            let joined = current.isEmpty ? clause : current + " · " + clause
+            if fits(joined) {
+                current = joined
+                continue
+            }
+            if !current.isEmpty {
+                lines.append(current + " ·")
+                current = ""
+            }
+            for word in clause.split(separator: " ").map(String.init) {
+                let candidate = current.isEmpty ? word : current + " " + word
+                if fits(candidate) || current.isEmpty {
+                    current = candidate
+                } else {
+                    lines.append(current)
+                    current = word
+                }
+            }
+        }
+        if !current.isEmpty { lines.append(current) }
+        return lines
     }
 }

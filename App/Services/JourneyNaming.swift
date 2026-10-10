@@ -192,11 +192,22 @@ enum TripJourneyNaming {
     }
 }
 
-/// Discovered journeys the user hid. Keys only. Shown again from the hidden
-/// row at the foot of the Discovery list (#167).
+/// Discovered journeys the user hid, shown again from the hidden row at the
+/// foot of the Discovery list (#167).
+///
+/// **Matched by their photographs, not only their key** (#170). A journey's key
+/// is its first day, and that day moves when a `discovery` threshold changes or
+/// a photograph is added before it. Keyed alone, a hidden journey then came
+/// back under its new key, and whatever journey took the old key was hidden in
+/// its place. Each hidden journey keeps its photographs' asset ids (identifiers
+/// only, never a position — §0) and every scan finds it again by the share it
+/// holds, the rule a stored trip is matched by (ADR 2026-09-23 (d)). A record
+/// from before #170 has no photographs and is matched by its key, as it was.
 struct DismissedJourneys {
     private let defaults: UserDefaults
     private static let key = "kamome.dismissedJourneys"
+    /// Hidden key → that journey's asset ids, for records made since #170.
+    private static let photosKey = "kamome.dismissedJourneyPhotos"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -206,11 +217,59 @@ struct DismissedJourneys {
         Set(defaults.stringArray(forKey: Self.key) ?? [])
     }
 
-    func dismiss(_ journeyKey: String) {
+    private var photos: [String: [String]] {
+        defaults.dictionary(forKey: Self.photosKey) as? [String: [String]] ?? [:]
+    }
+
+    /// - Parameter assetIds: the journey's photographs, so it is found again
+    ///   when its key moves. Empty keeps the key-only record of before #170.
+    func dismiss(_ journeyKey: String, assetIds: [String] = []) {
         defaults.set(Array(keys.union([journeyKey])).sorted(), forKey: Self.key)
+        guard !assetIds.isEmpty else { return }
+        var stored = photos
+        stored[journeyKey] = assetIds
+        defaults.set(stored, forKey: Self.photosKey)
     }
 
     func restore(_ journeyKey: String) {
         defaults.set(Array(keys.subtracting([journeyKey])).sorted(), forKey: Self.key)
+        var stored = photos
+        stored[journeyKey] = nil
+        defaults.set(stored, forKey: Self.photosKey)
+    }
+
+    /// The keys hidden in this scan, each record moved to the key its journey
+    /// has now. A record with photographs hides the journey holding at least
+    /// `minShare` of them (the largest share wins), whatever its key; one whose
+    /// journey is gone hides nothing until a scan finds it again. A record with
+    /// no photographs hides its key.
+    ///
+    /// - Parameter journeys: this scan's journeys, key → asset ids.
+    func reconcile(with journeys: [String: Set<String>], minShare: Double) -> Set<String> {
+        let stored = photos
+        var hidden = keys.filter { stored[$0] == nil }
+        var moved = stored
+        var claimed: Set<String> = []
+        for (recordKey, assetIds) in stored.sorted(by: { $0.key < $1.key }) {
+            let wanted = Set(assetIds)
+            guard !wanted.isEmpty else { continue }
+            let best = journeys
+                .filter { !claimed.contains($0.key) }
+                .map { (key: $0.key, share: Double($0.value.intersection(wanted).count) / Double(wanted.count)) }
+                .max { ($0.share, $1.key) < ($1.share, $0.key) }
+            guard let best, best.share >= minShare else { continue }
+            claimed.insert(best.key)
+            hidden.insert(best.key)
+            if best.key != recordKey {
+                moved[recordKey] = nil
+                moved[best.key] = assetIds
+            }
+        }
+        if moved != stored {
+            let legacy = keys.filter { stored[$0] == nil }
+            defaults.set(moved, forKey: Self.photosKey)
+            defaults.set(Array(legacy.union(moved.keys)).sorted(), forKey: Self.key)
+        }
+        return hidden
     }
 }

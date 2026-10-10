@@ -51,9 +51,11 @@ extension RecapOverlayRenderer {
     /// arbitrary photograph. Its colours are arguments rather than read from
     /// `style.hud…` since 2026-09-12, so the map credit can wear the same idiom
     /// without inheriting the HUD's palette — one pill shape, two callers.
-    func drawPill(_ rect: CGRect, fill: CGColor, border: CGColor, in surface: RenderSurface) {
+    func drawPill(
+        _ rect: CGRect, fill: CGColor, border: CGColor, cornerRadius: CGFloat? = nil, in surface: RenderSurface
+    ) {
         let context = surface.context
-        let corner = rect.height / 2
+        let corner = cornerRadius ?? rect.height / 2
         let path = CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil)
         context.setFillColor(fill)
         context.addPath(path)
