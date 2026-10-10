@@ -23,7 +23,7 @@ extension RecapExportJob {
             renderSeconds: seconds
         )
         guard let fileURL = FilmStore.resolvedURL(relativePath: record.relativePath) else {
-            return .failed(message: String(localized: "recap_failed"))
+            return Self.failed
         }
         return .finished(film: record, fileURL: fileURL)
     }
