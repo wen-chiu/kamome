@@ -237,4 +237,43 @@ final class RecapFilmTypeTests: XCTestCase {
         XCTAssertEqual(trip.filmType, .unknown)
         XCTAssertEqual(trip.filmType.renderedForm, .local)
     }
+
+    // MARK: - A crossing inside the trip (#276, Chiu 2026-10-10)
+
+    /// **A ferry routing cannot answer for is a gap inside the trip.** A
+    /// mainland drive, a ~25 km crossing to an island, three stops there: the
+    /// crossing is shorter than the ground on either side is wide, so it is one
+    /// journey and a local film. It used to count two, and the film trimmed the
+    /// mainland away and flew a plane over the ferry.
+    func testAMidTripFerryInsideOneCountryIsOneJourney() {
+        let mainland = [(56.0, -4.0), (56.3, -4.6), (56.5, -5.2), (56.45, -5.5)]
+        let island = [(56.45, -5.9), (56.6, -6.2), (56.5, -6.4)]
+        let trip = [leg(mainland), leg([mainland[3], island[0]], crossing: true), leg(island)]
+        XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 1)
+        XCTAssertEqual(RecapFilmType.classify(legs: trip, everyLegEstablished: true), .local)
+    }
+
+    /// **A flight after days of driving still splits** — it is longer than
+    /// either side is wide, however much driving came before it.
+    func testAFlightAfterALongDriveIsStillAJourneyAbroad() {
+        let honshu = [(35.68, 139.65), (35.18, 136.90), (34.69, 135.50)]
+        let trip = [leg(honshu), leg([honshu[2], miyakojima[0]], crossing: true), leg(miyakojima)]
+        XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 2)
+        XCTAssertEqual(RecapFilmType.classify(legs: trip, everyLegEstablished: true), .oneDestination)
+    }
+
+    /// **The fold does not depend on the order the trip went in.** Two regions
+    /// apart, then a third whose ground reaches both: one region. The first
+    /// fold merged the third into the first only and never looked again.
+    func testAJourneyThatBridgesTwoRegionsJoinsThemBoth() {
+        let west = [(10.0, 0.0), (10.0, 1.0)]
+        let east = [(10.0, 3.0), (10.0, 4.0)]
+        let across = [(10.0, 0.5), (10.0, 3.5)]
+        let trip = [
+            leg(west), leg([west[1], east[0]], crossing: true),
+            leg(east), leg([east[1], across[0]], crossing: true),
+            leg(across)
+        ]
+        XCTAssertEqual(RecapFilmType.distinctJourneyCount(legs: trip), 1)
+    }
 }
