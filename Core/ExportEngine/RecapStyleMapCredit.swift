@@ -26,6 +26,9 @@ public struct RecapMapCreditStyle {
     /// asked whether the credit could be smaller (2026-09-13); 24 is unchanged
     /// until a film is judged at another size.
     public var fontPx: CGFloat = 24
+    /// Baseline to baseline, in `fontPx`, when the credit wraps (#114) — only
+    /// a European film's Copernicus sentence does today.
+    public var lineHeightEm: CGFloat = 1.3
 
     // MARK: - The plate
 
