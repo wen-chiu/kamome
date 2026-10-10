@@ -70,6 +70,11 @@ extension TripRepository {
         /// The stops themselves, in trip order — what the card's day count reads
         /// each stop's zone from, so it counts as the film does (`TripClock`).
         public var stops: [StopRecord] = []
+        /// The legs themselves, in trip order, without their geometry: when
+        /// each starts and how routing ruled on it, so a card can fold them
+        /// into the gaps between its stops the way the diary does (#265).
+        /// `matchedPolyline` is always nil here.
+        public var segments: [SegmentRecord] = []
     }
 
     /// A bounding box in degrees — the persistence layer does no geodesy.
@@ -96,9 +101,11 @@ extension TripRepository {
             let filmCount = try Int.fetchOne(
                 db, sql: "SELECT COUNT(*) FROM film WHERE trip_id = ?", arguments: [tripId]
             ) ?? 0
-            let modes = try String.fetchAll(
-                db, sql: "SELECT mode FROM segment WHERE trip_id = ? ORDER BY started_at", arguments: [tripId]
-            )
+            // Every column but the matched road line, which a card never draws.
+            let segments = try SegmentRecord.fetchAll(db, sql: """
+                SELECT id, trip_id, mode, started_at, ended_at, source, routability, routability_version
+                FROM segment WHERE trip_id = ? ORDER BY started_at
+                """, arguments: [tripId])
             // The stop with the most photographs is the place the journey was
             // about; ties go to the earliest.
             let busiest = try Row.fetchOne(db, sql: """
@@ -120,12 +127,13 @@ extension TripRepository {
                 photos: photos,
                 stopCount: stops.count,
                 filmCount: filmCount,
-                legModes: modes,
+                legModes: segments.map(\.mode),
                 stopNames: stops.compactMap(\.name),
                 nameLookupLat: busiest?["lat"],
                 nameLookupLon: busiest?["lon"],
                 stopSpan: stopSpan,
-                stops: stops
+                stops: stops,
+                segments: segments
             )
         }
     }

@@ -59,6 +59,10 @@ struct JourneySummary: Identifiable, Equatable {
     /// A stored trip's own name — an album's, or one the person typed. nil for
     /// a trip nobody named and for a journey not yet imported.
     var realTitle: String?
+    /// The collapsed route line: the named places, each with the glyph of
+    /// the travel that reached it (`JourneyRouteText.steps`, #265). Empty for
+    /// a journey not yet imported, whose stops have no names.
+    var route: [JourneyRouteText.Step] = []
 
     /// `TripTitle`'s rule: a real name wins, and only a trip nobody named is
     /// called by the place found for it (#164). The flag is drawn beside

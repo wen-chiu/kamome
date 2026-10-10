@@ -21,13 +21,16 @@ struct JourneyItineraryView: View {
     let onOpenTrip: (String) -> Void
 
     @State private var itinerary: JourneyItinerary?
+    /// The places whose name is still coming. Any other unnamed place says
+    /// so, as S3 does, rather than "identifying" with nothing asking (#264).
+    @State private var naming: Set<String> = []
 
     var body: some View {
         ScrollView {
             if let itinerary {
                 VStack(alignment: .leading, spacing: 22) {
                     ItineraryMasthead(summary: summary, itinerary: itinerary)
-                    ItineraryDays(itinerary: itinerary)
+                    ItineraryDays(itinerary: itinerary, naming: naming)
                         .padding(.top, 2)
                 }
                 .padding(.horizontal, 20)
@@ -41,6 +44,8 @@ struct JourneyItineraryView: View {
         .safeAreaInset(edge: .bottom) { actionBar }
         .onAppear(perform: load)
         .onDisappear { model.previewNamer.cancel() }
+        // A stored trip's stops may be named by S3's run while this is open.
+        .onChange(of: summary.tripId.flatMap { StopNamingCoordinator.shared.progress[$0] }) { reload() }
         .alert(
             Text("journey_open_failed"),
             isPresented: Binding(
@@ -59,11 +64,23 @@ struct JourneyItineraryView: View {
     }
 
     private func load() {
-        itinerary = model.itinerary(for: summary)
-        guard let itinerary, !itinerary.isStored else { return }
-        model.previewNamer.name(itinerary.places) {
-            self.itinerary = model.itinerary(for: summary)
+        guard let itinerary = reload(), !itinerary.isStored else { return }
+        model.previewNamer.name(itinerary.places) { reload() }
+        // The places just queued are now drawn as naming.
+        reload()
+    }
+
+    @discardableResult
+    private func reload() -> JourneyItinerary? {
+        let fresh = model.itinerary(for: summary)
+        itinerary = fresh
+        let unnamed = fresh?.places.filter { $0.name == nil } ?? []
+        if let tripId = fresh?.tripId {
+            naming = Set(unnamed.map(\.id).filter { StopNamingCoordinator.shared.isNaming(tripId, anyOf: [$0]) })
+        } else {
+            naming = Set(unnamed.filter(model.previewNamer.isNaming).map(\.id))
         }
+        return fresh
     }
 
     // MARK: - The one action

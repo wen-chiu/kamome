@@ -26,6 +26,12 @@ final class PreviewStopNamer {
 
     private let geocoder: StopGeocoding
     private var answers: [Key: StopPlace] = [:]
+    /// Places whose lookup answered no name this session: not asked again by
+    /// a preview, so the diary can say "unnamed" rather than "identifying"
+    /// for good (#264). S3's own namer still asks after 「新增旅程」.
+    private var missed: Set<Key> = []
+    /// Places the run in flight has still to ask about.
+    private var waiting: Set<Key> = []
     private var task: Task<Void, Never>?
 
     init(geocoder: StopGeocoding) {
@@ -39,6 +45,12 @@ final class PreviewStopNamer {
     /// What the lookup answered for the stop here, if this session asked.
     func answer(lat: Double, lon: Double) -> StopPlace? {
         answers[Key(lat: lat, lon: lon)]
+    }
+
+    /// Whether this place's name is still coming: queued in the run in
+    /// flight, not yet answered or missed.
+    func isNaming(_ place: JourneyItinerary.Place) -> Bool {
+        waiting.contains(Key(lat: place.lat, lon: place.lon))
     }
 
     /// The clock a found journey's days and times are counted by: each stop's
@@ -67,24 +79,30 @@ final class PreviewStopNamer {
         return named
     }
 
-    /// Asks about each place with no answer yet, in order, one at a time.
-    /// `onAnswer` runs after each answer lands. Replaces any run still going.
-    func name(_ places: [JourneyItinerary.Place], onAnswer: @escaping () -> Void) {
+    /// Asks about each place with no answer yet, in order, one at a time —
+    /// a place that answered nothing earlier this session is not asked again.
+    /// `onChange` runs after each lookup, answered or not, so the screen can
+    /// stop saying a name is coming. Replaces any run still going.
+    func name(_ places: [JourneyItinerary.Place], onChange: @escaping () -> Void) {
         task?.cancel()
-        let pending = places.map { Key(lat: $0.lat, lon: $0.lon) }.filter { answers[$0] == nil }
+        let pending = places.map { Key(lat: $0.lat, lon: $0.lon) }
+            .filter { answers[$0] == nil && !missed.contains($0) }
+        waiting = Set(pending)
         guard !pending.isEmpty else { return }
         task = Task { [weak self] in
             for key in pending {
                 guard !Task.isCancelled, let self else { return }
                 guard self.answers[key] == nil else { continue }
                 let place = await self.lookUp(key)
+                self.waiting.remove(key)
                 if place.name != nil {
                     self.answers[key] = place
-                    onAnswer()
                 } else {
                     // Left for S3, whose namer tries again and says why.
+                    self.missed.insert(key)
                     KamomeLog.geocode.notice("preview stop naming produced no name; S3 will ask")
                 }
+                onChange()
             }
         }
     }
@@ -93,6 +111,7 @@ final class PreviewStopNamer {
     func cancel() {
         task?.cancel()
         task = nil
+        waiting = []
     }
 
     /// Writes every answer this session holds onto the stops at the same

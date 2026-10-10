@@ -2,6 +2,7 @@ import Foundation
 import KamomeConfig
 import KamomeImportKit
 import KamomePersistence
+import KamomeTrackingEngine
 import KamomeTripComposer
 import Observation
 
@@ -75,7 +76,23 @@ extension JourneyDiscoveryModel {
             countryCode: place?.countryCode,
             countryName: place?.country,
             clock: TripClock(stops: facts.stops),
-            realTitle: TripTitle.isFallback(trip) ? nil : trip.title
+            realTitle: TripTitle.isFallback(trip) ? nil : trip.title,
+            route: JourneyRouteText.steps(
+                stops: facts.stops.map { stop in
+                    JourneyRouteText.Stop(
+                        name: stop.name.flatMap { StopDisplayName.isCoordinate($0) ? nil : $0 },
+                        arrivedAt: stop.arrivedAt, departedAt: stop.departedAt
+                    )
+                },
+                legs: facts.segments.map { segment in
+                    StoryLegFolding.Piece(
+                        startedAt: segment.startedAt,
+                        mode: TransportMode(rawValue: segment.mode) ?? .unknown,
+                        provenance: RecapComposer.provenance(for: segment),
+                        isCrossing: RecapComposer.isCrossing(segment)
+                    )
+                }
+            )
         )
     }
 
