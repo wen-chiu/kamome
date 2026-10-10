@@ -27,13 +27,19 @@ struct FootprintsView: View {
     @State private var expanded: Set<String> = []
     @State private var showingHidden = false
 
+    /// A `List`, not a `ScrollView`, so a found journey can be hidden with a
+    /// swipe as well as from its menu (Chiu 2026-10-10, #267). Every row is
+    /// drawn edge to edge with no separator, inset or minimum height, so the
+    /// rail runs through the rows unbroken as it did in the stack.
     var body: some View {
-        ScrollView {
+        List {
             state
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
+        .contentMargins(.bottom, 40, for: .scrollContent)
         .scrollContentBackground(.hidden)
+        .animation(.snappy(duration: 0.45), value: model.sections)
         .refreshable { await model.refresh() }
         // The first appearance scans; a return reads the trips again, since a
         // journey made here has been named and routed since (#169).
@@ -56,9 +62,11 @@ struct FootprintsView: View {
                 Task { await model.requestAccessAndDiscover() }
             }
             .padding(.top, 8)
+            .modifier(FootprintsListRow())
         case .denied where !model.hasJourneys:
             AccessDeniedCard()
                 .padding(.top, 8)
+                .modifier(FootprintsListRow())
         default:
             journeyList
         }
@@ -68,8 +76,9 @@ struct FootprintsView: View {
     /// the first year heading to the last journey, and every entry hangs off
     /// it — which is what makes the screen read as a life of travel rather
     /// than a folder of albums.
+    @ViewBuilder
     private var journeyList: some View {
-        LazyVStack(alignment: .leading, spacing: 0) {
+        Group {
             if model.isScanning {
                 ScanningRow()
                     .padding(.bottom, 16)
@@ -79,43 +88,50 @@ struct FootprintsView: View {
                 LimitedLibraryRow { model.selectMorePhotos() }
                     .padding(.bottom, 20)
             }
-            let visits = model.visits
-            let gaps = model.homeGaps
-            ForEach(Array(model.sections.enumerated()), id: \.element.id) { sectionIndex, section in
-                yearHeading(section.year, isFirst: sectionIndex == 0)
-                ForEach(Array(section.journeys.enumerated()), id: \.element.id) { index, journey in
-                    JourneyEntry(
-                        journey: journey,
-                        visit: visits[journey.id],
-                        isExpanded: expanded.contains(journey.id),
-                        isOpening: model.openingId == journey.id,
-                        isNaming: model.awaitsName(journey),
-                        isLast: isLastOverall(section: sectionIndex, entry: index),
-                        namespace: namespace,
-                        onToggle: { toggle(journey) },
-                        action: { open(journey) }
-                    )
-                    .contextMenu { contextMenu(for: journey) }
-                    .transition(.opacity)
-                    if let days = gaps[journey.id] {
-                        HomeGapRow(days: days)
-                            .transition(.opacity)
-                    }
-                }
-            }
-            if !model.hasJourneys, !model.isScanning {
-                NothingFoundCard(access: model.access)
-            }
-            if !model.hiddenJourneys.isEmpty {
-                HiddenJourneysRow(journeys: model.hiddenJourneys, isExpanded: $showingHidden) { journey in
-                    withAnimation(.snappy) { model.unhide(journey) }
-                }
-                .padding(.top, 24)
-                .transition(.opacity)
-            }
         }
         .padding(.top, 4)
-        .animation(.snappy(duration: 0.45), value: model.sections)
+        .modifier(FootprintsListRow())
+        // One list row per element — a year, an entry, a home gap — so each
+        // entry is its own row and carries its own swipe.
+        let visits = model.visits
+        ForEach(rows) { row in
+            switch row {
+            case let .year(year, isFirst):
+                yearHeading(year, isFirst: isFirst)
+            case let .entry(journey, isLast):
+                JourneyEntry(
+                    journey: journey,
+                    visit: visits[journey.id],
+                    isExpanded: expanded.contains(journey.id),
+                    isOpening: model.openingId == journey.id,
+                    isNaming: model.awaitsName(journey),
+                    isLast: isLast,
+                    namespace: namespace,
+                    onToggle: { toggle(journey) },
+                    action: { open(journey) }
+                )
+                .contextMenu { contextMenu(for: journey) }
+                .swipeActions(edge: .trailing) { hideAction(for: journey) }
+                .transition(.opacity)
+                .modifier(FootprintsListRow())
+            case let .gap(_, days):
+                HomeGapRow(days: days)
+                    .transition(.opacity)
+                    .modifier(FootprintsListRow())
+            }
+        }
+        if !model.hasJourneys, !model.isScanning {
+            NothingFoundCard(access: model.access)
+                .modifier(FootprintsListRow())
+        }
+        if !model.hiddenJourneys.isEmpty {
+            HiddenJourneysRow(journeys: model.hiddenJourneys, isExpanded: $showingHidden) { journey in
+                withAnimation(.snappy) { model.unhide(journey) }
+            }
+            .padding(.top, 24)
+            .transition(.opacity)
+            .modifier(FootprintsListRow())
+        }
     }
 
     /// The year, in the same editorial serif the destinations use, sitting on
@@ -130,10 +146,38 @@ struct FootprintsView: View {
                 .tracking(1)
         }
         .accessibilityAddTraits(.isHeader)
+        .modifier(FootprintsListRow())
     }
 
-    private func isLastOverall(section: Int, entry: Int) -> Bool {
-        section == model.sections.count - 1 && entry == (model.sections.last?.journeys.count ?? 0) - 1
+    /// The chronology as rows, top to bottom: each year, its journeys, and
+    /// the time at home under each journey that has one.
+    private enum Row: Identifiable {
+        case year(Int, isFirst: Bool)
+        case entry(JourneySummary, isLast: Bool)
+        case gap(journeyId: String, days: Int)
+
+        var id: String {
+            switch self {
+            case let .year(year, _): "year-\(year)"
+            case let .entry(journey, _): journey.id
+            case let .gap(journeyId, _): "gap-\(journeyId)"
+            }
+        }
+    }
+
+    private var rows: [Row] {
+        let sections = model.sections
+        let gaps = model.homeGaps
+        let lastId = sections.last?.journeys.last?.id
+        var rows: [Row] = []
+        for (index, section) in sections.enumerated() {
+            rows.append(.year(section.year, isFirst: index == 0))
+            for journey in section.journeys {
+                rows.append(.entry(journey, isLast: journey.id == lastId))
+                if let days = gaps[journey.id] { rows.append(.gap(journeyId: journey.id, days: days)) }
+            }
+        }
+        return rows
     }
 
     /// A found journey can be hidden; a stored trip has nothing here. Delete
@@ -144,6 +188,19 @@ struct FootprintsView: View {
             Button { withAnimation(.snappy) { model.hide(journey) } } label: {
                 Label("journey_hide", systemImage: "eye.slash")
             }
+        }
+    }
+
+    /// The same rule as the menu: a found journey can be hidden, a stored
+    /// trip offers nothing here. Not destructive — the hidden row at the foot
+    /// of the list shows it again (#167) — so it is grey, not red.
+    @ViewBuilder
+    private func hideAction(for journey: JourneySummary) -> some View {
+        if FootprintsMenu.canHide(journey) {
+            Button { withAnimation(.snappy) { model.hide(journey) } } label: {
+                Label("journey_hide", systemImage: "eye.slash")
+            }
+            .tint(.gray)
         }
     }
 
@@ -183,6 +240,22 @@ struct FootprintsView: View {
 enum FootprintsMenu {
     static func canHide(_ journey: JourneySummary) -> Bool {
         !journey.isImported
+    }
+}
+
+/// A Footprints row in a `List` that draws like the stack it replaced: page
+/// margins only, no separator, no row background.
+///
+/// **No `.buttonStyle` here.** Set on a row, `.borderless` turned that row's
+/// swipe actions off (VERIFIED 2026-10-10: four lists side by side on the
+/// simulator, only the borderless one would not swipe). A default-style button
+/// that must answer only its own tap sets the style itself.
+private struct FootprintsListRow: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
 }
 
