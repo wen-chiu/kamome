@@ -237,7 +237,9 @@ enum RecapComposer {
             ),
             shareURL: nil,
             journeyDates: journeyDates(trip, clock: clock),
-            everyLegRoutabilityEstablished: everyLegRoutabilityEstablished
+            everyLegRoutabilityEstablished: everyLegRoutabilityEstablished,
+            // In the film's language, like the figures above (Chiu 2026-10-10, #287).
+            endCardTagline: String(localized: "recap_end_tagline")
         )
     }
 

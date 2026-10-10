@@ -51,6 +51,9 @@ enum HomeSegment: Hashable, CaseIterable {
 enum HomeRoute: Hashable {
     /// S3, by trip id.
     case trip(String)
+    /// S3 with its newest film already playing: the sample, which arrives with
+    /// its film made (#285).
+    case tripPlayingNewestFilm(String)
     /// A Footprints journey's itinerary, by its entry's id.
     case itinerary(String)
 }

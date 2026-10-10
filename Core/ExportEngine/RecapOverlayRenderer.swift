@@ -77,8 +77,8 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             drawHUD(dayLabel: dayLabel, place: place, travelledM: travelledM, into: surface)
         case let .titleChrome(title, subtitle):
             drawTitleChrome(title: title, subtitle: subtitle, into: surface)
-        case let .endChrome(title, figures, shareURL):
-            drawEndChrome(title: title, figures: figures, shareURL: shareURL, into: surface)
+        case let .endChrome(title, figures, shareURL, tagline):
+            drawEndChrome(title: title, figures: figures, shareURL: shareURL, tagline: tagline, into: surface)
         case let .mapCredit(text):
             drawMapCredit(text, into: surface)
         case .routeReveal, .stopLabel, .flightEnds, .placeNames:

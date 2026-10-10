@@ -28,8 +28,9 @@ struct RecapFinishedView: View {
 
     /// On finish the film plays immediately, inline, on this screen (Chiu
     /// 2026-09-05). Four actions: save to Photos / share / delete / export
-    /// again. The render-time readout stays — it is the §4.5 budget readout,
-    /// and it stays in Release (Chiu 2026-09-26).
+    /// again. The render-time readout is the §4.5 budget readout, shown in
+    /// Debug builds only (Chiu 2026-10-10, #288; it was Release too from
+    /// 2026-09-26).
     ///
     /// **Completion is a moment** (DESIGNER.md UX rule 6, ADR 2026-09-26 (c)).
     /// Save and Share are the pair; Delete lives in the ⋯ menu, still behind
@@ -154,12 +155,19 @@ struct RecapFinishedView: View {
         }
     }
 
+    /// Debug only (Chiu 2026-10-10, #288, reopening "stays in Release",
+    /// 2026-09-26): a developer's number at the moment meant to delight. The
+    /// export log still records every render's time.
     private var renderReadout: String? {
+        #if DEBUG
         guard case let .finished(film, _) = model.phase, let renderSeconds = film.renderSeconds else { return nil }
         return String.localizedStringWithFormat(
             String(localized: "recap_render_time"),
             String(format: "%.1f", renderSeconds)
         )
+        #else
+        return nil
+        #endif
     }
 
     private var noRoadHeadline: String? {

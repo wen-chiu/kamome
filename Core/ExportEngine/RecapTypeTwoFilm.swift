@@ -55,7 +55,8 @@ public enum RecapTypeTwoFilm {
             endCardFigures: trip.endCardFigures,
             shareURL: trip.shareURL,
             journeyDates: trip.journeyDates,
-            everyLegRoutabilityEstablished: trip.everyLegRoutabilityEstablished
+            everyLegRoutabilityEstablished: trip.everyLegRoutabilityEstablished,
+            endCardTagline: trip.endCardTagline
         )
     }
 

@@ -77,6 +77,22 @@ public struct RecapEndCardStyle {
     public var typeShadowColor = CGColor(srgbRed: 0, green: 0, blue: 0, alpha: 0.95)
     public var typeShadowBlurPx: CGFloat = 16
 
+    // MARK: - The glow behind the stack
+
+    /// **A local, feathered darkening behind the type** (Chiu 2026-10-10, #287):
+    /// what keeps the base map's own names — kept by the Map labels lock — from
+    /// reading as part of the trip's name where they fall under it. Not the
+    /// rejected card: no edge, nothing drawn outside the stack's ellipse. Alpha
+    /// carries the strength and is set per appearance, like `dimColor`; 0 turns
+    /// it off.
+    public var stackGlowColor = CGColor(srgbRed: 0.02, green: 0.04, blue: 0.07, alpha: 0.40)
+    /// Full strength out to this fraction of the radius, then fading to nothing.
+    public var stackGlowCoreFraction: CGFloat = 0.45
+    /// The ellipse's width as a fraction of the frame's.
+    public var stackGlowWidthFraction: CGFloat = 1.1
+    /// The ellipse's height as a multiple of the stack's.
+    public var stackGlowHeightScale: CGFloat = 1.25
+
     public init() {}
 }
 

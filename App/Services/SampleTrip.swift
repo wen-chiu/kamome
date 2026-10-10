@@ -76,10 +76,28 @@ enum SampleTrip {
         let timeZone: String
         let stops: [Stop]
         let legs: [Leg]
+        let film: ManifestFilm?
 
         enum CodingKeys: String, CodingKey {
-            case version, titles, date, stops, legs
+            case version, titles, date, stops, legs, film
             case timeZone = "time_zone"
+        }
+    }
+
+    /// The sample's own film, already made (#285): a bundled MP4 per app
+    /// language, and the facts its `FilmRecord` carries. Beside `Manifest`
+    /// rather than inside it, for the nesting limit.
+    struct ManifestFilm: Decodable {
+        let files: [String: String]
+        let durationS: Double
+        let appearance: String
+        let recapMode: String
+
+        enum CodingKeys: String, CodingKey {
+            case files
+            case durationS = "duration_s"
+            case appearance
+            case recapMode = "recap_mode"
         }
     }
 
@@ -155,6 +173,59 @@ enum SampleTrip {
             throw error
         }
         return tripId
+    }
+
+    // MARK: - Its film
+
+    enum FilmFailure: Error {
+        case noFilmInManifest
+        case filmMissing(String)
+    }
+
+    /// **The sample arrives with its film** (Chiu 2026-10-10, #285): 「先看一支
+    /// 範例影片」 promised a film, and the person got a map, a form and a
+    /// three-minute render. The film is this app's own render of this trip,
+    /// shipped in the bundle in the app's language, so it plays the moment it is
+    /// asked for. It is stored like any film — copied into `Films/` with its own
+    /// row — so it plays, saves, shares and deletes like one, and a new export
+    /// from the sample still renders from scratch.
+    ///
+    /// No render time is recorded: nothing was rendered on this phone.
+    @discardableResult
+    static func attachFilm(
+        tripId: String,
+        repository: TripRepository,
+        bundle: Bundle = .main,
+        localizations: [String] = Bundle.main.preferredLocalizations,
+        filmsDirectory: () throws -> URL = FilmStore.filmsDirectory
+    ) throws -> FilmRecord {
+        guard let film = try manifest(bundle: bundle).film else { throw FilmFailure.noFilmInManifest }
+        let name = text(film.files, localizations: localizations)
+        guard let source = bundle.url(forResource: name, withExtension: "mp4") else {
+            throw FilmFailure.filmMissing(name)
+        }
+        let fileName = "kamome-sample-\(UUID().uuidString).mp4"
+        let destination = try filmsDirectory().appendingPathComponent(fileName)
+        try FileManager.default.copyItem(at: source, to: destination)
+        let record = FilmRecord(
+            id: UUID().uuidString,
+            tripId: tripId,
+            relativePath: "\(FilmStore.directoryName)/\(fileName)",
+            format: "mp4",
+            createdAt: Date.now.timeIntervalSince1970,
+            durationS: film.durationS,
+            renderSeconds: nil,
+            appearance: film.appearance,
+            recapMode: film.recapMode,
+            fileBytes: FilmStore.fileSize(at: destination)
+        )
+        do {
+            try repository.saveFilm(record)
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
+            throw error
+        }
+        return record
     }
 
     private typealias Visit = (arrive: Double, depart: Double)

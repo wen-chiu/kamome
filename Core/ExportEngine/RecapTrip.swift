@@ -214,6 +214,12 @@ public struct RecapTrip {
     /// unchanged the day the share URL exists (spec P6/P7).
     public let shareURL: String?
 
+    /// **The closing line under the wordmark, in the film's language** (Chiu
+    /// 2026-10-10, #287, reopening 2026-09-05's "never localized"). Worded in the
+    /// app layer like every other string here; the default is the English brand
+    /// line, which is what synthetic fixtures and golden frames render.
+    public let endCardTagline: String
+
     /// **The date range the Journey Card prints — the whole trip's** (Chiu
     /// 2026-09-04), already formatted, e.g. `16 JUL 2025 – 18 JUL 2025`.
     ///
@@ -261,7 +267,8 @@ public struct RecapTrip {
         endCardFigures: [RecapEndCardFigure],
         shareURL: String? = nil,
         journeyDates: String? = nil,
-        everyLegRoutabilityEstablished: Bool = false
+        everyLegRoutabilityEstablished: Bool = false,
+        endCardTagline: String = RecapWordmark.tagline
     ) {
         self.legs = legs
         self.stops = stops
@@ -271,6 +278,7 @@ public struct RecapTrip {
         self.shareURL = shareURL
         self.journeyDates = journeyDates
         self.everyLegRoutabilityEstablished = everyLegRoutabilityEstablished
+        self.endCardTagline = endCardTagline
     }
 
     /// A trip that is one recorded drive end to end — synthetic geometry in
