@@ -12,8 +12,6 @@ public extension TrackingConfig {
         /// Stop holds shrink proportionally past this share of the video, so
         /// stop-dense trips keep a nonzero travel budget.
         public let maxHoldFraction: Double
-        public let gifFps: Int
-        public let gifWidthPx: Int
         /// Output frame size (§4.5: 1080×1920, 9:16 social default).
         public let frameWidthPx: Int
         public let frameHeightPx: Int

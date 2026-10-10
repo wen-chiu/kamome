@@ -19,6 +19,7 @@ struct FilmsListSheet: View {
                     onSelect(film)
                 } label: {
                     HStack(spacing: 12) {
+                        // A `gif` row predates the format's removal (ADR file 2026-10-10).
                         Image(systemName: film.format == "gif" ? "photo.on.rectangle" : "film")
                             .foregroundStyle(.tint)
                         VStack(alignment: .leading, spacing: 2) {

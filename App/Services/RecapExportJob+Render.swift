@@ -156,7 +156,6 @@ extension RecapExportJob {
         let scratch = FileManager.default.temporaryDirectory
         let stamp = Int(Date.now.timeIntervalSince1970)
         let videoURL = scratch.appendingPathComponent("kamome-recap-\(stamp).mp4")
-        let gifURL = request.format == .gif ? scratch.appendingPathComponent("kamome-recap-\(stamp).gif") : nil
         try? FileManager.default.removeItem(at: videoURL)
 
         // The same plan is what the sheet counts down (Chiu 2026-09-30): the
@@ -168,20 +167,20 @@ extension RecapExportJob {
         let started = ContinuousClock.now
         do {
             let output = try await runDetached(
-                exporter: exporter, videoURL: videoURL, gifURL: gifURL, channel: channel,
+                exporter: exporter, videoURL: videoURL, channel: channel,
                 memory: conditions.memory
             )
             // Asked again on the main actor after the last frame: a trip deleted
             // meanwhile (`TripDeletion`) stores nothing (arch review 2026-09-24).
             guard let output, channel.shouldContinue() else {
-                cleanup(videoURL: videoURL, gifURL: gifURL)
+                cleanup(videoURL: videoURL)
                 return .cancelled
             }
             let seconds = elapsed(since: started)
             report(output: output, seconds: seconds)
             return try store(output: output, plan: plan, seconds: seconds)
         } catch {
-            cleanup(videoURL: videoURL, gifURL: gifURL)
+            cleanup(videoURL: videoURL)
             // Logged, so a TestFlight device run keeps it (arch review
             // 2026-09-24, P1-6); the full text stays private because a MapLibre
             // error can carry a tile URL, and z/x/y is a place (§0).
@@ -261,7 +260,7 @@ extension RecapExportJob {
     /// only for progress updates. Cancellation reads the lock-guarded flag
     /// directly on the render thread.
     private func runDetached(
-        exporter: RecapExporter, videoURL: URL, gifURL: URL?, channel: RecapExportChannel,
+        exporter: RecapExporter, videoURL: URL, channel: RecapExportChannel,
         memory: MemoryWatch
     ) async throws -> RecapExporter.Output? {
         let progress = channel.progress
@@ -281,12 +280,6 @@ extension RecapExportJob {
                 memory.sample()
                 Task { @MainActor in progress(fraction) }
             }
-            // A GIF export renders only the frames the GIF keeps, and no MP4.
-            if let gifURL {
-                return try await exporter.exportGIF(
-                    gifURL: gifURL, progress: throttled, shouldContinue: shouldContinue
-                )
-            }
             return try await exporter.export(videoURL: videoURL, progress: throttled, shouldContinue: shouldContinue)
         }.value
     }
@@ -300,9 +293,8 @@ extension RecapExportJob {
         return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
     }
 
-    private func cleanup(videoURL: URL, gifURL: URL?) {
+    private func cleanup(videoURL: URL) {
         try? FileManager.default.removeItem(at: videoURL)
-        if let gifURL { try? FileManager.default.removeItem(at: gifURL) }
     }
 
     /// The style resource for each appearance — two frozen forks of

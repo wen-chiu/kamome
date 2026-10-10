@@ -32,8 +32,8 @@ import Foundation
 /// 3. **It is not legible on a dark style anyway.** Dark glyphs on a
 ///    translucent light bar measured **7.11:1** contrast on Positron and
 ///    **2.07:1** on the dark Liberty fork — under WCAG's 3:1 floor for large
-///    text, on the style Kamome is actually pursuing. And at 11 px it survives
-///    the GIF's 1080 → 480 downscale as ~5 px.
+///    text, on the style Kamome is actually pursuing. And at 11 px it survived
+///    the GIF's 1080 → 480 downscale (removed 2026-10-10) as ~5 px.
 ///
 /// So `MapLibreSnapshotProvider` turns `showsAttribution` off and Kamome draws
 /// one credit it controls. That trade is only safe because the absence is

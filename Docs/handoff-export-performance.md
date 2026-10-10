@@ -180,7 +180,8 @@ composite + encode + GIF on the Mac.
   the app).** MapLibre's default is 50 MB (INFERRED from its docs); whether a
   multi-region film evicts and refetches mid-export is UNKNOWN — same device
   run, Network instrument.
-- **A GIF export rendered and encoded the full 30 fps MP4 and threw it away.**
+- **GIF export was removed on 2026-10-10** (ADR 2026-10-10-a-film-is-an-mp4);
+  the item below is history. **A GIF export rendered and encoded the full 30 fps MP4 and threw it away.**
   `RecapGIFEncoder` keeps one frame in `fps / gif_fps` (stride **2** at the
   shipped 30/12, so half the frames). **Landed 2026-09-23:**
   `RecapExporter.exportGIF` + `RecapRenderLoop.renderFrames(only:)` composite

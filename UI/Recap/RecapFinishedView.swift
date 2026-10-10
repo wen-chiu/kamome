@@ -120,16 +120,11 @@ struct RecapFinishedView: View {
 
     @ViewBuilder
     private var preview: some View {
-        // Inline preview — starts immediately. A GIF is not a video:
-        // `AVPlayer` shows a struck-through play glyph for one, so it gets
-        // its own view (2026-09-25).
-        if isGIF {
-            AnimatedGIFView(url: fileURL)
-                .aspectRatio(9 / 16, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal)
-                .padding(.vertical, 12)
-        } else if let player {
+        // Inline preview — starts immediately. A GIF made before GIF export was
+        // removed is not played in the app (Chiu 2026-10-10): `AVPlayer` would
+        // show a struck-through play glyph, so it gets no preview at all and
+        // keeps share, save and delete.
+        if let player {
             VideoPlayer(player: player)
                 .aspectRatio(9 / 16, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -285,7 +280,9 @@ struct RecapFinishedView: View {
         }
     }
 
+    /// A film exported as a GIF before that format was removed (ADR file
+    /// 2026-10-10). It still exists on disk and in the film list.
     private var isGIF: Bool {
-        fileURL.pathExtension.lowercased() == RecapExportFormat.gif.rawValue
+        fileURL.pathExtension.lowercased() == "gif"
     }
 }

@@ -14,7 +14,7 @@ final class RecapExportLeftAppTests: XCTestCase {
     private let leftAppMessage = String(localized: "recap_failed_left_app")
 
     private func request() -> RecapExportRequest {
-        RecapExportRequest(tripId: "trip-a", photosEnabled: true, format: .mp4, appearance: .dark)
+        RecapExportRequest(tripId: "trip-a", photosEnabled: true, appearance: .dark)
     }
 
     private func waitUntil(

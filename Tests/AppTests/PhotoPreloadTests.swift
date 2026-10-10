@@ -109,7 +109,7 @@ final class PhotoPreloadTests: XCTestCase {
     @MainActor
     func testPreloadProgressReachesTheScreenAndCannotLeakIntoTheNextRun() async {
         let coordinator = RecapExportCoordinator()
-        let request = RecapExportRequest(tripId: "trip-a", photosEnabled: true, format: .mp4, appearance: .dark)
+        let request = RecapExportRequest(tripId: "trip-a", photosEnabled: true, appearance: .dark)
         let job = SpyExportJob()
         coordinator.start(request: request, job: job)
         for _ in 0..<10_000 where !job.hasStarted { await Task.yield() }

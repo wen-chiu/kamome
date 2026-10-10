@@ -7,7 +7,7 @@ import Foundation
 extension TrackingConfig.Export {
         public init(
             targetDurationS: Double, fps: Int, stopHoldS: Double, maxHoldFraction: Double,
-            gifFps: Int, gifWidthPx: Int, frameWidthPx: Int, frameHeightPx: Int,
+            frameWidthPx: Int, frameHeightPx: Int,
             cameraSpanM: Double, wideSpanPadding: Double, targetZoomRatio: Double = 2.5,
             // Defaulted to infinity for hand-built test configs: one area, which is
             // the film every such config was written against. The JSON key is required.
@@ -50,7 +50,6 @@ extension TrackingConfig.Export {
         ) {
             self.targetDurationS = targetDurationS; self.fps = fps
             self.stopHoldS = stopHoldS; self.maxHoldFraction = maxHoldFraction
-            self.gifFps = gifFps; self.gifWidthPx = gifWidthPx
             self.frameWidthPx = frameWidthPx; self.frameHeightPx = frameHeightPx
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
             self.targetZoomRatio = targetZoomRatio; self.cameraAreaSplitRatio = cameraAreaSplitRatio

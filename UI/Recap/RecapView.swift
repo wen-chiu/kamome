@@ -20,7 +20,7 @@ private extension RecapAppearance {
     }
 }
 
-/// S5 Export (P3 scope): photos toggle, MP4/GIF choice, progress, inline
+/// S5 Export (P3 scope): photos toggle, progress, inline
 /// playback, share, save to Photos, delete. The toggle copy must make clear
 /// it controls photo overlays only — title and end cards always render
 /// (decisions.md 2026-07-18 recap-chrome, Chiu).
@@ -207,21 +207,16 @@ struct RecapView: View {
         }
     }
 
-    /// **How the film is made, in one place** (Chiu 2026-10-09): length,
-    /// vehicle and format as three rows above the stops, so the settings read
-    /// as one short block and the list below is only *what* the film shows.
-    /// Format used to sit after every stop's row — off screen on a trip of any
-    /// size. MP4 stays the default (UX rule 2); a menu row costs it no room.
+    /// **How the film is made, in one place** (Chiu 2026-10-09): length and
+    /// vehicle as rows above the stops, so the settings read as one short block
+    /// and the list below is only *what* the film shows. The format row is gone
+    /// with the GIF (Chiu 2026-10-10): every film is an MP4.
     private var settingsSection: some View {
         Section {
             lengthRow
             // The plane is deliberately absent from the picker: the app picks it
             // from the journey for a crossing (`VehiclePickerLayout`).
             if model.pickableSubjects.count > 1 { VehicleRow(model: model) }
-            Picker("recap_format", selection: $model.format) {
-                Text("recap_format_mp4").tag(RecapModel.Format.mp4)
-                Text("recap_format_gif").tag(RecapModel.Format.gif)
-            }
         } header: {
             Text("recap_settings_header")
         } footer: {
