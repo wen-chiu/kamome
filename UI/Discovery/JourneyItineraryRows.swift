@@ -8,6 +8,8 @@ import SwiftUI
 /// became read-only; the rows no longer open a stop editor.
 struct ItineraryDays: View {
     let itinerary: JourneyItinerary
+    /// Places whose name is still coming (`JourneyItineraryView`).
+    var naming: Set<String> = []
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
@@ -20,6 +22,7 @@ struct ItineraryDays: View {
                     ItineraryPlaceRow(
                         place: entry.place,
                         time: itinerary.arrivalTime(of: entry.place),
+                        isNaming: naming.contains(entry.place.id),
                         isLast: isLastRow(dayIndex: dayIndex, entryIndex: entryIndex)
                     )
                 }
@@ -75,6 +78,8 @@ private struct ItineraryDayAnchor: View {
 private struct ItineraryPlaceRow: View {
     let place: JourneyItinerary.Place
     let time: String
+    /// The name is on its way; else an unnamed place says so (#264).
+    let isNaming: Bool
     let isLast: Bool
 
     var body: some View {
@@ -89,11 +94,15 @@ private struct ItineraryPlaceRow: View {
                         .foregroundStyle(.primary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                } else {
+                } else if isNaming {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.mini)
                         Text("story_identifying").font(.subheadline).foregroundStyle(.secondary)
                     }
+                } else {
+                    Text("stop_unnamed")
+                        .font(.system(.title3, design: .serif).weight(.semibold))
+                        .foregroundStyle(.secondary)
                 }
                 if let note = place.note, !note.isEmpty {
                     Text(verbatim: note)
