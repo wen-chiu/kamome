@@ -1,10 +1,11 @@
 import CoreGraphics
 import Foundation
 
-/// The product name as it appears in the film, and the line under it. Neither is
-/// localized — a wordmark is a brand mark, the same in every language, and so is
-/// a tagline.
-enum RecapWordmark {
+/// The product name as it appears in the film, and the English line under it.
+/// The wordmark is not localized — a brand mark is the same in every language.
+/// The line under it is, since 2026-10-10 (#287): this English sentence is the
+/// default `RecapTrip.endCardTagline`, and the app passes its own language's.
+public enum RecapWordmark {
     static let text = "Kamome"
 
     /// **The film's closing line** (Chiu 2026-09-05). It replaced `recap_end_cta`
@@ -12,13 +13,12 @@ enum RecapWordmark {
     /// the narrow waist as `RecapTrip.callToAction` — and the string, the field
     /// and the overlay's parameter went with it.
     ///
-    /// 🔴 **Deliberately not localized, on the wordmark's own argument.** Chiu
-    /// named the standing: this is brand copy, not a sentence about a trip, so it
-    /// belongs beside `text` rather than in `Localizable.xcstrings`. The film's
-    /// chrome already works this way — the boarding pass's `FROM` / `TO` /
-    /// `DISTANCE` / `DATE` are English literals by decision, and the HUD's `km`
-    /// is un-localized so a frame renders identically on any device.
-    static let tagline = "Turn your journey into memory."
+    /// **Localized since 2026-10-10** (Chiu, #287: 「中文影片用中文，改白字」). It
+    /// was deliberately English in every film from 2026-09-05, as brand copy
+    /// beside `text`; a Chinese film closing on an English line read as a
+    /// foreign element. `recap_end_tagline`'s English value must stay this
+    /// sentence (`LocalizationTests`).
+    public static let tagline = "Turn your journey into memory."
 }
 
 /// Trip chrome for the overlay renderer (§4.5 step 4): the opening title and the
@@ -104,7 +104,8 @@ extension RecapOverlayRenderer {
     /// for the film than no code. The QR path returns the moment `shareURL` is
     /// non-nil.
     func drawEndChrome(
-        title: String, figures: [RecapEndCardFigure], shareURL: String?, into surface: RenderSurface
+        title: String, figures: [RecapEndCardFigure], shareURL: String?, tagline: String,
+        into surface: RenderSurface
     ) {
         guard style.endCard == .full else { return drawMinimalEndChrome(into: surface) }
         let scale = surface.scale
@@ -112,16 +113,6 @@ extension RecapOverlayRenderer {
 
         surface.context.setFillColor(tokens.dimColor)
         surface.context.fill(CGRect(x: 0, y: 0, width: surface.widthPx, height: surface.heightPx))
-
-        // One halo for the whole stack — see `RecapEndCardStyle.typeShadowColor`
-        // for why the type carries its own separation instead of the dim carrying
-        // it. Everything below draws with `drawCenteredText`, never
-        // `drawShadowedText`, which would replace this with the stop label's.
-        surface.context.saveGState()
-        defer { surface.context.restoreGState() }
-        surface.context.setShadow(
-            offset: .zero, blur: tokens.typeShadowBlurPx * scale, color: tokens.typeShadowColor
-        )
 
         let markSide = shareURL == nil ? style.titleMarkSidePx * scale : style.qrSidePx * scale
         let sideMargin = style.cardMarginPx * scale * style.titleSideMarginScale
@@ -136,6 +127,21 @@ extension RecapOverlayRenderer {
             + gap * 2 + wordmarkH + gap * 0.5 + taglineH
         var cursorY = (CGFloat(surface.heightPx) + stackH) / 2
         let centerX = CGFloat(surface.widthPx) / 2
+
+        drawStackGlow(
+            center: CGPoint(x: centerX, y: CGFloat(surface.heightPx) / 2),
+            stackHeight: stackH, in: surface
+        )
+
+        // One halo for the whole stack — see `RecapEndCardStyle.typeShadowColor`
+        // for why the type carries its own separation instead of the dim carrying
+        // it. Everything below draws with `drawCenteredText`, never
+        // `drawShadowedText`, which would replace this with the stop label's.
+        surface.context.saveGState()
+        defer { surface.context.restoreGState() }
+        surface.context.setShadow(
+            offset: .zero, blur: tokens.typeShadowBlurPx * scale, color: tokens.typeShadowColor
+        )
 
         cursorY -= markSide
         drawEndMark(shareURL: shareURL, centerX: centerX, bottomY: cursorY, side: markSide, in: surface)
@@ -154,11 +160,44 @@ extension RecapOverlayRenderer {
 
         // **Directly under the wordmark and smaller** (Chiu 2026-09-05): it reads
         // as that mark's line rather than as another row of the summary. Set as
-        // written, not uppercased — it is a sentence with a full stop.
+        // written, not uppercased — it is a sentence with a full stop. **White,
+        // like the rest of the stack** (Chiu 2026-10-10, #287): at 30 px the
+        // accent red over a dimmed map was the one line that did not read.
         cursorY -= gap * 0.5 + taglineH
         drawCenteredText(
-            RecapWordmark.tagline, centerX: centerX, baselineY: cursorY + taglineH * 0.2,
-            fontPx: tokens.taglineFontPx, color: style.chromeAccentColor, in: surface
+            tagline, centerX: centerX, baselineY: cursorY + taglineH * 0.2,
+            fontPx: tokens.taglineFontPx, color: style.chromeTitleColor, in: surface
+        )
+    }
+
+    /// **A soft, feathered dark glow behind the text stack only** (Chiu
+    /// 2026-10-10, #287: 「文字後面加局部柔光」). The base map keeps its country
+    /// and island names (CHARTER §6, Map labels), and on the sample film one of
+    /// them, 「Taiwan 臺灣」, sat under the trip's name. A deeper full-frame dim
+    /// and a card were both rejected (`RecapEndCardStyle`); this darkens only
+    /// the ellipse the type stands in and fades to nothing at its edge, so the
+    /// coast and the trail around the stack keep every pixel.
+    private func drawStackGlow(center: CGPoint, stackHeight: CGFloat, in surface: RenderSurface) {
+        let tokens = style.endCardStyle
+        guard tokens.stackGlowColor.alpha > 0,
+              let clear = tokens.stackGlowColor.copy(alpha: 0),
+              let gradient = CGGradient(
+                colorsSpace: CGColorSpace(name: CGColorSpace.sRGB),
+                colors: [tokens.stackGlowColor, tokens.stackGlowColor, clear] as CFArray,
+                locations: [0, tokens.stackGlowCoreFraction, 1]
+              )
+        else { return }
+        let radiusX = CGFloat(surface.widthPx) * tokens.stackGlowWidthFraction / 2
+        let radiusY = stackHeight / 2 * tokens.stackGlowHeightScale
+        guard radiusX > 0, radiusY > 0 else { return }
+        let context = surface.context
+        context.saveGState()
+        defer { context.restoreGState() }
+        // A circle of radius `radiusY`, stretched sideways into the ellipse.
+        context.translateBy(x: center.x, y: center.y)
+        context.scaleBy(x: radiusX / radiusY, y: 1)
+        context.drawRadialGradient(
+            gradient, startCenter: .zero, startRadius: 0, endCenter: .zero, endRadius: radiusY, options: []
         )
     }
 
