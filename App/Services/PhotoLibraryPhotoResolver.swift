@@ -8,7 +8,7 @@ import Photos
 /// photo library, confining `import Photos` to the app (the export core stays
 /// SDK-free and deterministic). PhotoKit fetches are async, but the overlay
 /// renderer resolves a `PhotoRef` synchronously once per frame, so every ref is
-/// loaded into an in-memory cache by `warm(_:targetPx:)` before compositing
+/// loaded into an in-memory cache by `warm(_:targetSize:)` before compositing
 /// starts; the (detached) render thread then only reads the cache. Missing
 /// library access or an absent asset resolves to nil — the deck still blooms its
 /// matte (replaces `RecapModel.loadDeckImages`).
@@ -71,13 +71,13 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
     /// and the warm carries on — it never throws and never blocks the film.
     @discardableResult
     func warm(
-        _ refs: [PhotoRef], targetPx: Int, timeoutS: Double,
+        _ refs: [PhotoRef], targetSize: CGSize, timeoutS: Double,
         progress: (@Sendable (PreloadProgress) -> Void)? = nil,
         shouldContinue: @escaping @Sendable () -> Bool = { true }
     ) async -> WarmSummary {
-        let (resolved, pending) = await resolveLocally(refs, targetPx: targetPx, shouldContinue: shouldContinue)
+        let (resolved, pending) = await resolveLocally(refs, targetSize: targetSize, shouldContinue: shouldContinue)
         let downloaded = await download(
-            pending, targetPx: targetPx, timeoutS: timeoutS, progress: progress, shouldContinue: shouldContinue
+            pending, targetSize: targetSize, timeoutS: timeoutS, progress: progress, shouldContinue: shouldContinue
         )
         return WarmSummary(
             requested: refs.count, resolved: resolved + downloaded,
@@ -88,7 +88,7 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
     /// Phase 1: everything PhotoKit holds locally, with network access **off**.
     /// Returns how many resolved and the iCloud-only assets left for phase 2.
     private func resolveLocally(
-        _ refs: [PhotoRef], targetPx: Int, shouldContinue: @Sendable () -> Bool
+        _ refs: [PhotoRef], targetSize: CGSize, shouldContinue: @Sendable () -> Bool
     ) async -> (resolved: Int, pending: [(key: String, asset: PHAsset)]) {
         var resolved = 0
         var pending: [(key: String, asset: PHAsset)] = []
@@ -101,7 +101,7 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
             let key = Self.key(for: ref)
             // The sample trip's drawings ship in the app, so they are read as
             // the files they are — cached under the ref the film asks for.
-            switch await resolveLocally(SampleTrip.onDisk(ref), key: key, assets: assets, targetPx: targetPx) {
+            switch await resolveLocally(SampleTrip.onDisk(ref), key: key, assets: assets, targetSize: targetSize) {
             case .resolved: resolved += 1
             case let .inCloud(asset): pending.append((key, asset))
             case .missing: break
@@ -117,7 +117,7 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
     }
 
     private func resolveLocally(
-        _ ref: PhotoRef, key: String, assets: [String: PHAsset], targetPx: Int
+        _ ref: PhotoRef, key: String, assets: [String: PHAsset], targetSize: CGSize
     ) async -> LocalResult {
         if lock.withLock({ cache[key] }) != nil { return .resolved }
         switch ref {
@@ -128,7 +128,7 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
         case let .asset(id):
             guard let asset = assets[id] else { return .missing } // deleted
             switch await PhotoKitImageLoader.image(
-                for: asset, targetPx: targetPx, profile: .deck, allowNetwork: false
+                for: asset, targetSize: targetSize, profile: .deck, allowNetwork: false
             ) {
             case let .loaded(image):
                 guard let cgImage = image.cgImage else { return .missing }
@@ -142,7 +142,7 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
 
     /// Phase 2: the iCloud-only photos, sequentially. Returns how many arrived.
     private func download(
-        _ pending: [(key: String, asset: PHAsset)], targetPx: Int, timeoutS: Double,
+        _ pending: [(key: String, asset: PHAsset)], targetSize: CGSize, timeoutS: Double,
         progress: (@Sendable (PreloadProgress) -> Void)?, shouldContinue: @escaping @Sendable () -> Bool
     ) async -> Int {
         guard !pending.isEmpty, shouldContinue() else { return 0 }
@@ -152,7 +152,7 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
         for (index, item) in pending.enumerated() {
             guard shouldContinue() else { break }
             let outcome = await fetchFromICloud(
-                item.asset, targetPx: targetPx, timeoutS: timeoutS, shouldContinue: shouldContinue
+                item.asset, targetSize: targetSize, timeoutS: timeoutS, shouldContinue: shouldContinue
             ) { fraction in
                 progress?(PreloadProgress(
                     completed: index, total: total, fraction: (Double(index) + fraction) / Double(total)
@@ -174,12 +174,12 @@ final class PhotoLibraryPhotoResolver: RecapPhotoResolving, @unchecked Sendable 
     /// what cancels PhotoKit (`PhotoKitImageLoader`); the watcher only decides
     /// *when*.
     private func fetchFromICloud(
-        _ asset: PHAsset, targetPx: Int, timeoutS: Double,
+        _ asset: PHAsset, targetSize: CGSize, timeoutS: Double,
         shouldContinue: @escaping @Sendable () -> Bool, progress: @escaping @Sendable (Double) -> Void
     ) async -> PhotoFetch {
         let request = Task {
             await PhotoKitImageLoader.image(
-                for: asset, targetPx: targetPx, profile: .deck, allowNetwork: true, progress: progress
+                for: asset, targetSize: targetSize, profile: .deck, allowNetwork: true, progress: progress
             )
         }
         let watcher = Task {

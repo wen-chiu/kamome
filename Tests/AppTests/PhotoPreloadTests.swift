@@ -95,11 +95,13 @@ final class PhotoPreloadTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let resolver = PhotoLibraryPhotoResolver()
-        let summary = await resolver.warm([.file(url)], targetPx: 100, timeoutS: 1, shouldContinue: { false })
+        let summary = await resolver.warm(
+            [.file(url)], targetSize: CGSize(width: 100, height: 100), timeoutS: 1, shouldContinue: { false }
+        )
         XCTAssertEqual(summary.resolved, 0)
         XCTAssertNil(resolver.image(for: .file(url), targetPx: 100))
 
-        let unhindered = await resolver.warm([.file(url)], targetPx: 100, timeoutS: 1)
+        let unhindered = await resolver.warm([.file(url)], targetSize: CGSize(width: 100, height: 100), timeoutS: 1)
         XCTAssertEqual(unhindered.resolved, 1, "the same photo loads when nobody has cancelled")
         XCTAssertEqual(unhindered.downloaded, 0, "a file on this device is never a download")
     }

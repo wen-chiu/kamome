@@ -25,14 +25,14 @@ extension RecapExportJob {
     ) async {
         channel.photoShortfall(nil)
         guard request.photosEnabled else { return }
-        let targetPx = Int(CGFloat(config.export.frameWidthPx) * style.deckPhotoMaxWidthFraction)
         let preload = channel.photoPreload
         // Progress hops to main as fire-and-forget tasks; without this, one still
         // queued when the warm ends could land after `preload(nil)` and leave
         // "Downloading from iCloud" on screen for the whole render.
         let warmEnded = SharedFlag()
         let warmed = await resolver.warm(
-            trip.stops.flatMap(\.photos), targetPx: max(targetPx, 1),
+            trip.stops.flatMap(\.photos),
+            targetSize: Self.deckPhotoSize(frameWidthPx: config.export.frameWidthPx, style: style),
             timeoutS: config.photos.icloudFetchTimeoutS,
             progress: { progress in Task { @MainActor in if !warmEnded.isSet { preload(progress) } } },
             shouldContinue: channel.shouldContinue
@@ -53,5 +53,19 @@ extension RecapExportJob {
             (\(warmed.inCloud) are in iCloud and could not be downloaded) — those stops will \
             render blank cards. The route is unaffected: EXIF place and time need no download.
             """)
+    }
+
+    /// **The size a deck photograph is decoded at: the card it fills** (#279).
+    ///
+    /// The card is portrait — `deckPhotoMaxWidthFraction` of the frame wide,
+    /// `deckPhotoAspect` times that tall — and the photograph is drawn to fill
+    /// it. Decoded to fill a *square* of the card's width, a landscape
+    /// photograph came back only as tall as the card is wide (626 of 835 px at
+    /// 1080) and was upscaled 1.31× into it, soft in every film. Asked to fill
+    /// the card itself, every photograph arrives at least the card's size on
+    /// both sides; a portrait one is the same size as before.
+    static func deckPhotoSize(frameWidthPx: Int, style: RecapStyle) -> CGSize {
+        let width = max(CGFloat(frameWidthPx) * style.deckPhotoMaxWidthFraction, 1).rounded(.up)
+        return CGSize(width: width, height: (width * style.deckPhotoAspect).rounded(.up))
     }
 }

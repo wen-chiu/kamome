@@ -154,9 +154,9 @@ extension RecapExportJob {
         let conditions = await beginConditions(plan: plan)
         defer { reportConditions(conditions) }
         let scratch = FileManager.default.temporaryDirectory
+        Self.sweepLeftoverRenders(in: scratch)
         let stamp = Int(Date.now.timeIntervalSince1970)
-        let videoURL = scratch.appendingPathComponent("kamome-recap-\(stamp).mp4")
-        try? FileManager.default.removeItem(at: videoURL)
+        let videoURL = scratch.appendingPathComponent("\(Self.renderFilePrefix)\(stamp).mp4")
 
         // The same plan is what the sheet counts down (Chiu 2026-09-30): the
         // export's pace is stations per second, not frames (`RecapExportTimeLeft`).
