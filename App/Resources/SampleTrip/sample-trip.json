@@ -7,6 +7,16 @@
  },
  "date": "2025-11-15",
  "time_zone": "Asia/Taipei",
+ "film": {
+  "_about": "The sample's own film, made by this app from this trip and shipped so it plays the moment it is asked for (#285). One per app language (Chiu 2026-10-10: Chinese only for an hour, then 「還是把英文版的範例影片加回去吧」, since a reviewer's device is usually English). Re-render with Scripts/encode-sample-film.sh whenever the film's look changes.",
+  "files": {
+   "en": "sample-film-en",
+   "zh-Hant": "sample-film-zh-Hant"
+  },
+  "duration_s": 60,
+  "appearance": "light",
+  "recap_mode": "highlight"
+ },
  "stops": [
   {
    "id": "qixingtan",

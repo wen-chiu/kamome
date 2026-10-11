@@ -68,6 +68,9 @@ struct FilmPlayerSheet: View {
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 4)
 
+                // The render-budget readout is a developer's number: Debug only
+                // (Chiu 2026-10-10, #288, reopening 2026-09-26).
+                #if DEBUG
                 if let renderSeconds = film.renderSeconds {
                     Text(String.localizedStringWithFormat(
                         String(localized: "recap_render_time"),
@@ -77,6 +80,7 @@ struct FilmPlayerSheet: View {
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 8)
                 }
+                #endif
             }
             .navigationTitle("recap_title")
             .navigationBarTitleDisplayMode(.inline)
