@@ -160,12 +160,12 @@ struct HomeView: View {
         return "trip_delete_recorded_confirm"
     }
 
-    /// Creates the sample trip and opens it. Only offered while Home is empty,
-    /// so there is at most one unless the person deletes it and asks again.
+    /// Creates the sample and opens it, its film playing (#285). Offered only
+    /// while Home is empty, so there is at most one at a time.
     private func openSample() throws {
-        let tripId = try SampleTrip.create(repository: session.repository, vehicleId: LastVehicleChoice.forNewTrip())
+        let route = try SampleTrip.createAndRoute(repository: session.repository, vehicleId: LastVehicleChoice.forNewTrip())
         session.refreshTrips()
-        path = [.trip(tripId)]
+        path = [route]
     }
 
     /// 旅程: the trips, and the two ways to add one held at the foot of the
@@ -371,6 +371,8 @@ extension HomeView {
         switch route {
         case .trip(let tripId):
             TripDetailView(tripId: tripId, session: session)
+        case .tripPlayingNewestFilm(let tripId):
+            TripDetailView(tripId: tripId, session: session, playsNewestFilm: true)
         case .itinerary(let id):
             if let footprints, let journey = footprints.journeys.first(where: { $0.id == id }) {
                 JourneyItineraryView(summary: journey, model: footprints, onOpenTrip: openInJourneys)

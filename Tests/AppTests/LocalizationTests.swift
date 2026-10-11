@@ -26,11 +26,12 @@ final class LocalizationTests: XCTestCase {
     /// film's closing line must not promise a scan — the MVP film carries no QR
     /// (PD-4), and "Get this route" invited an interaction nothing could honor.
     ///
-    /// 🔴 **The closing line is no longer a localized string** (Chiu 2026-09-05):
-    /// it is `RecapWordmark.tagline`, brand copy beside the wordmark, and
+    /// 🔴 **The closing line is a localized string again** (Chiu 2026-10-10,
+    /// #287): `recap_end_tagline`, whose English value is still the brand line
+    /// `RecapWordmark.tagline` — the default a synthetic trip renders — so the
+    /// two cannot drift. From 2026-09-05 it was English in every film, and
     /// `recap_end_cta` was deleted with the field that carried it. The rule it
-    /// stood for did not move, so it is asserted on the line that ships and on
-    /// the key being gone, rather than dropped along with the key.
+    /// stood for did not move: no language's line may promise a scan.
     func testRecapStringsResolve() throws {
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "停留照片卡")
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "en"), "Stop photo cards")
@@ -38,11 +39,16 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "zh-Hant").contains("一律會顯示"))
 
         XCTAssertEqual(RecapWordmark.tagline, "Turn your journey into memory.")
-        for promise in ["scan", "qr", "code", "route"] {
-            XCTAssertFalse(
-                RecapWordmark.tagline.lowercased().contains(promise),
-                "the closing line must not promise \(promise) — the MVP film carries no QR (PD-4)"
-            )
+        XCTAssertEqual(try localizedValue("recap_end_tagline", locale: "en"), RecapWordmark.tagline)
+        let zhTagline = try localizedValue("recap_end_tagline", locale: "zh-Hant")
+        XCTAssertNotEqual(zhTagline, "recap_end_tagline", "the Chinese film's closing line must resolve")
+        for line in [RecapWordmark.tagline, zhTagline] {
+            for promise in ["scan", "qr", "code", "route", "掃描", "掃碼", "路線"] {
+                XCTAssertFalse(
+                    line.lowercased().contains(promise),
+                    "the closing line must not promise \(promise) — the MVP film carries no QR (PD-4)"
+                )
+            }
         }
         // A missing key resolves to itself: both languages must have lost it, or
         // the film's one piece of brand copy has two sources.

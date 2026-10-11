@@ -113,10 +113,10 @@ public enum OverlayContent: Equatable {
     /// does not know. So the **pair** crosses the waist and the app layer, which
     /// owns localization, builds it.
     ///
-    /// 🔴 **The closing line is not carried here.** It is `RecapWordmark.tagline`,
-    /// a brand mark the renderer owns, not trip data (Chiu 2026-09-05) — the same
-    /// standing the wordmark beside it has always had.
-    case endChrome(title: String, figures: [RecapEndCardFigure], shareURL: String?)
+    /// **The closing line is carried here, in the film's language** (Chiu
+    /// 2026-10-10, #287). From 2026-09-05 it was `RecapWordmark.tagline`, English
+    /// in every film; a Chinese film now closes on a Chinese line.
+    case endChrome(title: String, figures: [RecapEndCardFigure], shareURL: String?, tagline: String)
     /// **The base map's credit** — the licence notice the substrate's data
     /// obliges the exported film to carry (ADR 2026-09-12 (b),
     /// `RecapMapAttribution`).

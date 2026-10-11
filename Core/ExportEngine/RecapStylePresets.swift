@@ -120,6 +120,11 @@ public extension RecapStyle {
             style.endCardStyle.dimColor = CGColor(
                 srgbRed: 0.01, green: 0.02, blue: 0.04, alpha: 0.24
             )
+            // The glow behind the stack (#287), lighter on a base that is
+            // already dark.
+            style.endCardStyle.stackGlowColor = CGColor(
+                srgbRed: 0.01, green: 0.02, blue: 0.04, alpha: 0.32
+            )
             // **The boarding pass follows the appearance too** (Chiu 2026-09-04).
             // It was light in both until then, which made it the one surface that
             // ignored ADR 2026-08-27. Palette only — the layout is shared, and
@@ -133,6 +138,11 @@ public extension RecapStyle {
             // shadowed type does the rest (`RecapEndCardStyle`).
             style.endCardStyle.dimColor = CGColor(
                 srgbRed: 0.02, green: 0.04, blue: 0.07, alpha: 0.48
+            )
+            // The glow behind the stack (#287): the light base's names are
+            // dark ink, so this is what puts them behind the white type.
+            style.endCardStyle.stackGlowColor = CGColor(
+                srgbRed: 0.02, green: 0.04, blue: 0.07, alpha: 0.45
             )
             // No glow on a light base, and this one *is* settled: a wide
             // translucent stroke under the core composites darker than pale
