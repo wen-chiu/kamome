@@ -1,3 +1,4 @@
+@testable import Kamome
 import XCTest
 
 /// The export screen's copy, held to the promise ADR 2026-09-10 allows.
@@ -61,5 +62,31 @@ final class RecapExportCopyTests: XCTestCase {
         }
         XCTAssertTrue(try localizedValue("recap_export_busy_detail", locale: "en").contains("one film at a time"))
         XCTAssertTrue(try localizedValue("recap_export_busy_detail", locale: "zh-Hant").contains("一次只"))
+    }
+
+    /// **A failed export says a sentence, never the error** (#299). The screen
+    /// showed `KamomeExportEngine.SnapshotTimeout · 1` under 「匯出失敗」; the
+    /// code belongs in the log. Every failure that is not leaving the app
+    /// (#260 has its own sentence) reaches the screen as `RecapExportJob.failed`.
+    func testAFailedExportSaysASentenceAndNeverTheErrorCode() throws {
+        struct SnapshotTimeout: Error {}
+        let code = RecapExportJob.failureCode(SnapshotTimeout())
+        guard case let .failed(message) = RecapExportJob.failed else {
+            return XCTFail("RecapExportJob.failed must be a failure")
+        }
+        XCTAssertNotEqual(message, code, "the screen shows the error code again")
+        XCTAssertEqual(message, String(localized: "recap_failed_retry"))
+
+        for locale in ["en", "zh-Hant"] {
+            let sentence = try localizedValue("recap_failed_retry", locale: locale)
+            XCTAssertNotEqual(sentence, "recap_failed_retry", "[\(locale)] the key is missing")
+            XCTAssertNotEqual(
+                sentence, try localizedValue("recap_failed", locale: locale),
+                "[\(locale)] the line under 'Export failed' must not repeat it"
+            )
+            for codeLike in ["·", "Error", "Kamome", "Timeout"] {
+                XCTAssertFalse(sentence.contains(codeLike), "[\(locale)] reads like a code: \(sentence)")
+            }
+        }
     }
 }

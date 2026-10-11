@@ -48,11 +48,11 @@ struct RecapExportJob: RecapExportRunning {
         clock.enter("compose")
         guard let composed = compose() else {
             KamomeLog.recap.error("export failed — the trip could not be composed into a film")
-            return .failed(message: String(localized: "recap_failed"))
+            return Self.failed
         }
         guard let plan = plan(composed) else {
             KamomeLog.recap.error("export failed — no film plan (base map or timeline)")
-            return .failed(message: String(localized: "recap_failed"))
+            return Self.failed
         }
         clock.enter("photos")
         let resolver = PhotoLibraryPhotoResolver()
