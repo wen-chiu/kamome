@@ -191,13 +191,22 @@ extension RecapExportJob {
             if let containment = error as? SnapshotReprojection.ContainmentError {
                 KamomeLog.recap.error("export failed — \(containment.description, privacy: .public)")
             }
-            return .failed(message: code)
+            return Self.failed
         }
     }
 
-    /// What the export screen shows under "failed": the error's domain and code
-    /// and nothing else — enough for a tester's screenshot to name the cause,
-    /// never the description, which may hold a tile URL.
+    /// **What the export screen says under "Export failed"** (#299): one
+    /// sentence for the person, never the error. The screen showed
+    /// `KamomeExportEngine.SnapshotTimeout · 1` until 2026-10-10 — a type name
+    /// is not a sentence (DESIGNER rule 5). The code is in the log above,
+    /// where a tester's export history already finds it. Leaving the app keeps
+    /// its own sentence (#260, `RecapExportCoordinator.reported`).
+    nonisolated static var failed: RecapExportOutcome {
+        .failed(message: String(localized: "recap_failed_retry"))
+    }
+
+    /// The error's domain and code and nothing else, for the log — never the
+    /// description, which may hold a tile URL.
     nonisolated static func failureCode(_ error: Error) -> String {
         let bridged = error as NSError
         return "\(bridged.domain) · \(bridged.code)"
