@@ -49,10 +49,17 @@ final class ExportLifecycleGuard {
         var observeBackground: (@escaping () -> Void) -> NSObjectProtocol
         var stopObserving: (NSObjectProtocol) -> Void
 
-        static let uiKit = Platform(
+        /// `@MainActor` because a nested type does not inherit the guard's
+        /// isolation: without it these closures touched `UIApplication` from a
+        /// nonisolated context (#306). Annotating the property moves no call —
+        /// they were always made by the guard, on the main actor.
+        @MainActor static let uiKit = Platform(
             setIdleTimerDisabled: { UIApplication.shared.isIdleTimerDisabled = $0 },
             beginTask: { expiry in
-                UIApplication.shared.beginBackgroundTask(withName: "kamome.recap.export", expirationHandler: expiry)
+                // Wrapped, not passed: UIKit types the handler `@MainActor
+                // @Sendable`, which `expiry` is not. The wrapper only calls it,
+                // and iOS runs expiry handlers on the main thread.
+                UIApplication.shared.beginBackgroundTask(withName: "kamome.recap.export", expirationHandler: { expiry() })
             },
             endTask: { UIApplication.shared.endBackgroundTask($0) },
             observeBackground: { handler in
@@ -71,8 +78,10 @@ final class ExportLifecycleGuard {
     private var onExpiry: (() -> Void)?
     private var backgroundObserver: NSObjectProtocol?
 
-    init(platform: Platform = .uiKit) {
-        self.platform = platform
+    init(platform: Platform? = nil) {
+        // Built in the body, not as a default argument: a default argument is
+        // evaluated in a nonisolated context and `uiKit` is `@MainActor`.
+        self.platform = platform ?? .uiKit
     }
 
     /// Whether an assertion is currently held. The screen is pinned awake for
