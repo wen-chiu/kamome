@@ -15,7 +15,7 @@ struct AlwaysPrimingView: View {
             VStack(spacing: 16) {
                 Image(systemName: "location.fill.viewfinder")
                     .font(.system(size: 44))
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(Color(.brandTeal))
                 Text("priming_title")
                     .font(.title3.bold())
                     .multilineTextAlignment(.center)
@@ -38,7 +38,7 @@ struct AlwaysPrimingView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.prominent)
                 Button {
                     dismiss()
                 } label: {

@@ -91,10 +91,11 @@ struct VehiclePickerView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 104)
             .padding(.vertical, 8)
-            .background(
-                isSelected ? Color.accentColor.opacity(0.14) : Color(.secondarySystemGroupedBackground),
-                in: RoundedRectangle(cornerRadius: 14)
-            )
+            // The tint lies over the tile's own surface, not the page's grey:
+            // there the accent caption read 4.16 : 1 in light (ADR
+            // 2026-10-26-text-and-controls-take-a-deeper-teal).
+            .background(isSelected ? Color.accentColor.opacity(0.14) : .clear, in: RoundedRectangle(cornerRadius: 14))
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14).stroke(isSelected ? Color.accentColor : .clear, lineWidth: 2)
             )

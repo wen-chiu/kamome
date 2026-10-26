@@ -97,7 +97,7 @@ struct JourneyItineraryView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
         .controlSize(.large)
         .disabled(isCreating || itinerary == nil)
         .padding(.horizontal, 20)

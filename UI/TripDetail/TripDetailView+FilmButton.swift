@@ -16,7 +16,7 @@ extension TripDetailView {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
         // S5 entry: only completed trips have a recap to render. Naming is
         // throttled and asynchronous; a film exported before its stops are named
         // says "Unnamed stop" for each of them (Chiu 2026-08-04). It waits only

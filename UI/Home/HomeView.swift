@@ -256,7 +256,7 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
     }
 
     /// Live capture is secondary, not hidden (Chiu 2026-09-23: 「不是主力，但
