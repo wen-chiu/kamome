@@ -26,9 +26,13 @@ enum TripDeletion {
     static func delete(
         tripId: String,
         repository: TripRepository,
-        exports: RecapExportCoordinator = .shared,
-        routing: RouteMatchCoordinator = .shared
+        exports: RecapExportCoordinator? = nil,
+        routing: RouteMatchCoordinator? = nil
     ) -> Bool {
+        // Resolved in the body, not as default arguments: a default argument
+        // is evaluated in a nonisolated context and both `shared` are `@MainActor`.
+        let exports = exports ?? .shared
+        let routing = routing ?? .shared
         exports.cancel(tripId: tripId)
         routing.cancel(tripId: tripId)
         PhotoAnalysisCoordinator.shared.cancel(tripId: tripId)

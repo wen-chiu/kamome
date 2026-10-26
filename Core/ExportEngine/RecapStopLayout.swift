@@ -80,10 +80,9 @@ public struct RecapStopLayout {
         let pinY = Self.clamp(anchor.y, marginPx + pinInset, max(frameSize.height - marginPx - pinInset, marginPx))
         pinPoint = CGPoint(x: pinX, y: pinY)
 
-        // How far the cluster reaches from the pin. Identical on both sides —
-        // mirroring reorders the same pieces, it does not resize them.
+        // The card's share of the cluster. Identical on both sides — mirroring
+        // reorders the same pieces, it does not resize them.
         let cardBlock = cardSize.height > 0 ? cardSize.height + gap : 0
-        let reach = pinHeight / 2 + gap + labelBandHeight + cardBlock
 
         // **Which side is decided from the card's FINAL size, not its current
         // one** (2026-08-01). The card grows across the deck's reveal, so a reach
