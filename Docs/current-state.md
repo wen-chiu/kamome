@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-10 against ADR **2026-10-10-the-sample-arrives-with-its-film-and-the-film-button-has-words**.
+Last synced: 2026-10-26 against ADR **2026-10-26-the-in-app-map-draws-the-road-it-names**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -63,6 +63,8 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
 - **Rendering:** `RecapSnapshotProviding` is the boundary; each renderer confined
   to one file. **The export renders OpenFreeMap + MapLibre** (two frozen Liberty
   styles, dark and light); in-app maps stay MapKit. Apple fallback removed.
+  Trip Detail draws a leg's matched road where one is stored and frames the trip
+  itself (ADR 2026-10-26-the-in-app-map-draws-the-road-it-names).
 - **Routing:** `RouteProvider`-shaped boundary; **Geoapify**, key behind a
   Cloudflare Worker. Detour-ratio gate 2.5. **No snap radius exists or is needed**
   (ADR 2026-08-20 (d) — read it before citing any older snap-radius text).
