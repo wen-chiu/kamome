@@ -169,9 +169,9 @@ extension JourneyItinerary {
     }
 }
 
-/// **One rule for the travel between two places**, shared by S3's diary
-/// (`TripDetailModel.storyLeg`) and the itinerary: every piece that starts in
-/// the gap, folded into one connector. Its modes in order, its weakest claim
+/// **One rule for the travel between two places**, shared by the itinerary
+/// and a journey's route line (`JourneyRouteText`): every piece that starts
+/// in the gap, folded into one connector. Its modes in order, its weakest claim
 /// (inferred beats reconstructed beats recorded: a line is only as honest as
 /// its least-known stretch), and whether any of it was a crossing.
 enum StoryLegFolding {
