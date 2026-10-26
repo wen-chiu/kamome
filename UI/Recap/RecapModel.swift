@@ -55,12 +55,14 @@ final class RecapModel {
 
     init(
         tripId: String, config: TrackingConfig, repository: TripRepository,
-        coordinator: RecapExportCoordinator = .shared
+        coordinator: RecapExportCoordinator? = nil
     ) {
         self.tripId = tripId
         self.config = config
         self.repository = repository
-        self.coordinator = coordinator
+        // Resolved in the body, not as a default argument: a default argument
+        // is evaluated in a nonisolated context and `shared` is `@MainActor`.
+        self.coordinator = coordinator ?? .shared
         vehicleId = Stored.read("detail") { try repository.detail(tripId: tripId) }?.trip.vehicleId
             ?? VehicleCatalog.defaultSubjectId
     }

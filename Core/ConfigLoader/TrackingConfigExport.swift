@@ -4,7 +4,7 @@ import Foundation
 /// stay inside the size budget. It carries the film's entire pacing model: frame
 /// size, the opening prologue, stop dwell bounds, and the target duration window.
 public extension TrackingConfig {
-    public struct Export: Decodable, Equatable {
+    struct Export: Decodable, Equatable {
         /// Recap video pipeline tunables (§4.5).
         public let targetDurationS: Double
         public let fps: Int
