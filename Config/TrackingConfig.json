@@ -25,7 +25,7 @@
     "live_path_min_spacing_m": 25
   },
   "trip_map": {
-    "frame_padding": 1.25,
+    "frame_padding": 1.5,
     "frame_min_span_m": 2000
   },
   "matching": {

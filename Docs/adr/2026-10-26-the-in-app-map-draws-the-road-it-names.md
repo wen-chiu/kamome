@@ -28,15 +28,22 @@ trip itself.」
   at `matching.display_epsilon_m` as in the film; any other leg as before. Strokes unchanged.
 - The diary needs no change: it draws no line, and names a road only where one is stored.
 - The camera frames the bounding box of what the map draws, lines and pins, under the
-  day chip, × `trip_map.frame_padding` (1.25), at least `trip_map.frame_min_span_m`
-  (2000), across 180° the short way. It re-frames only when that box changes, so a pan
-  survives the reloads stop naming causes. Both numbers and framing a chip's day are the
-  implementing session's (INFERRED); Chiu judges them from the screenshots on the PR.
+  day chip, × `trip_map.frame_padding`, at least `trip_map.frame_min_span_m` (2000),
+  across 180° the short way. It re-frames only when that box changes, so a pan survives
+  the reloads stop naming causes. Padding **1.5**: Chiu, 2026-10-27, from renders of 1.25
+  and 1.5 (「改成 1.5」) — at 1.25 MapKit drew a layer of township labels across land the
+  trip never touched. The minimum span and framing a chip's day are the implementing
+  session's (INFERRED).
 
 ## Rejected
 - Dashing an unmatched leg, as the film does (#195 option 2): Chiu kept today's line.
 - Keeping straight lines and dropping the label (option 3): the road is known; draw it.
 - MapKit's automatic camera: its margins are its own, with no handle on what is framed.
+  On the sample its frame and 1.5's look alike in the renders; an explicit frame adds the day chip,
+  the minimum span, 180°, and a frame that does not move when a stop is named.
+- Padding 1.25: tighter, and busier (above). A muted base map without point-of-interest
+  icons would quiet it, but any `.mapStyle` crashes Trip Detail on the iOS 26.5 simulator,
+  with or without this change (#317).
 - Sharing ExportEngine's `Antimeridian.windowStart`: it is internal, and making it public
   changes a module interface (rule 2); its eight lines are restated at MapKit's boundary.
 
