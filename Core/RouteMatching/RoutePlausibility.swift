@@ -92,4 +92,30 @@ enum RoutePlausibility {
         }
         return true
     }
+
+    /// **A route of one point goes nowhere, so it is not this leg's road**
+    /// (#256). Every coordinate the provider drew is the same place once
+    /// repeats are dropped — INFERRED to be both ends snapping to one road
+    /// point, as two photographs in one car park would; the log line prints
+    /// the two lengths that would settle it.
+    ///
+    /// Read as an answer nobody could read until #256, which stores nothing, so
+    /// every export asked for the leg again — three requests of the users'
+    /// daily quota per export on the #112 phone run. It is a route that came
+    /// back and cannot be the way between two places the photographs show
+    /// apart, so it is refused like a detour: stored `implausible_route` — a
+    /// road is near, this route is not the leg's way, dashed, never a crossing —
+    /// and answered from storage after that. The mirror of the collapsed-
+    /// waypoint guard in `acceptsRoute`. Called once an empty geometry is ruled out.
+    static func goesSomewhere(
+        _ geometry: [GeoPoint], distanceM: Double, through waypoints: [RouteMatchPoint]
+    ) -> Bool {
+        guard geometry.count < 2 else { return true }
+        KamomeLog.routing.notice("""
+            route: REJECTED — the route is one point, \(distanceM, format: .fixed(precision: 0)) m routed \
+            vs \(RouteWaypoints.straightLineM(waypoints), format: .fixed(precision: 0)) m straight — \
+            it goes nowhere, so the leg stays raw
+            """)
+        return false
+    }
 }
