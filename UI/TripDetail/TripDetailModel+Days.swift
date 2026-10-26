@@ -1,4 +1,5 @@
 import Foundation
+import KamomeConfig
 import KamomeImportKit
 import KamomePersistence
 import KamomeTripComposer
@@ -55,13 +56,25 @@ extension TripDetailModel {
 
     /// Douglas-Peucker per segment, keyed by segment id. Pure, so `refresh()`
     /// runs it off the main thread beside the read.
+    ///
+    /// **A leg with a matched road is drawn along it** (Chiu 2026-10-26, #195),
+    /// at the film's tighter `roadEpsilonM`; any other leg keeps its own points.
+    /// The line is `LegGeometry`'s, the one the film draws and the diary names
+    /// 「已對齊道路」, so the map cannot show a straight line under that name.
     static func thinned(
-        _ segments: [(segment: SegmentRecord, points: [TrackpointRecord])], epsilonM: Double
+        _ segments: [(segment: SegmentRecord, points: [TrackpointRecord])], epsilonM: Double, roadEpsilonM: Double
     ) -> [String: [Simplifier.Point]] {
         Dictionary(uniqueKeysWithValues: segments.map { item in
-            (item.segment.id, Simplifier.douglasPeucker(
-                item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, epsilonM: epsilonM
-            ))
+            let line = LegGeometry.line(segment: item.segment, points: item.points)
+            return (item.segment.id, Simplifier.douglasPeucker(line.points, epsilonM: line.isRoad ? roadEpsilonM : epsilonM))
         })
+    }
+
+    /// What the map frames (#295 item 5): the lines it draws and the stops it
+    /// pins under the day chip — the trip itself, and nothing around it.
+    var mapFrame: TripMapFrame? {
+        let lines = visibleSegments.flatMap { displayPolyline(for: $0.segment) }
+        let pins = visibleStops.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }
+        return TripMapFrame(points: lines + pins, config: config.tripMap)
     }
 }

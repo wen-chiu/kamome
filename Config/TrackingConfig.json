@@ -24,6 +24,10 @@
     "epsilon_m": 15,
     "live_path_min_spacing_m": 25
   },
+  "trip_map": {
+    "frame_padding": 1.25,
+    "frame_min_span_m": 2000
+  },
   "matching": {
     "base_url": "https://kamome-routing.kamome-site.workers.dev",
     "chunk_size": 100,

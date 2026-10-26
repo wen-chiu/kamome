@@ -1,6 +1,5 @@
 import Foundation
 import KamomePersistence
-import KamomeRouteMatching
 import KamomeTrackingEngine
 import KamomeTripComposer
 
@@ -9,14 +8,9 @@ import KamomeTripComposer
 /// the two cannot disagree about one trip.
 enum LegLength {
     /// Along the road when one was matched, else along the raw points — the
-    /// same choice the film makes (`RecapComposer.legs`).
+    /// line the film and Trip Detail's map draw (`LegGeometry`).
     static func meters(segment: SegmentRecord, points: [TrackpointRecord]) -> Double {
-        let coordinates: [(lat: Double, lon: Double)]
-        if let encoded = segment.matchedPolyline, case let decoded = EncodedPolyline.decode(encoded), decoded.count >= 2 {
-            coordinates = decoded.map { ($0.lat, $0.lon) }
-        } else {
-            coordinates = points.map { ($0.lat, $0.lon) }
-        }
+        let coordinates = LegGeometry.line(segment: segment, points: points).points
         return zip(coordinates, coordinates.dropFirst()).reduce(0.0) { sum, pair in
             sum + Geo.distanceM(latA: pair.0.lat, lonA: pair.0.lon, latB: pair.1.lat, lonB: pair.1.lon)
         }

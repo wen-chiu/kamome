@@ -9,7 +9,7 @@ import SwiftUI
 /// written; only `private` is gone, which a separate file needs.
 extension TripDetailView {
     var map: some View {
-        Map {
+        Map(position: $mapCamera) {
             ForEach(model.visibleSegments, id: \.segment.id) { item in
                 let coords = model.displayPolyline(for: item.segment)
                     .map { CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon) }
@@ -23,6 +23,11 @@ extension TripDetailView {
                     stopPin(stop)
                 }
             }
+        }
+        // The trip itself (#295 item 5), re-framed only when what is drawn
+        // changes: a pan survives every reload that draws the same thing.
+        .onChange(of: model.mapFrame, initial: true) { _, frame in
+            if let frame { mapCamera = .region(frame.region) }
         }
     }
 

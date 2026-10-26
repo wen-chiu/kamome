@@ -4,7 +4,6 @@ import KamomeConfig
 import KamomeExportEngine
 import KamomeImportKit
 import KamomePersistence
-import KamomeRouteMatching
 import KamomeTrackingEngine
 import KamomeTripComposer
 
@@ -33,15 +32,8 @@ enum RecapComposer {
         stops: [StopRecord] = []
     ) -> [RecapTrip.Leg] {
         segments.compactMap { item -> RecapTrip.Leg? in
-            let source: (points: [Simplifier.Point], epsilonM: Double)
-            if let encoded = item.segment.matchedPolyline,
-               case let decoded = EncodedPolyline.decode(encoded),
-               decoded.count >= 2 {
-                source = (decoded.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, matchedEpsilonM)
-            } else {
-                source = (item.points.map { Simplifier.Point(lat: $0.lat, lon: $0.lon) }, epsilonM)
-            }
-            let coordinates = Simplifier.douglasPeucker(source.points, epsilonM: source.epsilonM)
+            let line = LegGeometry.line(segment: item.segment, points: item.points)
+            let coordinates = Simplifier.douglasPeucker(line.points, epsilonM: line.isRoad ? matchedEpsilonM : epsilonM)
                 .map { RecapCoordinate(lat: $0.lat, lon: $0.lon) }
             guard coordinates.count >= 2 else { return nil }
             let crossing = isCrossing(item.segment)
