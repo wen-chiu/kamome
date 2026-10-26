@@ -54,7 +54,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩只在您啟動的旅程期間記錄路線。"
+            "value": "卡摸咩只在你啟動的旅程期間記錄路線。"
           }
         }
       }
@@ -88,7 +88,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome 可以在你按下「儲存」時把回顧影片存到照片圖庫。影片絕不會自動儲存。"
+            "value": "卡摸咩可以在你按下「儲存」時把旅程影片存到照片圖庫。影片絕不會自動儲存。"
           }
         }
       }

@@ -35,7 +35,8 @@ final class RecapRoutingCopyTests: XCTestCase {
             let english = try sentence(key, locale: "en", legs: legs).lowercased()
             let chinese = try sentence(key, locale: "zh-Hant", legs: legs)
             let en = english.contains("export again") || english.contains("try again")
-            let zh = ["再輸出", "重新輸出", "再試", "重試"].contains { chinese.contains($0) }
+            // 製作 is the word since #289; the older 輸出 stays matched in case it comes back.
+            let zh = ["再製作", "重新製作", "再輸出", "重新輸出", "再試", "重試"].contains { chinese.contains($0) }
             return (en, zh)
         }
 

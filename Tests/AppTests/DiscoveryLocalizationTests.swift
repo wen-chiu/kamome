@@ -53,7 +53,12 @@ final class DiscoveryLocalizationTests: XCTestCase {
         XCTAssertTrue(privacyZH.contains("打開之前"), "nothing saved first: \(privacyZH)")
         XCTAssertTrue(privacyZH.contains("Apple"), "the recipient is named: \(privacyZH)")
         XCTAssertTrue(privacyZH.contains("座標"), "and what it receives: \(privacyZH)")
-        XCTAssertTrue(privacyZH.contains("停留點"), "what is sent is a stop: \(privacyZH)")
+        // A stop is 地點 since #289; 拍攝地點 is where a photo was taken, so it
+        // is set aside first or the photos sentence alone would pass.
+        XCTAssertTrue(
+            privacyZH.replacingOccurrences(of: "拍攝地點", with: "").contains("地點"),
+            "what is sent is a stop: \(privacyZH)"
+        )
         XCTAssertFalse(privacyZH.contains("不會上傳"), "the overclaim: \(privacyZH)")
 
         // Provenance on the card: the recorded chip exists beside the photos one,
