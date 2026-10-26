@@ -40,6 +40,12 @@ enum DemoSeeder {
         if ProcessInfo.processInfo.arguments.contains("-demo-seed-long") {
             seedLong(repository: repository)
         }
+        if ProcessInfo.processInfo.arguments.contains("-demo-seed-sample") {
+            seedSample(repository: repository)
+        }
+        if ProcessInfo.processInfo.arguments.contains("-demo-seed-mixed-legs") {
+            seedMixedLegs(repository: repository)
+        }
     }
 
     /// Twenty imported stops along the same road — enough that the short and

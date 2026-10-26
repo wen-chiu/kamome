@@ -97,7 +97,7 @@ struct HomeView: View {
             if ProcessInfo.processInfo.arguments.contains("-demo-open-import") {
                 showingImport = true
             }
-            if ProcessInfo.processInfo.arguments.contains("-demo-discover") {
+            if !Set(ProcessInfo.processInfo.arguments).isDisjoint(with: ["-demo-discover", "-demo-open-journey"]) {
                 show(.footprints)
             }
             // The record sheet's own shot (Chiu 2026-09-23 home cleanup).
