@@ -51,7 +51,8 @@ final class TripDetailRoadTests: XCTestCase {
             title: "road", startedAt: start, endedAt: start + 16_200, source: TripSource.importedPhotos.rawValue,
             segments: segments, stopsWithPhotos: stops, routeAttachedPhotos: []
         ))
-        let stored = try XCTUnwrap(repository.detail(tripId: tripId)).segments.map(\.segment).sorted { $0.startedAt < $1.startedAt }
+        let stored = try XCTUnwrap(repository.detail(tripId: tripId)).segments.map(\.segment)
+            .sorted { $0.startedAt < $1.startedAt }
         let road = (0...40).map { step in
             GeoPoint(lat: 10.0 + 0.005 * Double(step), lon: 20.0 + 0.05 * sin(Double.pi * Double(step) / 40))
         }
