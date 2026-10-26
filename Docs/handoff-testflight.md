@@ -13,9 +13,10 @@ S7 do not block it; the TestFlight build is how D1–D5 get run.
 
 - **T1 version from build settings** — PR #76. `project.yml` maps
   `CFBundleShortVersionString` / `CFBundleVersion` to the build settings;
-  `MARKETING_VERSION` is `0.1` (Chiu 2026-09-18), `CURRENT_PROJECT_VERSION` is `1`.
-  ⚠️ **Each upload bumps `CURRENT_PROJECT_VERSION`** — App Store Connect refuses a
-  build number it has already seen.
+  *History, not the current version:* `MARKETING_VERSION` was `0.1` (Chiu
+  2026-09-18), and each upload bumped `CURRENT_PROJECT_VERSION` by hand. **Read
+  the version in `Config/Version.xcconfig`** (`Scripts/set-version.sh`); every
+  build now stamps the build number from the commit count.
 - **T2 privacy manifest** — PR #76. `App/PrivacyInfo.xcprivacy`, `plutil -lint` OK,
   `NSPrivacyCollectedDataTypes` deliberately empty: what Kamome declares as
   collected is Chiu's, owed at the App Store privacy label.

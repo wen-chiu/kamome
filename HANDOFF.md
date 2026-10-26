@@ -66,6 +66,10 @@ cost somebody time; keep each to a summary and a pointer.
   `DEVELOPMENT_TEAM` in `project.yml`; a wrong one (B9U326WRA4, until
   2026-09-30) fails a CLI archive with "No Account for Team", and `archive.sh`
   now stops first if no valid signing certificate belongs to the team.
+- **`Deploy/worker` needs Node ≥ 22.13** (`package.json` `engines`; its tests
+  import `node:sqlite`). nvm's default on Chiu's Mac is Node 17, so `npm test`
+  and `npm run deploy` fail with `ERR_UNKNOWN_BUILTIN_MODULE`: `nvm use 22`
+  first. On Node 22.23.2 the Worker tests pass 50/50 (2026-10-26).
 
 ---
 
