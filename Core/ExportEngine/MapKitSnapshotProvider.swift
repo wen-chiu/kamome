@@ -263,10 +263,10 @@ public struct MapKitSnapshotProvider: MapRenderer {
         )
         options.size = size
         #if canImport(UIKit)
-        options.traitCollection = UITraitCollection(traitsFrom: [
-            UITraitCollection(displayScale: CGFloat(displayScale)),
-            UITraitCollection(userInterfaceStyle: appearance == .dark ? .dark : .light)
-        ])
+        options.traitCollection = UITraitCollection { traits in
+            traits.displayScale = CGFloat(displayScale)
+            traits.userInterfaceStyle = appearance == .dark ? .dark : .light
+        }
         #endif
 
         let snapshot = try await MKMapSnapshotter(options: options).start()
