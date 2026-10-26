@@ -80,7 +80,7 @@ struct StartRecordingSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Image(systemName: "location.slash")
                 .font(.system(size: 36, weight: .light))
-                .foregroundStyle(.tint)
+                .foregroundStyle(Color(.brandTeal))
                 .accessibilityHidden(true)
             Text("record_location_refused_title")
                 .font(.title3.weight(.semibold))
@@ -101,7 +101,7 @@ struct StartRecordingSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.prominent)
         } else if let settings = URL(string: UIApplication.openSettingsURLString) {
             Link(destination: settings) {
                 Text("record_location_open_settings")
@@ -109,7 +109,7 @@ struct StartRecordingSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.prominent)
         }
     }
 }

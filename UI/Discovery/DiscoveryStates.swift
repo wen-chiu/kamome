@@ -32,7 +32,7 @@ struct WelcomeCard: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.prominent)
             .controlSize(.large)
             .disabled(isWorking)
             Text("welcome_privacy")
@@ -137,7 +137,7 @@ struct KamomeGull: View {
     var body: some View {
         Image(systemName: "bird")
             .font(.system(size: size, weight: .light))
-            .foregroundStyle(.tint)
+            .foregroundStyle(Color(.brandTeal))
             .accessibilityHidden(true)
     }
 }

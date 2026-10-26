@@ -244,7 +244,7 @@ struct RecapFinishedView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
         .disabled(photosSaveState == .saving || photosSaveState == .saved)
     }
 

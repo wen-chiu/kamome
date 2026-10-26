@@ -54,7 +54,8 @@ extension RecapModel {
 /// the render is; only the position says that.
 ///
 /// Decorative: the bar carries the number for VoiceOver. With Reduce Motion the
-/// wings hold the brand pose.
+/// wings hold the brand pose. Drawn in `BrandTeal`, not the accent: it is the
+/// icon's gull and carries no text (ADR 2026-10-26-text-and-controls-take-a-deeper-teal).
 ///
 /// **Cost: no app code runs per display frame.** The main queue is not free
 /// during a render — `MapLibreSnapshotProvider` drives its snapshotter there —
@@ -92,6 +93,7 @@ struct ExportGullView: View {
                     .position(x: place.point.x, y: place.point.y - Self.altitude)
             }
         }
+        .tint(Color(.brandTeal))
         .frame(maxWidth: Self.maxWidth)
         .frame(height: Self.height)
         .frame(maxWidth: .infinity)
@@ -232,17 +234,12 @@ private final class GullFlapView: UIView {
         rebuild()
     }
 
-    override func tintColorDidChange() {
-        super.tintColorDidChange()
-        gull.strokeColor = tintColor.cgColor
-    }
-
     private func rebuild() {
         builtSize = bounds.size
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         gull.frame = bounds
-        gull.strokeColor = tintColor.cgColor
+        gull.strokeColor = UIColor(resource: .brandTeal).cgColor
         gull.lineWidth = GullPose.strokeWidth(in: bounds.size)
         gull.path = GullPose.path(phase: 0, in: bounds)
         CATransaction.commit()

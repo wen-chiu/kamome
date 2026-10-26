@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-10 against ADR **2026-10-10-the-sample-arrives-with-its-film-and-the-film-button-has-words**.
+Last synced: 2026-10-26 against ADR **2026-10-26-text-and-controls-take-a-deeper-teal**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open

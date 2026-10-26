@@ -33,7 +33,7 @@ extension TripDetailView {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: "mappin.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(Color(.brandTeal))
                     .background(Circle().fill(.background))
                 let count = model.photos(for: stop.id).count
                 if count > 0 {
@@ -81,7 +81,7 @@ extension TripDetailView {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
                 .background(Capsule().fill(selected ? Color.accentColor : Color.secondary.opacity(0.2)))
-                .foregroundStyle(selected ? Color.white : Color.primary)
+                .foregroundStyle(selected ? Color(.onAccent) : Color.primary)
         }
     }
 
@@ -221,7 +221,7 @@ extension TripDetailView {
 
     func color(for mode: String) -> Color {
         switch mode {
-        case "drive", "scooter": return .accentColor
+        case "drive", "scooter": return Color(.brandTeal)
         case "walk": return .green
         case "cycle": return .mint
         case "transit": return .purple

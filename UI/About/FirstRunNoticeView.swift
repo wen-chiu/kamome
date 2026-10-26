@@ -49,7 +49,7 @@ struct FirstRunNoticeView: View {
                     Text("first_run_acknowledge")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.prominent)
                 .controlSize(.large)
                 .padding()
                 .background(.bar)

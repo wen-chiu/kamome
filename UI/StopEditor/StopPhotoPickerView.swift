@@ -143,7 +143,7 @@ struct StopPhotoPickerView: View {
                 if let filmPosition {
                     Text("\(filmPosition + 1)")
                         .font(.caption.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color(.onAccent))
                         .frame(minWidth: 20, minHeight: 20)
                         .background(Circle().fill(Color.accentColor))
                 } else {

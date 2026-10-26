@@ -46,7 +46,7 @@ struct FilmPosterButton: View {
                 if count > 1 {
                     Text("\(count)")
                         .font(.caption2.bold())
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color(.onAccent))
                         .padding(5)
                         .background(Circle().fill(Color.accentColor))
                         .offset(x: 6, y: -6)
