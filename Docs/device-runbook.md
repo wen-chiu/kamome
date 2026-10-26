@@ -127,6 +127,11 @@ they postdate #105 and #110. Their exact build numbers are not in the log.
 | Crash-safe recording | kill the app mid-recording; the trip comes back | `handoff-long-recording.md` — **✅ 2026-10-09**: swiped away from the app switcher mid-recording, reopened, and it was recording again (Chiu) |
 | Restart while recording (#245) | restart the phone mid-recording, leave it locked while carrying it > 1 km, then unlock: no `Kamome` crash in Analytics Data, the trip resumes | #245 |
 | Merge-gap pacing | a multi-day `merge_gap` leg paces acceptably; is `merge_gap_min_m` = 500 right | same |
+| 3 GB phone | one Standard export finishes on a 3 GB phone that iOS 17 supports (iPhone XR or SE 2nd gen); peak memory recorded | the ceiling is UNKNOWN; the 2026-10-09 peak was 951.6 MB on the 15 Pro Max (Debug, 5129 frames, §A D2) |
+| Airplane mode | export the sample with no network; record whether it finishes or fails loudly | the App Review notes (#126 A4) say a connection is needed — INFERRED |
+| Lock mid-export, with #299 | on a build with #299 (PR #304), lock the screen mid-export: the sheet shows the new sentence, not the type name | #299 has not run on a phone; §A D1, #260 |
+| Heat | judge the heat with #117 (is 300 s right) | the 8910-frame Standard export spent 600 s at serious or above (§A D2) |
+| Fresh install | fresh install, or Settings → Reset Location & Privacy; record the prompt order | #196 |
 | Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` — **❌ 2026-10-09 (#260)**: the background assertion expired about 23 s after leaving, and the export was cancelled. The sheet returned to ready with **no message**. A second export started. |
 | Subject lookup miss rate | count fallback badges over ten exports (desk: 1 in 5) | `handoff-subject-lookup.md` |
 
