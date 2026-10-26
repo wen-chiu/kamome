@@ -19,6 +19,13 @@ final class AccentContrastTests: XCTestCase {
 
     private let light = UITraitCollection(userInterfaceStyle: .light)
     private let dark = UITraitCollection(userInterfaceStyle: .dark)
+    /// A sheet in dark mode: its backgrounds step up a level (About's rows
+    /// are #2C2C2E, VERIFIED off a screenshot 2026-10-27). Light has no step.
+    private let darkSheet = UITraitCollection { traits in
+        traits.userInterfaceStyle = .dark
+        traits.userInterfaceLevel = .elevated
+    }
+    private var appearances: [UITraitCollection] { [light, dark, darkSheet] }
 
     func testTheColoursAreTheOnesChiuChose() {
         XCTAssertEqual(hex(.accent, light), "1B727E")
@@ -31,7 +38,7 @@ final class AccentContrastTests: XCTestCase {
 
     /// A filled button's label on its fill.
     func testTheLabelOnAFilledButtonReads() {
-        for traits in [light, dark] {
+        for traits in appearances {
             assertReads(rgb(.onAccent, traits), on: rgb(.accent, traits), "OnAccent on AccentColor", traits)
         }
     }
@@ -44,7 +51,7 @@ final class AccentContrastTests: XCTestCase {
             ("systemGroupedBackground", .systemGroupedBackground),
             ("secondarySystemGroupedBackground", .secondarySystemGroupedBackground)
         ]
-        for traits in [light, dark] {
+        for traits in appearances {
             for (name, ground) in grounds {
                 assertReads(rgb(.accent, traits), on: Self.components(ground.resolvedColor(with: traits)).rgb,
                             "AccentColor on \(name)", traits)
@@ -53,11 +60,11 @@ final class AccentContrastTests: XCTestCase {
     }
 
     /// A `.bordered` button's label on its fill. The fill is
-    /// `secondarySystemFill`: measured off Home's two bordered buttons on
-    /// 2026-10-26, #E9E9EB light and #262629 dark over the page, which is that
-    /// fill over `systemBackground` exactly.
-    func testABorderedButtonsLabelReadsOnHome() {
-        for traits in [light, dark] {
+    /// `secondarySystemFill` over `systemBackground`, exactly: measured off
+    /// Home's two bordered buttons (#E9E9EB light, #262629 dark) and the film
+    /// player's 分享 in a dark sheet (#39393D), 2026-10-26 and -27.
+    func testABorderedButtonsLabelReads() {
+        for traits in appearances {
             let page = Self.components(UIColor.systemBackground.resolvedColor(with: traits)).rgb
             let fill = Self.components(UIColor.secondarySystemFill.resolvedColor(with: traits))
             assertReads(rgb(.accent, traits), on: Self.over(fill, page), "AccentColor on a bordered button", traits)
@@ -66,10 +73,11 @@ final class AccentContrastTests: XCTestCase {
 
     /// The vehicle picker's chosen tile: its "2 styles" caption in the accent,
     /// on the accent at 14 % laid over the tile's own surface
-    /// (`VehiclePickerView`). Laid over the page's grey instead, as it was
+    /// (`VehiclePickerView`; #DFEBED light and #2F4146 in the dark sheet,
+    /// VERIFIED off screenshots). Laid over the page's grey instead, as it was
     /// until 2026-10-26, the light caption measured 4.16 : 1.
     func testTheChosenVehicleTileCaptionReads() {
-        for traits in [light, dark] {
+        for traits in appearances {
             let accent = rgb(.accent, traits)
             let surface = Self.components(UIColor.secondarySystemGroupedBackground.resolvedColor(with: traits)).rgb
             assertReads(accent, on: Self.over((accent, 0.14), surface), "AccentColor on the chosen tile", traits)
@@ -85,7 +93,8 @@ final class AccentContrastTests: XCTestCase {
     private func assertReads(_ text: RGB, on ground: RGB, _ pair: String, _ traits: UITraitCollection,
                              file: StaticString = #filePath, line: UInt = #line) {
         let ratio = Self.contrast(text, ground)
-        let appearance = traits.userInterfaceStyle == .dark ? "dark" : "light"
+        let appearance = traits.userInterfaceStyle == .light ? "light"
+            : traits.userInterfaceLevel == .elevated ? "dark sheet" : "dark"
         XCTAssertGreaterThanOrEqual(ratio, Self.bodyText,
                                     "\(appearance): \(pair) is \(String(format: "%.2f", ratio)) : 1",
                                     file: file, line: line)
