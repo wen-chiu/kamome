@@ -12,7 +12,7 @@ struct HomeEmptyState: View {
         VStack(spacing: 12) {
             Image(systemName: "photo.on.rectangle.angled")
                 .font(.system(size: 56))
-                .foregroundStyle(.tint)
+                .foregroundStyle(Color(.brandTeal))
             Text("empty_state_pitch")
                 .font(.headline)
                 .multilineTextAlignment(.center)

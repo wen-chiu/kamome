@@ -26,7 +26,7 @@ struct DatabaseFailureView: View {
             }
         } actions: {
             Button("database_failed_retry", action: retry)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.prominent)
         }
     }
 }

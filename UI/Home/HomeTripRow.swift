@@ -54,7 +54,7 @@ struct HomeTripRow: View {
                 .overlay {
                     Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
                         .font(.title3)
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(Color(.brandTeal))
                 }
         }
     }

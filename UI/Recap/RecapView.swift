@@ -290,7 +290,7 @@ struct RecapView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
         .waitsForNaming(tripId: model.tripId, of: filmStopIds)
     }
 

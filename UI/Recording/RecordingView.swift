@@ -46,7 +46,7 @@ struct RecordingView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.prominent)
             .confirmationDialog("end_trip_confirm_title", isPresented: $confirmingEnd, titleVisibility: .visible) {
                 Button("end_trip", role: .destructive) { session.end() }
                 Button("end_trip_keep_recording", role: .cancel) {}
@@ -197,12 +197,12 @@ private struct RecordingMap: View {
         Map {
             if session.traveledPath.count >= 2 {
                 MapPolyline(coordinates: session.traveledPath)
-                    .stroke(.tint, lineWidth: 4)
+                    .stroke(Color(.brandTeal), lineWidth: 4)
             }
             if let head = session.headCoordinate {
                 Annotation("", coordinate: head) {
                     Image(systemName: "bird.fill") // the seagull head marker
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(Color(.brandTeal))
                         .padding(6)
                         .background(.thinMaterial, in: Circle())
                 }

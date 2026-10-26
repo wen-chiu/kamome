@@ -275,7 +275,7 @@ struct ImportSheet: View {
             Text("import_duplicate_open")
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
         Button {
             Task { await model.importAnyway() }
         } label: {
@@ -292,7 +292,7 @@ struct ImportSheet: View {
             Text("import_start")
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .buttonStyle(.prominent)
         .disabled(!model.canImport)
     }
 
