@@ -134,7 +134,7 @@ enum DemoSeeder {
     }
 
     /// Seeds a deterministic **imported_photos** trip (`-demo-seed-import`) so
-    /// the honest-provenance UI — the S1 "相片重建" badge and the S3 provenance
+    /// the honest-provenance UI — the S1 "照片重建" badge and the S3 provenance
     /// note (§3) — renders in the real app without a PhotoKit grant (which
     /// simctl cannot pre-answer on iOS 26). Mirrors the shape `ImportService`
     /// writes: one `exif` drive segment carrying the coarse route, stops with

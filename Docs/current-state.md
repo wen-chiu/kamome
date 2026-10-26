@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-26 against ADR **2026-10-26-text-and-controls-take-a-deeper-teal**.
+Last synced: 2026-10-26 against ADR **2026-10-26-zh-hant-uses-one-word-for-each-thing**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -21,6 +21,10 @@ without re-reading what the ADR changes here.
 Kamome (卡摸咩) is a **memory engine for road trips** (`CLAUDE.md` carries the
 sentence). Not a GPS visualizer. North star in `CHARTER.md` §7; the original spec is
 archived (`Docs/_archive/kamome-poc-spec.md`).
+
+**zh-Hant copy uses one word for each thing** (製作, 旅程影片, 照片, 你, 卡摸咩,
+地點, 旅程): the glossary is ADR 2026-10-26-zh-hant-uses-one-word-for-each-thing,
+and `ZhHantGlossaryTests` fails on a retired word. Read it before writing zh-Hant copy.
 
 **No release is in flight.** The current work proves the *artefact* ahead of
 productisation (Chiu 2026-08-15). The next release target is Phase 2 (App Store),

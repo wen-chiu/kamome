@@ -217,7 +217,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 以內，剛好放進 Reels 或 Shorts。卡摸咩會留下你拍最多照片的停留點。"
+            "value": "%@ 以內，剛好放進 Reels 或 Shorts。卡摸咩會留下你拍最多照片的地點。"
           }
         }
       }
@@ -234,7 +234,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "照整趟行程的節奏走，最長 %@ —— 去的地方越多，影片越長。"
+            "value": "照整趟旅程的節奏走，最長 %@ —— 去的地方越多，影片越長。"
           }
         }
       }
@@ -251,7 +251,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你自己加入的停留點讓影片變成 %1$@，超過這個長度的 %2$@。卡摸咩會保留它們；想要短一點，可以拿掉幾個。"
+            "value": "你自己加入的地點讓影片變成 %1$@，超過這個長度的 %2$@。卡摸咩會保留它們；想要短一點，可以拿掉幾個。"
           }
         }
       }
@@ -353,7 +353,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這個停留點不在影片裡。點一張照片，或打開上面的開關，就會放進去。"
+            "value": "這個地點不在影片裡。點一張照片，或打開上面的開關，就會放進去。"
           }
         }
       }
@@ -370,7 +370,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點照片就能放進影片或拿掉，每個停留點 1 到 %lld 張。長按可以設定永遠不用這張。★ 是「照片」App 裡的收藏，卡摸咩會優先挑選。"
+            "value": "點照片就能放進影片或拿掉，每個地點 1 到 %lld 張。長按可以設定永遠不用這張。★ 是「照片」App 裡的收藏，卡摸咩會優先挑選。"
           }
         }
       }
@@ -574,7 +574,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "把這個停留點移出影片？"
+            "value": "把這個地點移出影片？"
           }
         }
       }
@@ -591,7 +591,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這是這個停留點最後一張照片。之後可以從「其他停留點」再加回來。"
+            "value": "這是這個地點最後一張照片。之後可以從「其他地點」再加回來。"
           }
         }
       }
@@ -659,7 +659,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "影片裡的停留點 · %lld 個"
+            "value": "影片裡的地點 · %lld 個"
           }
         }
       }
@@ -676,7 +676,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些是卡摸咩幫你挑的。點一個停留點可以換照片，往左滑可以移出影片。"
+            "value": "這些是卡摸咩幫你挑的。點一個地點可以換照片，往左滑可以移出影片。"
           }
         }
       }
@@ -693,7 +693,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "其他停留點"
+            "value": "其他地點"
           }
         }
       }
@@ -710,7 +710,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點＋加入停留點，會依旅程順序出現，影片也會跟著變長。"
+            "value": "點＋加入地點，會依旅程順序出現，影片也會跟著變長。"
           }
         }
       }
@@ -785,7 +785,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 個停留點"
+            "value": "%lld 個地點"
           }
         }
       }
@@ -1086,7 +1086,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這次開啟 App 以來 Kamome 自己的紀錄，存成文字檔：只有耗時和次數，不含任何位置。不會自動傳送，由你決定分享給誰。"
+            "value": "這次開啟 App 以來卡摸咩自己的紀錄，存成文字檔：只有耗時和次數，不含任何位置。不會自動傳送，由你決定分享給誰。"
           }
         }
       }
@@ -1120,7 +1120,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅程是從相片的拍攝地點與時間找出來的。請在「設定」中允許相片存取，卡摸咩會再看一次。"
+            "value": "旅程是從照片的拍攝地點與時間找出來的。請在「設定」中允許照片存取，卡摸咩會再看一次。"
           }
         }
       }
@@ -1154,7 +1154,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩還看不到你的相片。"
+            "value": "卡摸咩還看不到你的照片。"
           }
         }
       }
@@ -1359,7 +1359,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "要刪除這趟行程和它的影片嗎？錄下的路線刪除後無法復原。"
+            "value": "要刪除這趟旅程和它的影片嗎？錄下的路線刪除後無法復原。"
           }
         }
       }
@@ -1376,7 +1376,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "刪除停留點"
+            "value": "刪除地點"
           }
         }
       }
@@ -1410,7 +1410,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "挑選相片，重建你的旅程回顧"
+            "value": "挑選照片，重建你的旅程影片"
           }
         }
       }
@@ -1529,7 +1529,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 張相片"
+            "value": "%lld 張照片"
           }
         }
       }
@@ -1546,7 +1546,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "找不到含有相片的相簿。"
+            "value": "找不到含有照片的相簿。"
           }
         }
       }
@@ -1631,7 +1631,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些相片大多已經在「%@」裡了。"
+            "value": "這些照片大多已經在「%@」裡了。"
           }
         }
       }
@@ -1682,7 +1682,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩需要取用相片才能重建旅程。請到「設定」開啟相片存取權。"
+            "value": "卡摸咩需要取用照片才能重建旅程。請到「設定」開啟照片存取權。"
           }
         }
       }
@@ -1699,7 +1699,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這段期間找不到有定位的相片。試著調整日期，或確認相片含有位置資訊。"
+            "value": "這段期間找不到有定位的照片。試著調整日期，或確認照片含有位置資訊。"
           }
         }
       }
@@ -1753,7 +1753,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這趟旅程的相片組不成一條路線。"
+            "value": "這趟旅程的照片組不成一條路線。"
           }
         }
       }
@@ -1787,7 +1787,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從相片匯入旅程"
+            "value": "從照片匯入旅程"
           }
         }
       }
@@ -1804,7 +1804,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩會讀取這段期間有定位的相片，重建成一趟旅程。最多 %1$d 天——選了超出範圍的日期，另一端會跟著移動以維持這個區間。相片不會被複製或上傳。"
+            "value": "卡摸咩會讀取這段期間有定位的照片，重建成一趟旅程。最多 %1$d 天——選了超出範圍的日期，另一端會跟著移動以維持這個區間。照片不會被複製或上傳。"
           }
         }
       }
@@ -1855,7 +1855,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用哪些相片"
+            "value": "使用哪些照片"
           }
         }
       }
@@ -1923,7 +1923,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從相片匯入"
+            "value": "從照片匯入"
           }
         }
       }
@@ -2003,7 +2003,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "要刪除這段旅程和它的影片嗎？你的相片不會受影響。"
+            "value": "要刪除這段旅程和它的影片嗎？你的照片不會受影響。"
           }
         }
       }
@@ -2083,7 +2083,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 張相片"
+            "value": "%lld 張照片"
           }
         }
       }
@@ -2141,7 +2141,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 個停留"
+            "value": "%lld 個地點"
           }
         }
       }
@@ -2175,7 +2175,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "相片之間推測"
+            "value": "照片之間推測"
           }
         }
       }
@@ -2226,7 +2226,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩只能存取你選取的相片，因此大部分相簿不會出現。可以選取更多相片，或改用日期範圍匯入。"
+            "value": "卡摸咩只能存取你選取的照片，因此大部分相簿不會出現。可以選取更多照片，或改用日期範圍匯入。"
           }
         }
       }
@@ -2243,7 +2243,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選取更多相片"
+            "value": "選取更多照片"
           }
         }
       }
@@ -2260,7 +2260,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome 只能看到你選取的相片"
+            "value": "卡摸咩只能看到你選取的照片"
           }
         }
       }
@@ -2277,7 +2277,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "出發後 Kamome 會用 GPS 記下你走過的路線。抵達時結束記錄，這條真實路線就能做成影片。"
+            "value": "出發後卡摸咩會用 GPS 記下你走過的路線。抵達時結束記錄，這條真實路線就能做成影片。"
           }
         }
       }
@@ -2362,7 +2362,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在辨識停留地點… %1$d / %2$d"
+            "value": "正在辨識地點… %1$d / %2$d"
           }
         }
       }
@@ -2379,7 +2379,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩會尋找離家拍攝、帶有位置的相片。下次旅行後，旅程就會出現在這裡——也可以依日期或相簿匯入。"
+            "value": "卡摸咩會尋找離家拍攝、帶有位置的照片。下次旅行後，旅程就會出現在這裡——也可以依日期或相簿匯入。"
           }
         }
       }
@@ -2396,7 +2396,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩只看得到你選取的相片。可以選取更多，或依日期、相簿匯入旅程。"
+            "value": "卡摸咩只看得到你選取的照片。可以選取更多，或依日期、相簿匯入旅程。"
           }
         }
       }
@@ -2447,7 +2447,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "請選擇「永遠允許」，即使螢幕鎖定也能持續記錄路線。卡摸咩只在您啟動的旅程期間記錄，旅程結束立即停止。"
+            "value": "請選擇「永遠允許」，即使螢幕鎖定也能持續記錄路線。卡摸咩只在你啟動的旅程期間記錄，旅程結束立即停止。"
           }
         }
       }
@@ -2566,7 +2566,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "每一段路程，卡摸咩會送出該段的位置：每個停留點的中心，以及其間相片的拍攝位置；相距不到 %1$.0f 公尺的點會被略過，每段最多 %2$lld 個點。這些座標放在請求的網址裡，而網址正是一次請求中最容易沿途被記錄下來的部分。"
+            "value": "每一段路程，卡摸咩會送出該段的位置：每個地點的中心，以及其間照片的拍攝位置；相距不到 %1$.0f 公尺的點會被略過，每段最多 %2$lld 個點。這些座標放在請求的網址裡，而網址正是一次請求中最容易沿途被記錄下來的部分。"
           }
         }
       }
@@ -2583,7 +2583,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從相片建立的旅程"
+            "value": "從照片建立的旅程"
           }
         }
       }
@@ -2600,7 +2600,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的相片、旅程與影片都留在這台裝置。為了畫出地圖，卡摸咩會向 OpenFreeMap 與 Amazon 下載該區域的地圖與地形，並向 Apple 查詢停留點名稱；為了沿真實道路繪製，會送出路線上的位置。"
+            "value": "你的照片、旅程與影片都留在這台裝置。為了畫出地圖，卡摸咩會向 OpenFreeMap 與 Amazon 下載該區域的地圖與地形，並向 Apple 查詢地點名稱；為了沿真實道路繪製，會送出路線上的位置。"
           }
         }
       }
@@ -2734,7 +2734,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "相片重建"
+            "value": "照片重建"
           }
         }
       }
@@ -2768,7 +2768,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這趟旅程根據相片的位置與時間重建，並非實際記錄的軌跡。"
+            "value": "這趟旅程根據照片的位置與時間重建，並非實際記錄的軌跡。"
           }
         }
       }
@@ -2853,7 +2853,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯出回顧影片"
+            "value": "製作旅程影片"
           }
         }
       }
@@ -2870,7 +2870,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新匯出"
+            "value": "重新製作"
           }
         }
       }
@@ -2887,7 +2887,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "另一部影片正在算圖"
+            "value": "另一部影片正在製作"
           }
         }
       }
@@ -2904,7 +2904,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩一次只算一部影片。請等目前這部完成，或到它所屬的旅程取消。"
+            "value": "卡摸咩一次只製作一部影片。請等目前這部完成，或到它所屬的旅程取消。"
           }
         }
       }
@@ -2921,7 +2921,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯出失敗"
+            "value": "製作失敗"
           }
         }
       }
@@ -2939,7 +2939,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome 在背景時，iOS 停止了匯出。請留在 Kamome 直到影片完成，再匯出一次。"
+            "value": "卡摸咩在背景時，iOS 停止了製作。請留在卡摸咩直到影片完成，再製作一次。"
           }
         }
       }
@@ -3029,7 +3029,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "停留"
+            "value": "地點"
           }
         }
       }
@@ -3047,7 +3047,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "停留"
+            "value": "地點"
           }
         }
       }
@@ -3166,7 +3166,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "有 %1$d 張（共 %2$d 張）無法載入，這些停留點會顯示空白卡片。如果它們在 iCloud，請確認網路連線後再重新輸出。路線本身不受影響。"
+            "value": "有 %1$d 張（共 %2$d 張）無法載入，這些地點會顯示空白卡片。如果它們在 iCloud，請確認網路連線後再重新製作。路線本身不受影響。"
           }
         }
       }
@@ -3183,7 +3183,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "只控制停留照片卡。標題卡與結尾的「取得這條路線」卡片一律會顯示。"
+            "value": "只控制地點照片卡。標題卡與結尾的「取得這條路線」卡片一律會顯示。"
           }
         }
       }
@@ -3370,7 +3370,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "停留照片卡"
+            "value": "地點照片卡"
           }
         }
       }
@@ -3387,7 +3387,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "算圖耗時 %@ 秒"
+            "value": "製作耗時 %@ 秒"
           }
         }
       }
@@ -3404,7 +3404,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "算圖中…"
+            "value": "製作中…"
           }
         }
       }
@@ -3469,7 +3469,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "請讓卡摸咩保持開啟，影片才能繼續輸出。離開這個畫面沒關係。"
+            "value": "請讓卡摸咩保持開啟，影片才能繼續製作。離開這個畫面沒關係。"
           }
         }
       }
@@ -3515,7 +3515,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅程太長，超出時間上限。畫好的路線已存，再輸出一次就會接著畫。"
+            "value": "旅程太長，超出時間上限。畫好的路線已存，再製作一次就會接著畫。"
           }
         }
       }
@@ -3779,7 +3779,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "旅程回顧"
+            "value": "旅程影片"
           }
         }
       }
@@ -3949,7 +3949,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在翻閱你的相片…"
+            "value": "正在翻閱你的照片…"
           }
         }
       }
@@ -4034,7 +4034,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "停留"
+            "value": "地點"
           }
         }
       }
@@ -4102,7 +4102,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "編輯停留點"
+            "value": "編輯地點"
           }
         }
       }
@@ -4119,7 +4119,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "停留點名稱"
+            "value": "地點名稱"
           }
         }
       }
@@ -4153,7 +4153,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "未命名停留點"
+            "value": "未命名地點"
           }
         }
       }
@@ -4204,7 +4204,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從你的相片重建"
+            "value": "從你的照片重建"
           }
         }
       }
@@ -4340,7 +4340,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的相片記得每一趟旅程——去了哪裡、什麼時候、怎麼去。卡摸咩會找出它們，把每一趟做成值得留下的影片。"
+            "value": "你的照片記得每一趟旅程——去了哪裡、什麼時候、怎麼去。卡摸咩會找出它們，把每一趟做成值得留下的影片。"
           }
         }
       }
@@ -4374,7 +4374,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "卡摸咩只讀取相片的拍攝地點與時間。相片不會離開這台裝置，打開之前也不會儲存任何旅程。為了替每趟旅程命名，卡摸咩會向 Apple 查詢其主要停留點的名稱，因此會送出該停留點的座標。"
+            "value": "卡摸咩只讀取照片的拍攝地點與時間。照片不會離開這台裝置，打開之前也不會儲存任何旅程。為了替每趟旅程命名，卡摸咩會向 Apple 查詢其主要地點的名稱，因此會送出該地點的座標。"
           }
         }
       }
@@ -4391,7 +4391,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的旅程，都在相片裡。"
+            "value": "你的旅程，都在照片裡。"
           }
         }
       }
@@ -4493,7 +4493,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome 曾被關閉，已自動接續錄製。其間約 %@ 沒有軌跡。"
+            "value": "卡摸咩曾被關閉，已自動接續錄製。其間約 %@ 沒有軌跡。"
           }
         }
       }
@@ -4697,7 +4697,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "其中一趟旅程正在匯出影片，請等匯出完成再合併。"
+            "value": "其中一趟旅程正在製作影片，請等製作完成再合併。"
           }
         }
       }
@@ -4782,7 +4782,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kamome 準備的範例：公開景點、OpenStreetMap 的道路，照片換成插畫。這不是任何人的真實旅程，隨時可以刪除。"
+            "value": "卡摸咩準備的範例：公開景點、OpenStreetMap 的道路，照片換成插畫。這不是任何人的真實旅程，隨時可以刪除。"
           }
         }
       }
@@ -4901,7 +4901,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "要刪除這個停留點嗎？它的名稱和備註會一起刪除，相片會留在旅程裡。"
+            "value": "要刪除這個地點嗎？它的名稱和備註會一起刪除，照片會留在旅程裡。"
           }
         }
       }
@@ -4918,7 +4918,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這趟旅程沒有停留點。"
+            "value": "這趟旅程沒有地點。"
           }
         }
       }

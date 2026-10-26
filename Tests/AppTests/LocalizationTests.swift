@@ -33,7 +33,7 @@ final class LocalizationTests: XCTestCase {
     /// `recap_end_cta` was deleted with the field that carried it. The rule it
     /// stood for did not move: no language's line may promise a scan.
     func testRecapStringsResolve() throws {
-        XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "停留照片卡")
+        XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "地點照片卡")
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "en"), "Stop photo cards")
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "en").contains("always appear"))
         XCTAssertTrue(try localizedValue("recap_photos_note", locale: "zh-Hant").contains("一律會顯示"))
@@ -74,7 +74,7 @@ final class LocalizationTests: XCTestCase {
     }
 
     func testLimitedPhotosStringsResolve() throws {
-        XCTAssertEqual(try localizedValue("limited_photos_manage", locale: "zh-Hant"), "選取更多相片")
+        XCTAssertEqual(try localizedValue("limited_photos_manage", locale: "zh-Hant"), "選取更多照片")
         XCTAssertEqual(try localizedValue("limited_photos_manage", locale: "en"), "Select More Photos")
         XCTAssertEqual(try localizedValue("route_photos_header", locale: "zh-Hant"), "沿途照片")
         XCTAssertEqual(try localizedValue("route_photos_header", locale: "en"), "Along the route")
@@ -82,7 +82,7 @@ final class LocalizationTests: XCTestCase {
 
     /// S1 import hero + sheet copy (Replay MVP §4.7/§5).
     func testImportStringsResolve() throws {
-        XCTAssertEqual(try localizedValue("import_from_photos", locale: "zh-Hant"), "從相片匯入旅程")
+        XCTAssertEqual(try localizedValue("import_from_photos", locale: "zh-Hant"), "從照片匯入旅程")
         XCTAssertEqual(try localizedValue("import_from_photos", locale: "en"), "Import from photos")
         XCTAssertEqual(try localizedValue("import_start", locale: "zh-Hant"), "開始匯入")
         XCTAssertEqual(try localizedValue("import_start", locale: "en"), "Import")
@@ -112,7 +112,7 @@ final class LocalizationTests: XCTestCase {
     /// Honest provenance (§3/§6): imported trips read as reconstructed, and the
     /// copy must never claim the trip is recorded or "verified".
     func testProvenanceStringsResolve() throws {
-        XCTAssertEqual(try localizedValue("provenance_badge", locale: "zh-Hant"), "相片重建")
+        XCTAssertEqual(try localizedValue("provenance_badge", locale: "zh-Hant"), "照片重建")
         XCTAssertEqual(try localizedValue("provenance_badge", locale: "en"), "From photos")
         let noteEN = try localizedValue("provenance_note", locale: "en")
         XCTAssertTrue(noteEN.contains("reconstructed"))
@@ -160,7 +160,7 @@ final class LocalizationTests: XCTestCase {
         // Content, not just shape: photograph positions are the half the approved
         // wording left out, and they are why the payload is not two coordinates.
         XCTAssertTrue(try localizedValue("privacy_imported_body", locale: "en").contains("photographs"))
-        XCTAssertTrue(try localizedValue("privacy_imported_body", locale: "zh-Hant").contains("相片"))
+        XCTAssertTrue(try localizedValue("privacy_imported_body", locale: "zh-Hant").contains("照片"))
         XCTAssertFalse(
             try localizedValue("privacy_imported_body", locale: "en").lowercased().contains("start and end"),
             "the corrected wording may not come back"
