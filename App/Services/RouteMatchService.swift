@@ -273,8 +273,9 @@ struct RouteMatchService {
             Stored.write("setRoutability") { try repository.setRoutability(segmentId: segmentId, .offRoadNetwork) }
             report.offRoadNetwork += 1
         case .implausible:
-            // A road exists and this route is not it. Stored so a later reader
-            // cannot mistake the dashed line for water.
+            // A road exists and this route is not it — a detour, or a route of
+            // one point (#256). Stored so a later reader cannot mistake the
+            // dashed line for water, and so the leg is not asked again.
             Stored.write("setRoutability") { try repository.setRoutability(segmentId: segmentId, .implausibleRoute) }
             report.implausibleRoute += 1
         case let .notEstablished(reason):

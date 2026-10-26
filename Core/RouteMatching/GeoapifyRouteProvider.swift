@@ -97,15 +97,19 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             return .notEstablished(.unreadableAnswer)
         }
         let geometry = route.geometry.points
-        guard geometry.count >= 2 else {
-            KamomeLog.routing.notice("route: the provider returned \(geometry.count) points — leg stays raw")
+        guard !geometry.isEmpty else {
+            KamomeLog.routing.notice("route: the provider returned no points — leg stays raw")
             return .notEstablished(.unreadableAnswer)
         }
-        guard RoutePlausibility.acceptsRoute(
-            distanceM: route.properties.distance,
-            through: waypoints,
-            maxDetourRatio: config.routeMaxDetourRatio
-        ) else { return .implausible }
+        // A route of one point is an answer, not an unreadable one: refused by
+        // policy, so the leg is stored and not asked again (#256).
+        guard RoutePlausibility.goesSomewhere(geometry, distanceM: route.properties.distance, through: waypoints),
+              RoutePlausibility.acceptsRoute(
+                  distanceM: route.properties.distance,
+                  through: waypoints,
+                  maxDetourRatio: config.routeMaxDetourRatio
+              )
+        else { return .implausible }
 
         KamomeLog.routing.notice("""
             route: reconstructed \(route.properties.distance / 1000, format: .fixed(precision: 1)) km \

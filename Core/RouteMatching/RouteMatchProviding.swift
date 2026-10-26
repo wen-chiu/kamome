@@ -115,8 +115,9 @@ public enum RouteReconstruction: Equatable, Sendable {
     case offTheRoadNetwork
     /// A route came back and `RoutePlausibility` refused it. **A road exists**;
     /// this particular route is not trustworthy, usually because one EXIF fix is
-    /// plainly wrong. Draws dashed, and is emphatically *not* a crossing —
-    /// treating it as one would fly a plane over a road.
+    /// plainly wrong — or, since #256, because it is one point and goes nowhere.
+    /// Draws dashed, and is emphatically *not* a crossing — treating it as one
+    /// would fly a plane over a road.
     case implausible
     /// Nothing was established about the geography at all. Retryable in
     /// principle, and never a claim about the ground.
@@ -131,7 +132,9 @@ public enum RouteReconstruction: Equatable, Sendable {
         /// Fewer than two waypoints survived thinning, or no URL could be built.
         case tooFewWaypoints
         /// The provider answered 200 with something this client could not turn
-        /// into a route: no feature, under two points, an unexpected geometry.
+        /// into a route: no feature, or no point in it (an unexpected geometry).
+        /// A route of one point is not this but `implausible` (#256): this one
+        /// stores nothing, so the leg is asked again on the next export.
         case unreadableAnswer
     }
 
