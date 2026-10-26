@@ -35,7 +35,10 @@ final class PhotoAnalysisCoordinator {
     private var deferred: [String: (repository: TripRepository, config: TrackingConfig.PhotoAnalysis)] = [:]
     private let exports: RecapExportCoordinator
 
-    init(exports: RecapExportCoordinator = .shared) {
+    init(exports: RecapExportCoordinator? = nil) {
+        // Resolved in the body, not as a default argument: a default argument
+        // is evaluated in a nonisolated context and `shared` is `@MainActor`.
+        let exports = exports ?? .shared
         self.exports = exports
         exports.whenIdle { [weak self] in self?.resumeDeferred() }
     }
