@@ -6,7 +6,8 @@ import SwiftUI
 /// two segments are one app (Chiu 2026-10-07): the flag and the serif name,
 /// the same words for the same figures, the same kilometres, and provenance
 /// marked by exception (ADR 2026-09-23 (e)). A cover photograph leads the row;
-/// a trip with none shows a route tile instead.
+/// a trip with none shows a route tile instead. A trip with a film carries the
+/// film glyph at the end of its name (#295 item 2).
 ///
 /// Split out of `HomeView` (arch review 2026-09-26, round 2) as
 /// `HomeView+TripRow`; a view of its own since its figures are read per row.
@@ -70,7 +71,21 @@ struct HomeTripRow: View {
                 .foregroundStyle(.primary)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
                 .fixedSize(horizontal: false, vertical: true)
+            if figures?.hasFilm == true {
+                Spacer(minLength: 4)
+                filmMark
+            }
         }
+    }
+
+    /// **This trip has a film** (#295 item 2): the glyph of 「製作旅程影片」 and of
+    /// the film list, in the accent, so the eye can run down the list's edge
+    /// for the trips already made. Not on the cover: a photograph is never
+    /// drawn over (`CHARTER.md` §7, rule 4). VoiceOver says it in words.
+    private var filmMark: some View {
+        Image(systemName: "film")
+            .font(.subheadline)
+            .foregroundStyle(.tint)
     }
 
     /// The dates, then the figures. On one line while it fits; at a large text
@@ -126,6 +141,7 @@ struct HomeTripRow: View {
         ]
         if let figures {
             spoken.append(Self.figuresText(groundM: figures.groundM, stopCount: figures.stopCount))
+            if figures.hasFilm { spoken.append(String(localized: "home_trip_has_film")) }
         }
         return spoken.joined(separator: ", ")
     }
@@ -203,9 +219,13 @@ extension HomeTripRow {
 struct HomeTripFigures: Equatable {
     let groundM: Double?
     let stopCount: Int
+    /// Films made of this trip and still kept, for the row's film mark.
+    let filmCount: Int
     let coverAssetId: String?
     /// The stops' zones, so the row's dates are where the trip happened.
     let clock: TripClock
+
+    var hasFilm: Bool { filmCount > 0 }
 
     static func load(trip: TripRecord, repository: TripRepository) -> HomeTripFigures? {
         guard let facts = Stored.read("journeyCardFacts", { try repository.journeyCardFacts(tripId: trip.id) })
@@ -217,6 +237,7 @@ struct HomeTripFigures: Equatable {
         return HomeTripFigures(
             groundM: LegLength.groundMeters(trip: trip, repository: repository),
             stopCount: facts.stopCount,
+            filmCount: facts.filmCount,
             coverAssetId: cover,
             clock: TripClock(stops: facts.stops)
         )

@@ -1,7 +1,6 @@
 import Foundation
 
-/// Typed mirror of Config/TrackingConfig.json — the single home for every
-/// tunable (spec §0 rule 2: no magic numbers in code).
+/// Typed mirror of Config/TrackingConfig.json — the single home for every tunable (spec §0 rule 2: no magic numbers in code).
 /// Every property is non-optional: a missing key is a hard startup error.
 public struct TrackingConfig: Decodable, Equatable {
     public struct Filter: Decodable, Equatable {
@@ -333,6 +332,7 @@ public struct TrackingConfig: Decodable, Equatable {
     public let dwell: Dwell
     public let simplify: Simplify
     public let tripMap: TripMap
+    public let home: Home
     public private(set) var matching: Matching
     public let photos: Photos
     public let photoImport: Import
@@ -345,7 +345,7 @@ public struct TrackingConfig: Decodable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, matching, photos, discovery, geocode, trip, sampling, export
+        case filter, segmentation, dwell, simplify, home, matching, photos, discovery, geocode, trip, sampling, export
         case photoImport = "import"
         case photoAnalysis = "photo_analysis"
         case tripMap = "trip_map"

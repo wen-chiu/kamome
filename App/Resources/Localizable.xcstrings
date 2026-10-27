@@ -1381,40 +1381,6 @@
         }
       }
     },
-    "empty_state_import_hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No need to wait for your next trip — relive a past one in minutes."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不必等下次出遊，幾分鐘就能重溫一趟舊旅程。"
-          }
-        }
-      }
-    },
-    "empty_state_pitch": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick your photos, rebuild your trip recap"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "挑選照片，重建你的旅程影片"
-          }
-        }
-      }
-    },
     "end_trip": {
       "extractionState": "manual",
       "localizations": {
@@ -1513,6 +1479,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的旅程"
+          }
+        }
+      }
+    },
+    "home_next_make_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open a journey to make it a film."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開一趟旅程，就能製作旅程影片。"
+          }
+        }
+      }
+    },
+    "home_next_find_journeys": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find more journeys in your photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從照片找出更多旅程"
+          }
+        }
+      }
+    },
+    "home_trip_has_film": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has a film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有旅程影片"
           }
         }
       }

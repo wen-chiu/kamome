@@ -179,7 +179,7 @@ struct HomeView: View {
                 // text size that outgrows it.
                 GeometryReader { room in
                     ScrollView {
-                        HomeEmptyState(openSample: openSample)
+                        HomeEmptyState(findJourneys: findJourneys, openSample: openSample)
                             .frame(minHeight: room.size.height)
                     }
                 }
@@ -217,19 +217,24 @@ struct HomeView: View {
     }
 
     private var tripList: some View {
-        List(session.trips) { trip in
-            NavigationLink(value: HomeRoute.trip(trip.id)) {
-                HomeTripRow(trip: trip, repository: session.repository)
-            }
-            // With no large title above it, the first row's top rule hung
-            // under the toolbar on its own; rows are still divided below.
-            .listRowSeparator(.hidden, edges: .top)
-            .swipeActions(edge: .trailing) {
-                Button(role: .destructive) {
-                    tripPendingDeletion = trip
-                } label: {
-                    Label("trip_delete", systemImage: "trash")
+        List {
+            ForEach(session.trips) { trip in
+                NavigationLink(value: HomeRoute.trip(trip.id)) {
+                    HomeTripRow(trip: trip, repository: session.repository)
                 }
+                // With no large title above it, the first row's top rule hung
+                // under the toolbar on its own; rows are still divided below.
+                .listRowSeparator(.hidden, edges: .top)
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        tripPendingDeletion = trip
+                    } label: {
+                        Label("trip_delete", systemImage: "trash")
+                    }
+                }
+            }
+            if HomeNextStep.isOffered(tripCount: session.trips.count, maxTrips: session.config.home.nextStepMaxTrips) {
+                HomeNextStepRow(trips: session.trips, repository: session.repository, findJourneys: findJourneys)
             }
         }
         .listStyle(.plain)
@@ -245,18 +250,26 @@ struct HomeView: View {
         }
     }
 
-    // MP4-from-photos is the hero action (§5 S1); live capture is secondary and
-    // graduates to Capture Beta (Phase 5).
+    // MP4-from-photos is the hero action (§5 S1) once there is a trip; live
+    // capture is secondary and graduates to Capture Beta (Phase 5). While 旅程
+    // is empty the welcome card's 「找出我的旅程」 is the one filled button, and
+    // import is the manual route, drawn like recording beside it (#290).
+    @ViewBuilder
     private var importButton: some View {
-        Button {
+        let isEmpty = session.trips.isEmpty
+        let button = Button {
             showingImport = true
         } label: {
             Label("import_from_photos", systemImage: "photo.stack")
-                .font(.title2.bold())
+                .font(isEmpty ? .headline : .title2.bold())
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
+                .padding(.vertical, isEmpty ? 8 : 12)
         }
-        .buttonStyle(.prominent)
+        if isEmpty {
+            button.buttonStyle(.bordered)
+        } else {
+            button.buttonStyle(.prominent)
+        }
     }
 
     /// Live capture is secondary, not hidden (Chiu 2026-09-23: 「不是主力，但
@@ -304,36 +317,6 @@ struct HomeView: View {
             Image(systemName: "wrench.and.screwdriver")
         }
     }
-
-    private static func exportDatabase(session: TrackingSession) -> DebugShareFile? {
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kamome-\(Self.timestamp()).sqlite")
-        do {
-            try session.repository.snapshotDatabase(to: url.path)
-            return DebugShareFile(url: url)
-        } catch {
-            return nil
-        }
-    }
-
-    private static func exportLatestTripGPX(session: TrackingSession) -> DebugShareFile? {
-        guard let trip = session.trips.first,
-              let detail = Stored.read("detail", { try session.repository.detail(tripId: trip.id) }) else { return nil }
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("kamome-trip-\(Self.timestamp()).gpx")
-        do {
-            try GPXExporter.gpx(for: detail).write(to: url, atomically: true, encoding: .utf8)
-            return DebugShareFile(url: url)
-        } catch {
-            return nil
-        }
-    }
-
-    private static func timestamp() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
-        return formatter.string(from: .now)
-    }
     #endif
 }
 
@@ -359,6 +342,13 @@ extension HomeView {
         segment = choice
     }
 
+    /// 「找出我的旅程」 from 旅程 — its empty state, or the line under a short
+    /// list (#290, #295 item 1): show 足跡, and ask for the library there.
+    fileprivate func findJourneys() {
+        show(.footprints)
+        footprints?.findJourneys()
+    }
+
     /// Both itinerary actions end here: switch to 旅程 and show the trip in S3
     /// (「新增旅程」 / 「在旅程中打開」, Footprints ADR draft).
     fileprivate func openInJourneys(_ tripId: String) {
@@ -381,20 +371,3 @@ extension HomeView {
         }
     }
 }
-
-#if DEBUG
-private struct DebugShareFile: Identifiable {
-    let url: URL
-    var id: URL { url }
-}
-
-private struct ActivityShareSheet: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
-}
-#endif

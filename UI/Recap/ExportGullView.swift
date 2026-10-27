@@ -264,8 +264,9 @@ private final class GullFlapView: UIView {
 ///
 /// A copy of the path, not a call into `ExportEngine`: that one is a
 /// `CGContext` drawing for the film and must not be restyled in place
-/// (`HANDOFF.md`), and this one must be free to move.
-private enum GullPose {
+/// (`HANDOFF.md`), and this one must be free to move. `KamomeGull` draws its
+/// resting pose, so the app's cards and its wait show one bird (#295 item 3).
+enum GullPose {
     /// One wing, in SVG units; the other is its mirror.
     private struct Pose {
         let tip: CGPoint
@@ -285,22 +286,29 @@ private enum GullPose {
     private static let wingsDown = Pose(tip: CGPoint(x: 18, y: 12), outer: CGPoint(x: 12, y: -7), inner: CGPoint(x: 5, y: -9))
     /// The SVG box the bird and its lift fit in: ±22 wide, −19…17 tall.
     private static let box = CGRect(x: -22, y: -19, width: 44, height: 36)
+    /// The brand pose alone, its round caps included: the wingtips' ±20 and
+    /// the arcs' crest near −8, each widened by half the stroke. A bird that
+    /// never moves needs no room to beat in.
+    static let restingBox = CGRect(x: -23.5, y: -11.5, width: 47, height: 20)
+    private static let stroke = 6.5
     private static let lift = 2.0
     private static let head = CGPoint(x: 0, y: -2)
 
-    static func strokeWidth(in size: CGSize) -> CGFloat {
-        6.5 * min(size.width / box.width, size.height / box.height)
+    static func strokeWidth(in size: CGSize, fitting frame: CGRect = box) -> CGFloat {
+        stroke * min(size.width / frame.width, size.height / frame.height)
     }
 
-    static func path(phase: Double, in rect: CGRect) -> CGPath {
+    /// - Parameter frame: the SVG box mapped onto `rect`; `restingBox` for a
+    ///   bird drawn only at phase 0.
+    static func path(phase: Double, in rect: CGRect, fitting frame: CGRect = box) -> CGPath {
         let beat = sin(2 * .pi * phase)
         let pose = beat >= 0 ? brand.mixed(with: wingsUp, beat) : brand.mixed(with: wingsDown, -beat)
         let bodyY = -lift * max(-beat, 0)
-        let scale = min(rect.width / box.width, rect.height / box.height)
+        let scale = min(rect.width / frame.width, rect.height / frame.height)
         func point(_ svg: CGPoint, mirrored: Bool = false) -> CGPoint {
             CGPoint(
-                x: rect.midX + ((mirrored ? -svg.x : svg.x) - box.midX) * scale,
-                y: rect.midY + (svg.y + bodyY - box.midY) * scale
+                x: rect.midX + ((mirrored ? -svg.x : svg.x) - frame.midX) * scale,
+                y: rect.midY + (svg.y + bodyY - frame.midY) * scale
             )
         }
         let path = CGMutablePath()
