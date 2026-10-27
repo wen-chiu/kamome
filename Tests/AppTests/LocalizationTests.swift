@@ -40,7 +40,8 @@ final class LocalizationTests: XCTestCase {
         // leaves alone, one of them a 「取得這條路線」 card named nowhere else. The
         // toggle still reads as photo cards only (2026-07-18): the label above and
         // a note about photos at the stops say it, and neither names another card.
-        for (locale, photos, stop) in [("en", "photos", "stop"), ("zh-Hant", "照片", "地點")] {
+        // The zh note says 景點, Chiu's word for it (2026-10-27, PR #321).
+        for (locale, photos, stop) in [("en", "photos", "stop"), ("zh-Hant", "照片", "景點")] {
             let note = try localizedValue("recap_photos_note", locale: locale)
             XCTAssertTrue(note.contains(photos) && note.contains(stop), "[\(locale)] photos at the stops: \(note)")
             for negative in ["always appear", "Get this route", "一律", "取得這條路線"] {

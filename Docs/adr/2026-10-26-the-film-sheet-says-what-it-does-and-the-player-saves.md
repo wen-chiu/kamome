@@ -9,7 +9,7 @@ The first-time-user walk of 2026-10-10 (VERIFIED on screen, sample trip, zh-Hant
 ## Decision
 Chiu, on #291 and #295, 2026-10-26. Where the means is this PR's rather than Chiu's words, it says so; Chiu judges it from the screenshots.
 - 「完成」 becomes **「關閉」** / "Close" on the film sheet. The player gets the same label (this PR's call).
-- The switch's note says what the switch does: 「每到一個地點，影片會放上你在那裡拍的照片。」 / "At each stop, the film shows photos you took there." **Draft wording**; the words are Chiu's to judge.
+- The switch's note says what the switch does: 「影片到景點後會出現照片」 (Chiu's wording, 2026-10-27, on PR #321). The English stays "At each stop, the film shows photos you took there." 景點 is Chiu's word here, beside the glossary's 地點 for a stop (ADR 2026-10-26-zh-hant-uses-one-word-for-each-thing). It is not a retired word, so `ZhHantGlossaryTests` passes.
 - 「2 / 2」 becomes **「2 張照片」**: the photos the film shows at that stop.
 - **The blank under 「車輛」 goes.** It was the 35 pt between two sections, not an empty footer: dropping the footer left it at 35 pt (VERIFIED, simulator screenshots before and after). The photo-card switch therefore joins the settings card, with its note as the row's second line. The length row gets the same treatment, because as the card's footer its sentence sat under the switch and read as the switch's. The means is this PR's.
 - **The player's pair is 儲存到照片 and 分享**, as on the finished screen, and it is the same component (`FilmSaveShareActions`). 刪除影片 becomes secondary and still asks first (the spirit of ADR 2026-10-02-deleting-a-stop-asks-first). It goes into ⋯ as on the finished screen (this PR's means).
