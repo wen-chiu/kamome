@@ -1,11 +1,16 @@
 import KamomeConfig
 import SwiftUI
 
-/// The licence and privacy surface — `Docs/release-readiness.md` S2 and S3.
+/// About, in the order Chiu decided on 2026-10-26 (#293, ADR
+/// `2026-10-26-about-opens-with-the-app-and-speaks-plainly`): who the app is,
+/// what leaves the device in plain words, a way to reach the developer and to
+/// rate the app, then what is owed to others. It used to open on the terrain
+/// licences, with no name, version or contact anywhere on it.
 ///
 /// **Attribution is a licence condition, not copy.** Geoapify attribution is
 /// mandatory on the free plan, in the format "Powered by Geoapify" with a link,
-/// and OpenStreetMap attribution is always required.
+/// and OpenStreetMap attribution is always required. The 2026-10-26 order moved
+/// the credits down the screen; every word of them is unchanged.
 ///
 /// ⚠️ **Amended 2026-09-12, and this screen keeps everything it carries.** Chiu
 /// decided 2026-08-17 that attribution lives in the app's *interface* and never
@@ -17,25 +22,15 @@ import SwiftUI
 /// film draws nothing at all while its substrate is Apple's.
 ///
 /// **The privacy notice is an honest declaration** (ADR 2026-08-20 (c)), so
-/// every sentence was checked against the code rather than against an intention:
-///
-/// - The two payloads are described separately because they are not the same
-///   payload, and "start and end coordinates" is untrue of both.
-/// - The thinning distance and the per-leg cap are read from `TrackingConfig`
-///   rather than typed into the copy, so tuning either one cannot quietly make
-///   the notice false.
-/// - The recorded-trip paragraph describes what `RouteMatchService` actually
-///   does today, which is **not** what `Docs/pre-launch.md`'s payload table
-///   says. See `HANDOFF.md` — that conflict is Chiu's to settle, and until he
-///   does, the sentence that matches the code is the honest one to ship.
+/// every sentence was checked against the code rather than against an intention.
+/// This screen carries the plain half; the payloads, retention and the server's
+/// detail are one row away, on `PrivacyDetailView`.
 ///
 /// **The same strings are the first-run notice's strings** (`FirstRunNoticeView`,
 /// ADR 2026-09-05 (b)) — one source, so the screen a user can always come back to
 /// and the one-time telling cannot drift apart.
 ///
-/// ⏳ **The wording and the placement are Chiu's and are not ruled on yet.**
-/// This ships so the obligation is met rather than deferred; the open half is
-/// carried in `Docs/release-readiness.md` S2/S3. Visual craft is `DESIGNER.md`'s.
+/// ⏳ **The wording is Chiu's** and comes back to him as one table (#118).
 struct AboutView: View {
     /// Read, not hardcoded: the notice states these two numbers as fact.
     let matching: TrackingConfig.Matching
@@ -54,14 +49,19 @@ struct AboutView: View {
     /// tunable either: it must be the same page as the store's, and
     /// `Scripts/release/check-attribution.sh` fails if it disappears.
     private static let privacyPolicy = URL(string: "https://wen-chiu.github.io/kamome-site/privacy/")!
+    /// Where 「意見回饋」 goes (Chiu 2026-10-26, #293): the site's support page,
+    /// which is also the store listing's support URL.
+    static let support = URL(string: "https://wen-chiu.github.io/kamome-site/support/")!
+    /// The App Store's own write-a-review sheet. 6813758768 is Kamome's Apple ID
+    /// in App Store Connect (Chiu 2026-10-27) — not the bundle id, not the SKU.
+    static let writeReview = URL(string: "https://apps.apple.com/app/id6813758768?action=write-review")!
 
     var body: some View {
         NavigationStack {
             List {
-                attributionSection
-                privacySection
-                DiagnosticsSection(file: $diagnosticsFile)
-                acknowledgementsSection
+                ForEach(AboutSection.allCases, id: \.self) { section in
+                    content(of: section)
+                }
             }
             .diagnosticsShareSheet($diagnosticsFile)
             .navigationTitle("about_title")
@@ -74,7 +74,56 @@ struct AboutView: View {
         }
     }
 
-    /// S2. The two rows are the obligation; the footer is the explanation, and
+    @ViewBuilder
+    private func content(of section: AboutSection) -> some View {
+        switch section {
+        case .app: Section { AboutHeader(identity: .main) }
+        case .privacy: privacySection
+        case .support: supportSection
+        case .diagnostics: DiagnosticsSection(file: $diagnosticsFile)
+        case .credits: attributionSection
+        case .licences: acknowledgementsSection
+        }
+    }
+
+    /// The plain half of the notice: what stays, who is asked for what, what
+    /// the reader controls. The technical half is behind 「詳細說明」.
+    private var privacySection: some View {
+        Section {
+            Text("privacy_intro")
+            // Which parties handle a journey's coordinates on the way to the
+            // roads — read off the config, so the config flip changes the
+            // sentence with it (`PrivacyNoticeCopy`).
+            Text(LocalizedStringKey(PrivacyNoticeCopy.hopKey(for: matching)))
+            Text("privacy_control")
+            Text("privacy_share")
+            NavigationLink {
+                PrivacyDetailView(matching: matching)
+            } label: {
+                Text("privacy_details")
+            }
+            Link(destination: Self.privacyPolicy) {
+                linkRow("privacy_policy_link")
+            }
+        } header: {
+            Text("privacy_header")
+        }
+        .font(.callout)
+    }
+
+    /// Feedback, then rating — the order Chiu gave.
+    private var supportSection: some View {
+        Section {
+            Link(destination: Self.support) {
+                linkRow("about_feedback")
+            }
+            Link(destination: Self.writeReview) {
+                linkRow("about_rate")
+            }
+        }
+    }
+
+    /// S2. The rows are the obligation; the footer is the explanation, and
     /// the obligation does not depend on it.
     private var attributionSection: some View {
         Section {
@@ -97,36 +146,6 @@ struct AboutView: View {
         }
     }
 
-    /// S3. Ordered the way a reader needs it: what stays, then each payload,
-    /// then how long someone else keeps it, then what the reader controls.
-    private var privacySection: some View {
-        Section {
-            Text("privacy_intro")
-            // Which parties handle a journey's coordinates on the way to the
-            // roads — read off the config, so the config flip changes the
-            // sentence with it (`PrivacyNoticeCopy`).
-            Text(LocalizedStringKey(PrivacyNoticeCopy.hopKey(for: matching)))
-            // The rest of the relay's story. The first-run card carries only the
-            // sentence above, so this is where the detail lives rather than
-            // being cut from the app entirely (Chiu 2026-09-06).
-            if let detail = PrivacyNoticeCopy.relayDetailKey(for: matching) {
-                Text(LocalizedStringKey(detail))
-            }
-            payload("privacy_imported_title", body: importedBody)
-            payload("privacy_recorded_title", body: Text("privacy_recorded_body"))
-            payload("privacy_tiles_title", body: Text("privacy_tiles_body"))
-            Text("privacy_retention")
-            Text("privacy_control")
-            Text("privacy_share")
-            Link(destination: Self.privacyPolicy) {
-                linkRow("privacy_policy_link")
-            }
-        } header: {
-            Text("privacy_header")
-        }
-        .font(.callout)
-    }
-
     /// The software licences the app's own contents oblige it to reproduce,
     /// in full rather than linked (ADR 2026-09-12 (c)). Last, because it is the
     /// section a reader is least likely to have come for.
@@ -146,23 +165,6 @@ struct AboutView: View {
         }
     }
 
-    /// The imported payload is the only sentence carrying numbers, and both come
-    /// from config so the copy cannot outlive a tuning change. Formatted in
-    /// `PrivacyNoticeCopy` because the first-run notice states the same fact and
-    /// the two must not be able to state it differently.
-    private var importedBody: Text {
-        Text(PrivacyNoticeCopy.importedBody(for: matching))
-    }
-
-    private func payload(_ title: LocalizedStringKey, body: Text) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.subheadline.bold())
-            body
-        }
-        .padding(.vertical, 2)
-    }
-
     private func linkRow(_ key: LocalizedStringKey) -> some View {
         HStack {
             Text(key)
@@ -173,4 +175,21 @@ struct AboutView: View {
                 .font(.footnote)
         }
     }
+}
+
+/// About's sections, top to bottom. Chiu 2026-10-26 (#293): name, icon and
+/// version → privacy in plain words → feedback → rating → map and terrain
+/// credits → open-source licences. `AboutTests` holds the order.
+///
+/// Diagnostics was not in that list; it sits after rating because the file it
+/// exports is what a tester sends along with feedback, and before the credits so
+/// the screen's last two sections are the ones owed to others.
+enum AboutSection: CaseIterable {
+    case app
+    case privacy
+    /// Feedback, then rating.
+    case support
+    case diagnostics
+    case credits
+    case licences
 }

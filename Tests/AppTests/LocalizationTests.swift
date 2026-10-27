@@ -225,22 +225,37 @@ final class LocalizationTests: XCTestCase {
     /// ⚠️ **Whose infrastructure the relay runs on is asserted on
     /// `privacy_relay_detail`, not here** (Chiu 2026-09-06 cut the card to two
     /// sentences). The rule did not move — the string carrying it did.
+    ///
+    /// ⚠️ **Restated 2026-10-26 (Chiu, #293): the relay is named as Kamome's
+    /// server.** The card drops 中繼 and 金鑰, words a new user cannot read, so
+    /// the extra party is asserted by whose it is — Kamome's — and the server
+    /// it runs on, instead of by the word "relay". The rule is the same: the
+    /// relay sentence names a party between the phone and Geoapify, and the
+    /// direct sentence names none.
     func testTheHopSentencesNameEveryPartyThatHandlesACoordinate() throws {
         let relayEN = try localizedValue("privacy_hop_relay", locale: "en")
         XCTAssertTrue(relayEN.contains("Geoapify"), relayEN)
-        XCTAssertTrue(relayEN.contains("relay"), "the extra party must be named: \(relayEN)")
+        XCTAssertTrue(
+            relayEN.contains("Kamome") && relayEN.lowercased().contains("server"),
+            "the extra party must be named: \(relayEN)"
+        )
 
         let relayZH = try localizedValue("privacy_hop_relay", locale: "zh-Hant")
         XCTAssertTrue(relayZH.contains("Geoapify"), relayZH)
-        XCTAssertTrue(relayZH.contains("中繼"), "the extra party must be named: \(relayZH)")
+        XCTAssertTrue(
+            relayZH.contains("卡摸咩") && relayZH.contains("伺服器"),
+            "the extra party must be named: \(relayZH)"
+        )
 
         for locale in ["en", "zh-Hant"] {
             let direct = try localizedValue("privacy_hop_direct", locale: locale)
             XCTAssertTrue(direct.contains("Geoapify"), "[\(locale)] \(direct)")
-            XCTAssertFalse(
-                direct.lowercased().contains("relay") || direct.contains("中繼"),
-                "[\(locale)] this sentence describes the build that has no relay: \(direct)"
-            )
+            for party in ["relay", "server", "中繼", "伺服器"] {
+                XCTAssertFalse(
+                    direct.lowercased().contains(party),
+                    "[\(locale)] this sentence describes the build that has no relay: \(direct)"
+                )
+            }
         }
     }
 
@@ -248,17 +263,20 @@ final class LocalizationTests: XCTestCase {
     /// Cutting the first-run card was a decision about *where* the detail lives,
     /// not about dropping it: the third party running the relay, what it keeps,
     /// and that it forwards nothing identifying the device are all facts a
-    /// privacy notice may not quietly lose.
+    /// privacy notice may not quietly lose. Since 2026-10-26 (#293) that the
+    /// relay holds the key is one of them: the hop sentence no longer says it.
     func testTheRelayDetailKeepsWhatTheShortSentenceDropped() throws {
         let english = try localizedValue("privacy_relay_detail", locale: "en")
         XCTAssertTrue(english.contains("Cloudflare"), "whose infrastructure it runs on: \(english)")
         XCTAssertTrue(english.lowercased().contains("no record"), "what it keeps: \(english)")
         XCTAssertTrue(english.lowercased().contains("identifies"), "what it forwards: \(english)")
+        XCTAssertTrue(english.lowercased().contains("key"), "what it holds: \(english)")
 
         let chinese = try localizedValue("privacy_relay_detail", locale: "zh-Hant")
         XCTAssertTrue(chinese.contains("Cloudflare"), "whose infrastructure it runs on: \(chinese)")
         XCTAssertTrue(chinese.contains("紀錄"), "what it keeps: \(chinese)")
         XCTAssertTrue(chinese.contains("識別"), "what it forwards: \(chinese)")
+        XCTAssertTrue(chinese.contains("金鑰"), "what it holds: \(chinese)")
     }
 
     /// **The first-run card is short, and stays short** (Chiu 2026-09-06: the

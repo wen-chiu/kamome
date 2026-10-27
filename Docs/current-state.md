@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-26 against ADR **2026-10-26-zh-hant-uses-one-word-for-each-thing**.
+Last synced: 2026-10-26 against ADR **2026-10-26-about-opens-with-the-app-and-speaks-plainly**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -25,6 +25,10 @@ archived (`Docs/_archive/kamome-poc-spec.md`).
 **zh-Hant copy uses one word for each thing** (製作, 旅程影片, 照片, 你, 卡摸咩,
 地點, 旅程): the glossary is ADR 2026-10-26-zh-hant-uses-one-word-for-each-thing,
 and `ZhHantGlossaryTests` fails on a retired word. Read it before writing zh-Hant copy.
+
+**About** opens with the app's name, icon and version, then privacy in plain words
+(detail behind 「詳細說明」), feedback, rating, credits, licences; the first-run
+notice says no 中繼 or 金鑰: ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly.
 
 **No release is in flight.** The current work proves the *artefact* ahead of
 productisation (Chiu 2026-08-15). The next release target is Phase 2 (App Store),

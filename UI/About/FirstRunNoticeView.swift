@@ -14,9 +14,10 @@ import SwiftUI
 /// **Two sentences and a pointer, and that is the whole card** (Chiu
 /// 2026-09-06). It was the full privacy notice first; a wall of text at first
 /// launch is not read, and a notice nobody reads discloses nothing. The detail
-/// it dropped — the payload, retention, the control, what the relay is — is on
-/// `AboutView`, which is where someone goes when they want it, and the last line
-/// says so.
+/// it dropped — the payload, retention, the control, what the server is — is on
+/// `AboutView` and its 「詳細說明」, which is where someone goes when they want
+/// it, and the last line says so. Since 2026-10-26 (#293) the card says neither
+/// 中繼 nor 金鑰, and still says once that importing reaches a third party.
 ///
 /// **Every sentence is still `AboutView`'s sentence** (`PrivacyNoticeCopy`):
 /// the card shows the lead, `AboutView` shows the lead *and* the rest. Nothing
