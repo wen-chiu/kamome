@@ -35,8 +35,19 @@ final class LocalizationTests: XCTestCase {
     func testRecapStringsResolve() throws {
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "zh-Hant"), "地點照片卡")
         XCTAssertEqual(try localizedValue("recap_photos_toggle", locale: "en"), "Stop photo cards")
-        XCTAssertTrue(try localizedValue("recap_photos_note", locale: "en").contains("always appear"))
-        XCTAssertTrue(try localizedValue("recap_photos_note", locale: "zh-Hant").contains("一律會顯示"))
+        // Restated, not weakened (Chiu 2026-10-26, #291): the note says what the
+        // switch does — photos at each stop — where it used to list the cards it
+        // leaves alone, one of them a 「取得這條路線」 card named nowhere else. The
+        // toggle still reads as photo cards only (2026-07-18): the label above and
+        // a note about photos at the stops say it, and neither names another card.
+        // The zh note says 景點, Chiu's word for it (2026-10-27, PR #321).
+        for (locale, photos, stop) in [("en", "photos", "stop"), ("zh-Hant", "照片", "景點")] {
+            let note = try localizedValue("recap_photos_note", locale: locale)
+            XCTAssertTrue(note.contains(photos) && note.contains(stop), "[\(locale)] photos at the stops: \(note)")
+            for negative in ["always appear", "Get this route", "一律", "取得這條路線"] {
+                XCTAssertFalse(note.contains(negative), "[\(locale)] what the switch does, not what it doesn't: \(note)")
+            }
+        }
 
         XCTAssertEqual(RecapWordmark.tagline, "Turn your journey into memory.")
         XCTAssertEqual(try localizedValue("recap_end_tagline", locale: "en"), RecapWordmark.tagline)

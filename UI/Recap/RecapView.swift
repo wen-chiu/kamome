@@ -64,7 +64,9 @@ struct RecapView: View {
                     // The export belongs to `RecapExportCoordinator` now and
                     // outlives this screen; cancelling is the Cancel button
                     // below, and nothing else.
-                    Button(model.isRendering ? "recap_back" : "recap_done") { dismiss() }
+                    // 「關閉」, not 「完成」 (Chiu 2026-10-26, #291): it closes the
+                    // sheet, and nothing has been finished.
+                    Button(model.isRendering ? "recap_back" : "recap_close") { dismiss() }
                 }
             }
         }
@@ -84,16 +86,6 @@ struct RecapView: View {
             // looks editable and is not; the film in flight has already chosen.
             if !model.isRendering {
                 settingsSection
-
-                // Its own section so the note reads as the toggle's, not as a
-                // caption under the settings (S5 review item 4).
-                Section {
-                    Toggle("recap_photos_toggle", isOn: $model.photosEnabled)
-                } footer: {
-                    // The load-bearing sentence: photos ≠ chrome.
-                    Text("recap_photos_note")
-                }
-
                 filmPhotosSection
             }
             if model.isRendering { ExportGullSection(progress: model.drawingFraction, caption: model.gullCaption) }
@@ -211,16 +203,29 @@ struct RecapView: View {
     /// vehicle as rows above the stops, so the settings read as one short block
     /// and the list below is only *what* the film shows. The format row is gone
     /// with the GIF (Chiu 2026-10-10): every film is an MP4.
+    ///
+    /// **The photo-card switch is in the same card** (Chiu 2026-10-26, #291:
+    /// the gap under 「車輛」 goes). The gap was the spacing between two sections,
+    /// not an empty footer: dropping the footer left it at 35 pt, measured. The
+    /// switch's note is its own second line, so it still reads as the switch's
+    /// (S5 review item 4) and never as a caption under the settings. The length's
+    /// sentence moved into its row for the same reason: as the card's footer it
+    /// sat under the switch and read as the switch's.
     private var settingsSection: some View {
         Section {
             lengthRow
             // The plane is deliberately absent from the picker: the app picks it
             // from the journey for a crossing (`VehiclePickerLayout`).
             if model.pickableSubjects.count > 1 { VehicleRow(model: model) }
+            Toggle(isOn: $model.photosEnabled) {
+                Text("recap_photos_toggle")
+                // What the switch does, not what it leaves alone (Chiu
+                // 2026-10-26, #291). Naming the photos at each stop is what
+                // keeps it reading as photo cards only (2026-07-18).
+                Text("recap_photos_note")
+            }
         } header: {
             Text("recap_settings_header")
-        } footer: {
-            lengthFooter
         }
     }
 
@@ -232,23 +237,29 @@ struct RecapView: View {
     @ViewBuilder
     private var lengthRow: some View {
         if let filmPhotos, showsLength(filmPhotos) {
-            HStack {
-                Text("recap_length_header")
-                Spacer()
-                Picker("recap_length_header", selection: Binding(
-                    get: { filmPhotos.length }, set: { length in withAnimation { filmPhotos.choose(length) } }
-                )) {
-                    Text("recap_length_short").tag(FilmLength.short)
-                    Text("recap_length_standard").tag(FilmLength.standard)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("recap_length_header")
+                    Spacer()
+                    Picker("recap_length_header", selection: Binding(
+                        get: { filmPhotos.length }, set: { length in withAnimation { filmPhotos.choose(length) } }
+                    )) {
+                        Text("recap_length_short").tag(FilmLength.short)
+                        Text("recap_length_standard").tag(FilmLength.standard)
+                    }
+                    .pickerStyle(.segmented)
+                    .fixedSize()
                 }
-                .pickerStyle(.segmented)
-                .fixedSize()
+                // Its sentence is the row's second line, drawn like the switch's note.
+                lengthNote
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         }
     }
 
     @ViewBuilder
-    private var lengthFooter: some View {
+    private var lengthNote: some View {
         if let filmPhotos, showsLength(filmPhotos) {
             let ceiling = Self.clock(filmPhotos.ceilingS)
             if filmPhotos.isOverCeiling(photosEnabled: model.photosEnabled) {
