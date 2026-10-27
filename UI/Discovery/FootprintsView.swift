@@ -46,6 +46,15 @@ struct FootprintsView: View {
         .task {
             if model.phase == .idle {
                 await model.refresh()
+                #if DEBUG
+                // The diary's own shot (#195): Footprints opens on its first stored
+                // journey's itinerary, on the first appearance only. Without
+                // `-demo-discover`, whose library asks for Photos (no tap answers it).
+                if ProcessInfo.processInfo.arguments.contains("-demo-open-journey"),
+                   let first = model.journeys.first(where: { $0.tripId != nil }) {
+                    onOpen(first)
+                }
+                #endif
             } else {
                 model.loadTrips()
             }

@@ -332,6 +332,7 @@ public struct TrackingConfig: Decodable, Equatable {
     public let segmentation: Segmentation
     public let dwell: Dwell
     public let simplify: Simplify
+    public let tripMap: TripMap
     public private(set) var matching: Matching
     public let photos: Photos
     public let photoImport: Import
@@ -347,6 +348,7 @@ public struct TrackingConfig: Decodable, Equatable {
         case filter, segmentation, dwell, simplify, matching, photos, discovery, geocode, trip, sampling, export
         case photoImport = "import"
         case photoAnalysis = "photo_analysis"
+        case tripMap = "trip_map"
     }
 
     /// The loaded config with a different `matching` block — the only value the

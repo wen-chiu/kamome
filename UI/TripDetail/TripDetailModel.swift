@@ -20,7 +20,8 @@ final class TripDetailModel {
     let tripId: String
     /// Not `private`: the rename in `TripDetailModel+Title.swift` writes through it.
     let repository: TripRepository
-    private let config: TrackingConfig
+    /// Not `private`: the map's frame in `TripDetailModel+Days.swift` reads it.
+    let config: TrackingConfig
     private let photoService: PhotoLibraryService
 
     init(tripId: String, config: TrackingConfig, repository: TripRepository) {
@@ -156,7 +157,8 @@ final class TripDetailModel {
             await running.value
             return
         }
-        let (repository, tripId, epsilonM, config) = (repository, tripId, config.simplify.epsilonM, config)
+        let (repository, tripId, config) = (repository, tripId, config)
+        let (epsilonM, roadEpsilonM) = (config.simplify.epsilonM, config.matching.displayEpsilonM)
         let task = Task { @MainActor in
             repeat {
                 refreshAgain = false
@@ -164,7 +166,7 @@ final class TripDetailModel {
                     let detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
                     return (detail,
                             Stored.read("films") { try repository.films(tripId: tripId) } ?? [],
-                            Self.thinned(detail?.segments ?? [], epsilonM: epsilonM),
+                            Self.thinned(detail?.segments ?? [], epsilonM: epsilonM, roadEpsilonM: roadEpsilonM),
                             detail.map { Self.filmStopIds($0, config: config) } ?? [],
                             detail.flatMap { LegLength.groundMeters(trip: $0.trip, segments: $0.segments) })
                 }.value
@@ -205,8 +207,8 @@ final class TripDetailModel {
         selectedDay = day
     }
 
-    /// Each segment's display polyline, Douglas-Peucker-thinned (§4.4), keyed
-    /// by segment id. Thinned in `refresh()` off the main thread, beside the read
+    /// Each segment's display polyline — its matched road when it has one
+    /// (#195) — Douglas-Peucker-thinned (§4.4), keyed by segment id. Thinned in `refresh()` off the main thread, beside the read
     /// it comes from: the map bodies used to thin every segment on every render
     /// (#139).
     private(set) var displayPolylines: [String: [Simplifier.Point]] = [:]

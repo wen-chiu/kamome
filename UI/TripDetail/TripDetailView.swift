@@ -20,6 +20,8 @@ struct TripDetailView: View {
     @State var playingFilm: FilmRecord?
     @State var showingAllFilms = false
     @State var showingProvenance = false
+    /// Set from `model.mapFrame` (`TripDetailView+Map.swift`); the person's pan after that.
+    @State var mapCamera: MapCameraPosition = .automatic
     @State private var showingMerge = false
     @State private var showingRename = false
     @State private var renameText = ""
