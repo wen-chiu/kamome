@@ -14,7 +14,8 @@ final class RecapComposerDayLabelTests: XCTestCase {
     private let chicago = "America/Chicago"
 
     /// The film of a trip `hours` long whose stops arrive `offsets` seconds in,
-    /// each stop carrying `chicago` as its geocoded zone.
+    /// each stop carrying `chicago` as its geocoded zone. The places are
+    /// nowhere in particular: the clock reads only `time_zone`.
     private func film(endingAfter hours: Double, stopsAt offsets: [Double]) throws -> (TripRecord, RecapTrip) {
         let record = TripRecord(
             id: "trip-1", title: "Loop", startedAt: tripStart, endedAt: tripStart + hours * 3_600,
@@ -22,13 +23,13 @@ final class RecapComposerDayLabelTests: XCTestCase {
         )
         let stops = offsets.enumerated().map { index, offset in
             StopRecord(
-                id: "stop-\(index)", tripId: "trip-1", lat: -32.0, lon: 115.75,
+                id: "stop-\(index)", tripId: "trip-1", lat: 0, lon: 0,
                 arrivedAt: tripStart + offset, departedAt: tripStart + offset + 600,
                 name: "Stop \(index)", timeZone: chicago
             )
         }
         let legs = [RecapTrip.Leg(
-            coordinates: [RecapCoordinate(lat: -32.0, lon: 115.75), RecapCoordinate(lat: -32.1, lon: 115.90)],
+            coordinates: [RecapCoordinate(lat: 0, lon: 0), RecapCoordinate(lat: 0.1, lon: 0.1)],
             mode: .drive, provenance: .recorded
         )]
         let recap = try XCTUnwrap(RecapComposer.trip(
