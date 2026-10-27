@@ -3,7 +3,13 @@ import KamomePersistence
 import SwiftUI
 
 /// Full-screen player for a stored film, opened from the trip detail's films
-/// section. Plays immediately; offers share and delete.
+/// section. Plays immediately.
+///
+/// **The same pair as the finished screen** (Chiu 2026-10-26, #295 item 9):
+/// Save to Photos and Share under the film, Delete in ⋯ and still asked first.
+/// A red Delete used to sit beside Share with Save missing, so the action
+/// someone opening a film most likely wants was not there, and the one that
+/// cannot be undone carried the same weight as Share.
 struct FilmPlayerSheet: View {
     let film: FilmRecord
     let onDelete: () -> Void
@@ -33,32 +39,11 @@ struct FilmPlayerSheet: View {
                         .padding()
                 }
 
-                HStack(spacing: 16) {
-                    if let url = FilmStore.resolvedURL(relativePath: film.relativePath) {
-                        ShareLink(item: url) {
-                            Label("recap_share", systemImage: "square.and.arrow.up")
-                        }
-                        .buttonStyle(.bordered)
-                    }
-
-                    Button(role: .destructive) {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Label("recap_film_delete", systemImage: "trash")
-                    }
-                    .buttonStyle(.bordered)
-                    .confirmationDialog(
-                        "recap_film_delete_confirm",
-                        isPresented: $showDeleteConfirmation,
-                        titleVisibility: .visible
-                    ) {
-                        Button("recap_film_delete", role: .destructive) {
-                            onDelete()
-                        }
-                    }
+                if let url = FilmStore.resolvedURL(relativePath: film.relativePath) {
+                    FilmSaveShareActions(fileURL: url)
+                        .padding(.horizontal)
+                        .padding(.bottom)
                 }
-                .padding(.horizontal)
-                .padding(.bottom)
 
                 // Format, date and size used to sit on Trip Detail's films row;
                 // they belong with the film, not on every visit to the trip
@@ -86,7 +71,29 @@ struct FilmPlayerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("recap_done") { dismiss() }
+                    // 「關閉」, as on the export sheet (#291): nothing here is
+                    // being finished.
+                    Button("recap_close") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button(role: .destructive) {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Label("recap_film_delete", systemImage: "trash")
+                        }
+                    } label: {
+                        Label("recap_more_actions", systemImage: "ellipsis.circle")
+                    }
+                }
+            }
+            .confirmationDialog(
+                "recap_film_delete_confirm",
+                isPresented: $showDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("recap_film_delete", role: .destructive) {
+                    onDelete()
                 }
             }
         }
