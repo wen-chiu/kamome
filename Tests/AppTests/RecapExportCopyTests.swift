@@ -64,6 +64,16 @@ final class RecapExportCopyTests: XCTestCase {
         XCTAssertTrue(try localizedValue("recap_export_busy_detail", locale: "zh-Hant").contains("一次只"))
     }
 
+    /// **The film sheet is a place to make something, not Settings** (Chiu
+    /// 2026-10-26, #291). Its leading button closes it, so it says 「關閉」, never
+    /// 「完成」; a stop's count says what it counts, 「2 張照片」, never 「2 / 2」.
+    func testTheFilmSheetClosesAndCountsPhotosInWords() throws {
+        XCTAssertEqual(try localizedValue("recap_close", locale: "zh-Hant"), "關閉")
+        XCTAssertEqual(try localizedValue("recap_close", locale: "en"), "Close")
+        let zhCount = try localizedValue("recap_stop_photo_count", locale: "zh-Hant")
+        XCTAssertEqual(String.localizedStringWithFormat(zhCount, 2), "2 張照片")
+    }
+
     /// **A failed export says a sentence, never the error** (#299). The screen
     /// showed `KamomeExportEngine.SnapshotTimeout · 1` under 「匯出失敗」; the
     /// code belongs in the log. Every failure that is not leaving the app

@@ -756,7 +756,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld 張"
+            "value": "%lld 張照片"
           }
         }
       }
@@ -2807,6 +2807,23 @@
         }
       }
     },
+    "recap_close": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉"
+          }
+        }
+      }
+    },
     "recap_done": {
       "extractionState": "manual",
       "localizations": {
@@ -3177,13 +3194,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Controls stop photo cards only. The title card and the closing “Get this route” card always appear."
+            "value": "At each stop, the film shows photos you took there."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "只控制地點照片卡。標題卡與結尾的「取得這條路線」卡片一律會顯示。"
+            "value": "每到一個地點，影片會放上你在那裡拍的照片。"
           }
         }
       }
