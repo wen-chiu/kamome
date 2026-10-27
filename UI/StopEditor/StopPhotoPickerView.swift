@@ -220,7 +220,10 @@ struct FilmDeckRow: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else if choices.isInFilm(stopId: stop.id) {
-                    Text(verbatim: "\(deck.count) / \(choices.photos(for: stop.id).count)")
+                    // 「2 張照片」, not 「2 / 2」 (Chiu 2026-10-26, #291): a fraction
+                    // with no legend. It counts what the film shows; the picker
+                    // behind the row has the rest.
+                    Text(String.localizedStringWithFormat(String(localized: "recap_stop_photo_count"), deck.count))
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                 } else {
