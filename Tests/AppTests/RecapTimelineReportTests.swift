@@ -73,6 +73,7 @@ final class RecapTimelineReportTests: XCTestCase {
 
         Self.reportTheRetime(line, recap: recap, config: config)
         Self.reportTheEndCard(line, recap: recap, config: config)
+        Self.reportTheDayStamps(line)
 
         // The camera's two spans and the zoom between them, which nothing else
         // prints — the figures in HANDOFF.md were derived when a region was
@@ -185,6 +186,38 @@ final class RecapTimelineReportTests: XCTestCase {
 
     /// Names a point by the stop it sits closest to. Equirectangular on purpose:
     /// this only has to pick the right stop out of a handful, not measure.
+    /// **Each turn of the day, and the stamp it got** (ADR 2026-10-28): when it
+    /// starts, when it lands against the stop's arrival, how long it held, and how
+    /// much room the turn had before the photographs open. Days and seconds only.
+    private static func reportTheDayStamps(_ line: LinearTimeline) {
+        var current = line.stops.first?.dayLabel ?? ""
+        var previous: CameraPath.Hold?
+        for hold in line.holds.sorted(by: { $0.startS < $1.startS }) where line.stops.indices.contains(hold.stopIndex) {
+            let label = line.stops[hold.stopIndex].dayLabel
+            defer { previous = hold }
+            guard label != current else { continue }
+            current = label
+            // The previous stop's photographs close a park ramp before its scene does.
+            let photosClose = previous.map { prior in
+                line.activeScene(atTime: prior.startS)?.hold == prior ? line.deckWindow(prior).end : prior.endS
+            } ?? 0
+            print(String(format: "    road in %.2fs · pull-away %.2fs", hold.startS - (previous?.endS ?? 0),
+                         (previous?.endS ?? 0) - photosClose))
+            let deckOpens = line.activeScene(atTime: hold.startS)?.hold == hold ? line.deckWindow(hold).start : hold.endS
+            guard let stamp = line.dayStampWindows.first(where: { $0.stopIndex == hold.stopIndex }) else {
+                print(String(format: "  day turn %@ at %.2fs — NO STAMP (arrival beat %.2fs)",
+                             label, hold.startS, deckOpens - hold.startS))
+                continue
+            }
+            print(String(
+                format: "  day turn %@ at %.2fs — stamp %.2f–%.2fs, lands %+.2fs from arrival, held %.2fs, "
+                    + "%.2fs to spare before the photos",
+                label, hold.startS, stamp.startS, stamp.endS, stamp.endS - hold.startS,
+                stamp.landStartS - stamp.pressEndS, deckOpens - stamp.endS
+            ))
+        }
+    }
+
     private static func nearestStopName(to point: RecapCoordinate, in trip: RecapTrip) -> String {
         trip.stops.min {
             Self.squaredDegrees(point, $0.coordinate) < Self.squaredDegrees(point, $1.coordinate)

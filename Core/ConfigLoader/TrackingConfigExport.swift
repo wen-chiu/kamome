@@ -36,6 +36,7 @@ public extension TrackingConfig {
         /// Camera areas (ADR 2026-09-24), the context floor under them (ADR 2026-09-24 (e)), earned travel (2026-09-28).
         public let cameraAreaSplitRatio: Double
         public let cameraContext: CameraContextConfig; public let travelPacing: TravelPacingConfig
+        public let dayStamp: DayStampConfig // the ink stamp when the film's day turns (ADR 2026-10-28)
         /// The whole route, revealed, held before the end card (Chiu 2026-09-29: 多停1~2秒).
         public let endRouteHoldS: Double
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).

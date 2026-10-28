@@ -154,6 +154,13 @@
     "travel_pacing": {
       "windows_per_s": 0.6
     },
+    "day_stamp": {
+      "clear_s": 0.25,
+      "press_s": 0.35,
+      "hold_s": 0.9,
+      "land_s": 0.55,
+      "min_s": 1.4
+    },
     "zoom_transition_s": 2.5,
     "act_split_km": 25,
     "crossing_beat_s": 4.0,

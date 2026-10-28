@@ -36,7 +36,7 @@ final class LinearTimelineHUDPlaceTests: LinearTimelineTestCase {
         var time = 0.0
         while time <= timeline.durationS {
             for content in timeline.overlayContents(atTime: time) {
-                if case let .hud(_, place, _) = content { samples.append((time, place)) }
+                if case let .hud(_, place, _, _) = content { samples.append((time, place)) }
             }
             time += 1.0 / 30
         }

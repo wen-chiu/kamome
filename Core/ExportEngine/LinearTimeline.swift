@@ -97,6 +97,8 @@ public struct LinearTimeline {
     /// second tunable saying the same thing is a number nobody could reason about
     /// (`CLAUDE.md` rule 7's spirit — the tunable exists, so no new one is added).
     let cardFadeS: Double
+    /// The day stamps (`LinearTimelineDayStamp`), planned once the beats exist.
+    private(set) var dayStampWindows: [DayStampWindow] = []
     private let title: String
     private let subtitle: String
     private let endCardFigures: [RecapEndCardFigure]
@@ -222,8 +224,7 @@ public struct LinearTimeline {
         )
         subjectArrivalStartS = arrival.startS
         subjectArrivalEndS = arrival.endS
-        titleCardS = min(config.titleCardS, path.durationS)
-        endCardS = config.endCardS
+        titleCardS = min(config.titleCardS, path.durationS); endCardS = config.endCardS
         title = trip.title
         subtitle = trip.subtitle
         endCardFigures = trip.endCardFigures
@@ -244,6 +245,7 @@ public struct LinearTimeline {
         // and this round is type-2 only.
         flightEndCoordinates = opensOnTheFlight ? RecapTypeTwoFilm.crossingEnds(trip) : nil
         journeyCard = flightEndCoordinates == nil ? nil : Self.journeyCard(trip: trip, locale: locale)
+        dayStampWindows = plannedDayStampWindows(config.dayStamp)
     }
 
     /// The trip the film is made of, and the same trip before a type-2 film's
@@ -369,14 +371,15 @@ public struct LinearTimeline {
         // Last, so it sits on top of everything it overlaps — and only across the
         // body: the title and end cards are full-bleed and own their seconds.
         if time >= titleCardS, time < durationS - endCardS {
+            let stamp = dayStamp(atTime: time)
             contents.append(.hud(
-                dayLabel: dayLabel(atTime: time),
+                dayLabel: hudDayLabel(atTime: time, stamp: stamp),
                 place: hudPlace(atTime: time),
                 // **The local journey, never the flight** (Chiu 2026-09-02). The
                 // trail reveal still uses the whole route — the dashed leg has to
                 // be drawn while the sprite crosses it — so the two readers of
                 // this axis deliberately ask different questions of it.
-                travelledM: path.traveledLocalDistanceM(atTime: time)
+                travelledM: path.traveledLocalDistanceM(atTime: time), dayStamp: stamp
             ))
         }
         return contents

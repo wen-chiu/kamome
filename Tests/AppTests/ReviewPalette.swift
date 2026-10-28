@@ -93,6 +93,20 @@ enum ReviewPalette {
             style.fallbackMarkerColor = try color(raw, variable: "KAMOME_FALLBACK_MARKER_COLOR")
         }
 
+        // The day stamp's two open questions (ADR 2026-10-28): where it presses,
+        // and which ink. Both refused when unparseable, like every lever here.
+        if let raw = HarnessEnv.value("KAMOME_DAY_STAMP_POSITION") {
+            guard let position = RecapDayStampStyle.Position(rawValue: raw) else {
+                throw HarnessError("KAMOME_DAY_STAMP_POSITION=\(raw) is not one of "
+                    + RecapDayStampStyle.Position.allCases.map(\.rawValue).joined(separator: ", "))
+            }
+            style.dayStamp.position = position
+        }
+        if let raw = HarnessEnv.value("KAMOME_DAY_STAMP_INK") {
+            style.dayStamp.inkColor = try color(raw, variable: "KAMOME_DAY_STAMP_INK")
+        }
+        print("KAMOME_REVIEW day stamp \(style.dayStamp.position.rawValue) · ink \(describe(style.dayStamp.inkColor))")
+
         print("KAMOME_REVIEW fallback marker \(describe(style.fallbackMarkerColor))"
             + " · luminance \(String(format: "%.3f", luminance(style.fallbackMarkerColor)))"
             + " · drawn at \(String(format: "%.2f", style.fallbackMarkerLengthFraction))x the subject")

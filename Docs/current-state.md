@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-28 against ADR **2026-10-26-home-shows-a-newcomer-the-next-step**.
+Last synced: 2026-10-28 against ADR **2026-10-28-a-new-day-presses-a-stamp-into-the-film**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -88,6 +88,8 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   as long as its windows need at `travel_pacing.windows_per_s` (ADR file 2026-09-28, Draft).
   Snapshots planned by `RecapSnapshotStations` (crop-scaling, PR #26). Two
   continuity gates scan **both** cameras — never relax them.
+- **Day stamp:** when the day turns, an ink stamp presses in and lands in the HUD's day slot, on
+  existing beats only (ADR 2026-10-28-a-new-day-presses-a-stamp-into-the-film; timing `export.day_stamp`).
 - **Export:** an MP4, nothing else (GIF removed, ADR 2026-10-10); one film at a time, app-wide; `RecapExportCoordinator` outlives
   every screen (ADR 2026-09-10). **The substrate declares its own attribution**
   (`MapRendererCapabilities.attribution`) and the render loop draws it on every
@@ -120,6 +122,8 @@ transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·
 per-act camera framing (rejected 2026-08-02) · "Place names as narrative rhythm" (`Docs/_archive/icebox.md`).
+The day stamp (ADR 2026-10-28-a-new-day-presses-a-stamp-into-the-film) took one slice of "chapters" and
+of place names as rhythm — the turn of the day — and reopened nothing else in either.
 
 ## Authoritative sources — higher wins; newest wins within a level
 

@@ -44,7 +44,7 @@ final class RecapTypeTwoCardFiguresTests: XCTestCase {
         for frame in 0..<line.frameCount {
             let timeS = Double(frame) / Double(config.fps)
             guard line.holdingStopIndex(atTime: timeS) == 0 else { continue }
-            for case let .hud(_, place, _) in line.overlayContents(atTime: timeS) {
+            for case let .hud(_, place, _, _) in line.overlayContents(atTime: timeS) {
                 XCTAssertNil(place, "the HUD named the departure airport at \(timeS)s")
             }
         }

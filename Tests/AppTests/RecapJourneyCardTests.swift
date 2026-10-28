@@ -191,7 +191,7 @@ final class RecapJourneyCardTests: XCTestCase {
 
         func odometer(atTime timeS: Double) -> Double? {
             for overlay in line.overlayContents(atTime: timeS) {
-                if case let .hud(_, _, travelledM) = overlay { return travelledM }
+                if case let .hud(_, _, travelledM, _) = overlay { return travelledM }
             }
             return nil
         }

@@ -25,6 +25,38 @@ public struct RecapPlaceName: Equatable {
     }
 }
 
+/// **A new day, pressed into the frame as an ink stamp** (Chiu 2026-10-28,
+/// ADR 2026-10-28-a-new-day-presses-a-stamp-into-the-film): the HUD's day,
+/// arriving. It rides inside `.hud` because it ends *in* the HUD pill's day slot,
+/// whose size and place depend on the pill's whole line — so the one drawing that
+/// lays the pill out also flies the stamp into it.
+///
+/// Three phases, each 0 → 1, one after the other. While `clear` runs the HUD's
+/// previous day fades and no stamp is drawn; from then until `land` reaches 1 the
+/// slot is empty and the stamp is the only day on screen. The day is never shown
+/// twice in one frame.
+public struct RecapDayStamp: Equatable {
+    /// The day the stamp names — the HUD's day once it lands. A stop's `dayLabel`,
+    /// in the film's language; never empty.
+    public let label: String
+    /// The day the HUD shows until `clear` has faded it.
+    public let previousLabel: String
+    /// The HUD's previous day fading out.
+    public let clear: Double
+    /// The ink pressing in, then held at 1.
+    public let press: Double
+    /// From where it pressed into the HUD pill's day slot.
+    public let land: Double
+
+    public init(label: String, previousLabel: String, clear: Double, press: Double, land: Double) {
+        self.label = label
+        self.previousLabel = previousLabel
+        self.clear = clear
+        self.press = press
+        self.land = land
+    }
+}
+
 /// One drawable element active at an instant — **pure data**, no CoreGraphics
 /// and no geo→pixel (the renderer projects through the `CameraFrame`, resolves
 /// `PhotoRef`s, and generates the QR from `shareURL`). Overlays never mutate or
@@ -97,7 +129,10 @@ public enum OverlayContent: Equatable {
     ///
     /// Suppressed under the title and end cards, which are full-bleed and own the
     /// frame for their few seconds.
-    case hud(dayLabel: String, place: String?, travelledM: Double)
+    ///
+    /// `dayStamp` is set while a new day is being stamped in, and nil otherwise
+    /// (ADR 2026-10-28): the pill then shows the stamp's days, not `dayLabel`.
+    case hud(dayLabel: String, place: String?, travelledM: Double, dayStamp: RecapDayStamp? = nil)
     /// Opening chrome: trip name + dates/distance.
     case titleChrome(title: String, subtitle: String)
     /// Closing chrome: the trip's name, the film's three figures, and the share

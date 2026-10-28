@@ -94,7 +94,7 @@ extension ExportQualityMatrixTests {
                 case let .photoDeck(card):
                     deck = true
                     if card.coordinate == nil { sawDepartureCard = true }
-                case let .hud(_, _, travelledM):
+                case let .hud(_, _, travelledM, _):
                     // 6. The odometer.
                     if !travelledM.isFinite || travelledM < 0 { backwards += 1 }
                     if travelledM < lastTravelled - 1 { backwards += 1 }

@@ -30,6 +30,7 @@ extension TrackingConfig.Export {
         case cameraAreaSplitRatio = "camera_area_split_ratio"
         case cameraContext = "camera_context"
         case travelPacing = "travel_pacing"
+        case dayStamp = "day_stamp"
         case endRouteHoldS = "end_route_hold_s"
         case zoomTransitionS = "zoom_transition_s"
         case actSplitKm = "act_split_km"

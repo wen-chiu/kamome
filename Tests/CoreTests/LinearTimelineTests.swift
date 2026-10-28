@@ -22,12 +22,12 @@ class LinearTimelineTestCase: XCTestCase {
         deckZoomS: Double = 0.5,
         deckPhotoHoldS: Double = 0.8,
         deckPhotoMinHoldS: Double = 0.2,
-        cameraSpanM: Double = 1500
+        cameraSpanM: Double = 1500, dayStamp: DayStampConfig = .off
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: 30, stopHoldS: 1.5, maxHoldFraction: 0.5,
             frameWidthPx: 1080, frameHeightPx: 1920,
-            cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, zoomTransitionS: 0.8, actSplitKm: 25,
+            cameraSpanM: cameraSpanM, wideSpanPadding: 1.15, dayStamp: dayStamp, zoomTransitionS: 0.8, actSplitKm: 25,
             crossingBeatS: 4.0, crossingApexPadding: 1.5, followHeadingUp: false,
             cameraPanWindowFractionPerS: 0.35, cameraDeadZoneFraction: 0.7, cameraSafeZoneFraction: 0.8,
             cameraResponsiveness: 6.0, endRevealS: 2.5, endRevealPadding: 1.9, endCardStyle: "full",
@@ -326,7 +326,7 @@ final class LinearTimelineTests: LinearTimelineTestCase {
         case let .placeNames(names, opacity): return String(format: "towns(%d,o%.2f)", names.count, opacity)
         case .titleChrome: return "title"
         case .endChrome: return "end"
-        case let .hud(day, place, travelledM):
+        case let .hud(day, place, travelledM, _):
             return String(format: "hud(%@/%@,%.0fm)", day, place ?? "-", travelledM)
         // The timeline never emits this one — `FrameCompositor` synthesises it
         // from the render loop's substrate (ADR 2026-09-12 (b)) — so it cannot
