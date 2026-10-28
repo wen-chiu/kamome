@@ -16,16 +16,19 @@ enum PrivacyNoticeCopy {
     /// `api_key_required` is the discriminator because it *is* the topology:
     /// `true` says this build carries the Geoapify key and calls the provider
     /// itself; `false` says the key lives in Kamome's relay and the app calls
-    /// that instead, which adds a hop the notice has to name. Reading the flag
-    /// means the config flip (`Docs/release-readiness.md` S6) changes the
-    /// sentence with it, rather than leaving the copy behind describing the old
-    /// path.
+    /// that instead, which adds a hop the notice has to name. The relay sentence
+    /// names it as Kamome's server, without 中繼 or 金鑰 (Chiu 2026-10-26, #293):
+    /// the first-run card is read by someone who has never heard either word.
+    /// Reading the flag means the config flip (`Docs/release-readiness.md` S6)
+    /// changes the sentence with it, rather than leaving the copy behind
+    /// describing the old path.
     static func hopKey(for matching: TrackingConfig.Matching) -> String {
         matching.apiKeyRequired ? "privacy_hop_direct" : "privacy_hop_relay"
     }
 
-    /// What the relay is, what it keeps, and what it forwards — **`AboutView`
-    /// only**, and nil when there is no relay to explain.
+    /// What the relay is, that it holds the key, what it keeps, and what it
+    /// forwards — **`PrivacyDetailView` only** (About's 「詳細說明」), and nil
+    /// when there is no relay to explain.
     ///
     /// The hop sentence above names the parties, which is the fact a first-run
     /// card exists to deliver (Chiu 2026-09-06: the card is short or it is not
