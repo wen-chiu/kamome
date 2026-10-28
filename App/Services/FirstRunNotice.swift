@@ -10,8 +10,10 @@ import KamomeConfig
 /// **This informs; it does not ask.** There is deliberately no "decline"
 /// (ADR 2026-09-05 (b)): a refusal that switches nothing off is a worse lie than no
 /// question at all, and the control the app really offers is the one
-/// `privacy_control` already names — you decide what is sent by deciding what to
-/// import.
+/// `privacy_control` already names — you decide what is sent to the road
+/// service by deciding what to import. Since Footprints, that sentence also says
+/// Footprints asks Apple for each journey's name, and only once it is opened
+/// (#305).
 ///
 /// **Gated on this build being able to send anything.** `matching.base_url` is
 /// `""` in the shipped config, so nothing leaves the device yet and a notice

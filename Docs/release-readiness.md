@@ -162,6 +162,9 @@ Two cases only. Everything else is this file's problem.
    Chiu 2026-09-04, told once on first run and remembered (ADR 2026-09-05 (b)). What
    is left of it is a **deferred** question, not an open obligation: whether the
    user may *refuse*, which needs a mechanism before it needs a button.
+   **2026-10-26: S2's placement is decided** (ADR
+   2026-10-26-about-opens-with-the-app-and-speaks-plainly); S3's wording is in
+   Chiu's #118 table.
 2. **A gate that would have to be weakened** to ship. `CLAUDE.md` rule 3 makes
    that a stop-and-ask, always.
 

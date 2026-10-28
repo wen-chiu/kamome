@@ -1108,6 +1108,60 @@
         }
       }
     },
+    "about_version": {
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). Under the app's name at the top of About. %1$@ is the version (0.3.1), %2$@ the build number.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version %1$@ (%2$@)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 %1$@（%2$@）"
+          }
+        }
+      }
+    },
+    "about_feedback": {
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About row; opens the support page, https://wen-chiu.github.io/kamome-site/support/.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Feedback"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "意見回饋"
+          }
+        }
+      }
+    },
+    "about_rate": {
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About row; opens the App Store's write-a-review sheet for Kamome.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rate Kamome on the App Store"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 App Store 為卡摸咩評分"
+          }
+        }
+      }
+    },
     "access_denied_body": {
       "extractionState": "manual",
       "localizations": {
@@ -2594,13 +2648,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "You decide what is sent by deciding what to import: a date range, or a single album."
+            "value": "You decide what is sent by deciding what to import: a date range, or a single album. Footprints also asks Apple for the name of each journey's main place; this begins only when you open Footprints."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你決定匯入什麼，就決定了會送出什麼：一段日期範圍，或是單一相簿。"
+            "value": "你決定匯入什麼，就決定了會送出什麼：一段日期範圍，或是單一相簿。「足跡」也會為每趟旅程向 Apple 查詢主要地點的名稱；這只在你打開「足跡」後才會開始。"
+          }
+        }
+      }
+    },
+    "privacy_details": {
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About's privacy section: the row that opens the technical detail, and that screen's title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Details"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳細說明"
           }
         }
       }
@@ -2645,13 +2717,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Those positions pass through Kamome's relay, which holds the key, on to Geoapify."
+            "value": "Once you import, those positions go via Kamome's server, which keeps none of it, to Geoapify, a third-party road service."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "這些路線位置會先送到卡摸咩的中繼（金鑰放在那裡），再送到 Geoapify。"
+            "value": "匯入旅程後，這些位置會經過卡摸咩的伺服器（不留存內容），送到第三方的道路服務 Geoapify。"
           }
         }
       }
@@ -2696,7 +2768,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, trips and films stay on this device. To draw the map, Kamome downloads map and terrain tiles for your trip's area from OpenFreeMap and Amazon, and asks Apple for stop names. To follow real roads, it sends the positions along your route."
+            "value": "Your photos, trips and films stay on this device. Kamome downloads map and terrain tiles for your trip's area from OpenFreeMap and Amazon, and asks Apple for stop names. To follow real roads, it sends your route's positions."
           }
         },
         "zh-Hant": {
@@ -2713,13 +2785,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The path your phone recorded is not sent to a routing service — it is already the route. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above. If a future version ever sends it, this notice will say so."
+            "value": "The path your phone recorded is not sent to a routing service — it is already the route. One exception: when you merge two trips, the gap between them is matched to roads like a photo trip, so the end of one and the start of the next are sent. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above. If a future version ever sends it, this notice will say so."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。若日後的版本要送出它，本說明也會如實寫明。"
+            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。例外是合併兩趟旅程：兩段之間的空白會像照片旅程一樣對齊道路，因此會送出前一段的終點和下一段的起點。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。若日後的版本要送出它，本說明也會如實寫明。"
           }
         }
       }
@@ -2747,13 +2819,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The relay is a small service on Cloudflare. It keeps no record of what it forwards — it counts requests, nothing more — and it forwards nothing that identifies your device, so Geoapify sees the relay rather than your phone."
+            "value": "Kamome's server is a small relay on Cloudflare. It holds the key Kamome uses with Geoapify, so the key is not inside the app. It keeps no record of what it forwards — it counts requests, nothing more — and it forwards nothing that identifies your device, so Geoapify sees the server rather than your phone."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "中繼是放在 Cloudflare 上的小服務。它不保留任何一筆轉送內容的紀錄，只計算請求次數；也不會轉送任何足以識別你裝置的資料，因此 Geoapify 看到的是中繼，不是你的手機。"
+            "value": "卡摸咩的伺服器是放在 Cloudflare 上的小型中繼服務，保管卡摸咩使用 Geoapify 的金鑰，所以金鑰不在 App 裡。它不保留任何一筆轉送內容的紀錄，只計算請求次數；也不會轉送任何足以識別你裝置的資料，因此 Geoapify 看到的是這台伺服器，不是你的手機。"
           }
         }
       }
