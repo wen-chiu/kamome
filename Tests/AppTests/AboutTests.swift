@@ -87,6 +87,15 @@ final class AboutTests: XCTestCase {
         XCTAssertTrue(chinese.contains("第三方"), "the road service is a third party: \(chinese)")
     }
 
+    /// **The card says the server keeps nothing** (Chiu 2026-10-28, PR #323).
+    /// It agrees with `privacy_relay_detail`, which says the same at length.
+    func testTheHopSentenceSaysTheServerKeepsNothing() throws {
+        XCTAssertTrue(try localizedValue("privacy_hop_relay", locale: "en").contains("keeps none"))
+        XCTAssertTrue(try localizedValue("privacy_hop_relay", locale: "zh-Hant").contains("不留存"))
+        XCTAssertTrue(try localizedValue("privacy_relay_detail", locale: "en").lowercased().contains("no record"))
+        XCTAssertTrue(try localizedValue("privacy_relay_detail", locale: "zh-Hant").contains("不保留"))
+    }
+
     /// **The control sentence stops overclaiming** (#305). Since Footprints,
     /// choosing what to import is not the only thing that decides what leaves:
     /// opening Footprints asks Apple to name every journey it finds. The

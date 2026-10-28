@@ -1109,7 +1109,7 @@
       }
     },
     "about_version": {
-      "comment": "DRAFT for the #118 wording batch (#293, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). Under the app's name at the top of About. %1$@ is the version (0.3.1), %2$@ the build number.",
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). Under the app's name at the top of About. %1$@ is the version (0.3.1), %2$@ the build number.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1127,7 +1127,7 @@
       }
     },
     "about_feedback": {
-      "comment": "DRAFT for the #118 wording batch (#293, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About row; opens the support page, https://wen-chiu.github.io/kamome-site/support/.",
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About row; opens the support page, https://wen-chiu.github.io/kamome-site/support/.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1145,7 +1145,7 @@
       }
     },
     "about_rate": {
-      "comment": "DRAFT for the #118 wording batch (#293, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About row; opens the App Store's write-a-review sheet for Kamome.",
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About row; opens the App Store's write-a-review sheet for Kamome.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2558,7 +2558,7 @@
       }
     },
     "privacy_details": {
-      "comment": "DRAFT for the #118 wording batch (#293, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About's privacy section: the row that opens the technical detail, and that screen's title.",
+      "comment": "Chiu approved 2026-10-28 (#293, PR #323, ADR 2026-10-26-about-opens-with-the-app-and-speaks-plainly). About's privacy section: the row that opens the technical detail, and that screen's title.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -2615,13 +2615,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Once you import, those positions go via Kamome's server to Geoapify, a third-party road service."
+            "value": "Once you import, those positions go via Kamome's server, which keeps none of it, to Geoapify, a third-party road service."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯入旅程後，這些位置會經過卡摸咩的伺服器，送到第三方的道路服務 Geoapify。"
+            "value": "匯入旅程後，這些位置會經過卡摸咩的伺服器（不留存內容），送到第三方的道路服務 Geoapify。"
           }
         }
       }
@@ -2666,7 +2666,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your photos, trips and films stay on this device. To draw the map, Kamome downloads map and terrain tiles for your trip's area from OpenFreeMap and Amazon, and asks Apple for stop names. To follow real roads, it sends the positions along your route."
+            "value": "Your photos, trips and films stay on this device. Kamome downloads map and terrain tiles for your trip's area from OpenFreeMap and Amazon, and asks Apple for stop names. To follow real roads, it sends your route's positions."
           }
         },
         "zh-Hant": {
@@ -2683,13 +2683,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The path your phone recorded is not sent to a routing service — it is already the route. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above. If a future version ever sends it, this notice will say so."
+            "value": "The path your phone recorded is not sent to a routing service — it is already the route. One exception: when you merge two trips, the gap between them is matched to roads like a photo trip, so the end of one and the start of the next are sent. When the film renders, the map tiles downloaded for its area reveal the route's geography, as described above. If a future version ever sends it, this notice will say so."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。若日後的版本要送出它，本說明也會如實寫明。"
+            "value": "手機記錄下來的路徑不會送到路線規劃服務——它本身就是路線。例外是合併兩趟旅程：兩段之間的空白會像照片旅程一樣對齊道路，因此會送出前一段的終點和下一段的起點。影片製作時，為其區域下載的地圖圖磚會透露路線的地理位置，如上所述。若日後的版本要送出它，本說明也會如實寫明。"
           }
         }
       }

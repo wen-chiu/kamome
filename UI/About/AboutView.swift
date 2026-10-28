@@ -30,7 +30,7 @@ import SwiftUI
 /// ADR 2026-09-05 (b)) — one source, so the screen a user can always come back to
 /// and the one-time telling cannot drift apart.
 ///
-/// ⏳ **The wording is Chiu's** and comes back to him as one table (#118).
+/// **The wording is Chiu's**, approved as one table on 2026-10-28 (PR #323, #118).
 struct AboutView: View {
     /// Read, not hardcoded: the notice states these two numbers as fact.
     let matching: TrackingConfig.Matching
@@ -125,19 +125,23 @@ struct AboutView: View {
 
     /// S2. The rows are the obligation; the footer is the explanation, and
     /// the obligation does not depend on it.
+    ///
+    /// **Quiet, not hidden** (Chiu 2026-10-28, PR #323): footnote type in the
+    /// secondary text colour instead of accent-teal body text, and still links.
+    /// Only the look changed; every word is the licence's.
     private var attributionSection: some View {
         Section {
             // "Powered by Geoapify" is the format the free plan requires, so it
             // is the same string in both languages — a translated brand
             // attribution would no longer be the required format.
             Link(destination: Self.geoapify) {
-                linkRow("attribution_geoapify")
+                creditRow("attribution_geoapify")
             }
             Link(destination: Self.openStreetMap) {
-                linkRow("attribution_osm")
+                creditRow("attribution_osm")
             }
             Link(destination: Self.terrainTiles) {
-                linkRow("attribution_terrain")
+                creditRow("attribution_terrain")
             }
         } header: {
             Text("attribution_header")
@@ -174,6 +178,19 @@ struct AboutView: View {
                 .foregroundStyle(.secondary)
                 .font(.footnote)
         }
+    }
+
+    /// A credit: the same row, quieter. The colour is the system's secondary
+    /// label as a concrete colour, because inside a `Link` the hierarchical
+    /// `.secondary` is read off the link's tint and comes out pale teal.
+    private func creditRow(_ key: LocalizedStringKey) -> some View {
+        HStack {
+            Text(key)
+            Spacer()
+            Image(systemName: "arrow.up.forward.square")
+        }
+        .font(.footnote)
+        .foregroundStyle(Color(uiColor: .secondaryLabel))
     }
 }
 

@@ -28,6 +28,13 @@ import XCTest
 /// narrower and enforceable: **they are not sent today, and the day that
 /// changes, the notice changes with it.**
 ///
+/// **One exception is sent, and the notice says so** (Chiu 2026-10-28, PR #323):
+/// merging two recorded trips joins them with a two-point `mergeGap` leg — the
+/// end of one and the start of the next — routed like a photo leg
+/// (`TripMerger`). `testAMergeGapLegIsOfferedAndTheNoticeSaysSo` holds both
+/// halves, so the exception cannot be dropped from the notice while the code
+/// still sends it.
+///
 /// → `Docs/release-readiness.md` S3b.
 final class RouteMatchRecordedLegTests: XCTestCase {
     /// Stands in for whatever Capture Beta wires up. It never has to answer:
@@ -101,6 +108,30 @@ final class RouteMatchRecordedLegTests: XCTestCase {
             report.attempted, 3,
             "with a matcher wired, recorded legs ARE offered — so the shipped-path assertion is not vacuous"
         )
+    }
+
+    /// The merge exception, as code and as copy. A recorded trip's gap leg is
+    /// offered to routing on the shipped path — so `privacy_recorded_body` must
+    /// say a merge sends the two ends, in both languages.
+    func testAMergeGapLegIsOfferedAndTheNoticeSaysSo() async throws {
+        let repository = TripRepository(database: try AppDatabase.inMemory())
+        let tripId = try seed(legs: 1, source: .mergeGap, trip: .recorded, into: repository)
+
+        let service = RouteMatchService(
+            repository: repository, matching: shippedMatching(), reconstructor: StubReconstructor()
+        )
+        let report = await service.matchTrip(tripId: tripId)
+        XCTAssertEqual(report.attempted, 1, "a merge's gap leg is routed like a photo leg (TripMerger)")
+
+        for (locale, merge) in [("en", "merge"), ("zh-Hant", "合併")] {
+            let path = try XCTUnwrap(Bundle.main.path(forResource: locale, ofType: "lproj"))
+            let notice = try XCTUnwrap(Bundle(path: path))
+                .localizedString(forKey: "privacy_recorded_body", value: nil, table: nil)
+            XCTAssertTrue(
+                notice.contains(merge),
+                "[\(locale)] the gap leg leaves the device, and privacy_recorded_body no longer says so: \(notice)"
+            )
+        }
     }
 
     // MARK: - Fixtures
