@@ -176,6 +176,10 @@ enum RecapComposer {
         // (`TripClock`); the export passes the whole trip's stops so the trip's
         // last moment, after the film's own end, is counted in its own zone.
         let clock = clock ?? TripClock(stops: stops)
+        // A one-day film says no 「第 N 天」 (Chiu 2026-10-26, #295): every stop
+        // would read Day 1. One day is the end card's count, by the chip's own
+        // clock, so the HUD and the card never disagree; the HUD drops "".
+        let namesTheDay = dayCount(trip: trip, clock: clock) > 1
 
         let inputs = PhotoInputs(
             byStop: photosByStop, highlighted: highlightedAssets,
@@ -188,7 +192,8 @@ enum RecapComposer {
             RecapTrip.Stop(
                 coordinate: snapped(lat: stop.lat, lon: stop.lon, to: legs),
                 name: stop.name ?? String(localized: "stop_unnamed"),
-                dayLabel: dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt, clock: clock),
+                dayLabel: namesTheDay
+                    ? dayLabel(for: stop.arrivedAt, tripStartedAt: trip.startedAt, clock: clock) : "",
                 detail: walkDetail(for: stop),
                 photos: photos,
                 dwellS: photos.isEmpty ? stopHoldS : deck.dwellS(photoCount: photos.count),
