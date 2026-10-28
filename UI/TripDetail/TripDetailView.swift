@@ -34,17 +34,21 @@ struct TripDetailView: View {
     /// Set for the sample, which arrives with its film made (#285): that film
     /// plays once, as soon as it is read, and never again on this screen.
     @State private var autoplayPending: Bool
+    /// Set when Home's next-step card opened this trip to make its film
+    /// (Chiu 2026-10-27): the film sheet opens once 「製作旅程影片」 could be pressed.
+    @State var filmSheetPending: Bool
     /// The export outlives the sheet, so the trip screen has to be able to draw
     /// it (Chiu 2026-09-10). Read directly off the shared coordinator rather
     /// than mirrored onto `TripDetailModel`: a mirror is a second place for the
     /// answer to be wrong, and Observation tracks the reads in `body` either way.
     private let exportCoordinator = RecapExportCoordinator.shared
 
-    init(tripId: String, session: TrackingSession, playsNewestFilm: Bool = false) {
+    init(tripId: String, session: TrackingSession, playsNewestFilm: Bool = false, opensFilmSheet: Bool = false) {
         _model = State(initialValue: TripDetailModel(
             tripId: tripId, config: session.config, repository: session.repository
         ))
         _autoplayPending = State(initialValue: playsNewestFilm)
+        _filmSheetPending = State(initialValue: opensFilmSheet)
     }
 
     /// What can be changed about the trip itself. A pencil rather than the
@@ -87,6 +91,7 @@ struct TripDetailView: View {
             timeline
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { makeFilmButton }
+        .onChange(of: canMakeFilm, initial: true) { openPendingFilmSheet() }
         .navigationTitle(model.screenTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: model.films) {

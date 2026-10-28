@@ -17,12 +17,7 @@ extension TripDetailView {
                 .padding(.vertical, 8)
         }
         .buttonStyle(.prominent)
-        // S5 entry: only completed trips have a recap to render. Naming is
-        // throttled and asynchronous; a film exported before its stops are named
-        // says "Unnamed stop" for each of them (Chiu 2026-08-04). It waits only
-        // for the stops a film shows (#160); the banner above keeps counting
-        // the rest.
-        .disabled(model.detail?.trip.endedAt == nil || model.isNamingFilmStops)
+        .disabled(!canMakeFilm)
         // As large as Home's two at the first accessibility size, no larger:
         // past that they took the screen from the list (#205).
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
@@ -30,5 +25,24 @@ extension TripDetailView {
         .padding(.top, 8)
         .padding(.bottom, 8)
         .background(.bar)
+    }
+
+    /// S5 entry: only completed trips have a recap to render. Naming is
+    /// throttled and asynchronous; a film exported before its stops are named
+    /// says "Unnamed stop" for each of them (Chiu 2026-08-04). It waits only
+    /// for the stops a film shows (#160); the banner above keeps counting the
+    /// rest. The button and Home's path to the sheet both wait on this.
+    var canMakeFilm: Bool {
+        model.detail?.trip.endedAt != nil && !model.isNamingFilmStops
+    }
+
+    /// **Home's 「製作旅程影片」 opens this trip's film sheet** (Chiu 2026-10-27,
+    /// ADR 2026-10-26-home-shows-a-newcomer-the-next-step). The same sheet as
+    /// the button below, opened once, as soon as the button could be pressed:
+    /// one film at a time stays `RecapExportCoordinator`'s, as from here.
+    func openPendingFilmSheet() {
+        guard filmSheetPending, canMakeFilm else { return }
+        filmSheetPending = false
+        showingRecap = true
     }
 }

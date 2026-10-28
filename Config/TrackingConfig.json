@@ -28,6 +28,9 @@
     "frame_padding": 1.5,
     "frame_min_span_m": 2000
   },
+  "home": {
+    "next_step_max_trips": 3
+  },
   "matching": {
     "base_url": "https://kamome-routing.kamome-site.workers.dev",
     "chunk_size": 100,

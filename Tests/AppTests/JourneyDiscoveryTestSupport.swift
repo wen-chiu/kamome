@@ -11,6 +11,10 @@ final class DiscoveryStubLibrary: ImportPhotoProviding, PhotoAccessProviding {
     var queries: [ImportQuery] = []
     var access: PhotoReadAccess = .granted
     var pickerPresented = 0
+    /// How many times the person was asked for the library.
+    var accessRequests = 0
+    /// What the person answers when asked; nil leaves `access` as it is.
+    var answer: PhotoReadAccess?
 
     func photos(matching query: ImportQuery) async -> [ImportPhoto] {
         queries.append(query)
@@ -18,7 +22,11 @@ final class DiscoveryStubLibrary: ImportPhotoProviding, PhotoAccessProviding {
     }
     func albums() async -> [PhotoAlbum] { [] }
     var readAccess: PhotoReadAccess { access }
-    func requestReadAccess() async -> PhotoReadAccess { access }
+    func requestReadAccess() async -> PhotoReadAccess {
+        accessRequests += 1
+        if let answer { access = answer }
+        return access
+    }
     func presentLimitedLibraryPicker(completion: @escaping () -> Void) {
         pickerPresented += 1
         completion()

@@ -41,11 +41,12 @@ struct FootprintsView: View {
         .scrollContentBackground(.hidden)
         .animation(.snappy(duration: 0.45), value: model.sections)
         .refreshable { await model.refresh() }
-        // The first appearance scans; a return reads the trips again, since a
+        // The first appearance scans (or asks first, when 旅程's 「找出我的旅程」
+        // brought it here, #290); a return reads the trips again, since a
         // journey made here has been named and routed since (#169).
         .task {
             if model.phase == .idle {
-                await model.refresh()
+                await model.firstLook()
                 #if DEBUG
                 // The diary's own shot (#195): Footprints opens on its first stored
                 // journey's itinerary, on the first appearance only. Without

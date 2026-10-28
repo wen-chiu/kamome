@@ -92,6 +92,10 @@ final class JourneyDiscoveryModel {
     /// Journeys whose lookup answered nothing this session. Not asked again
     /// until the person pulls to refresh, and no longer drawn as naming (#263).
     private(set) var unanswered: Set<String> = []
+    /// Set when 旅程's 「找出我的旅程」 is pressed before 足跡 has been shown,
+    /// so 足跡's first look asks for the library as its own welcome card's
+    /// button would (#290). `findJourneys()`.
+    var asksOnFirstLook = false
 
     init(
         config: TrackingConfig,

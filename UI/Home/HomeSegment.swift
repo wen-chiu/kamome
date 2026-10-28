@@ -54,6 +54,8 @@ enum HomeRoute: Hashable {
     /// S3 with its newest film already playing: the sample, which arrives with
     /// its film made (#285).
     case tripPlayingNewestFilm(String)
+    /// S3 with its film sheet open: Home's next-step card (Chiu 2026-10-27).
+    case tripMakingFilm(String)
     /// A Footprints journey's itinerary, by its entry's id.
     case itinerary(String)
 }

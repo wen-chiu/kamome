@@ -75,7 +75,6 @@ struct ExportGullView: View {
     private static let gullSize = CGSize(width: 70, height: 58)
     /// How far above the route the gull flies, in points.
     private static let altitude: CGFloat = 44
-    private static let flapPeriodS = 0.8
     /// Tilt follows the route's slope, but never further than this.
     private static let maxTilt = Angle.degrees(7)
     private static let dotSpacing: CGFloat = 11
@@ -87,7 +86,7 @@ struct ExportGullView: View {
             let place = route.place(at: travelled)
             ZStack(alignment: .topLeading) {
                 routeCanvas(route, travelled: travelled)
-                GullFlap(beats: !reduceMotion, periodS: Self.flapPeriodS)
+                GullFlap(beats: !reduceMotion, periodS: GullPose.beatS)
                     .frame(width: Self.gullSize.width, height: Self.gullSize.height)
                     .rotationEffect(clampedTilt(place.slope))
                     .position(x: place.point.x, y: place.point.y - Self.altitude)
@@ -264,8 +263,13 @@ private final class GullFlapView: UIView {
 ///
 /// A copy of the path, not a call into `ExportEngine`: that one is a
 /// `CGContext` drawing for the film and must not be restyled in place
-/// (`HANDOFF.md`), and this one must be free to move.
-private enum GullPose {
+/// (`HANDOFF.md`), and this one must be free to move. `KamomeGull` draws it
+/// too, beating once and coming to rest, so the app's cards and its wait show
+/// one bird (#295 item 3; Chiu 2026-10-27).
+enum GullPose {
+    /// One wingbeat, phase 0 → 1, in seconds: the wait's period, and the
+    /// cards' single beat.
+    static let beatS = 0.8
     /// One wing, in SVG units; the other is its mirror.
     private struct Pose {
         let tip: CGPoint
@@ -285,22 +289,29 @@ private enum GullPose {
     private static let wingsDown = Pose(tip: CGPoint(x: 18, y: 12), outer: CGPoint(x: 12, y: -7), inner: CGPoint(x: 5, y: -9))
     /// The SVG box the bird and its lift fit in: ±22 wide, −19…17 tall.
     private static let box = CGRect(x: -22, y: -19, width: 44, height: 36)
+    /// The brand pose alone, its round caps included: the wingtips' ±20 and
+    /// the arcs' crest near −8, each widened by half the stroke. A bird that
+    /// never moves needs no room to beat in.
+    static let restingBox = CGRect(x: -23.5, y: -11.5, width: 47, height: 20)
+    private static let stroke = 6.5
     private static let lift = 2.0
     private static let head = CGPoint(x: 0, y: -2)
 
-    static func strokeWidth(in size: CGSize) -> CGFloat {
-        6.5 * min(size.width / box.width, size.height / box.height)
+    static func strokeWidth(in size: CGSize, fitting frame: CGRect = box) -> CGFloat {
+        stroke * min(size.width / frame.width, size.height / frame.height)
     }
 
-    static func path(phase: Double, in rect: CGRect) -> CGPath {
+    /// - Parameter frame: the SVG box mapped onto `rect`; `restingBox` for a
+    ///   bird drawn only at phase 0.
+    static func path(phase: Double, in rect: CGRect, fitting frame: CGRect = box) -> CGPath {
         let beat = sin(2 * .pi * phase)
         let pose = beat >= 0 ? brand.mixed(with: wingsUp, beat) : brand.mixed(with: wingsDown, -beat)
         let bodyY = -lift * max(-beat, 0)
-        let scale = min(rect.width / box.width, rect.height / box.height)
+        let scale = min(rect.width / frame.width, rect.height / frame.height)
         func point(_ svg: CGPoint, mirrored: Bool = false) -> CGPoint {
             CGPoint(
-                x: rect.midX + ((mirrored ? -svg.x : svg.x) - box.midX) * scale,
-                y: rect.midY + (svg.y + bodyY - box.midY) * scale
+                x: rect.midX + ((mirrored ? -svg.x : svg.x) - frame.midX) * scale,
+                y: rect.midY + (svg.y + bodyY - frame.midY) * scale
             )
         }
         let path = CGMutablePath()

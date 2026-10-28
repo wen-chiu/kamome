@@ -6,7 +6,8 @@ import SwiftUI
 /// two segments are one app (Chiu 2026-10-07): the flag and the serif name,
 /// the same words for the same figures, the same kilometres, and provenance
 /// marked by exception (ADR 2026-09-23 (e)). A cover photograph leads the row;
-/// a trip with none shows a route tile instead.
+/// a trip with none shows a route tile instead. A trip with a film says so at
+/// the end of its figures, 「· 已有影片」 (#295 item 2; Chiu 2026-10-27).
 ///
 /// Split out of `HomeView` (arch review 2026-09-26, round 2) as
 /// `HomeView+TripRow`; a view of its own since its figures are read per row.
@@ -81,7 +82,11 @@ struct HomeTripRow: View {
         return HStack(alignment: .firstTextBaseline, spacing: 5) {
             provenanceMark
             if let figures {
-                let line = Self.figuresText(groundM: figures.groundM, stopCount: figures.stopCount)
+                // The film mark rides with the figures, so when the line
+                // stacks at a large size it moves with the second half.
+                let line = Self.figuresText(
+                    groundM: figures.groundM, stopCount: figures.stopCount, filmMade: figures.hasFilm
+                )
                 ViewThatFits(in: .horizontal) {
                     Text(verbatim: "\(dates) · \(line)")
                     // Without the fixed height the fallback is measured one line
@@ -126,6 +131,7 @@ struct HomeTripRow: View {
         ]
         if let figures {
             spoken.append(Self.figuresText(groundM: figures.groundM, stopCount: figures.stopCount))
+            if figures.hasFilm { spoken.append(String(localized: "home_trip_has_film")) }
         }
         return spoken.joined(separator: ", ")
     }
@@ -177,12 +183,17 @@ extension HomeTripRow {
     /// kilometre up, and the stops counted as places. The count carries its
     /// unit: a bare number read as a stray digit, most of all the zero of a
     /// recording with no stops (#192).
-    static func figuresText(groundM: Double?, stopCount: Int) -> String {
+    ///
+    /// - Parameter filmMade: ends the line with 「已有影片」 (Chiu 2026-10-27): a
+    ///   state, in the line's own grey. It was a teal film glyph by the chevron,
+    ///   the glyph and colour of 「製作旅程影片」, and read as "make one here".
+    static func figuresText(groundM: Double?, stopCount: Int, filmMade: Bool = false) -> String {
         var parts: [String] = []
         if let groundM, groundM >= 1000 {
             parts.append(String.localizedStringWithFormat(String(localized: "journey_km"), groundM / 1000))
         }
         parts.append(String.localizedStringWithFormat(String(localized: "journey_places"), stopCount))
+        if filmMade { parts.append(String(localized: "home_trip_film_made")) }
         return parts.joined(separator: " · ")
     }
 
@@ -203,9 +214,13 @@ extension HomeTripRow {
 struct HomeTripFigures: Equatable {
     let groundM: Double?
     let stopCount: Int
+    /// Films made of this trip and still kept, for the row's film mark.
+    let filmCount: Int
     let coverAssetId: String?
     /// The stops' zones, so the row's dates are where the trip happened.
     let clock: TripClock
+
+    var hasFilm: Bool { filmCount > 0 }
 
     static func load(trip: TripRecord, repository: TripRepository) -> HomeTripFigures? {
         guard let facts = Stored.read("journeyCardFacts", { try repository.journeyCardFacts(tripId: trip.id) })
@@ -217,6 +232,7 @@ struct HomeTripFigures: Equatable {
         return HomeTripFigures(
             groundM: LegLength.groundMeters(trip: trip, repository: repository),
             stopCount: facts.stopCount,
+            filmCount: facts.filmCount,
             coverAssetId: cover,
             clock: TripClock(stops: facts.stops)
         )
