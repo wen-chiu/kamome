@@ -3,7 +3,8 @@ import KamomePersistence
 import XCTest
 
 /// **Home says the next step while 旅程 is short, and marks a trip with a film**
-/// (#295 items 1–2, ADR 2026-10-26-home-shows-a-newcomer-the-next-step).
+/// (#295 items 1–2, ADR 2026-10-26-home-shows-a-newcomer-the-next-step; Chiu's
+/// review 2026-10-27: the step is a card that opens the trip's film sheet).
 final class HomeNextStepTests: XCTestCase {
     private func repository() throws -> TripRepository {
         TripRepository(database: try AppDatabase.inMemory())
@@ -30,7 +31,8 @@ final class HomeNextStepTests: XCTestCase {
         let tripId = try repository.saveCompletedTrip(
             title: "Coast", startedAt: 0, endedAt: 1_000, segments: [], stops: []
         )
-        XCTAssertEqual(HomeNextStep.load(trips: try repository.allTrips(), repository: repository), .makeFilm)
+        let coast = try XCTUnwrap(repository.allTrips().first)
+        XCTAssertEqual(HomeNextStep.load(trips: try repository.allTrips(), repository: repository), .makeFilm(coast))
 
         try repository.saveFilm(film("first", tripId: tripId))
         XCTAssertEqual(
@@ -38,11 +40,50 @@ final class HomeNextStepTests: XCTestCase {
             "every trip has its film: the next step is more journeys"
         )
 
-        _ = try repository.saveCompletedTrip(title: "Hills", startedAt: 2_000, endedAt: 3_000, segments: [], stops: [])
-        XCTAssertEqual(
-            HomeNextStep.load(trips: try repository.allTrips(), repository: repository), .makeFilm,
-            "one trip still without a film is enough"
+        let hillsId = try repository.saveCompletedTrip(
+            title: "Hills", startedAt: 2_000, endedAt: 3_000, segments: [], stops: []
         )
+        let hills = try XCTUnwrap(repository.allTrips().first { $0.id == hillsId })
+        XCTAssertEqual(
+            HomeNextStep.load(trips: try repository.allTrips(), repository: repository), .makeFilm(hills),
+            "one trip still without a film is enough, and the card names it"
+        )
+    }
+
+    /// **Which trip the film card offers** (Chiu 2026-10-27: 「挑最近一趟」): of
+    /// the finished trips without a film, the one that began last — not the
+    /// list's first, not one with a film, not one still recording.
+    func testTheFilmCardOffersTheNewestFinishedTripWithoutAFilm() throws {
+        let repository = try repository()
+        let older = try repository.saveCompletedTrip(title: "Older", startedAt: 0, endedAt: 1_000, segments: [], stops: [])
+        let newer = try repository.saveCompletedTrip(
+            title: "Newer", startedAt: 5_000, endedAt: 6_000, segments: [], stops: []
+        )
+        let filmed = try repository.saveCompletedTrip(
+            title: "Filmed", startedAt: 9_000, endedAt: 10_000, segments: [], stops: []
+        )
+        try repository.saveFilm(film("made", tripId: filmed))
+        let recording = TripRecord(id: "live", title: "Now", startedAt: 20_000, endedAt: nil, status: "recording")
+
+        // Oldest first, so "the list's first" and "the newest" disagree.
+        let trips = try repository.allTrips().sorted { $0.startedAt < $1.startedAt } + [recording]
+        guard case let .makeFilm(offered) = HomeNextStep.load(trips: trips, repository: repository) else {
+            return XCTFail("two finished trips have no film: the card offers one")
+        }
+        XCTAssertEqual(offered.id, newer, "the newest finished trip without a film")
+        XCTAssertNotEqual(offered.id, older)
+
+        try repository.saveFilm(film("newer-film", tripId: newer))
+        guard case let .makeFilm(next) = HomeNextStep.load(trips: trips, repository: repository) else {
+            return XCTFail("the older trip still has no film")
+        }
+        XCTAssertEqual(next.id, older, "once the newer has its film, the card moves to the next one back")
+    }
+
+    func testTheFilmCardNamesTheTripAsItsRowDoes() throws {
+        let trip = TripRecord(id: "t", title: "Coast road", startedAt: 0, endedAt: 1_000, status: "completed")
+        let text = HomeNextStepRow.filmCardText(for: trip)
+        XCTAssertTrue(text.contains(HomeTripRow.headline(for: trip).title), "the row's own title: \(text)")
     }
 
     func testATripStillRecordingIsNotAskedForAFilm() throws {
@@ -53,18 +94,14 @@ final class HomeNextStepTests: XCTestCase {
         )
     }
 
-    /// The row draws its two lines through a helper that `LocalizationCoverageTests`'
-    /// scan cannot see, so they are held here, in both languages, to the glossary's words.
-    func testTheNextStepLinesResolveInBothLanguages() throws {
-        func value(_ key: String, _ locale: String) throws -> String {
-            let path = try XCTUnwrap(Bundle.main.path(forResource: locale, ofType: "lproj"))
-            return try XCTUnwrap(Bundle(path: path)).localizedString(forKey: key, value: nil, table: nil)
-        }
-        XCTAssertEqual(try value("home_next_make_film", "zh-Hant"), "打開一趟旅程，就能製作旅程影片。")
-        XCTAssertEqual(try value("home_next_find_journeys", "zh-Hant"), "從照片找出更多旅程")
-        for key in ["home_next_make_film", "home_next_find_journeys", "home_trip_has_film"] {
-            XCTAssertNotEqual(try value(key, "en"), key, "\(key) has no English string")
-        }
+    /// The film mark is a state in the figures' grey, not a control (Chiu
+    /// 2026-10-27): the line's last part, so it stacks with the figures (#191).
+    func testTheFilmMarkEndsTheFiguresLine() {
+        let mark = String(localized: "home_trip_film_made")
+        XCTAssertNotEqual(mark, "home_trip_film_made", "the mark has a string")
+        let line = HomeTripRow.figuresText(groundM: 172_000, stopCount: 5, filmMade: true)
+        XCTAssertTrue(line.hasSuffix(" · " + mark), line)
+        XCTAssertFalse(HomeTripRow.figuresText(groundM: 172_000, stopCount: 5).contains(mark))
     }
 
     func testARowKnowsItsTripHasAFilm() throws {

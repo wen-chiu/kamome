@@ -1483,40 +1483,6 @@
         }
       }
     },
-    "home_next_make_film": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open a journey to make it a film."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開一趟旅程，就能製作旅程影片。"
-          }
-        }
-      }
-    },
-    "home_next_find_journeys": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Find more journeys in your photos"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "從照片找出更多旅程"
-          }
-        }
-      }
-    },
     "home_trip_has_film": {
       "extractionState": "manual",
       "localizations": {
@@ -1530,6 +1496,125 @@
           "stringUnit": {
             "state": "translated",
             "value": "已有旅程影片"
+          }
+        }
+      }
+    },
+    "home_trip_film_made": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Film made"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有影片"
+          }
+        }
+      }
+    },
+    "home_next_film_card": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn “%@” into a film"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把「%@」做成旅程影片"
+          }
+        }
+      }
+    },
+    "home_next_find_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are more journeys in your photos."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的照片裡，還有更多旅程。"
+          }
+        }
+      }
+    },
+    "home_next_find_action": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find more journeys"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找出更多旅程"
+          }
+        }
+      }
+    },
+    "home_manual_title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Or add one yourself"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "或手動加入"
+          }
+        }
+      }
+    },
+    "home_manual_import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import photos"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從照片匯入"
+          }
+        }
+      }
+    },
+    "home_manual_record": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record a trip"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記錄旅程"
           }
         }
       }

@@ -134,8 +134,14 @@ struct LimitedLibraryRow: View {
 }
 
 /// **The gull of the app icon and of the export's wait** (#295 item 3): the
-/// brand's double arc at rest (`GullPose`), in `BrandTeal`. It was SF Symbols'
-/// `bird`, a songbird. `size` is its wingspan in points.
+/// brand's double arc (`GullPose`), in `BrandTeal`. It was SF Symbols' `bird`,
+/// a songbird. `size` is its wingspan in points.
+///
+/// **It beats its wings once as its card appears, then rests** (Chiu
+/// 2026-10-27): the wait's own wingbeat, one `GullPose.beatS`, ending on the
+/// brand pose. Standing still, the double arc reads as the letter "m"; one
+/// beat says it is a bird. With Reduce Motion it never moves. The flap is
+/// drawn past the resting frame, so the card's layout does not move with it.
 ///
 /// Not `VehicleMarker.seagull`: that one is the film's and the wordmark's,
 /// drawn into a `CGContext` by `ExportEngine`, and is never restyled in place
@@ -144,9 +150,13 @@ struct LimitedLibraryRow: View {
 struct KamomeGull: View {
     let size: CGFloat
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 0 → 1 over one beat; both ends are the brand pose.
+    @State private var phase = 0.0
+
     var body: some View {
         let height = size * GullPose.restingBox.height / GullPose.restingBox.width
-        GullAtRest()
+        GullStroke(phase: phase)
             .stroke(
                 Color(.brandTeal),
                 style: StrokeStyle(
@@ -158,11 +168,25 @@ struct KamomeGull: View {
             )
             .frame(width: size, height: height)
             .accessibilityHidden(true)
+            .onAppear {
+                phase = 0
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: GullPose.beatS)) { phase = 1 }
+            }
     }
 }
 
-private struct GullAtRest: Shape {
+/// The gull at one phase of its beat; SwiftUI animates the phase, and the
+/// path is the wait's own pose at each frame.
+private struct GullStroke: Shape {
+    var phase: Double
+
+    var animatableData: Double {
+        get { phase }
+        set { phase = newValue }
+    }
+
     func path(in rect: CGRect) -> Path {
-        Path(GullPose.path(phase: 0, in: rect, fitting: GullPose.restingBox))
+        Path(GullPose.path(phase: phase, in: rect, fitting: GullPose.restingBox))
     }
 }

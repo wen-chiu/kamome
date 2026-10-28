@@ -75,7 +75,6 @@ struct ExportGullView: View {
     private static let gullSize = CGSize(width: 70, height: 58)
     /// How far above the route the gull flies, in points.
     private static let altitude: CGFloat = 44
-    private static let flapPeriodS = 0.8
     /// Tilt follows the route's slope, but never further than this.
     private static let maxTilt = Angle.degrees(7)
     private static let dotSpacing: CGFloat = 11
@@ -87,7 +86,7 @@ struct ExportGullView: View {
             let place = route.place(at: travelled)
             ZStack(alignment: .topLeading) {
                 routeCanvas(route, travelled: travelled)
-                GullFlap(beats: !reduceMotion, periodS: Self.flapPeriodS)
+                GullFlap(beats: !reduceMotion, periodS: GullPose.beatS)
                     .frame(width: Self.gullSize.width, height: Self.gullSize.height)
                     .rotationEffect(clampedTilt(place.slope))
                     .position(x: place.point.x, y: place.point.y - Self.altitude)
@@ -264,9 +263,13 @@ private final class GullFlapView: UIView {
 ///
 /// A copy of the path, not a call into `ExportEngine`: that one is a
 /// `CGContext` drawing for the film and must not be restyled in place
-/// (`HANDOFF.md`), and this one must be free to move. `KamomeGull` draws its
-/// resting pose, so the app's cards and its wait show one bird (#295 item 3).
+/// (`HANDOFF.md`), and this one must be free to move. `KamomeGull` draws it
+/// too, beating once and coming to rest, so the app's cards and its wait show
+/// one bird (#295 item 3; Chiu 2026-10-27).
 enum GullPose {
+    /// One wingbeat, phase 0 → 1, in seconds: the wait's period, and the
+    /// cards' single beat.
+    static let beatS = 0.8
     /// One wing, in SVG units; the other is its mirror.
     private struct Pose {
         let tip: CGPoint

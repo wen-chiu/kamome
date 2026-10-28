@@ -172,47 +172,54 @@ struct HomeView: View {
     /// screen (Chiu 2026-10-07). They used to sit under the list behind a
     /// `Spacer`, which left a short list a thin strip above an empty middle;
     /// now the list runs the whole height and scrolls under them.
+    ///
+    /// **Empty, the two step down into the page** (Chiu 2026-10-27): a row of
+    /// small buttons under 「或手動加入」, below the sample, so the empty screen
+    /// reads 「找出我的旅程」, then the sample, then the manual route.
+    @ViewBuilder
     private var journeys: some View {
-        Group {
-            if session.trips.isEmpty {
-                // Centred in the room above the buttons, and scrollable at a
-                // text size that outgrows it.
-                GeometryReader { room in
-                    ScrollView {
-                        HomeEmptyState(findJourneys: findJourneys, openSample: openSample)
-                            .frame(minHeight: room.size.height)
-                    }
+        if session.trips.isEmpty {
+            // Centred in the room, and scrollable at a text size that outgrows it.
+            GeometryReader { room in
+                ScrollView {
+                    HomeEmptyState(
+                        findJourneys: findJourneys, openSample: openSample,
+                        importTrip: { showingImport = true }, recordTrip: { showingStartRecording = true }
+                    )
+                    .frame(minHeight: room.size.height)
                 }
-            } else {
-                tripList
             }
+        } else {
+            tripList
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .safeAreaInset(edge: .bottom, spacing: 0) { footButtons }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: 12) {
-                importButton
-                recordButton
-            }
-            // They grow with the text up to the first accessibility size and
-            // no further: at the largest they took half the screen and left
-            // the list one row (#205).
-            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-            .padding(.horizontal)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
-            // The page's own background, faded in over the top edge, so a row
-            // scrolling under the buttons goes out softly and a short list
-            // shows no panel at all.
-            .background {
-                LinearGradient(
-                    stops: [
-                        .init(color: Color(.systemBackground).opacity(0), location: 0),
-                        .init(color: Color(.systemBackground), location: 0.2)
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .ignoresSafeArea(edges: .bottom)
-            }
+    }
+
+    private var footButtons: some View {
+        VStack(spacing: 12) {
+            importButton
+            recordButton
+        }
+        // They grow with the text up to the first accessibility size and
+        // no further: at the largest they took half the screen and left
+        // the list one row (#205).
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        .padding(.horizontal)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        // The page's own background, faded in over the top edge, so a row
+        // scrolling under the buttons goes out softly and a short list
+        // shows no panel at all.
+        .background {
+            LinearGradient(
+                stops: [
+                    .init(color: Color(.systemBackground).opacity(0), location: 0),
+                    .init(color: Color(.systemBackground), location: 0.2)
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea(edges: .bottom)
         }
     }
 
@@ -234,7 +241,10 @@ struct HomeView: View {
                 }
             }
             if HomeNextStep.isOffered(tripCount: session.trips.count, maxTrips: session.config.home.nextStepMaxTrips) {
-                HomeNextStepRow(trips: session.trips, repository: session.repository, findJourneys: findJourneys)
+                HomeNextStepRow(
+                    trips: session.trips, repository: session.repository,
+                    makeFilm: { path = [.tripMakingFilm($0)] }, findJourneys: findJourneys
+                )
             }
         }
         .listStyle(.plain)
@@ -251,25 +261,18 @@ struct HomeView: View {
     }
 
     // MP4-from-photos is the hero action (§5 S1) once there is a trip; live
-    // capture is secondary and graduates to Capture Beta (Phase 5). While 旅程
-    // is empty the welcome card's 「找出我的旅程」 is the one filled button, and
-    // import is the manual route, drawn like recording beside it (#290).
-    @ViewBuilder
+    // capture is secondary and graduates to Capture Beta (Phase 5). An empty
+    // 旅程 draws neither here: they are its manual route (#290).
     private var importButton: some View {
-        let isEmpty = session.trips.isEmpty
-        let button = Button {
+        Button {
             showingImport = true
         } label: {
             Label("import_from_photos", systemImage: "photo.stack")
-                .font(isEmpty ? .headline : .title2.bold())
+                .font(.title2.bold())
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, isEmpty ? 8 : 12)
+                .padding(.vertical, 12)
         }
-        if isEmpty {
-            button.buttonStyle(.bordered)
-        } else {
-            button.buttonStyle(.prominent)
-        }
+        .buttonStyle(.prominent)
     }
 
     /// Live capture is secondary, not hidden (Chiu 2026-09-23: 「不是主力，但
@@ -363,6 +366,8 @@ extension HomeView {
             TripDetailView(tripId: tripId, session: session)
         case .tripPlayingNewestFilm(let tripId):
             TripDetailView(tripId: tripId, session: session, playsNewestFilm: true)
+        case .tripMakingFilm(let tripId):
+            TripDetailView(tripId: tripId, session: session, opensFilmSheet: true)
         case .itinerary(let id):
             if let footprints, let journey = footprints.journeys.first(where: { $0.id == id }) {
                 JourneyItineraryView(summary: journey, model: footprints, onOpenTrip: openInJourneys)
