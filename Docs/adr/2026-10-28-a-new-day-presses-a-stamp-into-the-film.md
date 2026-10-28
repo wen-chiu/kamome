@@ -37,7 +37,8 @@ deferred items for this work and nothing else on the deferred list.
   vermilion's 2.7:1 on the same frame (VERIFIED, desk). Neither clears 3:1 on both maps in the corner,
   where the film's vignette darkens all chrome; that is in the review as an open question.
 - **Pressing in the upper centre:** brighter there (3.1:1 on dark), but on the road it lands on the
-  trail and the arriving town's name; under the pill it only ever covers map. Shown in the review.
+  trail and the arriving town's name. Under the pill it stays clear of the car and the trail, though it
+  can cover a town name for its beat. Shown in the review.
 - **A separate `OverlayContent` case:** it could not know the pill's fitted size, which depends on
   the place beside the day.
 - **A stamp for the first day:** nothing turns there, and the title card opens the film.
