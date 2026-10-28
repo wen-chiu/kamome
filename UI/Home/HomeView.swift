@@ -26,10 +26,11 @@ struct HomeView: View {
     @State private var showingStartRecording = false
     @State private var showingAbout = false
     @State private var showingFirstRunNotice = false
-    /// The trip a swipe asked to delete, held until the user confirms. A full
-    /// swipe used to delete outright — a recording, films and all, gone for
-    /// good with no way back (arch review 2026-09-24, P0-4).
-    @State private var tripPendingDeletion: TripRecord?
+    /// The trip a swipe asked to delete, held until the user confirms, and
+    /// where its row is. A full swipe used to delete outright — a recording,
+    /// films and all, gone for good with no way back (arch review 2026-09-24,
+    /// P0-4).
+    @State private var deletion = TripDeletionPrompt()
     #if DEBUG
     @State private var debugShareFile: DebugShareFile?
     #endif
@@ -154,7 +155,7 @@ struct HomeView: View {
     /// photos — so the two are warned differently. The imported wording is
     /// Discovery's own, the same delete seen from another screen.
     private var deletionPrompt: LocalizedStringKey {
-        guard let trip = tripPendingDeletion, !trip.tripSource.isReconstructed else {
+        guard let trip = deletion.trip, !trip.tripSource.isReconstructed else {
             return "journey_delete_confirm"
         }
         return "trip_delete_recorded_confirm"
@@ -227,17 +228,24 @@ struct HomeView: View {
         List {
             ForEach(session.trips) { trip in
                 NavigationLink(value: HomeRoute.trip(trip.id)) {
+                    // On the label: on the row it brought back the top rule below.
                     HomeTripRow(trip: trip, repository: session.repository)
+                        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { deletion.row(trip.id, isAt: $0) }
                 }
                 // With no large title above it, the first row's top rule hung
                 // under the toolbar on its own; rows are still divided below.
                 .listRowSeparator(.hidden, edges: .top)
                 .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        tripPendingDeletion = trip
+                    // Red, not `role: .destructive`: that role animates the row
+                    // out and back while the question is asked, which scrolls a
+                    // list at its foot and took the row under the import
+                    // button, arrow and all (VERIFIED 2026-10-28, #295 item 8).
+                    Button {
+                        deletion.ask(about: trip)
                     } label: {
                         Label("trip_delete", systemImage: "trash")
                     }
+                    .tint(.red)
                 }
             }
             if HomeNextStep.isOffered(tripCount: session.trips.count, maxTrips: session.config.home.nextStepMaxTrips) {
@@ -248,14 +256,16 @@ struct HomeView: View {
             }
         }
         .listStyle(.plain)
+        // Over the list at the swiped row, never on the row itself (#189):
+        // see `TripDeletionPrompt`.
         .confirmationDialog(
             deletionPrompt, isPresented: Binding(
-                get: { tripPendingDeletion != nil }, set: { if !$0 { tripPendingDeletion = nil } }
-            ), titleVisibility: .visible
+                get: { deletion.trip != nil }, set: { if !$0 { deletion.trip = nil } }
+            ), pointingAt: deletion.anchor
         ) {
             Button("trip_delete", role: .destructive) {
-                if let tripPendingDeletion { session.deleteTrip(tripPendingDeletion.id) }
-                tripPendingDeletion = nil
+                if let trip = deletion.trip { session.deleteTrip(trip.id) }
+                deletion.trip = nil
             }
         }
     }

@@ -66,6 +66,11 @@ cost somebody time; keep each to a summary and a pointer.
   `DEVELOPMENT_TEAM` in `project.yml`; a wrong one (B9U326WRA4, until
   2026-09-30) fails a CLI archive with "No Account for Team", and `archive.sh`
   now stops first if no valid signing certificate belongs to the team.
+- **On iOS 26, nothing presents from inside a `List` row**: a `.sheet` (#189) or a
+  `.confirmationDialog` (#295) there is taken down as it appears. A dialog's
+  arrow points at what it hangs on, so to aim it at a row, hang it on a clear view
+  over the list (`TripDeletionPrompt`). A `role: .destructive` swipe button
+  animates its row out and back, which scrolls a list at its foot.
 - **`Deploy/worker` needs Node ≥ 22.13** (`package.json` `engines`; its tests
   import `node:sqlite`). nvm's default on Chiu's Mac is Node 17, so `npm test`
   and `npm run deploy` fail with `ERR_UNKNOWN_BUILTIN_MODULE`: `nvm use 22`
