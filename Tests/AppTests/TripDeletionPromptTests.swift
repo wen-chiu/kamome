@@ -67,13 +67,18 @@ final class TripDeletionPromptTests: XCTestCase {
 
     // MARK: - The source, the way `DiagnosticsShareSheetTests` reads it (#189)
 
-    private func homeTripRow() throws -> Substring {
+    /// The trip row's code, its `//` comments dropped: the comment that says
+    /// why the role is gone names the role.
+    private func homeTripRow() throws -> String {
         let repoRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let file = try String(contentsOf: repoRoot.appendingPathComponent("UI/Home/HomeView.swift"), encoding: .utf8)
         let start = try XCTUnwrap(file.range(of: "ForEach(session.trips) { trip in"))
         let end = try XCTUnwrap(file.range(of: "HomeNextStep.isOffered", range: start.upperBound..<file.endIndex))
         let row = file[start.lowerBound..<end.lowerBound]
+            .split(separator: "\n")
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
         XCTAssertTrue(row.contains("deletion.ask(about: trip)"), "this is not the trip row any more")
         return row
     }
