@@ -1,7 +1,7 @@
 # An empty 旅程 offers 足跡's 「找出我的旅程」, a short one offers the next step, and a trip with a film says so
 
-**Status:** Decided (Chiu, 2026-10-26; amended by Chiu's review, 2026-10-27)
-**Supersedes:** ADR 2026-09-28-sample-trip, "Entry", in part: import is no longer the empty Home's hero (the sample button stays)
+**Status:** Decided (Chiu, 2026-10-26; amended by Chiu's review, 2026-10-27; round 2 approved 2026-10-28)
+**Supersedes:** ADR 2026-09-28-sample-trip, "Entry", in part: import is no longer the empty Home's hero (the sample button stays); ADR 2026-10-10-the-sample-arrives-with-its-film-and-the-film-button-has-words, the English of `make_film` only
 
 ## Context
 The first-time-user walk of 2026-10-10 (#290, #295), VERIFIED on the simulator:
@@ -39,7 +39,8 @@ What is built:
 - Opening the film sheet from Home in a new component: Trip Detail's sheet, with its gate, is the one path.
 
 ## Consequences
-- **Copy is draft, and Chiu finalises it:** `home_trip_film_made`, `home_trip_has_film`, `home_next_film_card`, `home_next_find_title`, `home_next_find_action`, `home_manual_title`, `home_manual_import`, `home_manual_record`. Retired: `empty_state_pitch` and `empty_state_import_hint`, and the first round's `home_next_make_film` and `home_next_find_journeys`.
+- **Copy is final** (Chiu 2026-10-28, PR #320: round 2 approved): the table in the PR. One change: `make_film`'s English is **"Make a film"** (was "Make this a Film"), and it changes on Trip Detail's film button too, on purpose. zh 「製作旅程影片」 is unchanged. The white, hairline cards and the threshold of 3 are accepted.
+- Keys: `home_trip_film_made`, `home_trip_has_film`, `home_next_film_card`, `home_next_find_title`, `home_next_find_action`, `home_manual_title`, `home_manual_import`, `home_manual_record`. Retired: `empty_state_pitch` and `empty_state_import_hint`, and the first round's `home_next_make_film` and `home_next_find_journeys`.
 - `home.next_step_max_trips` = 3, INFERRED. One row is about 70 pt of the ~570 pt above the buttons, so three fill about a third. A two- or three-trip Home on the phone settles it.
 - Tests: `HomeNextStepTests`, `JourneyDiscoveryModelTests+Find`.
 - Screenshots in the PR. The App Store note A4 ("tap *See a sample film first*") stays true.
