@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-27 against ADR **2026-10-26-home-shows-a-newcomer-the-next-step**.
+Last synced: 2026-10-28 against ADR **2026-10-26-home-shows-a-newcomer-the-next-step**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open

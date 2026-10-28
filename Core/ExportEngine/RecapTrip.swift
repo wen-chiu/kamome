@@ -90,6 +90,8 @@ public struct RecapTrip {
     public struct Stop: Equatable {
         public let coordinate: RecapCoordinate
         public let name: String
+        /// The HUD's day, localized by the app. Empty when the whole film is one
+        /// day (#295): the pill then names only the place, or is not drawn.
         public let dayLabel: String
         public let detail: String?
         public let photos: [PhotoRef]
