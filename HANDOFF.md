@@ -71,6 +71,11 @@ cost somebody time; keep each to a summary and a pointer.
   arrow points at what it hangs on, so to aim it at a row, hang it on a clear view
   over the list (`TripDeletionPrompt`). A `role: .destructive` swipe button
   animates its row out and back, which scrolls a list at its foot.
+- **A late permission prompt may have been raised late, not shown late.** On
+  the simulator `CMMotionActivityManager.isActivityAvailable()` is false, and
+  `stopActivityUpdates()` on a manager that never started raised the Motion
+  prompt at End Trip; #196 blamed the full-screen cover for four weeks. Read
+  tccd first: `simctl spawn <id> log stream --predicate 'process == "tccd"'`.
 - **`Deploy/worker` needs Node ≥ 22.13** (`package.json` `engines`; its tests
   import `node:sqlite`). nvm's default on Chiu's Mac is Node 17, so `npm test`
   and `npm run deploy` fail with `ERR_UNKNOWN_BUILTIN_MODULE`: `nvm use 22`

@@ -52,18 +52,21 @@ final class TrackingSession {
     private let permission: LocationPermissionProviding
     /// Start Journey was pressed before the location prompt was answered.
     private var vehicleAwaitingPermission: VehicleType?
+    private let motionPrompt: MotionPromptHold
 
     init(
         config: TrackingConfig,
         repository: TripRepository,
         journal: RecordingJournalFile? = RecordingJournalFile.defaultURL().map(RecordingJournalFile.init),
         permission: LocationPermissionProviding = LocationPermission(),
+        motion: MotionPermissionProviding = MotionPermission(),
         now: Date = .now
     ) {
         self.config = config
         self.repository = repository
         self.journal = journal
         self.permission = permission
+        motionPrompt = MotionPromptHold(motion)
         locationAccess = permission.access
         permission.onChange = { [weak self] in self?.locationAccessChanged($0) }
         TripTitle.clearLegacyFallbacks(in: repository)
@@ -145,7 +148,7 @@ final class TrackingSession {
             return .phantom
         }
 
-        let segments = engine.segments.map(Self.repositorySegment)
+        let segments = engine.segments.map(TripRepository.NewSegment.init(recorded:))
         let stops = allStops.map {
             TripRepository.NewStop(
                 lat: $0.lat, lon: $0.lon,
@@ -332,23 +335,9 @@ final class TrackingSession {
             )
         }
     }
-
-    private static func repositorySegment(from segment: TrackingEngine.Segment) -> TripRepository.NewSegment {
-        TripRepository.NewSegment(
-            mode: segment.mode.rawValue,
-            startedAt: segment.startedAt,
-            endedAt: segment.endedAt,
-            points: segment.points.map {
-                TripRepository.NewTrackpoint(
-                    ts: $0.ts, lat: $0.lat, lon: $0.lon,
-                    hAcc: $0.hAccM, speed: $0.speedMps, course: $0.course, altitude: $0.altitudeM
-                )
-            }
-        )
-    }
 }
 
-// MARK: - Location access
+// MARK: - Location and motion access
 
 extension TrackingSession {
     /// Start Journey. **A recording starts only once location is allowed**
@@ -357,12 +346,13 @@ extension TrackingSession {
     /// start on a yes. Refused — nothing starts; the record sheet says why.
     /// Not yet known in the moment after launch (#235) is the same as never
     /// answered: the request is a no-op for an answered prompt, and the answer
-    /// CoreLocation delivers starts the recording or refuses it.
+    /// CoreLocation delivers starts the recording or refuses it. Allowed, the
+    /// recording waits only for Motion & Fitness, and only if it was never asked.
     func requestStart(vehicle: VehicleType) {
         guard !isRecording else { return }
         switch locationAccess {
         case .allowed:
-            start(vehicle: vehicle)
+            startOnceMotionIsAnswered(vehicle)
         case .undetermined:
             vehicleAwaitingPermission = vehicle
             permission.request()
@@ -381,10 +371,16 @@ extension TrackingSession {
         guard access != .undetermined, let vehicle = vehicleAwaitingPermission else { return }
         vehicleAwaitingPermission = nil
         if access == .allowed {
-            start(vehicle: vehicle)
+            startOnceMotionIsAnswered(vehicle)
         } else {
             KamomeLog.recording.notice("recording not started — location was refused at the prompt")
         }
+    }
+
+    /// Motion & Fitness is asked as a recording starts, before the recording
+    /// screen and Kamome's card (ADR 2026-10-29, #196): `MotionPromptHold`.
+    private func startOnceMotionIsAnswered(_ vehicle: VehicleType) {
+        motionPrompt.start(vehicle) { [weak self] in self?.start(vehicle: $0) }
     }
 }
 

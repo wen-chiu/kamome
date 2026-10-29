@@ -43,10 +43,12 @@ final class RecordingLocationAccessTests: XCTestCase {
     private func session(_ permission: StubPermission) throws -> (TrackingSession, RecordingJournalFile) {
         let config = AppConfig.loadOrDie()
         let file = RecordingJournalFile(url: directory.appendingPathComponent("journal.csv"))
+        // Motion & Fitness is answered: a recording waits on it too (#196,
+        // `RecordingMotionPromptTests`), and these are about location.
         let session = TrackingSession(
             config: config.withMatching(config.matching.withBaseURL("")),
             repository: TripRepository(database: try AppDatabase.inMemory()),
-            journal: file, permission: permission
+            journal: file, permission: permission, motion: StubMotionPermission(answered: true)
         )
         return (session, file)
     }

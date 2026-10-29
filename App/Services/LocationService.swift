@@ -81,6 +81,15 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         return .regionMonitoring
     }
 
+    /// Whether a recording reads motion activity: only on an answered yes.
+    /// A recording never raises the prompt itself; it is asked on the record
+    /// sheet first (ADR 2026-10-29, #196), so it is unanswered here only in a
+    /// recording resumed after a relaunch, which has no one to ask. Without
+    /// it the engine tells the modes apart from GPS alone, as after a refusal.
+    static func readsMotionActivity(available: Bool, authorization: CMAuthorizationStatus) -> Bool {
+        available && authorization == .authorized
+    }
+
     var onSample: ((LocationSample, MotionActivity?) -> Void)?
 
     private static let dwellRegionIdentifier = "kamome.dwell.region"
@@ -92,6 +101,7 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     private var currentFilterM: Double = -1
     private var vehicle: VehicleType?
     private var isDwellRegionArmed = false
+    private var isReadingMotion = false
     /// Timestamp of the last delivered fix, for the silent-death watchdog
     /// (sampling.recovery_gap_s). nil right after (re)starting the standard
     /// session — the first fix after a restart never triggers recovery.
@@ -142,7 +152,12 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
         disarmDwellRegion()
         manager.stopUpdatingLocation()
         manager.stopMonitoringSignificantLocationChanges()
-        motionManager.stopActivityUpdates()
+        // Only what was started: on a manager that never started, this call
+        // raised the Motion & Fitness prompt at End Trip (#196).
+        if isReadingMotion {
+            motionManager.stopActivityUpdates()
+            isReadingMotion = false
+        }
         latestActivity = nil
         vehicle = nil
     }
@@ -205,7 +220,16 @@ final class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
     private func startMotionUpdates() {
-        guard CMMotionActivityManager.isActivityAvailable() else { return }
+        let available = CMMotionActivityManager.isActivityAvailable()
+        let authorization = CMMotionActivityManager.authorizationStatus()
+        guard Self.readsMotionActivity(available: available, authorization: authorization) else {
+            KamomeLog.recording.notice("""
+                motion activity not read (available \(available, privacy: .public), \
+                authorization \(authorization.rawValue, privacy: .public)) — modes come from GPS alone
+                """)
+            return
+        }
+        isReadingMotion = true
         motionManager.startActivityUpdates(to: .main) { [weak self] activity in
             guard let activity else { return }
             let kind: MotionActivity.Kind?
