@@ -176,10 +176,20 @@ struct RecordingView: View {
     private var elapsedText: String {
         // `now` ticks once a second to keep this fresh.
         _ = now
-        let seconds = Int(session.elapsed)
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        return String(format: "%d:%02d", hours, minutes)
+        return Self.elapsedText(seconds: session.elapsed)
+    }
+
+    /// "12 min", "1 hr, 5 min" / 「12分鐘」「1小時5分鐘」: the time with its units
+    /// (#332, Chiu 2026-10-29). It was hours:minutes with none, so a minute in
+    /// read "0:01" beside the kilometres, as if the clock had stalled at one
+    /// second. Hours keep counting past a day, as the trip does.
+    static func elapsedText(seconds: TimeInterval, calendar: Calendar = .autoupdatingCurrent) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.calendar = calendar
+        formatter.unitsStyle = .short
+        formatter.maximumUnitCount = 2
+        formatter.allowedUnits = [.hour, .minute]
+        return formatter.string(from: max(seconds, 0)) ?? ""
     }
 
     private var distanceText: String {
