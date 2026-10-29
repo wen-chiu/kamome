@@ -20,6 +20,8 @@ final class ExportPipelineConfigTests: XCTestCase {
         XCTAssertGreaterThan(pipeline.prefetchDepth, 0)
         XCTAssertGreaterThan(pipeline.compositeConcurrency, 0)
         XCTAssertGreaterThan(pipeline.snapshotTimeoutS, 0)
+        XCTAssertFalse(pipeline.snapshotRetryDelaysS.isEmpty, "the shipped app asks a failed snapshot again (#330)")
+        XCTAssertTrue(pipeline.snapshotRetryDelaysS.allSatisfy { $0 > 0 })
         XCTAssertGreaterThan(pipeline.mapCacheMb, 0)
         XCTAssertTrue(pipeline.coalesceTileRequests)
         XCTAssertGreaterThan(pipeline.terrainMaxAgeS, 0)
@@ -33,7 +35,8 @@ final class ExportPipelineConfigTests: XCTestCase {
         // The shipped values equal `.handBuilt`, so a reset would not show on
         // them: load a copy of the file whose pipeline no default could produce.
         let base = try shipped(pipeline: [
-            "prefetch_depth": 3, "composite_concurrency": 2, "snapshot_timeout_s": 7, "map_cache_mb": 9,
+            "prefetch_depth": 3, "composite_concurrency": 2, "snapshot_timeout_s": 7,
+            "snapshot_retry_delays_s": [29, 31], "map_cache_mb": 9,
             "coalesce_tile_requests": false, "terrain_max_age_s": 11, "tile_memory_mb": 13,
             "kept_export_logs": 17, "estimate_warmup_s": 19, "estimate_rise_tolerance_min": 23
         ])

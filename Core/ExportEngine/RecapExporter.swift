@@ -63,7 +63,7 @@ public struct RecapExporter {
         let loop = RecapRenderLoop(timeline: timeline, compositor: compositor, provider: provider, config: config)
         let stats: RecapRenderLoop.RenderStats
         do {
-            stats = try await loop.renderFrames { frame, image in
+            stats = try await loop.renderFrames(keepTrying: shouldContinue) { frame, image in
                 guard shouldContinue() else {
                     cancelled = true
                     return false

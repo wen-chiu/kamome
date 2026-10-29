@@ -230,7 +230,7 @@ extension RecapExportJob {
             \(stats.frames) frames · \(stats.stations) stations / \(stats.fetches) fetches · \
             snapshots \(stats.snapshotS, format: .fixed(precision: 1))s \
             (mean \(stats.meanSnapshotS, format: .fixed(precision: 2))s, \
-            wait \(stats.waitS, format: .fixed(precision: 1))s) · \
+            wait \(stats.waitS, format: .fixed(precision: 1))s, \(stats.retries) retried) · \
             composite \(stats.compositeS, format: .fixed(precision: 1))s · \
             encode \(stats.deliverS, format: .fixed(precision: 1))s · \
             finish \(output.finishS, format: .fixed(precision: 1))s
@@ -354,7 +354,8 @@ extension RecapExportJob {
     ///    only (`KAMOME_TILE_CACHE_PROBE`, which once stalled a full run). A mid-export network
     ///    drop therefore fails the export like (3) rather than shipping a film
     ///    with blank map. Not measured: a *slow* host (timeouts) and a tile the
-    ///    server answers 200 with a corrupt body.
+    ///    server answers 200 with a corrupt body. Paths 3–5 are retried twice
+    ///    from this same provider first (ADR 2026-10-29-a-failed-map-snapshot-is-asked-twice-more).
     ///
     /// **In-app maps stay MapKit and are not touched.** `TripDetailView` and
     /// `RecordingView` are sanctioned use: MapKit draws its own logo and legal

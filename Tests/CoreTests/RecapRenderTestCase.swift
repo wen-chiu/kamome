@@ -103,7 +103,8 @@ class RecapRenderTestCase: XCTestCase {
         targetDurationS: Double = 6,
         fps: Int = 10,
         keyframeIntervalFrames: Int = 15,
-        followHeadingUp: Bool = false
+        followHeadingUp: Bool = false,
+        pipeline: TrackingConfig.ExportPipeline = .handBuilt
     ) -> TrackingConfig.Export {
         TrackingConfig.Export(
             targetDurationS: targetDurationS, fps: fps, stopHoldS: 1.5, maxHoldFraction: 0.5,
@@ -131,7 +132,7 @@ class RecapRenderTestCase: XCTestCase {
             tierStandardPhotos: 3, tierTopPhotos: 5,
             earnedStopsFloor: 8, earnedStopsCap: 21,
             earnedStopsPerDoubling: 7, earnedStopsReferenceTripStops: 10,
-            recapMode: .highlight
+            recapMode: .highlight, pipeline: pipeline
         )
     }
 
