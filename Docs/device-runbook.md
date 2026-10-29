@@ -131,7 +131,7 @@ they postdate #105 and #110. Their exact build numbers are not in the log.
 | Airplane mode | export the sample with no network; record whether it finishes or fails loudly | the App Review notes (#126 A4) say a connection is needed — INFERRED |
 | Lock mid-export, with #299 | on a build with #299 (PR #304), lock the screen mid-export: the sheet shows the new sentence, not the type name | #299 has not run on a phone; §A D1, #260 |
 | Heat | judge the heat with #117 (is 300 s right) | the 8910-frame Standard export spent 600 s at serious or above (§A D2) |
-| Fresh install | fresh install, or Settings → Reset Location & Privacy; record the prompt order | #196 |
+| Fresh install, first recording | on a build with #196's fix: fresh install, or Settings → Reset Location & Privacy; press Start Journey and note each prompt and when. Pass: location, then Motion & Fitness, both over the record sheet; then the recording screen with Kamome's card; nothing on Home after End Trip | ADR 2026-10-29-motion-and-fitness-is-asked-before-the-recording-screen; the phone order is UNKNOWN (desk: simulator only) |
 | Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` — **❌ 2026-10-09 (#260)**: the background assertion expired about 23 s after leaving, and the export was cancelled. The sheet returned to ready with **no message**. A second export started. |
 | Subject lookup miss rate | count fallback badges over ten exports (desk: 1 in 5) | `handoff-subject-lookup.md` |
 
@@ -141,9 +141,9 @@ can settle it first, #127), and the two-week recording's replay time on a phone
 
 Also found in this run's export history (counts only): #256, a one-point route
 is never settled, and #259, the film type stays UNKNOWN on 3 of 6 trips.
-Still owed: #245 (restart while recording, needs a walk), #196 (whether the Motion
-prompt showed at this run's first recording is not yet reported; a phone that
-answered it before shows nothing, so a fresh install may be needed), B (T4, T5), C (films) and the rest of D.
+Still owed: #245 (restart while recording, needs a walk), the fresh-install
+prompt order (§D; a phone that answered Motion before shows nothing, so it needs a
+fresh install or Reset Location & Privacy), B (T4, T5), C (films) and the rest of D.
 
 ## E. Chiu's own steps (`HANDOFF.md` 🔴)
 
