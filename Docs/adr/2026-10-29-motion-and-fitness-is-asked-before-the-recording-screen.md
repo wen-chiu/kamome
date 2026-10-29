@@ -10,7 +10,7 @@
 - INFERRED: a phone, where activity is available, asks from `startActivityUpdates` at the start, so its prompt lands on the card. UNKNOWN until a fresh install is recorded on a phone (#112, `Docs/device-runbook.md` §D).
 
 ## Decision
-Chiu 2026-10-29, on #196: *fix it before submission. The Motion & Fitness prompt must appear while recording is starting, in its context, and never after the trip has ended. Denying it never blocks recording, as today.* The session chose how; this is what is built:
+Chiu 2026-10-29, on #196: *fix it before submission. The Motion & Fitness prompt must appear while recording is starting, in its context, and never after the trip has ended. Denying it never blocks recording, as today.* The session laid out three options on PR #335, and Chiu approved the first the same day: *「好 照你建議的」*. So Motion is asked before Kamome's card, not after it as #196 had listed. What is built:
 
 1. **Start Journey asks location, then Motion & Fitness, while the record sheet is up.** The recording screen, and Kamome's card with it, comes only after both are answered. The first recording's order: location → Motion & Fitness → recording screen and Kamome's card → (if chosen) the Always prompt the card explains.
 2. **Either answer starts the recording.** Refused, the engine classifies modes from GPS alone, as before.
