@@ -9,7 +9,8 @@ import XCTest
 /// does not flicker upwards.
 final class RecapExportTimeLeftTests: XCTestCase {
     private let pipeline = TrackingConfig.ExportPipeline(
-        prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256,
+        prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60,
+        snapshotRetryDelaysS: [2, 4], mapCacheMb: 256,
         coalesceTileRequests: true, terrainMaxAgeS: 0, tileMemoryMb: 64, keptExportLogs: 20,
         estimateWarmupS: 60, estimateRiseToleranceMin: 1
     )

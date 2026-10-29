@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-29 against ADR **2026-10-29-motion-and-fitness-is-asked-before-the-recording-screen**.
+Last synced: 2026-10-29 against ADR **2026-10-29-a-failed-map-snapshot-is-asked-twice-more**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -97,6 +97,8 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   frame — MapLibre credits OSM, **MapKit credits nothing and must not** (ADR
   2026-09-12). While drawing, the sheet adds **"about N minutes left"** after
   a warm-up, from the export's own stations per second (ADR 2026-09-30).
+  A failed map snapshot is asked twice more from the same source, never
+  another, before the export fails (ADR 2026-10-29-a-failed-map-snapshot-is-asked-twice-more).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
   ⚠️ **Two keys are dead** — tuning them does nothing
   (`Scripts/dead-config.baseline`). `total_duration_max_s` is Short's ceiling.

@@ -128,6 +128,7 @@ they postdate #105 and #110. Their exact build numbers are not in the log.
 | Restart while recording (#245) | restart the phone mid-recording, leave it locked while carrying it > 1 km, then unlock: no `Kamome` crash in Analytics Data, the trip resumes | #245 |
 | Merge-gap pacing | a multi-day `merge_gap` leg paces acceptably; is `merge_gap_min_m` = 500 right | same |
 | 3 GB phone | one Standard export finishes on a 3 GB phone that iOS 17 supports (iPhone XR or SE 2nd gen); peak memory recorded | the ceiling is UNKNOWN; the 2026-10-09 peak was 951.6 MB on the 15 Pro Max (Debug, 5129 frames, §A D2) |
+| Weak signal (#330) | export a trip with one bar of mobile signal | it finishes, or fails after its retries; read `retried` on the `render cost:` line and `snapshots (n failed)` (ADR 2026-10-29-a-failed-map-snapshot-is-asked-twice-more) |
 | Airplane mode | export the sample with no network; record whether it finishes or fails loudly | the App Review notes (#126 A4) say a connection is needed — INFERRED |
 | Lock mid-export, with #299 | on a build with #299 (PR #304), lock the screen mid-export: the sheet shows the new sentence, not the type name | #299 has not run on a phone; §A D1, #260 |
 | Heat | judge the heat with #117 (is 300 s right) | the 8910-frame Standard export spent 600 s at serious or above (§A D2) |
