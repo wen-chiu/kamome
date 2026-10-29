@@ -69,7 +69,7 @@ cost somebody time; keep each to a summary and a pointer.
 - **On iOS 26, nothing presents from inside a `List` row**: a `.sheet` (#189) or a
   `.confirmationDialog` (#295) there is taken down as it appears. A dialog's
   arrow points at what it hangs on, so to aim it at a row, hang it on a clear view
-  over the list (`TripDeletionPrompt`). A `role: .destructive` swipe button
+  over the list (`RowDeletionPrompt`). A `role: .destructive` swipe button
   animates its row out and back, which scrolls a list at its foot.
 - **A late permission prompt may have been raised late, not shown late.** On
   the simulator `CMMotionActivityManager.isActivityAvailable()` is false, and
