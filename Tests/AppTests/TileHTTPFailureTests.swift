@@ -92,6 +92,27 @@ final class TileHTTPFailureTests: XCTestCase {
         assertFailed(outcome, "a frame with dropped tiles came back as an image")
     }
 
+    /// **What a retry rests on** (#330): a snapshot that failed because the host
+    /// was down draws once the host is back. If MapLibre kept the failure, the
+    /// export's retry of the same snapshot would fail the same way and buy
+    /// nothing but time.
+    func testASnapshotThatFailedWhileTheHostWasDownDrawsOnceItIsBack() async throws {
+        let up = ServerSwitch()
+        up.isUp = false
+        let server = try TileServer { _, _ in up.isUp ? .ok : .status(503) }
+        defer { server.stop() }
+        let down = try await snapshot(server: server, sizePx: 512)
+        assertFailed(down, "a down host produced an image, so this case proves nothing")
+        let failedRequests = server.tileRequests.count
+
+        up.isUp = true
+        let back = try await snapshot(server: server, sizePx: 512)
+        print("TILE_HTTP down then up: \(back) failed=\(failedRequests) total=\(server.tileRequests.count)")
+        XCTAssertFalse(back.timedOut, "\(back)")
+        XCTAssertNotNil(back.image, "the same snapshot failed again with the host back: \(back)")
+        XCTAssertGreaterThan(server.tileRequests.count, failedRequests, "the retry never asked the host again")
+    }
+
     /// Path 5's own wording: "renders cached tiles and leaves unfetched areas
     /// transparent". One tile is fetched and cached; the host then goes down; a
     /// wider frame needs that cached tile and its neighbours.

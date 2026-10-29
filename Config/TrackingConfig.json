@@ -216,6 +216,7 @@
       "prefetch_depth": 8,
       "composite_concurrency": 4,
       "snapshot_timeout_s": 60,
+      "snapshot_retry_delays_s": [2, 4],
       "map_cache_mb": 256,
       "coalesce_tile_requests": true,
       "terrain_max_age_s": 2592000,

@@ -145,7 +145,10 @@ final class RecapEncoderTests: XCTestCase {
     /// waited forever, and Cancel — read between frames — could not reach it.
     func testASnapshotThatNeverAnswersFailsTheExportWithinItsDeadline() async throws {
         let config = exportConfig(pipeline: TrackingConfig.ExportPipeline(
-            prefetchDepth: 2, compositeConcurrency: 2, snapshotTimeoutS: 0.3, mapCacheMb: 1,
+            // Retries on (#330), with short waits: the deadline must still
+            // bound the export when every attempt goes unanswered.
+            prefetchDepth: 2, compositeConcurrency: 2, snapshotTimeoutS: 0.3,
+            snapshotRetryDelaysS: [0.05, 0.05], mapCacheMb: 1,
             coalesceTileRequests: false, terrainMaxAgeS: 0, tileMemoryMb: 0, keptExportLogs: 0,
             estimateWarmupS: 60, estimateRiseToleranceMin: 1
         ))

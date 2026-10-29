@@ -79,6 +79,10 @@ struct AccessDeniedCard: View {
             if let settings = URL(string: UIApplication.openSettingsURLString) {
                 Link("access_denied_settings", destination: settings)
                     .font(.headline)
+                    // In Footprints' list the row's style took the link's tint, and
+                    // it drew in primary black like a heading (#318). Borderless,
+                    // it is the accent, as links are (ADR 2026-10-26-text-and-controls-take-a-deeper-teal).
+                    .buttonStyle(.borderless)
             }
         }
         .padding(24)

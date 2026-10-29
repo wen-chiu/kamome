@@ -219,4 +219,21 @@ final class TripTitleTests: XCTestCase {
         XCTAssertEqual(unnamed.flag, "🇯🇵")
         XCTAssertEqual(unnamed.title, "Japan")
     }
+
+    /// A trip with no place to name it by is titled by its dates, and the line
+    /// under it said them again (#331, Chiu 2026-10-29): 「Oct 28, 2026 · 4 km ·
+    /// 0 places」 under 「Oct 28, 2026」. The dates are said once; a trip with a
+    /// name or a place keeps them on its line.
+    func testATripTitledByItsDatesDoesNotSayThemTwice() {
+        let unnamed = trip(title: TripTitle.unnamed)
+        let dates = HomeTripRow.dateRangeText(startedAt: startedAt, endedAt: nil)
+        let byDate = HomeTripRow.headline(for: unnamed, cache: JourneyNameCache(defaults: defaults), homeCountryCode: "TW")
+        XCTAssertEqual(byDate.title, dates, "precondition: with no place found, the headline is the dates")
+        XCTAssertNil(HomeTripRow.factsDates(headline: byDate.title, dates: dates))
+
+        let byPlace = HomeTripRow.headline(for: unnamed, cache: cacheWithJapan(), homeCountryCode: "TW")
+        XCTAssertEqual(HomeTripRow.factsDates(headline: byPlace.title, dates: dates), dates)
+        let named = HomeTripRow.headline(for: trip(title: "北海道夏天"), cache: cacheWithJapan(), homeCountryCode: "TW")
+        XCTAssertEqual(HomeTripRow.factsDates(headline: named.title, dates: dates), dates)
+    }
 }
