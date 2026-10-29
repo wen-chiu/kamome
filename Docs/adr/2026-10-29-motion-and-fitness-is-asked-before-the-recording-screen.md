@@ -23,6 +23,6 @@ Chiu 2026-10-29, on #196: *fix it before submission. The Motion & Fitness prompt
 - **Ask at first launch or on Home.** Out of context, which is what Chiu ruled out.
 
 ## Consequences
-- `MotionPermission` / `MotionPermissionProviding` (`LocationService.swift`) and `TrackingSession.startOnceMotionIsAnswered`. `LocationService.readsMotionActivity` decides whether to read motion. Held by `RecordingMotionPromptTests`, which were watched red with the old start restored (5 of 8 tests).
+- New `App/Services/MotionPermission.swift`: `MotionPermission` (the seam) and `MotionPromptHold` (holds Start Journey until the answer), used by `TrackingSession.requestStart`. `LocationService.readsMotionActivity` decides whether a recording reads motion. Held by `RecordingMotionPromptTests`, which were watched red with the old start restored (5 of 8 tests).
 - CoreMotion has no request call: a zero-length activity query raises the prompt. Its handler ran 13–21 ms after the answer on the simulator. If a phone never called back, a second Start Journey press starts the recording (tested).
 - Owed on a phone: one fresh-install recording that notes the order of the three prompts (`Docs/device-runbook.md` §D, #112). The App Review demo video (#126 A4) is re-recorded from the build that will be submitted.

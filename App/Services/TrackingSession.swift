@@ -52,9 +52,7 @@ final class TrackingSession {
     private let permission: LocationPermissionProviding
     /// Start Journey was pressed before the location prompt was answered.
     private var vehicleAwaitingPermission: VehicleType?
-    private let motion: MotionPermissionProviding
-    /// Location is allowed and the Motion & Fitness prompt is up.
-    private var vehicleAwaitingMotion: VehicleType?
+    private let motionPrompt: MotionPromptHold
 
     init(
         config: TrackingConfig,
@@ -68,7 +66,7 @@ final class TrackingSession {
         self.repository = repository
         self.journal = journal
         self.permission = permission
-        self.motion = motion
+        motionPrompt = MotionPromptHold(motion)
         locationAccess = permission.access
         permission.onChange = { [weak self] in self?.locationAccessChanged($0) }
         TripTitle.clearLegacyFallbacks(in: repository)
@@ -150,7 +148,7 @@ final class TrackingSession {
             return .phantom
         }
 
-        let segments = engine.segments.map(Self.repositorySegment)
+        let segments = engine.segments.map(TripRepository.NewSegment.init(recorded:))
         let stops = allStops.map {
             TripRepository.NewStop(
                 lat: $0.lat, lon: $0.lon,
@@ -337,20 +335,6 @@ final class TrackingSession {
             )
         }
     }
-
-    private static func repositorySegment(from segment: TrackingEngine.Segment) -> TripRepository.NewSegment {
-        TripRepository.NewSegment(
-            mode: segment.mode.rawValue,
-            startedAt: segment.startedAt,
-            endedAt: segment.endedAt,
-            points: segment.points.map {
-                TripRepository.NewTrackpoint(
-                    ts: $0.ts, lat: $0.lat, lon: $0.lon,
-                    hAcc: $0.hAccM, speed: $0.speedMps, course: $0.course, altitude: $0.altitudeM
-                )
-            }
-        )
-    }
 }
 
 // MARK: - Location and motion access
@@ -393,26 +377,10 @@ extension TrackingSession {
         }
     }
 
-    /// **Motion & Fitness is asked here**, after location and before the
-    /// recording screen, while the record sheet is still up (Chiu 2026-10-29,
-    /// ADR 2026-10-29, #196). It used to be asked by the recording itself, and
-    /// on the simulator the prompt came after the trip had ended. Asked here,
-    /// it can never land on Kamome's own card, which comes with the recording
-    /// screen. Either answer starts the recording; without motion it records
-    /// on GPS alone, as it always has. Once answered it is never asked again.
+    /// Motion & Fitness is asked as a recording starts, before the recording
+    /// screen and Kamome's card (ADR 2026-10-29, #196): `MotionPromptHold`.
     private func startOnceMotionIsAnswered(_ vehicle: VehicleType) {
-        guard motion.needsAsking else {
-            vehicleAwaitingMotion = nil
-            start(vehicle: vehicle)
-            return
-        }
-        guard vehicleAwaitingMotion == nil else { return } // already on screen
-        vehicleAwaitingMotion = vehicle
-        motion.ask { [weak self] in
-            guard let self, let vehicle = self.vehicleAwaitingMotion else { return }
-            self.vehicleAwaitingMotion = nil
-            self.start(vehicle: vehicle)
-        }
+        motionPrompt.start(vehicle) { [weak self] in self?.start(vehicle: $0) }
     }
 }
 

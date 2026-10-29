@@ -60,44 +60,6 @@ final class LocationPermission: NSObject, LocationPermissionProviding, CLLocatio
     }
 }
 
-/// The seam `TrackingSession` asks Motion & Fitness through, so a test can
-/// answer the prompt (ADR 2026-10-29, #196).
-protocol MotionPermissionProviding: AnyObject {
-    /// True only while Motion & Fitness has never been answered.
-    var needsAsking: Bool { get }
-    /// Raises the prompt. `answered` runs on the main queue once the user has
-    /// answered it, whichever the answer.
-    func ask(answered: @escaping () -> Void)
-}
-
-/// Asks for Motion & Fitness while the record sheet is up, before a recording
-/// starts (ADR 2026-10-29, #196). The recording used to ask by itself: on the
-/// simulator, where activity is unavailable and nothing was started, the
-/// prompt was raised by `stopActivityUpdates` at End Trip and came up on Home
-/// after the trip (VERIFIED, tccd log). A phone, where it is available, asks
-/// as the recording screen and Kamome's own card come up (INFERRED).
-///
-/// CoreMotion has no request call: a query is what raises the prompt, and its
-/// handler runs once the prompt is answered (VERIFIED on the simulator,
-/// 21 ms after the answer). The activities it returns are not wanted. Nothing
-/// is read at creation (#235): this is built in `KamomeApp.init`.
-final class MotionPermission: MotionPermissionProviding {
-    private var asking: CMMotionActivityManager?
-
-    var needsAsking: Bool {
-        CMMotionActivityManager.authorizationStatus() == .notDetermined
-    }
-
-    func ask(answered: @escaping () -> Void) {
-        let manager = CMMotionActivityManager()
-        asking = manager
-        manager.queryActivityStarting(from: .now, to: .now, to: .main) { [weak self] _, _ in
-            self?.asking = nil
-            answered()
-        }
-    }
-}
-
 /// Bridges CoreLocation/CoreMotion to the pure TrackingEngine and applies the
 /// §2.3 adaptive sampling table to the location manager. With
 /// `LocationPermission` above, the only file that talks to CLLocationManager.
