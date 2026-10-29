@@ -11,10 +11,11 @@ struct TripDetailView: View {
     @Environment(TrackingSession.self) private var session
     @State var model: TripDetailModel
     @State var editingStop: StopRecord?
-    /// The stop a swipe asked to delete, held until the person confirms. A full
-    /// swipe used to delete it outright: its name, note and film choices gone,
-    /// and a recorded stop cannot be made again (#188). Home asks the same way.
-    @State private var stopPendingDeletion: StopRecord?
+    /// The stop a swipe asked to delete, held until the person confirms, and
+    /// where its row is. A full swipe used to delete it outright: its name,
+    /// note and film choices gone, and a recorded stop cannot be made again
+    /// (#188). Home asks the same way, pointing at the swiped row (#326).
+    @State private var stopDeletion = RowDeletionPrompt<StopRecord>()
     @State private var showingRoutePhotos = false
     @State var showingRecap = false
     @State var playingFilm: FilmRecord?
@@ -242,13 +243,18 @@ struct TripDetailView: View {
                         Spacer()
                         PhotoStrip(photos: model.photos(for: stop.id), maxThumbnails: 3)
                     }
+                    // On the label, as Home measures its rows: see `RowDeletionPrompt`.
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { stopDeletion.row(stop.id, isAt: $0) }
                 }
                 .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        stopPendingDeletion = stop
+                    // Red, not `role: .destructive`: that role animates the row
+                    // out and back while the question is asked (#326, as Home).
+                    Button {
+                        stopDeletion.ask(about: stop)
                     } label: {
                         Label("delete_stop", systemImage: "trash")
                     }
+                    .tint(.red)
                     if model.visibleStops.first?.id != stop.id {
                         Button {
                             model.mergeWithPrevious(stopId: stop.id)
@@ -275,14 +281,15 @@ struct TripDetailView: View {
                     .padding()
             }
         }
+        // Over the list at the swiped row, never on the row itself (#189).
         .confirmationDialog(
             "stop_delete_confirm", isPresented: Binding(
-                get: { stopPendingDeletion != nil }, set: { if !$0 { stopPendingDeletion = nil } }
-            ), titleVisibility: .visible
+                get: { stopDeletion.item != nil }, set: { if !$0 { stopDeletion.item = nil } }
+            ), pointingAt: stopDeletion.anchor
         ) {
             Button("delete_stop", role: .destructive) {
-                if let stopPendingDeletion { model.deleteStop(stopId: stopPendingDeletion.id) }
-                stopPendingDeletion = nil
+                if let stop = stopDeletion.item { model.deleteStop(stopId: stop.id) }
+                stopDeletion.item = nil
             }
         }
     }
