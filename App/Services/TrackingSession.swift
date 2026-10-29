@@ -52,18 +52,23 @@ final class TrackingSession {
     private let permission: LocationPermissionProviding
     /// Start Journey was pressed before the location prompt was answered.
     private var vehicleAwaitingPermission: VehicleType?
+    private let motion: MotionPermissionProviding
+    /// Location is allowed and the Motion & Fitness prompt is up.
+    private var vehicleAwaitingMotion: VehicleType?
 
     init(
         config: TrackingConfig,
         repository: TripRepository,
         journal: RecordingJournalFile? = RecordingJournalFile.defaultURL().map(RecordingJournalFile.init),
         permission: LocationPermissionProviding = LocationPermission(),
+        motion: MotionPermissionProviding = MotionPermission(),
         now: Date = .now
     ) {
         self.config = config
         self.repository = repository
         self.journal = journal
         self.permission = permission
+        self.motion = motion
         locationAccess = permission.access
         permission.onChange = { [weak self] in self?.locationAccessChanged($0) }
         TripTitle.clearLegacyFallbacks(in: repository)
@@ -348,7 +353,7 @@ final class TrackingSession {
     }
 }
 
-// MARK: - Location access
+// MARK: - Location and motion access
 
 extension TrackingSession {
     /// Start Journey. **A recording starts only once location is allowed**
@@ -357,12 +362,13 @@ extension TrackingSession {
     /// start on a yes. Refused — nothing starts; the record sheet says why.
     /// Not yet known in the moment after launch (#235) is the same as never
     /// answered: the request is a no-op for an answered prompt, and the answer
-    /// CoreLocation delivers starts the recording or refuses it.
+    /// CoreLocation delivers starts the recording or refuses it. Allowed, the
+    /// recording waits only for Motion & Fitness, and only if it was never asked.
     func requestStart(vehicle: VehicleType) {
         guard !isRecording else { return }
         switch locationAccess {
         case .allowed:
-            start(vehicle: vehicle)
+            startOnceMotionIsAnswered(vehicle)
         case .undetermined:
             vehicleAwaitingPermission = vehicle
             permission.request()
@@ -381,9 +387,31 @@ extension TrackingSession {
         guard access != .undetermined, let vehicle = vehicleAwaitingPermission else { return }
         vehicleAwaitingPermission = nil
         if access == .allowed {
-            start(vehicle: vehicle)
+            startOnceMotionIsAnswered(vehicle)
         } else {
             KamomeLog.recording.notice("recording not started — location was refused at the prompt")
+        }
+    }
+
+    /// **Motion & Fitness is asked here**, after location and before the
+    /// recording screen, while the record sheet is still up (Chiu 2026-10-29,
+    /// ADR 2026-10-29, #196). It used to be asked by the recording itself, and
+    /// on the simulator the prompt came after the trip had ended. Asked here,
+    /// it can never land on Kamome's own card, which comes with the recording
+    /// screen. Either answer starts the recording; without motion it records
+    /// on GPS alone, as it always has. Once answered it is never asked again.
+    private func startOnceMotionIsAnswered(_ vehicle: VehicleType) {
+        guard motion.needsAsking else {
+            vehicleAwaitingMotion = nil
+            start(vehicle: vehicle)
+            return
+        }
+        guard vehicleAwaitingMotion == nil else { return } // already on screen
+        vehicleAwaitingMotion = vehicle
+        motion.ask { [weak self] in
+            guard let self, let vehicle = self.vehicleAwaitingMotion else { return }
+            self.vehicleAwaitingMotion = nil
+            self.start(vehicle: vehicle)
         }
     }
 }
