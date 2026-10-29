@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-28 against ADR **2026-10-26-home-shows-a-newcomer-the-next-step**.
+Last synced: 2026-10-28 against ADR **2026-10-28-home-asks-about-a-trip-at-its-row**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -55,7 +55,8 @@ ADRs 2026-09-30-footprints-sits-beside-journeys, 2026-10-07-home-reads-like-foot
 lookup timing is accepted (2026-09-18 (e)); home is never looked up, and a photo
 at home ends a journey (2026-09-25). An empty 旅程 carries 足跡's welcome card, whose
 「找出我的旅程」 opens 足跡 and asks there; a short list offers the next step as a card, and a
-trip with a film is marked (ADR 2026-10-26-home-shows-a-newcomer-the-next-step). Films follow the device's
+trip with a film is marked (ADR 2026-10-26-home-shows-a-newcomer-the-next-step). Home's 「刪除旅程」 points at the
+swiped row (ADR 2026-10-28-home-asks-about-a-trip-at-its-row). Films follow the device's
 appearance (2026-09-18 (d)); the terrain credit is owed only where a licence
 requires it (2026-09-18 (f)).
 
