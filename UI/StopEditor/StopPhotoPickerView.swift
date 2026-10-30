@@ -91,7 +91,7 @@ struct StopPhotoPickerView: View {
             if fullNotice > 0 {
                 Text(String.localizedStringWithFormat(String(localized: "stop_photos_full"), choices.maxPhotos))
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color(.warningText))
             }
         }
     }

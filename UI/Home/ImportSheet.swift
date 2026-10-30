@@ -246,7 +246,7 @@ struct ImportSheet: View {
             case let .failed(failure):
                 Label(errorText(failure), systemImage: "exclamationmark.triangle")
                     .font(.callout)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color(.warningText))
                 importButton
             case let .duplicate(duplicate):
                 duplicatePrompt(duplicate)

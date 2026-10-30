@@ -36,6 +36,44 @@ final class AccentContrastTests: XCTestCase {
         XCTAssertEqual(hex(.brandTeal, dark), "2DBDD0")
     }
 
+    /// **Warning text is `WarningText`, never the system orange** (#319, Chiu
+    /// 2026-10-29). `#FF9500` measured 2.20 : 1 on white and 1.97 on the
+    /// grouped grey. Light is Apple's increased-contrast orange `#C93400`;
+    /// dark keeps the system orange, which reads there.
+    func testWarningTextReadsOnPagesRowsAndSheets() {
+        XCTAssertEqual(hex(.warningText, light), "C93400")
+        XCTAssertEqual(hex(.warningText, dark), "FF9F0A")
+        let grounds: [(String, UIColor)] = [
+            ("systemBackground", .systemBackground),
+            ("systemGroupedBackground", .systemGroupedBackground),
+            ("secondarySystemGroupedBackground", .secondarySystemGroupedBackground)
+        ]
+        for traits in appearances {
+            for (name, ground) in grounds {
+                assertReads(rgb(.warningText, traits), on: Self.components(ground.resolvedColor(with: traits)).rgb,
+                            "WarningText on \(name)", traits)
+            }
+        }
+    }
+
+    /// No sentence or label in the app is drawn in `.orange` any more; the
+    /// pin's badge fill and a swipe button's tint are fills, not text.
+    func testNoTextIsDrawnInTheSystemOrange() throws {
+        let repoRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let ui = repoRoot.appendingPathComponent("UI")
+        let files = try XCTUnwrap(FileManager.default.enumerator(at: ui, includingPropertiesForKeys: nil))
+        var offenders: [String] = []
+        for case let url as URL in files where url.pathExtension == "swift" {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            for (index, line) in text.split(separator: "\n", omittingEmptySubsequences: false).enumerated()
+            where line.contains("foregroundStyle") && line.contains("orange") {
+                offenders.append("\(url.lastPathComponent):\(index + 1)")
+            }
+        }
+        XCTAssertEqual(offenders, [], "warning text goes through WarningText (#319)")
+    }
+
     /// A filled button's label on its fill.
     func testTheLabelOnAFilledButtonReads() {
         for traits in appearances {
