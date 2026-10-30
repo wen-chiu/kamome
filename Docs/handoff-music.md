@@ -1,77 +1,74 @@
-# Handoff — film music, desk loops (Chiu 2026-10-29)
+# Handoff — film music, desk loops (Chiu 2026-10-29, round 3 2026-10-30)
 
-**State, 2026-10-29.** A desk tool composes four regional loop sets, and an arranger fits one to a
-film's events. **Nothing in the app plays music**: music in the film is still deferred
-(`Docs/current-state.md`), and this is the material for that decision, not the decision. Chiu
-asked for it: free-licence music only, by region, looping, with different beats at the film's
-turns.
+**State, 2026-10-30.** A desk tool composes five loop sets for road-trip films, and an arranger
+fits one to a film's events. **Nothing in the app plays music**: music in the film is still
+deferred (`Docs/current-state.md`), and this is the material for that decision, not the decision.
+Chiu asked for it: free-licence music only, looping, with different beats at the film's turns.
 
-**Round 2, same day (Chiu's listen of round 1).** Melodies were "about 60–70%"; East Asia's
-guitar sounded unnatural; Nordic's tune was monotonous; **the percussion did not sit with the
-music**. Chiu then chose, when asked: **acoustic sounds from CC0 recordings** (VCSL) instead of
-synthesis, and **an upright piano and a vibraphone instead of East Asia's guitar**. Nordic got a new
-tune that moves; every `stop` loop now plays its style's own theme, sparser, so one tune runs
-through the film.
+## How it got here
+
+| round | what Chiu heard | what changed |
+|---|---|---|
+| 1 | melodies 60–70%; East Asia's guitar unnatural; Nordic monotonous; the percussion did not sit | — |
+| 2 | (Chiu chose recorded CC0 sounds over synthesis, an upright piano and vibraphone over the guitar) | VCSL recordings; a new Nordic tune |
+| 3 | "still a strange disharmony — too much harmony I can't control; subtract" + a Polarsteps film's music to match | rebuilt by subtraction, five moods |
+
+**Diagnosis behind round 3 (INFERRED from the measurements, not from listening):** rounds 1–2
+voiced jazz chords (maj9, #11, add9 clusters) on two or three harmony instruments at once, and
+synthesised imitations of acoustic instruments (flute, whistle, guitar). Chiu's reference,
+**MEASURED** from its audio: 118 BPM; E major, tuned to A440 (+0.2 cents); only triads I, iii, vi,
+IV, V; a four-on-the-floor kick under a 3-3-2 bass; a one-bar hook repeated, inside G#4–F#5. Its
+melody was not copied — only those numbers.
+
+**The rules now, in the module docstring.** Triads from the key, one chord a bar, in stock pop
+progressions; at most four layers; recorded instruments or honestly electronic sounds; no swing,
+crackle or pads. `check_melody` refuses to render a tune with a non-chord tone on beat 1 or 3, or
+held a beat or more.
 
 ## What exists
 
 | Piece | Where |
 |---|---|
-| Composer, sampler, synthesiser, arranger (pure stdlib) | `Tools/kamome-music.py` |
-| VCSL recordings, pinned commit, never committed here | `~/Kamome-music/vcsl/` — `fetch`, 403 files, 517 MB |
+| Composer, sampler, arranger (pure stdlib) | `Tools/kamome-music.py` |
+| VCSL recordings, pinned commit, never committed here | `~/Kamome-music/vcsl/` — `fetch`, 226 files, 432 MB |
 | Output (never committed; regenerate) | `~/Kamome-music/<style>/` — 4 loops, 4 one-shots, `beatmap.json` |
 
     python3 Tools/kamome-music.py fetch                        # once; needs git
-    python3 Tools/kamome-music.py render                       # ~2.5 min, 4 cores
-    python3 Tools/kamome-music.py arrange --style nordic --example
+    python3 Tools/kamome-music.py render                       # ~2 min, 4 cores
+    python3 Tools/kamome-music.py arrange --style cinematic --example
     python3 Tools/kamome-music.py style --country IS
 
-| style | countries (Chiu's table) | tempo | key, progression | recorded / synthesised |
+| style | countries | tempo, key | progression | chords / tune / drums |
 |---|---|---|---|---|
-| `east-asia` | JP TW KR | 90, swung | F: Bbmaj9 · A9 · Dm9 · Cm9 F9 | upright, vibes, cross-stick, hats / EP, kick, bass, flute |
-| `nordic` | IS NO | 80 | D: Dadd9 · A/C# · Bm7 · Gmaj7#11 | grand, glock, bass drum, snare, toms / pads, sub |
-| `southeast-asia` | VN TH | 100 | A: A · F#m7 · Dmaj7 · Esus4 E | Đàn Tranh, marimba, cajón, congas / guitars, pan flute, kalimba |
-| `oceania` | NZ AU | 98 | G: G · Em7 · Cadd9 · Dsus4 D | cajón, claps, tambourine, glock / guitars, whistle, bass |
+| `pop` | none yet | 120, E | I–V–vi–IV | grand piano / electronic pluck / kick, claps, hats |
+| `acoustic` | NZ AU | 100, G | I–IV–vi–V | upright piano / glockenspiel / cajón, claps, tambourine |
+| `cinematic` | IS NO | 80, D | I–V–vi–IV | one grand piano: left hand chords, right hand tune / bass drum, snare |
+| `lofi` | JP TW KR | 84, C | IV–V–iii–vi | upright piano / vibraphone / kick, cross-stick, hats |
+| `tropical` | VN TH | 105, C | vi–IV–I–V | grand piano off-beats / marimba / kick, claps, shaker |
 
-Every style's turns use recorded cymbal swells, cymbal hits and wind chimes.
-
-**How the turns work.** Loops: `intro` (title card), `travel_a`/`travel_b` (driving, alternating
-after each stop), `stop` (photos — no kick, no snare). Events: `go` → riser + `hit_big`, next
-travel loop; `stop` → `hit_soft`, the old loop fades over 0.9 s; `crossing` → riser + `hit_big`,
-`travel_b`; `end` → riser + `outro`. Every loop in a style plays the same 4-bar progression in the
-film's phase, so a switch on **any beat** stays in harmony. Events snap to the nearest beat; the
-film is not moved, and the arranger prints how far each event is off the beat.
+Sections: `intro` chords only; `travel_a` drums, bass, chords, the 4-bar hook; `travel_b` the hook
+and its answer, fuller drums; `stop` chords and the tune, softly. Turns: a recorded cymbal swells
+into `go`, `crossing` and `end`; a hit lands on `go` and `crossing`; wind chimes open a `stop`.
 
 ## Evidence
 
-- **VERIFIED — licence:** VCSL's `LICENSE` is CC0 1.0 Universal and its README says commercial
-  software, no credit; `fetch` and `render` refuse a checkout whose `LICENSE` is not. Everything
-  not from VCSL is synthesised in the file.
-- **VERIFIED — `fetch` from empty:** checks out commit `c1ea7bc`, 403 files, 517 MB.
-- **MEASURED — VCSL's note names put middle C at C3.** Every instrument read 1200 cents above its
-  name as scientific pitch; the tool reads them that way.
-- **MEASURED — tuning.** The glockenspiel is 8–24 cents sharp, one Đàn Tranh string 38, the pianos'
-  lower notes up to 10 flat; the Tanzanian kalimba is ±50 cents (its own scale), so the kalimba
-  stays synthesised. Pianos, glock and Đàn Tranh are re-pitched from a measurement of each
-  recording; rendered notes then read within ±6 cents. The grand's high notes read −8 cents in
-  their first 0.2 s and 0 after: unison strings beating, not mistuning.
-- **VERIFIED, desk measurement:** every loop's seam step is below its own 99.9th-percentile sample
-  step (16 of 16); the four example soundtracks average −21.3 to −22.1 dBFS, peaks ≤ −0.5 dBFS
-  after AAC.
-- **VERIFIED on the illustrative timeline only:** the largest event-to-beat offset is 350 ms
-  (half a beat at 80 BPM). Not measured on a real film's events.
-- **UNKNOWN — whether round 2 sounds good.** Settle: Chiu listens to the four `v2` demo MP4s.
+- **VERIFIED — licence:** VCSL's `LICENSE` is CC0 1.0 Universal; `fetch` and `render` refuse a
+  checkout without it. The kick, bass and pluck are synthesised in the file.
+- **VERIFIED — the rule:** all five tunes pass `check_melody`; a planted breach exits 2.
+- **MEASURED — VCSL:** note names put middle C at C3; glockenspiel and pianos are re-pitched from a
+  measurement of each recording (round 2), within ±6 cents.
+- **VERIFIED, desk measurement:** 20 of 20 loop seams below their own 99.9th-percentile sample
+  step; the five example soundtracks average −21.1 to −23.5 dBFS after AAC, peaks ≤ −1.1 dBFS;
+  largest event-to-beat offset 350 ms, on an illustrative timeline only.
+- **UNKNOWN — whether round 3 sounds right.** Settle: Chiu listens to the five `v3` demo MP4s.
 - **UNKNOWN — phone speaker.** Settle: one play on the phone.
-- **INFERRED, from Suno's own announcement via search — not read at suno.com:** Suno free-plan
-  songs are personal, non-commercial use only, and upgrading later does not make them commercial.
-  Settle: Suno's current terms.
 
 ## Not decided — Chiu
 
 1. Whether the film gets music at all, and in which tier (ADR 2026-07-20 recorded free = silent
    export, premium = an in-app track).
-2. What a country outside the eight gets (`style` refuses), and which style a two-country trip
-   takes.
+2. What a country outside the eight gets — `pop` is the candidate — and which style a
+   two-country trip takes.
 3. Whether the export moves events onto the beat (≤ half a beat). That touches measured
    durations, e.g. `crossing_beat_s` 4.0.
 
@@ -80,5 +77,5 @@ film is not moved, and the arranger prints how far each event is off the beat.
 Events from `LinearTimeline`: `journeyStartS` → `go`; each hold's start → `stop`, end → `go`;
 `crossingBeatWindowsS` → `crossing`; the end card → `end`. Mix after `RecapVideoEncoder` (video
 untouched, muxed with passthrough — INFERRED). Fades, recipes and the snap go to
-`Config/TrackingConfig.json`. Ship the rendered loops as AAC, not VCSL: 88–100 s of audio per
-style, ~6 MB for four at 128 kbps (INFERRED).
+`Config/TrackingConfig.json`. Ship the rendered loops as AAC, not VCSL: 70–100 s of audio a style,
+~1.1–1.6 MB at 128 kbps (INFERRED).
