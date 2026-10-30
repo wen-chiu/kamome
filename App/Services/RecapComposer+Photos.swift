@@ -203,7 +203,7 @@ extension RecapComposer {
         useAnalysis: Bool = true
     ) -> FilmPlan {
         let film = filmRecords(
-            segments: detail.segments, stops: detail.stops,
+            segments: detail.routeSegments, stops: detail.stops,
             epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM,
             homeRadiusM: config.discovery.awayRadiusM
