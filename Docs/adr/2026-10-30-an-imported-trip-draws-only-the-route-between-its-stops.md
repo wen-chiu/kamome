@@ -5,7 +5,7 @@
 
 ## Context
 - An import stores its legs apart from its stops (`PhotoImportClusterer`): one leg into each stop, plus legs from any loose photographs before the first or after the last. `deleteStop` removes the stop and leaves its legs.
-- Chiu, on the phone, 2026-10-30: a trip that began at a transit airport, with that stop deleted. Trip Detail's map still drew the flight from it, across two seas, into the first stop he kept. The film reads the same legs. Seen in his screenshot; not reproduced at the desk.
+- Chiu, on the phone, 2026-10-30: a trip that began at a transit airport, with that stop deleted. Trip Detail's map still drew the leg from it into the first stop he kept. The film reads the same legs. Seen in his screenshot; not reproduced at the desk.
 
 ## Decision
 Chiu: 「我刪除景點之後路線還是在 這是轉機點 我不想他出現 只要有目的地的路徑」.

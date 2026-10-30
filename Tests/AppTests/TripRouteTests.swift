@@ -21,14 +21,14 @@ final class TripRouteTests: XCTestCase {
             startedAt: start + from, endedAt: start + to, source: SegmentSource.exif.rawValue
         )
         return (segment, [
-            TrackpointRecord(segmentId: id, ts: start + from, lat: 25.0, lon: 55.0),
-            TrackpointRecord(segmentId: id, ts: start + to, lat: 41.8, lon: 12.2)
+            TrackpointRecord(segmentId: id, ts: start + from, lat: 10.0, lon: 20.0),
+            TrackpointRecord(segmentId: id, ts: start + to, lat: 10.5, lon: 20.5)
         ])
     }
 
     private func stop(_ id: String, at: Double, until: Double?) -> StopRecord {
         StopRecord(
-            id: id, tripId: "trip-1", lat: 41.8, lon: 12.2,
+            id: id, tripId: "trip-1", lat: 10.5, lon: 20.5,
             arrivedAt: start + at, departedAt: until.map { start + $0 }
         )
     }
