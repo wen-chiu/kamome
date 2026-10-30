@@ -35,4 +35,20 @@ final class FilmLengthCopyTests: XCTestCase {
         }
         XCTAssertEqual(try localizedValue("recap_length_short", locale: "zh-Hant"), "精華")
     }
+
+    /// The over-ceiling warning says how long the person's additions made the
+    /// film, and how to shorten it (Chiu 2026-10-30: 「新增地點照片讓影片變長至
+    /// x:xx，刪減照片地點可以縮短影片長度。」). It no longer names the ceiling.
+    /// `RecapView` still passes the length first, so the number lands in place.
+    func testTheOverCeilingWarningSaysTheFilmsLengthOnly() throws {
+        for locale in ["en", "zh-Hant"] {
+            let value = try localizedValue("recap_length_over", locale: locale)
+            XCTAssertTrue(value.contains("%1$@"), "recap_length_over in \(locale) must say the film's length: \(value)")
+            XCTAssertFalse(value.contains("%2$@"), "recap_length_over in \(locale) names the ceiling again: \(value)")
+        }
+        let formatted = String.localizedStringWithFormat(
+            try localizedValue("recap_length_over", locale: "zh-Hant"), "1:32", "1:30"
+        )
+        XCTAssertTrue(formatted.contains("1:32") && !formatted.contains("1:30"), formatted)
+    }
 }
