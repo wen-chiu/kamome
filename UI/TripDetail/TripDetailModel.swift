@@ -166,9 +166,9 @@ final class TripDetailModel {
                     let detail = Stored.read("detail") { try repository.detail(tripId: tripId) }
                     return (detail,
                             Stored.read("films") { try repository.films(tripId: tripId) } ?? [],
-                            Self.thinned(detail?.segments ?? [], epsilonM: epsilonM, roadEpsilonM: roadEpsilonM),
+                            Self.thinned(detail?.routeSegments ?? [], epsilonM: epsilonM, roadEpsilonM: roadEpsilonM),
                             detail.map { Self.filmStopIds($0, config: config) } ?? [],
-                            detail.flatMap { LegLength.groundMeters(trip: $0.trip, segments: $0.segments) })
+                            detail.flatMap { LegLength.groundMeters(trip: $0.trip, segments: $0.routeSegments) })
                 }.value
                 // One assignment, so the map never draws lines from another read.
                 (detail, films, displayPolylines, filmStopIds, groundDistanceM) = read

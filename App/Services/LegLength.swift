@@ -52,7 +52,7 @@ enum LegLength {
     static func groundMeters(trip: TripRecord, repository: TripRepository) -> Double? {
         if let measured = recordedMeters(trip) { return measured }
         guard let detail = Stored.read("detail", { try repository.detail(tripId: trip.id) }) else { return nil }
-        return groundMeters(trip: trip, segments: detail.segments)
+        return groundMeters(trip: trip, segments: detail.routeSegments)
     }
 
     /// The same figure, for a caller that already holds the trip's legs.
