@@ -77,6 +77,8 @@ public struct RecapRenderLoop {
         public var compositeS = 0.0
         /// Whatever the caller does with each frame — encoding, for the exporter.
         public var deliverS = 0.0
+        /// Snapshots asked again after a failure (`SnapshotRetry`); each is a fetch too.
+        public var retries = 0
 
         public var meanSnapshotS: Double { fetches > 0 ? snapshotS / Double(fetches) : 0 }
 
@@ -88,6 +90,7 @@ public struct RecapRenderLoop {
         private let lock = NSLock()
         private(set) var fetches = 0
         private(set) var totalS = 0.0
+        private(set) var retries = 0
 
         func record(_ seconds: Double) {
             lock.lock()
@@ -95,6 +98,8 @@ public struct RecapRenderLoop {
             fetches += 1
             totalS += seconds
         }
+
+        func recordRetry() { lock.withLock { retries += 1 } }
     }
 
     /// The live window of station snapshots: prefetches ahead of the station
@@ -109,14 +114,16 @@ public struct RecapRenderLoop {
         private let widthPx: Int
         private let heightPx: Int
         private let timeoutS: Double
+        private let retry: (delaysS: [Double], keepTrying: () -> Bool)
         private var fetches: [SnapshotKey: Task<MapSnapshot, Error>] = [:]
 
         init(
             stations: [RecapSnapshotStations.Station], provider: MapRenderer,
-            widthPx: Int, heightPx: Int, timeoutS: Double
+            widthPx: Int, heightPx: Int, timeoutS: Double, retry: (delaysS: [Double], keepTrying: () -> Bool)
         ) {
             self.stations = stations
             self.timeoutS = timeoutS
+            self.retry = retry
             self.provider = provider
             self.widthPx = widthPx
             self.heightPx = heightPx
@@ -152,12 +159,18 @@ public struct RecapRenderLoop {
         private func fetch(_ key: SnapshotKey) -> Task<MapSnapshot, Error> {
             if let running = fetches[key] { return running }
             let (provider, meter, widthPx, heightPx, timeoutS) = (provider, meter, widthPx, heightPx, timeoutS)
+            let retry = retry
             let task = Task {
-                let started = ContinuousClock.now
-                defer { meter.record(RecapRenderLoop.seconds(since: started)) }
-                return try await SnapshotDeadline.run(seconds: timeoutS) {
-                    try await provider.snapshot(key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx)
-                }
+                try await SnapshotRetry.run(
+                    delaysS: retry.delaysS, keepTrying: retry.keepTrying, onRetry: meter.recordRetry,
+                    attempt: {
+                        let started = ContinuousClock.now
+                        defer { meter.record(RecapRenderLoop.seconds(since: started)) }
+                        return try await SnapshotDeadline.run(seconds: timeoutS) {
+                            try await provider.snapshot(key.camera, map: key.map, widthPx: widthPx, heightPx: heightPx)
+                        }
+                    }
+                )
             }
             fetches[key] = task
             return task
@@ -235,9 +248,11 @@ public struct RecapRenderLoop {
     /// projection cache — is lock-guarded and, on a miss, serialises the
     /// underlying call rather than risk two threads inside MapLibre's
     /// Objective-C++ bridge at once (`RecapSnapshot.swift`).
+    /// `keepTrying` is the caller's Cancel, read before a failed snapshot is asked again.
     @discardableResult
     public func renderFrames(
         only wanted: (Int) -> Bool = { _ in true },
+        keepTrying: @escaping () -> Bool = { true },
         _ deliver: (Int, CGImage) throws -> Bool
     ) async throws -> RenderStats {
         let fullPlan = stations
@@ -253,7 +268,8 @@ public struct RecapRenderLoop {
         let fetcher = StationFetcher(
             stations: plan.map(\.station), provider: provider,
             widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
-            timeoutS: config.pipeline.snapshotTimeoutS
+            timeoutS: config.pipeline.snapshotTimeoutS,
+            retry: (config.pipeline.snapshotRetryDelaysS, keepTrying)
         )
         defer { fetcher.cancelAll() }
         try await composite(plan, fetcher: fetcher, stats: &stats, deliver: deliver)
@@ -263,6 +279,7 @@ public struct RecapRenderLoop {
         // where the measurement matters most.
         stats.fetches = fetcher.meter.fetches
         stats.snapshotS = fetcher.meter.totalS
+        stats.retries = fetcher.meter.retries
         return stats
     }
 

@@ -23,6 +23,17 @@ extension TrackingConfig {
         /// 60 s is ~40× the 0.72–1.55 s measured per snapshot on the simulator
         /// (`Docs/handoff-export-performance.md`); INFERRED, device figure owed.
         public let snapshotTimeoutS: Double
+        /// **A snapshot that fails is asked again, from the same source, once
+        /// after each of these waits** (#330, Chiu 2026-10-29: two retries, 2 s
+        /// then 4 s). Only when every attempt fails does the export fail. It is
+        /// not a fallback: the same style, the same tiles, the same picture, so
+        /// a retry that succeeds changes no pixel. Each attempt keeps its own
+        /// `snapshotTimeoutS`, so the worst a failing station adds is
+        /// `count × snapshotTimeoutS + sum` (126 s at the shipped values) before
+        /// the export fails as it did before. The waits are INFERRED: long
+        /// enough for a dropped connection to come back, short enough not to be
+        /// noticed in a render of minutes. Empty turns retries off.
+        public let snapshotRetryDelaysS: [Double]
         /// The on-device tile cache the map renderer may keep, in MB (2026-09-25).
         /// MapLibre's default is 50 MB (VERIFIED, `MLNOfflineStorage.h`), and a
         /// film that covers a whole island at several zooms, with a terrain DEM
@@ -68,13 +79,15 @@ extension TrackingConfig {
         public let estimateRiseToleranceMin: Int
 
         public init(
-            prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double, mapCacheMb: Int,
+            prefetchDepth: Int, compositeConcurrency: Int, snapshotTimeoutS: Double,
+            snapshotRetryDelaysS: [Double], mapCacheMb: Int,
             coalesceTileRequests: Bool, terrainMaxAgeS: Int, tileMemoryMb: Int, keptExportLogs: Int,
             estimateWarmupS: Double, estimateRiseToleranceMin: Int
         ) {
             self.prefetchDepth = prefetchDepth
             self.compositeConcurrency = compositeConcurrency
             self.snapshotTimeoutS = snapshotTimeoutS
+            self.snapshotRetryDelaysS = snapshotRetryDelaysS
             self.mapCacheMb = mapCacheMb
             self.coalesceTileRequests = coalesceTileRequests
             self.terrainMaxAgeS = terrainMaxAgeS
@@ -88,8 +101,9 @@ extension TrackingConfig {
         /// the JSON block is still required, so a config file missing it fails
         /// loudly. Mirrors the shipped values.
         public static let handBuilt = ExportPipeline(
-            prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60, mapCacheMb: 256,
-            coalesceTileRequests: true, terrainMaxAgeS: 2_592_000, tileMemoryMb: 64, keptExportLogs: 20,
+            prefetchDepth: 8, compositeConcurrency: 4, snapshotTimeoutS: 60,
+            snapshotRetryDelaysS: [2, 4], mapCacheMb: 256, coalesceTileRequests: true,
+            terrainMaxAgeS: 2_592_000, tileMemoryMb: 64, keptExportLogs: 20,
             estimateWarmupS: 60, estimateRiseToleranceMin: 1
         )
 
@@ -97,6 +111,7 @@ extension TrackingConfig {
             case prefetchDepth = "prefetch_depth"
             case compositeConcurrency = "composite_concurrency"
             case snapshotTimeoutS = "snapshot_timeout_s"
+            case snapshotRetryDelaysS = "snapshot_retry_delays_s"
             case mapCacheMb = "map_cache_mb"
             case coalesceTileRequests = "coalesce_tile_requests"
             case terrainMaxAgeS = "terrain_max_age_s"

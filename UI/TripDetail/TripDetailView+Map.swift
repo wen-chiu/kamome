@@ -36,14 +36,19 @@ extension TripDetailView {
             editingStop = stop
         } label: {
             ZStack(alignment: .topTrailing) {
+                // The accent, not `BrandTeal`: a pin is a button, and in light
+                // mode the brand teal was 1.07 : 1 on Apple's sea (#312).
                 Image(systemName: "mappin.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(Color(.brandTeal))
+                    .foregroundStyle(Color.accentColor)
                     .background(Circle().fill(.background))
                 let count = model.photos(for: stop.id).count
                 if count > 0 {
+                    // Black, not the button's tint: the accent on orange was 2.54
+                    // in light and 1.00 in dark (Chiu 2026-10-29, with #312).
                     Text("\(count)")
                         .font(.caption2.bold())
+                        .foregroundStyle(.black)
                         .padding(3)
                         .background(Circle().fill(.orange))
                         .offset(x: 8, y: -8)

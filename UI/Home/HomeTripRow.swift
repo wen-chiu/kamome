@@ -78,7 +78,7 @@ struct HomeTripRow: View {
     /// size the two halves used to wrap separately and interleave
     /// ("2026 · 2 / 年10 km"), so they stack and each stays whole (#191).
     private var facts: some View {
-        let dates = datesText
+        let dates = factsDates
         return HStack(alignment: .firstTextBaseline, spacing: 5) {
             provenanceMark
             if let figures {
@@ -87,17 +87,21 @@ struct HomeTripRow: View {
                 let line = Self.figuresText(
                     groundM: figures.groundM, stopCount: figures.stopCount, filmMade: figures.hasFilm
                 )
-                ViewThatFits(in: .horizontal) {
-                    Text(verbatim: "\(dates) · \(line)")
-                    // Without the fixed height the fallback is measured one line
-                    // tall and a long range is cut with an ellipsis, not wrapped.
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: dates)
-                        Text(verbatim: line)
+                if let dates {
+                    ViewThatFits(in: .horizontal) {
+                        Text(verbatim: "\(dates) · \(line)")
+                        // Without the fixed height the fallback is measured one line
+                        // tall and a long range is cut with an ellipsis, not wrapped.
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(verbatim: dates)
+                            Text(verbatim: line)
+                        }
+                        .fixedSize(horizontal: false, vertical: true)
                     }
-                    .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(verbatim: line)
                 }
-            } else {
+            } else if let dates {
                 Text(verbatim: dates)
             }
         }
@@ -122,13 +126,16 @@ struct HomeTripRow: View {
         Self.dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt, clock: figures?.clock ?? .uniform())
     }
 
+    /// The facts line's dates, unless the headline already is them.
+    private var factsDates: String? {
+        Self.factsDates(headline: Self.headline(for: trip, clock: figures?.clock ?? .uniform()).title, dates: datesText)
+    }
+
     private var accessibilityText: String {
         let parts = Self.headline(for: trip, clock: figures?.clock ?? .uniform())
-        var spoken = [
-            parts.title,
-            datesText,
-            String(localized: Self.provenanceKey(trip.tripSource))
-        ]
+        var spoken = [parts.title]
+        if let dates = factsDates { spoken.append(dates) }
+        spoken.append(String(localized: Self.provenanceKey(trip.tripSource)))
         if let figures {
             spoken.append(Self.figuresText(groundM: figures.groundM, stopCount: figures.stopCount))
             if figures.hasFilm { spoken.append(String(localized: "home_trip_has_film")) }
@@ -162,6 +169,14 @@ extension HomeTripRow {
             return (nil, place)
         }
         return (nil, dateRangeText(startedAt: trip.startedAt, endedAt: trip.endedAt, clock: clock))
+    }
+
+    /// The dates for the line under the headline, or nil when the headline
+    /// already is those dates (#331, Chiu 2026-10-29). A trip with no place to
+    /// name it by — a recording with no stop — is titled by its dates, and the
+    /// line under it said them again: 「Oct 28, 2026 · 4 km · 0 places」.
+    static func factsDates(headline: String, dates: String) -> String? {
+        headline == dates ? nil : dates
     }
 
     /// "Jun 21 – 22, 2026" — the same span format the Import sheet's own album
