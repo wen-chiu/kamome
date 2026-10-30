@@ -245,13 +245,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The stops you added make this film %1$@ — past this length's %2$@. Kamome keeps them; take some out for a shorter film."
+            "value": "Adding places and photos makes this film %1$@. Take out some photos or places to shorten it."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "你自己加入的地點讓影片變成 %1$@，超過這個長度的 %2$@。卡摸咩會保留它們；想要短一點，可以拿掉幾個。"
+            "value": "新增地點照片讓影片變長至 %1$@，刪減照片地點可以縮短影片長度。"
           }
         }
       }
