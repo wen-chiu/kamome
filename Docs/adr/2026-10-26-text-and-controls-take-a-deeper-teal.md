@@ -1,6 +1,6 @@
 # Text and controls take a deeper teal; #2DBDD0 stays the brand colour for drawings
 
-**Status:** Decided (Chiu, 2026-10-26)
+**Status:** Decided (Chiu, 2026-10-26; pins on the in-app map amended by 2026-10-29-a-stop-pin-is-a-control-in-the-accent)
 **Supersedes:** nothing — `#2DBDD0` was the asset's value, never a decision
 
 ## Context
