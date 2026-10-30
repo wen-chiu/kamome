@@ -1,9 +1,15 @@
 # Handoff — film music, desk loops (Chiu 2026-10-29; round 4 2026-10-30)
 
-**State, 2026-10-30.** A desk tool composes loop sets for road-trip films, and an arranger fits one
-to a film's events. **Nothing in the app plays music**: music in the film is still deferred
-(`Docs/current-state.md`), and this is the material for that decision, not the decision. Chiu
-asked for it: free-licence music only, looping, with different beats at the film's turns.
+**State, 2026-10-30: this approach is stopped.** Chiu heard Round 4 and judged it worse. Composing
+note by note in this file is not the way on, and the music is to be rethought from scratch,
+probably with an open-source AI music model, aiming at results like Suno's. The rethink runs in its
+own session. What follows is the record of the four rounds: the tool, what Chiu heard and what was
+measured.
+
+A desk tool composes loop sets for road-trip films, and an arranger fits one to a film's events.
+**Nothing in the app plays music**: music in the film is still deferred (`Docs/current-state.md`),
+and this is the material for that decision, not the decision. Chiu asked for it: free-licence music
+only, looping, with different beats at the film's turns.
 
 ## How it got here
 
@@ -13,6 +19,22 @@ asked for it: free-licence music only, looping, with different beats at the film
 | 2 | (Chiu chose recorded CC0 sounds over synthesis, an upright piano and vibraphone over the guitar) | VCSL recordings; a new Nordic tune |
 | 3 | "still a strange disharmony — subtract" + a Polarsteps film's music to match | triads only, ≤ 4 layers, five moods |
 | 4 | consonant but mechanical, repetitive, no emotional depth (written brief) | Tropical and Pop recomposed, A and B arrangements each |
+| 5 | Round 4 A, with its own tune and with an outside generator's tune: 「更難聽了 … 都有一種很古老遊戲配樂的粗糙感」, not the grand, fun music a road trip wants | stopped; rethink from scratch, probably with an open-source AI music model, toward Suno-like results |
+
+**Why it sounds like old game music (INFERRED; the rethink should test it).** Four rounds changed
+the notes, while the ceiling was the sound. Every note is a one-shot recording or a plain
+oscillator fired on a grid, which is how a tracker or General MIDI module plays, and that is how
+1990s game music was made. Nothing is performed (no strum, bowing, breath or pedal), and the bass,
+lead and pad are bare saws and sines. The palette is piano, mallets and small percussion, with no
+guitars, full kit, strings or voices. The mix has a Freeverb and EQ but no bus compression,
+saturation or mastering. Composition rules cannot reach past any of these. Settle: hear one track
+from a modern generator with the same chords beside a Round 4 loop.
+
+**An outside generator was tried (2026-10-30, not adopted).** Chiu brought a seeded melody
+generator written by another assistant. Run against this file with only the tune swapped, it put
+the tune inside the piano's chord range (68% of note-time in Tropical, 65% in Pop, against 28% and
+25% for the hand-written tunes). It also played the glockenspiel up to 17 semitones below its
+lowest recording. Chiu heard both tunes on the same arrangement and judged both worse (row 5).
 
 **Round 4's brief (Chiu, 2026-10-30), in short:** colour chords, inversions, two-bar chords and a
 moving bass, without stacking extensions; 2-bar motifs grown into 4- and 8-bar phrases; up to six
@@ -50,9 +72,9 @@ has per-instrument EQ, a pad and bass that duck under the kick, and an EQ'd reve
 
   Proxies, not a verdict: a spectrum close to a mastered pop track is not the goal in itself.
 - **VERIFIED, desk:** 20 of 20 Round 4 loop seams clean; arranged peaks ≤ 0.92.
-- **UNKNOWN — the six questions of the brief** (memorable melody, natural chords, instruments that
-  belong together, natural rhythm, atmosphere, completeness). Settle: Chiu listens to the four
-  `round4-*` comparison videos (Round 3 → A → B on one timeline).
+- **ANSWERED 2026-10-30 — the six questions of the brief** (memorable melody, natural chords,
+  instruments that belong together, natural rhythm, atmosphere, completeness): no. Chiu heard
+  Round 4 A and judged it worse than Round 3, rough like old game music (row 5).
 - **UNKNOWN — phone speaker.** Settle: one play on the phone.
 - **MEASURED — `acoustic` plays its glockenspiel below the recordings** (2026-10-30). VCSL's
   lowest glockenspiel note is G5, and the tune runs B4–B5, so 19 of its 33 notes are the G5
@@ -77,7 +99,9 @@ Round 3 styles, still current for the other moods: `acoustic` (NZ AU), `cinemati
 
 ## Not decided — Chiu
 
-1. A or B per style, or neither — then whether Round 4's approach goes to the other three moods.
+1. ~~A or B per style~~ — neither (2026-10-30); the approach stops. Open now: where the music
+   comes from instead (an open-source AI model, a paid generator's commercial licence, or
+   another way), which the rethink session proposes and Chiu decides.
 2. Whether the film gets music at all, and in which tier (ADR 2026-07-20 recorded free = silent
    export, premium = an in-app track).
 3. What a country outside the eight gets — `pop` is the candidate — and which style a
