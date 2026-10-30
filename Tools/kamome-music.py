@@ -23,6 +23,19 @@ is checked by `check_melody`, which refuses to render a breach:
    bass, a pluck) — no synthesised imitation of an acoustic instrument.
 4. **No swing, no crackle, no pads.**
 
+**Round 4 (Chiu, 2026-10-30) — Tropical and Pop only, as two arrangements
+each (`tropical-a`/`-b`, `pop-a`/`-b`; A restrained, B expressive)** — found
+Round 3 consonant but mechanical, and relaxes rules 1, 2 and 4 on purpose:
+colour chords (add9, maj7, sus2, sus4) on the chord instrument alone, any
+inversion, open voicings, two-bar chords and a bass that walks into the next
+chord (`check_tune` holds the melody to the chord, colours included); up to six
+layers, each with one job, a soft stereo pad among them; and one 16-bar
+composition built from a 2-bar motif, heard at five levels of energy — `intro`,
+`build`, `main`, `peak`, `stop` — that `arrange` climbs with the film. Its
+mix has per-instrument EQ, a pad and bass that duck under the kick, and an
+EQ'd reverb return. The other three styles stay Round 3 until Chiu has
+listened.
+
 **Where every sound comes from — the licence is the reason for each line:**
 
 - **Acoustic instruments are CC0 1.0 recordings** from the Versilian Community
@@ -39,6 +52,7 @@ Nothing else goes in: no other sample, sound font or recording.
     python3 Tools/kamome-music.py fetch                     # the VCSL subset, once
     python3 Tools/kamome-music.py render                    # all five styles
     python3 Tools/kamome-music.py render --style cinematic
+    python3 Tools/kamome-music.py render --style tropical-a --style tropical-b
     python3 Tools/kamome-music.py arrange --style cinematic --example
     python3 Tools/kamome-music.py arrange --style cinematic --timeline film.json
     python3 Tools/kamome-music.py style --country IS
@@ -279,6 +293,123 @@ def kick(f, dur, vel, seed, f_start=120.0, f_end=48.0, sweep=0.035, decay=0.24,
     return out
 
 
+def pad(f, dur, vel, seed, attack=0.9, release=1.6, nh_cap=10, detune_c=6.0):
+    """A sustained texture: three detuned saws from a wavetable, slow in and out."""
+    rng = random.Random(seed)
+    n_on = int(dur * SR)
+    n = n_on + int(release * SR)
+    out = zeros(n)
+    tab = _saw(max(1, min(nh_cap, int(NYQ_SAFE / (f * 1.01)))))
+    att = max(1.0, attack * SR)
+    k_rel = math.exp(-1.0 / (release * 0.3 * SR))
+    cos = math.cos
+    for cents in (-detune_c, 0.0, detune_c):
+        inc = f * 2 ** (cents / 1200.0) * _TAB / SR
+        ph = rng.uniform(0, _TAB)
+        g = 1.0
+        for t in range(n):
+            i = int(ph)
+            y = tab[i] + (ph - i) * (tab[i + 1] - tab[i])
+            e = 0.5 - 0.5 * cos(math.pi * t / att) if t < att else 1.0
+            if t >= n_on:
+                g *= k_rel
+                e *= g
+            out[t] += y * e * 0.3333
+            ph += inc
+            if ph >= _TAB:
+                ph -= _TAB
+    return out
+
+
+def pad_st(f, dur, vel, seed):
+    """Round 4's texture: the pad twice, a few cents apart, one each side —
+    width without a chorus effect, and honestly electronic."""
+    left = pad(f * 2 ** (-4 / 1200.0), dur, vel, seed)
+    right = pad(f * 2 ** (4 / 1200.0), dur, vel, seed + 7)
+    return (array('f', left), array('f', right))
+
+
+def lead(f, dur, vel, seed, cutoff=2400.0, attack=0.015, release=0.22, vib=0.005):
+    """Round 4's pop voice: two detuned saws and a sine an octave down, through
+    a gentle two-pole low-pass, a soft attack and a late vibrato. A synth that
+    sings; it imitates no acoustic instrument."""
+    rng = random.Random(seed)
+    n_on = int(dur * SR)
+    n = n_on + int(release * SR * 1.6)
+    out = zeros(n)
+    tab = _saw(max(1, min(20, int(NYQ_SAFE / (f * 1.01)))))
+    incs = [f * 2 ** (c / 1200.0) * _TAB / SR for c in (-5.0, 5.0)]
+    phs = [rng.uniform(0, _TAB) for _ in incs]
+    a = _lp_coef(cutoff * (0.75 + 0.5 * vel))
+    att = max(1, int(attack * SR))
+    k_rel = math.exp(-1.0 / (release * 0.4 * SR))
+    wv = TAU * 5.3 / SR
+    sub_w = TAU * f * 0.5 / SR
+    y1 = y2 = sub = 0.0
+    g = 1.0
+    sin = math.sin
+    for t in range(n):
+        m = 1.0 + vib * min(1.0, max(0.0, (t / SR - 0.25) / 0.35)) * sin(wv * t)
+        s = 0.0
+        for j in (0, 1):
+            ph = phs[j]
+            i = int(ph)
+            s += tab[i] + (ph - i) * (tab[i + 1] - tab[i])
+            ph += incs[j] * m
+            if ph >= _TAB:
+                ph -= _TAB
+            phs[j] = ph
+        sub += sub_w * m
+        x = 0.5 * s + 0.35 * sin(sub)
+        y1 += a * (x - y1)
+        y2 += a * (y1 - y2)
+        e = t / att if t < att else 1.0
+        if t >= n_on:
+            g *= k_rel
+            e *= g
+        out[t] = y2 * e
+    return out
+
+
+def _biquad(x, kind, fc, q=0.707, gain_db=0.0):
+    """RBJ high-pass, low-pass or bell, applied in place to one channel."""
+    w0 = TAU * fc / SR
+    c, alpha = math.cos(w0), math.sin(w0) / (2.0 * q)
+    if kind == 'lp':
+        b0, b1, b2 = (1 - c) / 2, 1 - c, (1 - c) / 2
+        a0, a1, a2 = 1 + alpha, -2 * c, 1 - alpha
+    elif kind == 'hp':
+        b0, b1, b2 = (1 + c) / 2, -(1 + c), (1 + c) / 2
+        a0, a1, a2 = 1 + alpha, -2 * c, 1 - alpha
+    else:
+        g = 10 ** (gain_db / 40.0)
+        b0, b1, b2 = 1 + alpha * g, -2 * c, 1 - alpha * g
+        a0, a1, a2 = 1 + alpha / g, -2 * c, 1 - alpha / g
+    b0, b1, b2, a1, a2 = b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0
+    x1 = x2 = y1 = y2 = 0.0
+    for i in range(len(x)):
+        xi = x[i]
+        y = b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2
+        x2, x1, y2, y1 = x1, xi, y1, y
+        x[i] = y
+
+
+def equalise(sig, hp=None, lp=None, bells=()):
+    """An instrument kept to its own band — a channel strip's high- and low-cut
+    and its bells, (Hz, dB, Q) — applied note by note so it is cached with the
+    note."""
+    chans = sig if isinstance(sig, tuple) else (sig,)
+    out = tuple(array('d', ch) for ch in chans)
+    for ch in out:
+        if hp:
+            _biquad(ch, 'hp', hp)
+        if lp:
+            _biquad(ch, 'lp', lp)
+        for fc, gain_db, q in bells:
+            _biquad(ch, 'bell', fc, q, gain_db)
+    return out if isinstance(sig, tuple) else out[0]
+
+
 # ---------------------------------------------------------------- recorded instruments (VCSL, CC0)
 
 VCSL_URL = 'https://github.com/sgossner/VCSL'
@@ -308,6 +439,7 @@ VCSL_PATHS = (
     _M + 'Snare Drum, Modern 2/Snare3M_HitSN_*',
     _M + 'Snare Drum, Modern 2/Snare3M_Xstick_*',
     _M + 'Bass Drum 1/*',
+    _M + 'Conga/*',
 )
 VCSL_ROOT = None  # set from --vcsl before anything renders
 
@@ -537,6 +669,9 @@ BANKS = {
     'tamb': Bank(_S + 'Tambourine 1', r'Tamb1_Hit_v(?P<layer>\d)_rr', ('1', '2'), max_s=0.8),
     'bass_drum': Bank(_M + 'Bass Drum 1', r'BDrumNew_hit_v(?P<layer>\d)_rr', ('2', '3', '5', '7'),
                       max_s=2.5),
+    'quinto': Bank(_M + 'Conga', r'^Quinto_HitN_v(?P<layer>\d)_rr', ('1', '2', '3'), max_s=0.8),
+    'tumba': Bank(_M + 'Conga', r'^Tumba_HitN_v(?P<layer>\d)_rr', ('1', '2', '3', '4'), max_s=0.8),
+    'conga_mute': Bank(_M + 'Conga', r'^Conga_HitFM_v(?P<layer>\d)_rr', ('1', '2'), max_s=0.5),
 }
 
 
@@ -565,6 +700,37 @@ INST = {
     'shaker_up': (hit, dict(bank='shaker_up'), 1.4, 2, True),
     'tamb': (hit, dict(bank='tamb'), 1.0, 1, True),
     'bass_drum': (hit, dict(bank='bass_drum'), 1.6, 2, True),
+    # Round 4
+    'grand4': (sampled, dict(bank='grand', release=0.5), 0.8, 1, False),
+    'grand_lead': (sampled, dict(bank='grand', release=0.35), 1.5, 1, False),
+    'pad_st': (pad_st, {}, 0.16, 1, False),
+    'lead': (lead, {}, 0.475, 1, False),
+    'pluck4': (pluck_lead, {}, 1.3, 2, False),
+    'bass_warm': (bass, dict(bright=0.3, attack=0.008), 0.54, 1, False),
+    'kick_soft': (kick, dict(f_start=110.0, f_end=50.0, decay=0.22, click=0.03, drive=0.9), 0.94, 4, True),
+    'kick_pop4': (kick, dict(f_start=160.0, f_end=50.0, decay=0.3, click=0.08, drive=1.3), 0.64, 4, True),
+    'quinto': (hit, dict(bank='quinto'), 1.0, 2, True),
+    'tumba': (hit, dict(bank='tumba'), 1.0, 2, True),
+    'conga_mute': (hit, dict(bank='conga_mute'), 1.0, 2, True),
+}
+
+# Round 4's channel strips, per instrument: (high-pass Hz, low-pass Hz, bells as
+# (Hz, dB, Q)). Measured against Chiu's reference, Round 3 had 6-9 dB too much
+# at 250-1000 Hz — piano, marimba and lead all stacked in the box — and 5-11 dB
+# too little at 60-250 Hz; Round 4's first render still had +9 dB at
+# 500-1000 Hz and 3-6 dB too little at 2-8 kHz. So the chords give up the box,
+# the tune gets presence, and the bass gets weight.
+EQ = {
+    'grand4': (110.0, None, ((500.0, -4.5, 0.9),)),
+    'grand_lead': (180.0, None, ((450.0, -2.5, 1.0), (3000.0, 3.0, 0.8))),
+    'pad_st': (220.0, 3000.0, ((500.0, -3.0, 0.9),)),
+    'lead': (180.0, 9000.0, ((600.0, -2.0, 1.0), (3000.0, 2.5, 0.8))),
+    'pluck4': (250.0, None, ((500.0, -2.0, 1.0),)),
+    'bass_warm': (32.0, 1200.0, ((90.0, 2.0, 0.8),)),
+    'marimba': (200.0, None, ((600.0, -3.0, 1.0),)),
+    'shaker_dn': (400.0, None, ()),
+    'shaker_up': (400.0, None, ()),
+    'claps': (180.0, None, ()),
 }
 
 
@@ -580,10 +746,11 @@ class Section:
         self.rng = random.Random(f'{style.name}/{name}')
         self.notes = []
 
-    def n(self, beat, inst, pitch=None, dur=0.5, vel=0.8, pan=0.0, send=0.15):
+    def n(self, beat, inst, pitch=None, dur=0.5, vel=0.8, pan=0.0, send=0.15, late_ms=0.0):
         """A note. Straight time — no swing — with a few milliseconds of a
-        player's looseness and a little variation in how hard."""
-        jitter = self.rng.gauss(0.0, 0.002 if INST[inst][4] else 0.004) / self.beat_s
+        player's looseness, a little variation in how hard, and an optional
+        lay-back (`late_ms`) for off-beats that sit behind the beat."""
+        jitter = (self.rng.gauss(0.0, 0.002 if INST[inst][4] else 0.004) + late_ms / 1000.0) / self.beat_s
         vel = vel * (1.0 + self.rng.uniform(-0.05, 0.05))
         self.notes.append((beat + jitter, inst, pitch, dur, vel, pan, send))
 
@@ -913,8 +1080,522 @@ def chord_notes(names):
     return [midi(x) for x in names.split()]
 
 
+# ---------------------------------------------------------------- round 4: composition
+#
+# Round 3 made the music consonant and then mechanical: one chord a bar, triads
+# only, root-note bass, one 8-bar pattern. Round 4 (Chiu, 2026-10-30) composes:
+# colour chords on the piano alone, inversions and two-bar chords, a bass line
+# that walks to the next chord, a tune built from a 2-bar motif, and one 16-bar
+# piece heard at five levels of energy rather than five different loops.
+
+_Q = {'': (0, 4, 7), 'm': (0, 3, 7), 'sus2': (0, 2, 7), 'sus4': (0, 5, 7)}
+_X = {'add9': 2, 'maj7': 11}
+
+
+def _pc(name):
+    return (_PC[name[0]] + {'#': 1, 'b': -1}.get(name[1:], 0)) % 12
+
+
+class Sym:
+    """A chord Round 4 voices: a triad (major, minor, sus2 or sus4), at most one
+    colour (add9 or maj7), and an optional bass note — 'Gmaj7', 'B/D#',
+    'C#m/B'. Only the chord instrument plays the colour; the pad plays the
+    triad, so no two instruments stack extensions."""
+
+    def __init__(self, text):
+        m = re.match(r'([A-G][#b]?)(m|sus2|sus4)?(maj7|add9)?(?:/([A-G][#b]?))?$', text)
+        if not m:
+            _fail(f'{text!r} is not a chord Round 4 voices')
+        self.text = text
+        self.root = _pc(m.group(1))
+        self.core = tuple((self.root + i) % 12 for i in _Q[m.group(2) or ''])
+        self.ext = ((self.root + _X[m.group(3)]) % 12,) if m.group(3) else ()
+        self.bass = _pc(m.group(4)) if m.group(4) else self.root
+        self.tones = self.core + self.ext
+
+
+class Prog:
+    """Chords and the bars each holds. Every Round 4 loop is one whole
+    progression long, so bar k of any loop is bar k here."""
+
+    def __init__(self, spec):
+        self.spans, bar = [], 0
+        for text, bars in spec:
+            self.spans.append((Sym(text), bar, bars))
+            bar += bars
+        self.bars = bar
+
+    def span(self, bar):
+        bar %= self.bars
+        for sym, first, n in self.spans:
+            if first <= bar < first + n:
+                return sym, first, n
+        raise AssertionError(bar)
+
+    def at(self, bar):
+        return self.span(bar)[0]
+
+
+def _close(pcs, low, high):
+    """Every close-position voicing of `pcs` whose lowest note is in
+    [low, low + 11] and whose highest is no higher than `high`."""
+    out = []
+    for base in range(low, low + 12):
+        if base % 12 not in pcs:
+            continue
+        v, left = [base], [p for p in pcs if p != base % 12]
+        while left:
+            nxt = v[-1] + 1
+            while nxt % 12 not in left:
+                nxt += 1
+            v.append(nxt)
+            left.remove(nxt % 12)
+        if v[-1] <= high:
+            out.append(v)
+    return out
+
+
+def _move(a, b):
+    return sum(min(abs(x - y) for y in b) for x in a) + sum(min(abs(x - y) for x in a) for y in b)
+
+
+def _rub(v):
+    """How much a voicing grinds: a semitone between neighbouring voices is the
+    'random jazz chord' sound (a close maj7's 7th against its root), a tone
+    below middle C is mud."""
+    gaps = [y - x for x, y in zip(v, v[1:])]
+    return sum(6 for g in gaps if g == 1) + sum(2 for x, g in zip(v, gaps) if g == 2 and x < 60)
+
+
+def lead_voices(prog, low, high, colour=True):
+    """One voicing per chord — close position or, for a four-note chord, the
+    pianist's open 'drop-2' — any inversion, chosen for the smallest move from
+    the chord before plus the least grind (`_rub`). The chords glide instead of
+    jumping, and a maj7 is voiced the way a player voices it."""
+    out, prev = {}, None
+    for sym, first, _ in prog.spans:
+        close = _close(list(sym.tones if colour else sym.core), low, high)
+        cands = close + [sorted([v[0], v[1], v[3], v[2] - 12]) for v in close
+                         if len(v) == 4 and v[2] - 12 >= low - 5]
+        if not cands:
+            _fail(f'{sym.text} has no voicing between {low} and {high}')
+        if prev is None:
+            pick = min(cands, key=lambda v: abs(sum(v) / len(v) - (low + high) / 2) + _rub(v))
+        else:
+            pick = min(cands, key=lambda v: _move(v, prev) + _rub(v))
+        out[first] = pick
+        prev = pick
+    return out
+
+
+def pitch_of(pc, low):
+    """The pitch of class `pc` at or above `low`, within an octave."""
+    return low + (pc - low) % 12
+
+
+def step_to(target, origin, key):
+    """The scale tone a step before `target`, approached from `origin`'s side:
+    the note a bass player leans on to walk into the next chord."""
+    scale = {(key + s) % 12 for s in MAJOR}
+    d = -1 if target >= origin else 1
+    p = target + d
+    while p % 12 not in scale:
+        p += d
+    return p
+
+
+def check_tune(st, prog, melody):
+    """Round 4's melody rule: every note is in the key; a note on beat 1 or 3,
+    or held a beat or more, is a tone of its chord — the chord's colour counts —
+    or, in the bar's last beat, an anticipation of the next chord, as pop
+    phrasing does. A breach refuses to render."""
+    scale = {(st.key + s) % 12 for s in MAJOR}
+    for beat, dur, nm in melody:
+        pc = midi(nm) % 12
+        bar = int(beat // 4)
+        pos = beat - 4 * bar
+        here = f'{st.name}: {nm} at beat {beat}'
+        if pc not in scale:
+            _fail(f'{here} is outside the key')
+        sym, nxt = prog.at(bar), prog.at(bar + 1)
+        anticipates = pos >= 3 - 1e-9 and pc in nxt.tones
+        strong = abs(pos) < 1e-9 or abs(pos - 2) < 1e-9
+        if (strong or dur >= 1.0) and pc not in sym.tones and not anticipates:
+            _fail(f'{here} is not a tone of {sym.text}')
+        if beat + dur > 4 * (bar + 1) + 1e-9 and not anticipates:
+            _fail(f'{here} runs over its bar line')
+
+
+def sing(s, inst, melody, vel, shift=0, pan=0.0, send=0.25, legato=1.02, only=None, echo=0.0):
+    """A tune shaped the way a player shapes it: each 4-bar phrase rising into
+    its third bar and easing off at its end, on-beat notes a touch firmer, high
+    notes a touch louder, each held just into the next. `echo` adds a
+    dotted-eighth delay, as notes, ping-ponged."""
+    for b, d, nm in melody:
+        if only and not only(b):
+            continue
+        p = midi(nm) + shift
+        arc = (0.92, 1.0, 1.06, 0.9)[int(b // 4) % 4]
+        acc = 1.05 if abs(b - round(b)) < 1e-9 else 0.94
+        v = vel * arc * acc * (1.0 + 0.03 * (midi(nm) - 74) / 4.0)
+        s.n(b, inst, p, d * legato, v, pan, send)
+        for k in ((1, 2) if echo else ()):
+            s.n(b + 0.75 * k, inst, p, d * 0.5, v * echo ** k, 0.35 if k == 1 else -0.35,
+                send + 0.15)
+
+
+LADDER = ('build', 'main', 'peak')
+LOOPS4 = ('intro',) + LADDER + ('stop',)
+
+
+def _build4(st, prog, tune, play, kick_inst, outro):
+    """Round 4's shape: one 16-bar composition heard at five levels — intro,
+    build, main, peak, stop — with the same chords and the same tune in the same
+    place in each. A film's events move the music up and down this ladder (see
+    `arrange`), so a turn adds or removes players instead of cutting to
+    another song, and the tune never restarts mid-phrase."""
+    check_tune(st, prog, tune)
+    st.loops, st.norm, st.ladder, st.cycle = LOOPS4, 'peak', LADDER, prog.bars
+    for level in LOOPS4:
+        play(st.sec(level, prog.bars), level)
+    s = st.sec('riser', 1, loop=False, tail_s=0.6, anchor_beats=4)
+    s.n(0, 'cymbal_swell', None, 4, 0.55, 0.0, 0.3)
+    s = st.sec('hit_big', 1, loop=False, tail_s=3.0)
+    s.n(0, 'cymbal', None, 4, 0.45, 0.1, 0.35)
+    s.n(0, kick_inst, None, 1, 0.9, 0.0, 0.1)
+    s = st.sec('hit_soft', 1, loop=False, tail_s=3.5)
+    s.n(0, 'chimes_up', None, 4, 0.45, 0.0, 0.35)
+    s = st.sec('outro', 2, loop=False, tail_s=5.0)
+    outro(s)
+    s.n(0.5, 'chimes_down', None, 4, 0.35, 0.0, 0.35)
+    return st
+
+
+TROPICAL4_PROG = [('Bm', 2), ('Gmaj7', 2), ('Dadd9', 2), ('Asus4', 1), ('A', 1),
+                  ('Bm', 2), ('Gmaj7', 2), ('D', 1), ('D/F#', 1), ('G', 1), ('A', 1)]
+# The motif is bar 1's rhythm — a rest, a quick fall, a held note across the
+# beat, two steps down — answered in bar 2, moved down to the next chord in
+# bars 3-4, up in 5-6. Bars 9-16 vary it, climb to D6 in bar 13, and resolve.
+TROPICAL4_TUNE = _phrase([
+    [(.5, .5, 'F#5'), (1, .5, 'E5'), (1.5, 1, 'F#5'), (2.5, .5, 'D5'), (3, 1, 'B4')],
+    [(0, 1, 'D5'), (1, .5, 'C#5'), (1.5, .5, 'B4'), (2, 1.5, 'D5')],
+    [(.5, .5, 'D5'), (1, .5, 'C#5'), (1.5, 1, 'D5'), (2.5, .5, 'B4'), (3, 1, 'G4')],
+    [(0, 1, 'B4'), (1, .5, 'A4'), (1.5, .5, 'G4'), (2, 1.5, 'F#4')],
+    [(.5, .5, 'A5'), (1, .5, 'F#5'), (1.5, 1, 'A5'), (2.5, .5, 'F#5'), (3, 1, 'E5')],
+    [(0, 1.5, 'F#5'), (1.5, .5, 'E5'), (2, 2, 'D5')],
+    [(0, 1, 'E5'), (1, .5, 'D5'), (1.5, .5, 'E5'), (2, 2, 'A5')],
+    [(0, 1.5, 'C#5'), (1.5, .5, 'B4'), (2, 1, 'A4')],
+    [(.5, .5, 'F#5'), (1, .5, 'E5'), (1.5, .5, 'F#5'), (2, 1, 'B5'), (3, .5, 'A5'), (3.5, .5, 'F#5')],
+    [(0, 1, 'D5'), (1, .5, 'C#5'), (1.5, .5, 'B4'), (2, 1.5, 'D5')],
+    [(.5, .5, 'D5'), (1, .5, 'E5'), (1.5, 1, 'F#5'), (2.5, .5, 'D5'), (3, 1, 'B4')],
+    [(0, 1, 'D5'), (1, .5, 'B4'), (1.5, .5, 'A4'), (2, 1, 'G4')],
+    [(0, 1, 'F#5'), (1, 1, 'A5'), (2, 2, 'D6')],
+    [(0, 1.5, 'A5'), (1.5, .5, 'G5'), (2, 1, 'F#5'), (3, .5, 'E5'), (3.5, .5, 'G5')],
+    [(0, 1.5, 'G5'), (1.5, .5, 'F#5'), (2, 1, 'D5'), (3, 1, 'B4')],
+    [(0, 1, 'C#5'), (1, 1, 'E5'), (2, 1.5, 'A5'), (3.5, .5, 'G5')]])
+# A marimba's two-note answers in the tune's rests (version B only).
+TROPICAL4_ANSWERS = [(15, .5, 'B5'), (15.5, .5, 'D6'), (31, .5, 'C#6'), (31.5, .5, 'E6'),
+                     (47, .5, 'B5'), (47.5, .5, 'D6'), (63, .5, 'C#6'), (63.5, .5, 'E6')]
+
+
+def tropical4(variant):
+    """Coconut Road, Round 4 — a sunset tropical-house piece in D (B minor's
+    colour), 100 BPM. Piano carries chords and tune, as in Kygo's records; a
+    warm bass walks under a soft kick that the pad and bass breathe around.
+    A is restrained; B adds the marimba's answers, congas, a fuller kick and
+    more change between levels."""
+    b = variant == 'b'
+    st = Style(f'tropical-{variant}', 'Coconut Road ' + variant.upper(), 100, 'D',
+               room=0.62, damp=0.5, wet=0.7)
+    st.duck = {'insts': {'pad_st', 'bass_warm'}, 'triggers': {'kick_soft'},
+               'depth': 0.55 if b else 0.4, 'release': 0.24}
+    st.channel_eq = True
+    prog = Prog(TROPICAL4_PROG)
+    keys = lead_voices(prog, midi('F#3'), midi('B4'))
+    pads = lead_voices(prog, midi('A3'), midi('E5'), colour=False)
+    tune = TROPICAL4_TUNE
+
+    def piano(s, level):
+        for sym, first, n in prog.spans:
+            v = keys[first]
+            low = pitch_of(sym.bass, midi('D2'))
+            if level in ('intro', 'stop'):
+                s.chord(first * 4, 'grand4', [low, low + 12] + v, 4 * n - 0.2, 0.45, roll_s=0.03,
+                        send=0.32)
+                continue
+            for bar in range(first, first + n):
+                o = bar * 4
+                if level == 'build':
+                    s.chord(o, 'grand4', v, 3.8, 0.45, roll_s=0.02, send=0.28)
+                else:
+                    s.chord(o, 'grand4', v, 2.3, 0.5, send=0.26)
+                    s.chord(o + 2.5, 'grand4', v, 1.4, 0.38, send=0.26)
+
+    def bass_line(s, level):
+        if level == 'intro':
+            return
+        for bar in range(prog.bars):
+            sym, first, n = prog.span(bar)
+            r = pitch_of(sym.bass, midi('D2'))
+            o = bar * 4
+            if level == 'stop' or (level == 'build' and not b):
+                if bar == first:
+                    s.n(o, 'bass_warm', r, 4 * n - 0.3, 0.55 if level == 'stop' else 0.7, 0.0, 0.0)
+                continue
+            if level == 'build':
+                s.n(o, 'bass_warm', r, 1.4, 0.75, 0.0, 0.0)
+                s.n(o + 2.5, 'bass_warm', r, 1.2, 0.55, 0.0, 0.0)
+                continue
+            last = bar == first + n - 1
+            nxt = pitch_of(prog.at(bar + 1).bass, midi('D2'))
+            s.n(o, 'bass_warm', r, 1.25, 0.85, 0.0, 0.0)
+            s.n(o + 1.5, 'bass_warm', r, 0.45, 0.55, 0.0, 0.0)
+            s.n(o + 2.5, 'bass_warm', r + (12 if level == 'peak' and b else 7), 0.8, 0.65, 0.0, 0.0)
+            if last and nxt % 12 != r % 12:
+                s.n(o + 3.5, 'bass_warm', step_to(nxt, r, st.key), 0.45, 0.6, 0.0, 0.0)
+
+    def pad(s, level):
+        vel = {'intro': 0.5, 'build': 0.42, 'main': 0.38 if b else 0.0, 'peak': 0.5 if b else 0.35,
+               'stop': 0.48}[level]
+        if not vel:
+            return
+        for sym, first, n in prog.spans:
+            for p in pads[first]:
+                s.n(first * 4, 'pad_st', p, 4 * n - 0.1, vel, 0.0, 0.4)
+
+    def drums(s, level):
+        if level in ('intro', 'stop'):
+            return
+        for bar in range(prog.bars):
+            o = bar * 4
+            if level == 'build':
+                for i in range(8):
+                    s.n(o + i * 0.5, 'shaker_up' if i % 2 else 'shaker_dn', None, 0.25,
+                        0.5 if i % 2 else 0.35, 0.3, 0.12, late_ms=6 if i % 2 else 0)
+                if b:
+                    s.n(o, 'kick_soft', None, 0.5, 0.6, 0.0, 0.05)
+                continue
+            for k, v in (((0, 0.75), (1, 0.6), (2, 0.7), (3, 0.6)) if b else ((0, 0.75), (2, 0.65))):
+                s.n(o + k, 'kick_soft', None, 0.5, v, 0.0, 0.05)
+            for k in (1, 3):
+                s.n(o + k, 'claps', None, 0.5, 0.62 if b else 0.56, 0.0, 0.2, late_ms=3)
+            if bar % 8 == 7 and (b or level == 'peak'):
+                s.n(o + 3.5, 'claps', None, 0.5, 0.35, 0.1, 0.2)
+            if b:
+                for i, v in enumerate((0.56, 0.24, 0.42, 0.24) * 4):
+                    s.n(o + i * 0.25, 'shaker_up' if i % 2 else 'shaker_dn', None, 0.25, v, 0.3, 0.12,
+                        late_ms=5 if i % 2 else 0)
+            else:
+                for i in range(8):
+                    s.n(o + i * 0.5, 'shaker_up' if i % 2 else 'shaker_dn', None, 0.25,
+                        0.52 if i % 2 else 0.37, 0.3, 0.12, late_ms=6 if i % 2 else 0)
+            if b or level == 'peak':
+                for k in (0.5, 1.5, 2.5, 3.5):
+                    s.n(o + k, 'hh', None, 0.25, 0.4, -0.25, 0.1, late_ms=5)
+            if b and level == 'peak':
+                for k, inst, v in ((0.75, 'tumba', 0.45), (1.5, 'quinto', 0.5), (2.75, 'tumba', 0.4),
+                                   (3.5, 'conga_mute', 0.5)):
+                    s.n(o + k, inst, None, 0.25, v, 0.35 if inst == 'quinto' else -0.15, 0.15)
+        if b and level == 'peak':
+            s.n(28, 'cymbal_swell', None, 4, 0.4, 0.2, 0.35)
+            s.n(60, 'cymbal_swell', None, 4, 0.4, 0.2, 0.35)
+
+    def melody(s, level):
+        if level == 'intro':
+            if b:
+                sing(s, 'grand_lead', tune, 0.5, send=0.42, only=lambda t: t < 8 or 16 <= t < 24)
+            return
+        vel = {'build': 0.6, 'main': 0.68, 'peak': 0.86, 'stop': 0.55}[level]
+        sing(s, 'grand_lead', tune, vel, send=0.3)
+        if level == 'peak':
+            sing(s, 'grand_lead', tune, vel * 0.5, shift=-12, send=0.3)
+        if b and level in ('main', 'peak'):
+            for t, d, nm in TROPICAL4_ANSWERS:
+                s.n(t, 'marimba', midi(nm), d, 0.55, -0.4, 0.3)
+        if b and level == 'peak':
+            s.n(48, 'chimes_up', None, 4, 0.25, 0.3, 0.4)
+
+    def play(s, level):
+        piano(s, level)
+        bass_line(s, level)
+        pad(s, level)
+        drums(s, level)
+        melody(s, level)
+
+    def outro(s):
+        s.chord(0, 'grand4', chord_notes('D2 A2') + _close([2, 6, 9, 4], midi('F#3'), midi('B4'))[0],
+                7, 0.6, roll_s=0.04, send=0.35)
+        s.n(0.25, 'grand_lead', midi('D5'), 6, 0.6, 0.0, 0.35)
+        for p in chord_notes('A3 D4 F#4'):
+            s.n(0, 'pad_st', p, 6, 0.45, 0.0, 0.45)
+
+    return _build4(st, prog, tune, play, 'kick_soft', outro)
+
+
+POP4_PROG = [('Eadd9', 2), ('B/D#', 2), ('C#m', 1), ('C#m/B', 1), ('Amaj7', 1), ('Bsus4', 1),
+             ('Eadd9', 1), ('B/D#', 1), ('C#m', 1), ('C#m/B', 1), ('A', 1), ('Amaj7', 1),
+             ('Bsus4', 1), ('B', 1)]
+# The bass walks down E D# C# B A, the pop line under I-V-vi-IV. The motif is
+# bar 1 — a climb B E F# to a held G# and a step back — answered in bar 2;
+# bars 3-8 move it with the chords; bars 9-16 run the harmony twice as fast,
+# reach C#6 in bar 11 and land on F# for the turn back to E.
+POP4_TUNE = _phrase([
+    [(0, .5, 'B4'), (.5, .5, 'E5'), (1, 1, 'F#5'), (2, 1.5, 'G#5'), (3.5, .5, 'F#5')],
+    [(0, 1, 'E5'), (1, .5, 'F#5'), (1.5, .5, 'E5'), (2, 1, 'B4')],
+    [(0, .5, 'F#4'), (.5, .5, 'B4'), (1, 1, 'D#5'), (2, 1.5, 'F#5'), (3.5, .5, 'E5')],
+    [(0, 1, 'D#5'), (1, .5, 'E5'), (1.5, .5, 'D#5'), (2, 1, 'B4')],
+    [(0, .5, 'E5'), (.5, .5, 'G#5'), (1, 1, 'C#6'), (2, 1.5, 'G#5'), (3.5, .5, 'E5')],
+    [(0, 1, 'E5'), (1, .5, 'F#5'), (1.5, .5, 'E5'), (2, 1, 'C#5')],
+    [(0, .5, 'C#5'), (.5, .5, 'E5'), (1, 1, 'G#5'), (2, 1.5, 'E5'), (3.5, .5, 'C#5')],
+    [(0, 1.5, 'E5'), (1.5, .5, 'F#5'), (2, 2, 'B5')],
+    [(0, .5, 'B4'), (.5, .5, 'E5'), (1, 1, 'F#5'), (2, 1, 'G#5'), (3, .5, 'B5'), (3.5, .5, 'G#5')],
+    [(0, 1.5, 'F#5'), (1.5, .5, 'E5'), (2, 1, 'D#5'), (3, .5, 'B4'), (3.5, .5, 'C#5')],
+    [(0, 1, 'E5'), (1, 1, 'G#5'), (2, 1.5, 'C#6'), (3.5, .5, 'B5')],
+    [(0, 1, 'G#5'), (1, .5, 'F#5'), (1.5, .5, 'E5'), (2, 1.5, 'E5'), (3.5, .5, 'F#5')],
+    [(0, 1.5, 'E5'), (1.5, .5, 'F#5'), (2, 1, 'A5'), (3, .5, 'G#5'), (3.5, .5, 'F#5')],
+    [(0, 1, 'C#5'), (1, .5, 'E5'), (1.5, .5, 'G#5'), (2, 2, 'A5')],
+    [(0, 1, 'E5'), (1, .5, 'F#5'), (1.5, .5, 'E5'), (2, 2, 'B4')],
+    [(0, 1.5, 'D#5'), (1.5, .5, 'E5'), (2, 2, 'F#5')]])
+# Version B's pluck answers: a quick climb through the chord in the tune's rests.
+POP4_ANSWERS = [(7 + i * 0.25, 'E5 G#5 B5 E6'.split()[i]) for i in range(4)] + \
+               [(15 + i * 0.25, 'B4 D#5 F#5 B5'.split()[i]) for i in range(4)] + \
+               [(23 + i * 0.25, 'C#5 E5 G#5 C#6'.split()[i]) for i in range(4)]
+
+
+def pop4(variant):
+    """Open Road, Round 4 — bright, driving pop in E at 120 BPM, after Chiu's
+    Polarsteps reference. A sung synth line over piano, a bass that walks down
+    E-D#-C#-B-A, a four-on-the-floor kick the pad and bass breathe around.
+    A is restrained; B adds the line's echo, the pluck's answers, a tambourine
+    and the piano doubling the tune at the peak."""
+    b = variant == 'b'
+    st = Style(f'pop-{variant}', 'Open Road ' + variant.upper(), 120, 'E', room=0.55, damp=0.5,
+               wet=0.65)
+    st.duck = {'insts': {'pad_st', 'bass_warm'}, 'triggers': {'kick_pop4'},
+               'depth': 0.6 if b else 0.45, 'release': 0.2}
+    st.channel_eq = True
+    prog = Prog(POP4_PROG)
+    keys = lead_voices(prog, midi('G#3'), midi('C#5'))
+    pads = lead_voices(prog, midi('B3'), midi('F#5'), colour=False)
+    tune = POP4_TUNE
+
+    def piano(s, level):
+        for sym, first, n in prog.spans:
+            v = keys[first]
+            low = pitch_of(sym.bass, midi('C#2'))
+            if level in ('intro', 'stop'):
+                s.chord(first * 4, 'grand4', [low, low + 12] + v, 4 * n - 0.2, 0.45, roll_s=0.03,
+                        send=0.3)
+                continue
+            for bar in range(first, first + n):
+                o = bar * 4
+                if level == 'build':
+                    s.chord(o, 'grand4', v, 2.3, 0.45, send=0.25)
+                    s.chord(o + 2.5, 'grand4', v, 1.4, 0.36, send=0.25)
+                elif level == 'peak':
+                    s.chord(o, 'grand4', v, 3.8, 0.55, roll_s=0.015, send=0.28)
+                else:
+                    for k, d, vel in ((0, 1.4, 0.5), (1.5, 0.9, 0.38), (2.5, 1.4, 0.44)):
+                        s.chord(o + k, 'grand4', v, d, vel, send=0.25)
+                    if b and bar == first + n - 1:
+                        s.chord(o + 3.5, 'grand4', keys[prog.span(bar + 1)[1]], 0.45, 0.35, send=0.25)
+
+    def bass_line(s, level):
+        if level == 'intro':
+            return
+        for bar in range(prog.bars):
+            sym, first, n = prog.span(bar)
+            r = pitch_of(sym.bass, midi('C#2'))
+            o = bar * 4
+            if level == 'stop':
+                if bar == first:
+                    s.n(o, 'bass_warm', r, 4 * n - 0.3, 0.55, 0.0, 0.0)
+                continue
+            if level == 'build':
+                hits = ((0, 0.9, 0.75), (1, 0.9, 0.55), (2, 0.9, 0.7), (3, 0.9, 0.55)) if b \
+                    else ((0, 1.8, 0.75), (2, 1.8, 0.65))
+                for k, d, v in hits:
+                    s.n(o + k, 'bass_warm', r, d, v, 0.0, 0.0)
+                continue
+            last = bar == first + n - 1
+            nxt = pitch_of(prog.at(bar + 1).bass, midi('C#2'))
+            for i in range(8):
+                p = r + 12 if (b and level == 'peak' and i % 2) else r
+                if i == 7 and last and nxt % 12 != r % 12:
+                    p = step_to(nxt, r, st.key)
+                s.n(o + i * 0.5, 'bass_warm', p, 0.42, 0.8 if i % 2 == 0 else 0.55, 0.0, 0.0)
+
+    def pad(s, level):
+        vel = ({'intro': 0.5, 'build': 0.4, 'main': 0.34, 'peak': 0.5, 'stop': 0.5} if b else
+               {'intro': 0.45, 'build': 0.0, 'main': 0.0, 'peak': 0.35, 'stop': 0.45})[level]
+        if not vel:
+            return
+        for sym, first, n in prog.spans:
+            for p in pads[first]:
+                s.n(first * 4, 'pad_st', p, 4 * n - 0.1, vel, 0.0, 0.4)
+
+    def drums(s, level):
+        if level in ('intro', 'stop'):
+            return
+        for bar in range(prog.bars):
+            o = bar * 4
+            if level == 'build':
+                for k, v in (((0, 0.6), (1, 0.5), (2, 0.6), (3, 0.5)) if b else ((0, 0.6), (2, 0.55))):
+                    s.n(o + k, 'kick_pop4', None, 0.5, v, 0.0, 0.05)
+                for i in range(8):
+                    s.n(o + i * 0.5, 'hh', None, 0.25, 0.38 if i % 2 else 0.23, -0.25, 0.1,
+                        late_ms=4 if i % 2 else 0)
+                continue
+            for k, v in ((0, 0.8), (1, 0.68), (2, 0.75), (3, 0.68)):
+                s.n(o + k, 'kick_pop4', None, 0.5, v, 0.0, 0.05)
+            for k in (1, 3):
+                s.n(o + k, 'claps', None, 0.5, 0.65, 0.0, 0.22, late_ms=3)
+            for k in (0.5, 1.5, 2.5, 3.5):
+                s.n(o + k, 'hh', None, 0.25, 0.53, -0.25, 0.1, late_ms=4)
+            if bar % 8 == 7:
+                s.n(o + 3.5, 'claps', None, 0.5, 0.4, 0.1, 0.22)
+            if b and level == 'peak':
+                for k in (0.5, 1.5, 2.5, 3.5):
+                    s.n(o + k, 'tamb', None, 0.25, 0.32, 0.35, 0.15, late_ms=6)
+        if level == 'peak':
+            for o in (0, 32):
+                s.n(o, 'cymbal', None, 4, 0.32, -0.3, 0.4)
+
+    def melody(s, level):
+        if level == 'intro':
+            if b:
+                sing(s, 'lead', tune, 0.45, send=0.4, only=lambda t: t < 8, echo=0.3)
+            return
+        vel = {'build': 0.6, 'main': 0.68, 'peak': 0.86, 'stop': 0.52}[level]
+        sing(s, 'lead', tune, vel, send=0.28, echo=0.28 if b else 0.0)
+        if b and level == 'peak':
+            sing(s, 'grand_lead', tune, 0.32, shift=12, send=0.3)
+        if b and level in ('main', 'peak'):
+            for t, nm in POP4_ANSWERS:
+                s.n(t, 'pluck4', midi(nm), 0.25, 0.5, 0.3, 0.3)
+
+    def play(s, level):
+        piano(s, level)
+        bass_line(s, level)
+        pad(s, level)
+        drums(s, level)
+        melody(s, level)
+
+    def outro(s):
+        s.chord(0, 'grand4', chord_notes('E2 B2') + _close([4, 8, 11, 6], midi('G#3'), midi('C#5'))[0],
+                7, 0.6, roll_s=0.04, send=0.35)
+        s.n(0.25, 'lead', midi('E5'), 4, 0.55, 0.0, 0.35)
+        for p in chord_notes('B3 E4 G#4'):
+            s.n(0, 'pad_st', p, 6, 0.45, 0.0, 0.45)
+
+    return _build4(st, prog, tune, play, 'kick_pop4', outro)
+
+
 STYLES = {'pop': pop, 'acoustic': acoustic, 'cinematic': cinematic, 'lofi': lofi,
-          'tropical': tropical}
+          'tropical': tropical,
+          # Round 4's test cases (Chiu, 2026-10-30): two arrangements of each.
+          'tropical-a': lambda: tropical4('a'), 'tropical-b': lambda: tropical4('b'),
+          'pop-a': lambda: pop4('a'), 'pop-b': lambda: pop4('b')}
 # Chiu's region table of 2026-10-29, carried onto the moods that fit it. Pop has
 # no countries yet: whether it is what every other country gets is Chiu's call.
 COUNTRIES = {'lofi': ('JP', 'TW', 'KR'), 'cinematic': ('IS', 'NO'), 'tropical': ('VN', 'TH'),
@@ -988,6 +1669,17 @@ def freeverb(send, room, damp, circular, predelay_s=0.02):
     return outs
 
 
+def bus_eq(buf, bands, circular):
+    """Filters on a whole bus, as (Hz, 'hp' | 'lp' | 'bell', dB). A loop is run
+    through twice and the second pass kept, so the filters' memory of the
+    loop's end is already in its start."""
+    n = len(buf)
+    x = buf + buf if circular else array('d', buf)
+    for fc, kind, gain_db in bands:
+        _biquad(x, kind, fc, 0.7, gain_db)
+    return x[n:] if circular else x
+
+
 def lowpass(buf, fc, circular):
     """Two one-pole low-passes; a loop is run twice so it wraps cleanly."""
     a = _lp_coef(fc)
@@ -1043,24 +1735,59 @@ def render_section(st, sec, cache):
     body = sec.bars * 4 * beat_n
     n = body if sec.loop else body + int(sec.tail_s * SR)
     dl, dr, ds = zeros(n), zeros(n), zeros(n)
+    duck = getattr(st, 'duck', None)
+    kl, kr = (zeros(n), zeros(n)) if duck else (None, None)
     for beat, inst, pitch, dur, vel, pan, send in sec.notes:
         fn, opts, gain, variants, _ = INST[inst]
         vq = round(min(1.0, max(0.02, vel)) * 20) / 20
         seed = sec.rng.randrange(variants)
         dur_s = dur * sec.beat_s
-        key = (inst, pitch, round(dur_s, 3), vq, seed)
+        eq = EQ.get(inst) if getattr(st, 'channel_eq', False) else None
+        key = (inst, pitch, round(dur_s, 3), vq, seed, eq)
         sig = cache.get(key)
         if sig is None:
             sig = fn(hz(pitch) if pitch is not None else 0.0, dur_s, vq, seed, **opts)
+            if eq:
+                sig = equalise(sig, *eq)
             cache[key] = sig
         amp = gain * vq
         theta = (max(-1.0, min(1.0, pan)) + 1.0) * math.pi / 4.0
-        place(dl, dr, ds, sig, int(round(beat * beat_n)), amp * math.cos(theta),
+        into = (kl, kr) if duck and inst in duck['insts'] else (dl, dr)
+        place(into[0], into[1], ds, sig, int(round(beat * beat_n)), amp * math.cos(theta),
               amp * math.sin(theta), amp * send, sec.loop)
+    if duck:
+        # The pad and bass dip under every kick and swell back: the breathing
+        # that makes tropical and pop grooves move. Keyed off the kick's notes,
+        # not its audio, so it is exact and identical on every run.
+        env = array('d', [1.0]) * n
+        rel = int(duck['release'] * SR)
+        for beat, inst, *_ in sec.notes:
+            if inst not in duck['triggers']:
+                continue
+            s0 = int(round(beat * beat_n))
+            for j in range(rel):
+                idx = s0 + j
+                if sec.loop:
+                    idx %= n
+                elif not 0 <= idx < n:
+                    continue
+                g = 1.0 - duck['depth'] * (1.0 - j / rel) ** 2
+                if g < env[idx]:
+                    env[idx] = g
+        for i in range(n):
+            dl[i] += kl[i] * env[i]
+            dr[i] += kr[i] * env[i]
     wl, wr = freeverb(ds, st.room, st.damp, sec.loop)
+    if getattr(st, 'channel_eq', False):
+        # The reverb's return loses its low-mids, where a tail piles up and
+        # muddies the box, and the bus gets a little air: Round 4's first render
+        # measured +8 dB at 500-1000 Hz and -4 to -6 dB at 2-8 kHz.
+        wl, wr = (bus_eq(ch, ((250.0, 'hp', 0.0), (500.0, 'bell', -3.0)), sec.loop) for ch in (wl, wr))
     for i in range(n):
         dl[i] += wl[i] * st.wet
         dr[i] += wr[i] * st.wet
+    if getattr(st, 'channel_eq', False):
+        dl, dr = (bus_eq(ch, ((4500.0, 'bell', 2.5),), sec.loop) for ch in (dl, dr))
     if sec.lp_hz:
         dl, dr = lowpass(dl, sec.lp_hz, sec.loop), lowpass(dr, sec.lp_hz, sec.loop)
     return dl, dr
@@ -1111,7 +1838,7 @@ def render_style(name, out_root, vcsl_root):
     cache = {}
     rendered = {k: render_section(st, s, cache) for k, s in st.sections.items()}
     peak = max(max(abs(v) for v in ch) for lr in rendered.values() for ch in lr)
-    tl, tr = rendered['travel_b']
+    tl, tr = rendered[getattr(st, 'norm', 'travel_b')]
     rms = math.sqrt((sum(v * v for v in tl) + sum(v * v for v in tr)) / (2 * len(tl)))
     scale = min(10 ** (TRAVEL_RMS_DBFS / 20) / rms, PEAK_CAP / peak)
     out = os.path.join(out_root, name)
@@ -1125,11 +1852,13 @@ def render_style(name, out_root, vcsl_root):
         rms = math.sqrt(sum(v * v for v in left) / len(left))
         levels[k] = round(20 * math.log10(max(rms, 1e-9)), 1)
     beatmap = {
-        'style': name, 'title': st.title, 'countries': list(COUNTRIES[name]),
+        'style': name, 'title': st.title, 'countries': list(COUNTRIES.get(name, ())),
         'sample_rate': SR, 'bpm': st.bpm, 'beats_per_bar': 4, 'beat_samples': beat_n,
-        'progression_bars': 4,
+        'progression_bars': getattr(st, 'cycle', 4),
+        'ladder': list(getattr(st, 'ladder', ())),
         'loops': {k: {'file': f'{k}.wav', 'bars': st.sections[k].bars,
-                      'samples': st.sections[k].bars * 4 * beat_n} for k in LOOPS},
+                      'samples': st.sections[k].bars * 4 * beat_n}
+                  for k in getattr(st, 'loops', LOOPS)},
         'one_shots': {k: {'file': f'{k}.wav',
                           'anchor_samples': int(round(st.sections[k].anchor_beats * beat_n))}
                       for k in ONE_SHOTS},
@@ -1230,6 +1959,31 @@ def arrange(music_dir, timeline):
             L[start + k] += sl[k] * g
             R[start + k] += sr[k] * g
 
+    # A style with a ladder (Round 4) is one composition at rising energy: each
+    # 'go' climbs a rung, a crossing goes to the top, and a long drive climbs
+    # on its own at the next 8-bar line, at least 4 bars in — the film's arc
+    # becomes the music's. A stop drops to the 'stop' level without losing
+    # the rung. A style without one alternates travel_a and travel_b.
+    ladder = bm.get('ladder') or []
+    bar_n = 4 * beat_n
+    phrase_n = 8 * bar_n
+
+    def drive(name, s0, s1, fade_in_n, fade_out_n):
+        if name in ladder:
+            i = ladder.index(name)
+            b = (s0 // phrase_n + 1) * phrase_n
+            if b - s0 < 4 * bar_n:
+                b += phrase_n
+            while i < len(ladder) - 1 and b < s1 - 2 * bar_n:
+                add_loop(ladder[i], s0, b, fade_in_n, int(0.06 * SR))
+                climbs.append((b, ladder[i + 1]))
+                i, s0, fade_in_n, b = i + 1, b, int(0.006 * SR), b + phrase_n
+            name = ladder[i]
+        add_loop(name, s0, s1, fade_in_n, fade_out_n)
+        return name
+
+    climbs = []
+    rung = -1
     current, seg_start, prev_at = 'intro', 0, 0
     first_fade = int(0.3 * SR)
     seg_fade_in = first_fade
@@ -1237,7 +1991,9 @@ def arrange(music_dir, timeline):
         _, riser, hit, fade_s = RECIPES[c['kind']]
         at = c['at']
         if current:
-            add_loop(current, seg_start, at, seg_fade_in, int(fade_s * SR))
+            reached = drive(current, seg_start, at, seg_fade_in, int(fade_s * SR))
+            if reached in ladder:
+                rung = ladder.index(reached)
         if riser:
             add_shot('riser', at, prev_at)
         if hit:
@@ -1245,11 +2001,19 @@ def arrange(music_dir, timeline):
         if c['kind'] == 'end':
             add_shot('outro', at, 0)
             current = None
+        elif ladder and c['kind'] in ('go', 'crossing'):
+            rung = len(ladder) - 1 if c['kind'] == 'crossing' else min(len(ladder) - 1, rung + 1)
+            current = c['plays'] = ladder[rung]
         else:
             current = c['plays']
         seg_start, seg_fade_in, prev_at = at, int(0.008 * SR), at
     if current:
-        add_loop(current, seg_start, dur_n, seg_fade_in, 0)
+        drive(current, seg_start, dur_n, seg_fade_in, 0)
+    for at, name in climbs:
+        k = at // beat_n
+        cues.append({'kind': 'climb', 't_s': round(at / SR, 3), 'beat_t_s': round(at / SR, 3),
+                     'shift_ms': 0, 'bar': k // 4 + 1, 'beat': k % 4 + 1, 'plays': name, 'at': at})
+    cues.sort(key=lambda c: c['at'])
 
     fade = int(1.2 * SR)
     for j in range(max(0, dur_n - fade), n):
