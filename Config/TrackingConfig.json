@@ -167,6 +167,7 @@
     "camera_responsiveness": 12.0,
     "end_reveal_s": 2.5,
     "end_route_hold_s": 1.5,
+    "place_name_ink_draw_s": 0.6,
     "end_reveal_padding": 1.9,
     "end_card_style": "full",
     "deck_photo_hold_s": 2.5,

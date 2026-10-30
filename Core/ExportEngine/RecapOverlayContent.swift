@@ -17,11 +17,19 @@ public struct RecapPlaceName: Equatable {
     /// presents itself under the same name: one word is not set twice in one
     /// frame, and the stop's own type is the larger.
     public var opacity: Double
+    /// **How much of this town's ink is down at this instant** (Chiu
+    /// 2026-10-29, ADR 2026-10-29-the-film-inks-each-town-the-car-reaches): 0
+    /// before the car reaches the town, rising to 1 as the pen goes round it,
+    /// and 1 from then on. A fraction of the stroke rather than a time, so the
+    /// renderer needs no clock and the timeline no pen: it says *when*, and the
+    /// renderer decides how ink looks.
+    public var ink: Double
 
-    public init(name: String, coordinate: RecapCoordinate, opacity: Double = 1) {
+    public init(name: String, coordinate: RecapCoordinate, opacity: Double = 1, ink: Double = 0) {
         self.name = name
         self.coordinate = coordinate
         self.opacity = opacity
+        self.ink = ink
     }
 }
 

@@ -97,6 +97,9 @@ public struct LinearTimeline {
     /// second tunable saying the same thing is a number nobody could reason about
     /// (`CLAUDE.md` rule 7's spirit — the tunable exists, so no new one is added).
     let cardFadeS: Double
+    /// How long the pen takes to ink a town as the car reaches it
+    /// (`place_name_ink_draw_s`, `LinearTimelinePlaceInk`).
+    let placeNameInkDrawS: Double
     private let title: String
     private let subtitle: String
     private let endCardFigures: [RecapEndCardFigure]
@@ -237,7 +240,7 @@ public struct LinearTimeline {
         // frames) — a reporter contradicting the thing it reports on, which is
         // the shape of defect this project keeps finding one film at a time.
         opensOnTheFlight = flightFrame != nil && path.openingS > 0
-        cardFadeS = config.deckZoomS
+        cardFadeS = config.deckZoomS; placeNameInkDrawS = config.placeNameInkDrawS
         // **Only a type-2 opening carries a pass.** Gated on the camera's own
         // condition rather than on "has a crossing": a body crossing in some later
         // film would otherwise get a boarding pass in the middle of a road trip,
