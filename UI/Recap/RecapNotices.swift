@@ -17,7 +17,7 @@ struct RecapPhotoShortfallNotice: View {
             // and a body with a divider between them (Chiu 2026-10-01).
             VStack(alignment: .leading, spacing: 4) {
                 Label("recap_photos_missing", systemImage: "icloud.slash")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color(.warningText))
                 Text(String.localizedStringWithFormat(
                     String(localized: "recap_photos_missing_detail"),
                     shortfall.missing, shortfall.requested
@@ -49,7 +49,7 @@ struct RecapRoutingNotice: View {
                 } icon: {
                     Image(systemName: routingSymbol(routing))
                 }
-                .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color.orange)
+                .foregroundStyle(routing.headline == .someLegsHaveNoRoad ? Color.secondary : Color(.warningText))
                 Text(String.localizedStringWithFormat(
                     String(localized: routingDetailKey(routing)), Self.dashedLegs(routing)
                 ))

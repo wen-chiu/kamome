@@ -267,7 +267,7 @@ struct RecapView: View {
                 Text(verbatim: String.localizedStringWithFormat(
                     String(localized: "recap_length_over"), Self.clock(estimate), ceiling
                 ))
-                .foregroundStyle(.orange)
+                .foregroundStyle(Color(.warningText))
             } else {
                 let footer: String.LocalizationValue = filmPhotos.length == .short
                     ? "recap_length_short_footer" : "recap_length_standard_footer"
@@ -339,7 +339,7 @@ struct RecapView: View {
         if model.busyTripId != nil {
             Section {
                 Label("recap_export_busy", systemImage: "hourglass")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color(.warningText))
                 Text("recap_export_busy_detail")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
