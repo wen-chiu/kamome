@@ -54,6 +54,11 @@ has per-instrument EQ, a pad and bass that duck under the kick, and an EQ'd reve
   belong together, natural rhythm, atmosphere, completeness). Settle: Chiu listens to the four
   `round4-*` comparison videos (Round 3 → A → B on one timeline).
 - **UNKNOWN — phone speaker.** Settle: one play on the phone.
+- **MEASURED — `acoustic` plays its glockenspiel below the recordings** (2026-10-30). VCSL's
+  lowest glockenspiel note is G5, and the tune runs B4–B5, so 19 of its 33 notes are the G5
+  recording pitched down by up to 8 semitones. That makes a darker, longer bell than the
+  instrument makes. Settle: move the tune an octave up or give it to another instrument, then
+  listen.
 
 ## What exists
 
