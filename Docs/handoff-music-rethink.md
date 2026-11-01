@@ -296,7 +296,7 @@ dependency. It is not an app dependency. Two desk tools; nothing they make enter
     Tools/kamome-acestep.sh serve     # local API on 127.0.0.1:8001; first start downloads ~10 GB of weights
     python3 Tools/kamome-acestep.py list
     python3 Tools/kamome-acestep.py generate              # 5 styles × 3 moods × 2 takes, 120 s, WAV
-    open ~/Kamome-music/acestep/listen.html               # compare takes, score 1–10
+    open ~/Kamome-music/compare.html                       # compare takes, score 1–10
 
 - Styles: Chiu's four regions (`citypop`, `nordic`, `tropical`, `folk`), plus `anthem` as the
   default candidate. Moods follow the film's arc: `depart` (出發), `cruise` (巡航) and `epic` (壯闊).
@@ -311,6 +311,40 @@ dependency. It is not an app dependency. Two desk tools; nothing they make enter
   --takes 1`, then read `seconds_to_generate` in the manifest. If memory runs short, use the
   smaller planner: `ACESTEP_LM_MODEL_PATH=acestep-5Hz-lm-0.6B Tools/kamome-acestep.sh serve`.
 - This could not run in the cloud session: it has no GPU, and Hugging Face is blocked by the proxy.
+
+### D3b. Stable Audio 3 on the same Mac, cleared for commercial use (Chiu asked 2026-11-01)
+
+    Tools/kamome-stableaudio.sh setup        # pinned clone (5f5e6ac), MLX env, medium + small-music weights,
+                                             # the weights' licence checked and kept, registration recorded
+    python3 Tools/kamome-stableaudio.py generate --only tropical --mood depart --takes 1
+    python3 Tools/kamome-stableaudio.py generate          # the same 15 briefs and seeds as ACE-Step
+    open ~/Kamome-music/compare.html                      # both models side by side
+
+The briefs and seeds live in `Tools/kamome_music_briefs.py`, which both generators read. Stable
+Audio 3 has no tempo or key parameter, so both go into its prompt; the beat grid is measured
+afterwards for either model. Medium (1.4 B) runs through MLX on Apple Silicon (VERIFIED from its
+`optimized/mlx/README.md`). Its speed on Chiu's Mac is UNKNOWN; *settle:* one take, then read
+`seconds_to_generate`.
+
+**Commercial-use checklist.** Read in the Stability AI Community License, last updated 2024-07-05
+(scancode's verbatim copy on GitHub; stability.ai was unreachable here):
+
+| clause | what it means for Kamome | how it is enforced |
+|---|---|---|
+| III: commercial use **must register** at stability.ai/community-license | Chiu registers once, as whoever publishes the app | `setup` will not finish, and `generate` will not run, until the registration is recorded in `~/Kamome-music/stable-audio-3/kamome-licence.json` |
+| III: free only while **"You or Your Affiliate(s)" earn < US$1,000,000** a year; above it the licence ends and Enterprise is needed | generate as Chiu or Kamome, on his own Mac, never for an employer, whose revenue would count | confirmed at registration and recorded |
+| IV(c)(iii): "You own any outputs … to the extent permitted by applicable law" | the tracks are Kamome's to use; AI output may have no copyright at all (C3) | `setup` refuses a weights licence that no longer says this |
+| IV(a): when distributing "the Stability AI Materials or a Derivative Work … or a product or service that uses any portion of them": a copy of the licence, a Notice file, and **"Powered by Stability AI"** shown somewhere | Kamome ships outputs only, and outputs are not Derivative Works (V), so on the plain reading this does not apply (INFERRED). A "Powered by Stability AI" line in the app's acknowledgements removes the doubt at no cost. That is a product change, so it is Chiu's call. | — |
+| IV(b): the AUP applies; no outputs used to train a foundation model | no effect on a film soundtrack | — |
+| IV(f): termination on breach → delete the model | outputs are not covered by the deletion clause (INFERRED) | — |
+
+**UNKNOWN: the weights' exact licence version.** The Hugging Face `LICENSE` for
+`stabilityai/stable-audio-3-optimized` could not be read here. `setup` downloads it, checks that it
+still names the Community License, the US$1,000,000 threshold and output ownership (it stops
+otherwise), and keeps a copy with its sha256. Every take's manifest entry carries that hash.
+**INFERRED:** the text encoder is Google's T5Gemma, under the Gemma Terms of Use. Those allow
+commercial use, Google claims no rights in outputs, and the Prohibited Use Policy applies.
+*Settle:* read any Gemma notice that `setup` copies next to the weights licence.
 
 ### D4. Open for Chiu
 
