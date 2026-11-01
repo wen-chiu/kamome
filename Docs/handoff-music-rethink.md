@@ -257,6 +257,31 @@ pinned weights and recorded seeds, so their provenance is reproducible.
 | identification check on every track; record prompt, seed, model hash in the repo (never the audio) | free | — |
 | wire into the export: cut to length, snap turns, dip at stops, mux after `RecapVideoEncoder` | an implementation session | product change — **Chiu decides music ships, and in which tier** |
 
+### D3a. Running it on a Mac (Chiu asked 2026-11-01)
+
+Chiu chose to try ACE-Step 1.5 locally, which counts as his confirmation of this desk-only
+dependency. It is not an app dependency. Two desk tools; nothing they make enters the repository:
+
+    Tools/kamome-acestep.sh setup     # once: pinned clone (ca1e85f, MIT checked) + uv env, ~/Kamome-music/ace-step
+    Tools/kamome-acestep.sh serve     # local API on 127.0.0.1:8001; first start downloads ~10 GB of weights
+    python3 Tools/kamome-acestep.py list
+    python3 Tools/kamome-acestep.py generate              # 5 styles × 3 moods × 2 takes, 120 s, WAV
+    open ~/Kamome-music/acestep/listen.html               # compare takes, score 1–10
+
+- Styles: Chiu's four regions (`citypop`, `nordic`, `tropical`, `folk`), plus `anthem` as the
+  default candidate. Moods follow the film's arc: `depart` (出發), `cruise` (巡航) and `epic` (壯闊).
+  Each brief sets its tempo and key, so the beat grid is known before a film is cut to it.
+- `manifest.json` records each take's prompt, seed, models and ACE-Step commit. Any kept take can
+  be regenerated exactly from it: that is its provenance.
+- **VERIFIED (desk, 2026-11-01):** the client against a mock of ACE-Step's documented API: submit,
+  poll, download, manifest, a failed take retried on re-run, and a clear error with no server.
+  **INFERRED:** that the real server accepts every field. They were read from its
+  `release_task_param_parser.py` and `docs/en/API.md` at the pinned commit.
+  **UNKNOWN:** speed and memory on Chiu's Mac. *Settle:* `generate --only tropical --mood depart
+  --takes 1`, then read `seconds_to_generate` in the manifest. If memory runs short, use the
+  smaller planner: `ACESTEP_LM_MODEL_PATH=acestep-5Hz-lm-0.6B Tools/kamome-acestep.sh serve`.
+- This could not run in the cloud session: it has no GPU, and Hugging Face is blocked by the proxy.
+
 ### D4. Open for Chiu
 
 1. **Which source** — run D2, then choose (D1 names the default).
