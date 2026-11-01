@@ -193,13 +193,18 @@ set (ACE-Step) raises the odds of that; it does not make every output infringing
 - **Kamome's amplifier:** a library of about 15 tracks is shared by every user. One bad track means
   every film made with it can be claimed.
 - **Kamome cannot pull a track today.** There is no backend before P7, so a bundled track leaves
-  only with an app update, and films keep being exported with it until then. How to withdraw one
-  track is a product decision for Chiu, and it is owed before music ships.
-- **Mitigations:** no artist or song names in prompts (the 15 briefs have none); an audio-ID scan
-  of every track (ACRCloud, Shazam), which catches copied recordings but not melodies; a human
-  listen for melodic look-alikes; prefer Stable Audio 3's licensed training data when quality is
-  close; a way to withdraw a track; once there is revenue, commissioned buyouts for the
-  most-used tracks.
+  only with an app update.
+- **How likely, calibrated (Chiu 2026-11-01, INFERRED):** a lawsuit is unlikely. Claims need access
+  and substantial similarity, and chord progressions and genre conventions are not protected.
+  These briefs are generic instrumentals naming no artist. The suits on record (labels against Suno
+  and Udio) are about training, not about people who use the outputs. The realistic risk is an
+  occasional Content ID false match, which a user can dispute. So an app update is an acceptable
+  way to replace a bad track, and a remote withdrawal is **not** a prerequisite for shipping music.
+  Pick the model by ear; the unnamed training set counts against ACE-Step but does not veto it.
+- **Keep, because it is cheap:** no artist or song names in prompts (the 15 briefs have none), and
+  before shipping, an audio-ID scan of every track (ACRCloud, Shazam) plus one human listen for
+  melodic look-alikes. That is about an hour for 15 tracks. Once there is revenue, consider
+  commissioned buyouts for the most-used tracks.
 
 ### C4. Other routes
 
@@ -235,9 +240,9 @@ Why ACE-Step 1.5 over the others:
 
 **Its weak point is provenance:** the training data is described as licensed but no licensor is
 named. That is why the experiment runs **Stable Audio 3 beside it**: Stability's AudioSparx
-training data is the most defensible here. If Chiu hears them as close, **take Stable Audio 3**
-— provenance beats a small quality edge for something bundled in a commercial app. If ACE-Step
-is clearly better, take it and add the song-identification check (C3 rule 4) to every track.
+training data is the most defensible here. Pick by ear (calibrated 2026-11-01, see C3a): when the
+two are close, Stable Audio 3's provenance breaks the tie. Whichever is chosen, every track gets
+the song-identification check (C3 rule 4).
 
 **Against the obvious alternative — pay Suno for one month (US$10):** cheaper than anything, best
 quality, and what Chiu already likes. It is not recommended as the source of bundled music
