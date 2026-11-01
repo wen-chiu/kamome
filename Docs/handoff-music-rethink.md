@@ -176,6 +176,31 @@ after upgrading (INFERRED from the reported terms). It stays a reference.
   (UNKNOWN). *Settle:* upload one finished test film privately to YouTube and see if a claim
   appears.
 
+### C3a. If a bundled track turns out to copy a protected work (Chiu asked 2026-11-01)
+
+Being AI-made is not itself infringement. The risk is a track that is *substantially similar* to a
+protected work, because the model reproduced something from its training data. An unnamed training
+set (ACE-Step) raises the odds of that; it does not make every output infringing (INFERRED).
+
+- **Most likely: a Content ID claim** on a user's shared film. The owner takes its ad revenue, mutes
+  it or blocks it. A claim is not a strike, and the user can dispute it. Instagram and TikTok often
+  mute or remove the video outright.
+- **Rarer: a DMCA takedown** against a user, which is a strike on their account.
+- **Worst: a claim against Kamome.** Kamome distributes the track to every install, so the primary
+  liability is Kamome's, not the user's or the model maker's. MIT is "AS IS", with no indemnity.
+  US statutory damages are $750–30,000 per work, up to $150,000 if wilful. The owner may also file
+  an App Store complaint. INFERRED; Taiwan's law was not researched; not legal advice.
+- **Kamome's amplifier:** a library of about 15 tracks is shared by every user. One bad track means
+  every film made with it can be claimed.
+- **Kamome cannot pull a track today.** There is no backend before P7, so a bundled track leaves
+  only with an app update, and films keep being exported with it until then. How to withdraw one
+  track is a product decision for Chiu, and it is owed before music ships.
+- **Mitigations:** no artist or song names in prompts (the 15 briefs have none); an audio-ID scan
+  of every track (ACRCloud, Shazam), which catches copied recordings but not melodies; a human
+  listen for melodic look-alikes; prefer Stable Audio 3's licensed training data when quality is
+  close; a way to withdraw a track; once there is revenue, commissioned buyouts for the
+  most-used tracks.
+
 ### C4. Other routes
 
 | route | licence | cost | verdict |
