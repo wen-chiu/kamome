@@ -137,18 +137,33 @@ final class CameraPathTests: XCTestCase {
         XCTAssertGreaterThan(speed(atFrame: midLegFrame), brakingSpeed * 2, "camera should brake into the hold")
     }
 
-    /// `holds` exposes one window per stop in playback order even when stops are
-    /// passed out of route order — the timeline anchors each stop scene to them.
+    /// `holds` exposes one window per stop in playback order — the timeline
+    /// anchors each stop scene to them — and **the stops play in the order they
+    /// happened**, even where the route passed a stop's place earlier (#349).
+    ///
+    /// Restated 2026-11-02 (Chiu chose it): this pinned the opposite until then,
+    /// handing the stops over out of route order and expecting them re-sorted by
+    /// where they lie. That rule is what played a loop's last stop second and a
+    /// round trip's Day 4 before its Day 1. Stops reach the camera in arrival
+    /// order (`TripRepository.detail`), so the order they happened is the order
+    /// they play.
     func testHoldsExposeOneWindowPerStopInPlaybackOrder() throws {
-        // route[7] is passed first but lies later along the meridian than route[3].
+        // Out along the meridian and back: route[3]'s place is passed twice, and
+        // the second stop happened there on the way back.
+        let outAndBack = straightRoute + straightRoute.reversed().dropFirst()
         let path = try XCTUnwrap(
-            CameraPath(route: straightRoute, stops: [straightRoute[7], straightRoute[3]], config: exportConfig())
+            CameraPath(route: outAndBack, stops: [straightRoute[7], straightRoute[3]], config: exportConfig())
         )
         let holds = path.holds
 
         XCTAssertEqual(holds.count, 2)
-        XCTAssertEqual(holds.map(\.stopIndex), [1, 0], "the second stop passed lies earlier on the route")
+        XCTAssertEqual(holds.map(\.stopIndex), [0, 1], "the stops play in the order they happened")
         XCTAssertLessThan(holds[0].startS, holds[1].startS)
+        let between = stride(from: holds[0].endS, through: holds[1].startS, by: 0.05).map {
+            path.position(atTime: $0).lat
+        }
+        XCTAssertEqual(between.max() ?? 0, straightRoute[10].lat, accuracy: 0.0002,
+                       "the far end is reached between the two scenes: the second plays on the way back")
         for hold in holds {
             XCTAssertEqual(hold.endS - hold.startS, 1.5, accuracy: 1e-9)
             // The camera is actually holding this stop throughout the window.
