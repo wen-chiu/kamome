@@ -341,6 +341,7 @@ schemes:
         - { variable: KAMOME_MATCHING_E, value: "$(TEST_RUNNER_KAMOME_MATCHING_E)", isEnabled: true }
         - { variable: KAMOME_OSRM_BASE_URL, value: "$(TEST_RUNNER_KAMOME_OSRM_BASE_URL)", isEnabled: true }
         - { variable: KAMOME_OSRM_CAPTURE, value: "$(TEST_RUNNER_KAMOME_OSRM_CAPTURE)", isEnabled: true }
+        - { variable: KAMOME_PATH_PROBE_RENDER, value: "$(TEST_RUNNER_KAMOME_PATH_PROBE_RENDER)", isEnabled: true }
         - { variable: KAMOME_PILOT_FILM, value: "$(TEST_RUNNER_KAMOME_PILOT_FILM)", isEnabled: true }
         - { variable: KAMOME_PILOT_SECONDS, value: "$(TEST_RUNNER_KAMOME_PILOT_SECONDS)", isEnabled: true }
         - { variable: KAMOME_PILOT_START_S, value: "$(TEST_RUNNER_KAMOME_PILOT_START_S)", isEnabled: true }
