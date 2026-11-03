@@ -71,6 +71,20 @@
     "allow_network": false,
     "duplicate_distance": 0.3
   },
+  "soundtrack": {
+    "sample_rate_hz": 48000,
+    "channel_count": 2,
+    "audio_bitrate_kbps": 192,
+    "render_chunk_frames": 1024,
+    "target_lufs": -14.0,
+    "loudness_tolerance_lu": 1.0,
+    "true_peak_max_dbtp": -1.0,
+    "tempo_drift_max_bpm": 1.0,
+    "phrase_bars": 4,
+    "crossfade_beats": 1.0,
+    "fade_in_s": 1.5,
+    "fade_out_s": 1.0
+  },
   "discovery": {
     "lookback_years": 5,
     "home_cell_deg": 0.5,

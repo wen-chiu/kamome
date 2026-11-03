@@ -12,6 +12,14 @@ Nothing here changes the app yet.
 
 Labels follow `CLAUDE.md` rule 4. Each unmeasured claim names what would settle it.
 
+**Status, 2026-11-03: PR A is built** (§8). The cue sheet, manifest, arrangement, renderer, muxer,
+the §3.3 rule, the beatmap tool and the desk harness exist; nothing a user sees changed. Where the
+build departs from the text below, the text was updated: the manifest gained five fields (§2.2), a
+crossing is two cues (`crossing`, `landing`), and the departure's photographs over a frozen card
+are cues like a stop's. **After Chiu's listen the music plays straight through**
+(ADR 2026-11-03-the-music-plays-straight-through): §2.5 items 5–6 were built, heard and removed.
+The stop dip sounded broken, and the return and the photo lift went unnoticed. #361 is closed.
+
 ---
 
 ## 1. The shape, in one picture
@@ -87,10 +95,11 @@ One JSON per track, written at the desk by the beatmap tool (§5), never compute
 
 ```json
 {
+  "schema_version": 1,
   "id": "tropical-depart-2",
   "style": "tropical", "mood": "depart",
-  "file": "tropical-depart-2.m4a",
-  "bpm": 100.0, "beats_per_bar": 4, "first_downbeat_s": 0.412,
+  "file": "tropical-depart-2.m4a", "duration_s": 152.3,
+  "bpm": 100.0, "beats_per_bar": 4, "first_downbeat_s": 0.412, "tempo_drift_bpm": 0.2,
   "sections": [
     { "name": "intro",  "start_bar": 0,  "bars": 8,  "energy": 1, "role": "intro" },
     { "name": "verse",  "start_bar": 8,  "bars": 16, "energy": 2, "role": "body", "repeatable": true },
@@ -98,11 +107,19 @@ One JSON per track, written at the desk by the beatmap tool (§5), never compute
     { "name": "chorus", "start_bar": 32, "bars": 16, "energy": 4, "role": "peak", "repeatable": true },
     { "name": "ending", "start_bar": 48, "bars": 6,  "energy": 2, "role": "outro" }
   ],
+  "sections_confirmed": false,
   "final_hit_bar": 52, "tail_s": 3.1,
-  "integrated_lufs": -14.1,
+  "integrated_lufs": -14.1, "true_peak_dbtp": -1.2,
   "provenance": { "engine": "acestep-1.5", "commit": "ca1e85f", "seed": 123456789 }
 }
 ```
+
+**As built (PR A):** `Core/ExportEngine/SoundtrackManifest.swift` is the one schema. The five added
+fields are what validation needs: `duration_s` (sections must fit the file), `tempo_drift_bpm` and
+`true_peak_dbtp` (the desk's refusals, re-checked), `sections_confirmed` (false until Chiu has
+listened), `schema_version`. `Tools/kamome_soundtrack_manifest.py` refuses exactly what the Swift
+validator refuses, with the same codes; `Tests/Fixtures/soundtracks/invalid/` holds one file per
+code and both sides are tested against it.
 
 `sections` are what `handoff-music-rethink.md` A4 said the old `beatmap.json` lacked. **Whole
 tracks, not loops or stems** (rethink B1, INFERRED there): a produced track already has an intro,
@@ -186,9 +203,13 @@ Pure function `(manifest, cues, durationS, config) → SoundtrackPlan`, where th
    intro (audio offset *s* > 0) and fade in over the title card. No time-stretch, no pitch
    change, ever: a stretched track is the "something is wrong" sound Chiu hears at once.
 4. **A film longer than the track** (standard films reach 300 s, rethink B1) repeats a
-   `repeatable` section at its phrase lines. If the manifest has none, the picker must not
+   `repeatable` section at its phrase lines. *As built:* it replays the longest **stretch** that
+   begins and ends on a repeatable section, because a 180 s desk film that replayed one 8-bar
+   section five times in a row (16 s, five times) was a loop. If the manifest has none, the picker must not
    choose that track for that film (a filter, not a runtime surprise).
-5. **Moments the music answers** — Chiu's 「景點出現或照片出現可以加強音樂」:
+5. ~~**Moments the music answers**~~ — **removed after Chiu's listen, 2026-11-03** (ADR
+   2026-11-03-the-music-plays-straight-through): 「不行 像壞掉 照正常就好」. Kept below as the record of
+   what was tried. Chiu's original request, 「景點出現或照片出現可以加強音樂」:
 
    | cue | what the music does | why this and not more |
    |---|---|---|
@@ -203,7 +224,7 @@ Pure function `(manifest, cues, durationS, config) → SoundtrackPlan`, where th
    `fade_out_s`, `photo_accent_enabled`, …). **No added one-shot sound effects in v1** —
    Chiu's round-2 lesson (「太多東西你沒辦完整控制協調就會變得畫蛇添足」): a sting in the wrong key
    is the fastest way to make a good track sound cheap.
-6. **The music answers the picture, not the other way round (v1).** An accent snaps to the
+6. ~~**The music answers the picture, not the other way round (v1).**~~ Removed with item 5. An accent snaps to the
    nearest beat only within `accent_snap_tolerance_s`; outside it, the dip/lift ramps on the cue
    itself, unsynced. Human audio–video tolerance is roughly 45 ms audio-early to 125 ms
    audio-late (ITU-R BT.1359, INFERRED as applicable to music accents; *settle:* Chiu watches one
@@ -218,7 +239,8 @@ Pure function `(manifest, cues, durationS, config) → SoundtrackPlan`, where th
 
 `AVAudioEngine` in **offline manual rendering mode** (`enableManualRenderingMode(.offline, …)`):
 one `AVAudioPlayerNode` per clip (so a cross-fade is two nodes overlapping), into an
-`AVAudioUnitEQ` (one low-pass band) and the main mixer. The render loop pulls 1,024-frame chunks
+`AVAudioUnitEQ` (one low-pass band) and the main mixer. *As built after the ADR above:* no
+`AVAudioUnitEQ`, just the players into the main mixer, with one gain on the rendered samples. The render loop pulls 1,024-frame chunks
 and sets gain and cutoff from the plan's curves before each chunk — the curves are pure, so
 the "what" is unit-tested and this file only does the "how". Output: AAC 48 kHz stereo,
 `soundtrack.audio_bitrate_kbps` (192 proposed).
@@ -231,8 +253,18 @@ no low-pass — and the stop dip without a filter is just "quieter", which reads
 
 `AVMutableComposition` with the video track and the audio track, exported with
 `AVAssetExportPresetPassthrough` to `.mp4`. Video bytes are copied, not re-encoded.
-**INFERRED:** passthrough accepts an AAC track into an MP4 container and takes seconds for a
-90 s film. *Settle:* one desk harness run on the simulator, timed.
+**VERIFIED (desk, 2026-11-03):** passthrough accepts the AAC track into an MP4 container
+(`RecapSoundtrackRendererTests`); the time it takes is §4.1a. **One thing it does that was not
+expected:** AAC carries 2,112 samples of encoder priming. Decoded by AVFoundation, the muxed film's
+final hit lands on the end card's sample (`testTheMuxedFilmKeepsTheFinalHitOnTheEndCard`); decoded
+by ffmpeg, the same file plays it **2,112 samples (44 ms) late**. The standalone `.m4a` states its
+priming in an `iTunSMPB` tag that ffmpeg honours, but the muxed `.mp4`'s audio edit list starts at
+media time 0. Apple applies the priming trim implicitly and ffmpeg does not, and AVFoundation then reads the muxed
+track up to 44 ms short at its tail, inside the end card's fade-out. Writing the AAC with
+`AVAssetWriter` instead changed nothing (measured). 44 ms of late audio is inside the ~125 ms a
+viewer tolerates (ITU-R BT.1359, INFERRED as applicable). **UNKNOWN:** what LINE's and Instagram's
+re-encoders do with it. *Settle:* the PR B runbook row "a film shared to LINE and Instagram keeps
+its sound", checked for sync on the end card's chord.
 
 "Change the music" reuses this file: it takes the video track out of the stored `film.mp4`
 instead of `silent.mp4`. No silent master is kept, so storage does not double.
@@ -253,7 +285,8 @@ and `Scripts/check-architecture.sh` enforces it (VERIFIED by reading both). The 
 }
 ```
 
-**It lands in PR A, with the two files, not before.** Two facts of the checker decide that
+**Landed in PR A (2026-11-03)**, with the list form, the missing-path check and the type check below,
+each shown failing on a planted violation. **It lands in PR A, with the two files, not before.** Two facts of the checker decide that
 (VERIFIED by reading `check-architecture.sh`):
 - A confined value is **one** path, matched as a prefix. Three named files need the checker to
   accept a list. A prefix such as `Core/ExportEngine/Recap` would admit every `Recap*` file and
@@ -304,23 +337,37 @@ it can be read at); confining to `Core/ExportEngine/` (the rule would then guard
 
 ### 4.1a What the music costs in export time (Chiu asked 2026-11-03)
 
-All INFERRED: nothing here was measured on an Apple device. The inputs are the shipped
-`video_bitrate_mbps` 5 and the proposed 192 kbps audio.
+**VERIFIED (simulator), 2026-11-03**, PR A's desk harness (`RecapSoundtrackFilmTests`): the
+`margaret-river` fixture at `KAMOME_FORCE_DURATION_S` 90 and 180, iPhone 17 Pro simulator (iOS 26.5)
+on an M2 Mac with 16 GB, real 120 s ACE-Step take, 192 kbps AAC, shipped `video_bitrate_mbps` 5.
+**The Mac was heavily loaded throughout** (load average 260–510: another session generating music
+with ACE-Step, which swaps, plus another session's encode; disk 97% full). So these are an upper
+range, not a typical cost. Every run is listed, and none is dropped.
 
-| stage | 90 s film | 180 s film | adds to the wait? |
-|---|---|---|---|
-| arrange (pure Swift, a few hundred cues) | < 0.01 s | < 0.01 s | no |
-| render + AAC-encode the audio (offline `AVAudioEngine`, assumed ≥ 50× real time) | ~1–2 s | ~2–4 s | **no**: it runs while the map draws, and the map waits on snapshots 65% of the time (VERIFIED, §9 of `Docs/handoff-export-performance.md`), so a CPU is free |
-| mux, video copied (56 MB / 112 MB of video on flash) | ~0.5–2 s | ~1–3 s | **yes**: the only stage after the last frame |
-| **added wall time** | **~1–2 s** | **~1–3 s** | worst case, if the audio ran after the video instead: ~2–4 s / ~3–7 s |
+| run | film | drawing + encode | music, alongside drawing | mux | music, alone | mux (replace) |
+|---|---|---|---|---|---|---|
+| 1 | 90 s | 404 s | 4.7 s | 0.68 s | 6.3 s | 0.85 s |
+| 2 | 90 s | 627 s | 14.0 s | 0.66 s | 6.4 s | 1.73 s |
+| 1 | 180 s | 1,003 s | 27.4 s | 1.58 s | 5.8 s | 0.32 s |
+| 2 | 180 s | 685 s | 16.9 s | **66.1 s** | 9.8 s | **94.2 s** |
+| 3 ¹ | 180 s | 250 s | 11.5 s | 2.35 s | 4.2 s | 1.96 s |
 
-For scale: the drawing itself is minutes. A 338 s film took 942 s on an iPhone before the tile
-fix (VERIFIED, same document §9), and the device time after it is not measured yet. The music
-adds about 1% or less. Changing the music in the player afterwards costs the audio render plus
-the mux, ~2–4 s / ~3–7 s, with no redrawing.
+¹ After the repeat fix (§2.5 item 4 now replays a stretch). Arranging took under 3 ms in every run.
 
-*Settle:* PR A's desk harness logs both stages on the simulator; on a phone, the `music` and
-`mux` stages of `ExportLogHistory` (PR B, runbook row).
+What this settles, and what it does not:
+- **The music adds nothing to the wait while the map draws** (VERIFIED, 5 of 5 runs): even under
+  this load it finished in 4.7–27 s, against 250–1,003 s of drawing. It is slower than the 50×
+  real time the old table assumed (alone, 4–10 s: 18–43× real time), which does not matter while it
+  runs in parallel.
+- **The mux is the only added wall time.** It took 0.3–2.4 s in 8 of 10 measurements and 66 s / 94 s
+  in one run (180 s, run 2). That run was the peak of the external load. The cause is **UNKNOWN**:
+  contention for the disk (97% full, swapping) is INFERRED, not shown. *Settle:* the phone's `mux`
+  stage in `ExportLogHistory` (PR B, runbook row), and one more simulator run on an idle Mac.
+- **「換音樂」 costs the music render plus the mux**: 4–10 s plus 0.3–2 s here, with no redrawing.
+- **Device numbers are still owed** (PR B, runbook row: `music` and `mux` stages).
+
+For scale: a 338 s film took 942 s on an iPhone before the tile fix (VERIFIED,
+`Docs/handoff-export-performance.md` §9).
 
 ### 4.2 Screens
 
@@ -437,7 +484,7 @@ Older references in this document and in ADR 2026-11-03 to "PR 1–4" mean PR A,
 mean PR B.
 
 New `Docs/device-runbook.md` rows, owed by PR B: added wall time (`music`, `mux` stages); audio
-on the phone speaker (does the stop dip read, or does it sound broken); the silent switch; a film
+on the phone speaker; the silent switch; a film
 shared to LINE and Instagram keeps its sound; an export left in the background still muxes.
 
 **A visual change owes a render; this one owes a listen.** `./check.sh` cannot hear the film.

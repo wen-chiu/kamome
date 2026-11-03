@@ -235,11 +235,24 @@ extension LinearTimeline {
     }
 
     func focusIndex(atTime time: Double, deck window: (start: Double, end: Double), count: Int) -> Int {
+        let starts = photoSlotStartsS(deck: window, count: count)
+        return max(starts.lastIndex { $0 <= time } ?? 0, 0)
+    }
+
+    /// When each of the deck's `count` photographs comes into focus: the rotate
+    /// phase (between the zoom edges) split into `count` equal slots, photo `k`
+    /// from `rotateStart + k · slot`. Photo 0 is in focus before its slot too —
+    /// the grow holds it — and the last after its slot ends, through the shrink.
+    ///
+    /// **The one copy of the slot math** (handoff-music-in-the-film §2.1):
+    /// `focusIndex` reads it, and so does the film's cue sheet, so a photograph
+    /// and the music that answers it can never be timed by two formulas.
+    func photoSlotStartsS(deck window: (start: Double, end: Double), count: Int) -> [Double] {
         let zoom = zoomRamp(window)
         let rotateStart = window.start + zoom
         let rotateLength = max((window.end - zoom) - rotateStart, 1e-6)
-        let slot = rotateLength / Double(count)
-        return min(max(Int((time - rotateStart) / slot), 0), count - 1)
+        let slot = rotateLength / Double(max(count, 1))
+        return (0..<max(count, 1)).map { rotateStart + Double($0) * slot }
     }
 }
 

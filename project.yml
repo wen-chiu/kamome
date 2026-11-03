@@ -269,6 +269,9 @@ targets:
       - Tests/AppTests
       - path: Tests/Fixtures/stock-liberty.json
         buildPhase: resources
+      # The desk soundtrack harness plays this when no real track is given; the
+      # Core tests own it (`RecapSoundtrackFilmTests`, handoff-music §8).
+      - path: Tests/CoreTests/SyntheticSoundtrack.swift
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
@@ -361,6 +364,8 @@ schemes:
         - { variable: KAMOME_TILE_BENCH_FIX, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_FIX)", isEnabled: true }
         - { variable: KAMOME_TILE_BENCH_LIMIT, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_LIMIT)", isEnabled: true }
         - { variable: KAMOME_TILE_BENCH_OUT, value: "$(TEST_RUNNER_KAMOME_TILE_BENCH_OUT)", isEnabled: true }
+        - { variable: KAMOME_SOUNDTRACK, value: "$(TEST_RUNNER_KAMOME_SOUNDTRACK)", isEnabled: true }
+        - { variable: KAMOME_SOUNDTRACK_TRACK, value: "$(TEST_RUNNER_KAMOME_SOUNDTRACK_TRACK)", isEnabled: true }
         - { variable: KAMOME_STOP_PHOTOS, value: "$(TEST_RUNNER_KAMOME_STOP_PHOTOS)", isEnabled: true }
         - { variable: KAMOME_STOP_STILL, value: "$(TEST_RUNNER_KAMOME_STOP_STILL)", isEnabled: true }
         - { variable: KAMOME_SUBJECT_STILL, value: "$(TEST_RUNNER_KAMOME_SUBJECT_STILL)", isEnabled: true }
