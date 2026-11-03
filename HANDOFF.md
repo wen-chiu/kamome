@@ -83,6 +83,11 @@ cost somebody time; keep each to a summary and a pointer.
 
 ---
 
+- **`import AVKit` re-exports AVFoundation**: four UI files use `AVPlayer` with
+  only that import, so the AVFoundation confinement checks an `import` line, not
+  the types. Until the type check (`Docs/handoff-music-in-the-film.md` §3.3) lands,
+  build no writer, export session or composition outside `Core/ExportEngine/`.
+
 ## 🐛 Known bugs and accepted costs
 
 Import date range clips at timezone edges; `RecapMode` may be two axes; the

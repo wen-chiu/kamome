@@ -67,9 +67,15 @@ An extension on `LinearTimeline` returning `[FilmCue]`, sorted by time:
 
 Rules for this file:
 - **Derived, never stored, never re-computed by a copy.** Each time comes from the function the
-  overlay already uses (`deckWindow`, the photo-slot math), so a pacing change moves the music
-  with the picture. A second copy of the slot math is the bug to prevent; a test pins that every
-  `photoChanges` cue equals the frame where `overlayContents` shows a new photo.
+  overlay already uses, so a pacing change moves the music with the picture. A second copy of the
+  slot math is the bug to prevent; a test pins that every `photoChanges` cue equals the frame where
+  `overlayContents` shows a new photo.
+- **One refactor this needs (VERIFIED by reading, 2026-11-03):** the photo-change times are not
+  exposed today. They are computed inline inside `focusIndex(atTime:deck:count:)`
+  (`LinearTimelineStopScene.swift`: `rotateStart + k · slot`, with `count` from
+  `affordablePhotoCount`). PR 1 extracts that into one `photoSlotStartsS(deck:count:)` that
+  `focusIndex` and the cue sheet both call. `CameraPath.endRevealStartS` is `private`; it widens
+  to internal, as `LegRange` did on 2026-09-02.
 - **No coordinate, name or country in a cue** — kind, time, stop index. §0 by construction.
 - Open PRs that move these times — wen-chiu/kamome#355 (stops play in trip order) and
   wen-chiu/kamome#343 (the film ends on a souvenir map) — change *values*, not the cue kinds. If
@@ -231,12 +237,45 @@ no low-pass — and the stop dip without a filter is just "quieter", which reads
 "Change the music" reuses this file: it takes the video track out of the stored `film.mp4`
 instead of `silent.mp4`. No silent master is kept, so storage does not double.
 
-### 3.3 The confinement rule this needs
+### 3.3 The confinement rule this needs (Chiu confirmed 2026-11-03)
 
-`Config/architecture.json` confines AVFoundation to `Core/ExportEngine/RecapVideoEncoder.swift`.
-This design needs two more files. Proposal: confine it to those three files by name, and add
-`AVFAudio` (where `AVAudioEngine` actually lives; it can be imported without AVFoundation) as its
-own confined SDK, or the rule has a hole. **Architecture change → Chiu confirms first** (rule 2).
+`Config/architecture.json` confines AVFoundation to `Core/ExportEngine/RecapVideoEncoder.swift`,
+and `Scripts/check-architecture.sh` enforces it (VERIFIED by reading both). The change:
+
+```json
+"confined": {
+  "MapLibre":     "App/Services/MapLibreSnapshotProvider.swift",
+  "GRDB":         "Core/Persistence/",
+  "AVFoundation": ["Core/ExportEngine/RecapVideoEncoder.swift",
+                   "Core/ExportEngine/RecapSoundtrackRenderer.swift",
+                   "Core/ExportEngine/RecapFilmMuxer.swift"],
+  "AVFAudio":     ["Core/ExportEngine/RecapSoundtrackRenderer.swift"]
+}
+```
+
+**It lands in PR 4, with the two files, not before.** Two facts of the checker decide that
+(VERIFIED by reading `check-architecture.sh`):
+- A confined value is **one** path, matched as a prefix. Three named files need the checker to
+  accept a list. A prefix such as `Core/ExportEngine/Recap` would admit every `Recap*` file and
+  void the rule.
+- The checker **fails a rule that nothing imports** ("the confinement rule is dead"). An
+  `AVFAudio` rule written today fails `./check.sh` until the renderer exists.
+- So PR 4 also teaches the checker to fail a listed path that does not exist, so that the rule
+  never grants a permission to a file nobody wrote.
+
+**Why `AVFAudio` needs its own line:** `AVAudioEngine` lives in AVFAudio, which a file can import
+without importing AVFoundation, and the checker matches the literal `import` line.
+
+**A hole that already exists (VERIFIED 2026-11-03, not this design's):** `import AVKit`
+re-exports AVFoundation. `UI/TripDetail/FilmPlayerSheet.swift` and `UI/Recap/RecapFinishedView.swift`
+use `AVPlayer` with only `import AVKit`. Any of the four AVKit files could build an
+`AVAssetWriter` and pass the check. Playback in the UI is legitimate, so PR 4 should not ban
+AVKit; it should add a type check that `AVAssetWriter`, `AVAssetExportSession`,
+`AVMutableComposition` and `AVAudioEngine` appear only in the three files. Recorded as a trap
+in `HANDOFF.md`.
+
+**Rejected:** everything in `RecapVideoEncoder.swift` (three jobs in one file, and past the size
+it can be read at); confining to `Core/ExportEngine/` (the rule would then guard nothing).
 
 ---
 
@@ -244,11 +283,20 @@ own confined SDK, or the rule has a hole. **Architecture change → Chiu confirm
 
 ### 4.1 Export flow (`RecapExportJob`)
 
-    compose ─► pick soundtrack ─► plan timeline ─┬─► render video (minutes) ─┬─► mux ─► store
-                                                 └─► arrange + render audio ─┘
-                                                     (seconds, in parallel)
+    roads ─► compose ─► plan (timeline) ─► pick soundtrack ─► photos ─┬─► draw + encode video (minutes) ─┬─► mux ─► store
+                                                                       └─► arrange + render audio ───────┘
+                                                                           (seconds, in parallel)
 
-- The picker runs before `plan`, because §6 (if ever chosen) needs the track before the timeline.
+- **The picker runs after `plan` and before `drawing`** (VERIFIED order in
+  `RecapExportJob.runStages`: roads → compose → plan → photos → drawing). It needs the timeline's
+  `durationS` and `filmType`, and the plan's `appearance`, which exist only after `plan`. If §6 is
+  ever chosen, the picker must move before the timeline and read
+  `LinearTimelinePacing.plannedDurationS` instead. That is a §6 cost, not a v1 one.
+- **Streamed, not held.** 180 s of 48 kHz stereo float is ~69 MB if held whole; the renderer writes
+  each 1,024-frame chunk to the file as it goes, under the memory budget D2 prices.
+- **Cancel and leaving the app.** The audio task reads the same `shouldContinue` as the render
+  loop. Whether `AVAssetExportSession` survives the app going to the background mid-mux is
+  UNKNOWN. *Settle:* one device export left during the last seconds (runbook row, PR 6).
 - `ExportLogHistory` gains two stages, `music` and `mux`, so their cost is measured, not modelled.
 - A soundtrack failure **fails loudly but does not lose the film**: the silent film is kept and
   the sheet says the music could not be added, with 「再試一次」 that re-runs only §3.1–3.2.
@@ -281,12 +329,17 @@ the mux, ~2–4 s / ~3–7 s, with no redrawing.
   person cannot choose music for a film they have not seen.
 - **Player (`FilmPlayerSheet`)** — 「換音樂」 opens a short list: the current choice, the next
   two by the picker's score (labelled by mood in plain words, e.g. 「輕快」「悠閒」「壯闊」 — never
-  by country, see §4.4), and 無音樂. Selecting one previews at once (the player plays the stored
-  video with the candidate's freshly rendered audio) and 「使用這首」 re-muxes.
+  by country, see §4.4), and 無音樂. Selecting one renders that audio and muxes it to a
+  temporary file (the same ~2–7 s as §4.1a), which the existing `AVPlayer` plays. 「使用這首」
+  moves it into place; closing throws it away. The UI never builds a composition itself, so no UI
+  file needs AVFoundation beyond the playback it already does through AVKit.
 - zh-Hant: **音樂** is a new word for the glossary (ADR 2026-10-26-zh-hant-uses-one-word-for-each-thing);
   pick it once (音樂, not 配樂/BGM) and add it to `ZhHantGlossaryTests`.
-- **UNKNOWN — the silent switch.** Should the player play sound when the phone is on silent?
-  Video apps usually do (`AVAudioSession.Category.playback`). A device check, and a product call.
+- **The silent switch — VERIFIED that nothing sets it today:** no file in `App/` or `UI/` sets an
+  `AVAudioSession` category, so the players run under the default (`.soloAmbient`), which the
+  silent switch mutes. With music, a phone on silent plays the film without sound unless a
+  category is set. Video apps usually set `.playback`. A product call (§7, defaults), and a device
+  check.
 
 ### 4.3 Storage
 
@@ -351,7 +404,7 @@ Recommendation: **ship v1 without it**, listen, and decide with a film in hand.
 |---|---|---|
 | 1 | Music leaves "Deferred" | **Decided 2026-11-03**: yes (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it) |
 | 2 | Tier (2026-07-20: free = silent) | **Decided 2026-11-03**: the free film has music too |
-| 3 | The architecture change in §3.3: two more files allowed AVFoundation, AVFAudio confined | **open**: Chiu confirms before PR 4 |
+| 3 | The architecture change in §3.3: two more files allowed AVFoundation, AVFAudio confined | **Confirmed 2026-11-03**; the JSON and checker change land in PR 4 with the files |
 | 4 | Tracks in the repository | **settled**: the repository is private (Chiu, 2026-11-03). Still never register the tracks with a Content ID service, or a user's shared film would be claimed against them |
 | 5 | Defaults: the `anthem` style for unlisted countries, 自動 on by default, the silent switch | **later**: after the music is made (Chiu, 2026-11-03) |
 | 6 | Bundle size (~36 MB) vs. download | open |
@@ -365,7 +418,7 @@ Recommendation: **ship v1 without it**, listen, and decide with a film in hand.
 | 1 | `FilmCueSheet` + tests (cues equal overlay frames) | none | no |
 | 2 | `kamome-beatmap.py` + manifest schema + static gate + one real track | none | no |
 | 3 | `SoundtrackArrangement` + tests (ending on end card ±1 sample, total = film duration, no stretch, accents within tolerance or unsynced, repeat for long films) | none | no |
-| 4 | Renderer + muxer + architecture rule + desk harness `TEST_RUNNER_KAMOME_SOUNDTRACK=<fixture>` writing a film with music to `~/Kamome-films/` | none (harness only) | no |
+| 4 | Renderer + muxer + the §3.3 rule (list support, missing-path and type checks) + desk harness `TEST_RUNNER_KAMOME_SOUNDTRACK=<fixture>` writing a film with music to `~/Kamome-films/` | none (harness only) | no |
 | 5 | `PhotoMood` (analyser v2) + `SoundtrackPicker` + context + tests (deterministic, §0 log words) | none | timing on a phone |
 | 6 | Export wiring + `FilmRecord` migration + sheet row + player 「換音樂」 + copy | **yes** | yes — runbook rows below |
 
