@@ -1,6 +1,5 @@
 import { Composition } from "remotion";
 import { Promo, PromoProps, promoFrames } from "./Promo";
-import example from "../props.example.json";
 
 const FPS = 30;
 
@@ -22,7 +21,9 @@ export const Root: React.FC = () => (
         width={f.width}
         height={f.height}
         fps={FPS}
-        defaultProps={example as PromoProps}
+        // Empty, because Remotion merges --props over these: a default title or
+        // end card would leak into every project that leaves it out.
+        defaultProps={{ clips: [] } as PromoProps}
         calculateMetadata={({ props }) => ({ durationInFrames: promoFrames(props, FPS) })}
       />
     ))}

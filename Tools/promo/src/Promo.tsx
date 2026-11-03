@@ -19,6 +19,10 @@ export type PromoProps = {
   title?: string;        // the opening card; omit for App Store previews
   endCard?: string;      // e.g. the app name and "on the App Store"
   music?: string;
+  musicFromS?: number;   // where in the music file to start
+  fadeS?: number;        // each clip fades in from black over this long
+  // Kamome films keep stop names and attribution at the bottom: "top" clears them.
+  captionAt?: "top" | "bottom";
   voice?: string;        // a voice-over made by Tools/kamome-voice.py
   musicVolume?: number;
   // The voice-over's own lines, timed from the start of the video. Paste them
@@ -28,10 +32,20 @@ export type PromoProps = {
 };
 
 const CARD_S = 2;
+const MUSIC_FADE_IN_S = 0.5;
+const MUSIC_FADE_OUT_S = 1.5;
+
+const FadeIn: React.FC<{ seconds: number; children: React.ReactNode }> = ({ seconds, children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const opacity = seconds > 0
+    ? interpolate(frame, [0, seconds * fps], [0, 1], { extrapolateRight: "clamp" }) : 1;
+  return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>;
+};
 
 export const promoFrames = (p: PromoProps, fps: number) =>
-  Math.round(fps * (p.clips.reduce((s, c) => s + c.durationS, 0)
-    + (p.title ? CARD_S : 0) + (p.endCard ? CARD_S : 0)));
+  Math.max(1, Math.round(fps * (p.clips.reduce((s, c) => s + c.durationS, 0)
+    + (p.title ? CARD_S : 0) + (p.endCard ? CARD_S : 0))));
 
 const Card: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
@@ -48,13 +62,15 @@ const Card: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const Caption: React.FC<{ text: string }> = ({ text }) => {
+const Caption: React.FC<{ text: string; at?: "top" | "bottom" }> = ({ text, at = "bottom" }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const y = interpolate(frame, [0, fps * 0.35], [20, 0], { extrapolateRight: "clamp" });
   const opacity = interpolate(frame, [0, fps * 0.35], [0, 1], { extrapolateRight: "clamp" });
   return (
-    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: height * 0.09 }}>
+    <AbsoluteFill style={at === "top"
+      ? { justifyContent: "flex-start", alignItems: "center", paddingTop: height * 0.08 }
+      : { justifyContent: "flex-end", alignItems: "center", paddingBottom: height * 0.09 }}>
       <div style={{
         opacity, transform: `translateY(${y}px)`, color: "white", fontSize: width * 0.05,
         fontWeight: 600, fontFamily: "-apple-system, 'PingFang TC', sans-serif",
@@ -67,7 +83,11 @@ const Caption: React.FC<{ text: string }> = ({ text }) => {
 };
 
 export const Promo: React.FC<PromoProps> = (p) => {
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
+  const musicLevel = p.musicVolume ?? (p.voice ? 0.35 : 1);
+  const musicVolume = (f: number) => musicLevel * interpolate(
+    f, [0, MUSIC_FADE_IN_S * fps, durationInFrames - MUSIC_FADE_OUT_S * fps, durationInFrames],
+    [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   let at = 0;
   const seq: React.ReactNode[] = [];
   if (p.title) {
@@ -78,14 +98,14 @@ export const Promo: React.FC<PromoProps> = (p) => {
     const len = Math.round(c.durationS * fps);
     seq.push(
       <Sequence key={`clip-${i}`} from={at} durationInFrames={len}>
-        <AbsoluteFill style={{ background: "black" }}>
+        <FadeIn seconds={p.fadeS ?? 0}>
           <OffthreadVideo
             src={staticFile(c.file)} muted
             startFrom={Math.round((c.fromS ?? 0) * fps)}
             style={{ width: "100%", height: "100%", objectFit: c.fit ?? "cover" }}
           />
-        </AbsoluteFill>
-        {c.caption ? <Caption text={c.caption} /> : null}
+        </FadeIn>
+        {c.caption ? <Caption text={c.caption} at={p.captionAt} /> : null}
       </Sequence>,
     );
     at += len;
@@ -99,10 +119,13 @@ export const Promo: React.FC<PromoProps> = (p) => {
       {(p.voiceCaptions ?? []).map((c, i) => (
         <Sequence key={`vc-${i}`} from={Math.round(c.fromS * fps)}
           durationInFrames={Math.max(1, Math.round((c.toS - c.fromS) * fps))}>
-          <Caption text={c.text} />
+          <Caption text={c.text} at={p.captionAt} />
         </Sequence>
       ))}
-      {p.music ? <Audio src={staticFile(p.music)} volume={p.musicVolume ?? (p.voice ? 0.35 : 1)} /> : null}
+      {p.music ? (
+        <Audio src={staticFile(p.music)} volume={musicVolume}
+          startFrom={Math.round((p.musicFromS ?? 0) * fps)} />
+      ) : null}
       {p.voice ? <Audio src={staticFile(p.voice)} /> : null}
     </AbsoluteFill>
   );
