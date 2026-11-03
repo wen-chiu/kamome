@@ -16,7 +16,7 @@ Labels follow `CLAUDE.md` rule 4. Each unmeasured claim names what would settle 
 the §3.3 rule, the beatmap tool and the desk harness exist; nothing a user sees changed. Where the
 build departs from the text below, the text was updated: the manifest gained five fields (§2.2), a
 crossing is two cues (`crossing`, `landing`), and the departure's photographs over a frozen card
-start its music like a stop. **After Chiu's listen the music plays straight through**
+are cues like a stop's. **After Chiu's listen the music plays straight through**
 (ADR 2026-11-03-the-music-plays-straight-through): §2.5 items 5–6 were built, heard and removed.
 The stop dip sounded broken, and the return and the photo lift went unnoticed. #361 is closed.
 
