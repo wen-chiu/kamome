@@ -73,7 +73,7 @@ Rules for this file:
 - **One refactor this needs (VERIFIED by reading, 2026-11-03):** the photo-change times are not
   exposed today. They are computed inline inside `focusIndex(atTime:deck:count:)`
   (`LinearTimelineStopScene.swift`: `rotateStart + k · slot`, with `count` from
-  `affordablePhotoCount`). PR 1 extracts that into one `photoSlotStartsS(deck:count:)` that
+  `affordablePhotoCount`). PR A extracts that into one `photoSlotStartsS(deck:count:)` that
   `focusIndex` and the cue sheet both call. `CameraPath.endRevealStartS` is `private`; it widens
   to internal, as `LegRange` did on 2026-09-02.
 - **No coordinate, name or country in a cue** — kind, time, stop index. §0 by construction.
@@ -253,14 +253,14 @@ and `Scripts/check-architecture.sh` enforces it (VERIFIED by reading both). The 
 }
 ```
 
-**It lands in PR 4, with the two files, not before.** Two facts of the checker decide that
+**It lands in PR A, with the two files, not before.** Two facts of the checker decide that
 (VERIFIED by reading `check-architecture.sh`):
 - A confined value is **one** path, matched as a prefix. Three named files need the checker to
   accept a list. A prefix such as `Core/ExportEngine/Recap` would admit every `Recap*` file and
   void the rule.
 - The checker **fails a rule that nothing imports** ("the confinement rule is dead"). An
   `AVFAudio` rule written today fails `./check.sh` until the renderer exists.
-- So PR 4 also teaches the checker to fail a listed path that does not exist, so that the rule
+- So PR A also teaches the checker to fail a listed path that does not exist, so that the rule
   never grants a permission to a file nobody wrote.
 
 **Why `AVFAudio` needs its own line:** `AVAudioEngine` lives in AVFAudio, which a file can import
@@ -269,7 +269,7 @@ without importing AVFoundation, and the checker matches the literal `import` lin
 **A hole that already exists (VERIFIED 2026-11-03, not this design's):** `import AVKit`
 re-exports AVFoundation. `UI/TripDetail/FilmPlayerSheet.swift` and `UI/Recap/RecapFinishedView.swift`
 use `AVPlayer` with only `import AVKit`. Any of the four AVKit files could build an
-`AVAssetWriter` and pass the check. Playback in the UI is legitimate, so PR 4 should not ban
+`AVAssetWriter` and pass the check. Playback in the UI is legitimate, so PR A should not ban
 AVKit; it should add a type check that `AVAssetWriter`, `AVAssetExportSession`,
 `AVMutableComposition` and `AVAudioEngine` appear only in the three files. Recorded as a trap
 in `HANDOFF.md`.
@@ -296,7 +296,7 @@ it can be read at); confining to `Core/ExportEngine/` (the rule would then guard
   each 1,024-frame chunk to the file as it goes, under the memory budget D2 prices.
 - **Cancel and leaving the app.** The audio task reads the same `shouldContinue` as the render
   loop. Whether `AVAssetExportSession` survives the app going to the background mid-mux is
-  UNKNOWN. *Settle:* one device export left during the last seconds (runbook row, PR 6).
+  UNKNOWN. *Settle:* one device export left during the last seconds (runbook row, PR B).
 - `ExportLogHistory` gains two stages, `music` and `mux`, so their cost is measured, not modelled.
 - A soundtrack failure **fails loudly but does not lose the film**: the silent film is kept and
   the sheet says the music could not be added, with 「再試一次」 that re-runs only §3.1–3.2.
@@ -319,8 +319,8 @@ fix (VERIFIED, same document §9), and the device time after it is not measured 
 adds about 1% or less. Changing the music in the player afterwards costs the audio render plus
 the mux, ~2–4 s / ~3–7 s, with no redrawing.
 
-*Settle:* PR 4's desk harness logs both stages on the simulator; on a phone, the `music` and
-`mux` stages of `ExportLogHistory` (PR 6, runbook row).
+*Settle:* PR A's desk harness logs both stages on the simulator; on a phone, the `music` and
+`mux` stages of `ExportLogHistory` (PR B, runbook row).
 
 ### 4.2 Screens
 
@@ -405,27 +405,40 @@ Recommendation: **ship v1 without it**, listen, and decide with a film in hand.
 |---|---|---|
 | 1 | Music leaves "Deferred" | **Decided 2026-11-03**: yes (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it) |
 | 2 | Tier (2026-07-20: free = silent) | **Decided 2026-11-03**: the free film has music too |
-| 3 | The architecture change in §3.3: two more files allowed AVFoundation, AVFAudio confined | **Confirmed 2026-11-03**; the JSON and checker change land in PR 4 with the files |
+| 3 | The architecture change in §3.3: two more files allowed AVFoundation, AVFAudio confined | **Confirmed 2026-11-03**; the JSON and checker change land in PR A with the files |
 | 4 | Tracks in the repository | **settled**: the repository is private (Chiu, 2026-11-03). Still never register the tracks with a Content ID service, or a user's shared film would be claimed against them |
 | 5 | Defaults: the `anthem` style for unlisted countries, 自動 on by default, the silent switch | **later**: after the music is made (Chiu, 2026-11-03) |
 | 6 | Bundle size (~36 MB) vs. download | open |
 | 7 | librosa as a desk-only tool (§5) | **Confirmed 2026-11-03**. Loudness uses ffmpeg, already a desk tool; no pyloudnorm |
 
-## 8. Build order — one PR each, each `./check.sh` green
+## 8. Build order — two PRs (Chiu, 2026-11-03: 「應該一起整體處理的地方就應該一起分析實作」)
 
-| # | PR | behaviour change? | device? |
-|---|---|---|---|
-| 0 | ADR: music opens, free included (done: ADR 2026-11-03) | — | — |
-| 1 | `FilmCueSheet` + tests (cues equal overlay frames) | none | no |
-| 2 | `kamome-beatmap.py` + manifest schema + static gate + one real track | none | no |
-| 3 | `SoundtrackArrangement` + tests (ending on end card ±1 sample, total = film duration, no stretch, accents within tolerance or unsynced, repeat for long films) | none | no |
-| 4 | Renderer + muxer + the §3.3 rule (list support, missing-path and type checks) + desk harness `TEST_RUNNER_KAMOME_SOUNDTRACK=<fixture>` writing a film with music to `~/Kamome-films/` | none (harness only) | no |
-| 5 | `PhotoMood` (analyser v2) + `SoundtrackPicker` + context + tests (deterministic, §0 log words) | none | timing on a phone |
-| 6 | Export wiring + `FilmRecord` migration + sheet row + player 「換音樂」 + copy | **yes** | yes — runbook rows below |
+The first plan had six PRs. Four of them were one system cut at its seams: PR 1 alone would have
+published a public API (`cueSheet()`) with no consumer, and PR 2's manifest schema would have been
+written on one side of a contract (Python) before the other side (Swift) existed. The cut that
+remains follows what each half risks and how each half is judged.
 
-New `Docs/device-runbook.md` rows for PR 6: added wall time (`music`, `mux` stages); audio on the
-phone speaker (does the stop dip read, or does it sound broken); the silent switch; a film shared
-to LINE and Instagram keeps its sound; an export left in the background still muxes.
+| PR | what | behaviour change? | judged by | was |
+|---|---|---|---|---|
+| **A — music works end to end at the desk** | §2.1 cue sheet (with the `focusIndex` refactor), §2.2 manifest, §2.5 arrangement, `soundtrack` config, §3 renderer + muxer + the §3.3 rule, §5 `Tools/kamome-beatmap.py` writing the manifest the Swift side decodes (one schema, one cross-check test), desk harness `TEST_RUNNER_KAMOME_SOUNDTRACK=<fixture>`, the §4.1a timings measured | none | **Chiu's ear**: one fixture film with one real track, in `~/Kamome-films/` | old PRs 1–4 |
+| **B — the app ships music** | §2.3 picker, §2.4 `PhotoMood` (analyser v2), §4.1 export wiring, `FilmRecord` + `PhotoAnalysisRecord` migrations in one schema bump, §4.2 sheet row and player 「換音樂」, copy and glossary, runbook rows | **yes** | **Chiu's eyes and a phone**: screenshots, the device runbook | old PRs 5–6 |
 
-**A visual change owes a render; this one owes a listen.** `./check.sh` cannot hear the film —
-every PR from 3 on ships one rendered film with music for Chiu.
+**Why not one PR:** A is the gate for B. Four rounds of music were rejected by ear
+(`Docs/handoff-music-rethink.md` A2); if the dips or cuts are rejected too, nothing in B should
+have been built on them. A changes nothing a user sees; B changes the product. They also need
+different evidence, a listen against screens and a phone. **Why B stays one:** the picker is
+untestable as a product without the export and the screen, and two migrations in two PRs would
+be two schema bumps for one feature.
+
+**If B grows too large,** `PhotoMood` is the piece to defer, never split: the picker then reads
+country and film shape only, and the mood signal arrives in a later PR with its own schema bump.
+
+Older references in this document and in ADR 2026-11-03 to "PR 1–4" mean PR A, and to "PR 5–6"
+mean PR B.
+
+New `Docs/device-runbook.md` rows, owed by PR B: added wall time (`music`, `mux` stages); audio
+on the phone speaker (does the stop dip read, or does it sound broken); the silent switch; a film
+shared to LINE and Instagram keeps its sound; an export left in the background still muxes.
+
+**A visual change owes a render; this one owes a listen.** `./check.sh` cannot hear the film.
+Both PRs ship a rendered film with music for Chiu.
