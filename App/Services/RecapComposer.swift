@@ -323,14 +323,23 @@ enum RecapComposer {
     /// leaving the flight in it put 9,024 km in front of a viewer before the film
     /// had started. The dates are the local dates where the trip began and
     /// ended (`TripClock`, #171), the same ones the boarding pass prints.
+    ///
+    /// **Short dates, then the day count** (Chiu 2026-11-03). `yMMMd` writes the
+    /// year once and drops whatever the two ends share — 「2024年5月3日至9日」,
+    /// "May 3 – 9, 2024" — where `.medium` wrote both dates whole. The days are
+    /// the closing card's own count (`dayCount`), so the two cards agree.
     static func titleSubtitle(trip: TripRecord, distanceM: Double?, clock: TripClock = .uniform()) -> String {
         let formatter = DateIntervalFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
+        formatter.dateTemplate = "yMMMd"
         let span = clock.localDateSpan(startedAt: trip.startedAt, endedAt: trip.endedAt ?? trip.startedAt)
-        let dates = formatter.string(from: span.first, to: span.last)
-        guard let distanceM else { return dates }
-        return "\(dates) · \(Int((distanceM / 1000).rounded())) km"
+        var parts = [
+            formatter.string(from: span.first, to: span.last),
+            String.localizedStringWithFormat(String(localized: "journey_days"), dayCount(trip: trip, clock: clock))
+        ]
+        if let distanceM {
+            parts.append("\(Int((distanceM / 1000).rounded())) km")
+        }
+        return parts.joined(separator: " · ")
     }
 
     /// The share payload the end-card QR would encode. **Unused by the Replay

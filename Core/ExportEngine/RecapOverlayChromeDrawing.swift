@@ -42,48 +42,98 @@ extension RecapOverlayRenderer {
     /// Three things, in the order a viewer needs them: the branding (small — it
     /// signs the film, it is not the subject), the trip's name, and its dates.
     /// All inside the lower band, so the establishing shot above stays untouched.
-    func drawTitleChrome(title: String, subtitle: String, into surface: RenderSurface) {
+    func drawTitleChrome(
+        title: String, subtitle: String, reveal: RecapTitleReveal = .settled, into surface: RenderSurface
+    ) {
         let scale = surface.scale
-        let bandHeight = CGFloat(surface.heightPx) * style.titleBandHeightFraction
-        drawTitleBand(height: bandHeight, into: surface)
-
+        let tokens = style.titleStack
         // A wider margin than the rest of the chrome: this is the one line a
         // viewer reads cold, and type running edge to edge reads as a caption
         // rather than as a title.
         let sideMargin = style.cardMarginPx * scale * style.titleSideMarginScale
         let layout = titleLayout(title, maxWidth: CGFloat(surface.widthPx) - sideMargin * 2, in: surface)
-        let markSide = style.titleMarkSidePx * scale * style.titleBandMarkScale
-        let brandPx = style.subtitleFontPx
+        let markSide = style.titleMarkSidePx * scale * tokens.markScale
         let titleH = titleBlockHeight(layout, in: surface)
-        let metaH = style.subtitleFontPx * scale
+        let ruleH = tokens.ruleHeightPx * scale
+        let metaPx = tokens.metaFontPx
+        let metaH = metaPx * scale
         let gap = style.cardPaddingPx * scale
         let centerX = CGFloat(surface.widthPx) / 2
 
-        // Walk down from the top of the stack, the same idiom the end card uses:
-        // branding, then the trip's name, then its dates.
-        let stackH = markSide + gap * 1.2 + titleH + gap * 0.8 + metaH
-        var cursorY = (bandHeight * style.titleStackCenterFraction) + stackH / 2
+        // Branding, the trip's name, a short rule, then its dates.
+        let stackH = markSide + gap + titleH + gap * 0.9 + ruleH + gap * 0.8 + metaH
+
+        // Centred in the band as designed — unless that would put the dates on
+        // the map credit, which is as tall as its licence makes it. Then the
+        // stack rises clear of it and the band grows by the same amount, so the
+        // type keeps its place on the band's solid ground.
+        let designedBandH = CGFloat(surface.heightPx) * style.titleBandHeightFraction
+        let designedBottom = designedBandH * style.titleStackCenterFraction - stackH / 2
+        let creditTop = surface.mapCredit.map { $0.isEmpty ? 0 : mapCreditPlate($0, in: surface).pill.maxY } ?? 0
+        let lift = max(0, creditTop + tokens.creditClearancePx * scale - designedBottom)
+        withArrival(reveal.band, exit: reveal.exit, in: surface) { _ in
+            drawTitleBand(height: designedBandH + lift, into: surface)
+        }
+
+        var cursorY = designedBottom + lift + stackH
 
         cursorY -= markSide
-        let brandW = textWidth(RecapWordmark.text, fontPx: brandPx, in: surface)
-        let lockupW = markSide + gap * 0.5 + brandW
-        drawMark(
-            centeredAt: CGPoint(x: centerX - lockupW / 2 + markSide / 2, y: cursorY + markSide / 2),
-            side: markSide, in: surface
-        )
-        drawText(
-            RecapWordmark.text,
-            at: CGPoint(x: centerX - lockupW / 2 + markSide + gap * 0.5, y: cursorY + markSide * 0.32),
-            fontPx: brandPx, color: style.chromeMetaColor, in: surface
-        )
+        let brandY = cursorY
+        withArrival(reveal.brand, exit: reveal.exit, in: surface) { drop in
+            drawBrandLockup(centerX: centerX, bottomY: brandY - drop, markSide: markSide, in: surface)
+        }
 
-        cursorY -= gap * 1.2 + titleH
-        drawTitleBlock(layout, centerX: centerX, bottomY: cursorY, in: surface)
+        cursorY -= gap + titleH
+        let nameY = cursorY
+        withArrival(reveal.name, exit: reveal.exit, in: surface) { drop in
+            drawTitleBlock(layout, centerX: centerX, bottomY: nameY - drop, in: surface)
+        }
+
+        // The rule draws outward from the centre rather than rising.
+        cursorY -= gap * 0.9 + ruleH
+        let ruleW = tokens.ruleWidthPx * scale * reveal.rule
+        if ruleW > 0.5, reveal.exit > 0.001 {
+            surface.context.setFillColor(style.chromeAccentColor.copy(alpha: reveal.exit) ?? style.chromeAccentColor)
+            surface.context.addPath(
+                CGPath(roundedRect: CGRect(x: centerX - ruleW / 2, y: cursorY, width: ruleW, height: ruleH),
+                       cornerWidth: ruleH / 2, cornerHeight: ruleH / 2, transform: nil)
+            )
+            surface.context.fillPath()
+        }
 
         cursorY -= gap * 0.8 + metaH
+        let metaY = cursorY
+        withArrival(reveal.meta, exit: reveal.exit, in: surface) { drop in
+            drawTitleMeta(subtitle, bottomY: metaY - drop, maxWidth: CGFloat(surface.widthPx) - sideMargin * 2,
+                          in: surface)
+        }
+    }
+
+    /// The dates line, tracked and centred, shrunk only if it would not fit.
+    private func drawTitleMeta(_ subtitle: String, bottomY: CGFloat, maxWidth: CGFloat, in surface: RenderSurface) {
+        let tokens = style.titleStack
+        let text = subtitle.uppercased()
+        let fittedPx = fittedFontPx(text, preferred: tokens.metaFontPx, maxWidth: maxWidth, in: surface)
         drawCenteredText(
-            subtitle.uppercased(), centerX: centerX, baselineY: cursorY + metaH * 0.22,
-            fontPx: style.subtitleFontPx, color: style.chromeMetaColor, in: surface
+            text, centerX: CGFloat(surface.widthPx) / 2,
+            baselineY: bottomY + tokens.metaFontPx * surface.scale * 0.22,
+            fontPx: fittedPx, color: style.chromeMetaColor,
+            tracking: fittedPx * tokens.metaTrackingEm * surface.scale, in: surface
+        )
+    }
+
+    /// The mark and the wordmark as one centred unit, its bottom at `bottomY`.
+    private func drawBrandLockup(centerX: CGFloat, bottomY: CGFloat, markSide: CGFloat, in surface: RenderSurface) {
+        let brandPx = style.titleStack.brandFontPx
+        let tracking = brandPx * style.titleStack.brandTrackingEm * surface.scale
+        let brandW = textWidth(RecapWordmark.text, fontPx: brandPx, tracking: tracking, in: surface)
+        let markGap = markSide * 0.3
+        let left = centerX - (markSide + markGap + brandW) / 2
+        drawMark(centeredAt: CGPoint(x: left + markSide / 2, y: bottomY + markSide / 2), side: markSide, in: surface)
+        drawText(
+            RecapWordmark.text,
+            at: CGPoint(x: left + markSide + markGap, y: bottomY + markSide * 0.5 - brandPx * surface.scale * 0.36),
+            fontPx: brandPx, color: style.chromeMetaColor, tracking: tracking, in: surface
         )
     }
 

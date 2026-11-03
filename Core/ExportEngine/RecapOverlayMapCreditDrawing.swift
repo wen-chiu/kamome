@@ -44,8 +44,8 @@ extension RecapOverlayRenderer {
     /// **Bottom-left, not bottom-right**, on the film's own layout rather than
     /// on the snapshotter's habit: the HUD owns both *top* corners (day on the
     /// left, distance on the right), the end card's figures are centred, and the
-    /// title stack sits at 0.46 of its band — so the bottom-left is the one
-    /// corner no beat competes for.
+    /// title stack rises clear of the credit (`titleStack.creditClearancePx`) — so the
+    /// bottom-left is the one corner no beat competes for.
     ///
     /// **Never truncated and never fitted.** Every other string in this renderer
     /// is trip data of unknown length and shrinks to fit; this one is a fixed
@@ -61,17 +61,10 @@ extension RecapOverlayRenderer {
         guard !text.isEmpty else { return }
         let scale = surface.scale
         let tokens = style.mapCredit
-        let margin = tokens.marginPx * scale
         let padding = CGSize(width: tokens.pillPaddingXPx * scale, height: tokens.pillPaddingYPx * scale)
         let fontPx = tokens.fontPx
-        let maxTextWidth = CGFloat(surface.widthPx) - 2 * margin - 2 * padding.width
-        let lines = mapCreditLines(text, maxWidth: maxTextWidth, in: surface)
+        let (pill, lines) = mapCreditPlate(text, in: surface)
         let lineStep = fontPx * tokens.lineHeightEm * scale
-        let pill = CGRect(
-            x: margin, y: margin,
-            width: (lines.map { textWidth($0, fontPx: fontPx, in: surface) }.max() ?? 0) + padding.width * 2,
-            height: fontPx * scale + CGFloat(lines.count - 1) * lineStep + padding.height * 2
-        )
         // One line keeps the HUD's capsule; more keep its corner, not its shape.
         let singleLineHeight = fontPx * scale + padding.height * 2
         drawPill(pill, fill: tokens.pillColor, border: tokens.pillBorderColor,
@@ -87,6 +80,26 @@ extension RecapOverlayRenderer {
                 fontPx: fontPx, color: tokens.textColor, in: surface
             )
         }
+    }
+
+    /// **Where the credit's plate lands, and the lines it holds** — the one
+    /// measurement both the credit and the opening title read, so the title can
+    /// never be laid out against a credit shorter than the one drawn.
+    func mapCreditPlate(_ text: String, in surface: RenderSurface) -> (pill: CGRect, lines: [String]) {
+        let scale = surface.scale
+        let tokens = style.mapCredit
+        let margin = tokens.marginPx * scale
+        let padding = CGSize(width: tokens.pillPaddingXPx * scale, height: tokens.pillPaddingYPx * scale)
+        let fontPx = tokens.fontPx
+        let maxTextWidth = CGFloat(surface.widthPx) - 2 * margin - 2 * padding.width
+        let lines = mapCreditLines(text, maxWidth: maxTextWidth, in: surface)
+        let lineStep = fontPx * tokens.lineHeightEm * scale
+        let pill = CGRect(
+            x: margin, y: margin,
+            width: (lines.map { textWidth($0, fontPx: fontPx, in: surface) }.max() ?? 0) + padding.width * 2,
+            height: fontPx * scale + CGFloat(lines.count - 1) * lineStep + padding.height * 2
+        )
+        return (pill, lines)
     }
 
     /// The credit broken into lines no wider than `maxWidth`: whole ` · `

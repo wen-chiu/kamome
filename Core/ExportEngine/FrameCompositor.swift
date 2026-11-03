@@ -190,9 +190,10 @@ public struct FrameCompositor {
         let camera = timeline.cameraFrame(atTime: time)
         // The projection carries the keyframe cross-fade blend, so the subject
         // and overlays track the map through a dolly/fade.
-        let surface = RenderSurface(context: context, widthPx: widthPx, heightPx: heightPx, scale: scale) { lat, lon in
+        var surface = RenderSurface(context: context, widthPx: widthPx, heightPx: heightPx, scale: scale) { lat, lon in
             background.point(lat: lat, lon: lon)
         }
+        surface.mapCredit = credit
         let contents = timeline.overlayContents(atTime: time)
 
         for content in contents where Self.drawsBelowSubject(content) {
