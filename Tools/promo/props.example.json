@@ -1,0 +1,9 @@
+{
+  "title": "一趟旅程\n一部值得留下的影片",
+  "clips": [
+    { "file": "example/film.mp4", "fromS": 0, "durationS": 6, "caption": "匯入照片，Kamome 重建你的路線" },
+    { "file": "example/app.mp4", "fromS": 0, "durationS": 5, "caption": "每一站，都是你拍下的畫面" }
+  ],
+  "endCard": "Kamome\nApp Store",
+  "musicVolume": 0.8
+}
