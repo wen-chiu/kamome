@@ -25,15 +25,47 @@
   },
 
   "_confined_comment": [
-    "An SDK listed here may be imported only under the given path. MapKit and",
-    "Photos are deliberately NOT here: a CI comment claimed each was confined to",
-    "one file, and on 2026-08-31 that was measured false — MapKit is in 3 files",
-    "and Photos in 4, all legitimate (a live map view is not the film renderer).",
-    "The claim was wrong, not the code."
+    "An SDK listed here may be imported only under the given path, or under one",
+    "of the listed paths: a path ending in / is a directory, any other is one",
+    "file, and a listed path that does not exist fails the check, so a rule never",
+    "grants a permission to a file nobody wrote. MapKit and Photos are",
+    "deliberately NOT here: a CI comment claimed each was confined to one file,",
+    "and on 2026-08-31 that was measured false — MapKit is in 3 files and Photos",
+    "in 4, all legitimate (a live map view is not the film renderer). The claim",
+    "was wrong, not the code.",
+    "",
+    "AVFoundation: the video encoder, the soundtrack renderer and the muxer",
+    "(ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it). AVFAudio has",
+    "its own line because AVAudioEngine can be imported without AVFoundation."
   ],
   "confined": {
     "MapLibre":     "App/Services/MapLibreSnapshotProvider.swift",
     "GRDB":         "Core/Persistence/",
-    "AVFoundation": "Core/ExportEngine/RecapVideoEncoder.swift"
+    "AVFoundation": ["Core/ExportEngine/RecapVideoEncoder.swift",
+                     "Core/ExportEngine/RecapSoundtrackRenderer.swift",
+                     "Core/ExportEngine/RecapFilmMuxer.swift"],
+    "AVFAudio":     ["Core/ExportEngine/RecapSoundtrackRenderer.swift"]
+  },
+
+  "_confined_types_comment": [
+    "`import AVKit` re-exports AVFoundation, so the import rule alone lets a UI",
+    "file that plays a film also build a writer (HANDOFF.md trap). Playback in",
+    "the UI is legitimate, so AVKit is not banned; instead each type below — or",
+    "any type whose name begins with it (AVAssetWriterInput, …) — may appear",
+    "only in the listed files. Comments are not counted."
+  ],
+  "confined_types": {
+    "AVAssetWriter":        ["Core/ExportEngine/RecapVideoEncoder.swift",
+                             "Core/ExportEngine/RecapSoundtrackRenderer.swift",
+                             "Core/ExportEngine/RecapFilmMuxer.swift"],
+    "AVAssetExportSession": ["Core/ExportEngine/RecapVideoEncoder.swift",
+                             "Core/ExportEngine/RecapSoundtrackRenderer.swift",
+                             "Core/ExportEngine/RecapFilmMuxer.swift"],
+    "AVMutableComposition": ["Core/ExportEngine/RecapVideoEncoder.swift",
+                             "Core/ExportEngine/RecapSoundtrackRenderer.swift",
+                             "Core/ExportEngine/RecapFilmMuxer.swift"],
+    "AVAudioEngine":        ["Core/ExportEngine/RecapVideoEncoder.swift",
+                             "Core/ExportEngine/RecapSoundtrackRenderer.swift",
+                             "Core/ExportEngine/RecapFilmMuxer.swift"]
   }
 }

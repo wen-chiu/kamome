@@ -123,8 +123,9 @@ public struct CameraPath {
     /// being presented).
     private let wideEndS: Double
     /// The closing reveal: eases out once the last stop is done, landing exactly
-    /// as the end card arrives.
-    private let endRevealStartS: Double?
+    /// as the end card arrives. Internal, not private, since 2026-11-03: the
+    /// film's cue sheet reads it (`FilmCueSheet`), as `LegRange` was widened.
+    let endRevealStartS: Double?
     private let endRevealFrame: CameraFrame
     /// When the opening finishes handing the frame to the body camera.
     private let openingEndsS: Double
