@@ -15,8 +15,9 @@ import Foundation
 ///
 /// **Bottom-left is a layout fact, not a habit.** The HUD owns both *top*
 /// corners (day on the left, distance on the right), the end card's figures are
-/// centred, and the title stack sits at `titleStackCenterFraction` 0.46 of its
-/// band — so the bottom-left is the one corner no beat competes for.
+/// centred, and the title stack rises clear of the credit by
+/// `titleStack.creditClearancePx` — so the bottom-left is the one corner no beat
+/// competes for.
 public struct RecapMapCreditStyle {
     /// ⚠️ **This has a floor**: 10 px in the film, held by
     /// `RecapMapCreditTests.testTheCreditIsLegibleAtTheFilmsOwnSize`. Until

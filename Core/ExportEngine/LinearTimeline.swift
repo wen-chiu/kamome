@@ -325,7 +325,7 @@ public struct LinearTimeline {
     public func overlayContents(atTime time: Double) -> [OverlayContent] {
         var contents: [OverlayContent] = [.routeReveal(revealedLegs(atTime: time))]
         if time < titleCardS {
-            contents.append(.titleChrome(title: title, subtitle: subtitle))
+            contents.append(.titleChrome(title: title, subtitle: subtitle, elapsedS: time, holdS: titleCardS))
         }
         if time >= durationS - endCardS {
             contents.append(.endChrome(title: title, figures: endCardFigures, shareURL: shareURL, tagline: endCardTagline))

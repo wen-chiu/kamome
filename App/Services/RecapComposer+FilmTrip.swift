@@ -31,10 +31,12 @@ extension RecapComposer {
             photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
             labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
         )
-        // The film ends at the destination (ADR 2026-09-01): the flight home and
+        // An import draws only the route between its stops (`TripRoute`); the
+        // film ends at the destination (ADR 2026-09-01): the flight home and
         // everything after it come off here, before anything is classified.
+        let routeSegments = detail.routeSegments
         let film = filmRecords(
-            segments: detail.segments, stops: detail.stops,
+            segments: routeSegments, stops: detail.stops,
             epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM,
             homeRadiusM: config.discovery.awayRadiusM
@@ -48,8 +50,8 @@ extension RecapComposer {
         )
         // The title's distance is the recorded total less every flight in it —
         // the flight home included, though the film no longer shows it (#278).
-        let wholeTripLegs = film.segments.count == detail.segments.count ? legs : Self.legs(
-            from: detail.segments, epsilonM: config.simplify.epsilonM,
+        let wholeTripLegs = film.segments.count == routeSegments.count ? legs : Self.legs(
+            from: routeSegments, epsilonM: config.simplify.epsilonM,
             matchedEpsilonM: config.matching.displayEpsilonM
         )
         guard let trip = trip(
@@ -69,7 +71,7 @@ extension RecapComposer {
         ) else { return nil }
         return FilmComposition(
             trip: trip,
-            droppedSegments: detail.segments.count - film.segments.count,
+            droppedSegments: routeSegments.count - film.segments.count,
             droppedStops: detail.stops.count - film.stops.count,
             analysed: photos.analysis != nil
         )
