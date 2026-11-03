@@ -6,8 +6,9 @@ beats 景點出現或照片出現可以加強音樂 … 先產生如何實作的
 
 This is the *app* half. Where the music comes from (ACE-Step 1.5 / Stable Audio 3 generated at the
 desk, five styles × three moods, beatmap measured once) is `Docs/handoff-music-rethink.md` and is
-not repeated here. Music in the film is still **deferred** (`Docs/current-state.md`, "Deferred");
-§7 lists what Chiu must decide before any of this is built. Nothing here changes the app.
+not repeated here. **Music left Deferred on 2026-11-03, free films included**
+(ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it); §7 says what is still open.
+Nothing here changes the app yet.
 
 Labels follow `CLAUDE.md` rule 4. Each unmeasured claim names what would settle it.
 
@@ -253,6 +254,26 @@ own confined SDK, or the rule has a hole. **Architecture change → Chiu confirm
   the sheet says the music could not be added, with 「再試一次」 that re-runs only §3.1–3.2.
   Not a silent fallback (`CHARTER.md` §4): the person is told.
 
+### 4.1a What the music costs in export time (Chiu asked 2026-11-03)
+
+All INFERRED: nothing here was measured on an Apple device. The inputs are the shipped
+`video_bitrate_mbps` 5 and the proposed 192 kbps audio.
+
+| stage | 90 s film | 180 s film | adds to the wait? |
+|---|---|---|---|
+| arrange (pure Swift, a few hundred cues) | < 0.01 s | < 0.01 s | no |
+| render + AAC-encode the audio (offline `AVAudioEngine`, assumed ≥ 50× real time) | ~1–2 s | ~2–4 s | **no**: it runs while the map draws, and the map waits on snapshots 65% of the time (VERIFIED, §9 of `Docs/handoff-export-performance.md`), so a CPU is free |
+| mux, video copied (56 MB / 112 MB of video on flash) | ~0.5–2 s | ~1–3 s | **yes**: the only stage after the last frame |
+| **added wall time** | **~1–2 s** | **~1–3 s** | worst case, if the audio ran after the video instead: ~2–4 s / ~3–7 s |
+
+For scale: the drawing itself is minutes. A 338 s film took 942 s on an iPhone before the tile
+fix (VERIFIED, same document §9), and the device time after it is not measured yet. The music
+adds about 1% or less. Changing the music in the player afterwards costs the audio render plus
+the mux, ~2–4 s / ~3–7 s, with no redrawing.
+
+*Settle:* PR 4's desk harness logs both stages on the simulator; on a phone, the `music` and
+`mux` stages of `ExportLogHistory` (PR 6, runbook row).
+
 ### 4.2 Screens
 
 - **Film sheet (`RecapView`)** — one new row in the settings card: 「音樂」, value 「自動」, a menu
@@ -326,23 +347,21 @@ Recommendation: **ship v1 without it**, listen, and decide with a film in hand.
 
 ## 7. What Chiu decides before any code (rule 2, rule 6)
 
-1. **Music leaves "Deferred"** and an ADR says so (scope: v1 = §1–§5, not §6).
-2. **Tier.** ADR 2026-07-20 says *free = silent export, premium = in-app track* (`Docs/decisions.md`
-   line 593). Does it still stand? No paywall exists, so "premium" has nowhere to live yet.
-3. **The architecture change** in §3.3 (two files allowed AVFoundation, AVFAudio confined).
-4. **Public repository.** Tracks committed here are public to anyone. Alternatives: Git LFS in a
-   private store fetched at build time, or accept it (AI output may carry no copyright anyway,
-   rethink C3). **And never register the tracks with a Content ID service** — a user's shared
-   film would be claimed against them.
-5. **Defaults:** the `anthem` style for unlisted countries; 自動 on by default; whether the
-   silent switch silences the player.
-6. **Bundle size** (~36 MB) vs. download.
+| # | question | status |
+|---|---|---|
+| 1 | Music leaves "Deferred" | **Decided 2026-11-03**: yes (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it) |
+| 2 | Tier (2026-07-20: free = silent) | **Decided 2026-11-03**: the free film has music too |
+| 3 | The architecture change in §3.3: two more files allowed AVFoundation, AVFAudio confined | **open**: Chiu confirms before PR 4 |
+| 4 | Tracks in the repository | **settled**: the repository is private (Chiu, 2026-11-03). Still never register the tracks with a Content ID service, or a user's shared film would be claimed against them |
+| 5 | Defaults: the `anthem` style for unlisted countries, 自動 on by default, the silent switch | **later**: after the music is made (Chiu, 2026-11-03) |
+| 6 | Bundle size (~36 MB) vs. download | open |
+| 7 | librosa + pyloudnorm as desk-only tools (§5) | open: before PR 2 |
 
 ## 8. Build order — one PR each, each `./check.sh` green
 
 | # | PR | behaviour change? | device? |
 |---|---|---|---|
-| 0 | ADR: music opens, scope v1, answers to §7 | — | — |
+| 0 | ADR: music opens, free included (done: ADR 2026-11-03) | — | — |
 | 1 | `FilmCueSheet` + tests (cues equal overlay frames) | none | no |
 | 2 | `kamome-beatmap.py` + manifest schema + static gate + one real track | none | no |
 | 3 | `SoundtrackArrangement` + tests (ending on end card ±1 sample, total = film duration, no stretch, accents within tolerance or unsynced, repeat for long films) | none | no |
