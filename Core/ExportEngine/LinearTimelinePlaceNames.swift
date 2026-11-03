@@ -79,7 +79,8 @@ extension LinearTimeline {
     }
 
     /// The name a stop is being presented under at `time`, and how strongly:
-    /// its lead-in label, then its photo deck, or a quiet stop's passing label.
+    /// its lead-in label, then its photo deck, a quiet stop's passing label, or
+    /// the departure's over the opening.
     func presentedStopName(atTime time: Double) -> (name: String, opacity: Double)? {
         if let active = activeScene(atTime: time) {
             guard let name = displayName(of: active.hold.stopIndex) else { return nil }
@@ -87,8 +88,10 @@ extension LinearTimeline {
             let deck = time >= window.start ? deckOpacity(atTime: time, deck: window) : 0
             return (name, max(leadLabelOpacity(atTime: time, hold: active.hold, deck: window), deck))
         }
-        guard let quiet = quietStop(atTime: time), let name = displayName(of: quiet.hold.stopIndex) else { return nil }
-        return (name, quietLabelOpacity(atTime: time, hold: quiet.hold))
+        if let quiet = quietStop(atTime: time), let name = displayName(of: quiet.hold.stopIndex) {
+            return (name, quietLabelOpacity(atTime: time, hold: quiet.hold))
+        }
+        return departure.map { ($0.name, departureLabelOpacity(atTime: time)) }
     }
 
     /// The names, for the whole body of the film: they come up as the title

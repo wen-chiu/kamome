@@ -59,6 +59,8 @@ public struct LinearTimeline {
     /// `fitted(into:)`.
     public internal(set) var substrateBand: MercatorBand?
     let stops: [RecapTrip.Stop]
+    /// Where the journey set out, when the film does not stop there (`LinearTimelineDeparture`).
+    let departure: RecapTrip.Stop?
     let holds: [CameraPath.Hold]
     /// Internal, not private, since 2026-09-03: `LinearTimelineCrossing` owns
     /// the trail reveal, and Swift scopes `private` to the file. Same widening,
@@ -198,7 +200,9 @@ public struct LinearTimeline {
         guard let planned = camera(plan?.totalS ?? pacing.fixedTotalS, cut.config, nil) else { return nil }
         // Travel is then trimmed to what its windows need (ADR file 2026-09-28).
         let path = Self.earningTravel(planned, plan: plan, stopHoldsS: stopHolds, config: cut.config, rebuild: camera)
-        departureCut = cut.departure
+        // Both ways the film says where it set out: a type-2 film's photographs
+        // over the frozen frame, or any other film's first stop when it is not held.
+        (departureCut, departure) = (cut.departure, untrimmedTrip.filmType.hasDestinationAbroad ? nil : trip.departure)
 
         self.path = Self.announced(path, trip: trip)
         durationS = path.durationS
@@ -337,6 +341,7 @@ public struct LinearTimeline {
                 opacity: quietLabelOpacity(atTime: time, hold: quiet.hold)
             ))
         }
+        if let departure = departureLabel(atTime: time) { contents.append(departure) }
         // Under the card and under everything else: the two ends are the ground
         // the opening is read against, not chrome over it.
         if let ends = flightEnds(atTime: time) { contents.insert(ends, at: 1) }
