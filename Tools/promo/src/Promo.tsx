@@ -14,6 +14,7 @@ export type Clip = {
   fit?: "cover" | "contain";
   fadeS?: number;        // overrides the project's fade; 0 for a cut that continues the last clip
   captionAt?: "top" | "bottom"; // overrides the project's caption position
+  rate?: number;         // playback speed: the clip spends durationS × rate of the source
 };
 
 // The opening: a title over a phone that plays an app capture (a simulator
@@ -87,6 +88,7 @@ export type Outro = {
   icon?: string;
   name?: string;
   tagline?: string;
+  speed?: number;        // >1 lands the figures, headline and icon sooner, for a short cut
 };
 
 export type PromoProps = {
@@ -99,6 +101,9 @@ export type PromoProps = {
   // Kamome films keep stop names and attribution at the bottom: "top" clears them.
   captionAt?: "top" | "bottom";
   captionSize?: number;  // caption type as a fraction of the frame width (0.05)
+  // Distance from the frame's edge as a fraction of its height (0.08 top, 0.09
+  // bottom). A letterboxed film's bands hold the captions with small insets.
+  captionInset?: { top?: number; bottom?: number };
   voice?: string;        // a voice-over made by Tools/kamome-voice.py
   musicVolume?: number;
   // The voice-over's own lines, timed from the start of the video. Paste them
@@ -107,6 +112,9 @@ export type PromoProps = {
   voiceCaptions?: { fromS: number; toS: number; text: string }[];
   intro?: Intro;
   outro?: Outro;
+  // Behind a "contain" clip: a film narrower than the frame's aspect (1080 × 1920
+  // in 886 × 1920) keeps its edges, and the bands match the films' night sea.
+  letterbox?: string;
   accent?: string;       // the outro's figures; defaults to the films' route cyan
 };
 
@@ -114,12 +122,12 @@ const CARD_S = 2;
 const MUSIC_FADE_IN_S = 0.5;
 const MUSIC_FADE_OUT_S = 1.5;
 
-const FadeIn: React.FC<{ seconds: number; children: React.ReactNode }> = ({ seconds, children }) => {
+const FadeIn: React.FC<{ seconds: number; bg?: string; children: React.ReactNode }> = ({ seconds, bg, children }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const opacity = seconds > 0
     ? interpolate(frame, [0, seconds * fps], [0, 1], { extrapolateRight: "clamp" }) : 1;
-  return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>;
+  return <AbsoluteFill style={{ opacity, background: bg }}>{children}</AbsoluteFill>;
 };
 
 export const promoFrames = (p: PromoProps, fps: number) =>
@@ -192,7 +200,9 @@ const OutroBeat: React.FC<{ o: Outro; accent: string }> = ({ o, accent }) => {
   const pop = (atS: number, damping = 12) =>
     spring({ frame: frame - atS * fps, fps, config: { damping, mass: 0.6 } });
   const stats = o.stats ?? [];
-  const statsAt = 0.35, headlineAt = 0.35 + stats.length * 0.15 + 0.55, iconAt = headlineAt + 0.8;
+  const sp = o.speed ?? 1;
+  const statsAt = 0.35 / sp, step = 0.15 / sp;
+  const headlineAt = statsAt + stats.length * step + 0.55 / sp, iconAt = headlineAt + 0.8 / sp;
   return (
     <AbsoluteFill style={{ background: "black", overflow: "hidden" }}>
       <Img src={staticFile(o.bg)} style={{
@@ -202,9 +212,9 @@ const OutroBeat: React.FC<{ o: Outro; accent: string }> = ({ o, accent }) => {
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", fontFamily: FONT, color: "white" }}>
         <div style={{ display: "flex", gap: width * 0.07, marginBottom: width * 0.1 }}>
           {stats.map((s, i) => {
-            const at = statsAt + i * 0.15;
+            const at = statsAt + i * step;
             const k = pop(at);
-            const count = interpolate(t, [at, at + 0.9], [0, s.value],
+            const count = interpolate(t, [at, at + 0.9 / sp], [0, s.value],
               { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (x) => 1 - Math.pow(1 - x, 3) });
             return (
               <div key={i} style={{ textAlign: "center", opacity: k, transform: `translateY(${(1 - k) * 40}px)` }}>
@@ -254,15 +264,16 @@ const Card: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const Caption: React.FC<{ text: string; at?: "top" | "bottom"; size?: number }> = ({ text, at = "bottom", size = 0.05 }) => {
+const Caption: React.FC<{ text: string; at?: "top" | "bottom"; size?: number; inset?: { top?: number; bottom?: number } }> =
+  ({ text, at = "bottom", size = 0.05, inset }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const y = interpolate(frame, [0, fps * 0.35], [20, 0], { extrapolateRight: "clamp" });
   const opacity = interpolate(frame, [0, fps * 0.35], [0, 1], { extrapolateRight: "clamp" });
   return (
     <AbsoluteFill style={at === "top"
-      ? { justifyContent: "flex-start", alignItems: "center", paddingTop: height * 0.08 }
-      : { justifyContent: "flex-end", alignItems: "center", paddingBottom: height * 0.09 }}>
+      ? { justifyContent: "flex-start", alignItems: "center", paddingTop: height * (inset?.top ?? 0.08) }
+      : { justifyContent: "flex-end", alignItems: "center", paddingBottom: height * (inset?.bottom ?? 0.09) }}>
       <div style={{
         opacity, transform: `translateY(${y}px)`, color: "white", fontSize: width * size,
         fontWeight: 600, fontFamily: "-apple-system, 'PingFang TC', sans-serif",
@@ -295,14 +306,14 @@ export const Promo: React.FC<PromoProps> = (p) => {
     const len = Math.round(c.durationS * fps);
     seq.push(
       <Sequence key={`clip-${i}`} from={at} durationInFrames={len}>
-        <FadeIn seconds={c.fadeS ?? p.fadeS ?? 0}>
+        <FadeIn seconds={c.fadeS ?? p.fadeS ?? 0} bg={p.letterbox}>
           <OffthreadVideo
-            src={staticFile(c.file)} muted
+            src={staticFile(c.file)} muted playbackRate={c.rate ?? 1}
             startFrom={Math.round((c.fromS ?? 0) * fps)}
             style={{ width: "100%", height: "100%", objectFit: c.fit ?? "cover" }}
           />
         </FadeIn>
-        {c.caption ? <Caption text={c.caption} at={c.captionAt ?? p.captionAt} size={p.captionSize} /> : null}
+        {c.caption ? <Caption text={c.caption} at={c.captionAt ?? p.captionAt} size={p.captionSize} inset={p.captionInset} /> : null}
       </Sequence>,
     );
     at += len;
@@ -321,7 +332,7 @@ export const Promo: React.FC<PromoProps> = (p) => {
       {(p.voiceCaptions ?? []).map((c, i) => (
         <Sequence key={`vc-${i}`} from={Math.round(c.fromS * fps)}
           durationInFrames={Math.max(1, Math.round((c.toS - c.fromS) * fps))}>
-          <Caption text={c.text} at={p.captionAt} size={p.captionSize} />
+          <Caption text={c.text} at={p.captionAt} size={p.captionSize} inset={p.captionInset} />
         </Sequence>
       ))}
       {p.music ? (
