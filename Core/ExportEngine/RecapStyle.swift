@@ -96,9 +96,8 @@ public struct RecapStyle {
     public var titleStackCenterFraction: CGFloat = 0.46
     /// The title's side margin, as a multiple of `cardMarginPx`.
     public var titleSideMarginScale: CGFloat = 1.6
-    /// The mark shrinks inside the band — branding signs the opening, it is not
-    /// the subject of it.
-    public var titleBandMarkScale: CGFloat = 0.55
+    /// The opening title's own type and spacing (`RecapTitleStackStyle`).
+    public var titleStack = RecapTitleStackStyle()
 
     // Legacy panel tokens. ⚠️ **Nothing draws these** — the stop label's pill
     // they belonged to was removed on 2026-07-31 when the label was restyled to
