@@ -47,7 +47,7 @@ public struct SoundtrackPlan: Equatable {
     public let finalHitS: Double
     /// How far into the track the film starts (§2.5 item 3).
     public let introOffsetS: Double
-    /// How many times a repeatable section was played again (§2.5 item 4).
+    /// How many times a repeatable stretch was played again (§2.5 item 4).
     public let repeats: Int
 }
 
@@ -65,7 +65,7 @@ public enum SoundtrackArrangement {
     }
 
     /// How the body before the ending is played: from `introOffsetS`, through
-    /// `repeats` extra plays of `section`, to the phrase line `cutBar`.
+    /// `repeats` extra plays of the stretch `section`, to the phrase line `cutBar`.
     struct BodyRoute {
         let introOffsetS: Double
         let section: SoundtrackManifest.Section?
@@ -139,7 +139,7 @@ public enum SoundtrackArrangement {
         let first = manifest.sections[0]
         let introBars = first.role == .intro ? max(first.bars, phraseBars) : phraseBars
         let maxOffsetS = manifest.timeS(bar: first.startBar + introBars)
-        let repeatable = manifest.sections.filter { $0.repeatable && ($0.role == .body || $0.role == .peak) }
+        let repeatable = repeatableStretches(manifest)
         let shortest = repeatable.map { Double($0.bars) * manifest.barS }.min() ?? .infinity
         let room = manifest.timeS(bar: manifest.outro?.startBar ?? 0)
         let mostRepeats = shortest.isFinite ? Int(((outroFilmS - room) / shortest).rounded(.up)) + 1 : 0
@@ -154,6 +154,29 @@ public enum SoundtrackArrangement {
             if !found.isEmpty { return found }
         }
         return found
+    }
+
+    /// What may play again: any run of sections that begins on a repeatable
+    /// section and ends on one, with no intro or outro inside. **The longest
+    /// run wins, by needing the fewest repeats**: a 180 s film on a 120 s track
+    /// replays verse-lift-chorus once rather than one chorus five times — the
+    /// same eight bars over and over is the assembled sound four rounds of
+    /// music were rejected for (`handoff-music-rethink.md` A2; desk render
+    /// 2026-11-03).
+    static func repeatableStretches(_ manifest: SoundtrackManifest) -> [SoundtrackManifest.Section] {
+        let sections = manifest.sections
+        let ends = sections.indices.filter { sections[$0].repeatable && [.body, .peak].contains(sections[$0].role) }
+        return ends.flatMap { first in
+            ends.filter { $0 >= first }.compactMap { last -> SoundtrackManifest.Section? in
+                let run = sections[first...last]
+                guard !run.contains(where: { $0.role == .intro || $0.role == .outro }) else { return nil }
+                return SoundtrackManifest.Section(
+                    name: run.map(\.name).joined(separator: "+"), startBar: run.first?.startBar ?? 0,
+                    bars: (run.last?.endBar ?? 0) - (run.first?.startBar ?? 0),
+                    energy: run.map(\.energy).max() ?? 1, role: .body, repeatable: true
+                )
+            }
+        }
     }
 
     private static func route(

@@ -80,6 +80,23 @@ final class SoundtrackArrangementTests: XCTestCase {
         XCTAssertEqual(try SoundtrackTestSupport.plan(durationS: 90).repeats, 0)
     }
 
+    /// A long film replays the longest stretch it can, not one section over and
+    /// over: on the desk tool's real manifest (four 8-bar repeatable sections),
+    /// a 180 s film once played one 8-bar section five times in a row.
+    func testALongFilmReplaysAStretchNotOneSectionOverAndOver() throws {
+        let url = SoundtrackTestSupport.fixtures.appendingPathComponent("anthem-depart-s1855554642.json")
+        let real = try SoundtrackManifest.load(from: Data(contentsOf: url), limits: SoundtrackTestSupport.soundtrack())
+        let plan = try SoundtrackArrangement.plan(
+            manifest: real, cues: SoundtrackTestSupport.cues(durationS: 180), durationS: 180,
+            config: SoundtrackTestSupport.soundtrack()
+        )
+        XCTAssertEqual(plan.repeats, 1, "one replay of a long stretch covers 60 s; five of one section is a loop")
+        for clip in plan.clips {
+            XCTAssertGreaterThan(clip.sourceEndS - clip.sourceStartS, 2 * 8 * real.barS,
+                                 "a clip no longer than one 8-bar section means the same bars back to back")
+        }
+    }
+
     func testAccentsLandOnTheBeatWithinToleranceOrOnTheCue() throws {
         for tolerance in [0.0, 0.1, 0.25] {
             let plan = try SoundtrackTestSupport.plan(durationS: 120, overrides: ["accent_snap_tolerance_s": tolerance])
