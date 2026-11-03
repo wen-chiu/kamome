@@ -45,8 +45,8 @@ extension TripDetailModel {
 
     var visibleSegments: [(segment: SegmentRecord, points: [TrackpointRecord])] {
         guard let detail else { return [] }
-        guard let selectedDay else { return detail.segments }
-        return detail.segments.filter { dayIndex(of: $0.segment.startedAt) == selectedDay }
+        guard let selectedDay else { return detail.routeSegments }
+        return detail.routeSegments.filter { dayIndex(of: $0.segment.startedAt) == selectedDay }
     }
 
     /// The segment's line as `refresh()` thinned it; empty until the first read.

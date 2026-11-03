@@ -80,6 +80,8 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   styles, dark and light); in-app maps stay MapKit. Apple fallback removed.
   Trip Detail draws a leg's matched road where one is stored and frames the trip
   itself (ADR 2026-10-26-the-in-app-map-draws-the-road-it-names).
+  An import draws, maps and films only the legs between its first and last stop
+  (ADR 2026-10-30-an-imported-trip-draws-only-the-route-between-its-stops).
 - **Routing:** `RouteProvider`-shaped boundary; **Geoapify**, key behind a
   Cloudflare Worker. Detour-ratio gate 2.5. **No snap radius exists or is needed**
   (ADR 2026-08-20 (d) — read it before citing any older snap-radius text).
