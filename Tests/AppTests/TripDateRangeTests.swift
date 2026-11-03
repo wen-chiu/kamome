@@ -54,9 +54,9 @@ final class TripDateRangeTests: XCTestCase {
 
     func testTheTitleCardPrintsTheLocalDates() {
         let formatter = DateIntervalFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        let expected = formatter.string(from: march(10), to: march(12))
+        formatter.dateTemplate = "yMMMd"
+        let expected = formatter.string(from: march(10), to: march(12)) + " · "
+            + String.localizedStringWithFormat(String(localized: "journey_days"), 3)
 
         let subtitle = RecapComposer.titleSubtitle(trip: trip, distanceM: nil, clock: clock)
 
