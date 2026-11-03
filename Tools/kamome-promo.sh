@@ -8,6 +8,9 @@
 #   Tools/kamome-promo.sh upscale <in> <out>   # 4× Real-ESRGAN: a photo, a folder of
 #                                 # photos (names kept) or a video (audio kept).
 #                                 # ~2.5 s a frame on an M2: photos, not long videos
+#   Tools/kamome-promo.sh music <video> <track> <out.mp4> [from-s]   # lay one music
+#                                 # track under a (silent) cut: faded, and levelled to
+#                                 # −14 LUFS / −1.5 dBTP, the social platforms' target
 #   Tools/kamome-promo.sh smooth <in.mp4> <out.mp4>   # RIFE: twice the frame rate.
 #                                 # Look at the result: it invents in-between
 #                                 # frames and smears text and map labels.
@@ -158,10 +161,21 @@ smooth() {
   per_frame "$in" "$out" 2 ./rife-ncnn-vulkan -m rife-v4.6
 }
 
+# Swapping a track takes seconds this way, where re-rendering the cut takes minutes.
+music() {
+  local video="${1:?usage: music <video> <track> <out.mp4> [from-s]}" track="${2:?track}" out="${3:?out}" from="${4:-0}" dur
+  dur="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$video")"
+  ffmpeg -loglevel error -y -i "$video" -ss "$from" -i "$track" -filter_complex \
+    "[1:a]atrim=0:$dur,asetpts=PTS-STARTPTS,afade=t=in:d=0.5,afade=t=out:st=$(echo "$dur - 1.5" | bc):d=1.5,loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000[a]" \
+    -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 256k -shortest "$out"
+  echo "→ $out"
+}
+
 case "${1:-}" in
   setup) setup ;;
+  music) shift; music "$@" ;;
   check) check ;;
   upscale) shift; upscale "$@" ;;
   smooth) shift; smooth "$@" ;;
-  *) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+  *) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

@@ -1,5 +1,5 @@
 import {
-  AbsoluteFill, Audio, OffthreadVideo, Sequence, interpolate, staticFile,
+  AbsoluteFill, Audio, Img, OffthreadVideo, Sequence, interpolate, spring, staticFile,
   useCurrentFrame, useVideoConfig,
 } from "remotion";
 
@@ -12,6 +12,20 @@ export type Clip = {
   durationS: number;
   caption?: string;      // a short overlay; Apple allows text that explains the app
   fit?: "cover" | "contain";
+  fadeS?: number;        // overrides the project's fade; 0 for a cut that continues the last clip
+};
+
+// The closing beat: the last clip's final frame (exported as a still) blurs and
+// darkens, the trip's figures count up, a headline lands, then the app icon.
+// Figures are copied from the film's own end card, never computed here.
+export type Outro = {
+  bg: string;            // a still of the frame the last clip ends on
+  durationS: number;
+  stats?: { value: number; unit: string }[];
+  headline?: string;
+  icon?: string;
+  name?: string;
+  tagline?: string;
 };
 
 export type PromoProps = {
@@ -29,6 +43,8 @@ export type PromoProps = {
   // from captions/<script>.cues.json; seconds include the title card. Both sit
   // at the bottom: use these or the clips' own captions, not both at once.
   voiceCaptions?: { fromS: number; toS: number; text: string }[];
+  outro?: Outro;
+  accent?: string;       // the outro's figures; defaults to the films' route cyan
 };
 
 const CARD_S = 2;
@@ -45,7 +61,67 @@ const FadeIn: React.FC<{ seconds: number; children: React.ReactNode }> = ({ seco
 
 export const promoFrames = (p: PromoProps, fps: number) =>
   Math.max(1, Math.round(fps * (p.clips.reduce((s, c) => s + c.durationS, 0)
-    + (p.title ? CARD_S : 0) + (p.endCard ? CARD_S : 0))));
+    + (p.title ? CARD_S : 0) + (p.outro?.durationS ?? 0) + (p.endCard ? CARD_S : 0))));
+
+const FONT = "-apple-system, 'PingFang TC', sans-serif";
+
+const OutroBeat: React.FC<{ o: Outro; accent: string }> = ({ o, accent }) => {
+  const frame = useCurrentFrame();
+  const { fps, width } = useVideoConfig();
+  const t = frame / fps;
+  // The background starts sharp, as the last clip left it, so the cut is invisible.
+  const blur = interpolate(t, [0, 0.6], [0, 10], { extrapolateRight: "clamp" });
+  const dim = interpolate(t, [0, 0.6], [1, 0.5], { extrapolateRight: "clamp" });
+  const zoom = interpolate(t, [0, o.durationS], [1, 1.12]);
+  const pop = (atS: number, damping = 12) =>
+    spring({ frame: frame - atS * fps, fps, config: { damping, mass: 0.6 } });
+  const stats = o.stats ?? [];
+  const statsAt = 0.35, headlineAt = 0.35 + stats.length * 0.15 + 0.55, iconAt = headlineAt + 0.8;
+  return (
+    <AbsoluteFill style={{ background: "black", overflow: "hidden" }}>
+      <Img src={staticFile(o.bg)} style={{
+        width: "100%", height: "100%", objectFit: "cover",
+        transform: `scale(${zoom})`, filter: `blur(${blur}px) brightness(${dim})`,
+      }} />
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", fontFamily: FONT, color: "white" }}>
+        <div style={{ display: "flex", gap: width * 0.07, marginBottom: width * 0.1 }}>
+          {stats.map((s, i) => {
+            const at = statsAt + i * 0.15;
+            const k = pop(at);
+            const count = interpolate(t, [at, at + 0.9], [0, s.value],
+              { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (x) => 1 - Math.pow(1 - x, 3) });
+            return (
+              <div key={i} style={{ textAlign: "center", opacity: k, transform: `translateY(${(1 - k) * 40}px)` }}>
+                <div style={{ fontSize: width * 0.115, fontWeight: 800, color: accent, lineHeight: 1,
+                  fontVariantNumeric: "tabular-nums" }}>
+                  {Math.round(count).toLocaleString("en-US")}
+                </div>
+                <div style={{ fontSize: width * 0.042, fontWeight: 600, marginTop: width * 0.015, opacity: 0.9 }}>{s.unit}</div>
+              </div>
+            );
+          })}
+        </div>
+        {o.headline ? (
+          <div style={{
+            fontSize: width * 0.085, fontWeight: 800, textAlign: "center", whiteSpace: "pre-line",
+            lineHeight: 1.3, padding: `0 ${width * 0.08}px`, textWrap: "balance",
+            opacity: pop(headlineAt, 14), transform: `scale(${0.85 + 0.15 * pop(headlineAt, 14)})`,
+            textShadow: "0 4px 24px rgba(0,0,0,0.5)",
+          }}>{o.headline}</div>
+        ) : null}
+        {o.icon ? (
+          <div style={{ marginTop: width * 0.11, display: "flex", flexDirection: "column", alignItems: "center",
+            opacity: pop(iconAt), transform: `scale(${0.6 + 0.4 * pop(iconAt, 9)})` }}>
+            <Img src={staticFile(o.icon)} style={{ width: width * 0.22, height: width * 0.22,
+              borderRadius: width * 0.05, boxShadow: "0 12px 40px rgba(0,0,0,0.45)" }} />
+            {o.name ? <div style={{ fontSize: width * 0.06, fontWeight: 700, marginTop: width * 0.035 }}>{o.name}</div> : null}
+            {o.tagline ? <div style={{ fontSize: width * 0.036, opacity: 0.8, marginTop: width * 0.012 }}>{o.tagline}</div> : null}
+          </div>
+        ) : null}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
 
 const Card: React.FC<{ text: string }> = ({ text }) => {
   const frame = useCurrentFrame();
@@ -98,7 +174,7 @@ export const Promo: React.FC<PromoProps> = (p) => {
     const len = Math.round(c.durationS * fps);
     seq.push(
       <Sequence key={`clip-${i}`} from={at} durationInFrames={len}>
-        <FadeIn seconds={p.fadeS ?? 0}>
+        <FadeIn seconds={c.fadeS ?? p.fadeS ?? 0}>
           <OffthreadVideo
             src={staticFile(c.file)} muted
             startFrom={Math.round((c.fromS ?? 0) * fps)}
@@ -110,6 +186,11 @@ export const Promo: React.FC<PromoProps> = (p) => {
     );
     at += len;
   });
+  if (p.outro) {
+    const len = Math.round(p.outro.durationS * fps);
+    seq.push(<Sequence key="outro" from={at} durationInFrames={len}><OutroBeat o={p.outro} accent={p.accent ?? "#5cc8e0"} /></Sequence>);
+    at += len;
+  }
   if (p.endCard) {
     seq.push(<Sequence key="end" from={at} durationInFrames={CARD_S * fps}><Card text={p.endCard} /></Sequence>);
   }
