@@ -30,6 +30,9 @@ export type Intro = {
   // A finger's tap, drawn because a launch from simctl shows none: when (seconds
   // into the intro) and where (fractions of the screen).
   tap?: { atS: number; x: number; y: number };
+  // "tap" dives into the tapped point (the app icon) instead of the whole screen,
+  // so the intro can end before the launch animation's white window.
+  zoomInto?: "screen" | "tap";
 };
 
 const TapRipple: React.FC<{ atS: number; x: number; y: number; size: number }> = ({ atS, x, y, size }) => {
@@ -110,8 +113,15 @@ const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
   // Ease into the screen until it covers the frame, the way an app opens.
   const k = interpolate(t, [o.durationS - zoomS, o.durationS], [0, 1],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (x) => x * x * (3 - 2 * x) });
-  const cover = Math.max(width / screenW, height / screenH) * 1.02;
+  const intoTap = o.zoomInto === "tap" && o.tap;
+  // Into the tap: an app icon is about a sixth of the screen's width; three times
+  // that covers the frame.
+  const cover = intoTap ? (width / (screenW * 0.16)) * 3 : Math.max(width / screenW, height / screenH) * 1.02;
   const scale = 1 + (cover - 1) * k;
+  const origin = intoTap
+    ? `${bezel + o.tap!.x * screenW}px ${bezel + o.tap!.y * screenH}px` : "50% 50%";
+  const fadeOut = intoTap ? interpolate(t, [o.durationS - 0.2, o.durationS], [1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
   const rise = interpolate(t, [0, 0.6], [60, 0], { extrapolateRight: "clamp", easing: (x) => 1 - Math.pow(1 - x, 3) });
   const appear = interpolate(t, [0, 0.5], [0, 1], { extrapolateRight: "clamp" });
   const phoneY = height * 0.09;  // the phone sits below the title, and moves to centre as it zooms
@@ -121,7 +131,7 @@ const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
         <div style={{
           position: "absolute", top: height * 0.07, width: "100%", textAlign: "center", color: "#f4efe6",
           fontFamily: FONT, fontWeight: 700, fontSize: width * 0.068, lineHeight: 1.3, whiteSpace: "pre-line",
-          opacity: appear * (1 - k), transform: `translateY(${-k * 80}px)`,
+          opacity: appear * Math.max(0, 1 - k * 3), transform: `translateY(${-k * 80}px)`,
         }}>{o.title}</div>
       ) : null}
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
@@ -129,8 +139,8 @@ const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
           width: screenW + bezel * 2, height: screenH + bezel * 2, borderRadius: radius + bezel,
           background: "#050607", padding: bezel, boxSizing: "border-box", position: "relative",
           boxShadow: `0 0 0 ${width * 0.004}px #3a4047, 0 30px 80px rgba(0,0,0,0.6)`,
-          opacity: appear,
-          transform: `translateY(${(phoneY + rise) * (1 - k)}px) scale(${scale})`,
+          opacity: appear * fadeOut, transformOrigin: origin,
+          transform: `translateY(${(phoneY + rise) * (intoTap ? 1 : 1 - k)}px) scale(${scale})`,
         }}>
           <div style={{ width: screenW, height: screenH, borderRadius: radius, overflow: "hidden", position: "relative" }}>
             <OffthreadVideo src={staticFile(o.file)} muted startFrom={Math.round((o.fromS ?? 0) * fps)}
