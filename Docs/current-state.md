@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-11-03 against ADR **2026-11-03-music-leaves-deferred-and-every-film-has-it**.
+Last synced: 2026-11-03 against ADR **2026-11-03-the-film-names-where-the-journey-set-out**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
