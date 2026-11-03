@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-10-30 against ADR **2026-10-30-an-imported-trip-draws-only-the-route-between-its-stops**.
+Last synced: 2026-11-03 against ADR **2026-11-03-music-leaves-deferred-and-every-film-has-it**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -39,7 +39,9 @@ gated by `Docs/release-readiness.md`; nothing there blocks Phase 4.
 **Phase 4 — films worth keeping** (opened 2026-08-15), in closeout. Left: the
 phone run (`Docs/device-runbook.md`, #112) with the performance it prices
 (`MLNMapSnapshotter`, `Docs/handoff-export-performance.md`), and Chiu's
-judgement of a film. Music is outside the closeout.
+judgement of a film. Music is outside the closeout but no longer deferred: every film,
+free included, carries it (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it;
+design `Docs/handoff-music-in-the-film.md`).
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
@@ -121,8 +123,8 @@ is not to be tuned** — Variant A is harness-only env overrides.
 
 MapLibre substrate work beyond the frozen styles (custom tiles, tile server, map
 labels, pixel art) · Story
-Director's remaining content (chapters, music, video beads — hero photos
-reopened, ADR 2026-09-24) ·
+Director's remaining content (chapters, video beads — hero photos reopened, ADR 2026-09-24;
+music reopened, ADR 2026-11-03) ·
 transit routing as a road profile · walk-narrowing for recorded trips · the
 crossing **mode classifier** (plane / ship / seagull) · **type 3** multi-region
 films · the duration rule's candidate formula and the travel-pacing tunable ·
