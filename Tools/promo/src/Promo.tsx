@@ -37,6 +37,7 @@ export type PromoProps = {
   fadeS?: number;        // each clip fades in from black over this long
   // Kamome films keep stop names and attribution at the bottom: "top" clears them.
   captionAt?: "top" | "bottom";
+  captionSize?: number;  // caption type as a fraction of the frame width (0.05)
   voice?: string;        // a voice-over made by Tools/kamome-voice.py
   musicVolume?: number;
   // The voice-over's own lines, timed from the start of the video. Paste them
@@ -138,7 +139,7 @@ const Card: React.FC<{ text: string }> = ({ text }) => {
   );
 };
 
-const Caption: React.FC<{ text: string; at?: "top" | "bottom" }> = ({ text, at = "bottom" }) => {
+const Caption: React.FC<{ text: string; at?: "top" | "bottom"; size?: number }> = ({ text, at = "bottom", size = 0.05 }) => {
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const y = interpolate(frame, [0, fps * 0.35], [20, 0], { extrapolateRight: "clamp" });
@@ -148,11 +149,11 @@ const Caption: React.FC<{ text: string; at?: "top" | "bottom" }> = ({ text, at =
       ? { justifyContent: "flex-start", alignItems: "center", paddingTop: height * 0.08 }
       : { justifyContent: "flex-end", alignItems: "center", paddingBottom: height * 0.09 }}>
       <div style={{
-        opacity, transform: `translateY(${y}px)`, color: "white", fontSize: width * 0.05,
+        opacity, transform: `translateY(${y}px)`, color: "white", fontSize: width * size,
         fontWeight: 600, fontFamily: "-apple-system, 'PingFang TC', sans-serif",
         background: "rgba(0,0,0,0.45)", borderRadius: width * 0.03,
         padding: `${width * 0.02}px ${width * 0.045}px`, textAlign: "center", maxWidth: "86%",
-        textWrap: "balance",
+        textWrap: "balance", whiteSpace: "pre-line", lineHeight: 1.35,
       }}>{text}</div>
     </AbsoluteFill>
   );
@@ -181,7 +182,7 @@ export const Promo: React.FC<PromoProps> = (p) => {
             style={{ width: "100%", height: "100%", objectFit: c.fit ?? "cover" }}
           />
         </FadeIn>
-        {c.caption ? <Caption text={c.caption} at={p.captionAt} /> : null}
+        {c.caption ? <Caption text={c.caption} at={p.captionAt} size={p.captionSize} /> : null}
       </Sequence>,
     );
     at += len;
@@ -200,7 +201,7 @@ export const Promo: React.FC<PromoProps> = (p) => {
       {(p.voiceCaptions ?? []).map((c, i) => (
         <Sequence key={`vc-${i}`} from={Math.round(c.fromS * fps)}
           durationInFrames={Math.max(1, Math.round((c.toS - c.fromS) * fps))}>
-          <Caption text={c.text} at={p.captionAt} />
+          <Caption text={c.text} at={p.captionAt} size={p.captionSize} />
         </Sequence>
       ))}
       {p.music ? (
