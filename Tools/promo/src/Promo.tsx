@@ -35,12 +35,38 @@ export type Intro = {
   zoomInto?: "screen" | "tap";
 };
 
+// A pointing hand that glides in, rests on the target and presses on the tap.
+const Pointer: React.FC<{ atS: number; x: number; y: number; size: number; screenW: number; screenH: number }> =
+  ({ atS, x, y, size, screenW, screenH }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const t = frame / fps;
+  const enter = atS - 1.1, arrive = atS - 0.25;
+  if (t < enter) return null;
+  const k = interpolate(t, [enter, arrive], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (v) => 1 - Math.pow(1 - v, 3) });
+  // From the lower right of the screen to the target; the fingertip is the emoji's top-left third.
+  const px = interpolate(k, [0, 1], [screenW * 0.95, x]), py = interpolate(k, [0, 1], [screenH * 0.75, y]);
+  const press = interpolate(t, [atS - 0.08, atS, atS + 0.12], [1, 0.82, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Gone once it has pressed, so the dive into the icon does not magnify it.
+  const opacity = interpolate(t, [enter, enter + 0.2, atS + 0.04, atS + 0.12], [0, 1, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <div style={{
+      position: "absolute", left: px - size * 0.36, top: py - size * 0.08, fontSize: size, lineHeight: 1,
+      transform: `scale(${press})`, transformOrigin: "36% 8%", opacity,
+      filter: "drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
+    }}>👆</div>
+  );
+};
+
 const TapRipple: React.FC<{ atS: number; x: number; y: number; size: number }> = ({ atS, x, y, size }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps - atS;
-  if (t < 0 || t > 0.6) return null;
-  const k = t / 0.6;
+  if (t < 0 || t > 0.3) return null;  // over before the dive starts
+  const k = t / 0.3;
   return (
     <div style={{
       position: "absolute", left: x - size / 2, top: y - size / 2, width: size, height: size,
@@ -146,6 +172,8 @@ const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
             <OffthreadVideo src={staticFile(o.file)} muted startFrom={Math.round((o.fromS ?? 0) * fps)}
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             {o.tap ? <TapRipple atS={o.tap.atS} x={o.tap.x * screenW} y={o.tap.y * screenH} size={screenW * 0.2} /> : null}
+            {o.tap ? <Pointer atS={o.tap.atS} x={o.tap.x * screenW} y={(o.tap.y - 0.005) * screenH}
+              size={screenW * 0.22} screenW={screenW} screenH={screenH} /> : null}
           </div>
         </div>
       </AbsoluteFill>
