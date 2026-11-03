@@ -266,7 +266,8 @@ public struct LinearTimeline {
         return SubjectState(
             lat: position.lat, lon: position.lon, heading: position.heading,
             emphasis: presence, isVisible: presence > 0.001,
-            role: subjectRole(atTime: time)
+            role: subjectRole(atTime: time),
+            pinToClear: departure?.coordinate, pinClearance: departureLabelOpacity(atTime: time)
         )
     }
 

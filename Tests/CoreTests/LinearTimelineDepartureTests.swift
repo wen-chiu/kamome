@@ -130,4 +130,21 @@ final class LinearTimelineDepartureTests: LinearTimelineTestCase {
         let line = try timeline(trip(stopVertices: [0, 36], config: config), config)
         XCTAssertTrue(departureLabels(line).isEmpty)
     }
+
+    /// **The car is never drawn on the departure's pin** (Chiu 2026-11-03:
+    /// 「車子不能跟地標點重疊 應該放在下面或旁邊」): it is asked to clear the pin
+    /// exactly as long, and as strongly, as the pin is up.
+    func testTheCarClearsTheDeparturePinWhileThePinIsUp() throws {
+        let config = exportConfig()
+        let line = try timeline(trip(config: config), config)
+        let labels = departureLabels(line)
+        XCTAssertFalse(labels.isEmpty)
+        for label in labels {
+            let subject = line.subjectState(atTime: label.time)
+            XCTAssertEqual(subject.pinToClear, trip(config: config).departure?.coordinate)
+            XCTAssertEqual(subject.pinClearance, label.opacity, accuracy: 1e-9, "t=\(label.time)")
+        }
+        let after = try XCTUnwrap(labels.last).time + 1
+        XCTAssertEqual(line.subjectState(atTime: after).pinClearance, 0, "still stepping aside on the road")
+    }
 }

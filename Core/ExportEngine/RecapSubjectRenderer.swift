@@ -34,10 +34,14 @@ public enum SubjectVisual {
 public struct VehicleSubjectRenderer: SubjectRenderer {
     public var visual: SubjectVisual
     public var lengthPx: CGFloat
+    /// The dot radius of the stop pin the subject steps clear of
+    /// (`SubjectState.pinToClear`), from the style that draws that pin.
+    public var pinRadiusPx: CGFloat
 
-    public init(visual: SubjectVisual, lengthPx: CGFloat) {
+    public init(visual: SubjectVisual, lengthPx: CGFloat, pinRadiusPx: CGFloat = RecapStyle().labelPinRadiusPx) {
         self.visual = visual
         self.lengthPx = lengthPx
+        self.pinRadiusPx = pinRadiusPx
     }
 
     /// Builds the renderer for the trip's chosen subject, sized from config —
@@ -104,15 +108,16 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
                 // Sized from the subject it replaces, never from a number of its
                 // own: a stand-in larger than the vehicle is what an absolute
                 // produced when `subject_length_px` moved (Chiu 2026-08-29).
-                lengthPx: style.fallbackMarkerLength(subjectLengthPx: lengthPx)
+                lengthPx: style.fallbackMarkerLength(subjectLengthPx: lengthPx),
+                pinRadiusPx: style.labelPinRadiusPx
             )
         }
         let size = found.subject.lengthFraction.map { CGFloat($0) * lengthPx } ?? lengthPx
         switch found.artwork {
         case let .directional(set):
-            return VehicleSubjectRenderer(visual: .rasterSprite(set), lengthPx: size)
+            return VehicleSubjectRenderer(visual: .rasterSprite(set), lengthPx: size, pinRadiusPx: style.labelPinRadiusPx)
         case let .omni(image):
-            return VehicleSubjectRenderer(visual: .omniSprite(image), lengthPx: size)
+            return VehicleSubjectRenderer(visual: .omniSprite(image), lengthPx: size, pinRadiusPx: style.labelPinRadiusPx)
         }
     }
 
@@ -120,11 +125,16 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
     /// than blinking out of existence at a stop (Chiu 2026-07-26).
     public func render(_ state: SubjectState, camera: CameraFrame, into surface: RenderSurface) {
         guard state.isVisible, state.emphasis > 0.001 else { return }
-        let center = surface.cgPoint(lat: state.lat, lon: state.lon)
+        let size = lengthPx * surface.scale
+        let center = Self.clearing(
+            surface.cgPoint(lat: state.lat, lon: state.lon),
+            of: state.pinToClear.map { surface.cgPoint(lat: $0.lat, lon: $0.lon) },
+            reachPx: RecapOverlayRenderer.pinRingRadius(pinRadiusPx * surface.scale) + size / 2,
+            amount: state.pinClearance
+        )
         let screenBearing = VehicleMarker.screenRotationDegrees(
             heading: state.heading, bearing: camera.bearing
         )
-        let size = lengthPx * surface.scale
         surface.context.saveGState()
         surface.context.setAlpha(CGFloat(min(state.emphasis, 1)))
         defer { surface.context.restoreGState() }
@@ -143,6 +153,18 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
                 rotationDegrees: screenBearing, colors: palette
             )
         }
+    }
+
+    /// **Below the pin, not on it** (Chiu 2026-11-03). Where the subject is
+    /// drawn when it must clear `pin`: straight below, its top at the pin's
+    /// ring, by `amount` — and by less the farther it already is, so the car
+    /// slides back onto its road as it drives off instead of jumping. `reachPx`
+    /// is the ring's radius plus half the subject. The surface draws y-up.
+    static func clearing(_ center: CGPoint, of pin: CGPoint?, reachPx: CGFloat, amount: Double) -> CGPoint {
+        guard let pin, amount > 0, reachPx > 0 else { return center }
+        let near = max(0, 1 - hypot(center.x - pin.x, center.y - pin.y) / reachPx)
+        let weight = CGFloat(min(amount, 1)) * near
+        return CGPoint(x: center.x + (pin.x - center.x) * weight, y: center.y + (pin.y - reachPx - center.y) * weight)
     }
 
     /// Draws the selected sprite centered on the subject, native aspect
