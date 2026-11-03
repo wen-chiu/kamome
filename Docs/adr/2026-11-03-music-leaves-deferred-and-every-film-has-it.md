@@ -21,6 +21,6 @@ Chiu, 2026-11-03: 「音樂移出 Deferred，免費版也要有音樂」. On the
 ## Consequences
 - `Docs/current-state.md` no longer lists music under Deferred.
 - The confinement change lands in PR 4 with the two files. Before that, the checker fails an `AVFAudio` rule that nothing imports, and it cannot list files. PR 4 also adds a missing-path check and a type check for the AVKit re-export hole (handoff §3.3).
-- Still owed before PR 2: Chiu confirms the desk-only Python dependencies (§5).
+- librosa may be used by the desk beatmap tool only, never by the app or `./check.sh` (Chiu: 「librosa 可以用」). Loudness is measured with ffmpeg, already a desk tool, so pyloudnorm is not added (handoff §5).
 - The private repository does not relax §0. Location data stays out of commits, issues and PRs as before.
 - Never register Kamome's tracks with a Content ID service, so that a shared film is not claimed against its maker (handoff §7).

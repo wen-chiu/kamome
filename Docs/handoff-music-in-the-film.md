@@ -368,13 +368,14 @@ The picker reads `country_code`, which is derived from location. It runs on the 
   brief's (rethink B2 item 4). It finds `first_downbeat_s`.
 - **Sections:** proposed from a self-similarity matrix on 8-bar chunks, then **confirmed by
   Chiu's ear** in the compare page — the tool writes them, a human signs them.
-- **Loudness:** −14 LUFS integrated, true peak ≤ −1 dBTP (`pyloudnorm`), or refuse.
+- **Loudness:** −14 LUFS integrated, true peak ≤ −1 dBTP, measured with `ffmpeg -af ebur128=peak=true`, or refuse. ffmpeg is already a desk tool (`Scripts/encode-sample-film.sh`), so this adds no dependency.
 - **A gate in `./check.sh --static`:** every catalog track has a manifest, every manifest's
   sections fit inside the file's duration, no section crosses another, at least one `repeatable`
   body section exists. Stdlib-only for the gate; librosa only in the desk tool.
 
-librosa and pyloudnorm are **desk-only dependencies — Chiu confirms them** (rule 2), as he did
-for ACE-Step (rethink D3a).
+**librosa is a desk-only dependency, confirmed by Chiu 2026-11-03** (「librosa 可以用」), as ACE-Step was
+(rethink D3a). It is never an app dependency and never runs in `./check.sh`. pyloudnorm is not
+needed: ffmpeg measures loudness.
 
 Reusable from PR wen-chiu/kamome#340 (rethink A4, VERIFIED there by reading): the event model and
 `plan()`'s snap-to-beat with shift reporting. Port the *idea* to Swift (§2.5); do not ship Python
@@ -408,7 +409,7 @@ Recommendation: **ship v1 without it**, listen, and decide with a film in hand.
 | 4 | Tracks in the repository | **settled**: the repository is private (Chiu, 2026-11-03). Still never register the tracks with a Content ID service, or a user's shared film would be claimed against them |
 | 5 | Defaults: the `anthem` style for unlisted countries, 自動 on by default, the silent switch | **later**: after the music is made (Chiu, 2026-11-03) |
 | 6 | Bundle size (~36 MB) vs. download | open |
-| 7 | librosa + pyloudnorm as desk-only tools (§5) | open: before PR 2 |
+| 7 | librosa as a desk-only tool (§5) | **Confirmed 2026-11-03**. Loudness uses ffmpeg, already a desk tool; no pyloudnorm |
 
 ## 8. Build order — one PR each, each `./check.sh` green
 
