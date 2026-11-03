@@ -44,31 +44,8 @@ extension TrackingConfig {
         /// Fade-out over the end card's last seconds.
         public let fadeOutS: Double
 
-        // MARK: Moments the music answers (§2.5 item 5)
-
-        /// Gain while a stop's photographs play, in dB (negative: a dip).
-        public let stopDipDb: Double
-        /// Low-pass cutoff while a stop's photographs play.
-        public let stopCutoffHz: Double
-        /// The cutoff that means "no filter": where the curve rests.
-        public let openCutoffHz: Double
-        /// How long the dip takes to settle, in beats.
-        public let dipRampBeats: Double
-        /// The shortest return to full level after the car sets off, in beats;
-        /// the return lands on the first downbeat at least this far after `go`.
-        public let returnMinRampBeats: Double
-        /// An accent moves onto the nearest beat only within this; farther, it
-        /// plays on the cue itself (§2.5 item 6).
-        public let accentSnapToleranceS: Double
-        /// Whether a photograph changing opens the filter a step.
-        public let photoAccentEnabled: Bool
-        /// How far the cutoff opens on a photograph change, as a multiple of the
-        /// dip's cutoff.
-        public let photoAccentCutoffRatio: Double
-        /// How fast it opens.
-        public let photoAccentAttackS: Double
-        /// How long it takes to settle back, in beats.
-        public let photoAccentDecayBeats: Double
+        // No dip at a stop and no lift on a photograph: the music plays straight
+        // through (ADR 2026-11-03-the-music-plays-straight-through).
 
         enum CodingKeys: String, CodingKey {
             case sampleRateHz = "sample_rate_hz"
@@ -83,16 +60,6 @@ extension TrackingConfig {
             case crossfadeBeats = "crossfade_beats"
             case fadeInS = "fade_in_s"
             case fadeOutS = "fade_out_s"
-            case stopDipDb = "stop_dip_db"
-            case stopCutoffHz = "stop_cutoff_hz"
-            case openCutoffHz = "open_cutoff_hz"
-            case dipRampBeats = "dip_ramp_beats"
-            case returnMinRampBeats = "return_min_ramp_beats"
-            case accentSnapToleranceS = "accent_snap_tolerance_s"
-            case photoAccentEnabled = "photo_accent_enabled"
-            case photoAccentCutoffRatio = "photo_accent_cutoff_ratio"
-            case photoAccentAttackS = "photo_accent_attack_s"
-            case photoAccentDecayBeats = "photo_accent_decay_beats"
         }
     }
 }

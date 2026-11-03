@@ -16,8 +16,9 @@ Labels follow `CLAUDE.md` rule 4. Each unmeasured claim names what would settle 
 the §3.3 rule, the beatmap tool and the desk harness exist; nothing a user sees changed. Where the
 build departs from the text below, the text was updated: the manifest gained five fields (§2.2), a
 crossing is two cues (`crossing`, `landing`), and the departure's photographs over a frozen card
-dip the music like a stop. Not built: the crossing's section change and the cut onto the end reveal
-(§2.5 item 5, rows 4–5) — wen-chiu/kamome#361, after Chiu's listen.
+start its music like a stop. **After Chiu's listen the music plays straight through**
+(ADR 2026-11-03-the-music-plays-straight-through): §2.5 items 5–6 were built, heard and removed.
+The stop dip sounded broken, and the return and the photo lift went unnoticed. #361 is closed.
 
 ---
 
@@ -206,7 +207,9 @@ Pure function `(manifest, cues, durationS, config) → SoundtrackPlan`, where th
    begins and ends on a repeatable section, because a 180 s desk film that replayed one 8-bar
    section five times in a row (16 s, five times) was a loop. If the manifest has none, the picker must not
    choose that track for that film (a filter, not a runtime surprise).
-5. **Moments the music answers** — Chiu's 「景點出現或照片出現可以加強音樂」:
+5. ~~**Moments the music answers**~~ — **removed after Chiu's listen, 2026-11-03** (ADR
+   2026-11-03-the-music-plays-straight-through): 「不行 像壞掉 照正常就好」. Kept below as the record of
+   what was tried. Chiu's original request, 「景點出現或照片出現可以加強音樂」:
 
    | cue | what the music does | why this and not more |
    |---|---|---|
@@ -221,7 +224,7 @@ Pure function `(manifest, cues, durationS, config) → SoundtrackPlan`, where th
    `fade_out_s`, `photo_accent_enabled`, …). **No added one-shot sound effects in v1** —
    Chiu's round-2 lesson (「太多東西你沒辦完整控制協調就會變得畫蛇添足」): a sting in the wrong key
    is the fastest way to make a good track sound cheap.
-6. **The music answers the picture, not the other way round (v1).** An accent snaps to the
+6. ~~**The music answers the picture, not the other way round (v1).**~~ Removed with item 5. An accent snaps to the
    nearest beat only within `accent_snap_tolerance_s`; outside it, the dip/lift ramps on the cue
    itself, unsynced. Human audio–video tolerance is roughly 45 ms audio-early to 125 ms
    audio-late (ITU-R BT.1359, INFERRED as applicable to music accents; *settle:* Chiu watches one
@@ -236,7 +239,8 @@ Pure function `(manifest, cues, durationS, config) → SoundtrackPlan`, where th
 
 `AVAudioEngine` in **offline manual rendering mode** (`enableManualRenderingMode(.offline, …)`):
 one `AVAudioPlayerNode` per clip (so a cross-fade is two nodes overlapping), into an
-`AVAudioUnitEQ` (one low-pass band) and the main mixer. The render loop pulls 1,024-frame chunks
+`AVAudioUnitEQ` (one low-pass band) and the main mixer. *As built after the ADR above:* no
+`AVAudioUnitEQ`, just the players into the main mixer, with one gain on the rendered samples. The render loop pulls 1,024-frame chunks
 and sets gain and cutoff from the plan's curves before each chunk — the curves are pure, so
 the "what" is unit-tested and this file only does the "how". Output: AAC 48 kHz stereo,
 `soundtrack.audio_bitrate_kbps` (192 proposed).
@@ -480,7 +484,7 @@ Older references in this document and in ADR 2026-11-03 to "PR 1–4" mean PR A,
 mean PR B.
 
 New `Docs/device-runbook.md` rows, owed by PR B: added wall time (`music`, `mux` stages); audio
-on the phone speaker (does the stop dip read, or does it sound broken); the silent switch; a film
+on the phone speaker; the silent switch; a film
 shared to LINE and Instagram keeps its sound; an export left in the background still muxes.
 
 **A visual change owes a render; this one owes a listen.** `./check.sh` cannot hear the film.

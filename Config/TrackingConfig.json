@@ -83,17 +83,7 @@
     "phrase_bars": 4,
     "crossfade_beats": 1.0,
     "fade_in_s": 1.5,
-    "fade_out_s": 1.0,
-    "stop_dip_db": -6.0,
-    "stop_cutoff_hz": 1200,
-    "open_cutoff_hz": 20000,
-    "dip_ramp_beats": 1.0,
-    "return_min_ramp_beats": 1.0,
-    "accent_snap_tolerance_s": 0.1,
-    "photo_accent_enabled": true,
-    "photo_accent_cutoff_ratio": 1.8,
-    "photo_accent_attack_s": 0.06,
-    "photo_accent_decay_beats": 2.0
+    "fade_out_s": 1.0
   },
   "discovery": {
     "lookback_years": 5,

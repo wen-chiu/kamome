@@ -140,8 +140,6 @@ final class RecapSoundtrackFilmTests: XCTestCase {
             + String(format: "%.2f s into the track · %d repeat(s) · final hit at %.2f s", plan.introOffsetS,
                      plan.repeats, plan.finalHitS)
             + " · " + clips.joined(separator: " | "))
-        let accents = plan.accents.map { String(format: "%@ %.2f%@", $0.cue.kind.rawValue, $0.timeS, $0.snapped ? "♪" : "") }
-        print("KAMOME_SOUNDTRACK_ACCENTS " + accents.joined(separator: ", "))
     }
 
     private func timed<T>(_ name: String, into stages: inout [Stage], _ work: () throws -> T) rethrows -> T {

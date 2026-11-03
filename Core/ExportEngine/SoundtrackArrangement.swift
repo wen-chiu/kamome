@@ -2,9 +2,13 @@ import Foundation
 import KamomeConfig
 
 /// **How one track is fitted to one film** (`Docs/handoff-music-in-the-film.md`
-/// §2.5): which stretches of the track play when, and how loud and how bright the
-/// music is at every moment. Pure — the renderer (`RecapSoundtrackRenderer`) only
-/// carries the plan out.
+/// §2.5): which stretches of the track play when, and how loud. Pure — the
+/// renderer (`RecapSoundtrackRenderer`) only carries the plan out.
+///
+/// **The music plays straight through** (ADR 2026-11-03-the-music-plays-straight-through):
+/// no dip at a stop, no lift on a photograph. Chiu listened to both and heard the
+/// dip as something broken. The film's moments decide only where the track is
+/// cut, never how it sounds in between.
 ///
 /// A clip always plays at 1× — **no time-stretch and no pitch-shift, ever**: a
 /// stretched track is the "something is wrong" sound Chiu hears at once. So
@@ -22,27 +26,11 @@ public struct SoundtrackPlan: Equatable {
         public var filmEndS: Double { filmStartS + (sourceEndS - sourceStartS) }
     }
 
-    /// A moment the music answered, and where: on the nearest beat when one was
-    /// within `accent_snap_tolerance_s`, otherwise on the cue itself.
-    public struct Accent: Equatable {
-        public let cue: FilmCue
-        public let timeS: Double
-        public let snapped: Bool
-    }
-
     public let durationS: Double
     public let clips: [Clip]
-    /// Linear amplitude over film time: loudness normalisation × the stop dips.
-    public let gain: SoundtrackCurve
-    /// The low-pass cutoff over film time, interpolated in log frequency.
-    public let cutoffHz: SoundtrackCurve
-    public let accents: [Accent]
-    /// The music's grid in film time: every beat is `gridAnchorS + n · beatS`,
-    /// every downbeat `gridAnchorS + n · barS`. One lattice for the whole film,
-    /// because every cut and repeat joins bar line to bar line.
-    public let gridAnchorS: Double
-    public let beatS: Double
-    public let barS: Double
+    /// One linear gain for the whole film: the track brought to `target_lufs`,
+    /// held under the true-peak ceiling.
+    public let gain: Double
     /// Film time of the track's final hit: the end card's arrival.
     public let finalHitS: Double
     /// How far into the track the film starts (§2.5 item 3).
@@ -91,17 +79,19 @@ public enum SoundtrackArrangement {
         // repeating a section when the film outlasts the track.
         let route = try bestRoute(manifest: manifest, outroFilmS: outroFilmS, cues: cues, config: config)
         let segments = Self.segments(route, manifest: manifest, outroFilmS: outroFilmS, durationS: durationS)
-        let grid = SoundtrackGrid(anchorS: outroFilmS, beatS: manifest.beatS, barS: manifest.barS)
-        // 5. The moments.
-        let automation = SoundtrackAutomation(grid: grid, config: config, manifest: manifest).curves(cues: cues)
         return SoundtrackPlan(
             durationS: durationS,
             clips: clips(segments, manifest: manifest, durationS: durationS, config: config),
-            gain: automation.gain, cutoffHz: automation.cutoffHz, accents: automation.accents,
-            gridAnchorS: grid.anchorS, beatS: grid.beatS, barS: grid.barS, finalHitS: endCardS,
+            gain: pow(10, normalisationDb(manifest, config) / 20), finalHitS: endCardS,
             introOffsetS: segments.first.map { $0.filmStartS == 0 ? $0.sourceStartS : 0 } ?? 0,
             repeats: route?.repeats ?? 0
         )
+    }
+
+    /// The gain that brings the track to `target_lufs`, held under the true-peak
+    /// ceiling: a quiet track is lifted only as far as its peaks allow.
+    static func normalisationDb(_ manifest: SoundtrackManifest, _ config: TrackingConfig.Soundtrack) -> Double {
+        min(config.targetLufs - manifest.integratedLufs, config.truePeakMaxDbtp - manifest.truePeakDbtp)
     }
 
     // MARK: - The body

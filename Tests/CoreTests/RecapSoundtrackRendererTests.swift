@@ -91,6 +91,19 @@ final class RecapSoundtrackRendererTests: XCTestCase {
         }
     }
 
+    /// **The music plays straight through a stop** (ADR 2026-11-03-the-music-plays-straight-through):
+    /// the clicks during the first stop (9–14 s, in the synthetic film) are as
+    /// loud and as sharp as the ones before it. Both windows stay inside the
+    /// intro (the film starts 3.25 s into the track), where every downbeat meets
+    /// the intro's tone at the same phase, so equal means equal.
+    func testAStopDoesNotDuckTheMusic() throws {
+        let output = try samples(render(durationS: 40, encoding: .linearPCM, name: "stop.caf"))
+        func loudest(_ fromS: Double, _ toS: Double) -> Float {
+            output[Int(fromS * 48_000)..<Int(toS * 48_000)].map(abs).max() ?? 0
+        }
+        XCTAssertEqual(loudest(9.5, 12.5), loudest(3.5, 6.5), accuracy: 0.01, "a stop changed the music's level")
+    }
+
     func testACancelledRenderLeavesNoFile() throws {
         let url = directory.appendingPathComponent("cancelled.m4a")
         var chunks = 0

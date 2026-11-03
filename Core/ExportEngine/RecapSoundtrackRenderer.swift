@@ -5,14 +5,13 @@ import KamomeConfig
 /// **Plan → soundtrack file** (`Docs/handoff-music-in-the-film.md` §3.1).
 ///
 /// `AVAudioEngine` in offline manual rendering: one `AVAudioPlayerNode` per
-/// clip (a cross-fade is two nodes overlapping), all into the main mixer, then
-/// one low-pass band of an `AVAudioUnitEQ`. The loop pulls `render_chunk_frames`
-/// at a time, sets the cutoff from the plan before each chunk, applies the gain
-/// curve to the rendered samples, and writes the chunk straight to the file —
-/// **streamed, never held**: 180 s of 48 kHz stereo float would be ~69 MB.
+/// clip (a cross-fade is two nodes overlapping), all into the main mixer, which
+/// also converts the track's sample rate. The loop pulls `render_chunk_frames`
+/// at a time, applies the plan's gain, and writes the chunk straight to the
+/// file — **streamed, never held**: 180 s of 48 kHz stereo float would be ~69 MB.
 ///
-/// The curves are pure and tested in `SoundtrackArrangement`; this file only
-/// carries them out. One of the three files allowed AVFoundation, and the only
+/// The plan is pure and tested in `SoundtrackArrangement`; this file only
+/// carries it out. One of the three files allowed AVFoundation, and the only
 /// one allowed AVFAudio (`Config/architecture.json`, ADR 2026-11-03).
 public final class RecapSoundtrackRenderer {
     public struct RenderError: Error, CustomStringConvertible {
@@ -75,37 +74,28 @@ public final class RecapSoundtrackRenderer {
         while rendered < total {
             guard shouldContinue() else { throw CancellationError() }
             let frames = AVAudioFrameCount(min(AVAudioFramePosition(chunk), total - rendered))
-            graph.lowPass.frequency = Float(plan.cutoffHz.value(atS: Double(rendered) / config.sampleRateHz))
             let status = try graph.engine.renderOffline(frames, to: buffer)
             guard status == .success else { throw RenderError(description: "render stopped (\(status.rawValue))") }
-            applyGain(plan.gain, to: buffer, from: rendered)
+            applyGain(Float(plan.gain), to: buffer)
             try output.write(from: buffer)
             rendered += AVAudioFramePosition(buffer.frameLength)
         }
     }
 
-    /// The engine, its players and the low-pass band.
+    /// The engine and its players.
     private struct Graph {
         let engine = AVAudioEngine()
         let players: [AVAudioPlayerNode]
-        let lowPass: AVAudioUnitEQFilterParameters
 
         init(format: AVAudioFormat, chunk: AVAudioFrameCount, clips: Int, trackURL: URL) throws {
             let source = try AVAudioFile(forReading: trackURL).processingFormat
             try engine.enableManualRenderingMode(.offline, format: format, maximumFrameCount: chunk)
-            let equaliser = AVAudioUnitEQ(numberOfBands: 1)
-            lowPass = equaliser.bands[0]
-            lowPass.filterType = .lowPass
-            lowPass.bypass = false
-            engine.attach(equaliser)
             players = (0..<clips).map { _ in AVAudioPlayerNode() }
             for player in players {
                 engine.attach(player)
                 engine.connect(player, to: engine.mainMixerNode, format: source)
             }
-            engine.disconnectNodeOutput(engine.mainMixerNode)
-            engine.connect(engine.mainMixerNode, to: equaliser, format: format)
-            engine.connect(equaliser, to: engine.outputNode, format: format)
+            engine.connect(engine.mainMixerNode, to: engine.outputNode, format: format)
         }
     }
 
@@ -153,16 +143,12 @@ public final class RecapSoundtrackRenderer {
         return buffer
     }
 
-    /// The gain curve across one chunk, as a straight line between its values
-    /// at the chunk's two ends — a curve's corner moves by at most one chunk.
-    private func applyGain(_ curve: SoundtrackCurve, to buffer: AVAudioPCMBuffer, from frame: AVAudioFramePosition) {
-        guard let channels = buffer.floatChannelData else { return }
-        let length = Int(buffer.frameLength)
-        let startGain = curve.value(atS: Double(frame) / config.sampleRateHz)
-        let endGain = curve.value(atS: Double(frame + AVAudioFramePosition(length)) / config.sampleRateHz)
-        for index in 0..<length {
-            let gain = Float(startGain + (endGain - startGain) * Double(index) / Double(max(length, 1)))
-            for channel in 0..<Int(buffer.format.channelCount) { channels[channel][index] *= gain }
+    /// The plan's one gain, on the rendered samples. Not the mixer's volume: a
+    /// quiet track is lifted, and `outputVolume` stops at 1.
+    private func applyGain(_ gain: Float, to buffer: AVAudioPCMBuffer) {
+        guard gain != 1, let channels = buffer.floatChannelData else { return }
+        for channel in 0..<Int(buffer.format.channelCount) {
+            for index in 0..<Int(buffer.frameLength) { channels[channel][index] *= gain }
         }
     }
 
