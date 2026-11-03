@@ -13,6 +13,38 @@ export type Clip = {
   caption?: string;      // a short overlay; Apple allows text that explains the app
   fit?: "cover" | "contain";
   fadeS?: number;        // overrides the project's fade; 0 for a cut that continues the last clip
+  captionAt?: "top" | "bottom"; // overrides the project's caption position
+};
+
+// The opening: a title over a phone that plays an app capture (a simulator
+// recording: home screen, tap Kamome, the app opens), then the camera falls into
+// the phone's screen and the film takes over. Simulator captures include the
+// Dynamic Island, so the frame draws only the bezel.
+export type Intro = {
+  file: string;          // the screen recording, portrait
+  fromS?: number;
+  durationS: number;
+  title?: string;
+  zoomS?: number;        // the last seconds, spent zooming into the screen (0.8)
+  screenAspect?: number; // width / height of the recording (1206 / 2622 for a 6.3" iPhone)
+  // A finger's tap, drawn because a launch from simctl shows none: when (seconds
+  // into the intro) and where (fractions of the screen).
+  tap?: { atS: number; x: number; y: number };
+};
+
+const TapRipple: React.FC<{ atS: number; x: number; y: number; size: number }> = ({ atS, x, y, size }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const t = frame / fps - atS;
+  if (t < 0 || t > 0.6) return null;
+  const k = t / 0.6;
+  return (
+    <div style={{
+      position: "absolute", left: x - size / 2, top: y - size / 2, width: size, height: size,
+      borderRadius: size, background: "rgba(20,30,40,0.35)", border: `${size * 0.05}px solid white`,
+      boxShadow: "0 0 12px rgba(0,0,0,0.35)", transform: `scale(${0.5 + 0.7 * k})`, opacity: 1 - k * k,
+    }} />
+  );
 };
 
 // The closing beat: the last clip's final frame (exported as a still) blurs and
@@ -44,6 +76,7 @@ export type PromoProps = {
   // from captions/<script>.cues.json; seconds include the title card. Both sit
   // at the bottom: use these or the clips' own captions, not both at once.
   voiceCaptions?: { fromS: number; toS: number; text: string }[];
+  intro?: Intro;
   outro?: Outro;
   accent?: string;       // the outro's figures; defaults to the films' route cyan
 };
@@ -62,9 +95,53 @@ const FadeIn: React.FC<{ seconds: number; children: React.ReactNode }> = ({ seco
 
 export const promoFrames = (p: PromoProps, fps: number) =>
   Math.max(1, Math.round(fps * (p.clips.reduce((s, c) => s + c.durationS, 0)
-    + (p.title ? CARD_S : 0) + (p.outro?.durationS ?? 0) + (p.endCard ? CARD_S : 0))));
+    + (p.title ? CARD_S : 0) + (p.intro?.durationS ?? 0) + (p.outro?.durationS ?? 0) + (p.endCard ? CARD_S : 0))));
 
 const FONT = "-apple-system, 'PingFang TC', sans-serif";
+
+const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const t = frame / fps;
+  const zoomS = o.zoomS ?? 0.8;
+  const aspect = o.screenAspect ?? 1206 / 2622;
+  const screenW = width * 0.6, screenH = screenW / aspect;
+  const bezel = width * 0.022, radius = width * 0.085;
+  // Ease into the screen until it covers the frame, the way an app opens.
+  const k = interpolate(t, [o.durationS - zoomS, o.durationS], [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: (x) => x * x * (3 - 2 * x) });
+  const cover = Math.max(width / screenW, height / screenH) * 1.02;
+  const scale = 1 + (cover - 1) * k;
+  const rise = interpolate(t, [0, 0.6], [60, 0], { extrapolateRight: "clamp", easing: (x) => 1 - Math.pow(1 - x, 3) });
+  const appear = interpolate(t, [0, 0.5], [0, 1], { extrapolateRight: "clamp" });
+  const phoneY = height * 0.09;  // the phone sits below the title, and moves to centre as it zooms
+  return (
+    <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 40%, #1a2733 0%, #0b0f14 70%)", overflow: "hidden" }}>
+      {o.title ? (
+        <div style={{
+          position: "absolute", top: height * 0.07, width: "100%", textAlign: "center", color: "#f4efe6",
+          fontFamily: FONT, fontWeight: 700, fontSize: width * 0.068, lineHeight: 1.3, whiteSpace: "pre-line",
+          opacity: appear * (1 - k), transform: `translateY(${-k * 80}px)`,
+        }}>{o.title}</div>
+      ) : null}
+      <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
+        <div style={{
+          width: screenW + bezel * 2, height: screenH + bezel * 2, borderRadius: radius + bezel,
+          background: "#050607", padding: bezel, boxSizing: "border-box", position: "relative",
+          boxShadow: `0 0 0 ${width * 0.004}px #3a4047, 0 30px 80px rgba(0,0,0,0.6)`,
+          opacity: appear,
+          transform: `translateY(${(phoneY + rise) * (1 - k)}px) scale(${scale})`,
+        }}>
+          <div style={{ width: screenW, height: screenH, borderRadius: radius, overflow: "hidden", position: "relative" }}>
+            <OffthreadVideo src={staticFile(o.file)} muted startFrom={Math.round((o.fromS ?? 0) * fps)}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {o.tap ? <TapRipple atS={o.tap.atS} x={o.tap.x * screenW} y={o.tap.y * screenH} size={screenW * 0.2} /> : null}
+          </div>
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
 
 const OutroBeat: React.FC<{ o: Outro; accent: string }> = ({ o, accent }) => {
   const frame = useCurrentFrame();
@@ -171,6 +248,11 @@ export const Promo: React.FC<PromoProps> = (p) => {
     seq.push(<Sequence key="title" from={0} durationInFrames={CARD_S * fps}><Card text={p.title} /></Sequence>);
     at += CARD_S * fps;
   }
+  if (p.intro) {
+    const len = Math.round(p.intro.durationS * fps);
+    seq.push(<Sequence key="intro" from={at} durationInFrames={len}><IntroBeat o={p.intro} /></Sequence>);
+    at += len;
+  }
   p.clips.forEach((c, i) => {
     const len = Math.round(c.durationS * fps);
     seq.push(
@@ -182,7 +264,7 @@ export const Promo: React.FC<PromoProps> = (p) => {
             style={{ width: "100%", height: "100%", objectFit: c.fit ?? "cover" }}
           />
         </FadeIn>
-        {c.caption ? <Caption text={c.caption} at={p.captionAt} size={p.captionSize} /> : null}
+        {c.caption ? <Caption text={c.caption} at={c.captionAt ?? p.captionAt} size={p.captionSize} /> : null}
       </Sequence>,
     );
     at += len;
