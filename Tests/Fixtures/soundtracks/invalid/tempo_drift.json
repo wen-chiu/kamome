@@ -9,7 +9,7 @@
   "bpm": 120.0,
   "beats_per_bar": 4,
   "first_downbeat_s": 0.25,
-  "tempo_drift_bpm": 1.5,
+  "tempo_drift_bpm": 6.0,
   "sections": [
     {
       "name": "intro",

@@ -5164,6 +5164,240 @@
           }
         }
       }
+    },
+    "recap_music_header": {
+      "comment": "「音樂」 row on the film sheet (handoff-music §4.2). 音樂 is the glossary word (not 配樂, not BGM).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Music"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂"
+          }
+        }
+      }
+    },
+    "recap_music_auto": {
+      "comment": "Music row value: Kamome chooses the music from the trip.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        }
+      }
+    },
+    "recap_music_none": {
+      "comment": "Music row value, and the last row of 換音樂: the film carries no music.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Music"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無音樂"
+          }
+        }
+      }
+    },
+    "recap_music_failed": {
+      "comment": "Finished screen: the film was kept, but its music could not be added (handoff-music §4.1).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The music couldn’t be added. The film is saved without it."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音樂沒能加進影片，影片已經存好，沒有音樂。"
+          }
+        }
+      }
+    },
+    "recap_music_retry": {
+      "comment": "Re-runs only the music and the mux, never the drawing.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try Again"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試一次"
+          }
+        }
+      }
+    },
+    "recap_music_retrying": {
+      "comment": "While the music is being added again.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding the music…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加上音樂…"
+          }
+        }
+      }
+    },
+    "film_music_change": {
+      "comment": "Film player: opens the list of other music for this film (handoff-music §4.2).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Music"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "換音樂"
+          }
+        }
+      }
+    },
+    "film_music_use": {
+      "comment": "Film player, while previewing other music: keeps it.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use This"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用這首"
+          }
+        }
+      }
+    },
+    "film_music_preparing": {
+      "comment": "Film player, while the chosen music is being put under the film (a few seconds).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing the music…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在準備音樂…"
+          }
+        }
+      }
+    },
+    "film_music_failed": {
+      "comment": "Film player: the chosen music could not be put under the film.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This music couldn’t be added. Try another."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這首音樂沒辦法加進影片，換一首試試。"
+          }
+        }
+      }
+    },
+    "music_mood_depart": {
+      "comment": "A track labelled by its mood, never its region (handoff-music §4.4). Bright and hopeful.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upbeat"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輕快"
+          }
+        }
+      }
+    },
+    "music_mood_cruise": {
+      "comment": "A track labelled by its mood. Calm and steady.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relaxed"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悠閒"
+          }
+        }
+      }
+    },
+    "music_mood_epic": {
+      "comment": "A track labelled by its mood. Grand.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grand"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "壯闊"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

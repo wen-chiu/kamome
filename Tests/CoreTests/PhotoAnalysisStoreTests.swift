@@ -28,9 +28,12 @@ final class PhotoAnalysisStoreTests: XCTestCase {
         )
     }
 
+    /// Read at v12 itself: a later migration adds columns (v17, the music's
+    /// mood — `SoundtrackSchemaTests`), which is not what this one creates.
     func testMigrationToV12CreatesTheAnalysisTable() throws {
-        let database = try AppDatabase.inMemory()
-        try database.writer.read { db in
+        let queue = try DatabaseQueue()
+        try AppDatabase.migrator.migrate(queue, upTo: "v12")
+        try queue.read { db in
             let columns = try db.columns(in: "photo_analysis").map(\.name)
             XCTAssertEqual(
                 Set(columns),

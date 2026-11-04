@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "anthem-cruise-s62937947",
+  "style": "anthem",
+  "mood": "cruise",
+  "file": "anthem-cruise-s62937947.m4a",
+  "duration_s": 120.0,
+  "bpm": 110.0659,
+  "beats_per_bar": 4,
+  "first_downbeat_s": 1.2876,
+  "tempo_drift_bpm": 3.0438,
+  "sections": [
+    {
+      "name": "intro-A0",
+      "start_bar": 0,
+      "bars": 8,
+      "energy": 4,
+      "role": "intro",
+      "repeatable": false
+    },
+    {
+      "name": "body-B1",
+      "start_bar": 8,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "body-B2",
+      "start_bar": 16,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "body-C3",
+      "start_bar": 24,
+      "bars": 8,
+      "energy": 1,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "lift-D4",
+      "start_bar": 32,
+      "bars": 8,
+      "energy": 2,
+      "role": "lift",
+      "repeatable": false
+    },
+    {
+      "name": "peak-E5",
+      "start_bar": 40,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "outro-F6",
+      "start_bar": 48,
+      "bars": 6,
+      "energy": 2,
+      "role": "outro",
+      "repeatable": false
+    }
+  ],
+  "sections_confirmed": false,
+  "final_hit_bar": 53,
+  "tail_s": 3.1452,
+  "integrated_lufs": -14.0,
+  "true_peak_dbtp": -1.1,
+  "provenance": {
+    "engine": "acestep-1.5",
+    "commit": "ca1e85f",
+    "seed": 62937947
+  }
+}

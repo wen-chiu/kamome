@@ -7,8 +7,8 @@ import Foundation
 /// stop it belongs to — **never a coordinate, a name or a country** (§0 by
 /// construction: a cue sheet can be logged, measured and tested without
 /// carrying where the trip went).
-public struct FilmCue: Equatable {
-    public enum Kind: String, CaseIterable {
+public struct FilmCue: Codable, Equatable {
+    public enum Kind: String, CaseIterable, Codable {
         /// The first frame.
         case opening
         /// The title card's held frame cuts to the film proper (`titleCutS`).

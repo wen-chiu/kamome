@@ -62,3 +62,26 @@ extension FilmPhotoChoicesTests {
         XCTAssertNil(RecapComposer.filmPlan(detail: detail, config: config).decks[busiest])
     }
 }
+
+/// **Analyser v2 does not undo the analysed pick** (handoff-music §2.4): it
+/// added only the music's mood, so a version-1 row still serves the photo pick
+/// while it waits to be analysed again.
+extension FilmPhotoChoicesTests {
+    func testAVersionOneRowStillServesThePick() async throws {
+        let config = AppConfig.loadOrDie()
+        let (repository, imported) = try await importedTrip(config: config)
+        for photo in imported.photos where photo.stopId != nil {
+            try repository.savePhotoAnalysis(PhotoAnalysisRecord(
+                phAssetId: photo.phAssetId, version: 1, outcome: .analyzed, isUtility: 0, analyzedAt: 0
+            ))
+        }
+        let detail = try XCTUnwrap(try repository.detail(tripId: imported.trip.id))
+        XCTAssertNotNil(RecapComposer.photoInputs(detail: detail, analysis: config.photoAnalysis).analysis,
+                        "version-1 rows are not waiting for the pick")
+        XCTAssertEqual(
+            try repository.assetsNeedingAnalysis(tripId: imported.trip.id, version: PhotoAnalysisVersion.current).count,
+            detail.photos.filter { $0.stopId != nil }.count,
+            "but every one is analysed again, for its mood"
+        )
+    }
+}

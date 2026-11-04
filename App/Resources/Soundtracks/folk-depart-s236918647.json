@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "folk-depart-s236918647",
+  "style": "folk",
+  "mood": "depart",
+  "file": "folk-depart-s236918647.m4a",
+  "duration_s": 120.0,
+  "bpm": 110.1866,
+  "beats_per_bar": 4,
+  "first_downbeat_s": 1.2591,
+  "tempo_drift_bpm": 3.9785,
+  "sections": [
+    {
+      "name": "intro-A0",
+      "start_bar": 0,
+      "bars": 8,
+      "energy": 3,
+      "role": "intro",
+      "repeatable": false
+    },
+    {
+      "name": "peak-A1",
+      "start_bar": 8,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "body-B2",
+      "start_bar": 16,
+      "bars": 8,
+      "energy": 2,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "lift-C3",
+      "start_bar": 24,
+      "bars": 8,
+      "energy": 2,
+      "role": "lift",
+      "repeatable": false
+    },
+    {
+      "name": "peak-B4",
+      "start_bar": 32,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "body-D5",
+      "start_bar": 40,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "outro-E6",
+      "start_bar": 48,
+      "bars": 6,
+      "energy": 1,
+      "role": "outro",
+      "repeatable": false
+    }
+  ],
+  "sections_confirmed": false,
+  "final_hit_bar": 52,
+  "tail_s": 5.4784,
+  "integrated_lufs": -13.9,
+  "true_peak_dbtp": -1.1,
+  "provenance": {
+    "engine": "acestep-1.5",
+    "commit": "ca1e85f",
+    "seed": 236918647
+  }
+}

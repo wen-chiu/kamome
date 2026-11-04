@@ -1,6 +1,7 @@
 import Foundation
 import ImageIO
 import KamomeConfig
+import KamomeExportEngine
 import KamomePersistence
 import Photos
 import UIKit
@@ -8,9 +9,19 @@ import Vision
 
 /// The analyser's version, stored on every row. Bump it when what a row means
 /// changes — a new request, a new revision — and every photograph is analysed
-/// again (the trip plays the time-based pick until it has been).
+/// again.
+///
+/// **2** (handoff-music §2.4) added scene labels and colour for the film's
+/// music. Its pick signals — utility, quality, feature print — are version 1's
+/// unchanged, so a version-1 row still serves the photo pick (`pickSignals`)
+/// while it waits to be analysed again; only its mood reads as neutral.
 enum PhotoAnalysisVersion {
-    static let current = 1
+    static let current = 2
+    /// The oldest version whose utility, quality and feature print the photo
+    /// pick may use. Raise it only when one of those three changes.
+    static let pickSignals = 1
+    /// The oldest version that measured mood.
+    static let mood = 2
 }
 
 /// **Vision looks at one photograph, on the device** (ADR 2026-09-25 (d)).
@@ -23,6 +34,10 @@ enum PhotoAnalysisVersion {
 ///    stays NULL and each slot takes the photograph at its centre, as before.
 ///  - *feature print* — `VNGenerateImageFeaturePrintRequest`, pinned to revision
 ///    2 (iOS 17) so every device's prints share one space.
+///  - *mood* (version 2) — `VNClassifyImageRequest`'s labels from a fixed
+///    whitelist (`PhotoMood.Label`), kept at `label_confidence_min`, and mean
+///    luminance, saturation and warmth of a `mood_sample_px` square
+///    downsample of the same pixels. For the film's music only (§2.4).
 ///
 /// Pixels come from `PhotoKitImageLoader` at `photo_analysis.target_px` and are
 /// dropped when the function returns; nothing is written but the row, and
@@ -47,6 +62,7 @@ enum PhotoAnalyzer {
         var fetchMs: Double
         var featurePrintMs: Double?
         var aestheticsMs: Double?
+        var classifyMs: Double?
     }
 
     static func analyze(asset: PHAsset?, assetId: String, config: TrackingConfig.PhotoAnalysis) async -> Result {
@@ -84,15 +100,23 @@ enum PhotoAnalyzer {
             aestheticsMs = milliseconds(clock.now - start)
         }
 
+        let classifyStart = clock.now
+        let labels = sceneLabels(cgImage, orientation: orientation, confidenceMin: config.labelConfidenceMin)
+        let classifyMs = milliseconds(clock.now - classifyStart)
+        let colour = self.colour(cgImage, side: config.moodSamplePx)
+
         let isUtility: Int? = if isScreenshot { 1 } else { aesthetics.map { $0.isUtility ? 1 : 0 } }
         let record = PhotoAnalysisRecord(
             phAssetId: assetId, version: PhotoAnalysisVersion.current, outcome: .analyzed,
             isUtility: isUtility, quality: aesthetics?.score,
-            featurePrint: featurePrint.map(PhotoAnalysisRecord.encode(featurePrint:)), analyzedAt: now
+            featurePrint: featurePrint.map(PhotoAnalysisRecord.encode(featurePrint:)),
+            sceneLabels: labels.map { PhotoMood.Label.mask($0) },
+            luminance: colour?.luminance, saturation: colour?.saturation, warmth: colour?.warmth, analyzedAt: now
         )
         return Result(
             record: record, source: source, fetchMs: fetchMs,
-            featurePrintMs: featurePrint == nil ? nil : featurePrintMs, aestheticsMs: aestheticsMs
+            featurePrintMs: featurePrint == nil ? nil : featurePrintMs, aestheticsMs: aestheticsMs,
+            classifyMs: labels == nil ? nil : classifyMs
         )
     }
 
@@ -155,6 +179,40 @@ enum PhotoAnalyzer {
         }
         guard let observation = request.results?.first else { return nil }
         return (Double(observation.overallScore), observation.isUtility)
+    }
+
+    /// The whitelisted labels Vision gives at `confidenceMin` or over; nil when
+    /// the request failed (an empty set is an answer: none of ours).
+    private static func sceneLabels(
+        _ image: CGImage, orientation: CGImagePropertyOrientation, confidenceMin: Double
+    ) -> [PhotoMood.Label]? {
+        let request = VNClassifyImageRequest()
+        do {
+            try VNImageRequestHandler(cgImage: image, orientation: orientation).perform([request])
+        } catch {
+            KamomeLog.importing.error("photo analysis: classification failed: \(error.localizedDescription)")
+            return nil
+        }
+        return (request.results ?? []).compactMap { observation in
+            Double(observation.confidence) >= confidenceMin ? PhotoMood.Label(rawValue: observation.identifier) : nil
+        }
+    }
+
+    /// Luminance, saturation and warmth of the image drawn into a `side` ×
+    /// `side` sRGB square — no Vision needed (§2.4).
+    private static func colour(_ image: CGImage, side: Int) -> PhotoMood.Colour? {
+        guard side > 0, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            ) else { return false }
+            context.interpolationQuality = .medium
+            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        return drawn ? PhotoMood.colour(rgba: pixels) : nil
     }
 
     private static func milliseconds(_ duration: Duration) -> Double {

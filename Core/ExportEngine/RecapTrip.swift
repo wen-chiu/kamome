@@ -104,6 +104,10 @@ public struct RecapTrip {
         /// what a film that never leaves one town names on its map (#183).
         /// nil when there is none or it has not been asked yet.
         public let subLocality: String?
+        /// The country the stop is in, ISO 3166-1 alpha-2 (`CLPlacemark.isoCountryCode`,
+        /// schema v16). Read only by the soundtrack picker, which turns film time
+        /// per country into a style; never drawn, never logged (§0).
+        public let countryCode: String?
 
         public init(
             coordinate: RecapCoordinate,
@@ -113,7 +117,8 @@ public struct RecapTrip {
             photos: [PhotoRef] = [],
             dwellS: Double,
             locality: String? = nil,
-            subLocality: String? = nil
+            subLocality: String? = nil,
+            countryCode: String? = nil
         ) {
             self.coordinate = coordinate
             self.name = name
@@ -123,6 +128,7 @@ public struct RecapTrip {
             self.dwellS = dwellS
             self.locality = locality
             self.subLocality = subLocality
+            self.countryCode = countryCode
         }
     }
 

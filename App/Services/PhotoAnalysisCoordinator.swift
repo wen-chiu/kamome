@@ -69,16 +69,18 @@ final class PhotoAnalysisCoordinator {
         running[tripId] = Task { [weak self] in
             // Background priority: this is never what the person is waiting on,
             // and an export rendering at the same time must not feel it.
-            let (done, yielded) = await Task.detached(priority: .background) {
+            let run = await Task.detached(priority: .background) {
                 await Self.run(pending, repository: repository, config: config, flag: flag, rendering: rendering) { done in
                     Task { @MainActor in self?.progress[tripId] = (done, pending.count) }
                 }
             }.value
             // Counts only — which photographs, never where (§0).
+            let (done, yielded) = (run.done, run.yielded)
             let paused = yielded ? " — paused for a film, resumes when it ends" : ""
-            KamomeLog.importing.notice(
-                "photo analysis: \(done) of \(pending.count) photographs analysed\(paused, privacy: .public)"
-            )
+            KamomeLog.importing.notice("""
+                photo analysis: \(done) of \(pending.count) photographs analysed · \
+                classify mean \(run.classifyMean, privacy: .public) ms\(paused, privacy: .public)
+                """)
             self?.finish(tripId: tripId)
             // Not if the trip was deleted meanwhile (`cancel` set the flag).
             guard yielded, !flag.isSet, let self else { return }
@@ -114,25 +116,39 @@ final class PhotoAnalysisCoordinator {
         finishedRuns[tripId, default: 0] += 1
     }
 
+    /// How a run ended, and what scene classification cost per photograph
+    /// (handoff-music §2.4: `classifyMs`, read on a phone).
+    struct AnalysisRun: Sendable {
+        let done: Int
+        let yielded: Bool
+        let classifyMs: [Double]
+
+        var classifyMean: String {
+            classifyMs.isEmpty ? "—" : String(format: "%.0f", classifyMs.reduce(0, +) / Double(classifyMs.count))
+        }
+    }
+
     /// Analyses `assetIds` one at a time, writing each row as it lands.
     /// Returns how many were written, and whether it stopped for a film.
     private nonisolated static func run(
         _ assetIds: [String], repository: TripRepository, config: TrackingConfig.PhotoAnalysis,
         flag: SharedFlag, rendering: SharedFlag, progress: @escaping @Sendable (Int) -> Void
-    ) async -> (done: Int, yielded: Bool) {
+    ) async -> AnalysisRun {
         let fetched = PHAsset.fetchAssets(withLocalIdentifiers: assetIds, options: nil)
         var assets: [String: PHAsset] = [:]
         fetched.enumerateObjects { asset, _, _ in assets[asset.localIdentifier] = asset }
         var done = 0
+        var classifyMs: [Double] = []
         for assetId in assetIds {
             guard !flag.isSet, !Task.isCancelled else { break }
             // A film started: step aside and resume when it ends.
-            guard !rendering.isSet else { return (done, true) }
+            guard !rendering.isSet else { return AnalysisRun(done: done, yielded: true, classifyMs: classifyMs) }
             let result = await PhotoAnalyzer.analyze(asset: assets[assetId], assetId: assetId, config: config)
+            if let ms = result.classifyMs { classifyMs.append(ms) }
             guard Stored.write("savePhotoAnalysis", { try repository.savePhotoAnalysis(result.record) }) else { break }
             done += 1
             progress(done)
         }
-        return (done, false)
+        return AnalysisRun(done: done, yielded: false, classifyMs: classifyMs)
     }
 }

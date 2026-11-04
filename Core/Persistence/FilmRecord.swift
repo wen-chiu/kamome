@@ -35,6 +35,16 @@ public struct FilmRecord: Codable, Equatable, FetchableRecord, PersistableRecord
     public var recapMode: String
     /// On-disk size in bytes, for the trip-detail display.
     public var fileBytes: Int64?
+    /// The track the film carries (schema v17). NULL is a silent film: 無音樂,
+    /// a film made before music, or music that could not be added.
+    public var soundtrackId: String?
+    /// `FilmSoundtrackBasis.planVersion` when the basis was written; NULL for
+    /// a film made before music.
+    public var soundtrackPlanVersion: Int?
+    /// JSON: the cue sheet the film was cut with and the picker's ranking —
+    /// what 「換音樂」 needs, since the timeline is never stored. Kinds, times
+    /// and track ids only. Decoded in the app; this module never reads it.
+    public var soundtrackBasis: String?
 
     enum CodingKeys: String, CodingKey {
         case id, format, appearance
@@ -45,6 +55,9 @@ public struct FilmRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         case renderSeconds = "render_seconds"
         case recapMode = "recap_mode"
         case fileBytes = "file_bytes"
+        case soundtrackId = "soundtrack_id"
+        case soundtrackPlanVersion = "soundtrack_plan_version"
+        case soundtrackBasis = "soundtrack_basis"
     }
 
     public init(
@@ -57,7 +70,10 @@ public struct FilmRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         renderSeconds: Double? = nil,
         appearance: String,
         recapMode: String,
-        fileBytes: Int64? = nil
+        fileBytes: Int64? = nil,
+        soundtrackId: String? = nil,
+        soundtrackPlanVersion: Int? = nil,
+        soundtrackBasis: String? = nil
     ) {
         self.id = id
         self.tripId = tripId
@@ -69,5 +85,8 @@ public struct FilmRecord: Codable, Equatable, FetchableRecord, PersistableRecord
         self.appearance = appearance
         self.recapMode = recapMode
         self.fileBytes = fileBytes
+        self.soundtrackId = soundtrackId
+        self.soundtrackPlanVersion = soundtrackPlanVersion
+        self.soundtrackBasis = soundtrackBasis
     }
 }

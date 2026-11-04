@@ -10,13 +10,29 @@ import SwiftUI
 /// A red Delete used to sit beside Share with Save missing, so the action
 /// someone opening a film most likely wants was not there, and the one that
 /// cannot be undone carried the same weight as Share.
+///
+/// **「換音樂」** (handoff-music §4.2) sits under the actions: a choice is
+/// rendered beside the picture and played here before 「使用這首」 keeps it.
 struct FilmPlayerSheet: View {
-    let film: FilmRecord
     let onDelete: () -> Void
+    /// The film's row changed (its music): the screen behind reloads.
+    var onChange: (FilmRecord) -> Void = { _ in }
 
+    @State private var editor: FilmMusicEditor
     @State private var player: AVPlayer?
     @State private var showDeleteConfirmation = false
     @Environment(\.dismiss) private var dismiss
+
+    init(film: FilmRecord, session: TrackingSession, onDelete: @escaping () -> Void,
+         onChange: @escaping (FilmRecord) -> Void = { _ in }) {
+        self.onDelete = onDelete
+        self.onChange = onChange
+        _editor = State(initialValue: FilmMusicEditor(
+            film: film, config: session.config, repository: session.repository
+        ))
+    }
+
+    private var film: FilmRecord { editor.film }
 
     private var fileDetail: String {
         var parts = [film.format.uppercased()]
@@ -43,7 +59,14 @@ struct FilmPlayerSheet: View {
                     FilmSaveShareActions(fileURL: url)
                         .padding(.horizontal)
                         .padding(.bottom)
+                        // Saving or sharing the preview's music would be a
+                        // choice the person has not made yet.
+                        .disabled(editor.trial != nil)
                 }
+
+                FilmMusicControl(editor: editor) { onChange($0) }
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
 
                 // Format, date and size used to sit on Trip Detail's films row;
                 // they belong with the film, not on every visit to the trip
@@ -98,14 +121,23 @@ struct FilmPlayerSheet: View {
             }
         }
         .onAppear {
-            guard let url = FilmStore.resolvedURL(relativePath: film.relativePath) else { return }
-            let newPlayer = AVPlayer(url: url)
-            player = newPlayer
-            newPlayer.play()
+            FilmAudioSession.preparePlayback()
+            play()
         }
+        .onChange(of: editor.revision) { play() }
         .onDisappear {
             player?.pause()
             player = nil
+            // Closing throws a preview nobody kept away (§4.2).
+            editor.discard()
         }
+    }
+
+    private func play() {
+        player?.pause()
+        guard let url = editor.playbackURL else { return }
+        let newPlayer = AVPlayer(url: url)
+        player = newPlayer
+        newPlayer.play()
     }
 }

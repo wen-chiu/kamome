@@ -26,6 +26,10 @@ final class ZhHantGlossaryTests: XCTestCase {
         Retired(word: "您", use: "你"),
         Retired(word: "停留", use: "地點"),
         Retired(word: "行程", use: "旅程"),
+        // The film's music is 音樂 (handoff-music §4.2, ADR
+        // 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent).
+        Retired(word: "配樂", use: "音樂"),
+        Retired(word: "BGM", use: "音樂"),
         // The home-screen name stays Kamome; inside a sentence it is 卡摸咩.
         Retired(word: "Kamome", use: "卡摸咩", allowed: ["CFBundleDisplayName", "CFBundleName"])
     ]

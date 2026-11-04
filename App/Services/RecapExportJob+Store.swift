@@ -13,14 +13,14 @@ extension RecapExportJob {
     /// looking at lose nothing** — the film exists before the outcome is
     /// published, so no screen has to be open for it to be kept.
     func store(
-        output: RecapExporter.Output, plan: Plan, seconds: Double
+        videoURL: URL, soundtrackId: String?, basis: FilmSoundtrackPlan, plan: Plan, seconds: Double
     ) throws -> RecapExportOutcome {
         let record = try persistFilm(
-            tempURL: output.videoURL,
+            tempURL: videoURL,
             format: "mp4",
-            appearance: plan.appearance,
-            durationS: plan.timeline.durationS,
-            renderSeconds: seconds
+            plan: plan,
+            renderSeconds: seconds,
+            music: (soundtrackId, basis)
         )
         guard let fileURL = FilmStore.resolvedURL(relativePath: record.relativePath) else {
             return Self.failed
@@ -29,8 +29,8 @@ extension RecapExportJob {
     }
 
     private func persistFilm(
-        tempURL: URL, format: String, appearance: RecapAppearance,
-        durationS: Double, renderSeconds: Double
+        tempURL: URL, format: String, plan: Plan, renderSeconds: Double,
+        music: (soundtrackId: String?, basis: FilmSoundtrackPlan)
     ) throws -> FilmRecord {
         let relativePath = try FilmStore.moveToStore(from: tempURL)
         let fileURL = FilmStore.resolvedURL(relativePath: relativePath)
@@ -41,11 +41,14 @@ extension RecapExportJob {
             relativePath: relativePath,
             format: format,
             createdAt: Date.now.timeIntervalSince1970,
-            durationS: durationS,
+            durationS: plan.timeline.durationS,
             renderSeconds: renderSeconds,
-            appearance: appearance.rawValue,
+            appearance: plan.appearance.rawValue,
             recapMode: config.export.recapMode.rawValue,
-            fileBytes: fileBytes
+            fileBytes: fileBytes,
+            soundtrackId: music.soundtrackId,
+            soundtrackPlanVersion: FilmSoundtrackBasis.planVersion,
+            soundtrackBasis: music.basis.basisJSON
         )
         do {
             try repository.saveFilm(record)

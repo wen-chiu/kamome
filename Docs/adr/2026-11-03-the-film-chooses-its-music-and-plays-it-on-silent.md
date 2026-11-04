@@ -22,6 +22,9 @@
 - One take per brief, only PR A's take, or the Stable Audio 3 takes (26 of 30 clip; tempo is a prompt request only).
 
 ## Consequences
+- **The drift limit was loosened the next day.** At `tempo_drift_max_bpm` 1.0, 17 of 30 takes were refused: 15 for drifting 1.4–4.2 BPM, 2 for true peak. Whole briefs had no track (citypop had only cruise). Chiu, 2026-11-04: 「先放寬 說不定沒差 如果需要調整再說」. The limit is 4.5, INFERRED harmless. *Settle:* Chiu listens to a film cut from a take that drifts > 3 BPM.
+- **The bundle: 29 of 30 takes, 66 MB** (VERIFIED, `du`). That is more than the ~36 MB proposed: two takes per brief, and AAC VBR averages ~146 kbps. One take is left out: folk-cruise-s446581886's true peak stayed at −0.1 dBTP after encoding. Every style has every mood.
+- 音樂 joins the zh-Hant glossary (ADR 2026-10-26-zh-hant-uses-one-word-for-each-thing). 配樂 and BGM are retired, and `ZhHantGlossaryTests` holds them.
 - `Scripts/check-soundtrack-manifests.sh` stops refusing committed audio. It accepts audio only under `App/Resources/Soundtracks/`, and only with a manifest and a catalog entry each.
 - AAC at 128 kbps CBR overshot a −2.3 dBTP master to −0.6 dBTP. Measured 2026-11-03 on anthem-depart-s1855554642. VBR held it at −1.2 dBTP, so the catalog tool encodes VBR.
 - Device rows owed (`Docs/device-runbook.md`): the silent switch, audio on the phone speaker.

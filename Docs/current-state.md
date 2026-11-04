@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-11-03 against ADR **2026-11-03-the-music-plays-straight-through**.
+Last synced: 2026-11-03 against ADR **2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -41,8 +41,8 @@ phone run (`Docs/device-runbook.md`, #112) with the performance it prices
 (`MLNMapSnapshotter`, `Docs/handoff-export-performance.md`), and Chiu's
 judgement of a film. Music is outside the closeout but no longer deferred: every film,
 free included, carries it (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it;
-design `Docs/handoff-music-in-the-film.md`). Its desk half (§8 PR A) renders a film with music at
-the desk; the app does not play music yet (PR B). The music plays straight through, with no dip at a stop
+design `Docs/handoff-music-in-the-film.md`). Both halves (§8 PR A, PR B) are built.
+The music plays straight through, with no dip at a stop
 and no lift on a photograph (ADR 2026-11-03-the-music-plays-straight-through).
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
@@ -105,6 +105,10 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   a warm-up, from the export's own stations per second (ADR 2026-09-30).
   A failed map snapshot is asked twice more from the same source, never
   another, before the export fails (ADR 2026-10-29-a-failed-map-snapshot-is-asked-twice-more).
+  **Music:** every film carries one bundled track, 自動 by default. The style comes from the country
+  and the mood from the photographs. It renders beside the drawing and is muxed after it. If it fails,
+  the silent film is kept and 「再試一次」 is offered. 「換音樂」 in the player never redraws. Films play
+  on the silent switch (ADR 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
   ⚠️ **Two keys are dead** — tuning them does nothing
   (`Scripts/dead-config.baseline`). `total_duration_max_s` is Short's ceiling.

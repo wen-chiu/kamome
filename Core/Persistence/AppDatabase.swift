@@ -289,6 +289,24 @@ public final class AppDatabase {
             try db.execute(sql: "ALTER TABLE stop ADD COLUMN country_code TEXT")
         }
 
+        // Schema v17 — the film's music (`Docs/handoff-music-in-the-film.md`
+        // §4.3, §2.4), one bump for both halves. `film`: which track it carries
+        // (NULL = silent: 無音樂, a film made before music, or music that failed
+        // and was not retried), the plan version, and the basis a later
+        // 「換音樂」 cuts to (cues + ranking, JSON). `photo_analysis`: the
+        // analyser v2's scene labels (a bitmask) and colour. NULL everywhere
+        // for rows written before; a version-1 analysis row reads as no mood.
+        // Nothing here leaves the device (§0). Forward-only.
+        migrator.registerMigration("v17") { db in
+            try db.execute(sql: "ALTER TABLE film ADD COLUMN soundtrack_id TEXT")
+            try db.execute(sql: "ALTER TABLE film ADD COLUMN soundtrack_plan_version INTEGER")
+            try db.execute(sql: "ALTER TABLE film ADD COLUMN soundtrack_basis TEXT")
+            try db.execute(sql: "ALTER TABLE photo_analysis ADD COLUMN scene_labels INTEGER")
+            try db.execute(sql: "ALTER TABLE photo_analysis ADD COLUMN luminance REAL")
+            try db.execute(sql: "ALTER TABLE photo_analysis ADD COLUMN saturation REAL")
+            try db.execute(sql: "ALTER TABLE photo_analysis ADD COLUMN warmth REAL")
+        }
+
         return migrator
     }
 }

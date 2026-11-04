@@ -146,6 +146,18 @@ Still owed: #245 (restart while recording, needs a walk), the fresh-install
 prompt order (§D; a phone that answered Motion before shows nothing, so it needs a
 fresh install or Reset Location & Privacy), B (T4, T5), C (films) and the rest of D.
 
+## D2. The film's music (handoff-music §8 PR B, ADR 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent)
+
+| check | pass means | detail |
+|---|---|---|
+| Added wall time | one Standard and one Short export; read `music` and `mux` on the `export stages:` line | music finishes inside `drawing`; `mux` a few seconds. The desk measured 0.3–2.4 s, with one 66 s outlier under load (handoff-music §4.1a) |
+| Audio on the phone speaker | play a finished film on the speaker, with no headphones | the music is clear, neither clipped nor too quiet against other apps' video; Chiu judges |
+| The silent switch | with the switch on silent, play a film in the player and on the finished screen | the music plays (`.playback`, Chiu 2026-11-03) |
+| Shared to LINE and Instagram | share one film to each and play it there | it keeps its sound, and the end card's chord still lands on the card (handoff-music §3.2: the 44 ms AAC priming) |
+| An export left in the background | leave the app during the last seconds of drawing | the mux still finishes, or the export fails loudly; never a silent film with no notice (§4.1) |
+| 「換音樂」 | change a film's music twice, then 「使用這首」 | each preview takes seconds; the kept film plays the new music and its size updates |
+| Classification cost | import one trip and read `photo analysis: … classify mean N ms` | N recorded; the per-photo cost of analyser v2 (§2.4 UNKNOWN) |
+
 ## E. Chiu's own steps (`HANDOFF.md` 🔴)
 
 1. `./check.sh --release <.xcarchive>`. It needs **no** key (ADR 2026-10-02).

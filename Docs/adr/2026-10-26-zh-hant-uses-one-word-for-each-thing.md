@@ -18,6 +18,7 @@ Chiu (#289, 2026-10-26): the 2026-10-11 glossary is adopted in full, and the hom
 | the app in a zh sentence | **卡摸咩** | Kamome | the home-screen name (`CFBundleDisplayName`, `CFBundleName`) stays Kamome |
 | a place in the trip (a stop) | **地點** | 停留點 · 停留 · 停留地點 | 拍攝地點 is where a photo was taken, not a stop |
 | a trip | **旅程** | 行程 | — |
+| the film's music | **音樂** | 配樂 · BGM | — · *added 2026-11-03 with the music (ADR 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent)* |
 
 The sweep changed words only, never what a sentence says. English was unchanged (the sweep's brief, 2026-10-26).
 

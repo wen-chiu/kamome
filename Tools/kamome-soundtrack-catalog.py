@@ -96,7 +96,7 @@ def main():
         decoded = os.path.join(decoded_dir, track_id + '.wav')
         manifest = os.path.join(args.work, track_id + '.json')
         why = None
-        for margin in (args.peak_margin_db, args.peak_margin_db + 1.0):
+        for margin in (args.peak_margin_db, args.peak_margin_db + 1.0, args.peak_margin_db + 2.0):
             master(wav, mastered, limit['target_lufs'], limit['true_peak_max_dbtp'] - margin)
             for cmd in (['afconvert', '-f', 'm4af', '-d', 'aac', '-s', '3', '-b', str(args.bitrate), '-q', '127',
                          mastered, m4a],

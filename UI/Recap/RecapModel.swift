@@ -38,6 +38,13 @@ final class RecapModel {
     /// flight is actually using rather than this fresh model's defaults.
     private var requestedPhotosEnabled = true
 
+    /// 自動 or 無音樂 for the **next** export; read from the running request
+    /// while one runs, like `photosEnabled` (handoff-music §4.2).
+    private var requestedMusic: FilmMusicChoice = .auto
+
+    /// While 「再試一次」 is adding the music to a kept silent film.
+    private(set) var isRetryingMusic = false
+
     /// Set when a start was refused because a **different** trip is rendering.
     /// One export at a time is a hard rule (`RecapExportCoordinator`); this is
     /// how the screen says so.
@@ -109,6 +116,17 @@ final class RecapModel {
     var photosEnabled: Bool {
         get { running?.request.photosEnabled ?? requestedPhotosEnabled }
         set { requestedPhotosEnabled = newValue }
+    }
+
+    var music: FilmMusicChoice {
+        get { running?.request.music ?? requestedMusic }
+        set { requestedMusic = newValue }
+    }
+
+    /// The finished film was kept silent because its music could not be
+    /// added (handoff-music §4.1).
+    var musicFailed: Bool {
+        running?.musicFailed ?? coordinator.findings(tripId: tripId)?.musicFailed ?? false
     }
 
     var phase: Phase {
@@ -187,7 +205,8 @@ final class RecapModel {
             tripId: tripId,
             photosEnabled: requestedPhotosEnabled,
             appearance: appearance,
-            length: length
+            length: length,
+            music: requestedMusic
         )
         let job = RecapExportJob(request: request, config: config, repository: repository)
         switch coordinator.start(request: request, job: job) {
@@ -210,6 +229,25 @@ final class RecapModel {
     /// short of deleting the one just made. Export is one more tap, on the form.
     func exportAgain() {
         coordinator.clearOutcome(tripId: tripId)
+    }
+
+    /// **「再試一次」** (handoff-music §4.1): adds the music the export chose to
+    /// the kept silent film — the music and the mux again, never the drawing.
+    /// A second failure leaves the silent film and the notice where they were.
+    func retryMusic() async {
+        guard case let .finished(film, _) = phase, !isRetryingMusic else { return }
+        isRetryingMusic = true
+        defer { isRetryingMusic = false }
+        do {
+            let trackId = FilmMusicChange.automaticTrackId(for: film)
+            let preview = try await FilmMusicChange.preview(film: film, trackId: trackId, config: config)
+            guard let updated = try FilmMusicChange.use(
+                preview: preview, film: film, trackId: trackId, repository: repository
+            ) else { return }
+            coordinator.replaceFinished(film: updated)
+        } catch {
+            KamomeLog.recap.error("music: try again failed — \(RecapExportJob.failureCode(error), privacy: .public)")
+        }
     }
 
     /// Deletes a film's row and its file. Called from the finished screen's

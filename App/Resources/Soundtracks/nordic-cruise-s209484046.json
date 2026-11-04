@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "nordic-cruise-s209484046",
+  "style": "nordic",
+  "mood": "cruise",
+  "file": "nordic-cruise-s209484046.m4a",
+  "duration_s": 120.0,
+  "bpm": 83.8834,
+  "beats_per_bar": 4,
+  "first_downbeat_s": 1.5451,
+  "tempo_drift_bpm": 2.1083,
+  "sections": [
+    {
+      "name": "intro-A0",
+      "start_bar": 0,
+      "bars": 8,
+      "energy": 2,
+      "role": "intro",
+      "repeatable": false
+    },
+    {
+      "name": "peak-B1",
+      "start_bar": 8,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "peak-B2",
+      "start_bar": 16,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "body-C3",
+      "start_bar": 24,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "body-B4",
+      "start_bar": 32,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "outro-D5",
+      "start_bar": 40,
+      "bars": 1,
+      "energy": 1,
+      "role": "outro",
+      "repeatable": false
+    }
+  ],
+  "sections_confirmed": false,
+  "final_hit_bar": 40,
+  "tail_s": 4.0103,
+  "integrated_lufs": -13.6,
+  "true_peak_dbtp": -1.9,
+  "provenance": {
+    "engine": "acestep-1.5",
+    "commit": "ca1e85f",
+    "seed": 209484046
+  }
+}
