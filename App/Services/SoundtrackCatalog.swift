@@ -49,8 +49,12 @@ struct SoundtrackCatalog {
                 }
                 return try SoundtrackManifest.load(from: Data(contentsOf: url), limits: limits)
             } catch {
-                // The id names a style, which says where the trip went (§4.4).
-                KamomeLog.recap.error("music: a bundled track was refused — \(id, privacy: .private): \(error)")
+                // Never the id, nor the error's text, which repeats it: an id
+                // names a style, and a style says where the trip went (§4.4).
+                // `.private` is not enough — it read back in full into the kept
+                // export history on the simulator (2026-11-04).
+                let code = (error as? SoundtrackManifestError)?.code ?? RecapExportJob.failureCode(error)
+                KamomeLog.recap.error("music: a bundled track was refused — \(code, privacy: .public)")
                 return nil
             }
         }

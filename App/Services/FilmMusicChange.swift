@@ -94,7 +94,6 @@ enum FilmMusicChange {
             music changed (preview): music \(musicS, format: .fixed(precision: 2))s · \
             mux \(totalS - musicS, format: .fixed(precision: 2))s
             """)
-        if let trackId { KamomeLog.recap.notice("music: preview track \(trackId, privacy: .private)") }
         return output
     }
 

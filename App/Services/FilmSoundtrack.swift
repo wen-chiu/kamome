@@ -38,8 +38,11 @@ struct FilmSoundtrackPlan: @unchecked Sendable {
 /// file only gathers what it decides from.
 ///
 /// **§0 (§4.4).** The style is the trip's country in disguise, so it is never
-/// in a `.public` log string, `ExportLogHistory` or the film's metadata; the
-/// track id names a style and is logged `.private`. Logs say counts and times.
+/// in a log line, `ExportLogHistory` or the film's metadata. Nor is the track
+/// id, which begins with its style: the handoff's `.private` was measured not
+/// to hold — on the simulator a `.private` value read back in full into the
+/// kept export history (2026-11-04). Logs say counts and times; the film's row
+/// keeps which track it carries, on the device.
 enum FilmSoundtrack {
     // MARK: - The pick
 
@@ -73,7 +76,6 @@ enum FilmSoundtrack {
             in \(ms, format: .fixed(precision: 0)) ms · plan \(cues.count) cues · \
             \(ranking.choices.count) tracks fit · \(context.photoMood.photoCount) photographs measured
             """)
-        if let track { KamomeLog.recap.notice("music: track \(track.manifest.id, privacy: .private)") }
         return FilmSoundtrackPlan(basis: basis, track: track)
     }
 
@@ -88,7 +90,7 @@ enum FilmSoundtrack {
         config: TrackingConfig
     ) -> FilmSoundtrackPlan.Track? {
         guard let audioURL = catalog.audioURL(for: manifest) else {
-            KamomeLog.recap.error("music: a track's audio is missing from the bundle — \(manifest.id, privacy: .private)")
+            KamomeLog.recap.error("music: a track's audio is missing from the bundle")
             return nil
         }
         do {
@@ -97,7 +99,8 @@ enum FilmSoundtrack {
             )
             return FilmSoundtrackPlan.Track(manifest: manifest, audioURL: audioURL, plan: plan)
         } catch {
-            KamomeLog.recap.error("music: the arrangement refused a track — \(error)")
+            // Fixed words only: the arrangement's message names the track.
+            KamomeLog.recap.error("music: the arrangement refused a track")
             return nil
         }
     }
