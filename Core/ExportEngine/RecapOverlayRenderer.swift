@@ -176,9 +176,8 @@ public struct RecapOverlayRenderer: OverlayRenderer {
         context.fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
     }
 
-    /// How far a pin of dot `radius` reaches: its white ring. One definition, so
-    /// the car can step clear of what is drawn (`VehicleSubjectRenderer`).
-    public static func pinRingRadius(_ radius: CGFloat) -> CGFloat { radius * 1.5 }
+    /// How far a pin of dot `radius` reaches: its white ring.
+    static func pinRingRadius(_ radius: CGFloat) -> CGFloat { radius * 1.5 }
 
     /// The photo card's height once fully revealed. One definition, shared by
     /// both stop beats, so they can never disagree about which side to hang on.

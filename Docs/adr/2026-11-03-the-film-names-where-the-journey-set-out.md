@@ -14,6 +14,7 @@ Chiu 2026-11-03, choosing among a label over the opening, the departure's town k
 - `RecapTrip.departure` is the trip's first stop when the film does not hold it. The composer sets it; a film that holds its first stop has none, because that stop names itself.
 - Over the opening, the departure gets a quiet stop's label: the same pin and name drawing. It rises as the car fades in and falls over `deck_zoom_s` once the car sets off. No pause, no new tunable, and the film's length is unchanged.
 - Until the first stop, the HUD gives the departure's day and town, never the first held stop's.
+- **The car waits right at the pin and is never hidden by it** (Chiu 2026-11-04: 「車子應該更靠近…可以重疊一點只要點還看得見」, 「car should be on the top of the spot」). The car is drawn just below the pin's dot, overlapping only its white ring, and slides back onto its road as it sets off. Stop pins and the towns' dots and names now draw **under** the car everywhere in the film; photo cards and the HUD stay over it.
 - No label when a stop is held at the start, on a route-only film (no stop labels at all), or on a type-2 film, whose departure airport is never named (ADR 2026-09-05 (c)).
 
 ## Rejected
@@ -21,6 +22,6 @@ Chiu 2026-11-03, choosing among a label over the opening, the departure's town k
 - **Take the later town's name off until it is reached:** Chiu ruled on 2026-10-29 that names stay from the opening.
 
 ## Consequences
-- `Core/ExportEngine/LinearTimelineDeparture.swift`; `RecapTrip.departure`; `RecapComposer.trip`.
-- Held by `LinearTimelineDepartureTests` (5) and `FilmLengthExportTests.testAFilmThatDropsTheFirstStopCarriesItAsTheDeparture`.
+- `Core/ExportEngine/LinearTimelineDeparture.swift`; `RecapTrip.departure`; `RecapComposer.trip`; `SubjectState.pinToClear`; `VehicleSubjectRenderer.clearing` (placed by the art's own opaque rows, not its canvas); `FrameCompositor.drawsBelowSubject`.
+- Held by `LinearTimelineDepartureTests` (6), `SubjectPinClearanceTests` (5) and `FilmLengthExportTests.testAFilmThatDropsTheFirstStopCarriesItAsTheDeparture`.
 - Films already made do not change. #362 (the trail beginning on water) stays open and needs the phone's record of that trip.

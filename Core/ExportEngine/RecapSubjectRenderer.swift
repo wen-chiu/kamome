@@ -126,26 +126,29 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
     public func render(_ state: SubjectState, camera: CameraFrame, into surface: RenderSurface) {
         guard state.isVisible, state.emphasis > 0.001 else { return }
         let size = lengthPx * surface.scale
+        let screenBearing = VehicleMarker.screenRotationDegrees(
+            heading: state.heading, bearing: camera.bearing
+        )
+        var sprite: CGImage?
+        switch visual {
+        case let .rasterSprite(set): sprite = set[SpriteDirection.nearest(toBearing: screenBearing)]
+        case let .omniSprite(image): sprite = image
+        case .marker: sprite = nil
+        }
         let center = Self.clearing(
             surface.cgPoint(lat: state.lat, lon: state.lon),
             of: state.pinToClear.map { surface.cgPoint(lat: $0.lat, lon: $0.lon) },
-            reachPx: RecapOverlayRenderer.pinRingRadius(pinRadiusPx * surface.scale) + size / 2,
+            reachPx: pinRadiusPx * surface.scale + Self.artTopPx(sprite, longestSidePx: size),
             amount: state.pinClearance
-        )
-        let screenBearing = VehicleMarker.screenRotationDegrees(
-            heading: state.heading, bearing: camera.bearing
         )
         surface.context.saveGState()
         surface.context.setAlpha(CGFloat(min(state.emphasis, 1)))
         defer { surface.context.restoreGState() }
         switch visual {
-        case let .rasterSprite(set):
-            let direction = SpriteDirection.nearest(toBearing: screenBearing)
-            guard let sprite = set[direction] else { return }
-            draw(sprite, at: center, longestSidePx: size, in: surface.context)
-        case let .omniSprite(sprite):
-            // No bearing is consulted at all: an omni mark stands for "you are
-            // here" and must read the same whichever way the journey runs.
+        case .rasterSprite, .omniSprite:
+            // A directional set missing this heading draws nothing, as before.
+            // An omni mark consults no bearing: it stands for "you are here".
+            guard let sprite else { return }
             draw(sprite, at: center, longestSidePx: size, in: surface.context)
         case let .marker(marker, palette):
             marker.draw(
@@ -155,11 +158,37 @@ public struct VehicleSubjectRenderer: SubjectRenderer {
         }
     }
 
-    /// **Below the pin, not on it** (Chiu 2026-11-03). Where the subject is
-    /// drawn when it must clear `pin`: straight below, its top at the pin's
-    /// ring, by `amount` — and by less the farther it already is, so the car
-    /// slides back onto its road as it drives off instead of jumping. `reachPx`
-    /// is the ring's radius plus half the subject. The surface draws y-up.
+    /// How far the drawing itself reaches above its centre, at draw size. The
+    /// eight drawings share one canvas, so the car is smaller than the canvas,
+    /// and stepping clear by half the canvas left it far below the pin (Chiu
+    /// 2026-11-03: 「車子應該更靠近」). Read off the art's opaque rows; half
+    /// the size for the vector marker, which fills its box.
+    static func artTopPx(_ sprite: CGImage?, longestSidePx: CGFloat) -> CGFloat {
+        guard let sprite, let topRow = firstOpaqueRow(sprite) else { return longestSidePx / 2 }
+        let height = CGFloat(sprite.height), scale = longestSidePx / CGFloat(max(sprite.width, sprite.height))
+        return (height / 2 - CGFloat(topRow)) * scale
+    }
+
+    /// The first row from the top with any ink in it, nil when there is none.
+    static func firstOpaqueRow(_ image: CGImage) -> Int? {
+        let width = image.width, height = image.height
+        guard let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let data = context.data?.assumingMemoryBound(to: UInt8.self) else { return nil }
+        // Bitmap memory runs from the image's top row down.
+        return (0..<height).first { row in (0..<width).contains { data[(row * width + $0) * 4 + 3] > 0 } }
+    }
+
+    /// **Close below the pin, never over its dot** (Chiu 2026-11-03:
+    /// 「可以重疊一點 只要點還看得見」). Where the subject is drawn when it must
+    /// clear `pin`: straight below, by `amount`, and by less the farther it
+    /// already is, so the car slides back onto its road as it drives off
+    /// instead of jumping. `reachPx` is the pin's dot radius plus how far the
+    /// art reaches above its centre, so the car's top meets the dot's edge and
+    /// overlaps only the white ring. The surface draws y-up.
     static func clearing(_ center: CGPoint, of pin: CGPoint?, reachPx: CGFloat, amount: Double) -> CGPoint {
         guard let pin, amount > 0, reachPx > 0 else { return center }
         let near = max(0, 1 - hypot(center.x - pin.x, center.y - pin.y) / reachPx)

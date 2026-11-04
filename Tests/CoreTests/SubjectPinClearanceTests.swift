@@ -33,4 +33,33 @@ final class SubjectPinClearanceTests: XCTestCase {
             previous = drawn
         }
     }
+
+    /// The car is smaller than its canvas, so it steps clear by the art's own
+    /// reach, not by half the canvas: a 100 px canvas whose ink starts 30 px
+    /// down reaches 20 px above its centre.
+    func testTheCarStepsClearByItsArtNotItsCanvas() throws {
+        let context = try XCTUnwrap(CGContext(
+            data: nil, width: 100, height: 100, bitsPerComponent: 8, bytesPerRow: 400,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        // y-up: rows 30–69 from the top are y 30…70 from the bottom.
+        context.fill(CGRect(x: 20, y: 30, width: 60, height: 40))
+        let car = try XCTUnwrap(context.makeImage())
+        XCTAssertEqual(VehicleSubjectRenderer.firstOpaqueRow(car), 30)
+        XCTAssertEqual(VehicleSubjectRenderer.artTopPx(car, longestSidePx: 100), 20, accuracy: 1e-9)
+        XCTAssertEqual(VehicleSubjectRenderer.artTopPx(car, longestSidePx: 300), 60, accuracy: 1e-9)
+        XCTAssertEqual(VehicleSubjectRenderer.artTopPx(nil, longestSidePx: 300), 150, "the marker fills its box")
+    }
+
+    /// **A pin never hides the car** (Chiu 2026-11-03): the map's own marks
+    /// draw under it, the photo deck and the HUD over it.
+    func testPinsAndTownNamesDrawUnderTheCar() {
+        let place = RecapCoordinate(lat: 0, lon: 0)
+        XCTAssertTrue(FrameCompositor.drawsBelowSubject(.stopLabel(name: "A", coordinate: place, detail: nil, opacity: 1)))
+        XCTAssertTrue(FrameCompositor.drawsBelowSubject(.placeNames([], opacity: 1)))
+        XCTAssertTrue(FrameCompositor.drawsBelowSubject(.routeReveal([])))
+        XCTAssertFalse(FrameCompositor.drawsBelowSubject(.hud(dayLabel: "", place: nil, travelledM: 0)))
+        XCTAssertFalse(FrameCompositor.drawsBelowSubject(.mapCredit("")))
+    }
 }
