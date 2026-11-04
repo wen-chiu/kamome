@@ -34,6 +34,8 @@ export type Intro = {
   // "tap" dives into the tapped point (the app icon) instead of the whole screen,
   // so the intro can end before the launch animation's white window.
   zoomInto?: "screen" | "tap";
+  titleSize?: number;    // fraction of the frame width (0.068)
+  titleColor?: string;
 };
 
 // A pointing hand that glides in, rests on the target and presses on the tap.
@@ -80,6 +82,13 @@ const TapRipple: React.FC<{ atS: number; x: number; y: number; size: number }> =
 // The closing beat: the last clip's final frame (exported as a still) blurs and
 // darkens, the trip's figures count up, a headline lands, then the app icon.
 // Figures are copied from the film's own end card, never computed here.
+// The problem the app solves, told before the app appears. "roll" is a camera
+// roll that scrolls faster until it blurs (too many photos to sort); "notes" is a
+// travel log that gets typed, stalls and is deleted (too lazy to write it down).
+export type Hook =
+  | { kind: "roll"; images: string[]; durationS: number; caption: string }
+  | { kind: "notes"; title: string; typed: string; durationS: number; caption: string };
+
 export type Outro = {
   bg: string;            // a still of the frame the last clip ends on
   durationS: number;
@@ -110,6 +119,7 @@ export type PromoProps = {
   // from captions/<script>.cues.json; seconds include the title card. Both sit
   // at the bottom: use these or the clips' own captions, not both at once.
   voiceCaptions?: { fromS: number; toS: number; text: string }[];
+  hooks?: Hook[];        // the problem, before the intro: why anyone needs the app
   intro?: Intro;
   outro?: Outro;
   // Behind a "contain" clip: a film narrower than the frame's aspect (1080 × 1920
@@ -132,9 +142,83 @@ const FadeIn: React.FC<{ seconds: number; bg?: string; children: React.ReactNode
 
 export const promoFrames = (p: PromoProps, fps: number) =>
   Math.max(1, Math.round(fps * (p.clips.reduce((s, c) => s + c.durationS, 0)
-    + (p.title ? CARD_S : 0) + (p.intro?.durationS ?? 0) + (p.outro?.durationS ?? 0) + (p.endCard ? CARD_S : 0))));
+    + (p.title ? CARD_S : 0) + (p.hooks ?? []).reduce((s, h) => s + h.durationS, 0) + (p.intro?.durationS ?? 0) + (p.outro?.durationS ?? 0) + (p.endCard ? CARD_S : 0))));
 
 const FONT = "-apple-system, 'PingFang TC', sans-serif";
+
+const HookCaption: React.FC<{ text: string; dark?: boolean }> = ({ text, dark = true }) => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const k = spring({ frame: frame - 0.25 * fps, fps, config: { damping: 13, mass: 0.6 } });
+  return (
+    <AbsoluteFill style={{ justifyContent: "flex-end", alignItems: "center", paddingBottom: height * 0.16,
+      background: dark ? "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 45%)" : undefined }}>
+      <div style={{
+        color: dark ? "white" : "#1d2328", fontFamily: FONT, fontWeight: 800, fontSize: width * 0.085,
+        lineHeight: 1.3, textAlign: "center", whiteSpace: "pre-line", opacity: k,
+        transform: `translateY(${(1 - k) * 50}px) scale(${0.9 + 0.1 * k})`,
+        textShadow: dark ? "0 4px 20px rgba(0,0,0,0.6)" : undefined,
+      }}>{text}</div>
+    </AbsoluteFill>
+  );
+};
+
+const RollHook: React.FC<{ h: Extract<Hook, { kind: "roll" }> }> = ({ h }) => {
+  const frame = useCurrentFrame();
+  const { fps, width } = useVideoConfig();
+  const t = frame / fps;
+  const cols = 4, gap = width * 0.004, tile = (width - gap * (cols - 1)) / cols;
+  const rows = 60;
+  // Scrolls ever faster: distance grows with t², and blur with speed.
+  const y = -(tile * 1.2 * t + tile * 5 * t * t);
+  const speed = tile * 1.2 + tile * 10 * t;
+  const blur = Math.min(10, speed / (tile * 6));
+  const cells: React.ReactNode[] = [];
+  for (let i = 0; i < rows * cols; i++) {
+    // a fixed stride through the images: with a stride coprime to the count and a
+    // row step (cols × stride) that is not a multiple of it, no neighbour repeats
+    const img = h.images[(i * 5) % h.images.length];
+    cells.push(<Img key={i} src={staticFile(img)} style={{ width: tile, height: tile, objectFit: "cover" }} />);
+  }
+  return (
+    <AbsoluteFill style={{ background: "black", overflow: "hidden" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap, width, transform: `translateY(${y}px)`,
+        filter: `blur(${blur}px)` }}>{cells}</div>
+      <HookCaption text={h.caption} />
+    </AbsoluteFill>
+  );
+};
+
+const NotesHook: React.FC<{ h: Extract<Hook, { kind: "notes" }> }> = ({ h }) => {
+  const frame = useCurrentFrame();
+  const { fps, width, height } = useVideoConfig();
+  const t = frame / fps, d = h.durationS;
+  const chars = [...h.typed];
+  // types in, stalls, then is deleted back to nothing
+  const typedEnd = d * 0.4, deleteAt = d * 0.55, deletedBy = d * 0.75;
+  const n = t < typedEnd ? Math.floor(chars.length * Math.max(0, t - 0.15) / (typedEnd - 0.15))
+    : t < deleteAt ? chars.length
+    : Math.max(0, Math.round(chars.length * (1 - (t - deleteAt) / (deletedBy - deleteAt))));
+  const cursorOn = Math.floor(t * 2.5) % 2 === 0;
+  const fs = width * 0.055;
+  return (
+    <AbsoluteFill style={{ background: "#efe9dd", alignItems: "center", paddingTop: height * 0.14 }}>
+      <div style={{
+        width: width * 0.84, minHeight: height * 0.42, background: "#fffdf8", borderRadius: width * 0.04,
+        boxShadow: "0 20px 60px rgba(60,45,20,0.18)", padding: width * 0.07, boxSizing: "border-box",
+        fontFamily: FONT, color: "#2b2b2b",
+      }}>
+        <div style={{ fontSize: fs * 1.25, fontWeight: 800, marginBottom: fs * 0.8 }}>{h.title}</div>
+        <div style={{ fontSize: fs, lineHeight: 1.6 }}>
+          {chars.slice(0, n).join("")}
+          <span style={{ display: "inline-block", width: fs * 0.08, height: fs * 1.1, marginLeft: 2,
+            verticalAlign: "text-bottom", background: "#e0a100", opacity: cursorOn ? 1 : 0 }} />
+        </div>
+      </div>
+      <HookCaption text={h.caption} dark={false} />
+    </AbsoluteFill>
+  );
+};
 
 const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
   const frame = useCurrentFrame();
@@ -163,8 +247,9 @@ const IntroBeat: React.FC<{ o: Intro }> = ({ o }) => {
     <AbsoluteFill style={{ background: "radial-gradient(ellipse at 50% 40%, #1a2733 0%, #0b0f14 70%)", overflow: "hidden" }}>
       {o.title ? (
         <div style={{
-          position: "absolute", top: height * 0.07, width: "100%", textAlign: "center", color: "#f4efe6",
-          fontFamily: FONT, fontWeight: 700, fontSize: width * 0.068, lineHeight: 1.3, whiteSpace: "pre-line",
+          position: "absolute", top: height * 0.05, width: "100%", textAlign: "center",
+          fontFamily: FONT, fontWeight: 800, fontSize: width * (o.titleSize ?? 0.068), lineHeight: 1.25, whiteSpace: "pre-line",
+          color: o.titleColor ?? "#f4efe6",
           opacity: appear * Math.max(0, 1 - k * 3), transform: `translateY(${-k * 80}px)`,
         }}>{o.title}</div>
       ) : null}
@@ -297,6 +382,15 @@ export const Promo: React.FC<PromoProps> = (p) => {
     seq.push(<Sequence key="title" from={0} durationInFrames={CARD_S * fps}><Card text={p.title} /></Sequence>);
     at += CARD_S * fps;
   }
+  (p.hooks ?? []).forEach((h, i) => {
+    const len = Math.round(h.durationS * fps);
+    seq.push(
+      <Sequence key={`hook-${i}`} from={at} durationInFrames={len}>
+        {h.kind === "roll" ? <RollHook h={h} /> : <NotesHook h={h} />}
+      </Sequence>,
+    );
+    at += len;
+  });
   if (p.intro) {
     const len = Math.round(p.intro.durationS * fps);
     seq.push(<Sequence key="intro" from={at} durationInFrames={len}><IntroBeat o={p.intro} /></Sequence>);
