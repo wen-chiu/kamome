@@ -39,7 +39,10 @@ import XCTest
 ///    local film never shows a pass or a flight end;
 /// 9. the title card opens the film and the end card closes it;
 /// 10. a flight the film does not draw is cut, not flown (#275): no frame wider
-///     than the opening's, nothing flies, the departure's photographs play.
+///     than the opening's, nothing flies, the departure's photographs play;
+/// 11. the stops play in the order they happened (#349): a loop's last stop
+///     and an out-and-back's way home play where the trip was, not at the
+///     first pass over the same place.
 ///
 /// Synthetic geometry between public places, none of them a trip anyone took
 /// (`CLAUDE.md` §0).
