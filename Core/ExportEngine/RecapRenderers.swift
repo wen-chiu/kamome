@@ -145,6 +145,12 @@ public struct RenderSurface {
     public let heightPx: Int
     /// frameWidth / 1080 — design tokens are authored at the 1080 reference.
     public let scale: CGFloat
+    /// **The licence notice this frame will carry** — the compositor's `credit`,
+    /// set before any overlay draws, so the opening title can stand clear of it.
+    /// The credit wraps (#114) and a European film's runs to three lines; the
+    /// title stack has to know how tall it really is, not assume one line.
+    /// Module-internal: drawing it stays the compositor's last act.
+    var mapCredit: String?
     private let project: (_ lat: Double, _ lon: Double) -> CGPoint
 
     public init(

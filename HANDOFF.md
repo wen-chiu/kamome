@@ -83,6 +83,15 @@ cost somebody time; keep each to a summary and a pointer.
 
 ---
 
+- **`import AVKit` re-exports AVFoundation**: four UI files use `AVPlayer` with
+  only that import, so the import rule alone cannot see a writer built there.
+  Since PR A (handoff-music §8) `check-architecture.sh` also confines the types
+  (`confined_types` in `Config/architecture.json`).
+- **Check a film's music sync with AVFoundation, not ffmpeg.** ffmpeg plays the
+  muxed film's AAC 2,112 samples (44 ms) late: it skips the implicit priming trim
+  that Apple applies. Decode with `AVAssetReader` before calling it a sync bug
+  (`Docs/handoff-music-in-the-film.md` §3.2).
+
 ## 🐛 Known bugs and accepted costs
 
 Import date range clips at timezone edges; `RecapMode` may be two axes; the

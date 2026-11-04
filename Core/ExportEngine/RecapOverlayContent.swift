@@ -99,7 +99,13 @@ public enum OverlayContent: Equatable {
     /// frame for their few seconds.
     case hud(dayLabel: String, place: String?, travelledM: Double)
     /// Opening chrome: trip name + dates/distance.
-    case titleChrome(title: String, subtitle: String)
+    ///
+    /// `elapsedS` is how far into the title beat this frame is and `holdS` how
+    /// long the beat lasts (2026-11-03): the stack arrives in order and leaves
+    /// before the map takes over, instead of cutting in on frame 0 and out on
+    /// the last. *When* the beat runs is the timeline's; the shape of the
+    /// entrance is the style's (`RecapTitleStackStyle`), like the deck's bloom.
+    case titleChrome(title: String, subtitle: String, elapsedS: Double, holdS: Double)
     /// Closing chrome: the trip's name, the film's three figures, and the share
     /// payload the renderer turns into a QR. `shareURL` is nil for the Replay MVP
     /// (PD-4) — the end card shows the Kamome wordmark instead of a code that

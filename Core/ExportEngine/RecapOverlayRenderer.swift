@@ -75,8 +75,11 @@ public struct RecapOverlayRenderer: OverlayRenderer {
             drawJourneyCard(card, into: surface)
         case let .hud(dayLabel, place, travelledM):
             drawHUD(dayLabel: dayLabel, place: place, travelledM: travelledM, into: surface)
-        case let .titleChrome(title, subtitle):
-            drawTitleChrome(title: title, subtitle: subtitle, into: surface)
+        case let .titleChrome(title, subtitle, elapsedS, holdS):
+            drawTitleChrome(
+                title: title, subtitle: subtitle,
+                reveal: titleReveal(elapsedS: elapsedS, holdS: holdS), into: surface
+            )
         case let .endChrome(title, figures, shareURL, tagline):
             drawEndChrome(title: title, figures: figures, shareURL: shareURL, tagline: tagline, into: surface)
         case let .mapCredit(text):
