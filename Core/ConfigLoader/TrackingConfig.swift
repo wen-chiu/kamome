@@ -323,8 +323,8 @@ public struct TrackingConfig: Decodable, Equatable {
         }
     }
 
-    // `Export` lives in TrackingConfigExport.swift — the §4.5 block carries the
-    // recap's whole pacing model and both files stay inside the size budget.
+    // `Export` lives in TrackingConfigExport.swift and `Soundtrack` in
+    // TrackingConfigSoundtrack.swift, so this file stays inside its size budget.
 
     public let schemaVersion: Int
     public let filter: Filter
@@ -342,10 +342,10 @@ public struct TrackingConfig: Decodable, Equatable {
     public let sampling: Sampling
     public let export: Export
     public let photoAnalysis: PhotoAnalysis
-
+    public let soundtrack: Soundtrack
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
-        case filter, segmentation, dwell, simplify, home, matching, photos, discovery, geocode, trip, sampling, export
+        case filter, segmentation, dwell, simplify, home, matching, photos, discovery, geocode, trip, sampling, export, soundtrack
         case photoImport = "import"
         case photoAnalysis = "photo_analysis"
         case tripMap = "trip_map"

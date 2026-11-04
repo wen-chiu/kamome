@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-11-03 against ADR **2026-11-03-the-film-names-where-the-journey-set-out**.
+Last synced: 2026-11-03 against ADR **2026-11-03-the-music-plays-straight-through**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -41,7 +41,9 @@ phone run (`Docs/device-runbook.md`, #112) with the performance it prices
 (`MLNMapSnapshotter`, `Docs/handoff-export-performance.md`), and Chiu's
 judgement of a film. Music is outside the closeout but no longer deferred: every film,
 free included, carries it (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it;
-design `Docs/handoff-music-in-the-film.md`).
+design `Docs/handoff-music-in-the-film.md`). Its desk half (§8 PR A) renders a film with music at
+the desk; the app does not play music yet (PR B). The music plays straight through, with no dip at a stop
+and no lift on a photograph (ADR 2026-11-03-the-music-plays-straight-through).
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
