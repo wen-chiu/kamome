@@ -43,7 +43,10 @@ enum SnapshotRetry {
                 // tile URL, and z/x/y is a place (§0).
                 let bridged = error as NSError
                 let code = "\(bridged.domain) · \(bridged.code)"
-                KamomeLog.recap.notice("snapshot retry \(index + 1) of \(delaysS.count) after \(code, privacy: .public)")
+                KamomeLog.recap.notice("""
+                    snapshot retry \(index + 1, privacy: .public) of \(delaysS.count, privacy: .public) \
+                    after \(code, privacy: .public)
+                    """)
                 try await Task.sleep(nanoseconds: UInt64(max(0, delay) * 1_000_000_000))
                 guard keepTrying() else { throw error }
             }

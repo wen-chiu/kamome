@@ -135,7 +135,8 @@ extension LinearTimeline {
         let towns = trip.stops.compactMap(\.locality)
         KamomeLog.recap.notice("""
             camera: \(path.areaSpansM.map { String(format: "%.1f", $0 / 1000) }.joined(separator: " / "), privacy: .public) km · \
-            \(trip.stops.count) stops · \(towns.count) with a town · \(Set(towns).count) towns
+            \(trip.stops.count, privacy: .public) stops · \(towns.count, privacy: .public) with a town · \
+            \(Set(towns).count, privacy: .public) towns
             """)
         return path
     }

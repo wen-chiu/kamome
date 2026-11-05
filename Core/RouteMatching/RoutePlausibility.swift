@@ -83,10 +83,11 @@ enum RoutePlausibility {
         guard straightM > 0 else { return false }
         guard distanceM <= straightM * maxDetourRatio else {
             KamomeLog.routing.notice("""
-                route: REJECTED by the detour gate — \(distanceM / 1000, format: .fixed(precision: 1)) km routed \
-                vs \(straightM / 1000, format: .fixed(precision: 1)) km straight \
-                (\(distanceM / straightM, format: .fixed(precision: 1))× > \
-                \(maxDetourRatio, format: .fixed(precision: 1))×) — leg stays raw (PD-3)
+                route: REJECTED by the detour gate — \
+                \(distanceM / 1000, format: .fixed(precision: 1), privacy: .public) km routed \
+                vs \(straightM / 1000, format: .fixed(precision: 1), privacy: .public) km straight \
+                (\(distanceM / straightM, format: .fixed(precision: 1), privacy: .public)× > \
+                \(maxDetourRatio, format: .fixed(precision: 1), privacy: .public)×) — leg stays raw (PD-3)
                 """)
             return false
         }
@@ -112,8 +113,8 @@ enum RoutePlausibility {
     ) -> Bool {
         guard geometry.count < 2 else { return true }
         KamomeLog.routing.notice("""
-            route: REJECTED — the route is one point, \(distanceM, format: .fixed(precision: 0)) m routed \
-            vs \(RouteWaypoints.straightLineM(waypoints), format: .fixed(precision: 0)) m straight — \
+            route: REJECTED — the route is one point, \(distanceM, format: .fixed(precision: 0), privacy: .public) m routed \
+            vs \(RouteWaypoints.straightLineM(waypoints), format: .fixed(precision: 0), privacy: .public) m straight — \
             it goes nowhere, so the leg stays raw
             """)
         return false

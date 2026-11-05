@@ -125,9 +125,10 @@ struct RouteMatchService {
         report.implausibleRoute = recalled.filter { $0 == .implausibleRoute }.count
         report.offRoadNetwork = recalled.filter { $0 == .offRoadNetwork }.count
         KamomeLog.routing.notice("""
-            matchTrip \(tripId, privacy: .public): \(routable.count)/\(detail.segments.count) legs routable \
-            against "\(endpoint, privacy: .public)" — \(recalled.count) answered by a stored verdict and not \
-            re-sent — budget \(config.tripBudgetS, format: .fixed(precision: 0))s
+            matchTrip \(tripId, privacy: .public): \
+            \(routable.count, privacy: .public)/\(detail.segments.count, privacy: .public) legs routable \
+            against "\(endpoint, privacy: .public)" — \(recalled.count, privacy: .public) answered by a stored verdict and not \
+            re-sent — budget \(config.tripBudgetS, format: .fixed(precision: 0), privacy: .public)s
             """)
 
         let deadline = ContinuousClock.now + .seconds(config.tripBudgetS)
@@ -138,9 +139,9 @@ struct RouteMatchService {
                 // from "there is no road there", and only one is worth a retry.
                 report.skipped = toAsk.count - index
                 KamomeLog.routing.error("""
-                    matchTrip \(tripId, privacy: .public): STOPPED after \(index) legs — \
+                    matchTrip \(tripId, privacy: .public): STOPPED after \(index, privacy: .public) legs — \
                     \(wanted ? "trip_budget_s exhausted" : "cancelled"); \
-                    \(report.skipped) legs left raw and retryable
+                    \(report.skipped, privacy: .public) legs left raw and retryable
                     """)
                 break
             }
@@ -151,17 +152,24 @@ struct RouteMatchService {
             progress?(index + 1, toAsk.count)
         }
 
-        // The headline a dogfooder needs: how much of the film will draw as road.
-        KamomeLog.routing.notice("""
-            matchTrip \(tripId, privacy: .public): \(report.reconstructed)/\(report.attempted) legs reconstructed; \
-            \(report.noPlausibleRoute) have NO ROAD (crossings), \
-            \(report.offRoadNetwork) off the road network (beaches, walk-only land — not crossings), \
-            \(report.implausibleRoute) implausible, \(report.beyondDriving) too fast to drive (crossings, never asked), \
-            \(report.routedButNotDriven) routed but too far to drive in the time (crossings), \
-            \(report.notEstablished) not established, \(report.unreachable) unreachable, \
-            \(report.rateLimited) rate-limited, \(report.skipped) never asked — the rest draw dashed (PD-1)
-            """)
+        Self.logHeadline(report, tripId: tripId)
         return report
+    }
+
+    /// The headline a dogfooder needs: how much of the film will draw as road.
+    private static func logHeadline(_ report: RouteMatchReport, tripId: String) {
+        KamomeLog.routing.notice("""
+            matchTrip \(tripId, privacy: .public): \
+            \(report.reconstructed, privacy: .public)/\(report.attempted, privacy: .public) legs reconstructed; \
+            \(report.noPlausibleRoute, privacy: .public) have NO ROAD (crossings), \
+            \(report.offRoadNetwork, privacy: .public) off the road network (beaches, walk-only land — not crossings), \
+            \(report.implausibleRoute, privacy: .public) implausible, \
+            \(report.beyondDriving, privacy: .public) too fast to drive (crossings, never asked), \
+            \(report.routedButNotDriven, privacy: .public) routed but too far to drive in the time (crossings), \
+            \(report.notEstablished, privacy: .public) not established, \(report.unreachable, privacy: .public) unreachable, \
+            \(report.rateLimited, privacy: .public) rate-limited, \
+            \(report.skipped, privacy: .public) never asked — the rest draw dashed (PD-1)
+            """)
     }
 
     /// One leg, with every answer kept apart — and, for a reconstructed leg,

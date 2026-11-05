@@ -87,6 +87,10 @@ cost somebody time; keep each to a summary and a pointer.
   only that import, so the import rule alone cannot see a writer built there.
   Since PR A (handoff-music §8) `check-architecture.sh` also confines the types
   (`confined_types` in `Config/architecture.json`).
+- **A log value not marked `.public` reads `<private>` in a tester's diagnostics,
+  a number too** (#366): `LogRedaction` rebuilds every line and keeps only public
+  values, on a simulator as on a phone. Mark each count and duration `.public`;
+  never write `composedMessage` to a file, the simulator returns it unredacted.
 - **Check a film's music sync with AVFoundation, not ffmpeg.** ffmpeg plays the
   muxed film's AAC 2,112 samples (44 ms) late: it skips the implicit priming trim
   that Apple applies. Decode with `AVAssetReader` before calling it a sync bug

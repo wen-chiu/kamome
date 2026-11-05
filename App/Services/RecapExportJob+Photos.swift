@@ -42,15 +42,16 @@ extension RecapExportJob {
         guard channel.shouldContinue() else { return }
         if warmed.downloaded > 0 {
             KamomeLog.recap.notice("""
-                deck photos: \(warmed.downloaded) of \(warmed.requested) downloaded from iCloud, \
-                \(warmed.resolved - warmed.downloaded) already on this device
+                deck photos: \(warmed.downloaded, privacy: .public) of \(warmed.requested, privacy: .public) \
+                downloaded from iCloud, \
+                \(warmed.resolved - warmed.downloaded, privacy: .public) already on this device
                 """)
         }
         guard warmed.missing > 0 else { return }
         channel.photoShortfall(warmed)
         KamomeLog.recap.error("""
-            \(warmed.missing) of \(warmed.requested) deck photos could not be loaded \
-            (\(warmed.inCloud) are in iCloud and could not be downloaded) — those stops will \
+            \(warmed.missing, privacy: .public) of \(warmed.requested, privacy: .public) deck photos could not be loaded \
+            (\(warmed.inCloud, privacy: .public) are in iCloud and could not be downloaded) — those stops will \
             render blank cards. The route is unaffected: EXIF place and time need no download.
             """)
     }

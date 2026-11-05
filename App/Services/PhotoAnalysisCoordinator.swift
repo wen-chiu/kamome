@@ -76,9 +76,10 @@ final class PhotoAnalysisCoordinator {
             }.value
             // Counts only — which photographs, never where (§0).
             let paused = yielded ? " — paused for a film, resumes when it ends" : ""
-            KamomeLog.importing.notice(
-                "photo analysis: \(done) of \(pending.count) photographs analysed\(paused, privacy: .public)"
-            )
+            KamomeLog.importing.notice("""
+                photo analysis: \(done, privacy: .public) of \(pending.count, privacy: .public) \
+                photographs analysed\(paused, privacy: .public)
+                """)
             self?.finish(tripId: tripId)
             // Not if the trip was deleted meanwhile (`cancel` set the flag).
             guard yielded, !flag.isSet, let self else { return }

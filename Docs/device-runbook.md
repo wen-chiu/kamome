@@ -135,6 +135,7 @@ they postdate #105 and #110. Their exact build numbers are not in the log.
 | Fresh install, first recording | on a build with #196's fix: fresh install, or Settings → Reset Location & Privacy; press Start Journey and note each prompt and when. Pass: location, then Motion & Fitness, both over the record sheet; then the recording screen with Kamome's card; nothing on Home after End Trip | ADR 2026-10-29-motion-and-fitness-is-asked-before-the-recording-screen; the phone order is UNKNOWN (desk: simulator only) |
 | Export after backgrounding (P0-1) | backgrounding mid-export fails the export, a second one can start | `_archive/handoff-arch-review-2026-09-24.md` — **❌ 2026-10-09 (#260)**: the background assertion expired about 23 s after leaving, and the export was cancelled. The sheet returned to ready with **no message**. A second export started. |
 | Subject lookup miss rate | count fallback badges over ten exports (desk: 1 in 5) | `handoff-subject-lookup.md` |
+| Diagnostics redaction (#366) | on a TestFlight (Release) build, one export that fails (Airplane Mode mid-export), then About → Export diagnostics: every value not marked public reads `<private>`, `render cost` and `export stages` keep their numbers, and no line shows a raw `%` placeholder | ADR 2026-11-05-what-a-tester-shares-keeps-only-the-values-marked-public; desk: simulator only. Look, do not paste the file anywhere (§0) |
 
 Also from the 2026-09-28 release review: an **iOS 17/18** pass (a simulator
 can settle it first, #127), and the two-week recording's replay time on a phone
