@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-11-03 against ADR **2026-11-03-the-music-plays-straight-through**.
+Last synced: 2026-11-05 against ADR **2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -105,6 +105,8 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   a warm-up, from the export's own stations per second (ADR 2026-09-30).
   A failed map snapshot is asked twice more from the same source, never
   another, before the export fails (ADR 2026-10-29-a-failed-map-snapshot-is-asked-twice-more).
+  A trip whose film route has no length (one place) is refused before the film button, which says
+  why (ADR 2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
   ⚠️ **Two keys are dead** — tuning them does nothing
   (`Scripts/dead-config.baseline`). `total_duration_max_s` is Short's ceiling.

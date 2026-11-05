@@ -31,23 +31,8 @@ extension RecapComposer {
             photoHoldS: config.export.deckPhotoHoldS, zoomS: config.export.deckZoomS,
             labelLeadS: config.export.deckLabelLeadS, photoMinHoldS: config.export.deckPhotoMinHoldS
         )
-        // An import draws only the route between its stops (`TripRoute`); the
-        // film ends at the destination (ADR 2026-09-01): the flight home and
-        // everything after it come off here, before anything is classified.
         let routeSegments = detail.routeSegments
-        let film = filmRecords(
-            segments: routeSegments, stops: detail.stops,
-            epsilonM: config.simplify.epsilonM,
-            matchedEpsilonM: config.matching.displayEpsilonM,
-            homeRadiusM: config.discovery.awayRadiusM
-        )
-        // Typed legs (Fable review 2026-07-26): each stretch reaches the film
-        // with its own transport mode and provenance, so a leg Kamome could not
-        // reconstruct renders visibly as a guess rather than as road (PD-1).
-        let legs = legs(
-            from: film.segments, epsilonM: config.simplify.epsilonM, matchedEpsilonM: config.matching.displayEpsilonM,
-            stops: detail.stops
-        )
+        let (film, legs) = filmLegs(detail: detail, config: config)
         // The title's distance is the recorded total less every flight in it —
         // the flight home included, though the film no longer shows it (#278).
         let wholeTripLegs = film.segments.count == routeSegments.count ? legs : Self.legs(
@@ -75,6 +60,45 @@ extension RecapComposer {
             droppedStops: detail.stops.count - film.stops.count,
             analysed: photos.analysis != nil
         )
+    }
+
+    /// **The legs the film draws, and the records they come from.** An import
+    /// draws only the route between its stops (`TripRoute`); the film ends at
+    /// the destination (ADR 2026-09-01): the flight home and everything after
+    /// it come off here, before anything is classified. Typed legs (Fable
+    /// review 2026-07-26): each stretch reaches the film with its own transport
+    /// mode and provenance, so a leg Kamome could not reconstruct renders
+    /// visibly as a guess rather than as road (PD-1).
+    static func filmLegs(
+        detail: TripRepository.TripDetail, config: TrackingConfig
+    ) -> (film: (segments: [TripRoute.Leg], stops: [StopRecord]), legs: [RecapTrip.Leg]) {
+        let film = filmRecords(
+            segments: detail.routeSegments, stops: detail.stops,
+            epsilonM: config.simplify.epsilonM,
+            matchedEpsilonM: config.matching.displayEpsilonM,
+            homeRadiusM: config.discovery.awayRadiusM
+        )
+        let legs = legs(
+            from: film.segments, epsilonM: config.simplify.epsilonM, matchedEpsilonM: config.matching.displayEpsilonM,
+            stops: detail.stops
+        )
+        return (film, legs)
+    }
+
+    /// **Whether the film has anywhere to go** (ADR
+    /// 2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button): the
+    /// route the export composes, asked the camera's own question
+    /// (`CameraPath.goesSomewhere`). False for a trip whose photographs all
+    /// carry one location — the film button is disabled and says why, rather
+    /// than the export failing with no film (#350). The route depends on
+    /// neither the photo cards nor the film's length, so one answer holds for
+    /// every sheet choice. Routing refuses a leg whose waypoints are one point
+    /// and a road that is one point (`RoutePlausibility`), so the export, which
+    /// routes first, should get the answer Trip Detail got before it; the path
+    /// probe asserts that, and that this agrees with the plan, on every shape.
+    static func filmGoesSomewhere(detail: TripRepository.TripDetail, config: TrackingConfig) -> Bool {
+        let route = filmLegs(detail: detail, config: config).legs.flatMap(\.coordinates)
+        return CameraPath.goesSomewhere(route.map { CameraPath.Point(lat: $0.lat, lon: $0.lon) })
     }
 
     /// **How long the film will run, measured** (Chiu 2026-09-29): the timeline
