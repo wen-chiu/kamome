@@ -69,7 +69,9 @@
   "photo_analysis": {
     "target_px": 512,
     "allow_network": false,
-    "duplicate_distance": 0.3
+    "duplicate_distance": 0.3,
+    "label_confidence_min": 0.3,
+    "mood_sample_px": 32
   },
   "soundtrack": {
     "sample_rate_hz": 48000,
@@ -79,11 +81,35 @@
     "target_lufs": -14.0,
     "loudness_tolerance_lu": 1.0,
     "true_peak_max_dbtp": -1.0,
-    "tempo_drift_max_bpm": 1.0,
+    "tempo_drift_max_bpm": 4.5,
     "phrase_bars": 4,
     "crossfade_beats": 1.0,
     "fade_in_s": 1.5,
-    "fade_out_s": 1.0
+    "fade_out_s": 1.0,
+    "country_styles": [
+      { "style": "citypop", "countries": ["JP", "TW", "KR"] },
+      { "style": "nordic", "countries": ["IS", "NO"] },
+      { "style": "tropical", "countries": ["VN", "TH"] },
+      { "style": "folk", "countries": ["NZ", "AU"] }
+    ],
+    "unlisted_style": "anthem",
+    "mood": {
+      "base_depart": 0.2,
+      "base_cruise": 0.1,
+      "base_epic": 0.0,
+      "landscape_epic": 1.0,
+      "people_depart": 1.0,
+      "night_cruise": 1.0,
+      "vivid_depart": 2.0,
+      "dull_cruise": 2.0,
+      "vividness_pivot": 0.45,
+      "warmth_depart": 0.5,
+      "night_luminance_max": 0.18,
+      "flight_epic": 0.5,
+      "long_film_epic": 0.3,
+      "long_film_s": 150.0,
+      "dark_cruise": 0.3
+    }
   },
   "discovery": {
     "lookback_years": 5,

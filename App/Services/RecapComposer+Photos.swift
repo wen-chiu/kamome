@@ -119,14 +119,16 @@ extension RecapComposer {
     }
 
     /// The trip's signals, or `nil` while any photograph at a stop is still
-    /// waiting for Vision (a row from an older analyser counts as waiting).
+    /// waiting for Vision (a row older than `PhotoAnalysisVersion.pickSignals`
+    /// counts as waiting; a version-1 row does not — version 2 changed only the
+    /// mood the music reads).
     /// `unavailable` rows count as done: they carry what metadata alone said.
     static func analysisInputs(
         detail: TripRepository.TripDetail, config: TrackingConfig.PhotoAnalysis
     ) -> PhotoAnalysisInputs? {
         var signals: [String: PhotoSignal] = [:]
         for photo in detail.photos where photo.stopId != nil {
-            guard let row = detail.analyses[photo.phAssetId], row.version >= PhotoAnalysisVersion.current
+            guard let row = detail.analyses[photo.phAssetId], row.version >= PhotoAnalysisVersion.pickSignals
             else { return nil }
             signals[photo.phAssetId] = PhotoSignal(
                 isUtility: row.isUtility == 1, quality: row.quality, featurePrint: row.featurePrintFloats

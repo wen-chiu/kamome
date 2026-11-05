@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "tropical-depart-s73012380",
+  "style": "tropical",
+  "mood": "depart",
+  "file": "tropical-depart-s73012380.m4a",
+  "duration_s": 120.0,
+  "bpm": 100.0022,
+  "beats_per_bar": 4,
+  "first_downbeat_s": 0.3356,
+  "tempo_drift_bpm": 0.023,
+  "sections": [
+    {
+      "name": "intro-A0",
+      "start_bar": 0,
+      "bars": 8,
+      "energy": 2,
+      "role": "intro",
+      "repeatable": false
+    },
+    {
+      "name": "peak-B1",
+      "start_bar": 8,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "peak-B2",
+      "start_bar": 16,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "body-B3",
+      "start_bar": 24,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "body-B4",
+      "start_bar": 32,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "body-B5",
+      "start_bar": 40,
+      "bars": 8,
+      "energy": 2,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "outro-C6",
+      "start_bar": 48,
+      "bars": 1,
+      "energy": 1,
+      "role": "outro",
+      "repeatable": false
+    }
+  ],
+  "sections_confirmed": false,
+  "final_hit_bar": 48,
+  "tail_s": 4.4669,
+  "integrated_lufs": -13.9,
+  "true_peak_dbtp": -1.1,
+  "provenance": {
+    "engine": "acestep-1.5",
+    "commit": "ca1e85f",
+    "seed": 73012380
+  }
+}

@@ -127,8 +127,8 @@ extension RecapExportJob {
     // MARK: - Rendering
 
     func render(
-        composed: Composed, plan: Plan,
-        resolver: PhotoLibraryPhotoResolver, channel: RecapExportChannel
+        composed: Composed, plan: Plan, soundtrack: FilmSoundtrackPlan,
+        resolver: PhotoLibraryPhotoResolver, channel: RecapExportChannel, clock: ExportStageClock
     ) async -> RecapExportOutcome {
         let compositor = compositor(composed: composed, plan: plan, resolver: resolver)
         let exporter = RecapExporter(
@@ -165,6 +165,8 @@ extension RecapExportJob {
             frameCount: plan.timeline.frameCount, pipeline: plan.config.pipeline
         ))
         let started = ContinuousClock.now
+        // The music renders alongside the drawing (handoff-music §4.1).
+        let music = startMusic(soundtrack, channel: channel)
         do {
             let output = try await runDetached(
                 exporter: exporter, videoURL: videoURL, channel: channel,
@@ -173,14 +175,15 @@ extension RecapExportJob {
             // Asked again on the main actor after the last frame: a trip deleted
             // meanwhile (`TripDeletion`) stores nothing (arch review 2026-09-24).
             guard let output, channel.shouldContinue() else {
-                cleanup(videoURL: videoURL)
+                cleanup(videoURL: videoURL, music: music)
                 return .cancelled
             }
             let seconds = elapsed(since: started)
             report(output: output, seconds: seconds)
-            return try store(output: output, plan: plan, seconds: seconds)
+            let film = await finishMusic(music, soundtrack: soundtrack, videoURL: output.videoURL, clock: clock, channel: channel)
+            return try store(videoURL: film.url, soundtrackId: film.soundtrackId, basis: soundtrack, plan: plan, seconds: seconds)
         } catch {
-            cleanup(videoURL: videoURL)
+            cleanup(videoURL: videoURL, music: music)
             // Logged, so a TestFlight device run keeps it (arch review
             // 2026-09-24, P1-6); the full text stays private because a MapLibre
             // error can carry a tile URL, and z/x/y is a place (§0).
@@ -300,10 +303,6 @@ extension RecapExportJob {
     private func elapsed(since started: ContinuousClock.Instant) -> Double {
         let elapsed = ContinuousClock.now - started
         return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) * 1e-18
-    }
-
-    private func cleanup(videoURL: URL) {
-        try? FileManager.default.removeItem(at: videoURL)
     }
 
     /// The style resource for each appearance — two frozen forks of

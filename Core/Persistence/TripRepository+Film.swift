@@ -13,6 +13,20 @@ extension TripRepository {
         }
     }
 
+    /// Records a film's new music (schema v17): which track it now carries (nil
+    /// = silent) and the file's new size. Returns the updated record, or nil
+    /// when the film no longer exists — deleted while its music was changing.
+    @discardableResult
+    public func setFilmSoundtrack(filmId: String, soundtrackId: String?, fileBytes: Int64?) throws -> FilmRecord? {
+        try database.writer.write { db in
+            guard var film = try FilmRecord.fetchOne(db, key: filmId) else { return nil }
+            film.soundtrackId = soundtrackId
+            film.fileBytes = fileBytes
+            try film.update(db)
+            return film
+        }
+    }
+
     /// All films for a trip, newest first.
     public func films(tripId: String) throws -> [FilmRecord] {
         try database.writer.read { db in

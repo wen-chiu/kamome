@@ -20,6 +20,14 @@ are cues like a stop's. **After Chiu's listen the music plays straight through**
 (ADR 2026-11-03-the-music-plays-straight-through): §2.5 items 5–6 were built, heard and removed.
 The stop dip sounded broken, and the return and the photo lift went unnoticed. #361 is closed.
 
+**Status, 2026-11-04: PR B is built** (§8): the picker, `PhotoMood` (analyser v2), schema v17, the
+export wiring, the sheet's 「音樂」 row, 「換音樂」 and 「再試一次」. §7's open defaults are decided
+(ADR 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent). Departures from the text below:
+- `FilmRecord` also stores `soundtrack_basis` (the cue sheet and ranking), because 「換音樂」 has no
+  timeline to cut to.
+- The ranking puts one take per mood first, so the list's mood labels differ.
+- A version-1 analysis row still serves the photo pick.
+
 ---
 
 ## 1. The shape, in one picture

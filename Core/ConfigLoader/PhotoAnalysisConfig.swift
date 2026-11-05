@@ -26,6 +26,12 @@ extension TrackingConfig {
         /// behaviour), too high and two different views collapse into one. The
         /// probe's consecutive-distance histogram on a real trip settles it.
         public let duplicateDistance: Double
+        /// Vision's confidence at or over which a whitelisted scene label is
+        /// kept for the photograph's mood (handoff-music §2.4). **INFERRED** 0.3.
+        public let labelConfidenceMin: Double
+        /// The side of the square the photograph is shrunk to before its
+        /// luminance, saturation and warmth are averaged (§2.4: 32 × 32).
+        public let moodSamplePx: Int
 
         /// The same block with iCloud allowed or not — the DEBUG probe measures
         /// both; the background run only ever uses the file's value.
@@ -39,6 +45,8 @@ extension TrackingConfig {
             case targetPx = "target_px"
             case allowNetwork = "allow_network"
             case duplicateDistance = "duplicate_distance"
+            case labelConfidenceMin = "label_confidence_min"
+            case moodSamplePx = "mood_sample_px"
         }
     }
 }

@@ -54,6 +54,9 @@ struct RecapExportJob: RecapExportRunning {
             KamomeLog.recap.error("export failed — no film plan (base map or timeline)")
             return Self.failed
         }
+        // After the plan, before the drawing (handoff-music §4.1): the picker
+        // needs the timeline's duration and the plan's appearance.
+        let soundtrack = pickSoundtrack(composed: composed, plan: plan)
         clock.enter("photos")
         let resolver = PhotoLibraryPhotoResolver()
         await warmDeckPhotos(trip: composed.trip, style: plan.style, resolver: resolver, channel: channel)
@@ -61,7 +64,9 @@ struct RecapExportJob: RecapExportRunning {
         guard channel.shouldContinue() else { return .cancelled }
         channel.stage(.drawing)
         clock.enter("drawing")
-        return await render(composed: composed, plan: plan, resolver: resolver, channel: channel)
+        return await render(
+            composed: composed, plan: plan, soundtrack: soundtrack, resolver: resolver, channel: channel, clock: clock
+        )
     }
 
     // MARK: - Routing

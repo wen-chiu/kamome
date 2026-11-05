@@ -8,10 +8,14 @@ import OSLog
 /// stages before it — routing, composing, downloading iCloud photographs — can
 /// be most of a slow export and were never timed. One line on every exit:
 ///
-///     export stages: roads 4.1s · compose 0.3s · photos 38.0s · drawing 212.4s · total 254.8s · finished
+///     export stages: roads 4.1s · compose 0.3s · photos 38.0s · drawing 212.4s · music 6.3s · mux 0.7s ·
+///                    total 255.5s · finished
 ///
 /// A stage that never started is absent, so a line ending at `compose` says the
-/// export stopped there. Durations and fixed words only (§0).
+/// export stopped there. `music` ran alongside `drawing` (handoff-music §4.1),
+/// so it is recorded rather than entered and does not add to the total; `mux`
+/// follows the last frame. Durations and fixed words only (§0) — never which
+/// music.
 @MainActor
 final class ExportStageClock {
     let startedAt = Date.now
@@ -23,6 +27,12 @@ final class ExportStageClock {
     func enter(_ name: String) {
         close()
         current = (name, .now)
+    }
+
+    /// A stage that ran alongside another — its own seconds, recorded where
+    /// the line has reached, without closing the stage in progress.
+    func record(_ name: String, seconds: Double) {
+        finished.append((name, seconds))
     }
 
     func report(outcome: RecapExportOutcome) {

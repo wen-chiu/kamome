@@ -137,6 +137,8 @@ private struct Report {
         lines.append("feature print ms \(prints.isEmpty ? "—" : Self.spread(prints))")
         let aesthetics = results.compactMap(\.aestheticsMs)
         lines.append("aesthetics ms \(aesthetics.isEmpty ? "— (iOS 17 or refused)" : Self.spread(aesthetics))")
+        let classify = results.compactMap(\.classifyMs)
+        lines.append("classify ms \(classify.isEmpty ? "— (refused)" : Self.spread(classify))")
         let scores = results.compactMap(\.record.quality)
         lines.append("score \(scores.isEmpty ? "—" : Self.spread(scores, digits: 2))")
         let utility = results.filter { $0.record.isUtility == 1 }.count

@@ -28,10 +28,19 @@ public struct PhotoAnalysisRecord: Codable, Equatable, FetchableRecord, Persista
     public var quality: Double?
     /// The feature print as little-endian Float32s. NULL without pixels.
     public var featurePrint: Data?
+    /// Analyser v2 (schema v17): the whitelisted Vision scene labels as a
+    /// bitmask (`PhotoMood.Label`). NULL from version 1 or without pixels.
+    public var sceneLabels: Int64?
+    /// Mean luminance, saturation (0…1) and warmth (−1…1) of a small
+    /// downsample. NULL from version 1 or without pixels.
+    public var luminance: Double?
+    public var saturation: Double?
+    public var warmth: Double?
     public var analyzedAt: Double
 
     enum CodingKeys: String, CodingKey {
-        case version, outcome, quality
+        case version, outcome, quality, luminance, saturation, warmth
+        case sceneLabels = "scene_labels"
         case phAssetId = "ph_asset_id"
         case isUtility = "is_utility"
         case featurePrint = "feature_print"
@@ -40,7 +49,8 @@ public struct PhotoAnalysisRecord: Codable, Equatable, FetchableRecord, Persista
 
     public init(
         phAssetId: String, version: Int, outcome: Outcome, isUtility: Int? = nil,
-        quality: Double? = nil, featurePrint: Data? = nil, analyzedAt: Double
+        quality: Double? = nil, featurePrint: Data? = nil, sceneLabels: Int64? = nil,
+        luminance: Double? = nil, saturation: Double? = nil, warmth: Double? = nil, analyzedAt: Double
     ) {
         self.phAssetId = phAssetId
         self.version = version
@@ -48,6 +58,10 @@ public struct PhotoAnalysisRecord: Codable, Equatable, FetchableRecord, Persista
         self.isUtility = isUtility
         self.quality = quality
         self.featurePrint = featurePrint
+        self.sceneLabels = sceneLabels
+        self.luminance = luminance
+        self.saturation = saturation
+        self.warmth = warmth
         self.analyzedAt = analyzedAt
     }
 

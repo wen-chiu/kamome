@@ -24,15 +24,20 @@ struct RecapExportRequest: Equatable, Sendable {
     /// `.standard` — the film every existing caller was written against — so
     /// only the export sheet has to say; it always does.
     let length: FilmLength
+    /// 自動 or 無音樂, from the sheet's 「音樂」 row (handoff-music §4.2).
+    /// Defaulted to 自動, the decided default (ADR
+    /// 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent).
+    let music: FilmMusicChoice
 
     init(
         tripId: String, photosEnabled: Bool, appearance: RecapAppearance,
-        length: FilmLength = .standard
+        length: FilmLength = .standard, music: FilmMusicChoice = .auto
     ) {
         self.tripId = tripId
         self.photosEnabled = photosEnabled
         self.appearance = appearance
         self.length = length
+        self.music = music
     }
 }
 
@@ -81,6 +86,9 @@ struct RecapExportChannel {
     /// Sent once, as drawing starts: the station plan the time-left estimate
     /// counts down (`RecapExportTimeLeft`, Chiu 2026-09-30).
     var timeLeft: (RecapExportTimeLeft) -> Void
+    /// Sent when the film's music could not be added: the silent film is kept
+    /// and the finished screen says so, with 「再試一次」 (handoff-music §4.1).
+    var musicFailed: () -> Void = {}
     /// Read from the render thread every frame — see `SharedFlag`.
     var shouldContinue: @Sendable () -> Bool
 }

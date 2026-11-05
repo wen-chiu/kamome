@@ -174,7 +174,7 @@ struct TripDetailView: View {
             }
         }
         .sheet(item: $playingFilm) { film in
-            FilmPlayerSheet(film: film, onDelete: {
+            FilmPlayerSheet(film: film, session: session, onDelete: {
                 model.deleteFilm(film)
                 // The export sheet remembers this trip's last finished film, and
                 // that memory now outlives the sheet — so deleting the film here
@@ -182,7 +182,7 @@ struct TripDetailView: View {
                 // gone (ADR 2026-09-10).
                 exportCoordinator.forget(film: film)
                 playingFilm = nil
-            })
+            }, onChange: { _ in model.reload() })
         }
     }
 

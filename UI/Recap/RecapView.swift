@@ -41,8 +41,11 @@ struct RecapView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if case let .finished(_, fileURL) = model.phase {
+                if case let .finished(film, fileURL) = model.phase {
+                    // A new identity when 「再試一次」 adds the music, so the
+                    // player opens the file again.
                     RecapFinishedView(model: model, fileURL: fileURL)
+                        .id(film.soundtrackId ?? "")
                 } else {
                     exportForm
                         .onAppear { if filmPhotos == nil { filmPhotos = model.filmPhotoChoices() } }
@@ -224,6 +227,7 @@ struct RecapView: View {
                 // keeps it reading as photo cards only (2026-07-18).
                 Text("recap_photos_note")
             }
+            FilmMusicRow(model: model)
         } header: {
             Text("recap_settings_header")
         }

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "id": "nordic-epic-s198801694",
+  "style": "nordic",
+  "mood": "epic",
+  "file": "nordic-epic-s198801694.m4a",
+  "duration_s": 120.0,
+  "bpm": 100.2761,
+  "beats_per_bar": 4,
+  "first_downbeat_s": 0.0517,
+  "tempo_drift_bpm": 1.4304,
+  "sections": [
+    {
+      "name": "intro-A0",
+      "start_bar": 0,
+      "bars": 8,
+      "energy": 2,
+      "role": "intro",
+      "repeatable": false
+    },
+    {
+      "name": "lift-B1",
+      "start_bar": 8,
+      "bars": 8,
+      "energy": 2,
+      "role": "lift",
+      "repeatable": false
+    },
+    {
+      "name": "peak-C2",
+      "start_bar": 16,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "lift-C3",
+      "start_bar": 24,
+      "bars": 8,
+      "energy": 3,
+      "role": "lift",
+      "repeatable": false
+    },
+    {
+      "name": "peak-C4",
+      "start_bar": 32,
+      "bars": 8,
+      "energy": 4,
+      "role": "peak",
+      "repeatable": true
+    },
+    {
+      "name": "body-C5",
+      "start_bar": 40,
+      "bars": 8,
+      "energy": 3,
+      "role": "body",
+      "repeatable": true
+    },
+    {
+      "name": "outro-D6",
+      "start_bar": 48,
+      "bars": 2,
+      "energy": 1,
+      "role": "outro",
+      "repeatable": false
+    }
+  ],
+  "sections_confirmed": false,
+  "final_hit_bar": 50,
+  "tail_s": 0.2787,
+  "integrated_lufs": -14.0,
+  "true_peak_dbtp": -2.6,
+  "provenance": {
+    "engine": "acestep-1.5",
+    "commit": "ca1e85f",
+    "seed": 198801694
+  }
+}

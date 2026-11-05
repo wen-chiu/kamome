@@ -61,6 +61,8 @@ final class RecapExportCoordinator {
         /// When drawing started — the estimate's clock, which is why road
         /// finding and the iCloud download never count towards its pace.
         var drawingStarted: ContinuousClock.Instant?
+        /// The music could not be added; the silent film is kept (handoff-music §4.1).
+        var musicFailed = false
 
         var tripId: String { request.tripId }
     }
@@ -81,6 +83,8 @@ final class RecapExportCoordinator {
     struct Findings: Equatable {
         var routing: RouteMatchReport?
         var photoShortfall: PhotoLibraryPhotoResolver.WarmSummary?
+        /// The film was kept silent because its music could not be added.
+        var musicFailed = false
     }
 
     private(set) var running: Running?
@@ -141,6 +145,14 @@ final class RecapExportCoordinator {
     /// The trip screen can delete the very film the export sheet is still
     /// holding, and reopening the sheet would then play a file that is gone —
     /// the cost of an outcome that now outlives the screen that produced it.
+    /// A finished film whose music changed after the export (「再試一次」):
+    /// the outcome carries the new record, and the failure is answered.
+    func replaceFinished(film: FilmRecord) {
+        guard case let .finished(stored, fileURL) = outcomes[film.tripId], stored.id == film.id else { return }
+        outcomes[film.tripId] = .finished(film: film, fileURL: fileURL)
+        findings[film.tripId]?.musicFailed = false
+    }
+
     func forget(film: FilmRecord) {
         guard case let .finished(stored, _) = outcomes[film.tripId], stored.id == film.id else { return }
         outcomes[film.tripId] = nil
@@ -202,6 +214,7 @@ final class RecapExportCoordinator {
                     running.drawingStarted = .now
                 }()
             },
+            musicFailed: { ifCurrent { $0.musicFailed = true }() },
             shouldContinue: { !flag.isSet }
         )
         task = Task { [weak self] in
@@ -227,7 +240,9 @@ final class RecapExportCoordinator {
         let outcome = Self.reported(reported, leftApp: leftApp)
         lifecycle.end()
         if case .finished = outcome, let running {
-            findings[tripId] = Findings(routing: running.routing, photoShortfall: running.photoShortfall)
+            findings[tripId] = Findings(
+                routing: running.routing, photoShortfall: running.photoShortfall, musicFailed: running.musicFailed
+            )
         }
         running = nil
         task = nil

@@ -44,6 +44,12 @@ struct RecapFinishedView: View {
             caption
             // What the run found, kept past its end: without this a film with
             // blank cards or dashed legs came back with no reason given.
+            if model.musicFailed {
+                RecapMusicFailedNotice(model: model)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
             if needsAnotherExport {
                 VStack(alignment: .leading, spacing: 6) {
                     RecapPhotoShortfallNotice(model: model)
@@ -87,6 +93,7 @@ struct RecapFinishedView: View {
         }
         .onAppear {
             guard !isGIF else { return }
+            FilmAudioSession.preparePlayback()
             let newPlayer = AVPlayer(url: fileURL)
             player = newPlayer
             newPlayer.play()
