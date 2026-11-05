@@ -4,6 +4,9 @@
     ~/Kamome-music/.beatmap-venv/bin/python Tools/kamome-beatmap.py \\
         ~/Kamome-music/stableaudio/anthem/anthem-depart-s1855554642.wav \\
         --style anthem --mood depart --engine stable-audio-3 --out anthem-depart-s1855554642.json
+    ~/Kamome-music/.beatmap-venv/bin/python Tools/kamome-beatmap.py \\
+        ~/Kamome-music/library/stableaudio/eurofolk-s450283920.wav \\
+        --brief eurofolk --engine stable-audio-3 --out eurofolk-s450283920.json
 
 Docs/handoff-music-in-the-film.md §5. Desk only: librosa is a desk dependency
 (Chiu 2026-11-03) and never runs in the app or ./check.sh. The manifest it writes
@@ -11,7 +14,9 @@ is the one Core/ExportEngine/SoundtrackManifest.swift decodes, validated by
 Tools/kamome_soundtrack_manifest.py before it is written.
 
 What it measures, and what it refuses:
-  * Tempo and grid. The brief sets the BPM (Tools/kamome_music_briefs.py);
+  * Tempo and grid. The brief sets the BPM (Tools/kamome_music_briefs.py: a
+    STYLES brief by --style/--mood, a film-library brief by --brief, which also
+    gives the style and mood the manifest carries for the picker);
     librosa tracks the beats and a straight line is fitted through them, so the
     grid is exact across the whole track. Refused when the fit is off the brief
     or the tempo drifts by more than `tempo_drift_max_bpm` anywhere.
@@ -157,8 +162,9 @@ def parse_sections(text):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('track')
-    ap.add_argument('--style', required=True, choices=list(briefs.STYLES))
-    ap.add_argument('--mood', required=True, choices=list(briefs.MOODS))
+    ap.add_argument('--style', choices=list(briefs.STYLES))
+    ap.add_argument('--mood', choices=list(briefs.MOODS))
+    ap.add_argument('--brief', choices=list(briefs.LIBRARY), help='a film-library brief, instead of --style/--mood')
     ap.add_argument('--engine', required=True, help='e.g. acestep-1.5 or stable-audio-3')
     ap.add_argument('--commit', help='the engine checkout the take came from')
     ap.add_argument('--seed', type=int, help='defaults to the -s<seed> in the file name')
@@ -168,12 +174,20 @@ def main():
     ap.add_argument('--confirmed', action='store_true', help='Chiu has listened to these sections')
     ap.add_argument('--out', required=True)
     args = ap.parse_args()
+    if args.brief:
+        if args.style or args.mood:
+            ap.error('--brief sets the style and mood; give it alone')
+        spec = briefs.LIBRARY[args.brief]
+        args.style, args.mood, brief_bpm = spec['style'], spec['mood'], spec['bpm']
+    elif args.style and args.mood:
+        brief_bpm = briefs.STYLES[args.style][args.mood][0]
+    else:
+        ap.error('give --style and --mood, or --brief')
 
     import librosa
     import numpy as np
 
     limit = manifests.limits()
-    brief_bpm = briefs.STYLES[args.style][args.mood][0]
     integrated, peak = loudness(args.track)
     if abs(integrated - limit['target_lufs']) > limit['loudness_tolerance_lu']:
         refuse(f'{integrated} LUFS, target {limit["target_lufs"]} ± {limit["loudness_tolerance_lu"]} — master it first')
