@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-11-05 against ADR **2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button**.
+Last synced: 2026-11-05 against ADR **2026-11-05-the-film-music-is-ten-long-tracks**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -43,7 +43,9 @@ judgement of a film. Music is outside the closeout but no longer deferred: every
 free included, carries it (ADR 2026-11-03-music-leaves-deferred-and-every-film-has-it;
 design `Docs/handoff-music-in-the-film.md`). Its desk half (§8 PR A) renders a film with music at
 the desk; the app does not play music yet (PR B). The music plays straight through, with no dip at a stop
-and no lift on a photograph (ADR 2026-11-03-the-music-plays-straight-through).
+and no lift on a photograph (ADR 2026-11-03-the-music-plays-straight-through). The tracks to bundle
+are ten 320 s library briefs, regional styles by country and a mood choice elsewhere
+(ADR 2026-11-05-the-film-music-is-ten-long-tracks).
 
 ⚠️ **Phase 4 has no hard gate and none is to be written** (ADR 2026-09-02,
 amending `CLAUDE.md` rule 7 **for Phase 4 only**). It closes when Chiu judges a
