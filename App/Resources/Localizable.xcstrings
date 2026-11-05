@@ -2490,7 +2490,7 @@
       }
     },
     "make_film_one_place": {
-      "comment": "Trip Detail, above the disabled film button: every photograph in the trip carries one location, so the film has nowhere to go (#350). Draft, for Chiu's batch.",
+      "comment": "Trip Detail, above the disabled film button: every photograph in the trip carries one location, so the film has nowhere to go (#350). Wording chosen by Chiu 2026-11-05.",
       "extractionState": "manual",
       "localizations": {
         "en": {
