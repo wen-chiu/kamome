@@ -14,6 +14,8 @@ extension TrackingConfig.Export {
             cameraAreaSplitRatio: Double = .infinity,
             // Off for hand-built test configs, like the split ratio above.
             cameraContext: CameraContextConfig = .off, travelPacing: TravelPacingConfig = .off, endRouteHoldS: Double = 0,
+            // 0 for hand-built test configs: a reached town is inked at once. The JSON key is required.
+            placeNameInkDrawS: Double = 0,
             zoomTransitionS: Double,
             actSplitKm: Double, crossingBeatS: Double, crossingApexPadding: Double,
             // Defaulted for the same reason `targetZoomRatio` is: the synthesized
@@ -54,6 +56,7 @@ extension TrackingConfig.Export {
             self.cameraSpanM = cameraSpanM; self.wideSpanPadding = wideSpanPadding
             self.targetZoomRatio = targetZoomRatio; self.cameraAreaSplitRatio = cameraAreaSplitRatio
             self.cameraContext = cameraContext; self.travelPacing = travelPacing; self.endRouteHoldS = endRouteHoldS
+            self.placeNameInkDrawS = placeNameInkDrawS
             self.zoomTransitionS = zoomTransitionS; self.actSplitKm = actSplitKm
             self.crossingBeatS = crossingBeatS; self.crossingApexPadding = crossingApexPadding
             self.departureStopMaxPhotos = departureStopMaxPhotos; self.followHeadingUp = followHeadingUp

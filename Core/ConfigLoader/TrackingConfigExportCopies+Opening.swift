@@ -13,6 +13,7 @@ extension TrackingConfig.Export {
             cameraSpanM: cameraSpanM, wideSpanPadding: wideSpanPadding,
             targetZoomRatio: targetZoomRatio, cameraAreaSplitRatio: cameraAreaSplitRatio,
             cameraContext: cameraContext, travelPacing: travelPacing, endRouteHoldS: endRouteHoldS,
+            placeNameInkDrawS: placeNameInkDrawS,
             zoomTransitionS: zoomTransitionS, actSplitKm: actSplitKm,
             crossingBeatS: crossingBeatS, crossingApexPadding: crossingApexPadding,
             departureStopMaxPhotos: departureStopMaxPhotos, followHeadingUp: followHeadingUp,

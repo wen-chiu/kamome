@@ -130,6 +130,10 @@ public extension RecapStyle {
             // ignored ADR 2026-08-27. Palette only — the layout is shared, and
             // `RecapJourneyCardStyle.dark()` says why.
             style.journeyCard = .dark()
+            // **A reached town's ink is the accent here, not the trail** (ADR
+            // 2026-10-29, Draft — Chiu's to judge): a loop in the trail's cyan
+            // round a name the trail runs past reads as more road.
+            style.placeName.inkColor = routeAccent
         case .light:
             style.routeColor = trailOnLight
             // **The closing dim on Apple Maps' light base**, which sits around
@@ -167,6 +171,8 @@ public extension RecapStyle {
             // — the pair a light map sets its own names in.
             style.placeName.textColor = CGColor(srgbRed: 0.031, green: 0.047, blue: 0.071, alpha: 1)
             style.placeName.haloColor = CGColor(srgbRed: 1, green: 1, blue: 1, alpha: 0.9)
+            // The ink: the trail, which on this map is the accent (ADR 2026-10-29, Draft).
+            style.placeName.inkColor = trailOnLight
             // ⏳ **The fallback marker is no longer set per appearance, and that
             // is a question for Chiu rather than a decision taken here**
             // (2026-08-29).

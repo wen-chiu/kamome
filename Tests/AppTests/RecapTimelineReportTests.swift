@@ -1,6 +1,8 @@
+import CoreGraphics
 @testable import Kamome
 import KamomeConfig
 @testable import KamomeExportEngine
+import KamomeTrackingEngine
 import XCTest
 
 /// Where the film's beats land, measured rather than watched.
@@ -73,6 +75,7 @@ final class RecapTimelineReportTests: XCTestCase {
 
         Self.reportTheRetime(line, recap: recap, config: config)
         Self.reportTheEndCard(line, recap: recap, config: config)
+        Self.reportTheInk(line, config: config)
 
         // The camera's two spans and the zoom between them, which nothing else
         // prints — the figures in HANDOFF.md were derived when a region was
@@ -181,6 +184,87 @@ final class RecapTimelineReportTests: XCTestCase {
             local km     \(String(format: "%.0f", odometerM / 1000)) km, the odometer's last reading
             figures      \(figures.isEmpty ? "EMPTY" : figures)
         """)
+    }
+
+    /// **Which way each town's ink went down** (ADR
+    /// 2026-10-29-the-film-inks-each-town-the-car-reaches): on the road in,
+    /// finishing as its first stop's lead-in begins; as its name came back,
+    /// because the road in was shorter than the pen; or never, because the film
+    /// never presented one of its stops. Then the room each name keeps, which
+    /// is what decides whether the ink costs a name anywhere.
+    private static func reportTheInk(_ line: LinearTimeline, config: TrackingConfig.Export) {
+        let names = LinearTimeline.placeNames(of: line.stops, journeys: line.stopJourneys).map(\.name)
+        let inks = line.placeInks()
+        let early = inks.values.filter { $0.path == .beforeTheLeadIn }.count
+        print(String(
+            format: "  KAMOME_PLACE_INK %d towns · %d before the lead-in · %d as the name returns · %d never reached "
+                + "· draw %.2fs · end route hold %.2f–%.2fs",
+            names.count, early, inks.count - early, names.count - inks.count, config.placeNameInkDrawS,
+            line.durationS - config.endCardS - config.endRouteHoldS, line.durationS - config.endCardS
+        ))
+        for name in names {
+            let ink = inks[name]
+            print("    \(name): " + (ink.map { String(format: "%.2fs %@", $0.startS, "\($0.path)") } ?? "never"))
+        }
+        reportTheRoom(line, config: config)
+    }
+
+    /// **What the ink's room costs in names** — computed, not rendered: every
+    /// third frame of the body, the names the renderer would draw with the room
+    /// the loop needs, against 18 px, the room before the ink (which the
+    /// underline needs no more than). Projected flat at the camera's own span,
+    /// as `FlatSnapshotProvider` does — MapLibre's Mercator differs from it by
+    /// a little at a wide frame (INFERRED), so this counts, it does not draw.
+    private static func reportTheRoom(_ line: LinearTimeline, config: TrackingConfig.Export) {
+        var loop = RecapStyle.modernMinimal(.dark), before = loop
+        before.placeName.inkMark = .underline
+        let loopRoom = RecapOverlayRenderer.nameClearancePx(loop.placeName)
+        let beforeRoom = RecapOverlayRenderer.nameClearancePx(before.placeName)
+        loop.placeName.inkMark = .loop
+        func drawn(_ style: RecapStyle, at time: Double) -> Int {
+            guard case let .placeNames(names, _)? = line.placeNamesContent(atTime: time) else { return 0 }
+            let renderer = RecapOverlayRenderer(style: style, resolver: NoPhotos())
+            return renderer.drawnNames(names, in: flatSurface(line.cameraFrame(atTime: time), config: config)).count
+        }
+        var (frames, lost, worst, totalBefore, totalAfter) = (0, 0, 0, 0, 0)
+        for frame in stride(from: 0, to: line.frameCount, by: 3) {
+            let time = Double(frame) / Double(config.fps)
+            let (was, now) = (drawn(before, at: time), drawn(loop, at: time))
+            guard was > 0 else { continue }
+            frames += 1; totalBefore += was; totalAfter += now
+            if now < was { lost += 1; worst = max(worst, was - now) }
+        }
+        let held = line.durationS - config.endCardS - 1 / Double(config.fps)
+        print(String(
+            format: "  KAMOME_PLACE_ROOM loop %.1f px vs %.1f px before · names drawn %d → %d over %d frames "
+                + "· %d frames lose a name (at most %d) · end route hold %d → %d",
+            loopRoom, beforeRoom, totalBefore, totalAfter, frames, lost, worst,
+            drawn(before, at: held), drawn(loop, at: held)
+        ))
+    }
+
+    private struct NoPhotos: RecapPhotoResolving {
+        func image(for ref: PhotoRef, targetPx: Int) -> CGImage? { nil }
+    }
+
+    /// A surface projecting as `FlatSnapshotProvider` does, for counting only.
+    private static func flatSurface(_ camera: CameraFrame, config: TrackingConfig.Export) -> RenderSurface {
+        let (width, height) = (config.frameWidthPx, config.frameHeightPx)
+        let context = CGContext(
+            data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        let perDegLat = Geo.distanceM(latA: camera.centerLat - 0.5, lonA: camera.centerLon,
+                                      latB: camera.centerLat + 0.5, lonB: camera.centerLon)
+        let perDegLon = Geo.distanceM(latA: camera.centerLat, lonA: camera.centerLon - 0.5,
+                                      latB: camera.centerLat, lonB: camera.centerLon + 0.5)
+        let pxPerM = Double(width) / camera.spanM
+        let theta = -camera.bearing * .pi / 180
+        return RenderSurface(context: context, widthPx: width, heightPx: height, scale: CGFloat(width) / 1080) { lat, lon in
+            let east = (lon - camera.centerLon) * perDegLon * pxPerM, south = -(lat - camera.centerLat) * perDegLat * pxPerM
+            return CGPoint(x: Double(width) / 2 + east * cos(theta) - south * sin(theta),
+                           y: Double(height) / 2 + east * sin(theta) + south * cos(theta))
+        }
     }
 
     /// Names a point by the stop it sits closest to. Equirectangular on purpose:

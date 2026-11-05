@@ -46,8 +46,57 @@ public struct RecapPlaceNameStyle {
     public var dotGapPx: CGFloat = 36
 
     /// The room each name keeps around itself. Two names closer than this are
-    /// one too many, and the second is not drawn.
+    /// one too many, and the second is not drawn. The ink is drawn inside it
+    /// (`inkReachPx`), so marking a town never changes which names are drawn.
     public var clearancePx: CGFloat = 18
+
+    // MARK: - The ink a reached town is marked with (ADR 2026-10-29, Draft)
+    //
+    // Chiu 2026-10-29: hand-drawn ink, the way someone circles a place on a paper
+    // road map — not a larger size and not a new face. First cut, INFERRED: he
+    // judges loop or underline, the colour and the draw time from the prototype.
+
+    /// A loop round the name, or a line under it.
+    public enum InkMark: Equatable {
+        case loop
+        case underline
+    }
+
+    public var inkMark = InkMark.loop
+
+    /// The pen's colour. The accent on the dark map, where the trail is cyan
+    /// and a mark in the trail's colour would read as more road; the light
+    /// map's trail *is* the accent. `modernMinimal` sets it per appearance.
+    public var inkColor = RecapStyle.routeAccent
+
+    /// The pen's width at full pressure; it starts and lifts thinner.
+    public var inkStrokePx: CGFloat = 5
+
+    /// Glyphs → the middle of the stroke. The ink hugs the letters, not the
+    /// name's box: that box runs a full em above the baseline, where capitals
+    /// stop at about 0.7, and stops at the baseline, where descenders do not.
+    public var inkPaddingPx: CGFloat = 7.5
+    public var inkGlyphTopEm: CGFloat = 0.8
+    public var inkGlyphBottomEm: CGFloat = 0.06
+
+    /// How far the hand wanders off the line — slowly, once or twice round
+    /// the loop, so it is lopsided rather than shaky — how far the loop leans
+    /// (its right end higher than its left by up to twice this), and how far
+    /// its end passes outside its start, so the two never join.
+    public var inkWobblePx: CGFloat = 2.5
+    public var inkTiltPx: CGFloat = 1.5
+    public var inkSpiralPx: CGFloat = 2
+
+    /// How far the pen runs on past where it started before it lifts, and how
+    /// far it rises as it does — up, where a name has room to spare above its
+    /// capitals, never out to the side or down.
+    public var inkOverlapPx: CGFloat = 70
+    public var inkLiftPx: CGFloat = 10
+
+    /// The underline: below the glyphs by this much, rising this much from
+    /// its start to its end.
+    public var inkUnderlineGapPx: CGFloat = 6
+    public var inkUnderlineRisePx: CGFloat = 3
 
     public init() {}
 }

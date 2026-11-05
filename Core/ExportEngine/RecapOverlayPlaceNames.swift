@@ -16,17 +16,39 @@ extension RecapOverlayRenderer {
     func drawPlaceNames(_ names: [RecapPlaceName], opacity: Double, into surface: RenderSurface) {
         guard opacity > 0.001 else { return }
         let token = style.placeName, scale = surface.scale
-        let placed = names.map { layout($0, in: surface) }
-        let frame = CGRect(x: 0, y: 0, width: surface.widthPx, height: surface.heightPx)
         let context = surface.context
         context.saveGState()
         defer { context.restoreGState() }
         context.setAlpha(CGFloat(opacity))
-        // Decided over every name, in or out of the frame: the dolly only
-        // translates, so which names survive does not change as it moves and
-        // none appears or disappears because another came into view.
-        let clearance = token.clearancePx * scale
+        for (index, placed) in drawnNames(names, in: surface) {
+            // The dot stays: the town is still there. Only its name yields.
+            drawPin(at: placed.point, radius: token.dotRadiusPx * scale, in: surface)
+            context.saveGState()
+            defer { context.restoreGState() }
+            context.setAlpha(CGFloat(opacity * names[index].opacity))
+            // Under the name, so its halo cuts the ink away from the letters.
+            drawPlaceInk(names[index].ink, name: names[index].name, around: placed.rect, in: surface)
+            for (row, text) in placed.lines.enumerated() {
+                let baselineY = placed.rect.maxY - token.fontPx * scale
+                    - CGFloat(row) * token.fontPx * token.lineHeightEm * scale
+                drawHaloedText(text, anchor: CGPoint(x: placed.rect.midX, y: baselineY), in: surface)
+            }
+        }
+    }
+
+    /// **Which names this frame draws, and where** — by name and place only:
+    /// nothing here reads `opacity` or `ink`, so fading a name or inking a town
+    /// never changes which names are drawn.
+    ///
+    /// Decided over every name, in or out of the frame: the dolly only
+    /// translates, so which names survive does not change as it moves and none
+    /// appears or disappears because another came into view.
+    func drawnNames(_ names: [RecapPlaceName], in surface: RenderSurface) -> [(index: Int, placed: PlacedName)] {
+        let placed = names.map { layout($0, in: surface) }
+        let frame = CGRect(x: 0, y: 0, width: surface.widthPx, height: surface.heightPx)
+        let clearance = Self.nameClearancePx(style.placeName) * surface.scale
         var drawn: [CGRect] = []
+        var shown: [(index: Int, placed: PlacedName)] = []
         for index in Self.uncrowded(placed.map { $0.rect.insetBy(dx: -clearance, dy: -clearance) })
         where frame.contains(placed[index].point) {
             // A town near the edge keeps its whole name: the box slides inside
@@ -35,23 +57,22 @@ extension RecapOverlayRenderer {
             let rect = Self.held(placed[index].rect, inside: nameBounds(in: surface))
             guard !drawn.contains(where: { $0.intersects(rect) }) else { continue }
             drawn.append(rect.insetBy(dx: -clearance, dy: -clearance))
-            // The dot stays: the town is still there. Only its name yields.
-            drawPin(at: placed[index].point, radius: token.dotRadiusPx * scale, in: surface)
-            context.saveGState()
-            defer { context.restoreGState() }
-            context.setAlpha(CGFloat(opacity * names[index].opacity))
-            for (row, text) in placed[index].lines.enumerated() {
-                let baselineY = rect.maxY - token.fontPx * scale
-                    - CGFloat(row) * token.fontPx * token.lineHeightEm * scale
-                drawHaloedText(text, anchor: CGPoint(x: rect.midX, y: baselineY), in: surface)
-            }
+            shown.append((index, PlacedName(lines: placed[index].lines, rect: rect, point: placed[index].point)))
         }
+        return shown
+    }
+
+    /// The room every name keeps round itself: `clearancePx`, or more if the
+    /// ink needs more (`inkReachPx`) — for every name, inked or not, from the
+    /// first frame, so a town being inked never pushes a neighbour off the map.
+    static func nameClearancePx(_ token: RecapPlaceNameStyle) -> CGFloat {
+        max(token.clearancePx, inkReachPx(token))
     }
 
     /// Where a name may sit: the frame, less the room the names keep around
     /// themselves, the HUD's row at the top and the map credit's at the bottom.
     private func nameBounds(in surface: RenderSurface) -> CGRect {
-        let scale = surface.scale, clearance = style.placeName.clearancePx * scale
+        let scale = surface.scale, clearance = Self.nameClearancePx(style.placeName) * scale
         let hud = (style.hudMarginPx + style.hudFontPx + 2 * style.hudPillPaddingYPx) * scale
         let credit = (style.mapCredit.marginPx + style.mapCredit.fontPx + 2 * style.mapCredit.pillPaddingYPx) * scale
         return CGRect(

@@ -46,18 +46,10 @@ extension LinearTimeline {
                 return members.min { apart($0) < apart($1) } ?? RecapCoordinate(lat: lat, lon: lon)
             }
         }
-        func text(_ value: String?) -> String? { value.flatMap { $0.isEmpty ? nil : $0 } }
-        let journey = journeys ?? stops.map { _ in 0 }
-        // The journeys that never leave one town, and have parts to tell apart.
-        let fine = Set(Set(journey).filter { index in
-            let own = stops.indices.filter { journey[$0] == index }
-            return Set(own.compactMap { text(stops[$0].locality) }).count == 1
-                && Set(own.compactMap { text(stops[$0].subLocality) }).count > 1
-        })
+        let keys = placeNameKeys(of: stops, journeys: journeys)
         var places: [String: Place] = [:]
         for (index, stop) in stops.enumerated() {
-            let town = text(stop.locality)
-            guard let name = fine.contains(journey[index]) ? text(stop.subLocality) ?? town : town else { continue }
+            guard let name = keys[index] else { continue }
             var place = places[name] ?? Place(first: index)
             place.members.append(stop.coordinate)
             place.dwellS += stop.dwellS
@@ -66,6 +58,25 @@ extension LinearTimeline {
         return places.sorted { lhs, rhs in
             lhs.value.dwellS != rhs.value.dwellS ? lhs.value.dwellS > rhs.value.dwellS : lhs.value.first < rhs.value.first
         }.map { RecapPlaceName(name: $0.key, coordinate: $0.value.anchor) }
+    }
+
+    /// The name each stop is counted under, in `stops` order: its town, or the
+    /// part of it for a journey that never leaves one town (`placeNames`). nil
+    /// for a stop the geocoder gave neither. One rule for the names and for
+    /// which town a stop reaches (`placeInks`), so the two can never disagree.
+    static func placeNameKeys(of stops: [RecapTrip.Stop], journeys: [Int]? = nil) -> [String?] {
+        func text(_ value: String?) -> String? { value.flatMap { $0.isEmpty ? nil : $0 } }
+        let journey = journeys ?? stops.map { _ in 0 }
+        // The journeys that never leave one town, and have parts to tell apart.
+        let fine = Set(Set(journey).filter { index in
+            let own = stops.indices.filter { journey[$0] == index }
+            return Set(own.compactMap { text(stops[$0].locality) }).count == 1
+                && Set(own.compactMap { text(stops[$0].subLocality) }).count > 1
+        })
+        return stops.indices.map { index in
+            let town = text(stops[index].locality)
+            return fine.contains(journey[index]) ? text(stops[index].subLocality) ?? town : town
+        }
     }
 
     /// Which journey each stop is in: how many crossings have played by the time
@@ -104,6 +115,11 @@ extension LinearTimeline {
         if let shown = presentedStopName(atTime: time),
            let index = names.firstIndex(where: { $0.name == shown.name }) {
             names[index].opacity = 1 - shown.opacity
+        }
+        // A town the car has reached is inked, and stays so (ADR 2026-10-29).
+        let inks = placeInks()
+        for index in names.indices {
+            names[index].ink = inks[names[index].name]?.progress(atTime: time, drawS: placeNameInkDrawS) ?? 0
         }
         guard !names.isEmpty else { return nil }
         let rise = journeyStartS > titleCardS

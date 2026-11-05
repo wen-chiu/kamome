@@ -357,6 +357,28 @@ struct RecapReviewScene {
         return image
     }
 
+    /// **This scene in another style**: the same trip, timeline, camera and
+    /// base map, with only the drawing's tokens changed — so two stills of one
+    /// frame differ in exactly what the reviewer is judging (the inked towns'
+    /// loop against their underline, ADR 2026-10-29, Draft).
+    func restyled(_ change: (inout RecapStyle) -> Void) throws -> RecapReviewScene {
+        var style = style
+        change(&style)
+        return RecapReviewScene(
+            trip: trip, config: config, timeline: timeline,
+            compositor: FrameCompositor(
+                timeline: timeline,
+                subject: Self.subjectRenderer(style: style, config: config),
+                overlay: RecapOverlayRenderer(style: style, resolver: try Self.resolver(for: trip)),
+                style: style,
+                widthPx: config.frameWidthPx, heightPx: config.frameHeightPx,
+                crossingSubject: Self.crossingRenderer(style: style, config: config),
+                flightSubject: Self.flightRenderer(style: style, config: config)
+            ),
+            provider: provider, appearance: appearance, style: style
+        )
+    }
+
     // MARK: - Output
 
     static func outputDirectory() -> URL {

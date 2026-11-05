@@ -38,6 +38,8 @@ public extension TrackingConfig {
         public let cameraContext: CameraContextConfig; public let travelPacing: TravelPacingConfig
         /// The whole route, revealed, held before the end card (Chiu 2026-09-29: 多停1~2秒).
         public let endRouteHoldS: Double
+        /// How long the pen takes to ink a town the car reaches (ADR 2026-10-29, Draft). 0.6 s is INFERRED.
+        public let placeNameInkDrawS: Double
         /// Seconds to ease wide↔close at each card boundary (a quick dolly).
         public let zoomTransitionS: Double
         /// Split the film into a new fixed camera frame when consecutive route
