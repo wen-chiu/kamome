@@ -2489,6 +2489,24 @@
         }
       }
     },
+    "make_film_one_place": {
+      "comment": "Trip Detail, above the disabled film button: every photograph in the trip carries one location, so the film has nowhere to go (#350). Wording chosen by Chiu 2026-11-05.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This trip has only one place, so it can't be made into a film."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這趟旅程只有一個地點，無法製作旅程影片。"
+          }
+        }
+      }
+    },
     "merge_with_previous": {
       "extractionState": "manual",
       "localizations": {

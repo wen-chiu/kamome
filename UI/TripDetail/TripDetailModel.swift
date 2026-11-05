@@ -168,10 +168,11 @@ final class TripDetailModel {
                             Stored.read("films") { try repository.films(tripId: tripId) } ?? [],
                             Self.thinned(detail?.routeSegments ?? [], epsilonM: epsilonM, roadEpsilonM: roadEpsilonM),
                             detail.map { Self.filmStopIds($0, config: config) } ?? [],
-                            detail.flatMap { LegLength.groundMeters(trip: $0.trip, segments: $0.routeSegments) })
+                            detail.flatMap { LegLength.groundMeters(trip: $0.trip, segments: $0.routeSegments) },
+                            detail.map { !RecapComposer.filmGoesSomewhere(detail: $0, config: config) } ?? false)
                 }.value
                 // One assignment, so the map never draws lines from another read.
-                (detail, films, displayPolylines, filmStopIds, groundDistanceM) = read
+                (detail, films, displayPolylines, filmStopIds, groundDistanceM, filmHasOnePlace) = read
                 rememberExtent(under: config.discovery.singlePlaceExtentM)
             } while refreshAgain
             refreshTask = nil
@@ -217,6 +218,10 @@ final class TripDetailModel {
     /// figure Home and Footprints print (#242). Measured in `refresh()`, off
     /// the main thread, beside the read it comes from. nil when no leg counts.
     private(set) var groundDistanceM: Double?
+
+    /// The film would have nowhere to go: every place in it is one place
+    /// (#350, `RecapComposer.filmGoesSomewhere`). Read with `detail`.
+    private(set) var filmHasOnePlace = false
 
     // MARK: - The story (Journey Discovery detail, 2026-09-17)
 

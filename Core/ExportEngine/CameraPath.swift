@@ -194,9 +194,9 @@ public struct CameraPath {
         crossingVertexRanges: [Range<Int>], openingFlightFrame: CameraFrame?, stopPlaces: [String?],
         framing: Framing?
     ) {
-        guard route.count >= 2 else { return nil }
+        guard Self.goesSomewhere(route) else { return nil }
         let cumulative = Self.cumulativeDistancesM(route)
-        guard let totalM = cumulative.last, totalM > 0 else { return nil }
+        guard let totalM = cumulative.last else { return nil }
 
         let anchors = Self.stopAnchors(route: route, cumulativeM: cumulative, stops: stops)
 
@@ -248,6 +248,15 @@ public struct CameraPath {
             openingEndsS: plan.openingEndsS
         )
         arcs = moves.arcs; crossingBeatsS = moves.beatsS
+    }
+
+    /// **Whether a camera can follow this route at all** (#350): two vertices
+    /// or more, with some length between them. `init` refuses exactly the
+    /// routes this refuses, by asking it, so a caller that asks first — Trip
+    /// Detail's film button — and the camera can never disagree. Zero is the
+    /// only cut: a route a centimetre long makes a film (the path probe's D4e).
+    public static func goesSomewhere(_ route: [Point]) -> Bool {
+        route.count >= 2 && (cumulativeDistancesM(route).last ?? 0) > 0
     }
 
     /// Along-route metres at every vertex, from 0.

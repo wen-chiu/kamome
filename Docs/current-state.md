@@ -6,7 +6,7 @@ way — this file rotted twice by growing its own reasoning.
 
 ## Staleness
 
-Last synced: 2026-11-03 against ADR **2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent**.
+Last synced: 2026-11-05 against ADR **2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button**.
 Earlier ADRs: `ls Docs/adr/`; before 2026-09-28, `Docs/decisions-index.md`.
 
 **This file is the snapshot of what is true, not a list of what is open.** Open
@@ -109,6 +109,8 @@ run (`Docs/handoff-testflight.md`). → `Docs/release-readiness.md`, `HANDOFF.md
   and the mood from the photographs. It renders beside the drawing and is muxed after it. If it fails,
   the silent film is kept and 「再試一次」 is offered. 「換音樂」 in the player never redraws. Films play
   on the silent switch (ADR 2026-11-03-the-film-chooses-its-music-and-plays-it-on-silent).
+  A trip whose film route has no length (one place) is refused before the film button, which says
+  why (ADR 2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button).
 - **Config:** no magic numbers; every tunable in `Config/TrackingConfig.json`.
   ⚠️ **Two keys are dead** — tuning them does nothing
   (`Scripts/dead-config.baseline`). `total_duration_max_s` is Short's ceiling.

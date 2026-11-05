@@ -60,27 +60,6 @@ extension CameraPath {
         public let endS: Double
     }
 
-    /// Anchor each stop to its nearest route vertex, ordered along the path.
-    static func stopAnchors(
-        route: [Point],
-        cumulativeM: [Double],
-        stops: [Point]
-    ) -> [(stopIndex: Int, distanceM: Double)] {
-        stops.enumerated().map { index, stop in
-            var bestVertex = 0
-            var bestDistance = Double.greatestFiniteMagnitude
-            for (vertex, point) in route.enumerated() {
-                let distance = Geo.distanceM(latA: stop.lat, lonA: stop.lon, latB: point.lat, lonB: point.lon)
-                if distance < bestDistance {
-                    bestDistance = distance
-                    bestVertex = vertex
-                }
-            }
-            return (index, cumulativeM[bestVertex])
-        }
-        .sorted { $0.distanceM < $1.distanceM }
-    }
-
     /// A span no wider than the installed region can cover. Without an extent
     /// there are no tiles to fall off, so the ask stands.
     static func cappedToRegion(

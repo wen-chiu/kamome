@@ -3,8 +3,8 @@ import KamomeConfig
 @testable import KamomeExportEngine
 import XCTest
 
-/// The audit `ExportQualityMatrixTests` runs on every film — the nine
-/// invariants its header lists, each violation named by its number.
+/// The audit `ExportQualityMatrixTests` runs on every film — the invariants
+/// its header lists, each violation named by its number.
 extension ExportQualityMatrixTests {
     struct Measured {
         var durationS = 0.0
@@ -148,6 +148,11 @@ extension ExportQualityMatrixTests {
             if sawArc { violations.append("10. something flies the crossing the film does not draw") }
             if !sawDepartureCard { violations.append("10. the departure's photographs never play") }
         }
+
+        // 11. The stops play in the order they happened (#349) — a loop's last
+        // stop or an out-and-back's way home never plays at the first pass.
+        let played = line.holds.sorted { $0.startS < $1.startS }.map(\.stopIndex)
+        if played != played.sorted() { violations.append("11. the stops play out of order: \(played)") }
 
         // 4 and 5. The stations.
         let planned = ContinuousClock.now
