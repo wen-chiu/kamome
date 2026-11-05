@@ -188,7 +188,7 @@ enum RecapComposer {
         )
         let plan = deckPlan(stops: stops, inputs: inputs, highlightMaxPhotos: highlightMaxPhotos,
                             weighting: weighting, length: length)
-        let tripStops = plan.map { stop, photos -> RecapTrip.Stop in
+        func filmStop(_ stop: StopRecord, photos: [PhotoRef]) -> RecapTrip.Stop {
             RecapTrip.Stop(
                 coordinate: snapped(lat: stop.lat, lon: stop.lon, to: legs),
                 name: stop.name ?? String(localized: "stop_unnamed"),
@@ -201,6 +201,13 @@ enum RecapComposer {
                 locality: stop.locality.flatMap { $0.isEmpty ? nil : $0 },
                 subLocality: stop.subLocality.flatMap { $0.isEmpty ? nil : $0 }
             )
+        }
+        let tripStops = plan.map { filmStop($0.stop, photos: $0.photos) }
+        // The trip set out from its first stop. When the cut dropped it, the film
+        // still says where that was (Chiu 2026-11-03), or the first place it names
+        // is one the trip only reaches later.
+        let departure = stops.min { $0.arrivedAt < $1.arrivedAt }.flatMap { first in
+            plan.contains { $0.stop.id == first.id } ? nil : filmStop(first, photos: [])
         }
 
         // **Every kilometre the film shows a viewer is the local journey**
@@ -236,7 +243,8 @@ enum RecapComposer {
             journeyDates: journeyDates(trip, clock: clock),
             everyLegRoutabilityEstablished: everyLegRoutabilityEstablished,
             // In the film's language, like the figures above (Chiu 2026-10-10, #287).
-            endCardTagline: String(localized: "recap_end_tagline")
+            endCardTagline: String(localized: "recap_end_tagline"),
+            departure: departure
         )
     }
 

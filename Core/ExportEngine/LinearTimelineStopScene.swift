@@ -104,14 +104,15 @@ extension LinearTimeline {
     /// (ADR 2026-09-24 (e), Chiu: *「也把地名加進 pill」*) — inherited the way the
     /// day is, so it turns over on arrival and never flickers out on the road.
     /// Nothing while a crossing plays: the boarding pass and the flight-end
-    /// marks own *where* there (ADR 2026-09-04 (b)).
+    /// marks own *where* there (ADR 2026-09-04 (b)). Before the first stop,
+    /// the departure's town (`LinearTimelineDeparture`), never the first stop's.
     func hudPlace(atTime time: Double) -> String? {
         // The departure's photographs play over the frozen frame; no town on
         // this map is where they were taken (#275).
         if isDepartureCut(atTime: time) { return nil }
         if let stopIndex = holdingStopIndex(atTime: time) { return displayName(of: stopIndex) }
         if path.arcs.contains(where: { $0.contains(time) }) { return nil }
-        var town = stops.first?.locality
+        var town = departure.map(\.locality) ?? stops.first?.locality
         for hold in holds where hold.startS <= time {
             guard stops.indices.contains(hold.stopIndex) else { continue }
             town = stops[hold.stopIndex].locality
@@ -125,9 +126,10 @@ extension LinearTimeline {
     /// A leg belongs to no stop, so it has to inherit a day from one of them, and
     /// inheriting from the stop just left is the honest direction — you drive on
     /// the day you set out, and the counter turns over on arrival, not somewhere
-    /// out on the road. Before the first stop the trip is on its first day.
+    /// out on the road. Before the first stop the trip is on its first day:
+    /// the departure's, when the film does not stop where it set out.
     func dayLabel(atTime time: Double) -> String {
-        var label = stops.first?.dayLabel ?? ""
+        var label = departure?.dayLabel ?? stops.first?.dayLabel ?? ""
         for hold in holds where hold.startS <= time {
             guard stops.indices.contains(hold.stopIndex) else { continue }
             label = stops[hold.stopIndex].dayLabel

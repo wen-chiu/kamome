@@ -59,6 +59,13 @@ public struct SubjectState: Equatable {
     /// unified and travels through the state stream that already carries the
     /// subject.
     public let role: SubjectRole
+    /// **A pin the subject must not cover, and how firmly** (Chiu 2026-11-03:
+    /// 「車子不能跟地標點重疊 應該放在下面」). The departure's pin stands where
+    /// the car waits, so the car steps below it — 0 on the road, 1 while the pin
+    /// is fully up. Where the car would land is the renderer's: it knows the pin's
+    /// size and the car's. The place stays where it is; only the drawing moves.
+    public let pinToClear: RecapCoordinate?
+    public let pinClearance: Double
 
     /// The two subjects a film can put on screen.
     ///
@@ -74,7 +81,8 @@ public struct SubjectState: Equatable {
 
     public init(
         lat: Double, lon: Double, heading: Double,
-        emphasis: Double = 1, isVisible: Bool = true, role: SubjectRole = .vehicle
+        emphasis: Double = 1, isVisible: Bool = true, role: SubjectRole = .vehicle,
+        pinToClear: RecapCoordinate? = nil, pinClearance: Double = 0
     ) {
         self.lat = lat
         self.lon = lon
@@ -82,6 +90,8 @@ public struct SubjectState: Equatable {
         self.emphasis = emphasis
         self.isVisible = isVisible
         self.role = role
+        self.pinToClear = pinToClear
+        self.pinClearance = pinClearance
     }
 }
 

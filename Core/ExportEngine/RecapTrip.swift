@@ -193,6 +193,12 @@ public struct RecapTrip {
     /// the camera's distance math is unaffected.
     public var route: [RecapCoordinate] { legs.flatMap(\.coordinates) }
     public let stops: [Stop]
+    /// **Where the journey set out, when the film does not stop there**
+    /// (Chiu 2026-11-03): the trip's first stop, which the highlight cut
+    /// dropped. The film shows its pin and name over the opening while the
+    /// car waits there, so the first place named is not one the trip reaches
+    /// later. nil when the first stop is one of `stops`, which names itself.
+    public let departure: Stop?
     public let title: String
     public let subtitle: String
     /// The closing card's three figures, already worded and localized — **the
@@ -270,10 +276,12 @@ public struct RecapTrip {
         shareURL: String? = nil,
         journeyDates: String? = nil,
         everyLegRoutabilityEstablished: Bool = false,
-        endCardTagline: String = RecapWordmark.tagline
+        endCardTagline: String = RecapWordmark.tagline,
+        departure: Stop? = nil
     ) {
         self.legs = legs
         self.stops = stops
+        self.departure = departure
         self.title = title
         self.subtitle = subtitle
         self.endCardFigures = endCardFigures

@@ -61,10 +61,10 @@ public struct RecapBackground {
 /// `FlatSnapshotProvider` the whole pipeline is deterministic, which the
 /// golden-frame gate tests rely on.
 ///
-/// Z-order: the traveled trail draws beneath the moving subject (the subject
-/// rides the head of its own trail), then the subject, then the stop label /
-/// photo deck / chrome on top — so an enlarged deck photo blooms in front of
-/// the vehicle. Which overlays sit under the subject is a rendering decision
+/// Z-order: the traveled trail, the stop pins and the town names draw beneath
+/// the moving subject (the subject rides the head of its own trail, over the
+/// map's marks), then the subject, then the photo deck / chrome on top — so an
+/// enlarged deck photo blooms in front of the vehicle. Which overlays sit under the subject is a rendering decision
 /// (`drawsBelowSubject`), never the timeline's.
 public struct FrameCompositor {
     public struct RenderError: Error {}
@@ -270,11 +270,15 @@ public struct FrameCompositor {
         context.restoreGState()
     }
 
-    /// The route trail draws beneath the subject; the label, deck, and chrome
-    /// draw above it. Z-order is a rendering concern, so it lives here, not on
-    /// the style-independent `OverlayContent`.
-    private static func drawsBelowSubject(_ content: OverlayContent) -> Bool {
-        if case .routeReveal = content { return true }
-        return false
+    /// The route trail and the map's own marks draw beneath the subject; the
+    /// deck and chrome draw above it. **A pin never hides the car** (Chiu
+    /// 2026-11-03: 「車子不能被點蓋住」): a stop's pin and name and the towns'
+    /// dots and names are part of the map the car drives over. Z-order is a
+    /// rendering concern, so it lives here, not on `OverlayContent`.
+    static func drawsBelowSubject(_ content: OverlayContent) -> Bool {
+        switch content {
+        case .routeReveal, .stopLabel, .placeNames: return true
+        default: return false
+        }
     }
 }

@@ -69,16 +69,20 @@ extension RecapTrip {
                     isCrossing: leg.isCrossing, countryCodes: leg.countryCodes
                 )
             },
-            stops: stops.map { stop in
-                Stop(
-                    coordinate: moved(stop.coordinate), name: stop.name, dayLabel: stop.dayLabel,
-                    detail: stop.detail, photos: stop.photos, dwellS: stop.dwellS,
-                    locality: stop.locality, subLocality: stop.subLocality
-                )
-            },
+            stops: stops.map { $0.moved(moved) },
             title: title, subtitle: subtitle, endCardFigures: endCardFigures, shareURL: shareURL,
             journeyDates: journeyDates, everyLegRoutabilityEstablished: everyLegRoutabilityEstablished,
-            endCardTagline: endCardTagline
+            endCardTagline: endCardTagline, departure: departure?.moved(moved)
+        )
+    }
+}
+
+extension RecapTrip.Stop {
+    /// The same stop at `move(coordinate)`.
+    func moved(_ move: (RecapCoordinate) -> RecapCoordinate) -> RecapTrip.Stop {
+        RecapTrip.Stop(
+            coordinate: move(coordinate), name: name, dayLabel: dayLabel, detail: detail, photos: photos,
+            dwellS: dwellS, locality: locality, subLocality: subLocality
         )
     }
 }

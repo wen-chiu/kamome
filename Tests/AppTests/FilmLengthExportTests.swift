@@ -182,6 +182,27 @@ final class FilmLengthExportTests: XCTestCase {
         XCTAssertTrue(text.hasPrefix(ExportLogHistory.blockMark))
     }
 
+    /// **A short film that drops the first stop still says where the trip set
+    /// out** (Chiu 2026-11-03). The composer hands the dropped first stop over as
+    /// the departure; a film that keeps it has none, because it names itself.
+    func testAFilmThatDropsTheFirstStopCarriesItAsTheDeparture() async throws {
+        let config = AppConfig.loadOrDie()
+        try XCTSkipIf(config.export.recapMode != .highlight, "only the highlight cut drops stops")
+        let trip = try await imported(stops: 30, photosPerStop: 12, markedPerStop: 0, config: config).detail
+        let first = try XCTUnwrap(trip.stops.min { $0.arrivedAt < $1.arrivedAt })
+        let short = try film(trip, length: .short, config: config)
+        let departure = try XCTUnwrap(short.departure, "precondition: the fewest photographs are at the first stop")
+        XCTAssertEqual(departure.coordinate.lat, first.lat, accuracy: 1e-3)
+        XCTAssertEqual(departure.coordinate.lon, first.lon, accuracy: 1e-3)
+        XCTAssertTrue(departure.photos.isEmpty, "the departure is named, never held")
+        XCTAssertFalse(short.stops.contains { $0.coordinate == departure.coordinate })
+
+        let small = try await imported(stops: 3, photosPerStop: 3, markedPerStop: 0, config: config).detail
+        let kept = try film(small, length: .short, config: config)
+        XCTAssertEqual(kept.stops.count, 3, "precondition: a three-stop film keeps every stop")
+        XCTAssertNil(kept.departure, "a film that stops where it set out has no separate departure")
+    }
+
     /// **Too long is said, not fixed** (Chiu 2026-09-27: 如果還是太長，要給提醒).
     /// Every stop put in by hand carries the short film past 90 s; the sheet's
     /// model says so, and keeps every one of them.

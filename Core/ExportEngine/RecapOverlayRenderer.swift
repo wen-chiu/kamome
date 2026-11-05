@@ -169,13 +169,15 @@ public struct RecapOverlayRenderer: OverlayRenderer {
     /// A white ring under a colored dot, so the stop point reads on any terrain.
     func drawPin(at center: CGPoint, radius: CGFloat, in surface: RenderSurface) {
         let context = surface.context
+        let ring = Self.pinRingRadius(radius)
         context.setFillColor(style.labelPinRingColor)
-        context.fillEllipse(in: CGRect(
-            x: center.x - radius * 1.5, y: center.y - radius * 1.5, width: radius * 3, height: radius * 3
-        ))
+        context.fillEllipse(in: CGRect(x: center.x - ring, y: center.y - ring, width: ring * 2, height: ring * 2))
         context.setFillColor(style.labelPinColor)
         context.fillEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
     }
+
+    /// How far a pin of dot `radius` reaches: its white ring.
+    static func pinRingRadius(_ radius: CGFloat) -> CGFloat { radius * 1.5 }
 
     /// The photo card's height once fully revealed. One definition, shared by
     /// both stop beats, so they can never disagree about which side to hang on.
