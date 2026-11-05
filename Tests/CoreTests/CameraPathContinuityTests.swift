@@ -207,6 +207,30 @@ extension CameraPathTests {
         XCTAssertNil(CameraPath(route: [straightRoute[0], straightRoute[0]], stops: [], config: exportConfig()))
     }
 
+    /// **The question Trip Detail asks is the camera's own** (#350): the film
+    /// button is disabled for exactly the routes `init` refuses, so the two
+    /// can never disagree. Zero is the only cut — a centimetre still films.
+    func testGoesSomewhereAnswersExactlyAsTheCameraDoes() {
+        let here = straightRoute[0]
+        let aCentimetreOn = CameraPath.Point(lat: here.lat + 0.000_000_09, lon: here.lon)
+        let nowhere: [String: [CameraPath.Point]] = [
+            "no vertex": [], "one vertex": [here], "two at one fix": [here, here], "three at one fix": [here, here, here]
+        ]
+        let somewhere: [String: [CameraPath.Point]] = [
+            "out and back to one fix": [here, aCentimetreOn, here], "a centimetre": [here, aCentimetreOn],
+            "a road": straightRoute
+        ]
+        for (goes, routes) in [(false, nowhere), (true, somewhere)] {
+            for (name, route) in routes {
+                XCTAssertEqual(CameraPath.goesSomewhere(route), goes, name)
+                XCTAssertEqual(
+                    CameraPath(route: route, stops: [], config: exportConfig()) != nil, goes,
+                    "\(name): the camera and goesSomewhere disagree"
+                )
+            }
+        }
+    }
+
     func testPerthReplayTripProducesFullCoveragePath() throws {
         let engine = try GPXReplay.run(fixture: "perth_margaret_river_day1.gpx")
         let route = engine.segments.flatMap(\.points).map { CameraPath.Point(lat: $0.lat, lon: $0.lon) }

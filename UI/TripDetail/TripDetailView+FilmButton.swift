@@ -8,33 +8,14 @@ extension TripDetailView {
     /// film the app exists to make. Same weight as Home's import button, the
     /// list scrolling under it the same way.
     var makeFilmButton: some View {
-        Button {
+        FilmButtonBar(canMakeFilm: canMakeFilm, onePlace: model.saysFilmHasOnePlace) {
             showingRecap = true
-        } label: {
-            Label("make_film", systemImage: "film")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
         }
-        .buttonStyle(.prominent)
-        .disabled(!canMakeFilm)
-        // As large as Home's two at the first accessibility size, no larger:
-        // past that they took the screen from the list (#205).
-        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
-        .background(.bar)
     }
 
-    /// S5 entry: only completed trips have a recap to render. Naming is
-    /// throttled and asynchronous; a film exported before its stops are named
-    /// says "Unnamed stop" for each of them (Chiu 2026-08-04). It waits only
-    /// for the stops a film shows (#160); the banner above keeps counting the
-    /// rest. The button and Home's path to the sheet both wait on this.
-    var canMakeFilm: Bool {
-        model.detail?.trip.endedAt != nil && !model.isNamingFilmStops
-    }
+    /// The model's rule (`TripDetailModel.canMakeFilm`), read where the view
+    /// acts on it.
+    var canMakeFilm: Bool { model.canMakeFilm }
 
     /// **Home's 「製作旅程影片」 opens this trip's film sheet** (Chiu 2026-10-27,
     /// ADR 2026-10-26-home-shows-a-newcomer-the-next-step). The same sheet as
@@ -44,5 +25,47 @@ extension TripDetailView {
         guard filmSheetPending, canMakeFilm else { return }
         filmSheetPending = false
         showingRecap = true
+    }
+}
+
+/// The bar at the foot of Trip Detail: the film button, and — for a trip of
+/// one place — the one sentence that says why it is disabled (Chiu 2026-11-04,
+/// ADR 2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button).
+///
+/// **VoiceOver hears the reason either way it arrives**: the sentence is
+/// ordinary text, read before the button, and the button carries it as its
+/// hint, so landing on the button straight from the rotor or by touch still
+/// says why it is dimmed. With hints off, the text alone still says it.
+struct FilmButtonBar: View {
+    let canMakeFilm: Bool
+    let onePlace: Bool
+    let action: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if onePlace {
+                Text("make_film_one_place")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button(action: action) {
+                Label("make_film", systemImage: "film")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.prominent)
+            .disabled(!canMakeFilm)
+            .accessibilityHint(onePlace ? Text("make_film_one_place") : Text(verbatim: ""))
+        }
+        // As large as Home's two at the first accessibility size, no larger:
+        // past that they took the screen from the list (#205).
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        .padding(.horizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .background(.bar)
     }
 }

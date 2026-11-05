@@ -29,7 +29,7 @@ final class RoutePathScenarioProbeTests: XCTestCase {
 
     /// Scenarios that fail on a filed issue. Each is expected to fail — strictly,
     /// so the day its issue is fixed this probe fails until the entry goes.
-    static let knownDefects: [String: Int] = ["D4": 350, "D4b": 350, "D4c": 350, "R1": 353]
+    static let knownDefects: [String: Int] = ["R1": 353]
 
     /// Holds one scenario's violations to nothing, or to its known defect.
     func assertNoViolations(_ violations: [String], name: String) {
@@ -68,29 +68,26 @@ final class RoutePathScenarioProbeTests: XCTestCase {
         repository: TripRepository, tripId: String, name: String, form: Form, routing: Geography, full: TrackingConfig
     ) async throws -> [String] {
         let scenario = (name: name, form: form)
-        let report = await RouteMatchService(
-            repository: repository, matching: full.matching.withBaseURL("https://probe.invalid"),
-            reconstructor: routing
-        ).matchTrip(tripId: tripId)
-        let detail = try XCTUnwrap(repository.detail(tripId: tripId))
-        let verdicts = detail.segments.map { item -> String in
-            let verdict = item.segment.routeVerdict.map { "\($0)" } ?? "nil"
-            return "\(item.segment.mode)/\(item.points.count)pt/\(verdict)"
-        }
-        print("KAMOME_PROBE \(scenario.name) · \(detail.stops.count) stops"
-            + " · segments [\(verdicts.joined(separator: ", "))]"
-            + " · reconstructed \(report.reconstructed) beyond \(report.beyondDriving) unreachable \(report.unreachable)")
-
-        guard let composition = RecapComposer.filmComposition(
+        let (detail, buttonBeforeRouting) = try await routed(
+            repository: repository, tripId: tripId, name: name, routing: routing, full: full
+        )
+        let composition = RecapComposer.filmComposition(
             detail: detail, config: full, photosEnabled: true, length: .standard
-        ) else {
+        )
+        let plan = composition.flatMap { Self.exportPlan($0.trip, config: full.export) }
+        let button = Self.buttonViolations(
+            name: scenario.name, beforeRouting: buttonBeforeRouting,
+            afterRouting: RecapComposer.filmGoesSomewhere(detail: detail, config: full), hasPlan: plan != nil
+        )
+        guard button.offered else { return button.violations }
+        guard let composition else {
             return ["the trip could not be composed — the export fails with no film"]
         }
         let trip = composition.trip
         let sheetS = RecapComposer.measuredFilmS(trip: trip, config: full.export)
 
         let config = full.export
-        guard let (line, band) = Self.exportPlan(trip, config: config) else {
+        guard let (line, band) = plan else {
             return ["no film plan — the export fails (\(trip.legs.count) legs, \(trip.stops.count) stops)"]
         }
         let legs = trip.legs.map {
@@ -114,6 +111,51 @@ final class RoutePathScenarioProbeTests: XCTestCase {
             violations.append(String(format: "the sheet says %.1f s, the export plans %.1f s", sheetS, line.durationS))
         }
         return violations
+    }
+
+    /// Routes the trip as the export does, first reading what the film button
+    /// says of it: Trip Detail may read the trip before routing has answered.
+    private func routed(
+        repository: TripRepository, tripId: String, name: String, routing: Geography, full: TrackingConfig
+    ) async throws -> (detail: TripRepository.TripDetail, buttonBeforeRouting: Bool) {
+        let unrouted = try XCTUnwrap(repository.detail(tripId: tripId))
+        let buttonBeforeRouting = RecapComposer.filmGoesSomewhere(detail: unrouted, config: full)
+        let report = await RouteMatchService(
+            repository: repository, matching: full.matching.withBaseURL("https://probe.invalid"),
+            reconstructor: routing
+        ).matchTrip(tripId: tripId)
+        let detail = try XCTUnwrap(repository.detail(tripId: tripId))
+        let verdicts = detail.segments.map { item -> String in
+            let verdict = item.segment.routeVerdict.map { "\($0)" } ?? "nil"
+            return "\(item.segment.mode)/\(item.points.count)pt/\(verdict)"
+        }
+        print("KAMOME_PROBE \(name) · \(detail.stops.count) stops"
+            + " · segments [\(verdicts.joined(separator: ", "))]"
+            + " · reconstructed \(report.reconstructed) beyond \(report.beyondDriving) unreachable \(report.unreachable)")
+        return (detail, buttonBeforeRouting)
+    }
+
+    /// **The film button and the film agree** (#350, ADR
+    /// 2026-11-04-a-trip-of-one-place-is-refused-before-the-film-button). A trip
+    /// with no film plan is refused before the button, which is not a
+    /// violation; a refused trip that *has* a plan is one, and so is a button
+    /// that changes its mind once routing answers. `offered` is whether the
+    /// button can be pressed, which is when the film itself is audited.
+    static func buttonViolations(
+        name: String, beforeRouting: Bool, afterRouting: Bool, hasPlan: Bool
+    ) -> (offered: Bool, violations: [String]) {
+        var violations: [String] = []
+        if beforeRouting != afterRouting {
+            violations.append("the film button changes its mind once routing answers"
+                + " (before \(beforeRouting), after \(afterRouting))")
+        }
+        guard !afterRouting else { return (true, violations) }
+        if hasPlan {
+            violations.append("the film button refuses a trip that has a film plan (one place, it says)")
+        } else {
+            print("KAMOME_PROBE \(name) · one place: refused before the film button")
+        }
+        return (false, violations)
     }
 
     func testRecordedTripsWithAFlight() async throws {
