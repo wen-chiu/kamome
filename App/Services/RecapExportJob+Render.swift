@@ -77,8 +77,9 @@ extension RecapExportJob {
             // Named, never silent: the picture is not the one the camera asked
             // for, and a reviewer of this film needs to know which frames moved.
             KamomeLog.recap.notice("""
-                film: \(fitted.moved) frames fitted inside the map's edge (±85°) — largest move \
-                \(fitted.worstShiftPx, format: .fixed(precision: 0)) px, \(fitted.tallerThanBand) taller than \
+                film: \(fitted.moved, privacy: .public) frames fitted inside the map's edge (±85°) — largest move \
+                \(fitted.worstShiftPx, format: .fixed(precision: 0), privacy: .public) px, \
+                \(fitted.tallerThanBand, privacy: .public) taller than \
                 the whole map and zoomed in to fit (ADR 2026-10-07)
                 """)
         }
@@ -114,9 +115,11 @@ extension RecapExportJob {
                 """)
         }
         KamomeLog.recap.notice("""
-            film: \(timeline.durationS, format: .fixed(precision: 1))s · \
-            \(timeline.frameCount) frames · opening \(timeline.openingS, format: .fixed(precision: 1))s · \
-            \(trip.stops.count) stops · \(trip.legs.filter(\.provenance.isInferred).count)/\(trip.legs.count) legs dashed · \
+            film: \(timeline.durationS, format: .fixed(precision: 1), privacy: .public)s · \
+            \(timeline.frameCount, privacy: .public) frames · \
+            opening \(timeline.openingS, format: .fixed(precision: 1), privacy: .public)s · \
+            \(trip.stops.count, privacy: .public) stops · \(trip.legs.filter(\.provenance.isInferred).count, privacy: .public)\
+            /\(trip.legs.count, privacy: .public) legs dashed · \
             \(appearance.rawValue, privacy: .public) appearance\
             \(appearance == request.appearance
                 ? ""
@@ -147,7 +150,7 @@ extension RecapExportJob {
             provider: plan.provider, config: plan.config
         ).stations
         KamomeLog.recap.notice(
-            "render plan: \(stations.count) stations for \(plan.timeline.frameCount) frames"
+            "render plan: \(stations.count, privacy: .public) stations for \(plan.timeline.frameCount, privacy: .public) frames"
         )
         // What the phone brought to this render, and — at every exit — what
         // the map renderer did with it (`RecapExportJob+Diagnostics`).
@@ -210,31 +213,6 @@ extension RecapExportJob {
     nonisolated static func failureCode(_ error: Error) -> String {
         let bridged = error as NSError
         return "\(bridged.domain) · \(bridged.code)"
-    }
-
-    /// **Where the export's minutes went**, in one line, at the only altitude a
-    /// device run can be read from.
-    ///
-    /// Durations and counts only — nothing here names a place (`CLAUDE.md` §0).
-    ///
-    /// How to read it: `snapshots` is the substrate's own bill, summed across
-    /// concurrent fetches, so it can exceed the total; `wait` is what the loop
-    /// actually stalled for, and the gap between the two is what prefetching
-    /// already hid. A `wait` close to the total means the render is starved on
-    /// the provider and more concurrency is the lever; a large `composite` says
-    /// it is not.
-    private func report(output: RecapExporter.Output, seconds: Double) {
-        let stats = output.stats
-        KamomeLog.recap.notice("""
-            render cost: \(seconds, format: .fixed(precision: 1))s total · \
-            \(stats.frames) frames · \(stats.stations) stations / \(stats.fetches) fetches · \
-            snapshots \(stats.snapshotS, format: .fixed(precision: 1))s \
-            (mean \(stats.meanSnapshotS, format: .fixed(precision: 2))s, \
-            wait \(stats.waitS, format: .fixed(precision: 1))s, \(stats.retries) retried) · \
-            composite \(stats.compositeS, format: .fixed(precision: 1))s · \
-            encode \(stats.deliverS, format: .fixed(precision: 1))s · \
-            finish \(output.finishS, format: .fixed(precision: 1))s
-            """)
     }
 
     private func compositor(

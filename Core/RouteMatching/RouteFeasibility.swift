@@ -70,13 +70,14 @@ public enum RouteFeasibility {
         // and by how much. Only legs long enough for either test to matter.
         if routedM >= config.crossingPaceMinDistanceM {
             KamomeLog.routing.notice("""
-                route: feasibility — \(routedM / 1000, format: .fixed(precision: 0)) km of road, \
-                \(elapsedS / 3600, format: .fixed(precision: 1)) h between photographs \
-                (+\(allowanceS / 3600, format: .fixed(precision: 1)) h clock allowance) = \
-                \(paceKmh, format: .fixed(precision: 0)) km/h vs \
-                \(config.crossingRoutePaceMinKmh, format: .fixed(precision: 0)); longest stretch with no \
-                photograph \(unwitnessedM / 1000, format: .fixed(precision: 0)) km vs a day's driving \
-                \(dayOfDrivingM / 1000, format: .fixed(precision: 0)) km → \(String(describing: verdict), privacy: .public)
+                route: feasibility — \(routedM / 1000, format: .fixed(precision: 0), privacy: .public) km of road, \
+                \(elapsedS / 3600, format: .fixed(precision: 1), privacy: .public) h between photographs \
+                (+\(allowanceS / 3600, format: .fixed(precision: 1), privacy: .public) h clock allowance) = \
+                \(paceKmh, format: .fixed(precision: 0), privacy: .public) km/h vs \
+                \(config.crossingRoutePaceMinKmh, format: .fixed(precision: 0), privacy: .public); longest stretch with no \
+                photograph \(unwitnessedM / 1000, format: .fixed(precision: 0), privacy: .public) km vs a day's driving \
+                \(dayOfDrivingM / 1000, format: .fixed(precision: 0), privacy: .public) km → \
+                \(String(describing: verdict), privacy: .public)
                 """)
         }
         return verdict

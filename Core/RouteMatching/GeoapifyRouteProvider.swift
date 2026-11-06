@@ -74,7 +74,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             waypoints, minSpacingM: config.routeWaypointMinSpacingM, limit: config.chunkSize
         )
         guard thinned.count >= 2, let url = requestURL(for: thinned, profile: Self.driveProfile) else {
-            KamomeLog.routing.notice("route: skipped — \(thinned.count) usable waypoints after thinning")
+            KamomeLog.routing.notice("route: skipped — \(thinned.count, privacy: .public) usable waypoints after thinning")
             return .notEstablished(.tooFewWaypoints)
         }
 
@@ -112,8 +112,8 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         else { return .implausible }
 
         KamomeLog.routing.notice("""
-            route: reconstructed \(route.properties.distance / 1000, format: .fixed(precision: 1)) km \
-            from \(waypoints.count) waypoints
+            route: reconstructed \(route.properties.distance / 1000, format: .fixed(precision: 1), privacy: .public) km \
+            from \(waypoints.count, privacy: .public) waypoints
             """)
         // Routing reports no confidence of its own. Passing the gate is the
         // verdict: the caller stores the geometry, which is what marks the leg
@@ -157,8 +157,9 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         }.max() ?? 0
         guard farthestM <= config.routeOffNetworkWalkSnapMaxM else {
             KamomeLog.routing.notice("""
-                route: off the road network, and a walk reaches it only \(farthestM, format: .fixed(precision: 0)) m \
-                away (limit \(config.routeOffNetworkWalkSnapMaxM, format: .fixed(precision: 0)) m) — leg stays raw
+                route: off the road network, and a walk reaches it only \
+                \(farthestM, format: .fixed(precision: 0), privacy: .public) m away (limit \
+                \(config.routeOffNetworkWalkSnapMaxM, format: .fixed(precision: 0), privacy: .public) m) — leg stays raw
                 """)
             return .offTheRoadNetwork
         }
@@ -167,7 +168,7 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
         else { return .offTheRoadNetwork }
         KamomeLog.routing.notice("""
             route: off the road network, asked again from where a walk reaches it \
-            (moved at most \(farthestM, format: .fixed(precision: 0)) m)
+            (moved at most \(farthestM, format: .fixed(precision: 0), privacy: .public) m)
             """)
         return try reconstruction(from: data, through: waypoints)
     }
@@ -267,12 +268,12 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             // throttle and *can* answer 429 with `Retry-After`.
             let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init)
             KamomeLog.routing.error(
-                "route: RATE LIMITED by \(config.baseURL, privacy: .public), retry after \(retryAfter ?? -1)s"
+                "route: RATE LIMITED by \(config.baseURL, privacy: .public), retry after \(retryAfter ?? -1, privacy: .public)s"
             )
             throw RouteProviderFailure.rateLimited(retryAfterS: retryAfter)
         default:
             KamomeLog.routing.error("""
-                route: HTTP \(http.statusCode) from \(config.baseURL, privacy: .public) — \
+                route: HTTP \(http.statusCode, privacy: .public) from \(config.baseURL, privacy: .public) — \
                 \(Self.redacted(Self.message(in: data)), privacy: .public)
                 """)
             throw RouteProviderFailure.refused(status: http.statusCode)
@@ -342,25 +343,6 @@ public struct GeoapifyRouteProvider: RouteReconstructing {
             points = flattened
             self.joints = joints
         }
-    }
-
-    /// **Which of the two geography answers a 400 is** (ADR 2026-09-23 (c)).
-    ///
-    /// Matched on the provider's own words, measured against the live endpoint
-    /// through the Worker on 2026-09-23 with public landmark coordinates:
-    ///
-    /// | request | answer |
-    /// |---|---|
-    /// | Taoyuan airport → Miyako airport | `No path could be found for input` |
-    /// | Miyako town → Sunayama beach | `No suitable edges near location. Please check…` |
-    ///
-    /// Only the second is matched; **every other 400 stays `.noRoadHere`**, which
-    /// is what all of them were before the split. If the provider ever rewords the
-    /// off-network message, beaches go back to being crossings — the old
-    /// behaviour, never a new wrong one — and `RouteReconstructionTests` pins the
-    /// wording so that shows up as a red test, not as planes over beaches.
-    static func verdict(for400 message: String) -> RouteReconstruction {
-        message.localizedCaseInsensitiveContains("no suitable edges") ? .offTheRoadNetwork : .noRoadHere
     }
 
     private struct ErrorBody: Decodable {

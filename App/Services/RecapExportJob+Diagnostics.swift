@@ -1,6 +1,7 @@
 import BackgroundTasks
 import Foundation
 import KamomeConfig
+import KamomeExportEngine
 
 /// **What the phone and the map renderer did during a render** (2026-09-25, the
 /// 859 s Iceland film). `render cost` says how long snapshots took; these lines
@@ -38,9 +39,9 @@ extension RecapExportJob {
             ) {
                 // Not fatal: the render still works on the old cache size, only
                 // slower if it evicts. Full text private, as for a failed export.
-                KamomeLog.recap.error("map cache: could not set \(cacheMb) MB — \(error)")
+                KamomeLog.recap.error("map cache: could not set \(cacheMb, privacy: .public) MB — \(error)")
             } else {
-                KamomeLog.recap.notice("map cache: \(cacheMb) MB ambient")
+                KamomeLog.recap.notice("map cache: \(cacheMb, privacy: .public) MB ambient")
             }
         }
         return RenderConditions(thermal: thermal, memory: memory, measuresSubstrate: measuresSubstrate)
@@ -65,26 +66,26 @@ extension RecapExportJob {
             render thermal: \(ThermalWatch.name(thermal.start), privacy: .public) → \
             \(ThermalWatch.name(thermal.end), privacy: .public) · \
             worst \(ThermalWatch.name(thermal.worst), privacy: .public) · \
-            \(thermal.hotS, format: .fixed(precision: 0))s at serious or above
+            \(thermal.hotS, format: .fixed(precision: 0), privacy: .public)s at serious or above
             """)
         KamomeLog.recap.notice("render memory: \(Self.memoryLine(conditions.memory.end()), privacy: .public)")
         guard conditions.measuresSubstrate else { return }
         let map = MapLibreSnapshotProvider.meter.read()
         let style = map.meanStyleS.map { String(format: "%.2fs", $0) } ?? "n/a"
         KamomeLog.recap.notice("""
-            render substrate: \(map.snapshots) snapshots (\(map.failedSnapshots) failed) · \
-            mean \(map.meanSnapshotS, format: .fixed(precision: 2))s, style \(style, privacy: .public) · \
-            peak in flight \(map.peakInFlight) · \
-            requests \(map.requests) / \(map.distinctRequests) distinct · \
-            \(map.revalidations) revalidated · \(map.refetches) refetched
+            render substrate: \(map.snapshots, privacy: .public) snapshots (\(map.failedSnapshots, privacy: .public) failed) · \
+            mean \(map.meanSnapshotS, format: .fixed(precision: 2), privacy: .public)s, style \(style, privacy: .public) · \
+            peak in flight \(map.peakInFlight, privacy: .public) · \
+            requests \(map.requests, privacy: .public) / \(map.distinctRequests, privacy: .public) distinct · \
+            \(map.revalidations, privacy: .public) revalidated · \(map.refetches, privacy: .public) refetched
             """)
         // What actually crossed the network (`TileRequestCoalescer`): with it on,
         // `downloads` should equal `distinct` above, and every other request was
         // joined to a download in flight or answered from one already landed.
         let hub = TileRequestCoalescer.shared.read()
         KamomeLog.recap.notice("""
-            render network: \(hub.downloads) downloads · \(hub.joined) joined · \
-            \(hub.remembered) remembered · \(hub.terrainAged) terrain given a lifetime
+            render network: \(hub.downloads, privacy: .public) downloads · \(hub.joined, privacy: .public) joined · \
+            \(hub.remembered, privacy: .public) remembered · \(hub.terrainAged, privacy: .public) terrain given a lifetime
             """)
     }
 
@@ -114,5 +115,31 @@ extension RecapExportJob {
         #else
         return "unknown (built without the iOS 26 SDK)"
         #endif
+    }
+
+    /// **Where the export's minutes went**, in one line, at the only altitude a
+    /// device run can be read from.
+    ///
+    /// Durations and counts only — nothing here names a place (`CLAUDE.md` §0).
+    ///
+    /// How to read it: `snapshots` is the substrate's own bill, summed across
+    /// concurrent fetches, so it can exceed the total; `wait` is what the loop
+    /// actually stalled for, and the gap between the two is what prefetching
+    /// already hid. A `wait` close to the total means the render is starved on
+    /// the provider and more concurrency is the lever; a large `composite` says
+    /// it is not.
+    func report(output: RecapExporter.Output, seconds: Double) {
+        let stats = output.stats
+        KamomeLog.recap.notice("""
+            render cost: \(seconds, format: .fixed(precision: 1), privacy: .public)s total · \
+            \(stats.frames, privacy: .public) frames · \
+            \(stats.stations, privacy: .public) stations / \(stats.fetches, privacy: .public) fetches · \
+            snapshots \(stats.snapshotS, format: .fixed(precision: 1), privacy: .public)s \
+            (mean \(stats.meanSnapshotS, format: .fixed(precision: 2), privacy: .public)s, \
+            wait \(stats.waitS, format: .fixed(precision: 1), privacy: .public)s, \(stats.retries, privacy: .public) retried) · \
+            composite \(stats.compositeS, format: .fixed(precision: 1), privacy: .public)s · \
+            encode \(stats.deliverS, format: .fixed(precision: 1), privacy: .public)s · \
+            finish \(output.finishS, format: .fixed(precision: 1), privacy: .public)s
+            """)
     }
 }

@@ -146,7 +146,8 @@ struct ImportService {
     private func markFlownLegs(tripId: String, plan: ImportedTripPlan, photos: [ImportPhoto]) {
         let flown = Self.flownLegs(of: plan, photos: photos, config: config)
         KamomeLog.importing.notice("""
-            import: \(flown.count) of \(plan.legs.count) legs flown, by photographs taken in flight
+            import: \(flown.count, privacy: .public) of \(plan.legs.count, privacy: .public) legs flown, \
+            by photographs taken in flight
             """)
         guard !flown.isEmpty,
               let detail = Stored.read("detail", { try repository.detail(tripId: tripId) }) else { return }

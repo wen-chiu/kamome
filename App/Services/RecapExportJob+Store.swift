@@ -56,7 +56,7 @@ extension RecapExportJob {
             throw error
         }
         KamomeLog.recap.notice(
-            "film stored: \(record.relativePath, privacy: .public) · \(fileBytes ?? 0) bytes"
+            "film stored: \(record.relativePath, privacy: .public) · \(fileBytes ?? 0, privacy: .public) bytes"
         )
         return record
     }

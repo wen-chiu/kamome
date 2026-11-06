@@ -14,9 +14,11 @@ import UIKit
 ///
 /// **§0.** Only `subsystem:com.chiu.kamome`, and every `KamomeLog` line is
 /// written to carry counts, durations and fixed strings — never a coordinate or
-/// a place (the rule each call site already keeps). Values logged without
-/// `privacy: .public` come back redacted. Nothing is sent anywhere: the share
-/// sheet is the user's own action, one file at a time.
+/// a place (the rule each call site already keeps). Every value logged without
+/// `privacy: .public` is written as `<private>` by Kamome itself, numbers
+/// included, before the file exists (`LogRedaction`, #366): the system redacts on
+/// a phone but not on a simulator, so its own redaction is not relied on. Nothing
+/// is sent anywhere: the share sheet is the user's own action, one file at a time.
 ///
 /// **Only this launch — except exports.** `OSLogStore` in an app sees its own
 /// process, so a run that crashed took its lines with it. Exports are the one
@@ -37,9 +39,11 @@ enum DiagnosticsLog {
             self.message = message
         }
 
+        /// The message rebuilt with only its public values (`LogRedaction`),
+        /// never `composedMessage`, which a simulator returns unredacted (#366).
         init(_ log: OSLogEntryLog) {
             self.init(date: log.date, category: log.category, level: DiagnosticsLog.level(log.level),
-                      message: log.composedMessage)
+                      message: LogRedaction.message(log))
         }
     }
 

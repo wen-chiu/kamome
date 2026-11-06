@@ -64,20 +64,30 @@ final class ExportStageClock {
 /// appends the file to what it shares. The most recent
 /// `export.pipeline.kept_export_logs` exports are kept.
 ///
-/// **§0.** These are the very lines `DiagnosticsLog` already shares — counts,
-/// durations and fixed words, values not marked public read back redacted —
-/// now also kept on this device. Nothing is sent anywhere: sharing stays the
-/// person's own action, one file at a time.
+/// **§0.** These are the very lines `DiagnosticsLog` shares — counts, durations
+/// and fixed words — now also kept on this device. Each line is rebuilt with only
+/// its public values before it is written (`LogRedaction`), so every value not
+/// marked `.public` is `<private>` in this file, a number too, on a simulator as on
+/// a phone. Until #366 the file held the system's own rendering, which on the
+/// iOS 26.5 simulator carried `.private` values in full (VERIFIED); that file
+/// (`legacyFileName`) is deleted unread. Nothing is sent anywhere: sharing stays
+/// the person's own action, one file at a time.
 enum ExportLogHistory {
     /// The line that opens each export's block — what `appending` splits on.
     static let blockMark = "=== export "
 
+    /// The file written before #366, from the system's rendering. Deleted, never read.
+    static let legacyFileName = "export-history.txt"
+
     /// Reads the export's lines off the main actor and appends them as one block.
     /// A failure is logged and dropped: bookkeeping must never fail an export.
-    static func keep(since start: Date, keptExports: Int, file: URL? = defaultFile) {
-        guard keptExports > 0, let file else { return }
-        Task.detached(priority: .utility) {
+    /// The export does not wait; the task is returned so a test can.
+    @discardableResult
+    static func keep(since start: Date, keptExports: Int, file: URL? = defaultFile) -> Task<Void, Never>? {
+        guard keptExports > 0, let file else { return nil }
+        return Task.detached(priority: .utility) {
             do {
+                removeLegacyFile(beside: file)
                 let lines = try readLines(since: start)
                 let existing = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
                 let text = appending(block: block(start: start, lines: lines), to: existing, keeping: keptExports)
@@ -93,8 +103,22 @@ enum ExportLogHistory {
 
     /// What has been kept, or nil when nothing has.
     static func read(file: URL? = defaultFile) -> String? {
-        guard let file, let text = try? String(contentsOf: file, encoding: .utf8), !text.isEmpty else { return nil }
+        guard let file else { return nil }
+        removeLegacyFile(beside: file)
+        guard let text = try? String(contentsOf: file, encoding: .utf8), !text.isEmpty else { return nil }
         return text
+    }
+
+    /// Deletes the pre-#366 file in `file`'s folder, which may hold values in full.
+    private static func removeLegacyFile(beside file: URL) {
+        let legacy = file.deletingLastPathComponent().appendingPathComponent(legacyFileName)
+        guard legacy.standardizedFileURL != file.standardizedFileURL,
+              FileManager.default.fileExists(atPath: legacy.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: legacy)
+        } catch {
+            KamomeLog.storage.error("export log history: could not delete the unredacted file — \(error)")
+        }
     }
 
     /// Pure, so the rolling cut is testable without a log store: `block`
@@ -113,7 +137,7 @@ enum ExportLogHistory {
     static var defaultFile: URL? {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Diagnostics", isDirectory: true)
-            .appendingPathComponent("export-history.txt")
+            .appendingPathComponent("export-history-redacted.txt")
     }
 
     private static func readLines(since start: Date) throws -> [DiagnosticsLog.Line] {
