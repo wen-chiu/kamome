@@ -45,18 +45,21 @@ final class DiagnosticsRedactionTests: XCTestCase {
         XCTAssertFalse(text.contains(probe.secret), "a value not marked public reached the shared diagnostics")
     }
 
-    func testTheKeptExportHistoryHoldsTheSameLineRedacted() throws {
+    func testTheKeptExportHistoryHoldsTheSameLineRedacted() async throws {
         let folder = FileManager.default.temporaryDirectory
             .appendingPathComponent("redaction-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let file = folder.appendingPathComponent("history.txt")
-        let start = Date.now
+        // A second early: a line logged just after `Date.now` can read back
+        // dated a fraction of a millisecond before it (VERIFIED, simulator).
+        let start = Date.now.addingTimeInterval(-1)
         let probe = logProbe()
 
-        ExportLogHistory.keep(since: start, keptExports: 3, file: file)
-        let deadline = Date.now.addingTimeInterval(15)
-        while !FileManager.default.fileExists(atPath: file.path), Date.now < deadline {
-            RunLoop.current.run(until: .now.addingTimeInterval(0.1))
+        // Awaited, not polled: on a CI runner the log-store read outlasted a
+        // 15 s wait (PR #373's first run).
+        await ExportLogHistory.keep(since: start, keptExports: 3, file: file)?.value
+        guard FileManager.default.fileExists(atPath: file.path) else {
+            return XCTFail("the history was not written; `export log history:` in the storage log says why")
         }
         let text = try String(contentsOf: file, encoding: .utf8)
 

@@ -81,9 +81,11 @@ enum ExportLogHistory {
 
     /// Reads the export's lines off the main actor and appends them as one block.
     /// A failure is logged and dropped: bookkeeping must never fail an export.
-    static func keep(since start: Date, keptExports: Int, file: URL? = defaultFile) {
-        guard keptExports > 0, let file else { return }
-        Task.detached(priority: .utility) {
+    /// The export does not wait; the task is returned so a test can.
+    @discardableResult
+    static func keep(since start: Date, keptExports: Int, file: URL? = defaultFile) -> Task<Void, Never>? {
+        guard keptExports > 0, let file else { return nil }
+        return Task.detached(priority: .utility) {
             do {
                 removeLegacyFile(beside: file)
                 let lines = try readLines(since: start)
